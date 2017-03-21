@@ -1,0 +1,69 @@
+.\"	$OpenBSD: mdoc.template,v 1.15 2014/03/31 00:09:54 dlg Exp $
+.\"
+.\" Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate$
+.Dt KWEBAPP 1
+.Os
+.Sh NAME
+.Nm kwebapp
+.Nd create web application API and database layer
+.Sh SYNOPSIS
+.Nm kwebapp
+.Op Fl ch
+.Op Ar config
+.Sh DESCRIPTION
+The
+.Nm
+utility accepts a configuration file
+.Ar config
+.Pq defaulting to standard input
+and creates source files defining a web application's C API to its
+database.
+It is a way of reducing the often-repeated code of serialising and
+de-serialising simple structures from a database.
+By default, it generates the header file
+.Pq see Fl h .
+Its arguments are as follows:
+.Bl -tag -width Ds
+.It Fl c
+Create the C source file implementing the header file.
+.It Fl h
+Create the C API header file.
+.El
+.Pp
+In all instances, the generated file is produced on standard output.
+.\" The following requests should be uncommented and used where appropriate.
+.\" .Sh CONTEXT
+.\" For section 9 functions only.
+.\" .Sh RETURN VALUES
+.\" For sections 2, 3, and 9 function return values only.
+.\" .Sh ENVIRONMENT
+.\" For sections 1, 6, 7, and 8 only.
+.\" .Sh FILES
+.\" .Sh EXIT STATUS
+.\" For sections 1, 6, and 8 only.
+.\" .Sh EXAMPLES
+.\" .Sh DIAGNOSTICS
+.\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
+.\" .Sh ERRORS
+.\" For sections 2, 3, 4, and 9 errno settings only.
+.Sh SEE ALSO
+.Xr kwebapp 5
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh CAVEATS
+.\" .Sh BUGS

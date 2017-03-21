@@ -57,7 +57,7 @@ main(int argc, char *argv[])
 	fclose(conf);
 
 	if (NULL == sq)
-		errx(EXIT_FAILURE, "%s: no structures", confile);
+		return(EXIT_FAILURE);
 
 	if (OP_SOURCE == op)
 		gen_source(sq);

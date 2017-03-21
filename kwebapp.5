@@ -1,0 +1,74 @@
+.\"	$OpenBSD$
+.\"
+.\" Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate$
+.Dt KWEBAPP 5
+.Os
+.Sh NAME
+.Nm kwebapp
+.Nd syntax for kwebapp configuration
+.Sh DESCRIPTION
+The
+.Nm
+configuration is used by
+.Xr kwebapp 1
+to generate C source and header files that drive a database.
+It is a free-form (white-space is not significant beyond separating
+tokens) configuration language with the following rough structure:
+.Bd -literal
+[ structname 
+  "{"
+    [ fieldname [ type ] ";" ]+
+  "}"
+]+
+.Ed
+.Pp
+In simple language, one or more structure definitions, each containing
+one or more fields.
+A
+.Dq structure
+is a database table or C struct; whereas a
+.Dq field
+is a column or a struct member.
+.Pp
+Structure and field names must be alphanumeric strings of at least one
+character and starting with a letter.
+The optional type may be one of
+.Dq txt
+or
+.Dq text
+for a nil-terminated string or
+.Dq int
+or
+.Dq integer
+for a 64-bit integer.
+By default, fields are integers.
+.Sh EXAMPLES
+A simple session table is as follows:
+.Bd -literal
+session { 
+  userid;
+  token;
+  id;
+}
+.Ed
+.Sh SEE ALSO
+.Xr kwebapp 1
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh CAVEATS
+.\" .Sh BUGS

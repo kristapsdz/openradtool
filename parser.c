@@ -7,6 +7,7 @@
 # include <err.h>
 #endif
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,7 +36,11 @@ struct	parse {
 	size_t		 bufmax; /* maximum buffer size */
 	size_t		 line; /* current line (from 1) */
 	size_t		 column; /* current column (from 0) */
+	const char	*fname; /* current filename */
 };
+
+static void parse_syntax_error(struct parse *, const char *, ...)
+	__attribute__((format(printf, 2, 3)));
 
 static void
 buf_push(struct parse *p, char c)
@@ -55,11 +60,11 @@ buf_push(struct parse *p, char c)
  * This sets the lasttype appropriately.
  */
 static void
-parse_error(struct parse *p, FILE *f, const char *fname)
+parse_error(struct parse *p, FILE *f)
 {
 
 	if (ferror(f)) {
-		warn("%s", fname);
+		warn("%s", p->fname);
 		p->lasttype = TOK_ERR;
 	} else 
 		p->lasttype = TOK_EOF;
@@ -70,11 +75,21 @@ parse_error(struct parse *p, FILE *f, const char *fname)
  * This sets the lasttype appropriately.
  */
 static void
-parse_syntax_error(struct parse *p, const char *fname)
+parse_syntax_error(struct parse *p, const char *fmt, ...)
 {
+	char	 buf[1024];
+	va_list	 ap;
 
-	warnx("%s:%zu:%zu: syntax error", 
-		fname, p->line, p->column);
+	if (NULL != fmt) {
+		va_start(ap, fmt);
+		vsnprintf(buf, sizeof(buf), fmt, ap);
+		va_end(ap);
+		warnx("%s:%zu:%zu: %s", 
+			p->fname, p->line, p->column, buf);
+	} else
+		warnx("%s:%zu:%zu: syntax error", 
+			p->fname, p->line, p->column);
+
 	p->lasttype = TOK_ERR;
 }
 
@@ -110,12 +125,13 @@ parse_nextchar(struct parse *p, FILE *f)
  * Otherwise, lasttype will be set to the last token type.
  */
 static void
-parse_next(struct parse *p, FILE *f, const char *fname)
+parse_next(struct parse *p, FILE *f)
 {
 	int		 c;
 	const char	*ep = NULL;
 
-	if (TOK_ERR == p->lasttype || TOK_EOF == p->lasttype) 
+	if (TOK_ERR == p->lasttype || 
+	    TOK_EOF == p->lasttype) 
 		return;
 
 	/* 
@@ -128,7 +144,7 @@ parse_next(struct parse *p, FILE *f, const char *fname)
 	} while (isspace(c));
 
 	if (feof(f) || ferror(f)) {
-		parse_error(p, f, fname);
+		parse_error(p, f);
 		return;
 	}
 
@@ -154,7 +170,7 @@ parse_next(struct parse *p, FILE *f, const char *fname)
 		} while (isdigit(c));
 
 		if (ferror(f)) {
-			parse_error(p, f, fname);
+			parse_error(p, f);
 			return;
 		} else if ( ! feof(f))
 			ungetc(c, f);
@@ -163,7 +179,7 @@ parse_next(struct parse *p, FILE *f, const char *fname)
 		p->last.integer = strtonum
 			(p->buf, -INT64_MAX, INT64_MAX, &ep);
 		if (NULL != ep) {
-			parse_syntax_error(p, fname);
+			parse_syntax_error(p, "malformed integer");
 			return;
 		}
 		p->lasttype = TOK_INTEGER;
@@ -177,7 +193,7 @@ parse_next(struct parse *p, FILE *f, const char *fname)
 		} while (isalnum(c));
 
 		if (ferror(f)) {
-			parse_error(p, f, fname);
+			parse_error(p, f);
 			return;
 		} else if ( ! feof(f))
 			ungetc(c, f);
@@ -186,7 +202,7 @@ parse_next(struct parse *p, FILE *f, const char *fname)
 		p->last.string = p->buf;
 		p->lasttype = TOK_IDENT;
 	} else
-		parse_syntax_error(p, fname);
+		parse_syntax_error(p, "unknown input token");
 }
 
 /*
@@ -199,12 +215,11 @@ parse_next(struct parse *p, FILE *f, const char *fname)
  * "text", or "txt".
  */
 static void
-parse_config_field(struct parse *p, 
-	FILE *f, const char *fname, struct field *fd)
+parse_config_field(struct parse *p, FILE *f, struct field *fd)
 {
 
 	for (;;) {
-		parse_next(p, f, fname);
+		parse_next(p, f);
 		if (TOK_SEMICOLON == p->lasttype)
 			break;
 		if (TOK_IDENT == p->lasttype) {
@@ -218,15 +233,13 @@ parse_config_field(struct parse *p,
 				fd->type = FTYPE_TEXT;
 				continue;
 			}
-			parse_syntax_error(p, fname);
+			parse_syntax_error(p, "unknown field type");
 			break;
 		}
-
 		if (TOK_SEMICOLON != p->lasttype) {
-			parse_syntax_error(p, fname);
+			parse_syntax_error(p, "unknown field token");
 			break;
 		}
-
 		break;
 	}
 }
@@ -243,23 +256,23 @@ parse_config_field(struct parse *p,
  * alphanumeric (starting with alpha) string.
  */
 static void
-parse_config_struct(struct parse *p, 
-	FILE *f, const char *fname, struct strct *s)
+parse_config_struct(struct parse *p, FILE *f, struct strct *s)
 {
 	struct field	*fd;
 
-	parse_next(p, f, fname);
+	parse_next(p, f);
 	if (TOK_LBRACE != p->lasttype) {
-		parse_syntax_error(p, fname);
+		parse_syntax_error(p, "expected left brace");
 		return;
 	}
 
 	for (;;) {
-		parse_next(p, f, fname);
+		parse_next(p, f);
 		if (TOK_RBRACE == p->lasttype)
 			break;
 		if (TOK_IDENT != p->lasttype) {
-			parse_syntax_error(p, fname);
+			parse_syntax_error(p, "expected "
+				"structure or right brace");
 			return;
 		}
 		if (NULL == (fd = calloc(1, sizeof(struct field))))
@@ -269,7 +282,13 @@ parse_config_struct(struct parse *p,
 
 		fd->type = FTYPE_INT;
 		TAILQ_INSERT_TAIL(&s->fq, fd, entries);
-		parse_config_field(p, f, fname, fd);
+		parse_config_field(p, f, fd);
+	}
+
+	if (TAILQ_EMPTY(&s->fq)) {
+		warnx("%s:%zu:%zu: no fields",
+			p->fname, p->line, p->column);
+		p->lasttype = TOK_ERR;
 	}
 }
 
@@ -300,17 +319,18 @@ parse_config(FILE *f, const char *fname)
 	memset(&p, 0, sizeof(struct parse));
 	p.column = 0;
 	p.line = 1;
+	p.fname = fname;
 
 	for (;;) {
-		parse_next(&p, f, fname);
+		parse_next(&p, f);
 		if (TOK_ERR == p.lasttype)
-			break;
+			goto error;
 		else if (TOK_EOF == p.lasttype)
-			return(q);
+			break;
 
 		if (TOK_IDENT != p.lasttype) {
-			parse_syntax_error(&p, fname);
-			break;
+			parse_syntax_error(&p, NULL);
+			goto error;
 		}
 
 		if (NULL == (s = calloc(1, sizeof(struct strct))))
@@ -320,9 +340,16 @@ parse_config(FILE *f, const char *fname)
 
 		TAILQ_INSERT_TAIL(q, s, entries);
 		TAILQ_INIT(&s->fq);
-		parse_config_struct(&p, f, fname, s);
+		parse_config_struct(&p, f, s);
 	}
 
+	if (TAILQ_EMPTY(q)) {
+		warnx("%s: no structures", fname);
+		goto error;
+	}
+
+	return(q);
+error:
 	parse_free(q);
 	return(NULL);
 }

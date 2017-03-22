@@ -13,9 +13,12 @@ enum	ftype {
  * actual table afterwards.
  */
 struct	ref {
-	char		*src; /* column with foreign key */
+	struct field	*target; /* target (after linkage) */
+	struct field	*source; /* source (after linkage) */
+	char		*sfield; /* column with foreign key */
 	char		*tstrct; /* target structure */
 	char		*tfield; /* target field */
+	struct field	*parent; /* parent reference */
 };
 
 /*
@@ -25,6 +28,7 @@ struct	field {
 	char		  *name; /* column name */
 	struct ref	  *ref; /* if FTYPE_REF */
 	enum ftype	   type; /* type of column */
+	struct strct	  *parent; /* parent reference */
 	TAILQ_ENTRY(field) entries;
 };
 
@@ -41,6 +45,7 @@ TAILQ_HEAD(strctq, strct);
 
 __BEGIN_DECLS
 
+int		 parse_link(struct strctq *);
 struct strctq	*parse_config(FILE *, const char *);
 void		 parse_free(struct strctq *);
 

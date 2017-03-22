@@ -248,7 +248,7 @@ parse_config_field_struct(struct parse *p, FILE *f, struct ref *r)
 		parse_syntax_error(p, "expected source field");
 		return;
 	}
-	if (NULL == (r->src = strdup(p->last.string)))
+	if (NULL == (r->sfield = strdup(p->last.string)))
 		err(EXIT_FAILURE, NULL);
 }
 
@@ -293,6 +293,7 @@ parse_config_field(struct parse *p, FILE *f, struct field *fd)
 			if (NULL == fd->ref)
 				err(EXIT_FAILURE, NULL);
 
+			fd->ref->parent = fd;
 			parse_config_field_struct(p, f, fd->ref);
 			continue;
 		}
@@ -341,6 +342,7 @@ parse_config_struct(struct parse *p, FILE *f, struct strct *s)
 			err(EXIT_FAILURE, NULL);
 
 		fd->type = FTYPE_INT;
+		fd->parent = s;
 		TAILQ_INSERT_TAIL(&s->fq, fd, entries);
 		parse_config_field(p, f, fd);
 	}

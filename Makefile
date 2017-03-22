@@ -7,6 +7,7 @@ COMPAT_OBJS	= compat_err.o \
 		  compat_strlcpy.o \
 		  compat_strtonum.o
 OBJS		= header.o \
+		  linker.o \
 		  main.o \
 		  parser.o \
 		  source.o

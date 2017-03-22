@@ -12,6 +12,7 @@
 #include "extern.h"
 
 enum	op {
+	OP_NOOP,
 	OP_HEADER,
 	OP_SOURCE
 };
@@ -30,7 +31,7 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "ch")))
+	while (-1 != (c = getopt(argc, argv, "chn")))
 		switch (c) {
 		case ('c'):
 			op = OP_SOURCE;
@@ -38,14 +39,24 @@ main(int argc, char *argv[])
 		case ('h'):
 			op = OP_HEADER;
 			break;
+		case ('n'):
+			op = OP_NOOP;
+			break;
 		default:
 			goto usage;
 		}
 
-	if (NULL == confile) {
+	argc -= optind;
+	argv += optind;
+
+	if (0 == argc) {
 		confile = "<stdin>";
 		conf = stdin;
-	} else if (NULL == (conf = fopen(confile, "r")))
+	} else if (argc > 1)
+		goto usage;
+
+	confile = argv[0];
+	if (NULL == (conf = fopen(confile, "r")))
 		err(EXIT_FAILURE, "%s", confile);
 
 #if HAVE_PLEDGE
@@ -61,14 +72,14 @@ main(int argc, char *argv[])
 
 	if (OP_SOURCE == op)
 		gen_source(sq);
-	else
+	else if (OP_HEADER == op)
 		gen_header(sq);
 
 	parse_free(sq);
 	return(EXIT_SUCCESS);
 
 usage:
-	fprintf(stderr, "usage: %s [-ch] [config]\n",
+	fprintf(stderr, "usage: %s [-chn] [config]\n",
 		getprogname());
 	return(EXIT_FAILURE);
 }

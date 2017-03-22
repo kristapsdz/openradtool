@@ -20,6 +20,8 @@ enum	tok {
 	TOK_INTEGER, /* integer */
 	TOK_LBRACE, /* { */
 	TOK_RBRACE, /* } */
+	TOK_PERIOD, /* } */
+	TOK_COLON, /* : */
 	TOK_SEMICOLON, /* ; */
 	TOK_ERR, /* error! */
 	TOK_EOF /* end of file! */
@@ -160,6 +162,10 @@ parse_next(struct parse *p, FILE *f)
 		p->lasttype = TOK_LBRACE;
 	} else if (';' == c) {
 		p->lasttype = TOK_SEMICOLON;
+	} else if ('.' == c) {
+		p->lasttype = TOK_PERIOD;
+	} else if (':' == c) {
+		p->lasttype = TOK_COLON;
 	} else if (isdigit(c)) {
 		p->bufsz = 0;
 		buf_push(p, c);
@@ -205,6 +211,47 @@ parse_next(struct parse *p, FILE *f)
 		parse_syntax_error(p, "unknown input token");
 }
 
+static void
+parse_config_field_struct(struct parse *p, FILE *f, struct ref *r)
+{
+	
+	parse_next(p, f);
+	if (TOK_IDENT != p->lasttype) {
+		parse_syntax_error(p, "expected struct table");
+		return;
+	}
+	if (NULL == (r->tstrct = strdup(p->last.string)))
+		err(EXIT_FAILURE, NULL);
+
+	parse_next(p, f);
+	if (TOK_PERIOD != p->lasttype) {
+		parse_syntax_error(p, "expected period");
+		return;
+	}
+
+	parse_next(p, f);
+	if (TOK_IDENT != p->lasttype) {
+		parse_syntax_error(p, "expected struct field");
+		return;
+	}
+	if (NULL == (r->tfield = strdup(p->last.string)))
+		err(EXIT_FAILURE, NULL);
+
+	parse_next(p, f);
+	if (TOK_COLON != p->lasttype) {
+		parse_syntax_error(p, "expected colon");
+		return;
+	}
+
+	parse_next(p, f);
+	if (TOK_IDENT != p->lasttype) {
+		parse_syntax_error(p, "expected source field");
+		return;
+	}
+	if (NULL == (r->src = strdup(p->last.string)))
+		err(EXIT_FAILURE, NULL);
+}
+
 /*
  * Read an individual field declaration.
  * Its syntax is:
@@ -223,18 +270,31 @@ parse_config_field(struct parse *p, FILE *f, struct field *fd)
 		if (TOK_SEMICOLON == p->lasttype)
 			break;
 		if (TOK_IDENT == p->lasttype) {
+			/* int64_t */
 			if (0 == strcasecmp(p->last.string, "int") ||
 			    0 == strcasecmp(p->last.string, "integer")) {
 				fd->type = FTYPE_INT;
 				continue;
 			}
+			/* char-array */
 			if (0 == strcasecmp(p->last.string, "text") ||
 			    0 == strcasecmp(p->last.string, "txt")) {
 				fd->type = FTYPE_TEXT;
 				continue;
 			}
-			parse_syntax_error(p, "unknown field type");
-			break;
+			/* fall-through */
+			if (strcasecmp(p->last.string, "struct")) {
+				parse_syntax_error(p, "unknown field type");
+				break;
+			}
+
+			fd->type = FTYPE_REF;
+			fd->ref = calloc(1, sizeof(struct ref));
+			if (NULL == fd->ref)
+				err(EXIT_FAILURE, NULL);
+
+			parse_config_field_struct(p, f, fd->ref);
+			continue;
 		}
 		if (TOK_SEMICOLON != p->lasttype) {
 			parse_syntax_error(p, "unknown field token");

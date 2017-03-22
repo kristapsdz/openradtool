@@ -22,7 +22,7 @@
 .Nd create web application API and database layer
 .Sh SYNOPSIS
 .Nm kwebapp
-.Op Fl ch
+.Op Fl chn
 .Op Ar config
 .Sh DESCRIPTION
 The
@@ -42,6 +42,8 @@ Its arguments are as follows:
 Create the C source file implementing the header file.
 .It Fl h
 Create the C API header file.
+.It Fl n
+Parse only.
 .El
 .Pp
 In all instances, the generated file is produced on standard output.

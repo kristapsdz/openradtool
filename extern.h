@@ -3,12 +3,28 @@
 
 enum	ftype {
 	FTYPE_INT,
-	FTYPE_TEXT
+	FTYPE_TEXT,
+	FTYPE_REF
 };
 
+/*
+ * An object reference into another table.
+ * This is gathered during the syntax parse phase, then linked to an
+ * actual table afterwards.
+ */
+struct	ref {
+	char		*src; /* column with foreign key */
+	char		*tstrct; /* target structure */
+	char		*tfield; /* target field */
+};
+
+/*
+ * A field defining a database/struct mapping.
+ */
 struct	field {
-	char		  *name;
-	enum ftype	   type;
+	char		  *name; /* column name */
+	struct ref	  *ref; /* if FTYPE_REF */
+	enum ftype	   type; /* type of column */
 	TAILQ_ENTRY(field) entries;
 };
 

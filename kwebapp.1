@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate$
+.Dd $Mdocdate: March 21 2017 $
 .Dt KWEBAPP 1
 .Os
 .Sh NAME
@@ -22,7 +22,7 @@
 .Nd create web application API and database layer
 .Sh SYNOPSIS
 .Nm kwebapp
-.Op Fl ch
+.Op Fl chn
 .Op Ar config
 .Sh DESCRIPTION
 The
@@ -42,6 +42,8 @@ Its arguments are as follows:
 Create the C source file implementing the header file.
 .It Fl h
 Create the C API header file.
+.It Fl n
+Parse only.
 .El
 .Pp
 In all instances, the generated file is produced on standard output.

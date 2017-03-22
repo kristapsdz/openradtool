@@ -64,11 +64,26 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
+	/*
+	 * First, parse the file.
+	 * This pulls all of the data from the configuration file.
+	 * If there are any errors, it will return NULL.
+	 */
+
 	sq = parse_config(conf, confile);
 	fclose(conf);
 
-	if (NULL == sq)
+	/*
+	 * After parsing, we need to link.
+	 * Linking connects foreign key references.
+	 */
+
+	if (NULL == sq || ! parse_link(sq)) {
+		parse_free(sq);
 		return(EXIT_FAILURE);
+	}
+
+	/* Finally, generate output. */
 
 	if (OP_SOURCE == op)
 		gen_source(sq);

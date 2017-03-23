@@ -393,6 +393,15 @@ parse_config(FILE *f, const char *fname)
 		if (TOK_IDENT != p.lasttype) {
 			parse_syntax_error(&p, NULL);
 			goto error;
+		} else if (strcasecmp(p.last.string, "struct")) {
+			parse_syntax_error(&p, "expected struct");
+			goto error;
+		}
+
+		parse_next(&p, f);
+		if (TOK_IDENT != p.lasttype) {
+			parse_syntax_error(&p, NULL);
+			goto error;
 		}
 
 		if (NULL == (s = calloc(1, sizeof(struct strct))))

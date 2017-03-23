@@ -12,6 +12,19 @@
 
 #include "extern.h"
 
+static char *
+gen_strct_caps(const char *v)
+{
+	char 	*cp, *caps;
+
+	if (NULL == (caps = strdup(v)))
+		err(EXIT_FAILURE, NULL);
+	for (cp = caps; '\0' != *cp; cp++)
+		*cp = toupper((int)*cp);
+
+	return(caps);
+}
+
 /*
  * Free ("unfill") an individual field that was filled from the
  * database (see gen_strct_fill_field()).
@@ -22,6 +35,11 @@ gen_strct_unfill_field(const struct field *f)
 
 	switch(f->type) {
 	case (FTYPE_INT):
+		break;
+	case (FTYPE_REF):
+		printf("\tdb_%s_unfill(&p->%s);\n",
+			f->ref->tstrct,
+			f->name);
 		break;
 	case (FTYPE_TEXT):
 		printf("\tfree(p->%s);\n", f->name);
@@ -37,6 +55,9 @@ static void
 gen_strct_fill_field(const struct field *f)
 {
 
+	if (FTYPE_REF == f->type)
+		return;
+
 	printf("\tp->%s = ", f->name);
 
 	switch(f->type) {
@@ -45,6 +66,8 @@ gen_strct_fill_field(const struct field *f)
 		break;
 	case (FTYPE_TEXT):
 		puts("kstrdup(ksql_stmt_str(stmt, (*pos)++));");
+		break;
+	default:
 		break;
 	}
 }
@@ -55,17 +78,15 @@ gen_strct_fill_field(const struct field *f)
  *  (1) db_xxx_fill (fill from database)
  *  (2) db_xxx_unfill (clear internal structure memory)
  *  (3) db_xxx_free (public: free object)
+ *  (4) db_xxx_get (public: get object)
  */
 static void
 gen_strct(const struct strct *p)
 {
 	const struct field *f;
-	char	*caps, *cp;
+	char	*caps;
 
-	if (NULL == (caps = strdup(p->name)))
-		err(EXIT_FAILURE, NULL);
-	for (cp = caps; '\0' != *cp; cp++)
-		*cp = toupper((int)*cp);
+	caps = gen_strct_caps(p->name);
 
 	/* Fill from database. */
 
@@ -107,26 +128,38 @@ gen_strct(const struct strct *p)
 	       "\n",
 	       p->name, p->name, p->name);
 
-	/* Get object by identifier (external). */
+	/* 
+	 * Get object by identifier (external).
+	 * This needs to account for filling in foreign key references.
+	 */
 
 	printf("struct %s *\n"
 	       "db_%s_get(void *db)\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
 	       "\tstruct %s *p = NULL;\n"
+	       "\tsize_t i = 0;\n"
 	       "\tksql_stmt_alloc(db, &stmt,\n"
 	       "\t\tstmts[STMT_%s_GET],\n"
 	       "\t\tSTMT_%s_GET);\n"
 	       "\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
 	       "\t\tp = kmalloc(sizeof(struct smtp));\n"
-	       "\t\tdb_%s_fill(p, stmt, NULL);\n"
-	       "\t}\n"
+	       "\t\tdb_%s_fill(p, stmt, &i);\n",
+	       p->name, p->name, p->name, 
+	       caps, caps, p->name);
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_REF != f->type)
+			continue;
+		printf("\t\tdb_%s_fill(&p->%s, stmt, &i);\n",
+			f->ref->tstrct, f->ref->tstrct);
+	}
+	printf("\t}\n"
 	       "\tksql_stmt_free(stmt);\n"
 	       "\treturn(p);\n"
 	       "}\n"
-	       "\n",
-	       p->name, p->name, p->name, 
-	       caps, caps, p->name);
+	       "\n");
+
+	free(caps);
 }
 
 /*
@@ -137,12 +170,10 @@ gen_strct(const struct strct *p)
 static void
 gen_stmt_enum(const struct strct *p)
 {
-	const char *cp;
+	char	*caps = gen_strct_caps(p->name);
 
-	printf("\tSTMT_");
-	for (cp = p->name; '\0' != *cp; cp++)
-		putchar(toupper((int)*cp));
-	puts("_GET,");
+	printf("\tSTMT_%s_GET,\n", caps);
+	free(caps);
 }
 
 /*
@@ -151,12 +182,35 @@ gen_stmt_enum(const struct strct *p)
 static void
 gen_stmt(const struct strct *p)
 {
-	const char *cp;
+	const struct field *f;
+	char	*caps, *scaps;
 
-	printf("\t\"SELECT \" SCHEMA_");
-	for (cp = p->name; '\0' != *cp; cp++)
-		putchar(toupper((int)*cp));
-	printf(" \" FROM %s WHERE id=?\",\n", p->name);
+	caps = gen_strct_caps(p->name);
+
+	printf("\t\"SELECT \" SCHEMA_%s \"", caps);
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_REF != f->type)
+			continue;
+		scaps = gen_strct_caps(f->ref->tstrct);
+		printf(",\" SCHEMA_%s \"", scaps);
+		free(scaps);
+	}
+
+	printf(" FROM %s", p->name);
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_REF != f->type)
+			continue;
+		printf(" INNER JOIN %s ON %s.%s=%s.%s",
+			f->ref->tstrct, 
+			f->ref->tstrct, f->ref->tfield,
+			p->name, f->ref->sfield);
+	}
+
+
+	printf(" WHERE id=?\",\n");
+	free(caps);
 }
 
 /*
@@ -166,21 +220,21 @@ gen_stmt(const struct strct *p)
 static void
 gen_schema(const struct strct *p)
 {
-	const char *cp;
 	const struct field *f;
+	char	*caps;
+
+	caps = gen_strct_caps(p->name);
 
 	/* TODO: chop at 72 characters. */
 
-	printf("#define SCHEMA_");
-	for (cp = p->name; '\0' != *cp; cp++)
-		putchar(toupper((int)*cp));
-	printf(" \"");
+	printf("#define SCHEMA_%s \"", caps);
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		printf("%s.%s", p->name, f->name);
 		if (TAILQ_NEXT(f, entries))
 			putchar(',');
 	}
 	puts("\"");
+	free(caps);
 }
 
 void

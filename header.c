@@ -15,6 +15,10 @@ gen_strct_field(const struct field *p)
 {
 
 	switch (p->type) {
+	case (FTYPE_REF):
+		printf("\tstruct %s %s;\n", 
+			p->ref->tstrct, p->name);
+		break;
 	case (FTYPE_INT):
 		printf("\tint64_t %s;\n", p->name);
 		break;
@@ -29,8 +33,6 @@ gen_strct_structs(const struct strct *p)
 {
 	const struct field *f;
 
-	/* Free object. */
-
 	printf("struct\t%s {\n", p->name);
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_field(f);
@@ -42,8 +44,8 @@ static void
 gen_strct_funcs(const struct strct *p)
 {
 
-	/* Free object. */
-
+	printf("struct %s *db_%s_get(void *);\n",
+		p->name, p->name);
 	printf("void db_%s_free(struct %s *);\n",
 		p->name, p->name);
 	puts("");

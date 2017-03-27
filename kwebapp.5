@@ -31,7 +31,7 @@ tokens) configuration language with the following rough structure:
 .Bd -literal
 [ "struct" structname 
   "{"
-    [ fieldname [ type ] ";" ]+
+    [ "field" fieldname [ type ] ";" ]+
   "}"
 ]+
 .Ed
@@ -59,10 +59,10 @@ By default, fields are integers.
 .Sh EXAMPLES
 A simple session table is as follows:
 .Bd -literal
-session { 
-  userid;
-  token;
-  id;
+struct session { 
+  field userid;
+  field token;
+  field id;
 }
 .Ed
 .Sh SEE ALSO

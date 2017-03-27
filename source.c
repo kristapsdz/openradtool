@@ -65,11 +65,30 @@ gen_strct_fill_field(const struct field *f)
 		puts("ksql_stmt_int(stmt, (*pos)++);");
 		break;
 	case (FTYPE_TEXT):
-		puts("kstrdup(ksql_stmt_str(stmt, (*pos)++));");
+		printf("strdup(ksql_stmt_str(stmt, (*pos)++));\n"
+		     "\tif (NULL == p->%s) {\n"
+		     "\t\tperror(NULL);\n"
+		     "\t\texit(EXIT_FAILURE);\n"
+		     "\t}\n", f->name);
 		break;
 	default:
 		break;
 	}
+}
+
+/*
+ * Provide definitions for all functions we're going to have here.
+ * FIXME: we shouldn't need this if we properly order our functions.
+ */
+static void
+gen_strct_defs(const struct strct *p)
+{
+
+	printf("static void db_%s_fill(struct %s *, "
+		"struct ksqlstmt *, size_t *);\n",
+		p->name, p->name);
+	printf("static void db_%s_unfill(struct %s *);\n",
+	       	p->name, p->name);
 }
 
 /*
@@ -143,10 +162,14 @@ gen_strct(const struct strct *p)
 	       "\t\tstmts[STMT_%s_GET],\n"
 	       "\t\tSTMT_%s_GET);\n"
 	       "\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
-	       "\t\tp = kmalloc(sizeof(struct smtp));\n"
+	       "\t\tp = malloc(sizeof(struct %s));\n"
+	       "\t\tif (NULL == p) {\n"
+	       "\t\t\tperror(NULL);\n"
+	       "\t\t\texit(EXIT_FAILURE);\n"
+	       "\t\t}\n"
 	       "\t\tdb_%s_fill(p, stmt, &i);\n",
 	       p->name, p->name, p->name, 
-	       caps, caps, p->name);
+	       caps, caps, p->name, p->name);
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_REF != f->type)
 			continue;
@@ -244,7 +267,11 @@ gen_source(const struct strctq *q)
 
 	/* Start with all headers we'll need. */
 
+	puts("#include <stdio.h>");
 	puts("#include <stdlib.h>");
+	puts("#include <string.h>");
+	puts("");
+	puts("#include <ksql.h>");
 	puts("");
 	puts("#include \"db.h\"");
 	puts("");
@@ -270,6 +297,10 @@ gen_source(const struct strctq *q)
 	TAILQ_FOREACH(p, q, entries)
 		gen_stmt(p);
 	puts("};");
+	puts("");
+
+	TAILQ_FOREACH(p, q, entries)
+		gen_strct_defs(p);
 	puts("");
 
 	/* Define our functions. */

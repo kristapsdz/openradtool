@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: March 21 2017 $
+.Dd $Mdocdate: March 22 2017 $
 .Dt KWEBAPP 1
 .Os
 .Sh NAME
@@ -34,7 +34,7 @@ and creates source files defining a web application's C API to its
 database.
 It is a way of reducing the often-repeated code of serialising and
 de-serialising simple structures from a database.
-By default, it generates the header file
+By default, it generates the C header file
 .Pq see Fl h .
 Its arguments are as follows:
 .Bl -tag -width Ds
@@ -43,10 +43,12 @@ Create the C source file implementing the header file.
 .It Fl h
 Create the C API header file.
 .It Fl n
-Parse only.
+Parse only (dry-run).
 .El
 .Pp
-In all instances, the generated file is produced on standard output.
+In all instances (except for
+.Fl n ) ,
+the generated file is produced on standard output.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

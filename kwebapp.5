@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: March 21 2017 $
+.Dd $Mdocdate: March 23 2017 $
 .Dt KWEBAPP 5
 .Os
 .Sh NAME
@@ -31,7 +31,7 @@ tokens) configuration language with the following rough structure:
 .Bd -literal
 [ "struct" structname 
   "{"
-    [ fieldname [ type ] ";" ]+
+    [ "field" fieldname [ type ] ";" ]+
   "}"
 ]+
 .Ed
@@ -59,10 +59,10 @@ By default, fields are integers.
 .Sh EXAMPLES
 A simple session table is as follows:
 .Bd -literal
-session { 
-  userid;
-  token;
-  id;
+struct session { 
+  field userid;
+  field token;
+  field id;
 }
 .Ed
 .Sh SEE ALSO

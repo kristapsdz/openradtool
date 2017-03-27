@@ -311,7 +311,7 @@ parse_config_field(struct parse *p, FILE *f, struct field *fd)
  * elements within.
  * Its syntax is:
  * 
- *  "{" [ident FIELD]* "}"
+ *  "{" ["field" ident FIELD]+ "}"
  *
  * Where FIELD is defined in parse_config_field and ident is an
  * alphanumeric (starting with alpha) string.
@@ -331,11 +331,19 @@ parse_config_struct(struct parse *p, FILE *f, struct strct *s)
 		parse_next(p, f);
 		if (TOK_RBRACE == p->lasttype)
 			break;
-		if (TOK_IDENT != p->lasttype) {
-			parse_syntax_error(p, "expected "
-				"structure or right brace");
+
+		if (TOK_IDENT != p->lasttype ||
+		    strcasecmp(p->last.string, "field")) {
+			parse_syntax_error(p, "expected field");
 			return;
 		}
+
+		parse_next(p, f);
+		if (TOK_IDENT != p->lasttype) {
+			parse_syntax_error(p, "expected field name");
+			return;
+		}
+
 		if (NULL == (fd = calloc(1, sizeof(struct field))))
 			err(EXIT_FAILURE, NULL);
 		if (NULL == (fd->name = strdup(p->last.string)))
@@ -361,7 +369,7 @@ parse_config_struct(struct parse *p, FILE *f, struct strct *s)
  * Then continue until we've read all structures.
  * Its syntax is:
  *
- *  [ ident STRUCT ]*
+ *  [ "struct" ident STRUCT ]+
  *
  * Where STRUCT is defined in parse_config_struct and ident is an
  * alphanumeric (starting with alpha) string.
@@ -390,10 +398,8 @@ parse_config(FILE *f, const char *fname)
 		else if (TOK_EOF == p.lasttype)
 			break;
 
-		if (TOK_IDENT != p.lasttype) {
-			parse_syntax_error(&p, NULL);
-			goto error;
-		} else if (strcasecmp(p.last.string, "struct")) {
+		if (TOK_IDENT != p.lasttype ||
+		    strcasecmp(p.last.string, "struct")) {
 			parse_syntax_error(&p, "expected struct");
 			goto error;
 		}
@@ -438,6 +444,12 @@ parse_free(struct strctq *q)
 		TAILQ_REMOVE(q, p, entries);
 		while (NULL != (f = TAILQ_FIRST(&p->fq))) {
 			TAILQ_REMOVE(&p->fq, f, entries);
+			if (NULL != f->ref) {
+				free(f->ref->sfield);
+				free(f->ref->tfield);
+				free(f->ref->tstrct);
+				free(f->ref);
+			}
 			free(f->name);
 			free(f);
 		}

@@ -13,8 +13,8 @@ enum	ftype {
  * actual table afterwards.
  */
 struct	ref {
-	struct field	*target; /* target (after linkage) */
-	struct field	*source; /* source (after linkage) */
+	struct field 	*target; /* target (after linkage) */
+	struct field 	*source; /* source (after linkage) */
 	char		*sfield; /* column with foreign key */
 	char		*tstrct; /* target structure */
 	char		*tfield; /* target field */
@@ -34,10 +34,16 @@ struct	field {
 
 TAILQ_HEAD(fieldq, field);
 
+/*
+ * A database/struct consisting of fields.
+ * Structures depend upon other structures (see the FTYPE_REF in the
+ * field), which is represented by the "height" value.
+ */
 struct	strct {
-	char		  *name;
-	char		  *docs;
-	struct fieldq	   fq;
+	char		  *name; /* name of structure */
+	size_t		   height; /* dependency order */
+	size_t		   colour; /* used during linkage */
+	struct fieldq	   fq; /* fields/columns/members */
 	TAILQ_ENTRY(strct) entries;
 };
 

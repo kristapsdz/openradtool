@@ -83,7 +83,7 @@ main(int argc, char *argv[])
 		return(EXIT_FAILURE);
 	}
 
-	/* Finally, generate output. */
+	/* Finally, (optionally) generate output. */
 
 	if (OP_SOURCE == op)
 		gen_source(sq);

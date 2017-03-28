@@ -63,7 +63,10 @@ checktarget(struct ref *ref, struct strctq *q)
 }
 
 /*
- * Annotate our height from each node.
+ * Recursively annotate our height from each node.
+ * This makes sure that we don't loop around at any point in our
+ * dependencies: this means that we don't do a chain of structures
+ * that ends up being self-referential.
  */
 static int
 annotate(struct ref *ref, size_t height, size_t colour)
@@ -71,19 +74,22 @@ annotate(struct ref *ref, size_t height, size_t colour)
 	struct field	*f;
 	struct strct	*p;
 
-	if (ref->target->parent->colour == colour) {
+	p = ref->target->parent;
+
+	if (p->colour == colour &&
+	    ref->source->parent->height > p->height) {
 		warnx("loop in assignment: %s.%s -> %s.%s",
 			ref->source->parent->name,
 			ref->source->name,
 			ref->target->parent->name,
 			ref->target->name);
 		return(0);
-	}
+	} else if (p->colour == colour)
+		return(1);
 
-	p = ref->target->parent;
 	p->colour = colour;
 	p->height += height;
-	
+
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if (FTYPE_REF == f->type)
 			if ( ! annotate(f->ref, height + 1, colour))
@@ -124,7 +130,11 @@ parse_link(struct strctq *q)
 				return(0);
 		}
 
-	/* Now follow and order all outbound links. */
+	/* 
+	 * Now follow and order all outbound links. 
+	 * From the get-go, we don't descend into structures that we've
+	 * already coloured.
+	 */
 
 	TAILQ_FOREACH(p, q, entries) {
 		sz++;

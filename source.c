@@ -36,7 +36,7 @@ gen_strct_unfill_field(const struct field *f)
 	switch(f->type) {
 	case (FTYPE_INT):
 		break;
-	case (FTYPE_REF):
+	case (FTYPE_STRUCT):
 		printf("\tdb_%s_unfill(&p->%s);\n",
 			f->ref->tstrct,
 			f->name);
@@ -55,7 +55,7 @@ static void
 gen_strct_fill_field(const struct field *f)
 {
 
-	if (FTYPE_REF == f->type)
+	if (FTYPE_STRUCT == f->type)
 		return;
 
 	printf("\tp->%s = ", f->name);
@@ -171,7 +171,7 @@ gen_strct(const struct strct *p)
 	       p->name, p->name, p->name, 
 	       caps, caps, p->name, p->name);
 	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_REF != f->type)
+		if (FTYPE_STRUCT != f->type)
 			continue;
 		printf("\t\tdb_%s_fill(&p->%s, stmt, &i);\n",
 			f->ref->tstrct, f->ref->tstrct);
@@ -215,7 +215,7 @@ gen_stmt(const struct strct *p)
 	printf("\t\"SELECT \" SCHEMA_%s(%s) \"", caps, p->name);
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_REF != f->type)
+		if (FTYPE_STRUCT != f->type)
 			continue;
 		scaps = gen_strct_caps(f->ref->tstrct);
 		printf(",\" SCHEMA_%s(_%c) \"", scaps, seqn++);
@@ -226,7 +226,7 @@ gen_stmt(const struct strct *p)
 	seqn = 'a';
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_REF != f->type)
+		if (FTYPE_STRUCT != f->type)
 			continue;
 		if (0 == lb)
 			putchar('"');

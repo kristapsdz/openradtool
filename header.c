@@ -15,7 +15,7 @@ gen_strct_field(const struct field *p)
 {
 
 	switch (p->type) {
-	case (FTYPE_REF):
+	case (FTYPE_STRUCT):
 		printf("\tstruct %s %s;\n", 
 			p->ref->tstrct, p->name);
 		break;

@@ -230,10 +230,11 @@ gen_stmt(const struct strct *p)
 			continue;
 		if (0 == lb)
 			putchar('"');
-		printf("\n\t\t\"INNER JOIN %s AS _%c ON %s.%s=%s.%s \"",
-			f->ref->tstrct, seqn++,
-			f->ref->tstrct, f->ref->tfield,
+		printf("\n\t\t\"INNER JOIN %s AS _%c ON _%c.%s=%s.%s \"",
+			f->ref->tstrct, seqn,
+			seqn, f->ref->tfield,
 			p->name, f->ref->sfield);
+		seqn++;
 		lb = 1;
 	}
 

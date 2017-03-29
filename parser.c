@@ -39,6 +39,7 @@ struct	parse {
 	size_t		 line; /* current line (from 1) */
 	size_t		 column; /* current column (from 0) */
 	const char	*fname; /* current filename */
+	FILE		*f; /* current parser */
 };
 
 static void parse_syntax_error(struct parse *, const char *, ...)
@@ -62,10 +63,10 @@ buf_push(struct parse *p, char c)
  * This sets the lasttype appropriately.
  */
 static void
-parse_error(struct parse *p, FILE *f)
+parse_error(struct parse *p)
 {
 
-	if (ferror(f)) {
+	if (ferror(p->f)) {
 		warn("%s", p->fname);
 		p->lasttype = TOK_ERR;
 	} else 
@@ -95,19 +96,32 @@ parse_syntax_error(struct parse *p, const char *fmt, ...)
 	p->lasttype = TOK_ERR;
 }
 
+static void
+parse_ungetc(struct parse *p, int c)
+{
+
+	/* FIXME: puts us at last line, not column */
+
+	if ('\n' == c)
+		p->line--;
+	else if (p->column > 0)
+		p->column--;
+	ungetc(c, p->f);
+}
+
 /*
  * Get the next character and advance us within the file.
  * If we've already reached an error condition, this just keeps us
  * there.
  */
 static int
-parse_nextchar(struct parse *p, FILE *f)
+parse_nextchar(struct parse *p)
 {
 	int	 c;
 
-	c = fgetc(f);
+	c = fgetc(p->f);
 
-	if (feof(f) || ferror(f))
+	if (feof(p->f) || ferror(p->f))
 		return(EOF);
 
 	p->column++;
@@ -127,7 +141,7 @@ parse_nextchar(struct parse *p, FILE *f)
  * Otherwise, lasttype will be set to the last token type.
  */
 static void
-parse_next(struct parse *p, FILE *f)
+parse_next(struct parse *p)
 {
 	int		 c;
 	const char	*ep = NULL;
@@ -142,11 +156,11 @@ parse_next(struct parse *p, FILE *f)
 	 */
 
 	do {
-		c = parse_nextchar(p, f);
+		c = parse_nextchar(p);
 	} while (isspace(c));
 
-	if (feof(f) || ferror(f)) {
-		parse_error(p, f);
+	if (feof(p->f) || ferror(p->f)) {
+		parse_error(p);
 		return;
 	}
 
@@ -170,16 +184,16 @@ parse_next(struct parse *p, FILE *f)
 		p->bufsz = 0;
 		buf_push(p, c);
 		do {
-			c = parse_nextchar(p, f);
+			c = parse_nextchar(p);
 			if (isdigit(c))
 				buf_push(p, c);
 		} while (isdigit(c));
 
-		if (ferror(f)) {
-			parse_error(p, f);
+		if (ferror(p->f)) {
+			parse_error(p);
 			return;
-		} else if ( ! feof(f))
-			ungetc(c, f);
+		} else if ( ! feof(p->f))
+			parse_ungetc(p, c);
 
 		buf_push(p, '\0');
 		p->last.integer = strtonum
@@ -193,16 +207,16 @@ parse_next(struct parse *p, FILE *f)
 		p->bufsz = 0;
 		buf_push(p, c);
 		do {
-			c = parse_nextchar(p, f);
+			c = parse_nextchar(p);
 			if (isalnum(c))
 				buf_push(p, c);
 		} while (isalnum(c));
 
-		if (ferror(f)) {
-			parse_error(p, f);
+		if (ferror(p->f)) {
+			parse_error(p);
 			return;
-		} else if ( ! feof(f))
-			ungetc(c, f);
+		} else if ( ! feof(p->f))
+			parse_ungetc(p, c);
 
 		buf_push(p, '\0');
 		p->last.string = p->buf;
@@ -216,10 +230,10 @@ parse_next(struct parse *p, FILE *f)
  * FIXME: this should be "source:target".
  */
 static void
-parse_config_field_struct(struct parse *p, FILE *f, struct ref *r)
+parse_config_field_struct(struct parse *p, struct ref *r)
 {
 	
-	parse_next(p, f);
+	parse_next(p);
 	if (TOK_IDENT != p->lasttype) {
 		parse_syntax_error(p, "expected struct table");
 		return;
@@ -227,13 +241,13 @@ parse_config_field_struct(struct parse *p, FILE *f, struct ref *r)
 	if (NULL == (r->tstrct = strdup(p->last.string)))
 		err(EXIT_FAILURE, NULL);
 
-	parse_next(p, f);
+	parse_next(p);
 	if (TOK_PERIOD != p->lasttype) {
 		parse_syntax_error(p, "expected period");
 		return;
 	}
 
-	parse_next(p, f);
+	parse_next(p);
 	if (TOK_IDENT != p->lasttype) {
 		parse_syntax_error(p, "expected struct field");
 		return;
@@ -241,13 +255,13 @@ parse_config_field_struct(struct parse *p, FILE *f, struct ref *r)
 	if (NULL == (r->tfield = strdup(p->last.string)))
 		err(EXIT_FAILURE, NULL);
 
-	parse_next(p, f);
+	parse_next(p);
 	if (TOK_COLON != p->lasttype) {
 		parse_syntax_error(p, "expected colon");
 		return;
 	}
 
-	parse_next(p, f);
+	parse_next(p);
 	if (TOK_IDENT != p->lasttype) {
 		parse_syntax_error(p, "expected source field");
 		return;
@@ -257,10 +271,10 @@ parse_config_field_struct(struct parse *p, FILE *f, struct ref *r)
 }
 
 static void
-parse_config_field_info(struct parse *p, FILE *f, struct field *fd)
+parse_config_field_info(struct parse *p, struct field *fd)
 {
 	for (;;) {
-		parse_next(p, f);
+		parse_next(p);
 		if (TOK_SEMICOLON == p->lasttype)
 			break;
 		if (TOK_IDENT != p->lasttype) {
@@ -289,10 +303,10 @@ parse_config_field_info(struct parse *p, FILE *f, struct field *fd)
  * parse_config_field_info() functions.
  */
 static void
-parse_config_field(struct parse *p, FILE *f, struct field *fd)
+parse_config_field(struct parse *p, struct field *fd)
 {
 
-	parse_next(p, f);
+	parse_next(p);
 	if (TOK_SEMICOLON == p->lasttype)
 		return;
 
@@ -307,14 +321,14 @@ parse_config_field(struct parse *p, FILE *f, struct field *fd)
 	if (0 == strcasecmp(p->last.string, "int") ||
 	    0 == strcasecmp(p->last.string, "integer")) {
 		fd->type = FTYPE_INT;
-		parse_config_field_info(p, f, fd);
+		parse_config_field_info(p, fd);
 		return;
 	}
 	/* char-array */
 	if (0 == strcasecmp(p->last.string, "text") ||
 	    0 == strcasecmp(p->last.string, "txt")) {
 		fd->type = FTYPE_TEXT;
-		parse_config_field_info(p, f, fd);
+		parse_config_field_info(p, fd);
 		return;
 	}
 	/* fall-through */
@@ -330,8 +344,8 @@ parse_config_field(struct parse *p, FILE *f, struct field *fd)
 
 	fd->ref->parent = fd;
 
-	parse_config_field_struct(p, f, fd->ref);
-	parse_config_field_info(p, f, fd);
+	parse_config_field_struct(p, fd->ref);
+	parse_config_field_info(p, fd);
 }
 
 /*
@@ -346,18 +360,18 @@ parse_config_field(struct parse *p, FILE *f, struct field *fd)
  * alphanumeric (starting with alpha) string.
  */
 static void
-parse_config_struct(struct parse *p, FILE *f, struct strct *s)
+parse_config_struct(struct parse *p, struct strct *s)
 {
 	struct field	*fd;
 
-	parse_next(p, f);
+	parse_next(p);
 	if (TOK_LBRACE != p->lasttype) {
 		parse_syntax_error(p, "expected left brace");
 		return;
 	}
 
 	for (;;) {
-		parse_next(p, f);
+		parse_next(p);
 		if (TOK_RBRACE == p->lasttype)
 			break;
 
@@ -367,7 +381,7 @@ parse_config_struct(struct parse *p, FILE *f, struct strct *s)
 			return;
 		}
 
-		parse_next(p, f);
+		parse_next(p);
 		if (TOK_IDENT != p->lasttype) {
 			parse_syntax_error(p, "expected field name");
 			return;
@@ -381,7 +395,7 @@ parse_config_struct(struct parse *p, FILE *f, struct strct *s)
 		fd->type = FTYPE_INT;
 		fd->parent = s;
 		TAILQ_INSERT_TAIL(&s->fq, fd, entries);
-		parse_config_field(p, f, fd);
+		parse_config_field(p, fd);
 	}
 
 	if (TAILQ_EMPTY(&s->fq)) {
@@ -419,9 +433,10 @@ parse_config(FILE *f, const char *fname)
 	p.column = 0;
 	p.line = 1;
 	p.fname = fname;
+	p.f = f;
 
 	for (;;) {
-		parse_next(&p, f);
+		parse_next(&p);
 		if (TOK_ERR == p.lasttype)
 			goto error;
 		else if (TOK_EOF == p.lasttype)
@@ -433,7 +448,7 @@ parse_config(FILE *f, const char *fname)
 			goto error;
 		}
 
-		parse_next(&p, f);
+		parse_next(&p);
 		if (TOK_IDENT != p.lasttype) {
 			parse_syntax_error(&p, NULL);
 			goto error;
@@ -446,7 +461,7 @@ parse_config(FILE *f, const char *fname)
 
 		TAILQ_INSERT_TAIL(q, s, entries);
 		TAILQ_INIT(&s->fq);
-		parse_config_struct(&p, f, s);
+		parse_config_struct(&p, s);
 	}
 
 	if (TAILQ_EMPTY(q)) {

@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: March 23 2017 $
+.Dd $Mdocdate: March 27 2017 $
 .Dt KWEBAPP 5
 .Os
 .Sh NAME
@@ -31,7 +31,7 @@ tokens) configuration language with the following rough structure:
 .Bd -literal
 [ "struct" structname 
   "{"
-    [ "field" fieldname [ type ] ";" ]+
+    [ "field" fieldname [ type [ typeinfo ] ] ";" ]+
   "}"
 ]+
 .Ed
@@ -43,28 +43,74 @@ A
 is a database table or C struct; whereas a
 .Dq field
 is a column or a struct member.
+The names of structures and fields must be case-sensitive alphanumeric
+strings starting with a letter.
+.Ss Structure
+A structure maps into a C structure or a database table.
+Their definitions begin with the word
+.Li struct ,
+then the name of the structure, then a set of definitions within the
+curly braces.
 .Pp
-Structure and field names must be alphanumeric strings of at least one
-character and starting with a letter.
-The optional type may be one of
-.Dq txt
+At this time, the set of structure definitions is limited to fields.
+.Ss Field
+A field defines a C structure member and/or a database column.
+Each field consists of the word
+.Li field
+followed by a field name and type.
+The type may be one of
+.Li struct ,
+.Li int ,
 or
-.Dq text
-for a nil-terminated string or
-.Dq int
-or
-.Dq integer
-for a 64-bit integer.
-By default, fields are integers.
+.Li text .
+.Pp
+The latter two will map into 64-bit integers and character strings.
+The former is considered a foreign key reference, and has the syntax of
+.Li source:target ,
+where
+.Li target
+is the foreign target with syntax
+.Li structure.field
+and
+.Li source
+is the name of the field in the current structure.
+This accomodates for joining tables; or in C terms, one structure
+referring to another structure.
 .Sh EXAMPLES
 A simple session table is as follows:
 .Bd -literal
+struct user {
+  field name text;
+  field id;
+}
 struct session { 
+  field user struct userid:user.id;
   field userid;
   field token;
   field id;
 }
 .Ed
+.Pp
+This generates two C structures,
+.Li user
+and
+.Li session ,
+consisting of the given fields.
+The
+.Li session
+structure contains a
+.Li struct user
+as well; thus, there is a declarative order that
+.Xr kwebapp 1
+enforces when writing out structures.
+.Pp
+The SQL interface, when fetching a
+.Li struct session ,
+will employ an
+.Li INNER JOIN
+over the user identifier and session
+.Li userid
+field.
 .Sh SEE ALSO
 .Xr kwebapp 1
 .\" .Sh STANDARDS

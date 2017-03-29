@@ -140,7 +140,7 @@ parse_nextchar(struct parse *p)
  * doesn't do anything.
  * Otherwise, lasttype will be set to the last token type.
  */
-static void
+static enum tok
 parse_next(struct parse *p)
 {
 	int		 c;
@@ -148,7 +148,7 @@ parse_next(struct parse *p)
 
 	if (TOK_ERR == p->lasttype || 
 	    TOK_EOF == p->lasttype) 
-		return;
+		return(p->lasttype);
 
 	/* 
 	 * Read past any white-space.
@@ -161,7 +161,7 @@ parse_next(struct parse *p)
 
 	if (feof(p->f) || ferror(p->f)) {
 		parse_error(p);
-		return;
+		return(p->lasttype);
 	}
 
 	/*
@@ -191,7 +191,7 @@ parse_next(struct parse *p)
 
 		if (ferror(p->f)) {
 			parse_error(p);
-			return;
+			return(p->lasttype);
 		} else if ( ! feof(p->f))
 			parse_ungetc(p, c);
 
@@ -200,7 +200,7 @@ parse_next(struct parse *p)
 			(p->buf, -INT64_MAX, INT64_MAX, &ep);
 		if (NULL != ep) {
 			parse_syntax_error(p, "malformed integer");
-			return;
+			return(p->lasttype);
 		}
 		p->lasttype = TOK_INTEGER;
 	} else if (isalpha(c)) {
@@ -214,7 +214,7 @@ parse_next(struct parse *p)
 
 		if (ferror(p->f)) {
 			parse_error(p);
-			return;
+			return(p->lasttype);
 		} else if ( ! feof(p->f))
 			parse_ungetc(p, c);
 
@@ -223,60 +223,68 @@ parse_next(struct parse *p)
 		p->lasttype = TOK_IDENT;
 	} else
 		parse_syntax_error(p, "unknown input token");
+
+	return(p->lasttype);
 }
 
 /*
  * Parse the linkage for a structure.
- * FIXME: this should be "source:target".
+ * Its syntax is:
+ *
+ *   source_field:target_struct.target_field
+ *
+ * These are queried later in the linkage phase.
  */
 static void
 parse_config_field_struct(struct parse *p, struct ref *r)
 {
+
+	if (TOK_IDENT != parse_next(p)) {
+		parse_syntax_error(p, "expected source field");
+		return;
+	} else if (NULL == (r->sfield = strdup(p->last.string)))
+		err(EXIT_FAILURE, NULL);
 	
-	parse_next(p);
-	if (TOK_IDENT != p->lasttype) {
-		parse_syntax_error(p, "expected struct table");
-		return;
-	}
-	if (NULL == (r->tstrct = strdup(p->last.string)))
-		err(EXIT_FAILURE, NULL);
-
-	parse_next(p);
-	if (TOK_PERIOD != p->lasttype) {
-		parse_syntax_error(p, "expected period");
-		return;
-	}
-
-	parse_next(p);
-	if (TOK_IDENT != p->lasttype) {
-		parse_syntax_error(p, "expected struct field");
-		return;
-	}
-	if (NULL == (r->tfield = strdup(p->last.string)))
-		err(EXIT_FAILURE, NULL);
-
-	parse_next(p);
-	if (TOK_COLON != p->lasttype) {
+	if (TOK_COLON != parse_next(p)) {
 		parse_syntax_error(p, "expected colon");
 		return;
 	}
 
-	parse_next(p);
-	if (TOK_IDENT != p->lasttype) {
-		parse_syntax_error(p, "expected source field");
+	if (TOK_IDENT != parse_next(p)) {
+		parse_syntax_error(p, "expected struct table");
+		return;
+	} else if (NULL == (r->tstrct = strdup(p->last.string)))
+		err(EXIT_FAILURE, NULL);
+
+	if (TOK_PERIOD != parse_next(p)) {
+		parse_syntax_error(p, "expected period");
 		return;
 	}
-	if (NULL == (r->sfield = strdup(p->last.string)))
+
+	if (TOK_IDENT != parse_next(p)) {
+		parse_syntax_error(p, "expected struct field");
+		return;
+	} else if (NULL == (r->tfield = strdup(p->last.string)))
 		err(EXIT_FAILURE, NULL);
+
 }
 
+/*
+ * Read auxiliary information for a field.
+ * Its syntax is:
+ *
+ *   [rowid] ";"
+ *
+ * This will continue processing until the semicolon is reached.
+ */
 static void
 parse_config_field_info(struct parse *p, struct field *fd)
 {
+
 	for (;;) {
-		parse_next(p);
-		if (TOK_SEMICOLON == p->lasttype)
+		if (TOK_SEMICOLON == parse_next(p))
 			break;
+
 		if (TOK_IDENT != p->lasttype) {
 			parse_syntax_error(p, 
 				"unknown field info token");
@@ -295,19 +303,18 @@ parse_config_field_info(struct parse *p, struct field *fd)
  * Read an individual field declaration.
  * Its syntax is:
  *
- *   TYPE [TYPEINFO] | ";"
+ *   TYPE TYPEINFO
  *
  * By default, fields are integers.  TYPE can be "int", "integer",
  * "text", or "txt".  The TYPEINFO depends upon the type and is
- * processed by the parse_config_field_struct() (for structs) and
- * parse_config_field_info() functions.
+ * processed by the parse_config_field_struct() (for structs) but is
+ * always followed by parse_config_field_info().
  */
 static void
 parse_config_field(struct parse *p, struct field *fd)
 {
 
-	parse_next(p);
-	if (TOK_SEMICOLON == p->lasttype)
+	if (TOK_SEMICOLON == parse_next(p))
 		return;
 
 	/* Type name and dependent type info. */
@@ -364,15 +371,13 @@ parse_config_struct(struct parse *p, struct strct *s)
 {
 	struct field	*fd;
 
-	parse_next(p);
-	if (TOK_LBRACE != p->lasttype) {
+	if (TOK_LBRACE != parse_next(p)) {
 		parse_syntax_error(p, "expected left brace");
 		return;
 	}
 
 	for (;;) {
-		parse_next(p);
-		if (TOK_RBRACE == p->lasttype)
+		if (TOK_RBRACE == parse_next(p))
 			break;
 
 		if (TOK_IDENT != p->lasttype ||
@@ -381,8 +386,7 @@ parse_config_struct(struct parse *p, struct strct *s)
 			return;
 		}
 
-		parse_next(p);
-		if (TOK_IDENT != p->lasttype) {
+		if (TOK_IDENT != parse_next(p)) {
 			parse_syntax_error(p, "expected field name");
 			return;
 		}
@@ -436,8 +440,7 @@ parse_config(FILE *f, const char *fname)
 	p.f = f;
 
 	for (;;) {
-		parse_next(&p);
-		if (TOK_ERR == p.lasttype)
+		if (TOK_ERR == parse_next(&p))
 			goto error;
 		else if (TOK_EOF == p.lasttype)
 			break;
@@ -448,8 +451,7 @@ parse_config(FILE *f, const char *fname)
 			goto error;
 		}
 
-		parse_next(&p);
-		if (TOK_IDENT != p.lasttype) {
+		if (TOK_IDENT != parse_next(&p)) {
 			parse_syntax_error(&p, NULL);
 			goto error;
 		}

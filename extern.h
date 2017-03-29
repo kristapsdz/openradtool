@@ -4,7 +4,7 @@
 enum	ftype {
 	FTYPE_INT,
 	FTYPE_TEXT,
-	FTYPE_REF
+	FTYPE_STRUCT
 };
 
 /*
@@ -13,11 +13,15 @@ enum	ftype {
  * actual table afterwards.
  */
 struct	ref {
-	struct field 	*target; /* target (after linkage) */
-	struct field 	*source; /* source (after linkage) */
 	char		*sfield; /* column with foreign key */
 	char		*tstrct; /* target structure */
 	char		*tfield; /* target field */
+	/* 
+	 * The following are "const" references that are [mostly] only
+	 * valid after linkage.
+	 */
+	struct field 	*target; /* target */
+	struct field 	*source; /* source */
 	struct field	*parent; /* parent reference */
 };
 
@@ -26,11 +30,11 @@ struct	ref {
  */
 struct	field {
 	char		  *name; /* column name */
-	struct ref	  *ref; /* if FTYPE_REF */
+	struct ref	  *ref; /* "foreign key" (references) */
 	enum ftype	   type; /* type of column */
 	struct strct	  *parent; /* parent reference */
 	unsigned int	   flags; /* flags */
-#define	FIELD_ROWID	   0x01
+#define	FIELD_ROWID	   0x01 /* this is a rowid field */
 	TAILQ_ENTRY(field) entries;
 };
 

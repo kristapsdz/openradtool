@@ -16,6 +16,8 @@
 /*
  * Check the source, which must fall within the same structure
  * (obviously) as the referrent.
+ * Do not do anything for non-structure references, since they're
+ * already tied to a source.
  * Return zero on failure, non-zero on success.
  * On success, this sets the "source" field for the referrent.
  */
@@ -23,6 +25,9 @@ static int
 checksource(struct ref *ref, struct strct *s)
 {
 	struct field	*f;
+
+	if (NULL != ref->source)
+		return(1);
 
 	TAILQ_FOREACH(f, &s->fq, entries) {
 		if (strcmp(f->name, ref->sfield))
@@ -33,6 +38,46 @@ checksource(struct ref *ref, struct strct *s)
 
 	warnx("%s: unknown source", ref->sfield);
 	return(0);
+}
+
+/*
+ * Reference rules: we can't reference from or to a struct, nor can the
+ * target and source be of a different type.
+ */
+static int
+checktargettype(const struct ref *ref)
+{
+
+	/* Our actual reference objects may not be structs. */
+
+	if (FTYPE_STRUCT == ref->target->type ||
+	    FTYPE_STRUCT == ref->source->type) {
+		warnx("%s.%s: referencing a struct",
+			ref->parent->parent->name,
+			ref->parent->name);
+		return(0);
+	} 
+
+	/* Our reference objects must have equivalent types. */
+
+	if (ref->source->type != ref->target->type) {
+		warnx("%s.%s: referencing a different type",
+			ref->parent->parent->name,
+			ref->parent->name);
+		return(0);
+	}
+
+	/* We can't (yet) redeclare our types. */
+
+	if (FTYPE_STRUCT == ref->parent->type &&
+	    NULL != ref->source->ref) {
+		warnx("%s.%s: redeclaration of reference",
+			ref->parent->parent->name,
+			ref->parent->name);
+		return(0);
+	}
+
+	return(1);
 }
 
 /*
@@ -53,7 +98,7 @@ checktarget(struct ref *ref, struct strctq *q)
 			if (strcmp(f->name, ref->tfield))
 				continue;
 			ref->target = f;
-			return(1);
+			return(checktargettype(ref));
 		}
 	}
 
@@ -64,6 +109,7 @@ checktarget(struct ref *ref, struct strctq *q)
 
 /*
  * Recursively annotate our height from each node.
+ * We only do this for FTYPE_STRUCT objects.
  * This makes sure that we don't loop around at any point in our
  * dependencies: this means that we don't do a chain of structures
  * that ends up being self-referential.
@@ -90,10 +136,13 @@ annotate(struct ref *ref, size_t height, size_t colour)
 	p->colour = colour;
 	p->height += height;
 
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if (FTYPE_REF == f->type)
-			if ( ! annotate(f->ref, height + 1, colour))
-				return(0);
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT != f->type)
+			continue;
+		assert(NULL != f->ref);
+		if ( ! annotate(f->ref, height + 1, colour))
+			return(0);
+	}
 
 	return(1);
 }
@@ -133,7 +182,7 @@ parse_link(struct strctq *q)
 				return(0);
 			} else if (FIELD_ROWID & f->flags)
 				hasrowid++;
-			if (FTYPE_REF != f->type)
+			if (NULL == f->ref)
 				continue;
 			if ( ! checksource(f->ref, p) ||
 			     ! checktarget(f->ref, q))
@@ -142,7 +191,7 @@ parse_link(struct strctq *q)
 	}
 
 	/* 
-	 * Now follow and order all outbound links. 
+	 * Now follow and order all outbound links for structs.
 	 * From the get-go, we don't descend into structures that we've
 	 * already coloured.
 	 */
@@ -152,8 +201,9 @@ parse_link(struct strctq *q)
 		if (p->colour)
 			continue;
 		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (FTYPE_REF != f->type)
+			if (FTYPE_STRUCT != f->type)
 				continue;
+			assert(NULL != f->ref);
 			if ( ! annotate(f->ref, 0, colour))
 				return(0);
 		}

@@ -29,6 +29,8 @@ struct	field {
 	struct ref	  *ref; /* if FTYPE_REF */
 	enum ftype	   type; /* type of column */
 	struct strct	  *parent; /* parent reference */
+	unsigned int	   flags; /* flags */
+#define	FIELD_ROWID	   0x01
 	TAILQ_ENTRY(field) entries;
 };
 

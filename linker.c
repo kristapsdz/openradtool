@@ -117,18 +117,29 @@ parse_link(struct strctq *q)
 	struct strct	 *p;
 	struct strct	**pa;
 	struct field	 *f;
-	size_t		  colour = 1, sz = 0, i = 0;
+	size_t		  colour = 1, sz = 0, i = 0, hasrowid = 0;
 
-	/* First, establish linkage between nodes. */
+	/* 
+	 * First, establish linkage between nodes.
+	 * While here, check for duplicate rowids.
+	 */
 
-	TAILQ_FOREACH(p, q, entries)
+	TAILQ_FOREACH(p, q, entries) {
+		hasrowid = 0;
 		TAILQ_FOREACH(f, &p->fq, entries) {
+			if (FIELD_ROWID & f->flags && hasrowid) {
+				warnx("%s.%s: multiple rowid",
+					p->name, f->name);
+				return(0);
+			} else if (FIELD_ROWID & f->flags)
+				hasrowid++;
 			if (FTYPE_REF != f->type)
 				continue;
 			if ( ! checksource(f->ref, p) ||
 			     ! checktarget(f->ref, q))
 				return(0);
 		}
+	}
 
 	/* 
 	 * Now follow and order all outbound links. 

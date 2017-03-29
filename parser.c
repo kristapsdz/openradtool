@@ -211,6 +211,10 @@ parse_next(struct parse *p, FILE *f)
 		parse_syntax_error(p, "unknown input token");
 }
 
+/*
+ * Parse the linkage for a structure.
+ * FIXME: this should be "source:target".
+ */
 static void
 parse_config_field_struct(struct parse *p, FILE *f, struct ref *r)
 {
@@ -252,57 +256,82 @@ parse_config_field_struct(struct parse *p, FILE *f, struct ref *r)
 		err(EXIT_FAILURE, NULL);
 }
 
+static void
+parse_config_field_info(struct parse *p, FILE *f, struct field *fd)
+{
+	for (;;) {
+		parse_next(p, f);
+		if (TOK_SEMICOLON == p->lasttype)
+			break;
+		if (TOK_IDENT != p->lasttype) {
+			parse_syntax_error(p, 
+				"unknown field info token");
+			break;
+		}
+		if (0 == strcasecmp(p->last.string, "rowid")) {
+			fd->flags |= FIELD_ROWID;
+			continue;
+		}
+		parse_syntax_error(p, "unknown field info token");
+		break;
+	}
+}
+
 /*
  * Read an individual field declaration.
  * Its syntax is:
  *
- *   TYPE | ";"
+ *   TYPE [TYPEINFO] | ";"
  *
  * By default, fields are integers.  TYPE can be "int", "integer",
- * "text", or "txt".
+ * "text", or "txt".  The TYPEINFO depends upon the type and is
+ * processed by the parse_config_field_struct() (for structs) and
+ * parse_config_field_info() functions.
  */
 static void
 parse_config_field(struct parse *p, FILE *f, struct field *fd)
 {
 
-	for (;;) {
-		parse_next(p, f);
-		if (TOK_SEMICOLON == p->lasttype)
-			break;
-		if (TOK_IDENT == p->lasttype) {
-			/* int64_t */
-			if (0 == strcasecmp(p->last.string, "int") ||
-			    0 == strcasecmp(p->last.string, "integer")) {
-				fd->type = FTYPE_INT;
-				continue;
-			}
-			/* char-array */
-			if (0 == strcasecmp(p->last.string, "text") ||
-			    0 == strcasecmp(p->last.string, "txt")) {
-				fd->type = FTYPE_TEXT;
-				continue;
-			}
-			/* fall-through */
-			if (strcasecmp(p->last.string, "struct")) {
-				parse_syntax_error(p, "unknown field type");
-				break;
-			}
+	parse_next(p, f);
+	if (TOK_SEMICOLON == p->lasttype)
+		return;
 
-			fd->type = FTYPE_REF;
-			fd->ref = calloc(1, sizeof(struct ref));
-			if (NULL == fd->ref)
-				err(EXIT_FAILURE, NULL);
+	/* Type name and dependent type info. */
 
-			fd->ref->parent = fd;
-			parse_config_field_struct(p, f, fd->ref);
-			continue;
-		}
-		if (TOK_SEMICOLON != p->lasttype) {
-			parse_syntax_error(p, "unknown field token");
-			break;
-		}
-		break;
+	if (TOK_IDENT != p->lasttype) {
+		parse_syntax_error(p, "unknown field token");
+		return;
 	}
+
+	/* int64_t */
+	if (0 == strcasecmp(p->last.string, "int") ||
+	    0 == strcasecmp(p->last.string, "integer")) {
+		fd->type = FTYPE_INT;
+		parse_config_field_info(p, f, fd);
+		return;
+	}
+	/* char-array */
+	if (0 == strcasecmp(p->last.string, "text") ||
+	    0 == strcasecmp(p->last.string, "txt")) {
+		fd->type = FTYPE_TEXT;
+		parse_config_field_info(p, f, fd);
+		return;
+	}
+	/* fall-through */
+	if (strcasecmp(p->last.string, "struct")) {
+		parse_syntax_error(p, "unknown field type");
+		return;
+	}
+
+	fd->type = FTYPE_REF;
+	fd->ref = calloc(1, sizeof(struct ref));
+	if (NULL == fd->ref)
+		err(EXIT_FAILURE, NULL);
+
+	fd->ref->parent = fd;
+
+	parse_config_field_struct(p, f, fd->ref);
+	parse_config_field_info(p, f, fd);
 }
 
 /*

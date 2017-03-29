@@ -303,12 +303,14 @@ parse_config_field_info(struct parse *p, struct field *fd)
  * Read an individual field declaration.
  * Its syntax is:
  *
- *   TYPE TYPEINFO
+ *   [:refstruct.reffield] TYPE TYPEINFO
  *
  * By default, fields are integers.  TYPE can be "int", "integer",
- * "text", or "txt".  The TYPEINFO depends upon the type and is
- * processed by the parse_config_field_struct() (for structs) but is
- * always followed by parse_config_field_info().
+ * "text", or "txt".  
+ * A reference clause triggers a foreign key reference.
+ * The TYPEINFO depends upon the type and is processed by the
+ * parse_config_field_struct() (for structs) but is always followed by
+ * parse_config_field_info().
  */
 static void
 parse_config_field(struct parse *p, struct field *fd)
@@ -317,10 +319,49 @@ parse_config_field(struct parse *p, struct field *fd)
 	if (TOK_SEMICOLON == parse_next(p))
 		return;
 
-	/* Type name and dependent type info. */
+	/* Check if this is a reference. */
 
-	if (TOK_IDENT != p->lasttype) {
-		parse_syntax_error(p, "unknown field token");
+	if (TOK_COLON == p->lasttype) {
+		fd->ref = calloc(1, sizeof(struct ref));
+		if (NULL == fd->ref)
+			err(EXIT_FAILURE, NULL);
+
+		fd->ref->source = fd->ref->parent = fd;
+		fd->ref->sfield = strdup(fd->name);
+		if (NULL == fd->ref->sfield)
+			err(EXIT_FAILURE, NULL);
+
+		if (TOK_IDENT != parse_next(p)) {
+			parse_syntax_error(p, 
+				"expected target field");
+			return;
+		}
+		fd->ref->tstrct = strdup(p->last.string);
+		if (NULL == fd->ref->tstrct)
+			err(EXIT_FAILURE, NULL);
+
+		if (TOK_PERIOD != parse_next(p)) {
+			parse_syntax_error(p, 
+				"expected period");
+			return;
+		}
+
+		if (TOK_IDENT != parse_next(p)) {
+			parse_syntax_error(p, 
+				"expected field type");
+			return;
+		}
+		fd->ref->tfield = strdup(p->last.string);
+		if (NULL == fd->ref->tfield)
+			err(EXIT_FAILURE, NULL);
+
+		if (TOK_IDENT != parse_next(p)) {
+			parse_syntax_error(p, 
+				"expected field type");
+			return;
+		}
+	} else if (TOK_IDENT != p->lasttype) {
+		parse_syntax_error(p, "expected field type");
 		return;
 	}
 
@@ -344,7 +385,7 @@ parse_config_field(struct parse *p, struct field *fd)
 		return;
 	}
 
-	fd->type = FTYPE_REF;
+	fd->type = FTYPE_STRUCT;
 	fd->ref = calloc(1, sizeof(struct ref));
 	if (NULL == fd->ref)
 		err(EXIT_FAILURE, NULL);

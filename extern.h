@@ -2,9 +2,9 @@
 #define EXTERN_H
 
 enum	ftype {
-	FTYPE_INT,
-	FTYPE_TEXT,
-	FTYPE_STRUCT
+	FTYPE_INT, /* native */
+	FTYPE_TEXT, /* native */
+	FTYPE_STRUCT /* only in C API (on reference) */
 };
 
 /*
@@ -17,8 +17,8 @@ struct	ref {
 	char		*tstrct; /* target structure */
 	char		*tfield; /* target field */
 	/* 
-	 * The following are "const" references that are [mostly] only
-	 * valid after linkage.
+	 * The following are "const" references that are only valid
+	 * after linkage.
 	 */
 	struct field 	*target; /* target */
 	struct field 	*source; /* source */
@@ -27,10 +27,11 @@ struct	ref {
 
 /*
  * A field defining a database/struct mapping.
+ * This can be either reflected in the database, in the C API, or both.
  */
 struct	field {
 	char		  *name; /* column name */
-	struct ref	  *ref; /* "foreign key" (references) */
+	struct ref	  *ref; /* "foreign key" reference */
 	enum ftype	   type; /* type of column */
 	struct strct	  *parent; /* parent reference */
 	unsigned int	   flags; /* flags */
@@ -63,6 +64,7 @@ void		 parse_free(struct strctq *);
 
 void		 gen_header(const struct strctq *);
 void		 gen_source(const struct strctq *);
+void		 gen_sql(const struct strctq *);
 
 __END_DECLS
 

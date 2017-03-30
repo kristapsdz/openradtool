@@ -14,7 +14,8 @@
 enum	op {
 	OP_NOOP,
 	OP_HEADER,
-	OP_SOURCE
+	OP_SOURCE,
+	OP_SQL
 };
 
 int
@@ -31,7 +32,7 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "chn")))
+	while (-1 != (c = getopt(argc, argv, "chns")))
 		switch (c) {
 		case ('c'):
 			op = OP_SOURCE;
@@ -41,6 +42,9 @@ main(int argc, char *argv[])
 			break;
 		case ('n'):
 			op = OP_NOOP;
+			break;
+		case ('s'):
+			op = OP_SQL;
 			break;
 		default:
 			goto usage;
@@ -89,12 +93,14 @@ main(int argc, char *argv[])
 		gen_source(sq);
 	else if (OP_HEADER == op)
 		gen_header(sq);
+	else if (OP_SQL == op)
+		gen_sql(sq);
 
 	parse_free(sq);
 	return(EXIT_SUCCESS);
 
 usage:
-	fprintf(stderr, "usage: %s [-chn] [config]\n",
+	fprintf(stderr, "usage: %s [-chns] [config]\n",
 		getprogname());
 	return(EXIT_FAILURE);
 }

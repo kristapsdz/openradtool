@@ -1,36 +1,23 @@
-struct d {
-	field c struct c.id:cid;
-	field cid int;
-	field id int;
-}
-
-struct session {
-	field user struct user.id:userid;
-	field userid int;
-	field token int;
-	field id int;
-}
-
-struct b {
-	field a struct a.id:aid;
-	field aid int;
-	field id int;
-}
-
-struct a {
-	field id int;
-}
-
-struct c {
-	field session struct session.id:sessid;
-	field sessid int;
-	field id int;
+struct bar { 
+  field session struct sessid:session.id;
+  field sessid;
 }
 
 struct user {
-	field a struct a.id:aid;
-	field aid int;
-	field name text;	
-	field id int;
+  field name text;
+  field id int rowid;
 }
 
+struct session { 
+  field user struct userid:user.id;
+  field userid;
+  field altuserid:user.id int;
+  field token;
+  field id int rowid;
+}
+
+struct foo { 
+  field session struct sessid:session.id;
+  field sessid;
+  field id;
+}

@@ -28,7 +28,7 @@ configuration is used by
 to generate C source and header files that drive a database.
 It is a free-form (white-space is not significant beyond separating
 tokens) configuration language with the following rough structure:
-.Bd -literal
+.Bd -literal -offset indent
 [ "struct" structname 
   "{"
     [ "field" fieldname [ type [ typeinfo ] ] ";" ]+
@@ -38,56 +38,87 @@ tokens) configuration language with the following rough structure:
 .Pp
 In simple language, one or more structure definitions, each containing
 one or more fields.
-A
-.Dq structure
-is a database table or C struct; whereas a
-.Dq field
-is a column or a struct member.
+A structure is a database table or C struct; whereas a field is a column
+or a struct member.
 The names of structures and fields must be case-sensitive alphanumeric
 strings starting with a letter.
-.Ss Structure
-A structure maps into a C structure or a database table.
-Their definitions begin with the word
-.Li struct ,
-then the name of the structure, then a set of definitions within the
-curly braces.
+.Ss Structures
+A structure defines a C structure or a database table.
+Its definition begins with the word
+.Cm struct ,
+then the name of the structure, then a set of one or more
+.Cm fields
+within the curly braces.
+.Bd -literal -offset indent
+"struct" structname "{" [ fields ]+ "}"
+.Ed
 .Pp
-At this time, the set of structure definitions is limited to fields.
-.Ss Field
+Structures may be mapped into by other structures from referencing
+fields, which are similar to foreign keys.
+In SQL terms, this abstracts the notion of inner joins on foreign keys.
+.Ss Fields
 A field defines a C structure member and/or a database column.
 Each field consists of the word
-.Li field
-followed by a field name and type.
-The type may be one of
-.Li struct ,
-.Li int ,
-or
-.Li text .
-.Pp
-The latter two will map into 64-bit integers and character strings.
-The former is considered a foreign key reference, and has the syntax of
-.Li source:target ,
-where
-.Li target
-is the foreign target with syntax
-.Li structure.field
+.Cm field
+followed by a field
+.Cm name
 and
-.Li source
-is the name of the field in the current structure.
-This accomodates for joining tables; or in C terms, one structure
-referring to another structure.
+.Cm type ,
+then additional information.
+.Bd -literal -offset indent
+"field" [name | name:target] type [typeinfo]+ ";" 
+.Ed
+.Pp
+The
+.Cm name
+may either be a standalone identifier or a
+.Dq foreign key
+referencing a field in another structure.
+The
+.Cm type
+may be one of
+.Cm struct ,
+.Cm int ,
+or
+.Cm text .
+The latter two are
+.Dq native
+types mapping into 64-bit integers and character strings, respectively.
+The former has the full syntax of
+.Pp
+.Dl \(dqstruct\(dq source:struct.field
+.Pp
+This special type joins the field
+.Cm source
+to the target structure and field
+.Cm struct.field .
+This special type differs from native type foreign keys in that it will
+be joined on database queries, while the native type is merely part of
+the definition.
+It is an error (for now) to be both a foreign key type and part of a
+.Cm struct
+reference.
+.Pp
+The
+.Cm typeinfo
+for the time being may only consist of
+.Cm rowid ,
+meaning (in SQL terms) that the field is a primary key.
+This is only available for native types.
 .Sh EXAMPLES
 A simple session table is as follows:
 .Bd -literal
 struct user {
   field name text;
-  field id;
+  field id rowid;
 }
+
 struct session { 
   field user struct userid:user.id;
   field userid;
+  field altuserid:user.id;
   field token;
-  field id;
+  field id int rowid;
 }
 .Ed
 .Pp

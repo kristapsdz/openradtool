@@ -225,7 +225,8 @@ parse_link(struct strctq *q)
 			if (FTYPE_STRUCT != f->type)
 				continue;
 			assert(NULL != f->ref);
-			if ( ! annotate(f->ref, 0, colour))
+			p->colour = colour;
+			if ( ! annotate(f->ref, 1, colour))
 				return(0);
 		}
 		colour++;

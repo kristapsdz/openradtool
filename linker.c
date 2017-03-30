@@ -14,6 +14,30 @@
 #include "extern.h"
 
 /*
+ * Check that a given row identifier is valid.
+ * The rules are that only one row identifier can exist on a structure
+ * and that it must happen on a native type.
+ */
+static int
+checkrowid(const struct field *f, int hasrowid)
+{
+
+	if (hasrowid) {
+		warnx("%s.%s: multiple rowids on "
+			"structure", f->parent->name, f->name);
+		return(0);
+	}
+
+	if (FTYPE_INT != f->type && FTYPE_TEXT != f->type) {
+		warnx("%s.%s: rowid on non-native field"
+			"type", f->parent->name, f->name);
+		return(0);
+	}
+
+	return(1);
+}
+
+/*
  * Check the source, which must fall within the same structure
  * (obviously) as the referrent.
  * Do not do anything for non-structure references, since they're
@@ -176,12 +200,9 @@ parse_link(struct strctq *q)
 	TAILQ_FOREACH(p, q, entries) {
 		hasrowid = 0;
 		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (FIELD_ROWID & f->flags && hasrowid) {
-				warnx("%s.%s: multiple rowid",
-					p->name, f->name);
-				return(0);
-			} else if (FIELD_ROWID & f->flags)
-				hasrowid++;
+			if (FIELD_ROWID & f->flags)
+				if ( ! checkrowid(f, hasrowid++))
+					return(0);
 			if (NULL == f->ref)
 				continue;
 			if ( ! checksource(f->ref, p) ||

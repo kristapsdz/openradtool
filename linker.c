@@ -38,33 +38,6 @@ checkrowid(const struct field *f, int hasrowid)
 }
 
 /*
- * Check the source, which must fall within the same structure
- * (obviously) as the referrent.
- * Do not do anything for non-structure references, since they're
- * already tied to a source.
- * Return zero on failure, non-zero on success.
- * On success, this sets the "source" field for the referrent.
- */
-static int
-checksource(struct ref *ref, struct strct *s)
-{
-	struct field	*f;
-
-	if (NULL != ref->source)
-		return(1);
-
-	TAILQ_FOREACH(f, &s->fq, entries) {
-		if (strcmp(f->name, ref->sfield))
-			continue;
-		ref->source = f;
-		return(1);
-	}
-
-	warnx("%s: unknown source", ref->sfield);
-	return(0);
-}
-
-/*
  * Reference rules: we can't reference from or to a struct, nor can the
  * target and source be of a different type.
  */
@@ -91,21 +64,94 @@ checktargettype(const struct ref *ref)
 		return(0);
 	}
 
-	/* We can't (yet) redeclare our types. */
+	return(1);
+}
 
-	if (FTYPE_STRUCT == ref->parent->type &&
-	    NULL != ref->source->ref) {
+/*
+ * When we're parsing a structure's reference, we need to create the
+ * referring information to the source field, which is the actual
+ * reference itself.
+ * Return zero on failure, non-zero on success.
+ */
+static int
+linkref(struct ref *ref)
+{
+
+	assert(NULL != ref->parent);
+	assert(NULL != ref->source);
+	assert(NULL != ref->target);
+
+	if (FTYPE_STRUCT != ref->parent->type)
+		return(1);
+
+	/*
+	 * If our source field is already a reference, make sure it
+	 * points to the same thing we point to.
+	 * Otherwise, it's an error.
+	 */
+
+	if (NULL != ref->source->ref &&
+	    (strcasecmp(ref->tfield, ref->source->ref->tfield) ||
+	     strcasecmp(ref->tstrct, ref->source->ref->tstrct))) {
 		warnx("%s.%s: redeclaration of reference",
 			ref->parent->parent->name,
 			ref->parent->name);
 		return(0);
-	}
+	} else if (NULL != ref->source->ref)
+		return(1);
+
+	/* Create linkage. */
+
+	ref->source->ref = calloc(1, sizeof(struct ref));
+	if (NULL == ref->source->ref)
+		err(EXIT_FAILURE, NULL);
+
+	ref->source->ref->parent = ref->source;
+	ref->source->ref->source = ref->source;
+	ref->source->ref->target = ref->target;
+
+	ref->source->ref->sfield = strdup(ref->sfield);
+	ref->source->ref->tfield = strdup(ref->tfield);
+	ref->source->ref->tstrct = strdup(ref->tstrct);
+
+	if (NULL == ref->source->ref->sfield ||
+	    NULL == ref->source->ref->tfield ||
+	    NULL == ref->source->ref->tstrct)
+		err(EXIT_FAILURE, NULL);
 
 	return(1);
 }
 
 /*
- * Check the target structure and field.
+ * Check the source field (case insensitive).
+ * Return zero on failure, non-zero on success.
+ * On success, this sets the "source" field for the referrent.
+ */
+static int
+checksource(struct ref *ref, struct strct *s)
+{
+	struct field	*f;
+
+	if (NULL != ref->source)
+		return(1);
+
+	assert(NULL == ref->source);
+	assert(NULL == ref->target);
+
+	TAILQ_FOREACH(f, &s->fq, entries) {
+		if (strcasecmp(f->name, ref->sfield))
+			continue;
+		ref->source = f;
+		return(1);
+	}
+
+	warnx("%s.%s: unknown reference source", 
+		s->name, ref->sfield);
+	return(0);
+}
+
+/*
+ * Check that the target structure and field exist (case insensitive).
  * Return zero on failure, non-zero on success.
  * On success, this sets the "target" field for the referrent.
  */
@@ -115,18 +161,24 @@ checktarget(struct ref *ref, struct strctq *q)
 	struct strct	*p;
 	struct field	*f;
 
+	if (NULL != ref->target)
+		return(1);
+
+	assert(NULL != ref->source);
+	assert(NULL == ref->target);
+
 	TAILQ_FOREACH(p, q, entries) {
-		if (strcmp(p->name, ref->tstrct))
+		if (strcasecmp(p->name, ref->tstrct))
 			continue;
 		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (strcmp(f->name, ref->tfield))
+			if (strcasecmp(f->name, ref->tfield))
 				continue;
 			ref->target = f;
-			return(checktargettype(ref));
+			return(1);
 		}
 	}
 
-	warnx("%s.%s: unknown target",
+	warnx("%s.%s: unknown reference target",
 		ref->tstrct, ref->tfield);
 	return(0);
 }
@@ -206,7 +258,9 @@ parse_link(struct strctq *q)
 			if (NULL == f->ref)
 				continue;
 			if ( ! checksource(f->ref, p) ||
-			     ! checktarget(f->ref, q))
+			     ! checktarget(f->ref, q) ||
+			     ! linkref(f->ref) ||
+			     ! checktargettype(f->ref))
 				return(0);
 		}
 	}

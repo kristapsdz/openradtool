@@ -326,7 +326,7 @@ parse_config_field(struct parse *p, struct field *fd)
 		if (NULL == fd->ref)
 			err(EXIT_FAILURE, NULL);
 
-		fd->ref->source = fd->ref->parent = fd;
+		fd->ref->parent = fd;
 		fd->ref->sfield = strdup(fd->name);
 		if (NULL == fd->ref->sfield)
 			err(EXIT_FAILURE, NULL);

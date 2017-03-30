@@ -291,6 +291,11 @@ parse_config_field_info(struct parse *p, struct field *fd)
 			break;
 		}
 		if (0 == strcasecmp(p->last.string, "rowid")) {
+			if (FTYPE_INT != fd->type) {
+				parse_syntax_error(p, "rowid "
+					"for non-integer type");
+				break;
+			}
 			fd->flags |= FIELD_ROWID;
 			continue;
 		}
@@ -432,6 +437,15 @@ parse_config_struct(struct parse *p, struct strct *s)
 			return;
 		}
 
+		/* Disallow duplicate names. */
+
+		TAILQ_FOREACH(fd, &s->fq, entries) {
+			if (strcasecmp(fd->name, p->last.string))
+				continue;
+			parse_syntax_error(p, "duplicate name");
+			return;
+		}
+
 		if (NULL == (fd = calloc(1, sizeof(struct field))))
 			err(EXIT_FAILURE, NULL);
 		if (NULL == (fd->name = strdup(p->last.string)))
@@ -494,6 +508,15 @@ parse_config(FILE *f, const char *fname)
 
 		if (TOK_IDENT != parse_next(&p)) {
 			parse_syntax_error(&p, NULL);
+			goto error;
+		}
+
+		/* Disallow duplicate names. */
+
+		TAILQ_FOREACH(s, q, entries) {
+			if (strcasecmp(s->name, p.last.string))
+				continue;
+			parse_syntax_error(&p, "duplicate name");
 			goto error;
 		}
 

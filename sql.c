@@ -33,6 +33,8 @@ gen_field(const struct field *f, int *first)
 	case (FTYPE_INT):
 		printf("%s\n\t%s INTEGER", 
 			*first ? "" : ",", f->name);
+		if (FIELD_ROWID & f->flags)
+			printf(" PRIMARY KEY");
 		*first = 0;
 		break;
 	case (FTYPE_TEXT):

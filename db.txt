@@ -17,7 +17,7 @@ struct session {
 }
 
 struct foo { 
-  field session struct sessid:session.id;
+  field session struct sessid:foo.id;
   field sessid;
   field id;
 }

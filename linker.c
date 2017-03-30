@@ -45,6 +45,13 @@ static int
 checktargettype(const struct ref *ref)
 {
 
+	if (ref->target->parent == ref->source->parent) {
+		warnx("%s.%s: referencing within struct",
+			ref->parent->parent->name,
+			ref->parent->name);
+		return(0);
+	}
+
 	/* Our actual reference objects may not be structs. */
 
 	if (FTYPE_STRUCT == ref->target->type ||

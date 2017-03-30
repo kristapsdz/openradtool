@@ -1,16 +1,18 @@
 include Makefile.configure
 
-COMPAT_OBJS	= compat_err.o \
-		  compat_progname.o \
-		  compat_reallocarray.o \
-		  compat_strlcat.o \
-		  compat_strlcpy.o \
-		  compat_strtonum.o
-OBJS		= header.o \
-		  linker.o \
-		  main.o \
-		  parser.o \
-		  source.o
+VERSION		 = 0.0.2
+CFLAGS		+= -DVERSION=\"$(VERSION)\"
+COMPAT_OBJS	 = compat_err.o \
+		   compat_progname.o \
+		   compat_reallocarray.o \
+		   compat_strlcat.o \
+		   compat_strlcpy.o \
+		   compat_strtonum.o
+OBJS		 = header.o \
+		   linker.o \
+		   main.o \
+		   parser.o \
+		   source.o
 
 kwebapp: $(COMPAT_OBJS) $(OBJS)
 	$(CC) -o $@ $(COMPAT_OBJS) $(OBJS)

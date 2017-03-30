@@ -40,8 +40,8 @@ In simple language, one or more structure definitions, each containing
 one or more fields.
 A structure is a database table or C struct; whereas a field is a column
 or a struct member.
-The names of structures and fields must be case-sensitive alphanumeric
-strings starting with a letter.
+The names of structures and fields must be unique case-insensitive
+alphanumeric strings starting with a letter.
 .Ss Structures
 A structure defines a C structure or a database table.
 Its definition begins with the word
@@ -95,9 +95,9 @@ to the target structure and field
 This special type differs from native type foreign keys in that it will
 be joined on database queries, while the native type is merely part of
 the definition.
-It is an error (for now) to be both a foreign key type and part of a
+It is an error for a
 .Cm struct
-reference.
+and native foreign key to reference different target fields.
 .Pp
 The
 .Cm typeinfo

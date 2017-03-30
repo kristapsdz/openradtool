@@ -22,7 +22,7 @@
 .Nd create web application API and database layer
 .Sh SYNOPSIS
 .Nm kwebapp
-.Op Fl chn
+.Op Fl chns
 .Op Ar config
 .Sh DESCRIPTION
 The
@@ -44,6 +44,8 @@ Create the C source file implementing the header file.
 Create the C API header file.
 .It Fl n
 Parse only (dry-run).
+.It Fl s
+Create the full SQL schema file.
 .El
 .Pp
 In all instances (except for

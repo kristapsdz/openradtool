@@ -5,13 +5,13 @@ struct bar {
 
 struct user {
   field name text;
+  field sid;
   field id int rowid;
 }
 
 struct session { 
   field user struct userid:user.id;
   field userid;
-  field altuserid:user.id int;
   field token;
   field id int rowid;
 }

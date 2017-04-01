@@ -32,6 +32,7 @@ tokens) configuration language with the following rough structure:
 [ "struct" structname 
   "{"
     [ "field" fieldname [ type [ typeinfo ] ] ";" ]+
+    [ "comment" quoted_string ";" ]?
   "}"
 ]+
 .Ed
@@ -101,26 +102,34 @@ and native foreign key to reference different target fields.
 .Pp
 The
 .Cm typeinfo
-for the time being may only consist of
-.Cm rowid ,
-meaning (in SQL terms) that the field is a primary key.
+may consist of the following:
+.Bd -literal -offset indent
+"rowid" | "comment" quoted_string
+.Ed
+.Pp
+The
+.Cm rowid
+means (in SQL terms) that the field is a primary key.
 This is only available for the
 .Cm int
 type.
+The quoted comment string documents the field.
 .Sh EXAMPLES
 A simple session table is as follows:
 .Bd -literal
 struct user {
   field name text;
   field id int rowid;
+  comment "A regular user.";
 }
 
 struct session { 
   field user struct userid:user.id;
-  field userid;
+  field userid comment "Associated user.";
   field altuserid:user.id;
-  field token;
+  field token comment "Random cookie.";
   field id int rowid;
+  comment "Authenticated session.";
 }
 .Ed
 .Pp

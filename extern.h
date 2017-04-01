@@ -32,6 +32,7 @@ struct	ref {
 struct	field {
 	char		  *name; /* column name */
 	struct ref	  *ref; /* "foreign key" reference */
+	char		  *doc; /* documentation */
 	enum ftype	   type; /* type of column */
 	struct strct	  *parent; /* parent reference */
 	unsigned int	   flags; /* flags */
@@ -48,6 +49,7 @@ TAILQ_HEAD(fieldq, field);
  */
 struct	strct {
 	char		  *name; /* name of structure */
+	char		  *doc; /* documentation */
 	size_t		   height; /* dependency order */
 	size_t		   colour; /* used during linkage */
 	struct fieldq	   fq; /* fields/columns/members */

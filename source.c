@@ -174,7 +174,7 @@ gen_strct(const struct strct *p)
 		if (FTYPE_STRUCT != f->type)
 			continue;
 		printf("\t\tdb_%s_fill(&p->%s, stmt, &i);\n",
-			f->ref->tstrct, f->ref->tstrct);
+			f->ref->tstrct, f->name);
 	}
 	printf("\t}\n"
 	       "\tksql_stmt_free(stmt);\n"

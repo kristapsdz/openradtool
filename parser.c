@@ -23,6 +23,7 @@ enum	tok {
 	TOK_PERIOD, /* } */
 	TOK_COLON, /* : */
 	TOK_SEMICOLON, /* ; */
+	TOK_LITERAL, /* "text" */
 	TOK_ERR, /* error! */
 	TOK_EOF /* end of file! */
 };
@@ -143,7 +144,7 @@ parse_nextchar(struct parse *p)
 static enum tok
 parse_next(struct parse *p)
 {
-	int		 c;
+	int		 c, last;
 	const char	*ep = NULL;
 
 	if (TOK_ERR == p->lasttype || 
@@ -180,6 +181,29 @@ parse_next(struct parse *p)
 		p->lasttype = TOK_PERIOD;
 	} else if (':' == c) {
 		p->lasttype = TOK_COLON;
+	} else if ('"' == c) {
+		p->bufsz = 0;
+		last = ' ';
+		do {
+			c = parse_nextchar(p);
+			if ('"' == c || EOF == c)
+				break;
+			if (isspace(last) && isspace(c)) {
+				last = c;
+				continue;
+			}
+			buf_push(p, c);
+			last = c;
+		} while ('"' != c && EOF != c);
+
+		if (ferror(p->f)) {
+			parse_error(p);
+			return(p->lasttype);
+		} 
+
+		buf_push(p, '\0');
+		p->last.string = p->buf;
+		p->lasttype = TOK_LITERAL;
 	} else if (isdigit(c)) {
 		p->bufsz = 0;
 		buf_push(p, c);
@@ -266,7 +290,6 @@ parse_config_field_struct(struct parse *p, struct ref *r)
 		return;
 	} else if (NULL == (r->tfield = strdup(p->last.string)))
 		err(EXIT_FAILURE, NULL);
-
 }
 
 /*
@@ -290,6 +313,7 @@ parse_config_field_info(struct parse *p, struct field *fd)
 				"unknown field info token");
 			break;
 		}
+
 		if (0 == strcasecmp(p->last.string, "rowid")) {
 			if (FTYPE_INT != fd->type) {
 				parse_syntax_error(p, "rowid "
@@ -297,6 +321,17 @@ parse_config_field_info(struct parse *p, struct field *fd)
 				break;
 			}
 			fd->flags |= FIELD_ROWID;
+			continue;
+		} else if (0 == strcasecmp(p->last.string, "comment")) {
+			if (TOK_LITERAL != parse_next(p)) {
+				parse_syntax_error(p,
+					"expected comment string");
+				break;
+			}
+			free(fd->doc);
+			fd->doc = strdup(p->last.string);
+			if (NULL == fd->doc)
+				err(EXIT_FAILURE, NULL);
 			continue;
 		}
 		parse_syntax_error(p, "unknown field info token");
@@ -426,8 +461,27 @@ parse_config_struct(struct parse *p, struct strct *s)
 		if (TOK_RBRACE == parse_next(p))
 			break;
 
-		if (TOK_IDENT != p->lasttype ||
-		    strcasecmp(p->last.string, "field")) {
+		if (TOK_IDENT != p->lasttype) {
+			parse_syntax_error(p, "expected field");
+			return;
+		}
+		if (0 == strcasecmp(p->last.string, "comment")) {
+			if (TOK_LITERAL != parse_next(p)) {
+				parse_syntax_error(p, 
+					"expected comment string");
+				return;
+			}
+			free(s->doc);
+			s->doc = strdup(p->last.string);
+			if (NULL == s->doc)
+				err(EXIT_FAILURE, NULL);
+			if (TOK_SEMICOLON != parse_next(p)) {
+				parse_syntax_error(p, 
+					"expected end of comment");
+				return;
+			}
+			continue;
+		} else if (strcasecmp(p->last.string, "field")) {
 			parse_syntax_error(p, "expected field");
 			return;
 		}
@@ -560,9 +614,11 @@ parse_free(struct strctq *q)
 				free(f->ref->tstrct);
 				free(f->ref);
 			}
+			free(f->doc);
 			free(f->name);
 			free(f);
 		}
+		free(p->doc);
 		free(p->name);
 		free(p);
 	}

@@ -200,9 +200,14 @@ parse_next(struct parse *p)
 	} else if ('"' == c) {
 		p->bufsz = 0;
 		last = ' ';
-		do {
+		for (;;) {
+			/* 
+			 * Continue until we get an unescaped quote or
+			 * EOF. 
+			 */
 			c = parse_nextchar(p);
-			if ('"' == c || EOF == c)
+			if (EOF == c ||
+			    ('"' == c && '\\' != last))
 				break;
 			if (isspace(last) && isspace(c)) {
 				last = c;
@@ -210,7 +215,7 @@ parse_next(struct parse *p)
 			}
 			buf_push(p, c);
 			last = c;
-		} while ('"' != c && EOF != c);
+		} 
 
 		if (ferror(p->f)) {
 			parse_error(p);

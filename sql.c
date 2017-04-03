@@ -69,6 +69,8 @@ gen_struct(const struct strct *p)
 	const struct field *f;
 	int	 first = 1;
 
+	gen_comment(p->doc, 0, NULL, "-- ", NULL);
+
 	printf("CREATE TABLE %s (", p->name);
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_field(f, &first);

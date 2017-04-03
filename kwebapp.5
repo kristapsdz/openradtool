@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: March 30 2017 $
+.Dd $Mdocdate: April 1 2017 $
 .Dt KWEBAPP 5
 .Os
 .Sh NAME
@@ -43,8 +43,12 @@ A structure is a database table or C struct; whereas a field is a column
 or a struct member.
 The names of structures and fields must be unique case-insensitive
 alphanumeric strings starting with a letter.
+In
+.Nm ,
+these are collectively called
+.Dq objects .
 .Ss Structures
-A structure defines a C structure or a database table.
+A structure object defines a C structure or a database table.
 Its definition begins with the word
 .Cm struct ,
 then the name of the structure, then a set of one or more
@@ -58,7 +62,7 @@ Structures may be mapped into by other structures from referencing
 fields, which are similar to foreign keys.
 In SQL terms, this abstracts the notion of inner joins on foreign keys.
 .Ss Fields
-A field defines a C structure member and/or a database column.
+A field object defines a C structure member and/or a database column.
 Each field consists of the word
 .Cm field
 followed by a field
@@ -114,6 +118,18 @@ This is only available for the
 .Cm int
 type.
 The quoted comment string documents the field.
+.Ss Comments
+Each
+.Nm
+object may be documented.
+This documentation is reflected in the generated sources.
+For the time being, documentation may be considered opaque text that may
+not contain a double-quote character unless preceded by a backslash.
+(The backslash is removed in output.)
+.Pp
+For the time being, white-space is handled by retaining the first
+instance, then stripping subsequent white-space.
+This might change.
 .Sh EXAMPLES
 A simple session table is as follows:
 .Bd -literal

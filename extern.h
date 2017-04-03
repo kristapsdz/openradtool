@@ -83,6 +83,8 @@ void		 parse_free(struct strctq *);
 void		 gen_header(const struct strctq *);
 void		 gen_source(const struct strctq *);
 void		 gen_sql(const struct strctq *);
+void		 gen_diff(const struct strctq *,
+			const struct strctq *);
 
 void		 gen_comment(const char *, size_t, 
 			const char *, const char *,

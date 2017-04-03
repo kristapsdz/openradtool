@@ -29,6 +29,7 @@
 
 enum	op {
 	OP_NOOP,
+	OP_DIFF,
 	OP_HEADER,
 	OP_SOURCE,
 	OP_SQL
@@ -37,9 +38,9 @@ enum	op {
 int
 main(int argc, char *argv[])
 {
-	FILE		*conf;
-	const char	*confile = NULL;
-	struct strctq	*sq;
+	FILE		*conf, *dconf;
+	const char	*confile = NULL, *dconfile = NULL;
+	struct strctq	*sq, *dsq = NULL;
 	int		 c;
 	enum op		 op = OP_HEADER;
 
@@ -48,10 +49,14 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "chns")))
+	while (-1 != (c = getopt(argc, argv, "cd:hns")))
 		switch (c) {
 		case ('c'):
 			op = OP_SOURCE;
+			break;
+		case ('d'):
+			op = OP_DIFF;
+			dconfile = optarg;
 			break;
 		case ('h'):
 			op = OP_HEADER;
@@ -79,6 +84,10 @@ main(int argc, char *argv[])
 	if (NULL == (conf = fopen(confile, "r")))
 		err(EXIT_FAILURE, "%s", confile);
 
+	if (NULL != dconfile && 
+	    NULL == (dconf = fopen(dconfile, "r")))
+		err(EXIT_FAILURE, "%s", dconfile);
+
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio", NULL))
 		err(EXIT_FAILURE, "pledge");
@@ -88,18 +97,28 @@ main(int argc, char *argv[])
 	 * First, parse the file.
 	 * This pulls all of the data from the configuration file.
 	 * If there are any errors, it will return NULL.
+	 * Also parse the "diff" configuration, if it exists.
 	 */
 
 	sq = parse_config(conf, confile);
 	fclose(conf);
 
+	if (NULL != dconf) {
+		dsq = parse_config(dconf, dconfile);
+		fclose(dconf);
+	}
+
 	/*
 	 * After parsing, we need to link.
 	 * Linking connects foreign key references.
+	 * Do this for both the main and (if applicable) diff
+	 * configuration files.
 	 */
 
-	if (NULL == sq || ! parse_link(sq)) {
+	if ((NULL == sq || ! parse_link(sq)) ||
+	    (NULL != dconfile && (NULL == dsq || ! parse_link(dsq)))) {
 		parse_free(sq);
+		parse_free(dsq);
 		return(EXIT_FAILURE);
 	}
 
@@ -111,12 +130,14 @@ main(int argc, char *argv[])
 		gen_header(sq);
 	else if (OP_SQL == op)
 		gen_sql(sq);
+	else if (OP_DIFF == op)
+		gen_diff(sq, dsq);
 
 	parse_free(sq);
 	return(EXIT_SUCCESS);
 
 usage:
-	fprintf(stderr, "usage: %s [-chns] [config]\n",
+	fprintf(stderr, "usage: %s [-chns] [-d config] [config]\n",
 		getprogname());
 	return(EXIT_FAILURE);
 }

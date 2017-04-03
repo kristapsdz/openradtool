@@ -23,8 +23,15 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "extern.h"
+
+static	const char *const ftypes[FTYPE__MAX] = {
+	"INTEGER",
+	"TEXT",
+	NULL,
+};
 
 static void
 gen_fkeys(const struct field *f, int *first)
@@ -45,22 +52,27 @@ static void
 gen_field(const struct field *f, int *first)
 {
 
+	if (FTYPE_STRUCT == f->type)
+		return;
+
+	printf("%s\n", *first ? "" : ",");
+
+	gen_comment(f->doc, 1, NULL, "-- ", NULL);
+
 	switch (f->type) {
 	case (FTYPE_INT):
-		printf("%s\n\t%s INTEGER", 
-			*first ? "" : ",", f->name);
+		printf("\t%s %s", f->name, ftypes[FTYPE_INT]);
 		if (FIELD_ROWID & f->flags)
 			printf(" PRIMARY KEY");
-		*first = 0;
 		break;
 	case (FTYPE_TEXT):
-		printf("%s\n\t%s TEXT", 
-			*first ? "" : ",", f->name);
-		*first = 0;
+		printf("\t%s %s", f->name, ftypes[FTYPE_TEXT]);
 		break;
 	default:
 		break;
 	}
+
+	*first = 0;
 }
 
 static void
@@ -87,4 +99,86 @@ gen_sql(const struct strctq *q)
 
 	TAILQ_FOREACH(p, q, entries)
 		gen_struct(p);
+}
+
+static size_t
+gen_diff_fields(const struct strct *s, const struct strct *ds)
+{
+	const struct field *f, *df;
+	size_t	 count = 0;
+
+	/*
+	 * Structure in both new and old queues.
+	 * Go through all fields in the new queue.
+	 * If they're not found in the old queue, modify and add.
+	 * Otherwise, make sure they're the same type and have the same
+	 * references.
+	 */
+
+	TAILQ_FOREACH(f, &s->fq, entries) {
+		TAILQ_FOREACH(df, &ds->fq, entries)
+			if (0 == strcasecmp(f->name, df->name))
+				break;
+
+		/* 
+		 * New "struct" fields are a no-op.
+		 * Otherwise, have an ALTER TABLE clause.
+		 */
+
+		if (NULL == df && FTYPE_STRUCT == f->type) {
+			warnx("%s.%s: new inner joined field",
+				f->parent->name, f->name);
+			continue;
+		} else if (NULL == df) {
+			printf("ALTER TABLE %s ADD COLUMN %s %s;\n",
+				f->parent->name, f->name, 
+				ftypes[f->type]);
+			count++;
+			/* FIXME: foreign key? */
+			continue;
+		} else if (df->type != f->type) {
+			warnx("%s.%s: type change from %s to %s",
+				f->parent->name, f->name,
+				ftypes[df->type],
+				ftypes[f->type]);
+			continue;
+		}
+	}
+
+	return(count);
+}
+
+void
+gen_diff(const struct strctq *sq, const struct strctq *dsq)
+{
+	const struct strct *s, *ds;
+
+	/*
+	 * Start by looking through all structures in the new queue and
+	 * see if they exist in the old queue.
+	 * If they don't exist in the old queue, we put out a CREATE
+	 * TABLE for them.
+	 * If they do, then look through them field by field.
+	 */
+
+	TAILQ_FOREACH(s, sq, entries) {
+		TAILQ_FOREACH(ds, dsq, entries)
+			if (0 == strcasecmp(s->name, ds->name))
+				break;
+		if (NULL == ds) {
+			/* Structure in "sq" does not exist in "dsq. */
+			gen_struct(s);
+			continue;
+		}
+		if (gen_diff_fields(s, ds))
+			puts("");
+	}
+
+	TAILQ_FOREACH(ds, dsq, entries) {
+		TAILQ_FOREACH(s, sq, entries)
+			if (0 == strcasecmp(s->name, ds->name))
+				break;
+		if (NULL == s) {
+		}
+	}
 }

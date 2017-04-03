@@ -46,6 +46,8 @@ gen_strct_field(const struct field *p)
 	case (FTYPE_TEXT):
 		printf("\tchar *%s;\n", p->name);
 		break;
+	default:
+		break;
 	}
 }
 
@@ -73,10 +75,12 @@ static void
 gen_strct_funcs(const struct strct *p)
 {
 
-	printf("struct %s *db_%s_get(void *);\n"
-	       "void db_%s_free(struct %s *);\n"
+	if (NULL != p->rowid)
+		printf("struct %s *db_%s_by_rowid(struct ksql *);\n",
+			p->name, p->name);
+
+	printf("void db_%s_free(struct %s *);\n"
 	       "\n",
-		p->name, p->name,
 		p->name, p->name);
 }
 

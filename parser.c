@@ -342,6 +342,12 @@ parse_config_field_info(struct parse *p, struct field *fd)
 				break;
 			}
 			fd->flags |= FIELD_ROWID;
+			if (NULL != fd->parent->rowid) {
+				parse_syntax_error(p,
+					"structure already has rowid");
+				break;
+			}
+			fd->parent->rowid = fd;
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "comment")) {
 			if (TOK_LITERAL != parse_next(p)) {

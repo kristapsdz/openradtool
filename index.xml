@@ -19,8 +19,9 @@
 				It accepts a configuration file that describes the <q>business logic</q> of your data: tables
 				(structures), fields (members), accessors, and so forth.
 				It then generates the source files you can include into your application.
-				<span class="nm">kwebapp</span> output uses <a href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for
+				The output uses <a href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for
 				the underlying <a href="https://sqlite.org">SQLite</a> database.
+				<span class="nm">kwebapp</span> is built to be fitted within a Makefile, just like your sources.
 			</p>
 			<figure>
 				<img src="index.svg" alt="" />
@@ -29,19 +30,25 @@
 				</figcaption>
 			</figure>
 			<p>
-				Consider the following <a href="kwebapp.5.html">kwebapp(5)</a> configuration file.
+				Consider the following <a href="kwebapp.5.html">kwebapp(5)</a> configuration file, <a href="db.txt.html">db.txt</a>.
 				It defines two objects, a <code>user</code> and a <code>session</code>, and establishes a relation between the
 				session and the user.
 				Each session, in this example, has a link to a user keyed by the <code>userid</code> field.
 			</p>
 			<article data-sblg-permlink="0" data-sblg-article="1"></article>
 			<p>
-				This generates the following C header file.
+				When passed through <a href="kwebapp.1.html">kwebapp(1)</a>, this generates the following C header file, <a
+					href="db.h.html">db.h</a>.
 				The header file defines the C structures relating to each configured object and declares the functions necessary
 				to acquire and release from the underlying SQLite database.
-				Internally, the generated C code will perform the proper <q>inner join</q> logic on the objects.
+				Internally, the generated C code (<a href="db.c.html">db.c</a>) will perform the proper <q>inner join</q> logic on the objects.
 			</p>
 			<article data-sblg-permlink="0" data-sblg-article="1"></article>
+			<p>
+				By linking (and compiling) your application to the <a href="db.c.html">db.c</a> and the header file <a
+					href="db.h.html">db.h</a>, you'll have a fully functional database backend without needing to worry
+				about managing the SQL invocations.
+			</p>
 		</article>
 		<footer>
 			Copyright &#xa9; 2017, <a href="mailto:kristaps@kcons.eu">Kristaps Dzonsons</a>

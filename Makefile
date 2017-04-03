@@ -56,33 +56,38 @@ kwebapp.1.html: kwebapp.1
 
 db.txt.xml: db.txt
 	( echo "<article data-sblg-article=\"1\">" ; \
-	  highlight -l --enclose-pre --src-lang=C -f db.txt ; \
+	  highlight -l --enclose-pre --src-lang=c -f db.txt ; \
 	  echo "</article>" ; ) >$@
 
 db.h.xml: db.h
 	( echo "<article data-sblg-article=\"1\">" ; \
-	  highlight -l --enclose-pre --src-lang=C -f db.h ; \
+	  highlight -l --enclose-pre --src-lang=c -f db.h ; \
+	  echo "</article>" ; ) >$@
+
+db.sql.xml: db.sql
+	( echo "<article data-sblg-article=\"1\">" ; \
+	  highlight -l --enclose-pre --src-lang=sql -f db.sql ; \
 	  echo "</article>" ; ) >$@
 
 db.c.html: db.c
-	highlight -s whitengrey -I -l --src-lang=C db.c >$@
+	highlight -s whitengrey -I -l --src-lang=c db.c >$@
 
 db.txt.html: db.txt
-	highlight -s whitengrey -I -l --src-lang=C db.txt >$@
+	highlight -s whitengrey -I -l --src-lang=c db.txt >$@
 
 db.h.html: db.h
-	highlight -s whitengrey -I -l --src-lang=C db.h >$@
+	highlight -s whitengrey -I -l --src-lang=c db.h >$@
 
 highlight.css:
 	highlight --print-style -s whitengrey
 
-index.html: index.xml db.txt.xml db.txt.html db.h.xml db.h.html db.c.html highlight.css
-	sblg -s cmdline -t index.xml -o- db.txt.xml db.h.xml > $@
+index.html: index.xml db.txt.xml db.txt.html db.h.xml db.h.html db.c.html db.sql.xml highlight.css
+	sblg -s cmdline -t index.xml -o- db.txt.xml db.h.xml db.sql.xml > $@
 
 clean:
 	rm -f kwebapp $(COMPAT_OBJS) $(OBJS) db.c db.h db.o db.sql db.db
 	rm -f index.svg index.html highlight.css kwebapp.5.html kwebapp.1.html
-	rm -f db.txt.xml db.h.xml db.c.html db.h.html db.txt.html
+	rm -f db.txt.xml db.h.xml db.c.html db.h.html db.txt.html db.sql.xml
 
 distclean: clean
 	rm -f config.h config.log Makefile.configure

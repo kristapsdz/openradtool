@@ -84,6 +84,10 @@ void		 gen_header(const struct strctq *);
 void		 gen_source(const struct strctq *);
 void		 gen_sql(const struct strctq *);
 
+void		 gen_comment(const char *, size_t, 
+			const char *, const char *,
+			const char *);
+
 __END_DECLS
 
 #endif /* ! EXTERN_H */

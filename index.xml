@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+		<meta charset="utf-8" /> 
+		<title>kwebapp | web application source generator</title>
+		<link rel="stylesheet" href="highlight.css" />
+		<link rel="stylesheet" href="index.css" />
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
+		<link rel="stylesheet" href="https://code.cdn.mozilla.net/fonts/fira.css" />
+	</head>
+	<body lang="en">
+		<header>
+			<h1>kwebapp</h1> &#8212; web application source generator
+		</header>
+		<article>
+			<p>
+				<span class="nm">kwebapp</span> generates the database API in C and SQL for your web application.
+				It accepts a configuration file that describes the <q>business logic</q> of your data: tables
+				(structures), fields (members), accessors, and so forth.
+				It then generates the source files you can include into your application.
+				<span class="nm">kwebapp</span> output uses <a href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for
+				the underlying <a href="https://sqlite.org">SQLite</a> database.
+			</p>
+			<figure>
+				<img src="index.svg" alt="" />
+				<figcaption>
+					Compilation sequence from configuration to output.
+				</figcaption>
+			</figure>
+			<p>
+				Consider the following <a href="kwebapp.5.html">kwebapp(5)</a> configuration file.
+				It defines two objects, a <code>user</code> and a <code>session</code>, and establishes a relation between the
+				session and the user.
+				Each session, in this example, has a link to a user keyed by the <code>userid</code> field.
+			</p>
+			<article data-sblg-permlink="0" data-sblg-article="1"></article>
+			<p>
+				This generates the following C header file.
+				The header file defines the C structures relating to each configured object and declares the functions necessary
+				to acquire and release from the underlying SQLite database.
+				Internally, the generated C code will perform the proper <q>inner join</q> logic on the objects.
+			</p>
+			<article data-sblg-permlink="0" data-sblg-article="1"></article>
+		</article>
+		<footer>
+			Copyright &#xa9; 2017, <a href="mailto:kristaps@kcons.eu">Kristaps Dzonsons</a>
+		</footer>
+	</body>
+</html>

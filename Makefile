@@ -1,3 +1,5 @@
+.SUFFIXES: .dot .svg
+
 include Makefile.configure
 
 VERSION		 = 0.0.3
@@ -17,6 +19,8 @@ OBJS		 = header.o \
 
 kwebapp: $(COMPAT_OBJS) $(OBJS)
 	$(CC) -o $@ $(COMPAT_OBJS) $(OBJS)
+
+www: index.svg index.html kwebapp.5.html kwebapp.1.html
 
 test: db.o db.db
 
@@ -40,8 +44,34 @@ $(COMPAT_OBJS) $(OBJS): config.h
 
 $(OBJS): extern.h
 
+kwebapp.5.html: kwebapp.5
+	mandoc -Thtml -Ostyle=mandoc.css kwebapp.5 >$@
+
+kwebapp.1.html: kwebapp.1
+	mandoc -Thtml -Ostyle=mandoc.css kwebapp.1 >$@
+
+.dot.svg:
+	dot -Tsvg $< | xsltproc --novalid notugly.xsl - >$@
+
+db.txt.xml: db.txt
+	( echo "<article data-sblg-article=\"1\">" ; \
+	  highlight -l --enclose-pre --src-lang=C -f db.txt ; \
+	  echo "</article>" ; ) >$@
+
+db.h.xml: db.h
+	( echo "<article data-sblg-article=\"1\">" ; \
+	  highlight -l --enclose-pre --src-lang=C -f db.h ; \
+	  echo "</article>" ; ) >$@
+
+highlight.css:
+	highlight --print-style -s whitengrey
+
+index.html: index.xml db.txt.xml db.h.xml highlight.css
+	sblg -s cmdline -t index.xml -o- db.txt.xml db.h.xml > $@
+
 clean:
 	rm -f kwebapp $(COMPAT_OBJS) $(OBJS) db.c db.h db.o db.sql db.db
+	rm -f index.svg db.txt.xml db.h.xml index.html highlight.css kwebapp.5.html kwebapp.1.html
 
 distclean: clean
 	rm -f config.h config.log Makefile.configure

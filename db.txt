@@ -1,23 +1,16 @@
-struct bar { 
-  field session struct sessid:session.id;
-  field sessid;
-}
-
 struct user {
   field name text;
-  field sid;
   field id int rowid;
+  comment 
+	"A regular user.
+	 Here is some whitespace.";
 }
 
 struct session { 
   field user struct userid:user.id;
-  field userid;
-  field token;
+  field userid int comment "Associated user.";
+  field altuserid:user.id int;
+  field token int comment "Random cookie.";
   field id int rowid;
-}
-
-struct foo { 
-  field session struct sessid:foo.id;
-  field sessid;
-  field id;
+  comment "Authenticated session.";
 }

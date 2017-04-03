@@ -93,27 +93,14 @@ gen_strct_fill_field(const struct field *f)
 }
 
 /*
- * Provide definitions for all functions we're going to have here.
- * FIXME: we shouldn't need this if we properly order our functions.
- */
-static void
-gen_strct_defs(const struct strct *p)
-{
-
-	printf("static void db_%s_fill(struct %s *, "
-		"struct ksqlstmt *, size_t *);\n",
-		p->name, p->name);
-	printf("static void db_%s_unfill(struct %s *);\n",
-	       	p->name, p->name);
-}
-
-/*
  * Provide the following function definitions:
  *
  *  (1) db_xxx_fill (fill from database)
  *  (2) db_xxx_unfill (clear internal structure memory)
  *  (3) db_xxx_free (public: free object)
  *  (4) db_xxx_get (public: get object)
+ *
+ * Also provide documentation for each function.
  */
 static void
 gen_strct(const struct strct *p)
@@ -125,28 +112,39 @@ gen_strct(const struct strct *p)
 
 	/* Fill from database. */
 
-	printf("static void\n"
+	printf("/*\n"
+	       " * Fill in a %s from an open statement \"stmt\".\n"
+	       " * This starts grabbing results from \"pos\",\n"
+	       " * which may be NULL to start from zero.\n"
+	       " */\n"
+	       "void\n"
 	       "db_%s_fill(struct %s *p, "
 		"struct ksqlstmt *stmt, size_t *pos)\n"
 	       "{\n"
 	       "\tsize_t i = 0;\n"
+	       "\n"
 	       "\tif (NULL == pos)\n"
 	       "\t\tpos = &i;\n"
 	       "\tmemset(p, 0, sizeof(*p));\n",
-		p->name, p->name);
+	       p->name, p->name, p->name);
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_fill_field(f);
 	printf("}\n"
 	       "\n");
 
-	/* Free (internal). */
+	/* Free. */
 
-	printf("static void\n"
+	printf("/*\n"
+	       " * Free memory allocated by db_%s_fill().\n"
+	       " * Also frees for all contained structures.\n"
+	       " * This is a noop if \"p\" is NULL.\n"
+	       " */\n"
+	       "void\n"
 	       "db_%s_unfill(struct %s *p)\n"
 	       "{\n"
 	       "\tif (NULL == p)\n"
 	       "\t\treturn;\n",
-		p->name, p->name);
+	       p->name, p->name, p->name);
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_unfill_field(f);
 	printf("}\n"
@@ -154,14 +152,18 @@ gen_strct(const struct strct *p)
 
 	/* Free object (external). */
 
-	printf("void\n"
+	printf("/*\n"
+	       " * Call db_%s_unfill() and free \"p\".\n"
+	       " * Has no effect if \"p\" is NULL.\n"
+	       " */\n"
+	       "void\n"
 	       "db_%s_free(struct %s *p)\n"
 	       "{\n"
 	       "\tdb_%s_unfill(p);\n"
 	       "\tfree(p);\n"
 	       "}\n"
 	       "\n",
-	       p->name, p->name, p->name);
+	       p->name, p->name, p->name, p->name);
 
 	/* 
 	 * Get object by identifier (external).
@@ -169,15 +171,22 @@ gen_strct(const struct strct *p)
 	 */
 
 	if (NULL != p->rowid) {
-		printf("struct %s *\n"
-		       "db_%s_by_rowid(struct ksql *db)\n"
+		printf("/*\n"
+		       " * Return the %s with rowid \"id\".\n"
+		       " * Returns NULL if no object was found.\n"
+		       " * Object must be freed with db_%s_free().\n"
+		       " */\n"
+		       "struct %s *\n"
+		       "db_%s_by_rowid(struct ksql *db, int64_t id)\n"
 		       "{\n"
 		       "\tstruct ksqlstmt *stmt;\n"
 		       "\tstruct %s *p = NULL;\n"
 		       "\tsize_t i = 0;\n"
+		       "\n"
 		       "\tksql_stmt_alloc(db, &stmt,\n"
 		       "\t\tstmts[STMT_%s_BY_ROWID],\n"
 		       "\t\tSTMT_%s_BY_ROWID);\n"
+		       "\tksql_bind_int(stmt, 0, id);\n"
 		       "\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
 		       "\t\tp = malloc(sizeof(struct %s));\n"
 		       "\t\tif (NULL == p) {\n"
@@ -185,7 +194,8 @@ gen_strct(const struct strct *p)
 		       "\t\t\texit(EXIT_FAILURE);\n"
 		       "\t\t}\n"
 		       "\t\tdb_%s_fill(p, stmt, &i);\n",
-		       p->name, p->name, p->name, 
+		       p->name, p->name, p->name,
+		       p->name, p->name, 
 		       caps, caps, p->name, p->name);
 		TAILQ_FOREACH(f, &p->fq, entries) {
 			if (FTYPE_STRUCT != f->type)
@@ -318,6 +328,12 @@ gen_source(const struct strctq *q)
 
 	/* A set of CPP defines for per-table schema. */
 
+	puts("/*\n"
+	     " * Define our table columns.\n"
+	     " * Do this as a series of macros because our\n"
+	     " * statements will use the \"AS\" feature when\n"
+	     " * generating its queries.\n"
+	     " */");
 	puts("#define STR(_name) #_name");
 	TAILQ_FOREACH(p, q, entries)
 		gen_schema(p);
@@ -336,10 +352,6 @@ gen_source(const struct strctq *q)
 	TAILQ_FOREACH(p, q, entries)
 		gen_stmt(p);
 	puts("};");
-	puts("");
-
-	TAILQ_FOREACH(p, q, entries)
-		gen_strct_defs(p);
 	puts("");
 
 	/* Define our functions. */

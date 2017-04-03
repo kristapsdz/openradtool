@@ -59,6 +59,164 @@ struct	parse {
 	FILE		*f; /* current parser */
 };
 
+/*
+ * Disallowed field names.
+ * These are from https://sqlite.org/lang_keywords.html.
+ */
+static	const char *const badidents[] = {
+	/* Things not allowed in C. */
+	"auto",
+	"break",
+	"case",
+	"char",
+	"const",
+	"continue",
+	"default",
+	"do",
+	"double",
+	"enum",
+	"extern",
+	"float",
+	"goto",
+	"long",
+	"register",
+	"short",
+	"signed",
+	"static",
+	"struct",
+	"typedef",
+	"union",
+	"unsigned",
+	"void",
+	"volatile",
+	/* Things not allowed in SQLite. */
+	"ABORT",
+	"ACTION",
+	"ADD",
+	"AFTER",
+	"ALL",
+	"ALTER",
+	"ANALYZE",
+	"AND",
+	"AS",
+	"ASC",
+	"ATTACH",
+	"AUTOINCREMENT",
+	"BEFORE",
+	"BEGIN",
+	"BETWEEN",
+	"BY",
+	"CASCADE",
+	"CASE",
+	"CAST",
+	"CHECK",
+	"COLLATE",
+	"COLUMN",
+	"COMMIT",
+	"CONFLICT",
+	"CONSTRAINT",
+	"CREATE",
+	"CROSS",
+	"CURRENT_DATE",
+	"CURRENT_TIME",
+	"CURRENT_TIMESTAMP",
+	"DATABASE",
+	"DEFAULT",
+	"DEFERRABLE",
+	"DEFERRED",
+	"DELETE",
+	"DESC",
+	"DETACH",
+	"DISTINCT",
+	"DROP",
+	"EACH",
+	"ELSE",
+	"END",
+	"ESCAPE",
+	"EXCEPT",
+	"EXCLUSIVE",
+	"EXISTS",
+	"EXPLAIN",
+	"FAIL",
+	"FOR",
+	"FOREIGN",
+	"FROM",
+	"FULL",
+	"GLOB",
+	"GROUP",
+	"HAVING",
+	"IF",
+	"IGNORE",
+	"IMMEDIATE",
+	"IN",
+	"INDEX",
+	"INDEXED",
+	"INITIALLY",
+	"INNER",
+	"INSERT",
+	"INSTEAD",
+	"INTERSECT",
+	"INTO",
+	"IS",
+	"ISNULL",
+	"JOIN",
+	"KEY",
+	"LEFT",
+	"LIKE",
+	"LIMIT",
+	"MATCH",
+	"NATURAL",
+	"NO",
+	"NOT",
+	"NOTNULL",
+	"NULL",
+	"OF",
+	"OFFSET",
+	"ON",
+	"OR",
+	"ORDER",
+	"OUTER",
+	"PLAN",
+	"PRAGMA",
+	"PRIMARY",
+	"QUERY",
+	"RAISE",
+	"RECURSIVE",
+	"REFERENCES",
+	"REGEXP",
+	"REINDEX",
+	"RELEASE",
+	"RENAME",
+	"REPLACE",
+	"RESTRICT",
+	"RIGHT",
+	"ROLLBACK",
+	"ROW",
+	"SAVEPOINT",
+	"SELECT",
+	"SET",
+	"TABLE",
+	"TEMP",
+	"TEMPORARY",
+	"THEN",
+	"TO",
+	"TRANSACTION",
+	"TRIGGER",
+	"UNION",
+	"UNIQUE",
+	"UPDATE",
+	"USING",
+	"VACUUM",
+	"VALUES",
+	"VIEW",
+	"VIRTUAL",
+	"WHEN",
+	"WHERE",
+	"WITH",
+	"WITHOUT",
+	NULL
+};
+
 static void parse_syntax_error(struct parse *, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
 
@@ -477,7 +635,8 @@ parse_config_field(struct parse *p, struct field *fd)
 static void
 parse_config_struct(struct parse *p, struct strct *s)
 {
-	struct field	*fd;
+	struct field	  *fd;
+	const char *const *cp;
 
 	if (TOK_LBRACE != parse_next(p)) {
 		parse_syntax_error(p, "expected left brace");
@@ -527,6 +686,16 @@ parse_config_struct(struct parse *p, struct strct *s)
 			return;
 		}
 
+		/* Disallow bad names. */
+
+		for (cp = badidents; NULL != *cp; cp++)
+			if (0 == strcasecmp(*cp, p->last.string)) {
+				parse_syntax_error(p, 
+					"disallowed field "
+					"identifier");
+				return;
+			}
+
 		if (NULL == (fd = calloc(1, sizeof(struct field))))
 			err(EXIT_FAILURE, NULL);
 		if (NULL == (fd->name = strdup(p->last.string)))
@@ -560,9 +729,10 @@ parse_config_struct(struct parse *p, struct strct *s)
 struct strctq *
 parse_config(FILE *f, const char *fname)
 {
-	struct strctq	*q;
-	struct strct	*s;
-	struct parse	 p;
+	struct strctq	  *q;
+	struct strct	  *s;
+	struct parse	   p;
+	const char *const *cp;
 
 	if (NULL == (q = malloc(sizeof(struct strctq))))
 		err(EXIT_FAILURE, NULL);
@@ -600,6 +770,16 @@ parse_config(FILE *f, const char *fname)
 			parse_syntax_error(&p, "duplicate name");
 			goto error;
 		}
+
+		/* Disallow bad names. */
+
+		for (cp = badidents; NULL != *cp; cp++)
+			if (0 == strcasecmp(*cp, p.last.string)) {
+				parse_syntax_error(&p, 
+					"disallowed structure "
+					"identifier");
+				goto error;
+			}
 
 		if (NULL == (s = calloc(1, sizeof(struct strct))))
 			err(EXIT_FAILURE, NULL);

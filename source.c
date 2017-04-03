@@ -50,8 +50,6 @@ gen_strct_unfill_field(const struct field *f)
 {
 
 	switch(f->type) {
-	case (FTYPE_INT):
-		break;
 	case (FTYPE_STRUCT):
 		printf("\tdb_%s_unfill(&p->%s);\n",
 			f->ref->tstrct,
@@ -59,6 +57,8 @@ gen_strct_unfill_field(const struct field *f)
 		break;
 	case (FTYPE_TEXT):
 		printf("\tfree(p->%s);\n", f->name);
+		break;
+	default:
 		break;
 	}
 }
@@ -168,35 +168,37 @@ gen_strct(const struct strct *p)
 	 * This needs to account for filling in foreign key references.
 	 */
 
-	printf("struct %s *\n"
-	       "db_%s_get(void *db)\n"
-	       "{\n"
-	       "\tstruct ksqlstmt *stmt;\n"
-	       "\tstruct %s *p = NULL;\n"
-	       "\tsize_t i = 0;\n"
-	       "\tksql_stmt_alloc(db, &stmt,\n"
-	       "\t\tstmts[STMT_%s_GET],\n"
-	       "\t\tSTMT_%s_GET);\n"
-	       "\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
-	       "\t\tp = malloc(sizeof(struct %s));\n"
-	       "\t\tif (NULL == p) {\n"
-	       "\t\t\tperror(NULL);\n"
-	       "\t\t\texit(EXIT_FAILURE);\n"
-	       "\t\t}\n"
-	       "\t\tdb_%s_fill(p, stmt, &i);\n",
-	       p->name, p->name, p->name, 
-	       caps, caps, p->name, p->name);
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT != f->type)
-			continue;
-		printf("\t\tdb_%s_fill(&p->%s, stmt, &i);\n",
-			f->ref->tstrct, f->name);
+	if (NULL != p->rowid) {
+		printf("struct %s *\n"
+		       "db_%s_by_rowid(struct ksql *db)\n"
+		       "{\n"
+		       "\tstruct ksqlstmt *stmt;\n"
+		       "\tstruct %s *p = NULL;\n"
+		       "\tsize_t i = 0;\n"
+		       "\tksql_stmt_alloc(db, &stmt,\n"
+		       "\t\tstmts[STMT_%s_BY_ROWID],\n"
+		       "\t\tSTMT_%s_BY_ROWID);\n"
+		       "\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
+		       "\t\tp = malloc(sizeof(struct %s));\n"
+		       "\t\tif (NULL == p) {\n"
+		       "\t\t\tperror(NULL);\n"
+		       "\t\t\texit(EXIT_FAILURE);\n"
+		       "\t\t}\n"
+		       "\t\tdb_%s_fill(p, stmt, &i);\n",
+		       p->name, p->name, p->name, 
+		       caps, caps, p->name, p->name);
+		TAILQ_FOREACH(f, &p->fq, entries) {
+			if (FTYPE_STRUCT != f->type)
+				continue;
+			printf("\t\tdb_%s_fill(&p->%s, stmt, &i);\n",
+				f->ref->tstrct, f->name);
+		}
+		printf("\t}\n"
+		       "\tksql_stmt_free(stmt);\n"
+		       "\treturn(p);\n"
+		       "}\n"
+		       "\n");
 	}
-	printf("\t}\n"
-	       "\tksql_stmt_free(stmt);\n"
-	       "\treturn(p);\n"
-	       "}\n"
-	       "\n");
 
 	free(caps);
 }
@@ -211,7 +213,8 @@ gen_stmt_enum(const struct strct *p)
 {
 	char	*caps = gen_strct_caps(p->name);
 
-	printf("\tSTMT_%s_GET,\n", caps);
+	if (NULL != p->rowid)
+		printf("\tSTMT_%s_BY_ROWID,\n", caps);
 	free(caps);
 }
 
@@ -228,33 +231,31 @@ gen_stmt(const struct strct *p)
 
 	caps = gen_strct_caps(p->name);
 
-	printf("\t\"SELECT \" SCHEMA_%s(%s) \"", caps, p->name);
-
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT != f->type)
-			continue;
-		scaps = gen_strct_caps(f->ref->tstrct);
-		printf(",\" SCHEMA_%s(_%c) \"", scaps, seqn++);
-		free(scaps);
+	if (NULL != p->rowid) {
+		printf("\t\"SELECT \" SCHEMA_%s(%s) \"", caps, p->name);
+		TAILQ_FOREACH(f, &p->fq, entries) {
+			if (FTYPE_STRUCT != f->type)
+				continue;
+			scaps = gen_strct_caps(f->ref->tstrct);
+			printf(",\" SCHEMA_%s(_%c) \"", scaps, seqn++);
+			free(scaps);
+		}
+		printf(" FROM %s ", p->name);
+		seqn = 'a';
+		TAILQ_FOREACH(f, &p->fq, entries) {
+			if (FTYPE_STRUCT != f->type)
+				continue;
+			if (0 == lb)
+				putchar('"');
+			printf("\n\t\t\"INNER JOIN %s AS _%c ON _%c.%s=%s.%s \"",
+				f->ref->tstrct, seqn,
+				seqn, f->ref->tfield,
+				p->name, f->ref->sfield);
+			seqn++;
+			lb = 1;
+		}
+		printf("%sWHERE %s=?\",\n", lb ? "\n\t\t\"" : "", p->rowid->name);
 	}
-
-	printf(" FROM %s ", p->name);
-	seqn = 'a';
-
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT != f->type)
-			continue;
-		if (0 == lb)
-			putchar('"');
-		printf("\n\t\t\"INNER JOIN %s AS _%c ON _%c.%s=%s.%s \"",
-			f->ref->tstrct, seqn,
-			seqn, f->ref->tfield,
-			p->name, f->ref->sfield);
-		seqn++;
-		lb = 1;
-	}
-
-	printf("%sWHERE id=?\",\n", lb ? "\n\t\t\"" : "");
 	free(caps);
 }
 

@@ -11,7 +11,6 @@ COMPAT_OBJS	 = compat_err.o \
 		   compat_strlcpy.o \
 		   compat_strtonum.o
 OBJS		 = comment.o \
-		   diff.o \
 		   header.o \
 		   linker.o \
 		   main.o \

@@ -1,16 +1,15 @@
 struct user {
   field name text;
-  field id int rowid;
+  field uid int rowid;
   comment 
 	"A regular user.
 	 Here is some whitespace.";
 }
 
 struct session { 
-  field user struct userid:user.id;
+  field user struct userid:user.uid;
   field userid int comment "Associated user.";
-  field altuserid:user.id int;
+  field altuserid:user.uid int;
   field token int comment "Random \"cookie\".";
-  field id int rowid;
   comment "Authenticated session.";
 }

@@ -38,7 +38,7 @@ enum	op {
 int
 main(int argc, char *argv[])
 {
-	FILE		*conf, *dconf;
+	FILE		*conf, *dconf = NULL;
 	const char	*confile = NULL, *dconfile = NULL;
 	struct strctq	*sq, *dsq = NULL;
 	int		 c;

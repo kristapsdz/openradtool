@@ -49,6 +49,12 @@
 					href="db.h.html">db.h</a>, you'll have a fully functional database backend without needing to worry
 				about managing the SQL invocations.
 			</p>
+			<p>
+				You can also manage your database directly by having <a href="kwebapp.1.html">kwebapp(1)</a> print out the database schema.
+				Notice that some object fields, like the <code>user</code> structure inside of the section, are not part of the SQL.
+				Rather, they are generated within <a href="db.c.html">db.c</a> using the foreign keys below.
+			</p>
+			<article data-sblg-permlink="0" data-sblg-article="1"></article>
 		</article>
 		<footer>
 			Copyright &#xa9; 2017, <a href="mailto:kristaps@kcons.eu">Kristaps Dzonsons</a>

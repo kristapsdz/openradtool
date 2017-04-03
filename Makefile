@@ -10,7 +10,8 @@ COMPAT_OBJS	 = compat_err.o \
 		   compat_strlcat.o \
 		   compat_strlcpy.o \
 		   compat_strtonum.o
-OBJS		 = header.o \
+OBJS		 = comment.o \
+		   header.o \
 		   linker.o \
 		   main.o \
 		   parser.o \
@@ -63,15 +64,25 @@ db.h.xml: db.h
 	  highlight -l --enclose-pre --src-lang=C -f db.h ; \
 	  echo "</article>" ; ) >$@
 
+db.c.html: db.c
+	highlight -s whitengrey -I -l --src-lang=C db.c >$@
+
+db.txt.html: db.txt
+	highlight -s whitengrey -I -l --src-lang=C db.txt >$@
+
+db.h.html: db.h
+	highlight -s whitengrey -I -l --src-lang=C db.h >$@
+
 highlight.css:
 	highlight --print-style -s whitengrey
 
-index.html: index.xml db.txt.xml db.h.xml highlight.css
+index.html: index.xml db.txt.xml db.txt.html db.h.xml db.h.html db.c.html highlight.css
 	sblg -s cmdline -t index.xml -o- db.txt.xml db.h.xml > $@
 
 clean:
 	rm -f kwebapp $(COMPAT_OBJS) $(OBJS) db.c db.h db.o db.sql db.db
-	rm -f index.svg db.txt.xml db.h.xml index.html highlight.css kwebapp.5.html kwebapp.1.html
+	rm -f index.svg index.html highlight.css kwebapp.5.html kwebapp.1.html
+	rm -f db.txt.xml db.h.xml db.c.html db.h.html db.txt.html
 
 distclean: clean
 	rm -f config.h config.log Makefile.configure

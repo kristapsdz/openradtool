@@ -10,7 +10,7 @@ struct session {
   field user struct userid:user.id;
   field userid int comment "Associated user.";
   field altuserid:user.id int;
-  field token int comment "Random cookie.";
+  field token int comment "Random \"cookie\".";
   field id int rowid;
   comment "Authenticated session.";
 }

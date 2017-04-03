@@ -1,0 +1,28 @@
+body					{ font-family: "Fira Sans", sans-serif; 
+					  color: #444;
+				 	  font-size: 14pt; }
+a					{ color: #07889b; }
+header					{ width: 100%; 
+					  padding: 48pt 0;
+					  color: #000;
+					  text-align: center; }
+h1					{ display: inline-block; 
+					  font-size: xx-large;
+					  font-weight: 500; }
+header 					{ font-size: x-large; }
+figure					{ text-align: center; 
+					  margin: 2em 0; }
+figcaption				{ color: #888; 
+					  font-size: smaller; }
+footer					{ text-align: center;
+					  color: #888;
+					  padding: 48pt 0;
+					  font-size: smaller; }
+footer a				{ color: #66b98f; }
+.nm					{ font-style: italic; }
+article					{ width: 60%;
+					  margin-left: auto;
+					  margin-right: auto; }
+article[data-sblg-article]		{ width: 100%; }
+code, pre.hl				{ font-family: "Fira Mono", monospace; 
+					  font-size: 12pt; }

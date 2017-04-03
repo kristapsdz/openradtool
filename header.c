@@ -76,12 +76,17 @@ gen_strct_funcs(const struct strct *p)
 {
 
 	if (NULL != p->rowid)
-		printf("struct %s *db_%s_by_rowid(struct ksql *);\n",
+		printf("struct %s *db_%s_by_rowid"
+			"(struct ksql *, int64_t);\n",
 			p->name, p->name);
-
 	printf("void db_%s_free(struct %s *);\n"
+	       "void db_%s_fill(struct %s *, "
+		"struct ksqlstmt *, size_t *);\n"
+	       "void db_%s_unfill(struct %s *);\n"
 	       "\n",
-		p->name, p->name);
+	       p->name, p->name,
+	       p->name, p->name,
+	       p->name, p->name);
 }
 
 void
@@ -103,6 +108,8 @@ gen_header(const struct strctq *q)
 		gen_strct_structs(p);
 
 	puts("__BEGIN_DECLS\n"
+	     "\n"
+	     "/* See db.c for function documentation. */\n"
 	     "");
 
 	TAILQ_FOREACH(p, q, entries)

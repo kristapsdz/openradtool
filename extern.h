@@ -20,7 +20,8 @@
 enum	ftype {
 	FTYPE_INT, /* native */
 	FTYPE_TEXT, /* native */
-	FTYPE_STRUCT /* only in C API (on reference) */
+	FTYPE_STRUCT, /* only in C API (on reference) */
+	FTYPE__MAX
 };
 
 /*
@@ -68,6 +69,7 @@ struct	strct {
 	char		  *doc; /* documentation */
 	size_t		   height; /* dependency order */
 	size_t		   colour; /* used during linkage */
+	struct field	  *rowid; /* optional rowid */
 	struct fieldq	   fq; /* fields/columns/members */
 	TAILQ_ENTRY(strct) entries;
 };

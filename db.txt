@@ -12,4 +12,5 @@ struct session {
   field altuserid:user.uid int;
   field token int comment "Random \"cookie\".";
   comment "Authenticated session.";
+  field id int rowid;
 }

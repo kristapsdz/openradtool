@@ -76,17 +76,42 @@ gen_strct_funcs(const struct strct *p)
 {
 
 	if (NULL != p->rowid)
-		printf("struct %s *db_%s_by_rowid"
-			"(struct ksql *, int64_t);\n",
-			p->name, p->name);
-	printf("void db_%s_free(struct %s *);\n"
-	       "void db_%s_fill(struct %s *, "
-		"struct ksqlstmt *, size_t *);\n"
-	       "void db_%s_unfill(struct %s *);\n"
+		printf("/*\n"
+		       " * Return the %s with rowid \"id\".\n"
+		       " * Returns NULL if no object was found.\n"
+		       " * Pointer must be freed with db_%s_free().\n"
+		       " */\n"
+		       "struct %s *db_%s_by_rowid"
+			"(struct ksql *p, int64_t id);\n"
+		       "\n",
+		       p->name, p->name, p->name, p->name);
+
+	printf("/*\n"
+	       " * Call db_%s_unfill() and free \"p\".\n"
+	       " * Has no effect if \"p\" is NULL.\n"
+	       " */\n"
+	       "void db_%s_free(struct %s *p);\n"
 	       "\n",
-	       p->name, p->name,
-	       p->name, p->name,
-	       p->name, p->name);
+	       p->name, p->name, p->name);
+
+	printf("/*\n"
+	       " * Fill in a %s from an open statement \"stmt\".\n"
+	       " * This starts grabbing results from \"pos\",\n"
+	       " * which may be NULL to start from zero.\n"
+	       " */\n"
+	       "void db_%s_fill(struct %s *p, "
+		"struct ksqlstmt *stmt, size_t *pos);\n"
+	       "\n",
+	       p->name, p->name, p->name);
+
+	printf("/*\n"
+	       " * Free memory allocated by db_%s_fill().\n"
+	       " * Also frees for all contained structures.\n"
+	       " * Has not effect if \"p\" is NULL.\n"
+	       " */\n"
+	       "void db_%s_unfill(struct %s *p);\n"
+	       "\n",
+	       p->name, p->name, p->name);
 }
 
 void
@@ -108,8 +133,6 @@ gen_header(const struct strctq *q)
 		gen_strct_structs(p);
 
 	puts("__BEGIN_DECLS\n"
-	     "\n"
-	     "/* See db.c for function documentation. */\n"
 	     "");
 
 	TAILQ_FOREACH(p, q, entries)

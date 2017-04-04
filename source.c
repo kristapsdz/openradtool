@@ -112,12 +112,7 @@ gen_strct(const struct strct *p)
 
 	/* Fill from database. */
 
-	printf("/*\n"
-	       " * Fill in a %s from an open statement \"stmt\".\n"
-	       " * This starts grabbing results from \"pos\",\n"
-	       " * which may be NULL to start from zero.\n"
-	       " */\n"
-	       "void\n"
+	printf("void\n"
 	       "db_%s_fill(struct %s *p, "
 		"struct ksqlstmt *stmt, size_t *pos)\n"
 	       "{\n"
@@ -126,44 +121,35 @@ gen_strct(const struct strct *p)
 	       "\tif (NULL == pos)\n"
 	       "\t\tpos = &i;\n"
 	       "\tmemset(p, 0, sizeof(*p));\n",
-	       p->name, p->name, p->name);
+	       p->name, p->name);
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_fill_field(f);
 	printf("}\n"
 	       "\n");
 
-	/* Free. */
+	/* Free internal resources. */
 
-	printf("/*\n"
-	       " * Free memory allocated by db_%s_fill().\n"
-	       " * Also frees for all contained structures.\n"
-	       " * This is a noop if \"p\" is NULL.\n"
-	       " */\n"
-	       "void\n"
+	printf("void\n"
 	       "db_%s_unfill(struct %s *p)\n"
 	       "{\n"
 	       "\tif (NULL == p)\n"
 	       "\t\treturn;\n",
-	       p->name, p->name, p->name);
+	       p->name, p->name);
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_unfill_field(f);
 	printf("}\n"
 	       "\n");
 
-	/* Free object (external). */
+	/* Free object. */
 
-	printf("/*\n"
-	       " * Call db_%s_unfill() and free \"p\".\n"
-	       " * Has no effect if \"p\" is NULL.\n"
-	       " */\n"
-	       "void\n"
+	printf("void\n"
 	       "db_%s_free(struct %s *p)\n"
 	       "{\n"
 	       "\tdb_%s_unfill(p);\n"
 	       "\tfree(p);\n"
 	       "}\n"
 	       "\n",
-	       p->name, p->name, p->name, p->name);
+	       p->name, p->name, p->name);
 
 	/* 
 	 * Get object by identifier (external).
@@ -171,12 +157,7 @@ gen_strct(const struct strct *p)
 	 */
 
 	if (NULL != p->rowid) {
-		printf("/*\n"
-		       " * Return the %s with rowid \"id\".\n"
-		       " * Returns NULL if no object was found.\n"
-		       " * Object must be freed with db_%s_free().\n"
-		       " */\n"
-		       "struct %s *\n"
+		printf("struct %s *\n"
 		       "db_%s_by_rowid(struct ksql *db, int64_t id)\n"
 		       "{\n"
 		       "\tstruct ksqlstmt *stmt;\n"
@@ -195,7 +176,6 @@ gen_strct(const struct strct *p)
 		       "\t\t}\n"
 		       "\t\tdb_%s_fill(p, stmt, &i);\n",
 		       p->name, p->name, p->name,
-		       p->name, p->name, 
 		       caps, caps, p->name, p->name);
 		TAILQ_FOREACH(f, &p->fq, entries) {
 			if (FTYPE_STRUCT != f->type)

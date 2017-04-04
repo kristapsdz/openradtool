@@ -87,6 +87,14 @@ checktargettype(const struct ref *ref)
 		return(0);
 	}
 
+	if ( ! (FIELD_ROWID & ref->target->flags)) 
+		warnx("%s.%s: referenced target %s.%s is not "
+			"a unique field",
+			ref->parent->parent->name,
+			ref->parent->name,
+			ref->target->parent->name,
+			ref->target->name);
+
 	return(1);
 }
 
@@ -151,7 +159,7 @@ linkref(struct ref *ref)
  * On success, this sets the "source" field for the referrent.
  */
 static int
-checksource(struct ref *ref, struct strct *s)
+resolvesource(struct ref *ref, struct strct *s)
 {
 	struct field	*f;
 
@@ -179,7 +187,7 @@ checksource(struct ref *ref, struct strct *s)
  * On success, this sets the "target" field for the referrent.
  */
 static int
-checktarget(struct ref *ref, struct strctq *q)
+resolvetarget(struct ref *ref, struct strctq *q)
 {
 	struct strct	*p;
 	struct field	*f;
@@ -280,8 +288,8 @@ parse_link(struct strctq *q)
 					return(0);
 			if (NULL == f->ref)
 				continue;
-			if ( ! checksource(f->ref, p) ||
-			     ! checktarget(f->ref, q) ||
+			if ( ! resolvesource(f->ref, p) ||
+			     ! resolvetarget(f->ref, q) ||
 			     ! linkref(f->ref) ||
 			     ! checktargettype(f->ref))
 				return(0);

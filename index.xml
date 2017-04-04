@@ -42,6 +42,7 @@
 				The header file defines the C structures relating to each configured object and declares the functions necessary
 				to acquire and release from the underlying SQLite database.
 				Internally, the generated C code (<a href="db.c.html">db.c</a>) will perform the proper <q>inner join</q> logic on the objects.
+				The documentation is created by the system.
 			</p>
 			<article data-sblg-permlink="0" data-sblg-article="1"></article>
 			<p>

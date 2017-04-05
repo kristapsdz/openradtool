@@ -244,44 +244,78 @@ gen_stmt_enum(const struct strct *p)
 }
 
 /*
+ * Recursively generate a series of SCHEMA_xxx statements for getting
+ * data on a structure.
+ * This will specify the schema of the top-level structure, then
+ * generate aliased schemas for all of the recursive structures.
+ * See gen_stmt_joins().
+ */
+static void
+gen_stmt_schema(const struct strct *p, size_t *seqn)
+{
+	const struct field *f;
+	char	*caps;
+
+	caps = gen_strct_caps(p->name);
+
+	if (0 == *seqn)
+		printf("\" SCHEMA_%s(%s) ", 
+			caps, p->name);
+	else
+		printf("\",\" SCHEMA_%s(_%c) ", 
+			caps, (char)*seqn + 96);
+
+	(*seqn)++;
+
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (FTYPE_STRUCT == f->type)
+			gen_stmt_schema(f->ref->target->parent, seqn);
+
+	free(caps);
+}
+
+/*
+ * Recursively generate a series of INNER JOIN statements for any
+ * structure object.
+ * If the structure object has no inner nested components, this will not
+ * do anything.
+ * See gen_stmt_schema().
+ */
+static void
+gen_stmt_joins(const struct strct *p, size_t *seqn)
+{
+	const struct field *f;
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT != f->type)
+			continue;
+		printf(" INNER JOIN %s AS _%c ON _%c.%s=%s.%s",
+			f->ref->tstrct, (char)*seqn + 97,
+			(char)*seqn + 97, f->ref->tfield,
+			p->name, f->ref->sfield);
+		(*seqn)++;
+		gen_stmt_joins(f->ref->target->parent, seqn);
+	}
+}
+
+/*
  * Fill in the statements noted in gen_stmt_enum().
  */
 static void
 gen_stmt(const struct strct *p)
 {
-	const struct field *f;
-	char	*caps, *scaps;
-	int	 lb = 0;
-	char	 seqn = 'a';
+	size_t	 seq;
 
-	caps = gen_strct_caps(p->name);
+	if (NULL == p->rowid) 
+		return;
 
-	if (NULL != p->rowid) {
-		printf("\t\"SELECT \" SCHEMA_%s(%s) \"", caps, p->name);
-		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (FTYPE_STRUCT != f->type)
-				continue;
-			scaps = gen_strct_caps(f->ref->tstrct);
-			printf(",\" SCHEMA_%s(_%c) \"", scaps, seqn++);
-			free(scaps);
-		}
-		printf(" FROM %s ", p->name);
-		seqn = 'a';
-		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (FTYPE_STRUCT != f->type)
-				continue;
-			if (0 == lb)
-				putchar('"');
-			printf("\n\t\t\"INNER JOIN %s AS _%c ON _%c.%s=%s.%s \"",
-				f->ref->tstrct, seqn,
-				seqn, f->ref->tfield,
-				p->name, f->ref->sfield);
-			seqn++;
-			lb = 1;
-		}
-		printf("%sWHERE %s=?\",\n", lb ? "\n\t\t\"" : "", p->rowid->name);
-	}
-	free(caps);
+	printf("\t\"SELECT ");
+	seq = 0;
+	gen_stmt_schema(p, &seq);
+	printf("\" FROM %s", p->name);
+	seq = 0;
+	gen_stmt_joins(p, &seq);
+	printf(" WHERE %s.%s=?\",\n", p->name, p->rowid->name);
 }
 
 /*

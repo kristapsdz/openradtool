@@ -39,9 +39,10 @@ int
 main(int argc, char *argv[])
 {
 	FILE		*conf, *dconf = NULL;
-	const char	*confile = NULL, *dconfile = NULL;
+	const char	*confile = NULL, *dconfile = NULL,
+	      		*header = NULL;
 	struct strctq	*sq, *dsq = NULL;
-	int		 c;
+	int		 c, rc = 1;
 	enum op		 op = OP_HEADER;
 
 #if HAVE_PLEDGE
@@ -49,10 +50,11 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "cd:hns")))
+	while (-1 != (c = getopt(argc, argv, "c:d:hns")))
 		switch (c) {
 		case ('c'):
 			op = OP_SOURCE;
+			header = optarg;
 			break;
 		case ('d'):
 			op = OP_DIFF;
@@ -77,10 +79,11 @@ main(int argc, char *argv[])
 	if (0 == argc) {
 		confile = "<stdin>";
 		conf = stdin;
-	} else if (argc > 1)
+	} else if (argc > 1) {
 		goto usage;
+	} else
+		confile = argv[0];
 
-	confile = argv[0];
 	if (NULL == (conf = fopen(confile, "r")))
 		err(EXIT_FAILURE, "%s", confile);
 
@@ -125,19 +128,24 @@ main(int argc, char *argv[])
 	/* Finally, (optionally) generate output. */
 
 	if (OP_SOURCE == op)
-		gen_source(sq);
+		gen_source(sq, header);
 	else if (OP_HEADER == op)
 		gen_header(sq);
 	else if (OP_SQL == op)
 		gen_sql(sq);
 	else if (OP_DIFF == op)
-		gen_diff(sq, dsq);
+		rc = gen_diff(sq, dsq);
 
 	parse_free(sq);
-	return(EXIT_SUCCESS);
+	return(rc ? EXIT_SUCCESS : EXIT_FAILURE);
 
 usage:
-	fprintf(stderr, "usage: %s [-chns] [-d config] [config]\n",
+	fprintf(stderr, 
+		"usage: %s "
+		"[-hns] "
+		"[-c header] "
+		"[-d config] "
+		"[config]\n",
 		getprogname());
 	return(EXIT_FAILURE);
 }

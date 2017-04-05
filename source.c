@@ -105,8 +105,13 @@ gen_strct_fill_field(const struct field *f)
 static void
 gen_strct(const struct strct *p)
 {
-	const struct field *f;
-	char	*caps;
+	const struct field	*f;
+	const struct search	*s;
+	const struct sref	*sr;
+	const struct sent	*sent;
+	char			*caps;
+	int			 first;
+	size_t			 pos;
 
 	caps = gen_strct_caps(p->name);
 
@@ -165,8 +170,8 @@ gen_strct(const struct strct *p)
 		       "\tsize_t i = 0;\n"
 		       "\n"
 		       "\tksql_stmt_alloc(db, &stmt,\n"
-		       "\t\tstmts[STMT_%s_BY_ROWID],\n"
-		       "\t\tSTMT_%s_BY_ROWID);\n"
+		       "\t\tstmts[STMT_%s_BY__ROWID],\n"
+		       "\t\tSTMT_%s_BY__ROWID);\n"
 		       "\tksql_bind_int(stmt, 0, id);\n"
 		       "\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
 		       "\t\tp = malloc(sizeof(struct %s));\n"
@@ -190,6 +195,36 @@ gen_strct(const struct strct *p)
 		       "\n");
 	}
 
+	/*
+	 * Generate the custom search functions.
+	 */
+
+	TAILQ_FOREACH(s, &p->sq, entries) {
+		printf("struct %s *\n"
+		       "db_%s_by", p->name, p->name);
+		first = 1;
+		TAILQ_FOREACH(sent, &s->sntq, entries) {
+			if ( ! first)
+				putchar('_');
+			first = 0;
+			TAILQ_FOREACH(sr, &sent->srq, entries)
+				printf("_%s", sr->name);
+		}
+		printf("(struct ksql *db");
+		pos = 1;
+		TAILQ_FOREACH(sent, &s->sntq, entries) {
+			sr = TAILQ_LAST(&sent->srq, srefq);
+			if (FTYPE_INT == sr->field->type) 
+				printf(", int64_t v%zu", pos++);
+			else
+				printf(", const char *v%zu", pos++);
+		}
+		printf(")\n"
+		       "{\n"
+		       "\treturn(NULL);\n"
+		       "}\n");
+	}
+
 	free(caps);
 }
 
@@ -204,7 +239,7 @@ gen_stmt_enum(const struct strct *p)
 	char	*caps = gen_strct_caps(p->name);
 
 	if (NULL != p->rowid)
-		printf("\tSTMT_%s_BY_ROWID,\n", caps);
+		printf("\tSTMT_%s_BY__ROWID,\n", caps);
 	free(caps);
 }
 
@@ -274,7 +309,7 @@ gen_schema(const struct strct *p)
 }
 
 void
-gen_source(const struct strctq *q)
+gen_source(const struct strctq *q, const char *header)
 {
 	const struct strct *p;
 
@@ -285,14 +320,15 @@ gen_source(const struct strctq *q)
 
 	/* Start with all headers we'll need. */
 
-	puts("#include <stdio.h>\n"
-	     "#include <stdlib.h>\n"
-	     "#include <string.h>\n"
-	     "\n"
-	     "#include <ksql.h>\n"
-	     "\n"
-	     "#include \"db.h\"\n"
-	     "");
+	printf("#include <stdio.h>\n"
+	       "#include <stdlib.h>\n"
+	       "#include <string.h>\n"
+	       "\n"
+	       "#include <ksql.h>\n"
+	       "\n"
+	       "#include \"%s\"\n"
+	       "\n",
+	       header);
 
 	/* Enumeration for statements. */
 

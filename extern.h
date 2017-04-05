@@ -60,6 +60,39 @@ struct	field {
 TAILQ_HEAD(fieldq, field);
 
 /*
+ * A single field reference within a chain.
+ * Each in the chain descends into nested structures.
+ */
+struct	sref {
+	char		 *name; /* field name */
+	struct field	 *field; /* field (after link) */
+	struct sent	 *parent; /* up-reference */
+	TAILQ_ENTRY(sref) entries;
+};
+
+TAILQ_HEAD(srefq, sref);
+
+struct	sent {
+	struct srefq	  srq;
+	struct search	 *parent; /* up-reference */
+	TAILQ_ENTRY(sent) entries;
+};
+
+TAILQ_HEAD(sentq, sent);
+
+/*
+ * A set of fields to search by.
+ * A "search" implies a unique response given a query.
+ */
+struct	search {
+	struct sentq	    sntq; /* nested reference chain */
+	struct strct	   *parent; /* up-reference */
+	TAILQ_ENTRY(search) entries;
+};
+
+TAILQ_HEAD(searchq, search);
+
+/*
  * A database/struct consisting of fields.
  * Structures depend upon other structures (see the FTYPE_REF in the
  * field), which is represented by the "height" value.
@@ -71,6 +104,7 @@ struct	strct {
 	size_t		   colour; /* used during linkage */
 	struct field	  *rowid; /* optional rowid */
 	struct fieldq	   fq; /* fields/columns/members */
+	struct searchq	   sq; /* search fields */
 	TAILQ_ENTRY(strct) entries;
 };
 
@@ -83,9 +117,9 @@ struct strctq	*parse_config(FILE *, const char *);
 void		 parse_free(struct strctq *);
 
 void		 gen_header(const struct strctq *);
-void		 gen_source(const struct strctq *);
+void		 gen_source(const struct strctq *, const char *);
 void		 gen_sql(const struct strctq *);
-void		 gen_diff(const struct strctq *,
+int		 gen_diff(const struct strctq *,
 			const struct strctq *);
 
 void		 gen_comment(const char *, size_t, 

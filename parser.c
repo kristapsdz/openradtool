@@ -39,6 +39,7 @@ enum	tok {
 	TOK_PERIOD, /* } */
 	TOK_COLON, /* : */
 	TOK_SEMICOLON, /* ; */
+	TOK_COMMA, /* ; */
 	TOK_LITERAL, /* "text" */
 	TOK_ERR, /* error! */
 	TOK_EOF /* end of file! */
@@ -61,7 +62,7 @@ struct	parse {
 
 /*
  * Disallowed field names.
- * These are from https://sqlite.org/lang_keywords.html.
+ * The SQL ones are from https://sqlite.org/lang_keywords.html.
  */
 static	const char *const badidents[] = {
 	/* Things not allowed in C. */
@@ -351,6 +352,8 @@ parse_next(struct parse *p)
 		p->lasttype = TOK_LBRACE;
 	} else if (';' == c) {
 		p->lasttype = TOK_SEMICOLON;
+	} else if (',' == c) {
+		p->lasttype = TOK_COMMA;
 	} else if ('.' == c) {
 		p->lasttype = TOK_PERIOD;
 	} else if (':' == c) {
@@ -498,6 +501,10 @@ parse_config_field_info(struct parse *p, struct field *fd)
 				parse_syntax_error(p, "rowid "
 					"for non-integer type");
 				break;
+			} else if (NULL != fd->ref) {
+				parse_syntax_error(p, "rowid "
+					"on foreign key reference");
+				break;
 			}
 			fd->flags |= FIELD_ROWID;
 			if (NULL != fd->parent->rowid) {
@@ -621,6 +628,113 @@ parse_config_field(struct parse *p, struct field *fd)
 	parse_config_field_info(p, fd);
 }
 
+static struct sref *
+sref_alloc(const char *name, struct sent *parent)
+{
+	struct sref	*ref;
+
+	if (NULL == (ref = calloc(1, sizeof(struct sref))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (ref->name = strdup(name)))
+		err(EXIT_FAILURE, NULL);
+	ref->parent = parent;
+	TAILQ_INSERT_TAIL(&parent->srq, ref, entries);
+	return(ref);
+}
+
+static struct sent *
+sent_alloc(struct search *parent)
+{
+	struct sent	*sent;
+
+	if (NULL == (sent = calloc(1, sizeof(struct sent))))
+		err(EXIT_FAILURE, NULL);
+	sent->parent = parent;
+	TAILQ_INIT(&sent->srq);
+	TAILQ_INSERT_TAIL(&parent->sntq, sent, entries);
+	return(sent);
+}
+
+/*
+ * Parse the field used in a search.  This is the FIELD designation in
+ * parse_config_struct_search().
+ * This may consist of nested structures, which uses dot-notation to
+ * signify the field within a field's reference structure.
+ *
+ *  field.[FIELD] | field
+ */
+static void
+parse_config_struct_search_field(struct parse *p, struct sent *sent)
+{
+
+	if (TOK_IDENT != parse_next(p)) {
+		parse_syntax_error(p, "expected "
+			"search field identifier");
+		return;
+	}
+	sref_alloc(p->last.string, sent);
+
+	for (;;) {
+		if (TOK_COMMA == parse_next(p) ||
+		    TOK_SEMICOLON == p->lasttype)
+			break;
+
+		if (TOK_PERIOD != p->lasttype) {
+			parse_syntax_error(p, "expected "
+				"search field separator");
+			return;
+		} else if (TOK_IDENT != parse_next(p)) {
+			parse_syntax_error(p, "expected "
+				"search field identifier");
+			return;
+		}
+		sref_alloc(p->last.string, sent);
+	}
+}
+
+/*
+ * Parse a search clause.
+ * This has the following syntax:
+ *
+ *  "search" FIELD [, FIELD]* ";"
+ *
+ * The FIELD parts are parsed in parse_config_struct_search_field().
+ * Returns zero on failure, non-zero on success.
+ * FIXME: have return value be void and use lasttype.
+ */
+static int
+parse_config_struct_search(struct parse *p, struct strct *s)
+{
+	struct search	*srch;
+	struct sent	*sent;
+
+	if (NULL == (srch = calloc(1, sizeof(struct search))))
+		err(EXIT_FAILURE, NULL);
+	srch->parent = s;
+	TAILQ_INIT(&srch->sntq);
+	TAILQ_INSERT_TAIL(&s->sq, srch, entries);
+
+	/* Per-field. */
+
+	sent = sent_alloc(srch);
+	parse_config_struct_search_field(p, sent);
+	if (TOK_SEMICOLON == p->lasttype)
+		return(1);
+	else if (TOK_COMMA != p->lasttype)
+		return(0);
+
+	for (;;) {
+		sent = sent_alloc(srch);
+		parse_config_struct_search_field(p, sent);
+		if (TOK_SEMICOLON == p->lasttype)
+			break;
+		else if (TOK_COMMA != p->lasttype)
+			return(0);
+	}
+
+	return(1);
+}
+
 /*
  * Read an individual structure.
  * This opens and closes the structure, then reads all of the field
@@ -648,10 +762,18 @@ parse_config_struct(struct parse *p, struct strct *s)
 			break;
 
 		if (TOK_IDENT != p->lasttype) {
-			parse_syntax_error(p, "expected field");
+			parse_syntax_error(p, 
+				"expected field entry type");
 			return;
 		}
+
 		if (0 == strcasecmp(p->last.string, "comment")) {
+			/*
+			 * A comment.
+			 * Attach it to the given structure, possibly
+			 * clearing out any prior comments.
+			 * XXX: augment comments?
+			 */
 			if (TOK_LITERAL != parse_next(p)) {
 				parse_syntax_error(p, 
 					"expected comment string");
@@ -667,10 +789,26 @@ parse_config_struct(struct parse *p, struct strct *s)
 				return;
 			}
 			continue;
-		} else if (strcasecmp(p->last.string, "field")) {
-			parse_syntax_error(p, "expected field");
+		} else if (0 == strcasecmp(p->last.string, "search")) {
+
+			/*
+			 * A set of search fields.
+			 * Parse each of the fields we're going to
+			 * search on.
+			 * (Later we'll link to the fields.)
+			 */
+			if ( ! parse_config_struct_search(p, s)) 
+				return;
+			continue;
+		} 
+		
+		if (strcasecmp(p->last.string, "field")) {
+			parse_syntax_error(p, 
+				"expected field entry type");
 			return;
 		}
+
+		/* Now we have a new field. */
 
 		if (TOK_IDENT != parse_next(p)) {
 			parse_syntax_error(p, "expected field name");
@@ -695,6 +833,11 @@ parse_config_struct(struct parse *p, struct strct *s)
 					"identifier");
 				return;
 			}
+
+		/*
+		 * Allocate the field entry by name and then continue
+		 * parsing the field attributes.
+		 */
 
 		if (NULL == (fd = calloc(1, sizeof(struct field))))
 			err(EXIT_FAILURE, NULL);
@@ -723,8 +866,8 @@ parse_config_struct(struct parse *p, struct strct *s)
  *
  *  [ "struct" ident STRUCT ]+
  *
- * Where STRUCT is defined in parse_config_struct and ident is an
- * alphanumeric (starting with alpha) string.
+ * Where STRUCT is defined in parse_config_struct and ident is a unique,
+ * alphanumeric (starting with alpha), non-reserved string.
  */
 struct strctq *
 parse_config(FILE *f, const char *fname)
@@ -781,6 +924,12 @@ parse_config(FILE *f, const char *fname)
 				goto error;
 			}
 
+		/*
+		 * Create the new structure with the given name and add
+		 * it to the queue of structures.
+		 * Then parse its fields.
+		 */
+
 		if (NULL == (s = calloc(1, sizeof(struct strct))))
 			err(EXIT_FAILURE, NULL);
 		if (NULL == (s->name = strdup(p.last.string)))
@@ -788,6 +937,7 @@ parse_config(FILE *f, const char *fname)
 
 		TAILQ_INSERT_TAIL(q, s, entries);
 		TAILQ_INIT(&s->fq);
+		TAILQ_INIT(&s->sq);
 		parse_config_struct(&p, s);
 	}
 
@@ -802,11 +952,61 @@ error:
 	return(NULL);
 }
 
+static void
+parse_free_ref(struct ref *p)
+{
+
+	if (NULL == p)
+		return;
+	free(p->sfield);
+	free(p->tfield);
+	free(p->tstrct);
+	free(p);
+}
+
+static void
+parse_free_field(struct field *p)
+{
+
+	if (NULL == p)
+		return;
+	parse_free_ref(p->ref);
+	free(p->doc);
+	free(p->name);
+	free(p);
+}
+
+static void
+parse_free_search(struct search *p)
+{
+	struct sref	*s;
+	struct sent	*sent;
+
+	if (NULL == p)
+		return;
+
+	while (NULL != (sent = TAILQ_FIRST(&p->sntq))) {
+		TAILQ_REMOVE(&p->sntq, sent, entries);
+		while (NULL != (s = TAILQ_FIRST(&sent->srq))) {
+			TAILQ_REMOVE(&sent->srq, s, entries);
+			free(s->name);
+			free(s);
+		}
+		free(sent);
+	}
+	free(p);
+}
+
+/*
+ * Free all resources from the queue of structures.
+ * Does nothing if "q" is empty or NULL.
+ */
 void
 parse_free(struct strctq *q)
 {
 	struct strct	*p;
 	struct field	*f;
+	struct search	*s;
 
 	if (NULL == q)
 		return;
@@ -815,15 +1015,11 @@ parse_free(struct strctq *q)
 		TAILQ_REMOVE(q, p, entries);
 		while (NULL != (f = TAILQ_FIRST(&p->fq))) {
 			TAILQ_REMOVE(&p->fq, f, entries);
-			if (NULL != f->ref) {
-				free(f->ref->sfield);
-				free(f->ref->tfield);
-				free(f->ref->tstrct);
-				free(f->ref);
-			}
-			free(f->doc);
-			free(f->name);
-			free(f);
+			parse_free_field(f);
+		}
+		while (NULL != (s = TAILQ_FIRST(&p->sq))) {
+			TAILQ_REMOVE(&p->sq, s, entries);
+			parse_free_search(s);
 		}
 		free(p->doc);
 		free(p->name);

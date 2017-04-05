@@ -1,16 +1,25 @@
+struct company {
+  field name text;
+  field id int rowid;
+}
+
 struct user {
+  field company struct cid:company.id;
+  field cid;
   field name text;
   field uid int rowid;
   comment 
 	"A regular user.
 	 Here is some whitespace.";
+  search name;
 }
 
 struct session { 
   field user struct userid:user.uid;
   field userid int comment "Associated user.";
   field altuserid:user.uid int;
-  field token int comment "Random \"cookie\".";
+  field token int comment "Random cookie.";
   comment "Authenticated session.";
+  search user.company.name,userid;
   field id int rowid;
 }

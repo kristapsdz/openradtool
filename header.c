@@ -26,6 +26,12 @@
 
 #include "extern.h"
 
+static	const char *const ftypes[FTYPE__MAX] = {
+	"int64_t",
+	"const char *",
+	NULL,
+};
+
 /*
  * Generate the C API for a given field.
  */
@@ -74,6 +80,11 @@ gen_strct_structs(const struct strct *p)
 static void
 gen_strct_funcs(const struct strct *p)
 {
+	int	 		 first;
+	size_t			 pos;
+	const struct search	*s;
+	const struct sref	*sr;
+	const struct sent	*sent;
 
 	if (NULL != p->rowid)
 		printf("/*\n"
@@ -112,6 +123,46 @@ gen_strct_funcs(const struct strct *p)
 	       "void db_%s_unfill(struct %s *p);\n"
 	       "\n",
 	       p->name, p->name, p->name);
+
+	TAILQ_FOREACH(s, &p->sq, entries) {
+		printf("/*\n"
+		       " * Search for a specific %s.\n"
+		       " * Uses the given fields in struct %s:\n",
+		       p->name, p->name);
+		TAILQ_FOREACH(sent, &s->sntq, entries) {
+			printf(" * ");
+			first = 1;
+			TAILQ_FOREACH(sr, &sent->srq, entries) {
+				putchar(first ? '\t' : '.');
+				first = 0;
+				printf("%s", sr->name);
+			}
+			sr = TAILQ_LAST(&sent->srq, srefq);
+			printf(" (%s)\n", ftypes[sr->field->type]);
+		}
+		printf(" * Returns a pointer on success or NULL.\n"
+		       " * Free the pointer with db_%s_free().\n"
+		       " */\n"
+		       "struct %s *db_%s_by", 
+		       p->name, p->name, p->name);
+		first = 1;
+		TAILQ_FOREACH(sent, &s->sntq, entries) {
+			if ( ! first)
+				putchar('_');
+			first = 0;
+			TAILQ_FOREACH(sr, &sent->srq, entries)
+				printf("_%s", sr->name);
+		}
+		printf("(struct ksql *db");
+		pos = 1;
+		TAILQ_FOREACH(sent, &s->sntq, entries) {
+			sr = TAILQ_LAST(&sent->srq, srefq);
+			printf(", %s v%zu", 
+				ftypes[sr->field->type], pos++);
+		}
+		puts(");\n"
+		     "");
+	}
 }
 
 void

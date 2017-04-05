@@ -255,6 +255,53 @@ annotate(struct ref *ref, size_t height, size_t colour)
 }
 
 /*
+ * Recursively follow the chain of references in a search target,
+ * finding out whether it's well-formed in the process.
+ * Returns zero on failure, non-zero on success.
+ */
+static int
+resolvesref(struct sref *ref, struct strct *s)
+{
+	struct field	*f;
+
+	TAILQ_FOREACH(f, &s->fq, entries)
+		if (0 == strcasecmp(f->name, ref->name))
+			break;
+
+	/* Did we find the field in our structure? */
+
+	if (NULL == (ref->field = f)) {
+		warnx("%s.%s: search term not found",
+			s->name, ref->name);
+		return(0);
+	}
+
+	/* 
+	 * If we're following a chain, we must have a "struct" type;
+	 * otherwise, we must have a native type.
+	 */
+
+	if (NULL == TAILQ_NEXT(ref, entries)) {
+		if (FTYPE_STRUCT != f->type) 
+			return(1);
+		warnx("%s.%s: search term leaf field "
+			"is a struct", f->parent->name,
+			f->name);
+		return(0);
+	} else if (FTYPE_STRUCT != f->type) {
+		warnx("%s.%s: search term node field "
+			"is not a struct", f->parent->name,
+			f->name);
+		return(0);
+	}
+
+	/* Follow the chain of our reference. */
+
+	ref = TAILQ_NEXT(ref, entries);
+	return(resolvesref(ref, f->ref->target->parent));
+}
+
+/*
  * Sort by reverse height.
  */
 static int
@@ -273,6 +320,9 @@ parse_link(struct strctq *q)
 	struct strct	 *p;
 	struct strct	**pa;
 	struct field	 *f;
+	struct sent	 *sent;
+	struct search	 *srch;
+	struct sref	 *ref;
 	size_t		  colour = 1, sz = 0, i = 0, hasrowid = 0;
 
 	/* 
@@ -316,6 +366,20 @@ parse_link(struct strctq *q)
 		}
 		colour++;
 	}
+
+	/*
+	 * Resolve the chain of search terms.
+	 * To do so, we need to descend into each set of search terms
+	 * for the structure and resolve the fields.
+	 */
+
+	TAILQ_FOREACH(p, q, entries)
+		TAILQ_FOREACH(srch, &p->sq, entries)
+			TAILQ_FOREACH(sent, &srch->sntq, entries) {
+				ref = TAILQ_FIRST(&sent->srq);
+				if ( ! resolvesref(ref, p))
+					return(0);
+			}
 
 	/* 
 	 * Copy the list into a temporary array.

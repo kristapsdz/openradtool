@@ -23,13 +23,15 @@ kwebapp: $(COMPAT_OBJS) $(OBJS)
 
 www: index.svg index.html kwebapp.5.html kwebapp.1.html
 
+OBJS: extern.h
+
 test: db.o db.db
 
 db.o: db.c db.h
 	$(CC) $(CFLAGS) -I/usr/local/include -o $@ -c db.c
 
 db.c: kwebapp db.txt
-	./kwebapp -c db.txt >$@
+	./kwebapp -c db.h db.txt >$@
 
 db.h: kwebapp db.txt
 	./kwebapp -h db.txt >$@

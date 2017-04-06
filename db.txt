@@ -10,16 +10,16 @@ struct user {
   field uid int rowid;
   comment 
 	"A regular user.
-	 Here is some whitespace.";
+	 Comments on a new line.";
   search name;
 }
 
 struct session { 
   field user struct userid:user.uid;
   field userid int comment "Associated user.";
-  field altuserid:user.uid int;
   field token int comment "Random cookie.";
+  field id int rowid;
+
   comment "Authenticated session.";
   search user.company.name,userid;
-  field id int rowid;
 }

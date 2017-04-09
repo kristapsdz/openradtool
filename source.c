@@ -18,6 +18,7 @@
 
 #include <sys/queue.h>
 
+#include <assert.h>
 #include <ctype.h>
 #if HAVE_ERR
 # include <err.h>
@@ -106,12 +107,7 @@ static void
 gen_strct(const struct strct *p)
 {
 	const struct field	*f;
-	const struct search	*s;
-	const struct sref	*sr;
-	const struct sent	*sent;
 	char			*caps;
-	int			 first;
-	size_t			 pos;
 
 	caps = gen_strct_caps(p->name);
 
@@ -170,8 +166,8 @@ gen_strct(const struct strct *p)
 		       "\tsize_t i = 0;\n"
 		       "\n"
 		       "\tksql_stmt_alloc(db, &stmt,\n"
-		       "\t\tstmts[STMT_%s_BY__ROWID],\n"
-		       "\t\tSTMT_%s_BY__ROWID);\n"
+		       "\t\tstmts[STMT_%s_BY_ROWID],\n"
+		       "\t\tSTMT_%s_BY_ROWID);\n"
 		       "\tksql_bind_int(stmt, 0, id);\n"
 		       "\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
 		       "\t\tp = malloc(sizeof(struct %s));\n"
@@ -199,6 +195,7 @@ gen_strct(const struct strct *p)
 	 * Generate the custom search functions.
 	 */
 
+#if 0
 	TAILQ_FOREACH(s, &p->sq, entries) {
 		printf("struct %s *\n"
 		       "db_%s_by", p->name, p->name);
@@ -219,57 +216,104 @@ gen_strct(const struct strct *p)
 			else
 				printf(", const char *v%zu", pos++);
 		}
-		printf(")\n"
-		       "{\n"
-		       "\treturn(NULL);\n"
-		       "}\n");
+		printf("{\n"
+		       "\tstruct ksqlstmt *stmt;\n"
+		       "\tstruct %s *p = NULL;\n"
+		       "\tsize_t i = 0;\n"
+		       "\n"
+		       "\tksql_stmt_alloc(db, &stmt,\n"
+		       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
+		       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
+		       p->name, caps, searchnum, 
+		       caps, searchnum);
 	}
+#endif
 
 	free(caps);
 }
 
 /*
  * Generate a set of statements that will be used for this structure:
- *
- *  (1) get by identifier
+ *  (1) get by rowid (if applicable)
+ *  (2) all explicit search terms
  */
 static void
 gen_stmt_enum(const struct strct *p)
 {
-	char	*caps = gen_strct_caps(p->name);
+	char	*caps;
+	const struct search *s;
+	size_t	 snum = 0;
+
+	caps = gen_strct_caps(p->name);
 
 	if (NULL != p->rowid)
-		printf("\tSTMT_%s_BY__ROWID,\n", caps);
+		printf("\tSTMT_%s_BY_ROWID,\n", caps);
+
+	TAILQ_FOREACH(s, &p->sq, entries)
+		printf("\tSTMT_%s_BY_SEARCH_%zu,\n", caps, snum++);
+
 	free(caps);
 }
 
 /*
  * Recursively generate a series of SCHEMA_xxx statements for getting
  * data on a structure.
- * This will specify the schema of the top-level structure, then
- * generate aliased schemas for all of the recursive structures.
+ * This will specify the schema of the top-level structure (pname is
+ * NULL), then generate aliased schemas for all of the recursive
+ * structures.
  * See gen_stmt_joins().
  */
 static void
-gen_stmt_schema(const struct strct *p, size_t *seqn)
+gen_stmt_schema(const struct strct *orig, 
+	const struct strct *p, const char *pname)
 {
 	const struct field *f;
-	char	*caps;
+	const struct alias *a = NULL;
+	int	 c;
+	char	*caps, *name = NULL;
+
+	/* Uppercase schema. */
 
 	caps = gen_strct_caps(p->name);
 
-	if (0 == *seqn)
-		printf("\" SCHEMA_%s(%s) ", 
-			caps, p->name);
-	else
-		printf("\",\" SCHEMA_%s(_%c) ", 
-			caps, (char)*seqn + 96);
+	/* 
+	 * If applicable, looks up our alias and emit it as the alias
+	 * for the table.
+	 * Otherwise, use the table name itself.
+	 */
 
-	(*seqn)++;
+	if (NULL != pname) {
+		TAILQ_FOREACH(a, &orig->aq, entries)
+			if (0 == strcasecmp(a->name, pname))
+				break;
+		assert(NULL != a);
+		printf("\",\" SCHEMA_%s(%s) ", caps, a->alias);
+	} else
+		printf("\" SCHEMA_%s(%s) ", caps, p->name);
 
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if (FTYPE_STRUCT == f->type)
-			gen_stmt_schema(f->ref->target->parent, seqn);
+	/*
+	 * Recursive step.
+	 * Search through all of our fields for structures.
+	 * If we find them, build up the canonical field reference and
+	 * descend.
+	 */
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT != f->type)
+			continue;
+
+		if (NULL != pname) {
+			c = asprintf(&name, 
+				"%s.%s", pname, f->name);
+			if (c < 0)
+				err(EXIT_FAILURE, NULL);
+		} else if (NULL == (name = strdup(f->name)))
+			err(EXIT_FAILURE, NULL);
+
+		gen_stmt_schema(orig, 
+			f->ref->target->parent, name);
+		free(name);
+	}
 
 	free(caps);
 }
@@ -282,19 +326,40 @@ gen_stmt_schema(const struct strct *p, size_t *seqn)
  * See gen_stmt_schema().
  */
 static void
-gen_stmt_joins(const struct strct *p, size_t *seqn)
+gen_stmt_joins(const struct strct *orig, 
+	const struct strct *p, const struct alias *parent)
 {
 	const struct field *f;
+	const struct alias *a;
+	int	 c;
+	char	*name;
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_STRUCT != f->type)
 			continue;
-		printf(" INNER JOIN %s AS _%c ON _%c.%s=%s.%s",
-			f->ref->tstrct, (char)*seqn + 97,
-			(char)*seqn + 97, f->ref->tfield,
-			p->name, f->ref->sfield);
-		(*seqn)++;
-		gen_stmt_joins(f->ref->target->parent, seqn);
+
+		if (NULL != parent) {
+			c = asprintf(&name, "%s.%s", 
+				parent->name, f->name);
+			if (c < 0)
+				err(EXIT_FAILURE, NULL);
+		} else if (NULL == (name = strdup(f->name)))
+			err(EXIT_FAILURE, NULL);
+
+		TAILQ_FOREACH(a, &orig->aq, entries)
+			if (0 == strcasecmp(a->name, name))
+				break;
+		assert(NULL != a);
+
+		printf(" INNER JOIN %s AS %s ON %s.%s=%s.%s",
+			f->ref->tstrct, a->alias,
+			a->alias, f->ref->tfield,
+			NULL == parent ? p->name : parent->alias,
+			f->ref->sfield);
+		gen_stmt_joins(orig, 
+			f->ref->target->parent, 
+			a);
+		free(name);
 	}
 }
 
@@ -304,18 +369,14 @@ gen_stmt_joins(const struct strct *p, size_t *seqn)
 static void
 gen_stmt(const struct strct *p)
 {
-	size_t	 seq;
 
-	if (NULL == p->rowid) 
-		return;
-
-	printf("\t\"SELECT ");
-	seq = 0;
-	gen_stmt_schema(p, &seq);
-	printf("\" FROM %s", p->name);
-	seq = 0;
-	gen_stmt_joins(p, &seq);
-	printf(" WHERE %s.%s=?\",\n", p->name, p->rowid->name);
+	if (NULL != p->rowid)  {
+		printf("\t\"SELECT ");
+		gen_stmt_schema(p, p, NULL);
+		printf("\" FROM %s", p->name);
+		gen_stmt_joins(p, p, NULL);
+		printf(" WHERE %s.%s=?\",\n", p->name, p->rowid->name);
+	}
 }
 
 /*

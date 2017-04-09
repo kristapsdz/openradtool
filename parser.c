@@ -666,6 +666,8 @@ sent_alloc(struct search *parent)
 static void
 parse_config_struct_search_field(struct parse *p, struct sent *sent)
 {
+	struct sref	*sf;
+	size_t		 sz;
 
 	if (TOK_IDENT != parse_next(p)) {
 		parse_syntax_error(p, "expected "
@@ -689,6 +691,29 @@ parse_config_struct_search_field(struct parse *p, struct sent *sent)
 			return;
 		}
 		sref_alloc(p->last.string, sent);
+	}
+
+	/*
+	 * Now fill in the search field's canonical structure name.
+	 * For example, if our fields are "user.company.name", this
+	 * would be "user.company".
+	 * For a singleton field (e.g., "userid"), this is NULL.
+	 */
+
+	TAILQ_FOREACH(sf, &sent->srq, entries) {
+		if (NULL == TAILQ_NEXT(sf, entries))
+			break;
+		if (NULL == sent->name) {
+			sent->name = strdup(sf->name);
+			if (NULL == sent->name)
+				err(EXIT_FAILURE, NULL);
+			continue;
+		}
+		sz = strlen(sent->name) +
+		     strlen(sf->name) + 2;
+		sent->name = realloc(sent->name, sz);
+		strlcat(sent->name, ".", sz);
+		strlcat(sent->name, sf->name, sz);
 	}
 }
 
@@ -938,6 +963,7 @@ parse_config(FILE *f, const char *fname)
 		TAILQ_INSERT_TAIL(q, s, entries);
 		TAILQ_INIT(&s->fq);
 		TAILQ_INIT(&s->sq);
+		TAILQ_INIT(&s->aq);
 		parse_config_struct(&p, s);
 	}
 
@@ -992,6 +1018,7 @@ parse_free_search(struct search *p)
 			free(s->name);
 			free(s);
 		}
+		free(sent->name);
 		free(sent);
 	}
 	free(p);
@@ -1007,6 +1034,7 @@ parse_free(struct strctq *q)
 	struct strct	*p;
 	struct field	*f;
 	struct search	*s;
+	struct alias	*a;
 
 	if (NULL == q)
 		return;
@@ -1020,6 +1048,12 @@ parse_free(struct strctq *q)
 		while (NULL != (s = TAILQ_FIRST(&p->sq))) {
 			TAILQ_REMOVE(&p->sq, s, entries);
 			parse_free_search(s);
+		}
+		while (NULL != (a = TAILQ_FIRST(&p->aq))) {
+			TAILQ_REMOVE(&p->aq, a, entries);
+			free(a->name);
+			free(a->alias);
+			free(a);
 		}
 		free(p->doc);
 		free(p->name);

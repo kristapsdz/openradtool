@@ -314,11 +314,59 @@ parse_cmp(const void *a1, const void *a2)
 	return((ssize_t)p1->height - (ssize_t)p2->height);
 }
 
+/*
+ * Recursively create the list of all possible search prefixes we're
+ * going to see in this structure.
+ * This consists of all "parent.child" chains of structure that descend
+ * from the given "orig" original structure.
+ * FIXME: artificially limited to 26 entries.
+ */
+static void
+aliases(struct strct *orig, struct strct *p, 
+	size_t *offs, const struct alias *prior)
+{
+	struct field	*f;
+	struct alias	*a;
+	int		 c;
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT != f->type)
+			continue;
+		assert(NULL != f->ref);
+		
+		a = calloc(1, sizeof(struct alias));
+		if (NULL == a)
+			err(EXIT_FAILURE, NULL);
+
+		if (NULL != prior) {
+			c = asprintf(&a->name, "%s.%s",
+				prior->name, f->name);
+			if (c < 0)
+				err(EXIT_FAILURE, NULL);
+		} else
+			a->name = strdup(f->name);
+
+		if (NULL == a->name)
+			err(EXIT_FAILURE, NULL);
+
+		assert(*offs < 26);
+		c = asprintf(&a->alias, 
+			"_%c", (char)*offs + 97);
+		if (c < 0)
+			err(EXIT_FAILURE, NULL);
+
+		(*offs)++;
+		TAILQ_INSERT_TAIL(&orig->aq, a, entries);
+		aliases(orig, f->ref->target->parent, offs, a);
+	}
+}
+
 int
 parse_link(struct strctq *q)
 {
 	struct strct	 *p;
 	struct strct	**pa;
+	struct alias	 *a;
 	struct field	 *f;
 	struct sent	 *sent;
 	struct search	 *srch;
@@ -350,6 +398,12 @@ parse_link(struct strctq *q)
 	 * Now follow and order all outbound links for structs.
 	 * From the get-go, we don't descend into structures that we've
 	 * already coloured.
+	 * FIXME: instead, have this just descend from each node and
+	 * search for finding "again" this node, which would mean a
+	 * loop.
+	 * We can envision situations where we might want to allow
+	 * nested situations, but we'll leave that up to the user not to
+	 * use a struct and do it all manually.
 	 */
 
 	TAILQ_FOREACH(p, q, entries) {
@@ -368,6 +422,18 @@ parse_link(struct strctq *q)
 	}
 
 	/*
+	 * Next, create unique names for all joins within a structure.
+	 * We do this by creating a list of all search patterns (e.g.,
+	 * user.name and user.company.name, which assumes two structures
+	 * "user" and "company", the first pointing into the second,
+	 * both of which contain "name").
+	 */
+
+	i = 0;
+	TAILQ_FOREACH(p, q, entries)
+		aliases(p, p, &i, NULL);
+
+	/*
 	 * Resolve the chain of search terms.
 	 * To do so, we need to descend into each set of search terms
 	 * for the structure and resolve the fields.
@@ -379,6 +445,22 @@ parse_link(struct strctq *q)
 				ref = TAILQ_FIRST(&sent->srq);
 				if ( ! resolvesref(ref, p))
 					return(0);
+				if (NULL == sent->name)
+					continue;
+
+				/* 
+				 * Look up our alias name.
+				 * Our resolvesref() function above
+				 * makes sure that the reference exists,
+				 * so just assert on lack of finding.
+				 */
+
+				TAILQ_FOREACH(a, &p->aq, entries)
+					if (0 == strcasecmp
+					    (a->name, sent->name))
+						break;
+				assert(NULL != a);
+				sent->alias = a;
 			}
 
 	/* 
@@ -389,6 +471,7 @@ parse_link(struct strctq *q)
 
 	if (NULL == (pa = calloc(sz, sizeof(struct strct *))))
 		err(EXIT_FAILURE, NULL);
+	i = 0;
 	while (NULL != (p = TAILQ_FIRST(q))) {
 		TAILQ_REMOVE(q, p, entries);
 		assert(i < sz);

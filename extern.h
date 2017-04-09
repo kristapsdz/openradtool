@@ -60,8 +60,28 @@ struct	field {
 TAILQ_HEAD(fieldq, field);
 
 /*
+ * An alias gives a unique name to each *possible* search entity.
+ * For any structure, this will consist of all possible paths into
+ * substructures.
+ * This is used later to easily link a search entity (for example,
+ * "user.company.name") into an alias (e.g., "_b") that's used in the AS
+ * clause when joining.
+ * These are unique within a given structure root.
+ */
+struct 	alias {
+	char		  *name; /* canonical dot-separated name */
+	char		  *alias; /* unique alias */
+	TAILQ_ENTRY(alias) entries;
+};
+
+TAILQ_HEAD(aliasq, alias);
+
+/*
  * A single field reference within a chain.
- * Each in the chain descends into nested structures.
+ * For example, in a chain of "user.company.name", which presumes
+ * structures "user" and "company", then a "name" in the latter, the
+ * fields would be "user", "company", an "name".
+ * These compose search entities, "struct sent".
  */
 struct	sref {
 	char		 *name; /* field name */
@@ -72,9 +92,19 @@ struct	sref {
 
 TAILQ_HEAD(srefq, sref);
 
+/*
+ * A search entity.
+ * For example, in a set of search criteria "user.company.name, userid",
+ * this would be one of "user.company.name" or "userid", both of which
+ * are represented by queues of srefs.
+ * One or more "struct sent" consist of a single "struct search".
+ *
+ */
 struct	sent {
 	struct srefq	  srq;
 	struct search	 *parent; /* up-reference */
+	char		 *name; /* canonical dot-form name or NULL */
+	struct alias	 *alias; /* resolved alias */
 	TAILQ_ENTRY(sent) entries;
 };
 
@@ -82,7 +112,9 @@ TAILQ_HEAD(sentq, sent);
 
 /*
  * A set of fields to search by.
- * A "search" implies a unique response given a query.
+ * A "search" implies a unique response given a query, for example,
+ * the set of sets "user.company.name, userid", which has two search
+ * entities (struct sent) with at least one search reference (sref).
  */
 struct	search {
 	struct sentq	    sntq; /* nested reference chain */
@@ -105,6 +137,7 @@ struct	strct {
 	struct field	  *rowid; /* optional rowid */
 	struct fieldq	   fq; /* fields/columns/members */
 	struct searchq	   sq; /* search fields */
+	struct aliasq	   aq; /* join aliases */
 	TAILQ_ENTRY(strct) entries;
 };
 

@@ -678,7 +678,8 @@ parse_config_struct_search_field(struct parse *p, struct sent *sent)
 
 	for (;;) {
 		if (TOK_COMMA == parse_next(p) ||
-		    TOK_SEMICOLON == p->lasttype)
+		    TOK_SEMICOLON == p->lasttype ||
+		    TOK_COLON == p->lasttype)
 			break;
 
 		if (TOK_PERIOD != p->lasttype) {
@@ -718,10 +719,53 @@ parse_config_struct_search_field(struct parse *p, struct sent *sent)
 }
 
 /*
+ * Parse the search parameters following the search fields:
+ *
+ *  "search" search_fields ":" [key val]* ";"
+ *
+ * The "key" can be "name" or "comment"; and the name, a unique function
+ * name or a comment literal.
+ */
+static void
+parse_config_struct_search_params(struct parse *p, struct search *s)
+{
+
+	if (TOK_SEMICOLON == parse_next(p))
+		return;
+
+	for (;;) {
+		if (TOK_IDENT != p->lasttype) {
+			parse_syntax_error(p, 
+				"expected search specifier");
+			break;
+		}
+		if (0 == strcasecmp("name", p->last.string)) {
+			if (TOK_IDENT != parse_next(p)) {
+				parse_syntax_error(p, 
+					"expected search name");
+				break;
+			} else if (TOK_SEMICOLON == parse_next(p))
+				break;
+		} else if (0 == strcasecmp("comment", p->last.string)) {
+			if (TOK_LITERAL != parse_next(p)) {
+				parse_syntax_error(p, 
+					"expected comment");
+				break;
+			} else if (TOK_SEMICOLON == parse_next(p))
+				break;
+		} else {
+			parse_syntax_error(p, 
+				"unknown search parameter");
+			break;
+		}
+	}
+}
+
+/*
  * Parse a search clause.
  * This has the following syntax:
  *
- *  "search" FIELD [, FIELD]* ";"
+ *  "search" FIELD [, FIELD]* [":" search_terms ]? ";"
  *
  * The FIELD parts are parsed in parse_config_struct_search_field().
  * Returns zero on failure, non-zero on success.
@@ -743,20 +787,28 @@ parse_config_struct_search(struct parse *p, struct strct *s)
 
 	sent = sent_alloc(srch);
 	parse_config_struct_search_field(p, sent);
-	if (TOK_SEMICOLON == p->lasttype)
+
+	if (TOK_COLON == p->lasttype) {
+		parse_config_struct_search_params(p, srch);
 		return(1);
-	else if (TOK_COMMA != p->lasttype)
+	} else if (TOK_SEMICOLON == p->lasttype)
+		return(1);
+
+	if (TOK_COMMA != p->lasttype)
 		return(0);
 
 	for (;;) {
 		sent = sent_alloc(srch);
 		parse_config_struct_search_field(p, sent);
 		if (TOK_SEMICOLON == p->lasttype)
+			return(1);
+		else if (TOK_COLON == p->lasttype)
 			break;
 		else if (TOK_COMMA != p->lasttype)
 			return(0);
 	}
 
+	parse_config_struct_search_params(p, srch);
 	return(1);
 }
 

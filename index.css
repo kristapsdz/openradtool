@@ -27,6 +27,8 @@ article[data-sblg-article]		{ width: 100%; }
 code, pre.hl				{ font-family: "Fira Mono", monospace; 
 					  font-size: 12pt; }
 pre.hl					{ overflow: hidden; }
+blockquote				{ font-size: larger; 
+					  font-family: "Fira Mono", monospace; }
 
 @media only screen and (max-width: 900px), only screen and (max-device-width: 900px) {
 article					{ width: 80%; }

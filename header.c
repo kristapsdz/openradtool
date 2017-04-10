@@ -109,6 +109,8 @@ gen_strct_funcs(const struct strct *p)
 	       " * Fill in a %s from an open statement \"stmt\".\n"
 	       " * This starts grabbing results from \"pos\",\n"
 	       " * which may be NULL to start from zero.\n"
+	       " * This recursively invokes the \"fill\" function\n"
+	       " * for all nested structures.\n"
 	       " */\n"
 	       "void db_%s_fill(struct %s *p, "
 		"struct ksqlstmt *stmt, size_t *pos);\n"

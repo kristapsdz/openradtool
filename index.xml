@@ -15,13 +15,15 @@
 		</header>
 		<article>
 			<p>
-				<span class="nm">kwebapp</span> generates the database API in C and SQL for your web application.
+				<span class="nm">kwebapp</span> is an <a href="https://opensource.org/licenses/ISC">open source</a> system
+				generating the database API in C and SQL for your web application.
 				It accepts a configuration file that describes the <q>business logic</q> of your data: tables
 				(structures), fields (members), accessors, and so forth.
 				It then generates the source files you can include into your application.
 				The output uses <a href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for
 				the underlying <a href="https://sqlite.org">SQLite</a> database.
 				<span class="nm">kwebapp</span> is built to be fitted within a Makefile, just like your sources.
+				It has no compile-time or run-time dependencies, and is a <a href="https://www.bsd.lv">BSD.lv</a> project.
 			</p>
 			<figure>
 				<img src="index.svg" alt="" />

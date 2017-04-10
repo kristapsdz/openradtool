@@ -250,6 +250,7 @@ gen_strct(const struct strct *p)
 		       "}\n"
 		       "\n",
 		       p->name, p->name);
+		searchnum++;
 	}
 
 	free(caps);
@@ -257,6 +258,7 @@ gen_strct(const struct strct *p)
 
 /*
  * Generate a set of statements that will be used for this structure:
+ *
  *  (1) get by rowid (if applicable)
  *  (2) all explicit search terms
  */
@@ -392,13 +394,38 @@ gen_stmt_joins(const struct strct *orig,
 static void
 gen_stmt(const struct strct *p)
 {
+	const struct search *s;
+	const struct sent *sent;
+	const struct sref *sr;
+	int	 first;
 
 	if (NULL != p->rowid)  {
 		printf("\t\"SELECT ");
 		gen_stmt_schema(p, p, NULL);
 		printf("\" FROM %s", p->name);
 		gen_stmt_joins(p, p, NULL);
-		printf(" WHERE %s.%s=?\",\n", p->name, p->rowid->name);
+		printf(" WHERE %s.%s=?\",\n", 
+			p->name, p->rowid->name);
+	}
+
+	TAILQ_FOREACH(s, &p->sq, entries) {
+		printf("\t\"SELECT ");
+		gen_stmt_schema(p, p, NULL);
+		printf("\" FROM %s", p->name);
+		gen_stmt_joins(p, p, NULL);
+		printf(" WHERE");
+		first = 1;
+		TAILQ_FOREACH(sent, &s->sntq, entries) {
+			if ( ! first)
+				printf(" AND");
+			first = 0;
+			sr = TAILQ_LAST(&sent->srq, srefq);
+			printf(" %s.%s=?", 
+				NULL == sent->alias ?
+				p->name : sent->alias->alias,
+				sr->name);
+		}
+		puts("\",");
 	}
 }
 

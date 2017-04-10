@@ -1024,8 +1024,10 @@ parse_config(FILE *f, const char *fname)
 		goto error;
 	}
 
+	free(p.buf);
 	return(q);
 error:
+	free(p.buf);
 	parse_free(q);
 	return(NULL);
 }
@@ -1111,5 +1113,5 @@ parse_free(struct strctq *q)
 		free(p->name);
 		free(p);
 	}
-	free(p);
+	free(q);
 }

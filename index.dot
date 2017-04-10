@@ -9,9 +9,11 @@ digraph {
 		src[label="C source"];
 		head[label="C header"];
 		sql[label="SQL schema"];
+		update[label="SQL update"];
 	}
 	cfg -> bin;
 	bin -> src;
 	bin -> head;
 	bin -> sql;
+	bin -> update;
 }

@@ -106,8 +106,13 @@ gen_strct_fill_field(const struct field *f)
 static void
 gen_strct(const struct strct *p)
 {
-	const struct field	*f;
-	char			*caps;
+	const struct field *f;
+	const struct search *s;
+	const struct sent *sent;
+	const struct sref *sr;
+	char	*caps;
+	int	 first;
+	size_t	 pos, searchnum = 0;
 
 	caps = gen_strct_caps(p->name);
 
@@ -125,6 +130,11 @@ gen_strct(const struct strct *p)
 	       p->name, p->name);
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_fill_field(f);
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (FTYPE_STRUCT == f->type)
+			printf("\tdb_%s_fill(&p->%s, stmt, pos);\n",
+				f->name,
+				f->ref->target->parent->name);
 	printf("}\n"
 	       "\n");
 
@@ -157,13 +167,12 @@ gen_strct(const struct strct *p)
 	 * This needs to account for filling in foreign key references.
 	 */
 
-	if (NULL != p->rowid) {
+	if (NULL != p->rowid)
 		printf("struct %s *\n"
 		       "db_%s_by_rowid(struct ksql *db, int64_t id)\n"
 		       "{\n"
 		       "\tstruct ksqlstmt *stmt;\n"
 		       "\tstruct %s *p = NULL;\n"
-		       "\tsize_t i = 0;\n"
 		       "\n"
 		       "\tksql_stmt_alloc(db, &stmt,\n"
 		       "\t\tstmts[STMT_%s_BY_ROWID],\n"
@@ -175,27 +184,19 @@ gen_strct(const struct strct *p)
 		       "\t\t\tperror(NULL);\n"
 		       "\t\t\texit(EXIT_FAILURE);\n"
 		       "\t\t}\n"
-		       "\t\tdb_%s_fill(p, stmt, &i);\n",
-		       p->name, p->name, p->name,
-		       caps, caps, p->name, p->name);
-		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (FTYPE_STRUCT != f->type)
-				continue;
-			printf("\t\tdb_%s_fill(&p->%s, stmt, &i);\n",
-				f->ref->tstrct, f->name);
-		}
-		printf("\t}\n"
+		       "\t\tdb_%s_fill(p, stmt, NULL);\n"
+		       "\t}\n"
 		       "\tksql_stmt_free(stmt);\n"
 		       "\treturn(p);\n"
 		       "}\n"
-		       "\n");
-	}
+		       "\n",
+		       p->name, p->name, p->name,
+		       caps, caps, p->name, p->name);
 
 	/*
 	 * Generate the custom search functions.
 	 */
 
-#if 0
 	TAILQ_FOREACH(s, &p->sq, entries) {
 		printf("struct %s *\n"
 		       "db_%s_by", p->name, p->name);
@@ -216,18 +217,40 @@ gen_strct(const struct strct *p)
 			else
 				printf(", const char *v%zu", pos++);
 		}
-		printf("{\n"
+		printf(")\n"
+		       "{\n"
 		       "\tstruct ksqlstmt *stmt;\n"
 		       "\tstruct %s *p = NULL;\n"
-		       "\tsize_t i = 0;\n"
 		       "\n"
 		       "\tksql_stmt_alloc(db, &stmt,\n"
 		       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
 		       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
 		       p->name, caps, searchnum, 
 		       caps, searchnum);
+		pos = 1;
+		TAILQ_FOREACH(sent, &s->sntq, entries) {
+			sr = TAILQ_LAST(&sent->srq, srefq);
+			if (FTYPE_INT == sr->field->type)
+				printf("\tksql_bind_int");
+			else
+				printf("\tksql_bind_str");
+			printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
+			pos++;
+		}
+		printf("\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
+		       "\t\tp = malloc(sizeof(struct %s));\n"
+		       "\t\tif (NULL == p) {\n"
+		       "\t\t\tperror(NULL);\n"
+		       "\t\t\texit(EXIT_FAILURE);\n"
+		       "\t\t}\n"
+		       "\t\tdb_%s_fill(p, stmt, NULL);\n"
+		       "\t}\n"
+		       "\tksql_stmt_free(stmt);\n"
+		       "\treturn(p);\n"
+		       "}\n"
+		       "\n",
+		       p->name, p->name);
 	}
-#endif
 
 	free(caps);
 }

@@ -32,6 +32,7 @@ tokens) configuration language with the following rough structure:
 [ "struct" structname 
   "{"
     [ "field" fieldname [ type [ typeinfo ] ] ";" ]+
+    [ "search" search_params ";" ]*
     [ "comment" quoted_string ";" ]?
   "}"
 ]+
@@ -48,6 +49,11 @@ In
 .Nm ,
 these are collectively called
 .Dq objects .
+.Pp
+Beyond objects, a structure may also contain a comment and a number of
+search fields.
+The latter include search functions in the generated API on the given
+fields.
 .Ss Structures
 A structure object defines a C structure or a database table.
 Its definition begins with the word
@@ -131,6 +137,28 @@ not contain a double-quote character unless preceded by a backslash.
 For the time being, white-space is handled by retaining the first
 instance, then stripping subsequent white-space.
 This might change.
+.Ss Searches
+You can specify searching for rows within a structure using the
+.Cm search
+keyword within a structure object.
+Searches are by field:
+.Bd -literal -offset indent
+"search" fields [,fields]* ";"
+.Ed
+.Pp
+Here,
+.Cm fields
+consists of the possibly-nested field names to search for.
+Nested fields are in dotted-notation:
+.Bd -literal -offset indent
+[structure.]*field
+.Ed
+.Pp
+This would produce functions searching the field
+.Dq field
+within the
+.Cm struct
+structures as listed.
 .Sh EXAMPLES
 A simple session table is as follows:
 .Bd -literal

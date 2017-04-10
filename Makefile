@@ -25,10 +25,14 @@ www: index.svg index.html kwebapp.5.html kwebapp.1.html
 
 OBJS: extern.h
 
-test: db.o db.db
+test: test.o db.o db.db
+	$(CC) -L/usr/local/lib -o $@ test.o db.o -lksql -lsqlite3
 
 db.o: db.c db.h
 	$(CC) $(CFLAGS) -I/usr/local/include -o $@ -c db.c
+
+test.o: test.c db.h
+	$(CC) $(CFLAGS) -I/usr/local/include -o $@ -c test.c
 
 db.c: kwebapp db.txt
 	./kwebapp -c db.h db.txt >$@
@@ -87,7 +91,7 @@ index.html: index.xml db.txt.xml db.txt.html db.h.xml db.h.html db.c.html db.sql
 	sblg -s cmdline -t index.xml -o- db.txt.xml db.h.xml db.sql.xml > $@
 
 clean:
-	rm -f kwebapp $(COMPAT_OBJS) $(OBJS) db.c db.h db.o db.sql db.db
+	rm -f kwebapp $(COMPAT_OBJS) $(OBJS) db.c db.h db.o db.sql db.db test test.o
 	rm -f index.svg index.html highlight.css kwebapp.5.html kwebapp.1.html
 	rm -f db.txt.xml db.h.xml db.c.html db.h.html db.txt.html db.sql.xml
 

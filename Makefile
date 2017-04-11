@@ -16,7 +16,8 @@ OBJS		 = comment.o \
 		   main.o \
 		   parser.o \
 		   source.o \
-		   sql.o
+		   sql.o \
+		   util.o
 
 kwebapp: $(COMPAT_OBJS) $(OBJS)
 	$(CC) -o $@ $(COMPAT_OBJS) $(OBJS)

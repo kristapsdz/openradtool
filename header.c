@@ -81,7 +81,6 @@ static void
 gen_strct_funcs(const struct strct *p)
 {
 	int	 		 first;
-	size_t			 pos;
 	const struct search	*s;
 	const struct sref	*sr;
 	const struct sent	*sent;
@@ -144,25 +143,9 @@ gen_strct_funcs(const struct strct *p)
 		}
 		printf(" * Returns a pointer on success or NULL.\n"
 		       " * Free the pointer with db_%s_free().\n"
-		       " */\n"
-		       "struct %s *db_%s_by", 
-		       p->name, p->name, p->name);
-		if (NULL == s->name) {
-			TAILQ_FOREACH(sent, &s->sntq, entries) {
-				putchar('_');
-				TAILQ_FOREACH(sr, &sent->srq, entries)
-					printf("_%s", sr->name);
-			}
-		} else 
-			printf("_%s", s->name);
-		printf("(struct ksql *db");
-		pos = 1;
-		TAILQ_FOREACH(sent, &s->sntq, entries) {
-			sr = TAILQ_LAST(&sent->srq, srefq);
-			printf(", %s v%zu", 
-				ftypes[sr->field->type], pos++);
-		}
-		puts(");\n"
+		       " */\n", p->name);
+		print_func_search(p, s, 1);
+		puts(";\n"
 		     "");
 	}
 }

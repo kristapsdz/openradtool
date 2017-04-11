@@ -197,26 +197,8 @@ gen_strct(const struct strct *p)
 	 */
 
 	TAILQ_FOREACH(s, &p->sq, entries) {
-		printf("struct %s *\n"
-		       "db_%s_by", p->name, p->name);
-		if (NULL == s->name) {
-			TAILQ_FOREACH(sent, &s->sntq, entries) {
-				putchar('_');
-				TAILQ_FOREACH(sr, &sent->srq, entries)
-					printf("_%s", sr->name);
-			}
-		} else
-			printf("_%s", s->name);
-		printf("(struct ksql *db");
-		pos = 1;
-		TAILQ_FOREACH(sent, &s->sntq, entries) {
-			sr = TAILQ_LAST(&sent->srq, srefq);
-			if (FTYPE_INT == sr->field->type) 
-				printf(", int64_t v%zu", pos++);
-			else
-				printf(", const char *v%zu", pos++);
-		}
-		printf(")\n"
+		print_func_search(p, s, 0);
+		printf("\n"
 		       "{\n"
 		       "\tstruct ksqlstmt *stmt;\n"
 		       "\tstruct %s *p = NULL;\n"

@@ -144,7 +144,7 @@ gen_strct_funcs(const struct strct *p)
 		printf(" * Returns a pointer on success or NULL.\n"
 		       " * Free the pointer with db_%s_free().\n"
 		       " */\n", p->name);
-		print_func_search(p, s, 1);
+		print_func_search(s, 1);
 		puts(";\n"
 		     "");
 	}

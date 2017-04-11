@@ -156,10 +156,9 @@ void		 gen_sql(const struct strctq *);
 int		 gen_diff(const struct strctq *,
 			const struct strctq *);
 
-void		 gen_comment(const char *, size_t, 
+void		 print_comment(const char *, size_t, 
 			const char *, const char *,
 			const char *);
-
 void		 print_func_search(const struct strct *,
 			const struct search *, int);
 

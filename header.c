@@ -39,7 +39,7 @@ static void
 gen_strct_field(const struct field *p)
 {
 
-	gen_comment(p->doc, 1, "/*", " * ", " */");
+	print_comment(p->doc, 1, "/*", " * ", " */");
 
 	switch (p->type) {
 	case (FTYPE_STRUCT):
@@ -65,7 +65,7 @@ gen_strct_structs(const struct strct *p)
 {
 	const struct field *f;
 
-	gen_comment(p->doc, 0, "/*", " * ", " */");
+	print_comment(p->doc, 0, "/*", " * ", " */");
 
 	printf("struct\t%s {\n", p->name);
 	TAILQ_FOREACH(f, &p->fq, entries)

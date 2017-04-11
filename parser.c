@@ -729,6 +729,7 @@ parse_config_struct_search_field(struct parse *p, struct sent *sent)
 static void
 parse_config_struct_search_params(struct parse *p, struct search *s)
 {
+	struct search	*ss;
 
 	if (TOK_SEMICOLON == parse_next(p))
 		return;
@@ -745,10 +746,21 @@ parse_config_struct_search_params(struct parse *p, struct search *s)
 					"expected search name");
 				break;
 			}
+			/* XXX: warn of prior */
 			free(s->name);
 			s->name = strdup(p->last.string);
 			if (NULL == s->name)
 				err(EXIT_FAILURE, NULL);
+
+			/* Disallow duplicate names. */
+
+			TAILQ_FOREACH(ss, &s->parent->sq, entries) {
+				if (strcasecmp(ss->name, s->name))
+					continue;
+				parse_syntax_error(p, 
+					"duplicate search name");
+				break;
+			}
 			if (TOK_SEMICOLON == parse_next(p))
 				break;
 		} else if (0 == strcasecmp("comment", p->last.string)) {
@@ -756,7 +768,13 @@ parse_config_struct_search_params(struct parse *p, struct search *s)
 				parse_syntax_error(p, 
 					"expected comment");
 				break;
-			} else if (TOK_SEMICOLON == parse_next(p))
+			} 
+			/* XXX: warn of prior */
+			free(s->doc);
+			s->doc = strdup(p->last.string);
+			if (NULL == s->doc)
+				err(EXIT_FAILURE, NULL);
+			if (TOK_SEMICOLON == parse_next(p))
 				break;
 		} else {
 			parse_syntax_error(p, 
@@ -1080,6 +1098,7 @@ parse_free_search(struct search *p)
 		free(sent->name);
 		free(sent);
 	}
+	free(p->doc);
 	free(p->name);
 	free(p);
 }

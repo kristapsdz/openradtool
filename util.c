@@ -33,16 +33,23 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	NULL,
 };
 
+/*
+ * Generate the listing for a search function "s".
+ * If this is NOT a declaration ("decl"), then print a newline after the
+ * return type; otherwise, have it on one line.
+ *
+ * FIXME: line wrapping.
+ */
 void
-print_func_search(const struct strct *p, 
-	const struct search *s, int decl)
+print_func_search(const struct search *s, int decl)
 {
 	const struct sent *sent;
 	const struct sref *sr;
 	size_t	 pos = 1;
 
 	printf("struct %s *%sdb_%s_by", 
-		p->name, decl ? "" : "\n", p->name);
+		s->parent->name, decl ? "" : "\n", 
+		s->parent->name);
 
 	if (NULL == s->name) {
 		TAILQ_FOREACH(sent, &s->sntq, entries) {

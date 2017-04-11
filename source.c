@@ -197,7 +197,7 @@ gen_strct(const struct strct *p)
 	 */
 
 	TAILQ_FOREACH(s, &p->sq, entries) {
-		print_func_search(p, s, 0);
+		print_func_search(s, 0);
 		printf("\n"
 		       "{\n"
 		       "\tstruct ksqlstmt *stmt;\n"

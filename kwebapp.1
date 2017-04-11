@@ -99,15 +99,33 @@ to be the name of the structure object:
 .Bl -tag -width Ds
 .It Fn db_foo_free
 Frees a pointer created by
-.Fn db_foo_by_rowid .
+.Fn db_foo_by_rowid
+or a custom search.
 .It Fn db_foo_fill
 Zero and fill in a pointer from an open database query.
+This fills all nested structures as well.
 .It Fn db_foo_unfill
 Release resources filled from a database query.
+This frees all nested structures as well.
 .It Fn db_foo_by_rowid
 Fetch a record by its unique identifier.
 Only valid for objects having a
 .Cm rowid .
+.It Fn db_foo_by_xxxx
+If the structure object has any named searches, these are listed in
+place of the
+.Dq xxxx .
+.It Fn db_foo_by__xxxx__yy_zz
+If the structure has any anonymous searches, these are listed with an
+undescore preceding each search term.
+In the given example,
+.Dq xxxx
+is a field in the given structure and
+.Dq yy_zz
+means a field
+.Dq zz
+in the nested structure
+.Dq yy .
 .El
 .Pp
 All of these are fully documented in the header file.

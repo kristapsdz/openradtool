@@ -111,7 +111,6 @@ gen_strct(const struct strct *p)
 	const struct sent *sent;
 	const struct sref *sr;
 	char	*caps;
-	int	 first;
 	size_t	 pos, searchnum = 0;
 
 	caps = gen_strct_caps(p->name);
@@ -200,14 +199,14 @@ gen_strct(const struct strct *p)
 	TAILQ_FOREACH(s, &p->sq, entries) {
 		printf("struct %s *\n"
 		       "db_%s_by", p->name, p->name);
-		first = 1;
-		TAILQ_FOREACH(sent, &s->sntq, entries) {
-			if ( ! first)
+		if (NULL == s->name) {
+			TAILQ_FOREACH(sent, &s->sntq, entries) {
 				putchar('_');
-			first = 0;
-			TAILQ_FOREACH(sr, &sent->srq, entries)
-				printf("_%s", sr->name);
-		}
+				TAILQ_FOREACH(sr, &sent->srq, entries)
+					printf("_%s", sr->name);
+			}
+		} else
+			printf("_%s", s->name);
 		printf("(struct ksql *db");
 		pos = 1;
 		TAILQ_FOREACH(sent, &s->sntq, entries) {

@@ -147,14 +147,14 @@ gen_strct_funcs(const struct strct *p)
 		       " */\n"
 		       "struct %s *db_%s_by", 
 		       p->name, p->name, p->name);
-		first = 1;
-		TAILQ_FOREACH(sent, &s->sntq, entries) {
-			if ( ! first)
+		if (NULL == s->name) {
+			TAILQ_FOREACH(sent, &s->sntq, entries) {
 				putchar('_');
-			first = 0;
-			TAILQ_FOREACH(sr, &sent->srq, entries)
-				printf("_%s", sr->name);
-		}
+				TAILQ_FOREACH(sr, &sent->srq, entries)
+					printf("_%s", sr->name);
+			}
+		} else 
+			printf("_%s", s->name);
 		printf("(struct ksql *db");
 		pos = 1;
 		TAILQ_FOREACH(sent, &s->sntq, entries) {

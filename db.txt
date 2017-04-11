@@ -22,6 +22,5 @@ struct session {
   field token int comment "Random cookie.";
   field id int rowid;
   comment "Authenticated session.";
-  search user.company.name,userid;
-  search user.company.name,company.name;
+  search user.company.name,userid: name foo;
 }

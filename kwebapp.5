@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: April 3 2017 $
+.Dd $Mdocdate: April 10 2017 $
 .Dt KWEBAPP 5
 .Os
 .Sh NAME
@@ -32,7 +32,7 @@ tokens) configuration language with the following rough structure:
 [ "struct" structname 
   "{"
     [ "field" fieldname [ type [ typeinfo ] ] ";" ]+
-    [ "search" search_params ";" ]*
+    [ "search" terms [":" [ params ] ";" ]*
     [ "comment" quoted_string ";" ]?
   "}"
 ]+
@@ -141,13 +141,13 @@ This might change.
 You can specify searching for rows within a structure using the
 .Cm search
 keyword within a structure object.
-Searches are by field:
+Searches are by field, and may be followed by parameters:
 .Bd -literal -offset indent
-"search" fields [,fields]* ";"
+"search" field [,field]* [":" [params]* ]? ";"
 .Ed
 .Pp
 Here,
-.Cm fields
+.Cm field
 consists of the possibly-nested field names to search for.
 Nested fields are in dotted-notation:
 .Bd -literal -offset indent
@@ -159,6 +159,17 @@ This would produce functions searching the field
 within the
 .Cm struct
 structures as listed.
+.Pp
+The search parameters are a series of key-value pairs:
+.Bd -literal -offset indent
+"name" searchname | "comment" string_literal
+.Ed
+.Pp
+The
+.Cm name
+is a unique identifier used in the C API for the search function and the
+.Cm comment
+is included in the API comments for the function.
 .Sh EXAMPLES
 A simple session table is as follows:
 .Bd -literal

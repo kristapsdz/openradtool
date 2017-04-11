@@ -57,7 +57,7 @@ gen_field(const struct field *f, int *first)
 
 	printf("%s\n", *first ? "" : ",");
 
-	gen_comment(f->doc, 1, NULL, "-- ", NULL);
+	print_comment(f->doc, 1, NULL, "-- ", NULL);
 
 	switch (f->type) {
 	case (FTYPE_INT):
@@ -81,7 +81,7 @@ gen_struct(const struct strct *p)
 	const struct field *f;
 	int	 first = 1;
 
-	gen_comment(p->doc, 0, NULL, "-- ", NULL);
+	print_comment(p->doc, 0, NULL, "-- ", NULL);
 
 	printf("CREATE TABLE %s (", p->name);
 	TAILQ_FOREACH(f, &p->fq, entries)

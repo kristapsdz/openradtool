@@ -62,3 +62,58 @@ print_func_search(const struct strct *p,
 	}
 	putchar(')');
 }
+
+/*
+ * Generate a (possibly) multi-line comment with "tabs" number of
+ * preceding tab spaces.
+ * This uses the standard comment syntax as seen in this comment itself.
+ *
+ * FIXME: don't allow comment-end string.
+ * FIXME: wrap at 72 characters.
+ */
+void
+print_comment(const char *doc, size_t tabs, 
+	const char *pre, const char *in, const char *post)
+{
+	const char	*cp;
+	size_t		 i;
+	char		 last = '\0';
+
+	if (NULL == doc)
+		return;
+
+	assert(NULL != in);
+
+	if (NULL != pre) {
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		puts(pre);
+	}
+
+	for (i = 0; i < tabs; i++)
+		putchar('\t');
+	printf("%s", in);
+
+	for (cp = doc; '\0' != *cp; cp++) {
+		if ('\n' == *cp) {
+			putchar('\n');
+			for (i = 0; i < tabs; i++)
+				putchar('\t');
+			printf("%s", in);
+			last = *cp;
+			continue;
+		}
+		if ('\\' == *cp && '"' == cp[1])
+			cp++;
+		putchar(*cp);
+		last = *cp;
+	}
+	if ('\n' != last)
+		putchar('\n');
+
+	if (NULL != post) {
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		puts(post);
+	}
+}

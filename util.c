@@ -70,6 +70,16 @@ print_func_search(const struct search *s, int decl)
 	putchar(')');
 }
 
+void
+print_func_fill(const struct strct *p, int decl)
+{
+
+	printf("void%sdb_%s_fill(struct %s *p, "
+	       "struct ksqlstmt *stmt, size_t *pos)",
+	       decl ? " " : "\n",
+	       p->name, p->name);
+}
+
 /*
  * Generate a (possibly) multi-line comment with "tabs" number of
  * preceding tab spaces.

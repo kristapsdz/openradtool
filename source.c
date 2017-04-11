@@ -117,16 +117,14 @@ gen_strct(const struct strct *p)
 
 	/* Fill from database. */
 
-	printf("void\n"
-	       "db_%s_fill(struct %s *p, "
-		"struct ksqlstmt *stmt, size_t *pos)\n"
-	       "{\n"
-	       "\tsize_t i = 0;\n"
-	       "\n"
-	       "\tif (NULL == pos)\n"
-	       "\t\tpos = &i;\n"
-	       "\tmemset(p, 0, sizeof(*p));\n",
-	       p->name, p->name);
+	print_func_fill(p, 0);
+	puts("\n"
+	     "{\n"
+	     "\tsize_t i = 0;\n"
+	     "\n"
+	     "\tif (NULL == pos)\n"
+	     "\t\tpos = &i;\n"
+	     "\tmemset(p, 0, sizeof(*p));");
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_fill_field(f);
 	TAILQ_FOREACH(f, &p->fq, entries)

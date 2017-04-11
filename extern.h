@@ -160,6 +160,7 @@ int		 gen_diff(const struct strctq *,
 void		 print_comment(const char *, size_t, 
 			const char *, const char *,
 			const char *);
+void		 print_func_fill(const struct strct *, int);
 void		 print_func_search(const struct search *, int);
 
 __END_DECLS

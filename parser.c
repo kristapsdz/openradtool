@@ -744,7 +744,12 @@ parse_config_struct_search_params(struct parse *p, struct search *s)
 				parse_syntax_error(p, 
 					"expected search name");
 				break;
-			} else if (TOK_SEMICOLON == parse_next(p))
+			}
+			free(s->name);
+			s->name = strdup(p->last.string);
+			if (NULL == s->name)
+				err(EXIT_FAILURE, NULL);
+			if (TOK_SEMICOLON == parse_next(p))
 				break;
 		} else if (0 == strcasecmp("comment", p->last.string)) {
 			if (TOK_LITERAL != parse_next(p)) {
@@ -1075,6 +1080,7 @@ parse_free_search(struct search *p)
 		free(sent->name);
 		free(sent);
 	}
+	free(p->name);
 	free(p);
 }
 

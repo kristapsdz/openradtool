@@ -118,6 +118,7 @@ TAILQ_HEAD(sentq, sent);
  */
 struct	search {
 	struct sentq	    sntq; /* nested reference chain */
+	char		   *name; /* named or NULL */
 	struct strct	   *parent; /* up-reference */
 	TAILQ_ENTRY(search) entries;
 };

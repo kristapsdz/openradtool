@@ -746,21 +746,23 @@ parse_config_struct_search_params(struct parse *p, struct search *s)
 					"expected search name");
 				break;
 			}
-			/* XXX: warn of prior */
-			free(s->name);
-			s->name = strdup(p->last.string);
-			if (NULL == s->name)
-				err(EXIT_FAILURE, NULL);
 
 			/* Disallow duplicate names. */
 
 			TAILQ_FOREACH(ss, &s->parent->sq, entries) {
-				if (strcasecmp(ss->name, s->name))
+				if (NULL == ss->name ||
+				    strcasecmp(ss->name, p->last.string))
 					continue;
 				parse_syntax_error(p, 
 					"duplicate search name");
 				break;
 			}
+
+			/* XXX: warn of prior */
+			free(s->name);
+			s->name = strdup(p->last.string);
+			if (NULL == s->name)
+				err(EXIT_FAILURE, NULL);
 			if (TOK_SEMICOLON == parse_next(p))
 				break;
 		} else if (0 == strcasecmp("comment", p->last.string)) {

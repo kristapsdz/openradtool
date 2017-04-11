@@ -10,8 +10,7 @@ COMPAT_OBJS	 = compat_err.o \
 		   compat_strlcat.o \
 		   compat_strlcpy.o \
 		   compat_strtonum.o
-OBJS		 = comment.o \
-		   header.o \
+OBJS		 = header.o \
 		   linker.o \
 		   main.o \
 		   parser.o \

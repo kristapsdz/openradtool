@@ -110,11 +110,11 @@ gen_strct_funcs(const struct strct *p)
 	       " * which may be NULL to start from zero.\n"
 	       " * This recursively invokes the \"fill\" function\n"
 	       " * for all nested structures.\n"
-	       " */\n"
-	       "void db_%s_fill(struct %s *p, "
-		"struct ksqlstmt *stmt, size_t *pos);\n"
-	       "\n",
-	       p->name, p->name, p->name);
+	       " */\n",
+	       p->name);
+	print_func_fill(p, 1);
+	puts(";\n"
+	     "");
 
 	printf("/*\n"
 	       " * Free memory allocated by db_%s_fill().\n"
@@ -126,8 +126,12 @@ gen_strct_funcs(const struct strct *p)
 	       p->name, p->name, p->name);
 
 	TAILQ_FOREACH(s, &p->sq, entries) {
-		printf("/*\n"
-		       " * Search for a specific %s.\n"
+		puts("/*");
+		if (NULL != s->doc) {
+			print_comment(s->doc, 0, NULL, " * ", NULL);
+			puts(" * ");
+		}
+		printf(" * Search for a specific %s.\n"
 		       " * Uses the given fields in struct %s:\n",
 		       p->name, p->name);
 		TAILQ_FOREACH(sent, &s->sntq, entries) {

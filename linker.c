@@ -271,8 +271,9 @@ resolvesref(struct sref *ref, struct strct *s)
 	/* Did we find the field in our structure? */
 
 	if (NULL == (ref->field = f)) {
-		warnx("%s.%s: search term not found",
-			s->name, ref->name);
+		warnx("%s:%zu:%zu: search term not found",
+			ref->pos.fname, ref->pos.line,
+			ref->pos.column);
 		return(0);
 	}
 
@@ -284,14 +285,16 @@ resolvesref(struct sref *ref, struct strct *s)
 	if (NULL == TAILQ_NEXT(ref, entries)) {
 		if (FTYPE_STRUCT != f->type) 
 			return(1);
-		warnx("%s.%s: search term leaf field "
-			"is a struct", f->parent->name,
-			f->name);
+		warnx("%s:%zu:%zu: search term leaf field "
+			"is a struct", 
+			ref->pos.fname, ref->pos.line,
+			ref->pos.column);
 		return(0);
 	} else if (FTYPE_STRUCT != f->type) {
-		warnx("%s.%s: search term node field "
-			"is not a struct", f->parent->name,
-			f->name);
+		warnx("%s:%zu:%zu: search term node field "
+			"is not a struct", 
+			ref->pos.fname, ref->pos.line,
+			ref->pos.column);
 		return(0);
 	}
 
@@ -358,6 +361,44 @@ aliases(struct strct *orig, struct strct *p,
 		(*offs)++;
 		TAILQ_INSERT_TAIL(&orig->aq, a, entries);
 		aliases(orig, f->ref->target->parent, offs, a);
+	}
+}
+
+/*
+ * Check to see that our search type (e.g., list or iterate) is
+ * consistent with the fields that we're searching for.
+ * In other words, running an iterator search on a unique row isn't
+ * generally useful.
+ */
+static void
+check_searchtype(const struct strct *p)
+{
+	const struct search *srch;
+	const struct sent *sent;
+	const struct sref *ref;
+	int	 hasuniq;
+
+	TAILQ_FOREACH(srch, &p->sq, entries) {
+		hasuniq = 0;
+		TAILQ_FOREACH(sent, &srch->sntq, entries) {
+			TAILQ_FOREACH(ref, &sent->srq, entries)
+				if (FIELD_ROWID & ref->field->flags) {
+					hasuniq = 1;
+					break;
+				}
+			if (NULL != ref)
+				break;
+		}
+		if (hasuniq && STYPE_SEARCH != srch->type)
+			warnx("%s:%zu:%zu: multiple-result search "
+				"on a unique field",
+				srch->pos.fname, srch->pos.line,
+				srch->pos.column);
+		else if ( ! hasuniq && STYPE_SEARCH == srch->type)
+			warnx("%s:%zu:%zu: single-result search "
+				"on a non-unique field",
+				srch->pos.fname, srch->pos.line,
+				srch->pos.column);
 	}
 }
 
@@ -462,6 +503,11 @@ parse_link(struct strctq *q)
 				assert(NULL != a);
 				sent->alias = a;
 			}
+
+	/* See if our search type is wonky. */
+
+	TAILQ_FOREACH(p, q, entries)
+		check_searchtype(p);
 
 	/* 
 	 * Copy the list into a temporary array.

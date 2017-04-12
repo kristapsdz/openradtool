@@ -25,6 +25,16 @@ enum	ftype {
 };
 
 /*
+ * A saved parsing position.
+ * (This can be for many reasons.)
+ */
+struct	pos {
+	const char	*fname; /* file-name */
+	size_t		 line; /* line number (from 1) */
+	size_t		 column; /* column number (from 1) */
+};
+
+/*
  * An object reference into another table.
  * This is gathered during the syntax parse phase, then linked to an
  * actual table afterwards.
@@ -54,6 +64,7 @@ struct	field {
 	struct strct	  *parent; /* parent reference */
 	unsigned int	   flags; /* flags */
 #define	FIELD_ROWID	   0x01 /* this is a rowid field */
+#define	FIELD_UNIQUE	   0x02 /* this is a unique field */
 	TAILQ_ENTRY(field) entries;
 };
 
@@ -85,6 +96,7 @@ TAILQ_HEAD(aliasq, alias);
  */
 struct	sref {
 	char		 *name; /* field name */
+	struct pos	  pos; /* parse point */
 	struct field	 *field; /* field (after link) */
 	struct sent	 *parent; /* up-reference */
 	TAILQ_ENTRY(sref) entries;
@@ -101,7 +113,8 @@ TAILQ_HEAD(srefq, sref);
  *
  */
 struct	sent {
-	struct srefq	  srq;
+	struct srefq	  srq; /* queue of search fields */
+	struct pos	  pos; /* parse point */
 	struct search	 *parent; /* up-reference */
 	char		 *name; /* canonical dot-form name or NULL */
 	struct alias	 *alias; /* resolved alias */
@@ -110,17 +123,26 @@ struct	sent {
 
 TAILQ_HEAD(sentq, sent);
 
+enum	stype {
+	STYPE_SEARCH, /* singular response */
+	STYPE_LIST, /* queue of responses */
+	STYPE_ITERATE, /* iterator of responses */
+};
+
 /*
- * A set of fields to search by.
- * A "search" implies a unique response given a query, for example,
- * the set of sets "user.company.name, userid", which has two search
- * entities (struct sent) with at least one search reference (sref).
+ * A set of fields to search by and return results.
+ * A "search" implies zero or more responses given a query; for example,
+ * a unique response to the set of sets "user.company.name, userid",
+ * which has two search entities (struct sent) with at least one search
+ * reference (sref).
  */
 struct	search {
 	struct sentq	    sntq; /* nested reference chain */
+	struct pos	    pos; /* parse point */
 	char		   *name; /* named or NULL */
 	char		   *doc; /* documentation */
 	struct strct	   *parent; /* up-reference */
+	enum stype	    type; /* type of search */
 	TAILQ_ENTRY(search) entries;
 };
 
@@ -140,10 +162,21 @@ struct	strct {
 	struct fieldq	   fq; /* fields/columns/members */
 	struct searchq	   sq; /* search fields */
 	struct aliasq	   aq; /* join aliases */
+	unsigned int	   flags;
+#define	STRCT_HAS_QUEUE	   0x01 /* needs a queue interface */
+#define	STRCT_HAS_ITERATOR 0x02 /* needs iterator interface */
 	TAILQ_ENTRY(strct) entries;
 };
 
 TAILQ_HEAD(strctq, strct);
+
+enum	cmtt {
+	COMMENT_C,
+	COMMENT_C_FRAG,
+	COMMENT_C_FRAG_CLOSE,
+	COMMENT_C_FRAG_OPEN,
+	COMMENT_SQL
+};
 
 __BEGIN_DECLS
 
@@ -157,11 +190,16 @@ void		 gen_sql(const struct strctq *);
 int		 gen_diff(const struct strctq *,
 			const struct strctq *);
 
-void		 print_comment(const char *, size_t, 
-			const char *, const char *,
-			const char *);
+void		 print_commentt(size_t, enum cmtt, const char *);
+void		 print_commentv(size_t, enum cmtt, const char *, ...)
+			__attribute__((format(printf, 3, 4)));
+void		 print_func_by_rowid(const struct strct *, int);
+void		 print_func_insert(const struct strct *, int);
 void		 print_func_fill(const struct strct *, int);
+void		 print_func_free(const struct strct *, int);
+void		 print_func_freeq(const struct strct *, int);
 void		 print_func_search(const struct search *, int);
+void		 print_func_unfill(const struct strct *, int);
 
 __END_DECLS
 

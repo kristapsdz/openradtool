@@ -55,7 +55,7 @@ struct	parse {
 	size_t		 bufsz; /* length of buffer */
 	size_t		 bufmax; /* maximum buffer size */
 	size_t		 line; /* current line (from 1) */
-	size_t		 column; /* current column (from 0) */
+	size_t		 column; /* current column (from 1) */
 	const char	*fname; /* current filename */
 	FILE		*f; /* current parser */
 };
@@ -221,6 +221,10 @@ static	const char *const badidents[] = {
 static void parse_syntax_error(struct parse *, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
 
+/*
+ * Push a single character into the retaining buffer.
+ * This bails out on memory allocation failure.
+ */
 static void
 buf_push(struct parse *p, char c)
 {
@@ -232,6 +236,18 @@ buf_push(struct parse *p, char c)
 			err(EXIT_FAILURE, NULL);
 	}
 	p->buf[p->bufsz++] = c;
+}
+
+/*
+ * Copy the current parse point into a saved position buffer.
+ */
+static void
+parse_point(const struct parse *p, struct pos *pp)
+{
+
+	pp->fname = p->fname;
+	pp->line = p->line;
+	pp->column = p->column;
 }
 
 /*
@@ -478,7 +494,7 @@ parse_config_field_struct(struct parse *p, struct ref *r)
  * Read auxiliary information for a field.
  * Its syntax is:
  *
- *   [rowid] ";"
+ *   ["rowid" | "unique" | "comment" string_literal]* ";"
  *
  * This will continue processing until the semicolon is reached.
  */
@@ -513,6 +529,14 @@ parse_config_field_info(struct parse *p, struct field *fd)
 				break;
 			}
 			fd->parent->rowid = fd;
+			continue;
+		} else if (0 == strcasecmp(p->last.string, "unique")) {
+			if (NULL != fd->ref) {
+				parse_syntax_error(p, "unique "
+					"on foreign key reference");
+				break;
+			}
+			fd->flags |= FIELD_UNIQUE;
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "comment")) {
 			if (TOK_LITERAL != parse_next(p)) {
@@ -629,7 +653,7 @@ parse_config_field(struct parse *p, struct field *fd)
 }
 
 static struct sref *
-sref_alloc(const char *name, struct sent *parent)
+sref_alloc(const struct parse *p, const char *name, struct sent *up)
 {
 	struct sref	*ref;
 
@@ -637,27 +661,29 @@ sref_alloc(const char *name, struct sent *parent)
 		err(EXIT_FAILURE, NULL);
 	if (NULL == (ref->name = strdup(name)))
 		err(EXIT_FAILURE, NULL);
-	ref->parent = parent;
-	TAILQ_INSERT_TAIL(&parent->srq, ref, entries);
+	ref->parent = up;
+	parse_point(p, &ref->pos);
+	TAILQ_INSERT_TAIL(&up->srq, ref, entries);
 	return(ref);
 }
 
 static struct sent *
-sent_alloc(struct search *parent)
+sent_alloc(const struct parse *p, struct search *up)
 {
 	struct sent	*sent;
 
 	if (NULL == (sent = calloc(1, sizeof(struct sent))))
 		err(EXIT_FAILURE, NULL);
-	sent->parent = parent;
+	sent->parent = up;
+	parse_point(p, &sent->pos);
 	TAILQ_INIT(&sent->srq);
-	TAILQ_INSERT_TAIL(&parent->sntq, sent, entries);
+	TAILQ_INSERT_TAIL(&up->sntq, sent, entries);
 	return(sent);
 }
 
 /*
  * Parse the field used in a search.  This is the FIELD designation in
- * parse_config_struct_search().
+ * parse_config_search().
  * This may consist of nested structures, which uses dot-notation to
  * signify the field within a field's reference structure.
  *
@@ -674,7 +700,7 @@ parse_config_struct_search_field(struct parse *p, struct sent *sent)
 			"search field identifier");
 		return;
 	}
-	sref_alloc(p->last.string, sent);
+	sref_alloc(p, p->last.string, sent);
 
 	for (;;) {
 		if (TOK_COMMA == parse_next(p) ||
@@ -691,7 +717,7 @@ parse_config_struct_search_field(struct parse *p, struct sent *sent)
 				"search field identifier");
 			return;
 		}
-		sref_alloc(p->last.string, sent);
+		sref_alloc(p, p->last.string, sent);
 	}
 
 	/*
@@ -797,7 +823,7 @@ parse_config_struct_search_params(struct parse *p, struct search *s)
  * FIXME: have return value be void and use lasttype.
  */
 static int
-parse_config_struct_search(struct parse *p, struct strct *s)
+parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 {
 	struct search	*srch;
 	struct sent	*sent;
@@ -805,12 +831,18 @@ parse_config_struct_search(struct parse *p, struct strct *s)
 	if (NULL == (srch = calloc(1, sizeof(struct search))))
 		err(EXIT_FAILURE, NULL);
 	srch->parent = s;
+	srch->type = stype;
+	parse_point(p, &srch->pos);
 	TAILQ_INIT(&srch->sntq);
 	TAILQ_INSERT_TAIL(&s->sq, srch, entries);
+	if (STYPE_LIST == stype)
+		s->flags |= STRCT_HAS_QUEUE;
+	else if (STYPE_ITERATE == stype)
+		s->flags |= STRCT_HAS_ITERATOR;
 
 	/* Per-field. */
 
-	sent = sent_alloc(srch);
+	sent = sent_alloc(p, srch);
 	parse_config_struct_search_field(p, sent);
 
 	if (TOK_COLON == p->lasttype) {
@@ -823,7 +855,7 @@ parse_config_struct_search(struct parse *p, struct strct *s)
 		return(0);
 
 	for (;;) {
-		sent = sent_alloc(srch);
+		sent = sent_alloc(p, srch);
 		parse_config_struct_search_field(p, sent);
 		if (TOK_SEMICOLON == p->lasttype)
 			return(1);
@@ -892,17 +924,19 @@ parse_config_struct(struct parse *p, struct strct *s)
 			}
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "search")) {
-
-			/*
-			 * A set of search fields.
-			 * Parse each of the fields we're going to
-			 * search on.
-			 * (Later we'll link to the fields.)
-			 */
-			if ( ! parse_config_struct_search(p, s)) 
+			if ( ! parse_config_search(p, s, STYPE_SEARCH)) 
 				return;
 			continue;
-		} 
+		} else if (0 == strcasecmp(p->last.string, "list")) {
+			if ( ! parse_config_search(p, s, STYPE_LIST)) 
+				return;
+			continue;
+		} else if (0 == strcasecmp(p->last.string, "iterate")) {
+			if ( ! parse_config_search(p, s, STYPE_ITERATE)) 
+				return;
+			continue;
+		}
+		 
 		
 		if (strcasecmp(p->last.string, "field")) {
 			parse_syntax_error(p, 

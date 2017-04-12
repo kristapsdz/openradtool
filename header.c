@@ -26,12 +26,6 @@
 
 #include "extern.h"
 
-static	const char *const ftypes[FTYPE__MAX] = {
-	"int64_t",
-	"const char *",
-	NULL,
-};
-
 /*
  * Generate the C API for a given field.
  */
@@ -39,7 +33,7 @@ static void
 gen_strct_field(const struct field *p)
 {
 
-	print_comment(p->doc, 1, "/*", " * ", " */");
+	print_commentt(1, COMMENT_C, p->doc);
 
 	switch (p->type) {
 	case (FTYPE_STRUCT):
@@ -59,19 +53,37 @@ gen_strct_field(const struct field *p)
 
 /*
  * Generate the C API for a given structure.
+ * This generates the TAILQ_ENTRY listing if the structure has any
+ * listings declared on it.
  */
 static void
 gen_strct_structs(const struct strct *p)
 {
 	const struct field *f;
 
-	print_comment(p->doc, 0, "/*", " * ", " */");
+	print_commentt(0, COMMENT_C, p->doc);
 
 	printf("struct\t%s {\n", p->name);
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_field(f);
+	if (STRCT_HAS_QUEUE & p->flags)
+		printf("\tTAILQ_ENTRY(%s) _entries;\n", p->name);
 	puts("};\n"
 	     "");
+
+	if (STRCT_HAS_QUEUE & p->flags) {
+		print_commentv(0, COMMENT_C, 
+			"Queue of %s for listings.", p->name);
+		printf("TAILQ_HEAD(%s_q, %s);\n\n", p->name, p->name);
+	}
+
+	if (STRCT_HAS_ITERATOR & p->flags) {
+		print_commentv(0, COMMENT_C, 
+			"Callback of %s for iteration.", p->name);
+		printf("typedef void (*%s_cb)"
+		       "(const struct %s *v, void *arg);\n\n", 
+		       p->name, p->name);
+	}
 }
 
 /*
@@ -80,74 +92,125 @@ gen_strct_structs(const struct strct *p)
 static void
 gen_strct_funcs(const struct strct *p)
 {
-	int	 		 first;
-	const struct search	*s;
-	const struct sref	*sr;
-	const struct sent	*sent;
+	const struct search *s;
+	const struct sref *sr;
+	const struct sent *sent;
+	const struct field *f;
+	int	 first;
+	size_t	 pos;
 
-	if (NULL != p->rowid)
-		printf("/*\n"
-		       " * Return the %s with rowid \"id\".\n"
-		       " * Returns NULL if no object was found.\n"
-		       " * Pointer must be freed with db_%s_free().\n"
-		       " */\n"
-		       "struct %s *db_%s_by_rowid"
-			"(struct ksql *p, int64_t id);\n"
-		       "\n",
-		       p->name, p->name, p->name, p->name);
+	if (NULL != p->rowid) {
+		print_commentv(0, COMMENT_C,
+		       "Return the %s with rowid \"id\".\n"
+		       "Returns NULL if no object was found.\n"
+		       "Pointer must be freed with db_%s_free().",
+		       p->name, p->name);
+		print_func_by_rowid(p, 1);
+		puts(";\n"
+		     "");
+	}
 
-	printf("/*\n"
-	       " * Call db_%s_unfill() and free \"p\".\n"
-	       " * Has no effect if \"p\" is NULL.\n"
-	       " */\n"
-	       "void db_%s_free(struct %s *p);\n"
-	       "\n",
-	       p->name, p->name, p->name);
+	print_commentv(0, COMMENT_C,
+	       "Call db_%s_unfill() and free \"p\".\n"
+	       "Has no effect if \"p\" is NULL.",
+	       p->name);
+	print_func_free(p, 1);
+	puts(";\n"
+	     "");
 
-	printf("/*\n"
-	       " * Fill in a %s from an open statement \"stmt\".\n"
-	       " * This starts grabbing results from \"pos\",\n"
-	       " * which may be NULL to start from zero.\n"
-	       " * This recursively invokes the \"fill\" function\n"
-	       " * for all nested structures.\n"
-	       " */\n",
+	if (STRCT_HAS_QUEUE & p->flags) {
+		print_commentv(0, COMMENT_C,
+		     "Unfill and free all queue members.\n"
+		     "Has no effect if \"q\" is NULL.");
+		print_func_freeq(p, 1);
+		puts(";\n"
+		     "");
+	}
+
+	print_commentv(0, COMMENT_C, 
+	       "Fill in a %s from an open statement \"stmt\".\n"
+	       "This starts grabbing results from \"pos\", "
+	       "which may be NULL to start from zero.\n"
+	       "This recursively invokes the \"fill\" function "
+	       "for all nested structures.",
 	       p->name);
 	print_func_fill(p, 1);
 	puts(";\n"
 	     "");
 
-	printf("/*\n"
-	       " * Free memory allocated by db_%s_fill().\n"
-	       " * Also frees for all contained structures.\n"
-	       " * Has not effect if \"p\" is NULL.\n"
-	       " */\n"
-	       "void db_%s_unfill(struct %s *p);\n"
-	       "\n",
-	       p->name, p->name, p->name);
+	print_commentt(0, COMMENT_C_FRAG_OPEN,
+		"Insert a new row into the database.\n"
+		"Only native (and non-rowid) fields may "
+		"be set.");
+	pos = 1;
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT == f->type ||
+		    FIELD_ROWID & f->flags)
+			continue;
+		printf(" *\tv%zu: %s\n", pos++, f->name);
+	}
+	print_commentt(0, COMMENT_C_FRAG_CLOSE,
+		"\nReturns zero on failure, non-zero "
+		"otherwise.");
+	print_func_insert(p, 1);
+	puts(";\n"
+	     "");
+
+	print_commentv(0, COMMENT_C,
+	       "Free memory allocated by db_%s_fill().\n"
+	       "Also frees for all contained structures.\n"
+	       "Has not effect if \"p\" is NULL.",
+	       p->name);
+	print_func_unfill(p, 1);
+	puts(";\n"
+	     "");
 
 	TAILQ_FOREACH(s, &p->sq, entries) {
-		puts("/*");
-		if (NULL != s->doc) {
-			print_comment(s->doc, 0, NULL, " * ", NULL);
-			puts(" * ");
-		}
-		printf(" * Search for a specific %s.\n"
-		       " * Uses the given fields in struct %s:\n",
-		       p->name, p->name);
+		if (NULL != s->doc)
+			print_commentt(0, COMMENT_C_FRAG_OPEN, s->doc);
+		else if (STYPE_SEARCH == s->type)
+			print_commentv(0, COMMENT_C_FRAG_OPEN,
+				"Search for a specific %s.", p->name);
+		else
+			print_commentv(0, COMMENT_C_FRAG_OPEN,
+				"Search for a set of %s.", p->name);
+
+		print_commentv(0, COMMENT_C_FRAG,
+			"\nUses the given fields in struct %s:",
+		       p->name);
+
+		pos = 1;
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
 			printf(" * ");
 			first = 1;
 			TAILQ_FOREACH(sr, &sent->srq, entries) {
-				putchar(first ? '\t' : '.');
-				first = 0;
+				if (first) {
+					printf("\tv%zu: ", pos);
+					first = 0;
+				} else
+					putchar('.');
 				printf("%s", sr->name);
 			}
 			sr = TAILQ_LAST(&sent->srq, srefq);
-			printf(" (%s)\n", ftypes[sr->field->type]);
+			puts("");
+			pos++;
 		}
-		printf(" * Returns a pointer on success or NULL.\n"
-		       " * Free the pointer with db_%s_free().\n"
-		       " */\n", p->name);
+
+		if (STYPE_SEARCH == s->type)
+			print_commentv(0, COMMENT_C_FRAG_CLOSE,
+				"\nReturns a pointer or NULL on fail.\n"
+				"Free the pointer with db_%s_free().",
+				p->name);
+		else if (STYPE_LIST == s->type)
+			print_commentv(0, COMMENT_C_FRAG_CLOSE,
+				"\nAlways returns a queue pointer.\n"
+				"Free this with db_%s_freeq().",
+				p->name);
+		else
+			print_commentv(0, COMMENT_C_FRAG_CLOSE,
+				"\nInvokes the given callback with "
+				"retrieved data.");
+
 		print_func_search(s, 1);
 		puts(";\n"
 		     "");
@@ -159,15 +222,14 @@ gen_header(const struct strctq *q)
 {
 	const struct strct *p;
 
-	printf("#ifndef DB_H\n"
-	       "#define DB_H\n"
-	       "\n"
-	       "/*\n"
-	       " * WARNING: automatically generated by kwebapp %s.\n"
-	       " * DO NOT EDIT!\n"
-	       " */\n"
-	       "\n", 
-	       VERSION);
+	puts("#ifndef DB_H\n"
+	     "#define DB_H\n"
+	     "");
+	print_commentt(0, COMMENT_C, 
+	       "WARNING: automatically generated by "
+	       "kwebapp " VERSION ".\n"
+	       "DO NOT EDIT!");
+	puts("");
 
 	TAILQ_FOREACH(p, q, entries)
 		gen_strct_structs(p);
@@ -180,5 +242,5 @@ gen_header(const struct strctq *q)
 
 	puts("__END_DECLS\n"
 	     "\n"
-	     "#endif /* ! DB_H */");
+	     "#endif");
 }

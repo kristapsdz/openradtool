@@ -1,3 +1,5 @@
+#include <sys/queue.h>
+
 #include <stdlib.h>
 
 #include <ksql.h>

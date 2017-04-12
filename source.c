@@ -94,6 +94,190 @@ gen_strct_fill_field(const struct field *f)
 }
 
 /*
+ * Print out a search function for an STYPE_ITERATE.
+ * This calls a function pointer with the retrieved data.
+ */
+static void
+gen_strct_iterator(const struct search *s, const char *caps, size_t num)
+{
+	const struct sent *sent;
+	const struct sref *sr;
+	size_t	 pos = 1;
+
+	assert(STYPE_ITERATE == s->type);
+
+	print_func_search(s, 0);
+	printf("\n"
+	       "{\n"
+	       "\tstruct ksqlstmt *stmt;\n"
+	       "\tstruct %s p;\n"
+	       "\n"
+	       "\tksql_stmt_alloc(db, &stmt,\n"
+	       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
+	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
+	       s->parent->name, caps, num, caps, num);
+
+	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		sr = TAILQ_LAST(&sent->srq, srefq);
+		if (FTYPE_INT == sr->field->type)
+			printf("\tksql_bind_int");
+		else
+			printf("\tksql_bind_str");
+		printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
+		pos++;
+	}
+
+	printf("\twhile (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
+	       "\t\tdb_%s_fill(&p, stmt, NULL);\n"
+	       "\t\t(*cb)(&p, arg);\n"
+	       "\t}\n"
+	       "\tksql_stmt_free(stmt);\n"
+	       "}\n"
+	       "\n",
+	       s->parent->name);
+}
+
+/*
+ * Print out a search function for an STYPE_LIST.
+ * This searches for a multiplicity of values.
+ */
+static void
+gen_strct_list(const struct search *s, const char *caps, size_t num)
+{
+	const struct sent *sent;
+	const struct sref *sr;
+	size_t	 pos = 1;
+
+	assert(STYPE_LIST == s->type);
+
+	print_func_search(s, 0);
+	printf("\n"
+	       "{\n"
+	       "\tstruct ksqlstmt *stmt;\n"
+	       "\tstruct %s_q *q;\n"
+	       "\tstruct %s *p;\n"
+	       "\n"
+	       "\tq = malloc(sizeof(struct %s_q));\n"
+	       "\tif (NULL == q) {\n"
+	       "\t\tperror(NULL);\n"
+	       "\t\texit(EXIT_FAILURE);\n"
+	       "\t}\n"
+	       "\tTAILQ_INIT(q);\n"
+	       "\n"
+	       "\tksql_stmt_alloc(db, &stmt,\n"
+	       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
+	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
+	       s->parent->name, s->parent->name, 
+	       s->parent->name, caps, num, caps, num);
+
+	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		sr = TAILQ_LAST(&sent->srq, srefq);
+		if (FTYPE_INT == sr->field->type)
+			printf("\tksql_bind_int");
+		else
+			printf("\tksql_bind_str");
+		printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
+		pos++;
+	}
+
+	printf("\twhile (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
+	       "\t\tp = malloc(sizeof(struct %s));\n"
+	       "\t\tif (NULL == p) {\n"
+	       "\t\t\tperror(NULL);\n"
+	       "\t\t\texit(EXIT_FAILURE);\n"
+	       "\t\t}\n"
+	       "\t\tdb_%s_fill(p, stmt, NULL);\n"
+	       "\t\tTAILQ_INSERT_TAIL(q, p, _entries);\n"
+	       "\t}\n"
+	       "\tksql_stmt_free(stmt);\n"
+	       "\treturn(q);\n"
+	       "}\n"
+	       "\n",
+	       s->parent->name, s->parent->name);
+}
+
+/*
+ * Print out the special rowid search function.
+ */
+static void
+gen_strct_rowid(const struct strct *p, const char *caps)
+{
+
+	print_func_by_rowid(p, 0);
+	printf("\n"
+	       "{\n"
+	       "\tstruct ksqlstmt *stmt;\n"
+	       "\tstruct %s *p = NULL;\n"
+	       "\n"
+	       "\tksql_stmt_alloc(db, &stmt,\n"
+	       "\t\tstmts[STMT_%s_BY_ROWID],\n"
+	       "\t\tSTMT_%s_BY_ROWID);\n"
+	       "\tksql_bind_int(stmt, 0, id);\n"
+	       "\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
+	       "\t\tp = malloc(sizeof(struct %s));\n"
+	       "\t\tif (NULL == p) {\n"
+	       "\t\t\tperror(NULL);\n"
+	       "\t\t\texit(EXIT_FAILURE);\n"
+	       "\t\t}\n"
+	       "\t\tdb_%s_fill(p, stmt, NULL);\n"
+	       "\t}\n"
+	       "\tksql_stmt_free(stmt);\n"
+	       "\treturn(p);\n"
+	       "}\n"
+	       "\n",
+	       p->name, caps, caps, p->name, p->name);
+}
+
+/*
+ * Print out a search function for an STYPE_SEARCH.
+ * This searches for a singular value.
+ */
+static void
+gen_strct_search(const struct search *s, const char *caps, size_t num)
+{
+	const struct sent *sent;
+	const struct sref *sr;
+	size_t	 pos = 1;
+
+	assert(STYPE_SEARCH == s->type);
+
+	print_func_search(s, 0);
+	printf("\n"
+	       "{\n"
+	       "\tstruct ksqlstmt *stmt;\n"
+	       "\tstruct %s *p = NULL;\n"
+	       "\n"
+	       "\tksql_stmt_alloc(db, &stmt,\n"
+	       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
+	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
+	       s->parent->name, caps, num, caps, num);
+
+	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		sr = TAILQ_LAST(&sent->srq, srefq);
+		if (FTYPE_INT == sr->field->type)
+			printf("\tksql_bind_int");
+		else
+			printf("\tksql_bind_str");
+		printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
+		pos++;
+	}
+
+	printf("\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
+	       "\t\tp = malloc(sizeof(struct %s));\n"
+	       "\t\tif (NULL == p) {\n"
+	       "\t\t\tperror(NULL);\n"
+	       "\t\t\texit(EXIT_FAILURE);\n"
+	       "\t\t}\n"
+	       "\t\tdb_%s_fill(p, stmt, NULL);\n"
+	       "\t}\n"
+	       "\tksql_stmt_free(stmt);\n"
+	       "\treturn(p);\n"
+	       "}\n"
+	       "\n",
+	       s->parent->name, s->parent->name);
+}
+
+/*
  * Provide the following function definitions:
  *
  *  (1) db_xxx_fill (fill from database)
@@ -108,10 +292,8 @@ gen_strct(const struct strct *p)
 {
 	const struct field *f;
 	const struct search *s;
-	const struct sent *sent;
-	const struct sref *sr;
 	char	*caps;
-	size_t	 pos, searchnum = 0;
+	size_t	 searchnum = 0, pos;
 
 	caps = gen_strct_caps(p->name);
 
@@ -137,12 +319,11 @@ gen_strct(const struct strct *p)
 
 	/* Free internal resources. */
 
-	printf("void\n"
-	       "db_%s_unfill(struct %s *p)\n"
-	       "{\n"
-	       "\tif (NULL == p)\n"
-	       "\t\treturn;\n",
-	       p->name, p->name);
+	print_func_unfill(p, 0);
+	puts("\n"
+	     "{\n"
+	     "\tif (NULL == p)\n"
+	     "\t\treturn;");
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_unfill_field(f);
 	printf("}\n"
@@ -150,14 +331,59 @@ gen_strct(const struct strct *p)
 
 	/* Free object. */
 
-	printf("void\n"
-	       "db_%s_free(struct %s *p)\n"
+	print_func_free(p, 0);
+	printf("\n"
 	       "{\n"
 	       "\tdb_%s_unfill(p);\n"
 	       "\tfree(p);\n"
 	       "}\n"
-	       "\n",
-	       p->name, p->name, p->name);
+	       "\n", 
+	       p->name);
+
+	if (STRCT_HAS_QUEUE & p->flags) {
+		print_func_freeq(p, 0);
+		printf("\n"
+		       "{\n"
+		       "\tstruct %s *p;\n\n"
+		       "\tif (NULL == q)\n"
+		       "\t\treturn;\n"
+		       "\twhile (NULL != (p = TAILQ_FIRST(q))) {\n"
+		       "\t\tTAILQ_REMOVE(q, p, _entries);\n"
+		       "\t\tdb_%s_free(p);\n"
+		       "\t}\n\n"
+		       "\tfree(q);\n"
+		       "}\n"
+		       "\n", 
+		       p->name, p->name);
+	}
+
+	print_func_insert(p, 0);
+	printf("\n"
+	       "{\n"
+	       "\tstruct ksqlstmt *stmt;\n"
+	       "\tenum ksqlc c;\n"
+	       "\n"
+	       "\tksql_stmt_alloc(db, &stmt,\n"
+	       "\t\tstmts[STMT_%s_INSERT],\n"
+	       "\t\tSTMT_%s_INSERT);\n",
+	       caps, caps);
+	pos = 1;
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT == f->type ||
+		    FIELD_ROWID & f->flags)
+			continue;
+		if (FTYPE_INT == f->type)
+			printf("\tksql_bind_int");
+		else
+			printf("\tksql_bind_str");
+		printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
+		pos++;
+	}
+	puts("\tc = ksql_stmt_cstep(stmt);\n"
+	     "\tksql_stmt_free(stmt);\n"
+	     "\treturn(KSQL_CONSTRAINT != c);\n"
+	     "}\n"
+	     "");
 
 	/* 
 	 * Get object by identifier (external).
@@ -165,72 +391,17 @@ gen_strct(const struct strct *p)
 	 */
 
 	if (NULL != p->rowid)
-		printf("struct %s *\n"
-		       "db_%s_by_rowid(struct ksql *db, int64_t id)\n"
-		       "{\n"
-		       "\tstruct ksqlstmt *stmt;\n"
-		       "\tstruct %s *p = NULL;\n"
-		       "\n"
-		       "\tksql_stmt_alloc(db, &stmt,\n"
-		       "\t\tstmts[STMT_%s_BY_ROWID],\n"
-		       "\t\tSTMT_%s_BY_ROWID);\n"
-		       "\tksql_bind_int(stmt, 0, id);\n"
-		       "\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
-		       "\t\tp = malloc(sizeof(struct %s));\n"
-		       "\t\tif (NULL == p) {\n"
-		       "\t\t\tperror(NULL);\n"
-		       "\t\t\texit(EXIT_FAILURE);\n"
-		       "\t\t}\n"
-		       "\t\tdb_%s_fill(p, stmt, NULL);\n"
-		       "\t}\n"
-		       "\tksql_stmt_free(stmt);\n"
-		       "\treturn(p);\n"
-		       "}\n"
-		       "\n",
-		       p->name, p->name, p->name,
-		       caps, caps, p->name, p->name);
+		gen_strct_rowid(p, caps);
 
-	/*
-	 * Generate the custom search functions.
-	 */
+	/* Generate the custom search functions. */
 
-	TAILQ_FOREACH(s, &p->sq, entries) {
-		print_func_search(s, 0);
-		printf("\n"
-		       "{\n"
-		       "\tstruct ksqlstmt *stmt;\n"
-		       "\tstruct %s *p = NULL;\n"
-		       "\n"
-		       "\tksql_stmt_alloc(db, &stmt,\n"
-		       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
-		       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
-		       p->name, caps, searchnum, 
-		       caps, searchnum);
-		pos = 1;
-		TAILQ_FOREACH(sent, &s->sntq, entries) {
-			sr = TAILQ_LAST(&sent->srq, srefq);
-			if (FTYPE_INT == sr->field->type)
-				printf("\tksql_bind_int");
-			else
-				printf("\tksql_bind_str");
-			printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
-			pos++;
-		}
-		printf("\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
-		       "\t\tp = malloc(sizeof(struct %s));\n"
-		       "\t\tif (NULL == p) {\n"
-		       "\t\t\tperror(NULL);\n"
-		       "\t\t\texit(EXIT_FAILURE);\n"
-		       "\t\t}\n"
-		       "\t\tdb_%s_fill(p, stmt, NULL);\n"
-		       "\t}\n"
-		       "\tksql_stmt_free(stmt);\n"
-		       "\treturn(p);\n"
-		       "}\n"
-		       "\n",
-		       p->name, p->name);
-		searchnum++;
-	}
+	TAILQ_FOREACH(s, &p->sq, entries)
+		if (STYPE_SEARCH == s->type)
+			gen_strct_search(s, caps, searchnum++);
+		else if (STYPE_LIST == s->type)
+			gen_strct_list(s, caps, searchnum++);
+		else
+			gen_strct_iterator(s, caps, searchnum++);
 
 	free(caps);
 }
@@ -255,6 +426,8 @@ gen_stmt_enum(const struct strct *p)
 
 	TAILQ_FOREACH(s, &p->sq, entries)
 		printf("\tSTMT_%s_BY_SEARCH_%zu,\n", caps, snum++);
+
+	printf("\tSTMT_%s_INSERT,\n", caps);
 
 	free(caps);
 }
@@ -376,10 +549,17 @@ gen_stmt(const struct strct *p)
 	const struct search *s;
 	const struct sent *sent;
 	const struct sref *sr;
+	const struct field *f;
 	int	 first;
+	size_t	 snum = 0;
+	char	*caps;
+
+	caps = gen_strct_caps(p->name);
 
 	if (NULL != p->rowid)  {
-		printf("\t\"SELECT ");
+		printf("\t/* STMT_%s_BY_ROWID */\n"
+		       "\t\"SELECT ",
+		       caps);
 		gen_stmt_schema(p, p, NULL);
 		printf("\" FROM %s", p->name);
 		gen_stmt_joins(p, p, NULL);
@@ -388,7 +568,9 @@ gen_stmt(const struct strct *p)
 	}
 
 	TAILQ_FOREACH(s, &p->sq, entries) {
-		printf("\t\"SELECT ");
+		printf("\t/* STMT_%s_BY_SEARCH_%zu */\n"
+		       "\t\"SELECT ",
+			caps, snum++);
 		gen_stmt_schema(p, p, NULL);
 		printf("\" FROM %s", p->name);
 		gen_stmt_joins(p, p, NULL);
@@ -406,6 +588,31 @@ gen_stmt(const struct strct *p)
 		}
 		puts("\",");
 	}
+
+	/* TODO: DEFAULT_VALUES */
+
+	printf("\t/* STMT_%s_INSERT */\n"
+	       "\t\"INSERT INTO %s (", caps, p->name);
+	first = 1;
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT == f->type ||
+		    FIELD_ROWID & f->flags)
+			continue;
+		printf("%s%s", first ? "" : ",", f->name);
+		first = 0;
+	}
+	printf(") VALUES (");
+	first = 1;
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT == f->type ||
+		    FIELD_ROWID & f->flags)
+			continue;
+		printf("%s?", first ? "" : ",");
+		first = 0;
+	}
+	puts(")\",");
+
+	free(caps);
 }
 
 /*
@@ -437,14 +644,16 @@ gen_source(const struct strctq *q, const char *header)
 {
 	const struct strct *p;
 
-	puts("/*\n"
-	     " * DO NOT EDIT.\n"
-	     " * Automatically generated by kwebapp " VERSION ".\n"
-	     " */");
+	print_commentt(0, COMMENT_C, 
+		"WARNING: automatically generated by "
+		"kwebapp " VERSION ".\n"
+		"DO NOT EDIT!");
 
 	/* Start with all headers we'll need. */
 
-	printf("#include <stdio.h>\n"
+	printf("#include <sys/queue.h>\n"
+	       "\n"
+	       "#include <stdio.h>\n"
 	       "#include <stdlib.h>\n"
 	       "#include <string.h>\n"
 	       "\n"
@@ -456,10 +665,9 @@ gen_source(const struct strctq *q, const char *header)
 
 	/* Enumeration for statements. */
 
-	puts("/*\n"
-	     " * All SQL statements we'll define in \"stmts\".\n"
-	     " */\n"
-	     "enum\tstmt {");
+	print_commentt(0, COMMENT_C,
+		"All SQL statements we'll define in \"stmts\".");
+	puts("enum\tstmt {");
 	TAILQ_FOREACH(p, q, entries)
 		gen_stmt_enum(p);
 	puts("\tSTMT__MAX\n"
@@ -468,12 +676,11 @@ gen_source(const struct strctq *q, const char *header)
 
 	/* A set of CPP defines for per-table schema. */
 
-	puts("/*\n"
-	     " * Define our table columns.\n"
-	     " * Do this as a series of macros because our\n"
-	     " * statements will use the \"AS\" feature when\n"
-	     " * generating its queries.\n"
-	     " */");
+	print_commentt(0, COMMENT_C,
+		"Define our table columns.\n"
+		"Do this as a series of macros because our\n"
+		"statements will use the \"AS\" feature when\n"
+		"generating its queries.");
 	puts("#define STR(_name) #_name");
 	TAILQ_FOREACH(p, q, entries)
 		gen_schema(p);
@@ -481,20 +688,23 @@ gen_source(const struct strctq *q, const char *header)
 
 	/* Now the array of all statement. */
 
-	puts("/*\n"
-	     " * Our full set of SQL statements.\n"
-	     " * We define these beforehand because that's how ksql\n"
-	     " * handles statement generation.\n"
-	     " * Notice the \"AS\" part: this allows for multiple\n"
-	     " * inner joins without ambiguity.\n"
-	     " */\n"
-	     "static\tconst char *const stmts[STMT__MAX] = {");
+	print_commentt(0, COMMENT_C,
+		"Our full set of SQL statements.\n"
+		"We define these beforehand because that's how ksql\n"
+		"handles statement generation.\n"
+		"Notice the \"AS\" part: this allows for multiple\n"
+		"inner joins without ambiguity.");
+	puts("static\tconst char *const stmts[STMT__MAX] = {");
 	TAILQ_FOREACH(p, q, entries)
 		gen_stmt(p);
 	puts("};");
 	puts("");
 
 	/* Define our functions. */
+
+	print_commentt(0, COMMENT_C,
+		"Finally, all of the functions we'll use.");
+	puts("");
 
 	TAILQ_FOREACH(p, q, entries)
 		gen_strct(p);

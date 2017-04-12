@@ -29,10 +29,10 @@ to generate C source and header files that drive a database.
 It is a free-form (white-space is not significant beyond separating
 tokens) configuration language with the following rough structure:
 .Bd -literal -offset indent
-[ "struct" structname 
+[ "struct" structname
   "{"
     [ "field" fieldname [ type [ typeinfo ] ] ";" ]+
-    [ "search" terms [":" [ params ] ";" ]*
+    [ searchtype terms [":" [ params ] ";" ]*
     [ "comment" quoted_string ";" ]?
   "}"
 ]+
@@ -52,8 +52,8 @@ these are collectively called
 .Pp
 Beyond objects, a structure may also contain a comment and a number of
 search fields.
-The latter include search functions in the generated API on the given
-fields.
+The latter include search functions (and possibly types) in the
+generated API on the given fields.
 .Ss Structures
 A structure object defines a C structure or a database table.
 Its definition begins with the word
@@ -78,7 +78,7 @@ and
 .Cm type ,
 then additional information.
 .Bd -literal -offset indent
-"field" [name | name:target] type [typeinfo]+ ";" 
+"field" [name | name:target] type [typeinfo]+ ";"
 .Ed
 .Pp
 The
@@ -115,7 +115,7 @@ The
 .Cm typeinfo
 may consist of the following:
 .Bd -literal -offset indent
-"rowid" | "comment" quoted_string
+"rowid" | "unique" | "comment" quoted_string
 .Ed
 .Pp
 The
@@ -124,7 +124,12 @@ means (in SQL terms) that the field is a primary key.
 This is only available for the
 .Cm int
 type and may only appear for one field in a given structure.
-The quoted comment string documents the field.
+The quoted comment string after
+.Cm comment
+documents the field.
+A
+.Cm unique
+field is marked as having a unique SQL column value.
 .Ss Comments
 Each
 .Nm
@@ -138,12 +143,20 @@ For the time being, white-space is handled by retaining the first
 instance, then stripping subsequent white-space.
 This might change.
 .Ss Searches
-You can specify searching for rows within a structure using the
-.Cm search
-keyword within a structure object.
-Searches are by field, and may be followed by parameters:
+There are three types of
+.Cm searchtype
+searches: search for individual rows (i.e., on a unique column),
+generate a queue of responses, or call a function for each retrieved
+result in an active query.
+These use the
+.Cm search ,
+.Cm list ,
+and
+.Cm iterate
+keywords, respectively.
+Searches either way are by field, and may be followed by parameters:
 .Bd -literal -offset indent
-"search" field [,field]* [":" [params]* ]? ";"
+searchtype field [,field]* [":" [params]* ]? ";"
 .Ed
 .Pp
 Here,
@@ -179,7 +192,7 @@ struct user {
   comment "A regular user.";
 }
 
-struct session { 
+struct session {
   field user struct userid:user.id;
   field userid comment "Associated user.";
   field altuserid:user.id;

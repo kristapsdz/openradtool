@@ -82,7 +82,7 @@ print_func_search(const struct search *s, int decl)
 			ftypes[sr->field->type], pos++);
 	}
 
-	putchar(')');
+	printf(")%s", decl ? ";\n" : "");
 }
 
 void
@@ -99,7 +99,7 @@ print_func_insert(const struct strct *p, int decl)
 			continue;
 		printf(", %sv%zu", ftypes[f->type], pos++);
 	}
-	putchar(')');
+	printf(")%s", decl ? ";\n" : "");
 }
 
 /*
@@ -112,8 +112,9 @@ print_func_freeq(const struct strct *p, int decl)
 {
 
 	assert(STRCT_HAS_QUEUE & p->flags);
-	printf("void%sdb_%s_freeq(struct %s_q *q)",
-	       decl ? " " : "\n", p->name, p->name);
+	printf("void%sdb_%s_freeq(struct %s_q *q)%s",
+	       decl ? " " : "\n", p->name, p->name,
+	       decl ? ";\n" : "");
 }
 
 /*
@@ -125,8 +126,9 @@ void
 print_func_free(const struct strct *p, int decl)
 {
 
-	printf("void%sdb_%s_free(struct %s *p)",
-	       decl ? " " : "\n", p->name, p->name);
+	printf("void%sdb_%s_free(struct %s *p)%s",
+	       decl ? " " : "\n", p->name, p->name,
+	       decl ? ";\n" : "");
 }
 
 /*
@@ -138,8 +140,9 @@ void
 print_func_unfill(const struct strct *p, int decl)
 {
 
-	printf("void%sdb_%s_unfill(struct %s *p)",
-	       decl ? " " : "\n", p->name, p->name);
+	printf("void%sdb_%s_unfill(struct %s *p)%s",
+	       decl ? " " : "\n", p->name, p->name,
+	       decl ? ";\n" : "");
 }
 
 /*
@@ -152,8 +155,9 @@ print_func_by_rowid(const struct strct *p, int decl)
 {
 
 	printf("struct %s *%sdb_%s_by_rowid"
-	       "(struct ksql *db, int64_t id)",
-	       p->name, decl ? " " : "\n", p->name);
+	       "(struct ksql *db, int64_t id)%s",
+	       p->name, decl ? "" : "\n", p->name,
+	       decl ? ";\n" : "");
 }
 
 /*
@@ -166,9 +170,10 @@ print_func_fill(const struct strct *p, int decl)
 {
 
 	printf("void%sdb_%s_fill(struct %s *p, "
-	       "struct ksqlstmt *stmt, size_t *pos)",
+	       "struct ksqlstmt *stmt, size_t *pos)%s",
 	       decl ? " " : "\n",
-	       p->name, p->name);
+	       p->name, p->name,
+	       decl ? ";\n" : "");
 }
 
 /*

@@ -106,8 +106,7 @@ gen_strct_funcs(const struct strct *p)
 		       "Pointer must be freed with db_%s_free().",
 		       p->name, p->name);
 		print_func_by_rowid(p, 1);
-		puts(";\n"
-		     "");
+		puts("");
 	}
 
 	print_commentv(0, COMMENT_C,
@@ -115,16 +114,14 @@ gen_strct_funcs(const struct strct *p)
 	       "Has no effect if \"p\" is NULL.",
 	       p->name);
 	print_func_free(p, 1);
-	puts(";\n"
-	     "");
+	puts("");
 
 	if (STRCT_HAS_QUEUE & p->flags) {
 		print_commentv(0, COMMENT_C,
 		     "Unfill and free all queue members.\n"
 		     "Has no effect if \"q\" is NULL.");
 		print_func_freeq(p, 1);
-		puts(";\n"
-		     "");
+		puts("");
 	}
 
 	print_commentv(0, COMMENT_C, 
@@ -135,8 +132,7 @@ gen_strct_funcs(const struct strct *p)
 	       "for all nested structures.",
 	       p->name);
 	print_func_fill(p, 1);
-	puts(";\n"
-	     "");
+	puts("");
 
 	print_commentt(0, COMMENT_C_FRAG_OPEN,
 		"Insert a new row into the database.\n"
@@ -150,11 +146,10 @@ gen_strct_funcs(const struct strct *p)
 		printf(" *\tv%zu: %s\n", pos++, f->name);
 	}
 	print_commentt(0, COMMENT_C_FRAG_CLOSE,
-		"\nReturns zero on failure, non-zero "
+		"Returns zero on failure, non-zero "
 		"otherwise.");
 	print_func_insert(p, 1);
-	puts(";\n"
-	     "");
+	puts("");
 
 	print_commentv(0, COMMENT_C,
 	       "Free memory allocated by db_%s_fill().\n"
@@ -162,8 +157,7 @@ gen_strct_funcs(const struct strct *p)
 	       "Has not effect if \"p\" is NULL.",
 	       p->name);
 	print_func_unfill(p, 1);
-	puts(";\n"
-	     "");
+	puts("");
 
 	TAILQ_FOREACH(s, &p->sq, entries) {
 		if (NULL != s->doc)
@@ -198,22 +192,21 @@ gen_strct_funcs(const struct strct *p)
 
 		if (STYPE_SEARCH == s->type)
 			print_commentv(0, COMMENT_C_FRAG_CLOSE,
-				"\nReturns a pointer or NULL on fail.\n"
+				"Returns a pointer or NULL on fail.\n"
 				"Free the pointer with db_%s_free().",
 				p->name);
 		else if (STYPE_LIST == s->type)
 			print_commentv(0, COMMENT_C_FRAG_CLOSE,
-				"\nAlways returns a queue pointer.\n"
+				"Always returns a queue pointer.\n"
 				"Free this with db_%s_freeq().",
 				p->name);
 		else
 			print_commentv(0, COMMENT_C_FRAG_CLOSE,
-				"\nInvokes the given callback with "
+				"Invokes the given callback with "
 				"retrieved data.");
 
 		print_func_search(s, 1);
-		puts(";\n"
-		     "");
+		puts("");
 	}
 }
 

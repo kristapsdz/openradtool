@@ -260,7 +260,7 @@ annotate(struct ref *ref, size_t height, size_t colour)
  * Returns zero on failure, non-zero on success.
  */
 static int
-resolvesref(struct sref *ref, struct strct *s)
+resolve_sref(struct sref *ref, struct strct *s)
 {
 	struct field	*f;
 
@@ -301,7 +301,7 @@ resolvesref(struct sref *ref, struct strct *s)
 	/* Follow the chain of our reference. */
 
 	ref = TAILQ_NEXT(ref, entries);
-	return(resolvesref(ref, f->ref->target->parent));
+	return(resolve_sref(ref, f->ref->target->parent));
 }
 
 /*
@@ -325,7 +325,7 @@ parse_cmp(const void *a1, const void *a2)
  * FIXME: artificially limited to 26 entries.
  */
 static void
-aliases(struct strct *orig, struct strct *p, 
+resolve_aliases(struct strct *orig, struct strct *p, 
 	size_t *offs, const struct alias *prior)
 {
 	struct field	*f;
@@ -360,7 +360,7 @@ aliases(struct strct *orig, struct strct *p,
 
 		(*offs)++;
 		TAILQ_INSERT_TAIL(&orig->aq, a, entries);
-		aliases(orig, f->ref->target->parent, offs, a);
+		resolve_aliases(orig, f->ref->target->parent, offs, a);
 	}
 }
 
@@ -374,27 +374,16 @@ static void
 check_searchtype(const struct strct *p)
 {
 	const struct search *srch;
-	const struct sent *sent;
-	const struct sref *ref;
-	int	 hasuniq;
 
 	TAILQ_FOREACH(srch, &p->sq, entries) {
-		hasuniq = 0;
-		TAILQ_FOREACH(sent, &srch->sntq, entries) {
-			TAILQ_FOREACH(ref, &sent->srq, entries)
-				if (FIELD_ROWID & ref->field->flags) {
-					hasuniq = 1;
-					break;
-				}
-			if (NULL != ref)
-				break;
-		}
-		if (hasuniq && STYPE_SEARCH != srch->type)
+		if (SEARCH_HAS_ROWID & srch->flags && 
+		    STYPE_SEARCH != srch->type) 
 			warnx("%s:%zu:%zu: multiple-result search "
 				"on a unique field",
 				srch->pos.fname, srch->pos.line,
 				srch->pos.column);
-		else if ( ! hasuniq && STYPE_SEARCH == srch->type)
+		if ( ! (SEARCH_HAS_ROWID & srch->flags) && 
+		    STYPE_SEARCH == srch->type)
 			warnx("%s:%zu:%zu: single-result search "
 				"on a non-unique field",
 				srch->pos.fname, srch->pos.line,
@@ -402,16 +391,58 @@ check_searchtype(const struct strct *p)
 	}
 }
 
+/*
+ * Resolve the chain of search terms.
+ * To do so, descend into each set of search terms for the structure and
+ * resolve the fields.
+ * Also set whether we have row identifiers within the search expansion.
+ */
+static int
+resolve_search(struct search *srch)
+{
+	struct sent	*sent;
+	struct sref	*ref;
+	struct alias	*a;
+	struct strct	*p;
+
+	p = srch->parent;
+
+	TAILQ_FOREACH(sent, &srch->sntq, entries) {
+		ref = TAILQ_FIRST(&sent->srq);
+		if ( ! resolve_sref(ref, p))
+			return(0);
+		ref = TAILQ_LAST(&sent->srq, srefq);
+		if (FIELD_ROWID & ref->field->flags) {
+			sent->flags |= SENT_HAS_ROWID;
+			srch->flags |= SEARCH_HAS_ROWID;
+		}
+		if (NULL == sent->name)
+			continue;
+
+		/* 
+		 * Look up our alias name.
+		 * Our resolve_sref() function above
+		 * makes sure that the reference exists,
+		 * so just assert on lack of finding.
+		 */
+
+		TAILQ_FOREACH(a, &p->aq, entries)
+			if (0 == strcasecmp(a->name, sent->name))
+				break;
+		assert(NULL != a);
+		sent->alias = a;
+	}
+
+	return(1);
+}
+
 int
 parse_link(struct strctq *q)
 {
 	struct strct	 *p;
 	struct strct	**pa;
-	struct alias	 *a;
 	struct field	 *f;
-	struct sent	 *sent;
 	struct search	 *srch;
-	struct sref	 *ref;
 	size_t		  colour = 1, sz = 0, i = 0, hasrowid = 0;
 
 	/* 
@@ -472,37 +503,14 @@ parse_link(struct strctq *q)
 
 	i = 0;
 	TAILQ_FOREACH(p, q, entries)
-		aliases(p, p, &i, NULL);
+		resolve_aliases(p, p, &i, NULL);
 
-	/*
-	 * Resolve the chain of search terms.
-	 * To do so, we need to descend into each set of search terms
-	 * for the structure and resolve the fields.
-	 */
+	/* Resolve search terms. */
 
 	TAILQ_FOREACH(p, q, entries)
 		TAILQ_FOREACH(srch, &p->sq, entries)
-			TAILQ_FOREACH(sent, &srch->sntq, entries) {
-				ref = TAILQ_FIRST(&sent->srq);
-				if ( ! resolvesref(ref, p))
-					return(0);
-				if (NULL == sent->name)
-					continue;
-
-				/* 
-				 * Look up our alias name.
-				 * Our resolvesref() function above
-				 * makes sure that the reference exists,
-				 * so just assert on lack of finding.
-				 */
-
-				TAILQ_FOREACH(a, &p->aq, entries)
-					if (0 == strcasecmp
-					    (a->name, sent->name))
-						break;
-				assert(NULL != a);
-				sent->alias = a;
-			}
+			if ( ! resolve_search(srch))
+				return(0);
 
 	/* See if our search type is wonky. */
 
@@ -517,6 +525,7 @@ parse_link(struct strctq *q)
 
 	if (NULL == (pa = calloc(sz, sizeof(struct strct *))))
 		err(EXIT_FAILURE, NULL);
+
 	i = 0;
 	while (NULL != (p = TAILQ_FIRST(q))) {
 		TAILQ_REMOVE(q, p, entries);

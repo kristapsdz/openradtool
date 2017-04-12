@@ -218,7 +218,7 @@ static	const char *const badidents[] = {
 	NULL
 };
 
-static void parse_syntax_error(struct parse *, const char *, ...)
+static void parse_err(struct parse *, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
 
 /*
@@ -270,7 +270,7 @@ parse_error(struct parse *p)
  * This sets the lasttype appropriately.
  */
 static void
-parse_syntax_error(struct parse *p, const char *fmt, ...)
+parse_err(struct parse *p, const char *fmt, ...)
 {
 	char	 buf[1024];
 	va_list	 ap;
@@ -421,7 +421,7 @@ parse_next(struct parse *p)
 		p->last.integer = strtonum
 			(p->buf, -INT64_MAX, INT64_MAX, &ep);
 		if (NULL != ep) {
-			parse_syntax_error(p, "malformed integer");
+			parse_err(p, "malformed integer");
 			return(p->lasttype);
 		}
 		p->lasttype = TOK_INTEGER;
@@ -444,7 +444,7 @@ parse_next(struct parse *p)
 		p->last.string = p->buf;
 		p->lasttype = TOK_IDENT;
 	} else
-		parse_syntax_error(p, "unknown input token");
+		parse_err(p, "unknown input token");
 
 	return(p->lasttype);
 }
@@ -462,29 +462,29 @@ parse_config_field_struct(struct parse *p, struct ref *r)
 {
 
 	if (TOK_IDENT != parse_next(p)) {
-		parse_syntax_error(p, "expected source field");
+		parse_err(p, "expected source field");
 		return;
 	} else if (NULL == (r->sfield = strdup(p->last.string)))
 		err(EXIT_FAILURE, NULL);
 	
 	if (TOK_COLON != parse_next(p)) {
-		parse_syntax_error(p, "expected colon");
+		parse_err(p, "expected colon");
 		return;
 	}
 
 	if (TOK_IDENT != parse_next(p)) {
-		parse_syntax_error(p, "expected struct table");
+		parse_err(p, "expected struct table");
 		return;
 	} else if (NULL == (r->tstrct = strdup(p->last.string)))
 		err(EXIT_FAILURE, NULL);
 
 	if (TOK_PERIOD != parse_next(p)) {
-		parse_syntax_error(p, "expected period");
+		parse_err(p, "expected period");
 		return;
 	}
 
 	if (TOK_IDENT != parse_next(p)) {
-		parse_syntax_error(p, "expected struct field");
+		parse_err(p, "expected struct field");
 		return;
 	} else if (NULL == (r->tfield = strdup(p->last.string)))
 		err(EXIT_FAILURE, NULL);
@@ -507,41 +507,35 @@ parse_config_field_info(struct parse *p, struct field *fd)
 			break;
 
 		if (TOK_IDENT != p->lasttype) {
-			parse_syntax_error(p, 
-				"unknown field info token");
+			parse_err(p, "unknown field info token");
 			break;
 		}
 
 		if (0 == strcasecmp(p->last.string, "rowid")) {
 			if (FTYPE_INT != fd->type) {
-				parse_syntax_error(p, "rowid "
-					"for non-integer type");
+				parse_err(p, "rowid for non-int type");
 				break;
 			} else if (NULL != fd->ref) {
-				parse_syntax_error(p, "rowid "
-					"on foreign key reference");
+				parse_err(p, "rowid on reference");
 				break;
 			}
 			fd->flags |= FIELD_ROWID;
 			if (NULL != fd->parent->rowid) {
-				parse_syntax_error(p,
-					"structure already has rowid");
+				parse_err(p, "already has rowid");
 				break;
 			}
 			fd->parent->rowid = fd;
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "unique")) {
 			if (NULL != fd->ref) {
-				parse_syntax_error(p, "unique "
-					"on foreign key reference");
+				parse_err(p, "unique on reference");
 				break;
 			}
 			fd->flags |= FIELD_UNIQUE;
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "comment")) {
 			if (TOK_LITERAL != parse_next(p)) {
-				parse_syntax_error(p,
-					"expected comment string");
+				parse_err(p, "expected comment string");
 				break;
 			}
 			free(fd->doc);
@@ -550,7 +544,7 @@ parse_config_field_info(struct parse *p, struct field *fd)
 				err(EXIT_FAILURE, NULL);
 			continue;
 		}
-		parse_syntax_error(p, "unknown field info token");
+		parse_err(p, "unknown field info token");
 		break;
 	}
 }
@@ -588,8 +582,7 @@ parse_config_field(struct parse *p, struct field *fd)
 			err(EXIT_FAILURE, NULL);
 
 		if (TOK_IDENT != parse_next(p)) {
-			parse_syntax_error(p, 
-				"expected target field");
+			parse_err(p, "expected target field");
 			return;
 		}
 		fd->ref->tstrct = strdup(p->last.string);
@@ -597,14 +590,12 @@ parse_config_field(struct parse *p, struct field *fd)
 			err(EXIT_FAILURE, NULL);
 
 		if (TOK_PERIOD != parse_next(p)) {
-			parse_syntax_error(p, 
-				"expected period");
+			parse_err(p, "expected period");
 			return;
 		}
 
 		if (TOK_IDENT != parse_next(p)) {
-			parse_syntax_error(p, 
-				"expected field type");
+			parse_err(p, "expected field type");
 			return;
 		}
 		fd->ref->tfield = strdup(p->last.string);
@@ -612,12 +603,11 @@ parse_config_field(struct parse *p, struct field *fd)
 			err(EXIT_FAILURE, NULL);
 
 		if (TOK_IDENT != parse_next(p)) {
-			parse_syntax_error(p, 
-				"expected field type");
+			parse_err(p, "expected field type");
 			return;
 		}
 	} else if (TOK_IDENT != p->lasttype) {
-		parse_syntax_error(p, "expected field type");
+		parse_err(p, "expected field type");
 		return;
 	}
 
@@ -637,7 +627,7 @@ parse_config_field(struct parse *p, struct field *fd)
 	}
 	/* fall-through */
 	if (strcasecmp(p->last.string, "struct")) {
-		parse_syntax_error(p, "unknown field type");
+		parse_err(p, "unknown field type");
 		return;
 	}
 
@@ -652,6 +642,10 @@ parse_config_field(struct parse *p, struct field *fd)
 	parse_config_field_info(p, fd);
 }
 
+/*
+ * Allocate a search reference and add it to the parent queue.
+ * Always returns the created pointer.
+ */
 static struct sref *
 sref_alloc(const struct parse *p, const char *name, struct sent *up)
 {
@@ -667,6 +661,10 @@ sref_alloc(const struct parse *p, const char *name, struct sent *up)
 	return(ref);
 }
 
+/*
+ * Allocate a search entity and add it to the parent queue.
+ * Always returns the created pointer.
+ */
 static struct sent *
 sent_alloc(const struct parse *p, struct search *up)
 {
@@ -688,16 +686,17 @@ sent_alloc(const struct parse *p, struct search *up)
  * signify the field within a field's reference structure.
  *
  *  field.[FIELD] | field
+ *
+ * FIXME: disallow name "rowid".
  */
 static void
-parse_config_struct_search_field(struct parse *p, struct sent *sent)
+parse_config_search_terms(struct parse *p, struct sent *sent)
 {
 	struct sref	*sf;
 	size_t		 sz;
 
 	if (TOK_IDENT != parse_next(p)) {
-		parse_syntax_error(p, "expected "
-			"search field identifier");
+		parse_err(p, "expected field identifier");
 		return;
 	}
 	sref_alloc(p, p->last.string, sent);
@@ -709,12 +708,10 @@ parse_config_struct_search_field(struct parse *p, struct sent *sent)
 			break;
 
 		if (TOK_PERIOD != p->lasttype) {
-			parse_syntax_error(p, "expected "
-				"search field separator");
+			parse_err(p, "expected field separator");
 			return;
 		} else if (TOK_IDENT != parse_next(p)) {
-			parse_syntax_error(p, "expected "
-				"search field identifier");
+			parse_err(p, "expected field identifier");
 			return;
 		}
 		sref_alloc(p, p->last.string, sent);
@@ -753,7 +750,7 @@ parse_config_struct_search_field(struct parse *p, struct sent *sent)
  * name or a comment literal.
  */
 static void
-parse_config_struct_search_params(struct parse *p, struct search *s)
+parse_config_search_params(struct parse *p, struct search *s)
 {
 	struct search	*ss;
 
@@ -762,14 +759,12 @@ parse_config_struct_search_params(struct parse *p, struct search *s)
 
 	for (;;) {
 		if (TOK_IDENT != p->lasttype) {
-			parse_syntax_error(p, 
-				"expected search specifier");
+			parse_err(p, "expected search specifier");
 			break;
 		}
 		if (0 == strcasecmp("name", p->last.string)) {
 			if (TOK_IDENT != parse_next(p)) {
-				parse_syntax_error(p, 
-					"expected search name");
+				parse_err(p, "expected search name");
 				break;
 			}
 
@@ -779,8 +774,7 @@ parse_config_struct_search_params(struct parse *p, struct search *s)
 				if (NULL == ss->name ||
 				    strcasecmp(ss->name, p->last.string))
 					continue;
-				parse_syntax_error(p, 
-					"duplicate search name");
+				parse_err(p, "duplicate search name");
 				break;
 			}
 
@@ -793,8 +787,7 @@ parse_config_struct_search_params(struct parse *p, struct search *s)
 				break;
 		} else if (0 == strcasecmp("comment", p->last.string)) {
 			if (TOK_LITERAL != parse_next(p)) {
-				parse_syntax_error(p, 
-					"expected comment");
+				parse_err(p, "expected comment");
 				break;
 			} 
 			/* XXX: warn of prior */
@@ -805,9 +798,22 @@ parse_config_struct_search_params(struct parse *p, struct search *s)
 			if (TOK_SEMICOLON == parse_next(p))
 				break;
 		} else {
-			parse_syntax_error(p, 
-				"unknown search parameter");
+			parse_err(p, "unknown search parameter");
 			break;
+		}
+	}
+}
+
+static void
+parse_config_update(struct parse *p, struct strct *s)
+{
+
+	for (;;) {
+		if (TOK_COLON == parse_next(p))
+			break;
+		if (TOK_IDENT != p->lasttype) {
+			parse_err(p, "expected fields to modify");
+			return;
 		}
 	}
 }
@@ -818,7 +824,7 @@ parse_config_struct_search_params(struct parse *p, struct search *s)
  *
  *  "search" FIELD [, FIELD]* [":" search_terms ]? ";"
  *
- * The FIELD parts are parsed in parse_config_struct_search_field().
+ * The FIELD parts are parsed in parse_config_search_params().
  * Returns zero on failure, non-zero on success.
  * FIXME: have return value be void and use lasttype.
  */
@@ -843,10 +849,10 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 	/* Per-field. */
 
 	sent = sent_alloc(p, srch);
-	parse_config_struct_search_field(p, sent);
+	parse_config_search_terms(p, sent);
 
 	if (TOK_COLON == p->lasttype) {
-		parse_config_struct_search_params(p, srch);
+		parse_config_search_params(p, srch);
 		return(1);
 	} else if (TOK_SEMICOLON == p->lasttype)
 		return(1);
@@ -856,7 +862,7 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 
 	for (;;) {
 		sent = sent_alloc(p, srch);
-		parse_config_struct_search_field(p, sent);
+		parse_config_search_terms(p, sent);
 		if (TOK_SEMICOLON == p->lasttype)
 			return(1);
 		else if (TOK_COLON == p->lasttype)
@@ -865,7 +871,7 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 			return(0);
 	}
 
-	parse_config_struct_search_params(p, srch);
+	parse_config_search_params(p, srch);
 	return(1);
 }
 
@@ -887,7 +893,7 @@ parse_config_struct(struct parse *p, struct strct *s)
 	const char *const *cp;
 
 	if (TOK_LBRACE != parse_next(p)) {
-		parse_syntax_error(p, "expected left brace");
+		parse_err(p, "expected left brace");
 		return;
 	}
 
@@ -896,8 +902,7 @@ parse_config_struct(struct parse *p, struct strct *s)
 			break;
 
 		if (TOK_IDENT != p->lasttype) {
-			parse_syntax_error(p, 
-				"expected field entry type");
+			parse_err(p, "expected field entry type");
 			return;
 		}
 
@@ -909,8 +914,7 @@ parse_config_struct(struct parse *p, struct strct *s)
 			 * XXX: augment comments?
 			 */
 			if (TOK_LITERAL != parse_next(p)) {
-				parse_syntax_error(p, 
-					"expected comment string");
+				parse_err(p, "expected comment string");
 				return;
 			}
 			free(s->doc);
@@ -918,8 +922,7 @@ parse_config_struct(struct parse *p, struct strct *s)
 			if (NULL == s->doc)
 				err(EXIT_FAILURE, NULL);
 			if (TOK_SEMICOLON != parse_next(p)) {
-				parse_syntax_error(p, 
-					"expected end of comment");
+				parse_err(p, "expected end of comment");
 				return;
 			}
 			continue;
@@ -939,15 +942,14 @@ parse_config_struct(struct parse *p, struct strct *s)
 		 
 		
 		if (strcasecmp(p->last.string, "field")) {
-			parse_syntax_error(p, 
-				"expected field entry type");
+			parse_err(p, "expected field entry type");
 			return;
 		}
 
 		/* Now we have a new field. */
 
 		if (TOK_IDENT != parse_next(p)) {
-			parse_syntax_error(p, "expected field name");
+			parse_err(p, "expected field name");
 			return;
 		}
 
@@ -956,7 +958,7 @@ parse_config_struct(struct parse *p, struct strct *s)
 		TAILQ_FOREACH(fd, &s->fq, entries) {
 			if (strcasecmp(fd->name, p->last.string))
 				continue;
-			parse_syntax_error(p, "duplicate name");
+			parse_err(p, "duplicate name");
 			return;
 		}
 
@@ -964,9 +966,7 @@ parse_config_struct(struct parse *p, struct strct *s)
 
 		for (cp = badidents; NULL != *cp; cp++)
 			if (0 == strcasecmp(*cp, p->last.string)) {
-				parse_syntax_error(p, 
-					"disallowed field "
-					"identifier");
+				parse_err(p, "illegal identifier");
 				return;
 			}
 
@@ -1032,12 +1032,12 @@ parse_config(FILE *f, const char *fname)
 
 		if (TOK_IDENT != p.lasttype ||
 		    strcasecmp(p.last.string, "struct")) {
-			parse_syntax_error(&p, "expected struct");
+			parse_err(&p, "expected struct");
 			goto error;
 		}
 
 		if (TOK_IDENT != parse_next(&p)) {
-			parse_syntax_error(&p, NULL);
+			parse_err(&p, NULL);
 			goto error;
 		}
 
@@ -1046,7 +1046,7 @@ parse_config(FILE *f, const char *fname)
 		TAILQ_FOREACH(s, q, entries) {
 			if (strcasecmp(s->name, p.last.string))
 				continue;
-			parse_syntax_error(&p, "duplicate name");
+			parse_err(&p, "duplicate name");
 			goto error;
 		}
 
@@ -1054,9 +1054,7 @@ parse_config(FILE *f, const char *fname)
 
 		for (cp = badidents; NULL != *cp; cp++)
 			if (0 == strcasecmp(*cp, p.last.string)) {
-				parse_syntax_error(&p, 
-					"disallowed structure "
-					"identifier");
+				parse_err(&p, "illegal identifier");
 				goto error;
 			}
 
@@ -1091,6 +1089,10 @@ error:
 	return(NULL);
 }
 
+/*
+ * Free a field reference.
+ * Does nothing if "p" is NULL.
+ */
 static void
 parse_free_ref(struct ref *p)
 {
@@ -1103,6 +1105,10 @@ parse_free_ref(struct ref *p)
 	free(p);
 }
 
+/*
+ * Free a field entity.
+ * Does nothing if "p" is NULL.
+ */
 static void
 parse_free_field(struct field *p)
 {
@@ -1115,6 +1121,10 @@ parse_free_field(struct field *p)
 	free(p);
 }
 
+/*
+ * Free a search series.
+ * Does nothing if "p" is NULL.
+ */
 static void
 parse_free_search(struct search *p)
 {

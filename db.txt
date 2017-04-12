@@ -23,4 +23,6 @@ struct session {
   field id int rowid;
   comment "Authenticated session.";
   search user.company.name,userid: name foo comment "Search by foos";
+  list id;
+  iterate id;
 }

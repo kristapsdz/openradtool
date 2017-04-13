@@ -836,21 +836,99 @@ parse_config_search_params(struct parse *p, struct search *s)
 	}
 }
 
-#if 0
+/*
+ * Parse an update clause.
+ * This has the following syntax:
+ *
+ *  "update" ufield [,ufield]* 
+ *       ":" sfield [,sfield]*
+ *     [ ":" [ "name" name | "comment" quoted_string ]* ] ?
+ *       ";"
+ *
+ * The fields ("ufield" for update field and "sfield" for select field)
+ * are within the current structure.
+ */
 static void
 parse_config_update(struct parse *p, struct strct *s)
 {
 
+	/* 
+	 * Start with the fields that will be updated.
+	 * (At least one field will be updated.)
+	 * This is followed by a colon.
+	 */
+
+	if (TOK_IDENT != parse_next(p)) {
+		parse_errx(p, "expected field to modify");
+		return;
+	}
+
 	for (;;) {
 		if (TOK_COLON == parse_next(p))
 			break;
+		if (TOK_COMMA != p->lasttype) {
+			parse_errx(p, "expected fields separator");
+			return;
+		} else if (TOK_IDENT != parse_next(p)) {
+			parse_errx(p, "expected field to modify");
+			return;
+		}
+	}
+
+	/*
+	 * Now the fields that will be used to constrain the update
+	 * mechanism.
+	 * Usually this will be a rowid.
+	 * This is followed by a semicolon or colon.
+	 */
+
+	if (TOK_IDENT != parse_next(p)) {
+		parse_errx(p, "expected select field");
+		return;
+	}
+
+	for (;;) {
+		if (TOK_COLON == parse_next(p))
+			break;
+		else if (TOK_SEMICOLON == p->lasttype)
+			return;
+		if (TOK_COMMA != p->lasttype) {
+			parse_errx(p, "expected fields separator");
+			return;
+		} else if (TOK_IDENT != parse_next(p)) {
+			parse_errx(p, "expected select field");
+			return;
+		}
+	}
+
+	/*
+	 * Lastly, process update terms.
+	 * This now consists of "name" and "comment".
+	 */
+
+	for (;;) {
+		if (TOK_SEMICOLON == parse_next(p))
+			break;
 		if (TOK_IDENT != p->lasttype) {
-			parse_errx(p, "expected fields to modify");
+			parse_errx(p, "expected update modifier");
+			return;
+		}
+		if (0 == strcasecmp(p->last.string, "name")) {
+			if (TOK_IDENT != parse_next(p)) {
+				parse_errx(p, "expected update name");
+				return;
+			}
+		} else if (0 == strcasecmp(p->last.string, "comment")) {
+			if (TOK_LITERAL != parse_next(p)) {
+				parse_errx(p, "expected update comment");
+				return;
+			}
+		} else {
+			parse_errx(p, "unknown update parameter");
 			return;
 		}
 	}
 }
-#endif
 
 /*
  * Parse a search clause.
@@ -971,6 +1049,9 @@ parse_config_struct(struct parse *p, struct strct *s)
 		} else if (0 == strcasecmp(p->last.string, "iterate")) {
 			if ( ! parse_config_search(p, s, STYPE_ITERATE)) 
 				return;
+			continue;
+		} else if (0 == strcasecmp(p->last.string, "update")) {
+			parse_config_update(p, s);
 			continue;
 		}
 		 
@@ -1107,6 +1188,7 @@ parse_config(FILE *f, const char *fname)
 		TAILQ_INIT(&s->fq);
 		TAILQ_INIT(&s->sq);
 		TAILQ_INIT(&s->aq);
+		TAILQ_INIT(&s->uq);
 		parse_config_struct(&p, s);
 	}
 
@@ -1184,6 +1266,46 @@ parse_free_search(struct search *p)
 }
 
 /*
+ * Free an update reference.
+ * Does nothing if "p" is NULL.
+ */
+static void
+parse_free_uref(struct uref *u)
+{
+
+	if (NULL == u)
+		return;
+	free(u->name);
+	free(u);
+}
+
+/*
+ * Free an update series.
+ * Does nothing if "p" is NULL.
+ */
+static void
+parse_free_update(struct update *p)
+{
+	struct uref	*u;
+
+	if (NULL == p)
+		return;
+
+	while (NULL != (u = TAILQ_FIRST(&p->mrq))) {
+		TAILQ_REMOVE(&p->mrq, u, entries);
+		parse_free_uref(u);
+	}
+	while (NULL != (u = TAILQ_FIRST(&p->crq))) {
+		TAILQ_REMOVE(&p->crq, u, entries);
+		parse_free_uref(u);
+	}
+
+	free(p->doc);
+	free(p->name);
+	free(p);
+}
+
+/*
  * Free all resources from the queue of structures.
  * Does nothing if "q" is empty or NULL.
  */
@@ -1194,6 +1316,7 @@ parse_free(struct strctq *q)
 	struct field	*f;
 	struct search	*s;
 	struct alias	*a;
+	struct update	*u;
 
 	if (NULL == q)
 		return;
@@ -1213,6 +1336,10 @@ parse_free(struct strctq *q)
 			free(a->name);
 			free(a->alias);
 			free(a);
+		}
+		while (NULL != (u = TAILQ_FIRST(&p->uq))) {
+			TAILQ_REMOVE(&p->uq, u, entries);
+			parse_free_update(u);
 		}
 		free(p->doc);
 		free(p->name);

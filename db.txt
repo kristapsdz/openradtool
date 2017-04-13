@@ -1,28 +1,30 @@
 struct company {
   field name text;
   field id int rowid;
+  comment "Controlling organisation.";
 }
 
 struct user {
   field company struct cid:company.id;
   field cid;
   field email text unique;
-  field name text;
+  field name text comment "Full name.";
   field uid int rowid;
-  comment 
-	"A regular user.
-	 Comments on a new line.";
   list cid;
-  iterate name;
+  iterate name : comment
+	"Search for users by full name.";
+  comment "A regular user.";
+
+  update foo : bar,baz : name foo;
 }
 
 struct session { 
   field user struct userid:user.uid;
-  field company struct cid:company.id;
-  field cid int;
   field userid int comment "Associated user.";
   field token int comment "Random cookie.";
+  field mtime int;
   field id int rowid;
+  iterate user.company.name,mtime: name foo comment 
+	"Search for logged-in users from a particular company.";
   comment "Authenticated session.";
-  search user.company.name,id: name foo comment "Search by foos";
 }

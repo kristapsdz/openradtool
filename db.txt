@@ -11,7 +11,8 @@ struct user {
   field name text comment "Full name.";
   field uid int rowid;
   list cid;
-  iterate name: comment "Search for users by full name.";
+  iterate name: comment
+    "Search for users by full name.";
   update cid: uid;
   comment "A regular user.";
 }
@@ -22,6 +23,7 @@ struct session {
   field token int comment "Random cookie.";
   field mtime int;
   field id int rowid;
-  iterate user.company.name,mtime: name foo comment "Search for company's logged-in users.";
+  iterate user.company.name,mtime: name foo comment 
+    "Search for company's logged-in users.";
   comment "Authenticated session.";
 }

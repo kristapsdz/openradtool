@@ -87,6 +87,9 @@ gen_strct_structs(const struct strct *p)
 	}
 }
 
+/*
+ * Generate update functions for a structure.
+ */
 static void
 gen_strct_func_update(const struct update *up)
 {
@@ -96,7 +99,7 @@ gen_strct_func_update(const struct update *up)
 
 	if (NULL != up->doc) {
 		print_commentt(0, COMMENT_C_FRAG_OPEN, up->doc);
-		print_commentt(0, COMMENT_C_FRAG, "\n");
+		print_commentt(0, COMMENT_C_FRAG, "");
 		ct = COMMENT_C_FRAG;
 	}
 

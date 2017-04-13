@@ -265,6 +265,11 @@ parse_err(struct parse *p)
 		p->lasttype = TOK_EOF;
 }
 
+/*
+ * Print a warning.
+ * This doesn't do anything else (like set any error conditions).
+ * XXX: limited to 1024 bytes of message content.
+ */
 static void
 parse_warnx(struct parse *p, const char *fmt, ...)
 {
@@ -285,6 +290,7 @@ parse_warnx(struct parse *p, const char *fmt, ...)
 /*
  * Trigger a "soft" error condition.
  * This sets the lasttype appropriately.
+ * XXX: limited to 1024 bytes of message content.
  */
 static void
 parse_errx(struct parse *p, const char *fmt, ...)
@@ -678,6 +684,26 @@ parse_config_field(struct parse *p, struct field *fd)
  * Allocate a search reference and add it to the parent queue.
  * Always returns the created pointer.
  */
+static struct uref *
+uref_alloc(const struct parse *p, const char *name, 
+	struct update *up, struct urefq *q)
+{
+	struct uref	*ref;
+
+	if (NULL == (ref = calloc(1, sizeof(struct uref))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (ref->name = strdup(name)))
+		err(EXIT_FAILURE, NULL);
+	ref->parent = up;
+	parse_point(p, &ref->pos);
+	TAILQ_INSERT_TAIL(q, ref, entries);
+	return(ref);
+}
+
+/*
+ * Allocate a search reference and add it to the parent queue.
+ * Always returns the created pointer.
+ */
 static struct sref *
 sref_alloc(const struct parse *p, const char *name, struct sent *up)
 {
@@ -851,6 +877,14 @@ parse_config_search_params(struct parse *p, struct search *s)
 static void
 parse_config_update(struct parse *p, struct strct *s)
 {
+	struct update	*up;
+
+	if (NULL == (up = calloc(1, sizeof(struct update))))
+		err(EXIT_FAILURE, NULL);
+	up->parent = s;
+	TAILQ_INIT(&up->mrq);
+	TAILQ_INIT(&up->crq);
+	TAILQ_INSERT_TAIL(&s->uq, up, entries);
 
 	/* 
 	 * Start with the fields that will be updated.
@@ -862,6 +896,7 @@ parse_config_update(struct parse *p, struct strct *s)
 		parse_errx(p, "expected field to modify");
 		return;
 	}
+	uref_alloc(p, p->last.string, up, &up->mrq);
 
 	for (;;) {
 		if (TOK_COLON == parse_next(p))
@@ -873,6 +908,7 @@ parse_config_update(struct parse *p, struct strct *s)
 			parse_errx(p, "expected field to modify");
 			return;
 		}
+		uref_alloc(p, p->last.string, up, &up->mrq);
 	}
 
 	/*
@@ -886,6 +922,7 @@ parse_config_update(struct parse *p, struct strct *s)
 		parse_errx(p, "expected select field");
 		return;
 	}
+	uref_alloc(p, p->last.string, up, &up->crq);
 
 	for (;;) {
 		if (TOK_COLON == parse_next(p))
@@ -899,6 +936,7 @@ parse_config_update(struct parse *p, struct strct *s)
 			parse_errx(p, "expected select field");
 			return;
 		}
+		uref_alloc(p, p->last.string, up, &up->crq);
 	}
 
 	/*
@@ -918,11 +956,19 @@ parse_config_update(struct parse *p, struct strct *s)
 				parse_errx(p, "expected update name");
 				return;
 			}
+			free(up->name);
+			up->name = strdup(p->last.string);
+			if (NULL == up->name)
+				err(EXIT_FAILURE, NULL);
 		} else if (0 == strcasecmp(p->last.string, "comment")) {
 			if (TOK_LITERAL != parse_next(p)) {
 				parse_errx(p, "expected update comment");
 				return;
 			}
+			free(up->doc);
+			up->doc = strdup(p->last.string);
+			if (NULL == up->doc)
+				err(EXIT_FAILURE, NULL);
 		} else {
 			parse_errx(p, "unknown update parameter");
 			return;

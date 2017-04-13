@@ -166,7 +166,7 @@ linkref(struct ref *ref)
  * On success, this sets the "source" field for the referrent.
  */
 static int
-resolvesource(struct ref *ref, struct strct *s)
+resolve_field_source(struct ref *ref, struct strct *s)
 {
 	struct field	*f;
 
@@ -194,7 +194,7 @@ resolvesource(struct ref *ref, struct strct *s)
  * On success, this sets the "target" field for the referrent.
  */
 static int
-resolvetarget(struct ref *ref, struct strctq *q)
+resolve_field_target(struct ref *ref, struct strctq *q)
 {
 	struct strct	*p;
 	struct field	*f;
@@ -257,6 +257,44 @@ annotate(struct ref *ref, size_t height, size_t colour)
 		if ( ! annotate(f->ref, height + 1, colour))
 			return(0);
 	}
+
+	return(1);
+}
+
+static int
+resolve_uref(struct uref *ref)
+{
+	struct field	*f;
+
+	TAILQ_FOREACH(f, &ref->parent->parent->fq, entries)
+		if (0 == strcasecmp(f->name, ref->name))
+			break;
+
+	if (NULL == (ref->field = f))
+		warnx("%s:%zu:%zu: update term not found",
+			ref->pos.fname, ref->pos.line,
+			ref->pos.column);
+	else if (FTYPE_STRUCT == f->type)
+		warnx("%s:%zu:%zu: update term is a struct", 
+			ref->pos.fname, ref->pos.line,
+			ref->pos.column);
+	else
+		return(1);
+
+	return(0);
+}
+
+static int
+resolve_update(struct update *up)
+{
+	struct uref	*ref;
+
+	TAILQ_FOREACH(ref, &up->mrq, entries)
+		if ( ! resolve_uref(ref))
+			return(0);
+	TAILQ_FOREACH(ref, &up->crq, entries)
+		if ( ! resolve_uref(ref))
+			return(0);
 
 	return(1);
 }
@@ -447,6 +485,7 @@ resolve_search(struct search *srch)
 int
 parse_link(struct strctq *q)
 {
+	struct update	 *u;
 	struct strct	 *p;
 	struct strct	**pa;
 	struct field	 *f;
@@ -466,12 +505,15 @@ parse_link(struct strctq *q)
 					return(0);
 			if (NULL == f->ref)
 				continue;
-			if ( ! resolvesource(f->ref, p) ||
-			     ! resolvetarget(f->ref, q) ||
+			if ( ! resolve_field_source(f->ref, p) ||
+			     ! resolve_field_target(f->ref, q) ||
 			     ! linkref(f->ref) ||
 			     ! checktargettype(f->ref))
 				return(0);
 		}
+		TAILQ_FOREACH(u, &p->uq, entries)
+			if ( ! resolve_update(u))
+				return(0);
 	}
 
 	/* 

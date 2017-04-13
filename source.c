@@ -98,7 +98,7 @@ gen_strct_fill_field(const struct field *f)
  * This calls a function pointer with the retrieved data.
  */
 static void
-gen_strct_iterator(const struct search *s, const char *caps, size_t num)
+gen_strct_func_iter(const struct search *s, const char *caps, size_t num)
 {
 	const struct sent *sent;
 	const struct sref *sr;
@@ -142,7 +142,7 @@ gen_strct_iterator(const struct search *s, const char *caps, size_t num)
  * This searches for a multiplicity of values.
  */
 static void
-gen_strct_list(const struct search *s, const char *caps, size_t num)
+gen_strct_func_list(const struct search *s, const char *caps, size_t num)
 {
 	const struct sent *sent;
 	const struct sref *sr;
@@ -198,11 +198,14 @@ gen_strct_list(const struct search *s, const char *caps, size_t num)
 
 /*
  * Print out the special rowid search function.
+ * This does nothing if there is no rowid function defined.
  */
 static void
-gen_strct_rowid(const struct strct *p, const char *caps)
+gen_strct_func_rowid(const struct strct *p, const char *caps)
 {
 
+	if (NULL == p->rowid)
+		return;
 	print_func_by_rowid(p, 0);
 	printf("\n"
 	       "{\n"
@@ -233,7 +236,7 @@ gen_strct_rowid(const struct strct *p, const char *caps)
  * This searches for a singular value.
  */
 static void
-gen_strct_search(const struct search *s, const char *caps, size_t num)
+gen_strct_func_srch(const struct search *s, const char *caps, size_t num)
 {
 	const struct sent *sent;
 	const struct sref *sr;
@@ -278,26 +281,113 @@ gen_strct_search(const struct search *s, const char *caps, size_t num)
 }
 
 /*
- * Provide the following function definitions:
- *
- *  (1) db_xxx_fill (fill from database)
- *  (2) db_xxx_unfill (clear internal structure memory)
- *  (3) db_xxx_free (public: free object)
- *  (4) db_xxx_get (public: get object)
- *
- * Also provide documentation for each function.
+ * Generate the "freeq" function.
+ * This must have STRCT_HAS_QUEUE defined in its flags, otherwise the
+ * function does nothing.
  */
 static void
-gen_strct(const struct strct *p)
+gen_strct_func_freeq(const struct strct *p)
+{
+
+	if ( ! (STRCT_HAS_QUEUE & p->flags))
+		return;
+
+	print_func_freeq(p, 0);
+	printf("\n"
+	       "{\n"
+	       "\tstruct %s *p;\n\n"
+	       "\tif (NULL == q)\n"
+	       "\t\treturn;\n"
+	       "\twhile (NULL != (p = TAILQ_FIRST(q))) {\n"
+	       "\t\tTAILQ_REMOVE(q, p, _entries);\n"
+	       "\t\tdb_%s_free(p);\n"
+	       "\t}\n\n"
+	       "\tfree(q);\n"
+	       "}\n"
+	       "\n", 
+	       p->name, p->name);
+}
+
+/*
+ * Generate the "insert" function.
+ */
+static void
+gen_strct_func_insert(const struct strct *p, const char *caps)
 {
 	const struct field *f;
-	const struct search *s;
-	char	*caps;
-	size_t	 searchnum = 0, pos;
+	size_t	 pos = 1;
 
-	caps = gen_strct_caps(p->name);
+	print_func_insert(p, 0);
+	printf("\n"
+	       "{\n"
+	       "\tstruct ksqlstmt *stmt;\n"
+	       "\tenum ksqlc c;\n"
+	       "\n"
+	       "\tksql_stmt_alloc(db, &stmt,\n"
+	       "\t\tstmts[STMT_%s_INSERT],\n"
+	       "\t\tSTMT_%s_INSERT);\n",
+	       caps, caps);
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT == f->type ||
+		    FIELD_ROWID & f->flags)
+			continue;
+		if (FTYPE_INT == f->type)
+			printf("\tksql_bind_int");
+		else
+			printf("\tksql_bind_str");
+		printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
+		pos++;
+	}
+	puts("\tc = ksql_stmt_cstep(stmt);\n"
+	     "\tksql_stmt_free(stmt);\n"
+	     "\treturn(KSQL_CONSTRAINT != c);\n"
+	     "}\n"
+	     "");
+}
 
-	/* Fill from database. */
+/*
+ * Generate the "free" function.
+ */
+static void
+gen_strct_func_free(const struct strct *p)
+{
+
+	print_func_free(p, 0);
+	printf("\n"
+	       "{\n"
+	       "\tdb_%s_unfill(p);\n"
+	       "\tfree(p);\n"
+	       "}\n"
+	       "\n", 
+	       p->name);
+}
+
+/*
+ * Generate the "unfill" function.
+ */
+static void
+gen_strct_func_unfill(const struct strct *p)
+{
+	const struct field *f;
+
+	print_func_unfill(p, 0);
+	puts("\n"
+	     "{\n"
+	     "\tif (NULL == p)\n"
+	     "\t\treturn;");
+	TAILQ_FOREACH(f, &p->fq, entries)
+		gen_strct_unfill_field(f);
+	printf("}\n"
+	       "\n");
+}
+
+/*
+ * Generate the "fill" function.
+ */
+static void
+gen_strct_func_fill(const struct strct *p)
+{
+	const struct field *f;
 
 	print_func_fill(p, 0);
 	puts("\n"
@@ -316,92 +406,41 @@ gen_strct(const struct strct *p)
 				f->ref->target->parent->name);
 	printf("}\n"
 	       "\n");
+}
 
-	/* Free internal resources. */
+/*
+ * Provide the following function definitions:
+ *
+ *  (1) db_xxx_fill (fill from database)
+ *  (2) db_xxx_unfill (clear internal structure memory)
+ *  (3) db_xxx_free (public: free object)
+ *  (4) db_xxx_get (public: get object)
+ *
+ * Also provide documentation for each function.
+ */
+static void
+gen_strct_funcs(const struct strct *p)
+{
+	const struct search *s;
+	char	*caps;
+	size_t	 searchnum = 0;
 
-	print_func_unfill(p, 0);
-	puts("\n"
-	     "{\n"
-	     "\tif (NULL == p)\n"
-	     "\t\treturn;");
-	TAILQ_FOREACH(f, &p->fq, entries)
-		gen_strct_unfill_field(f);
-	printf("}\n"
-	       "\n");
+	caps = gen_strct_caps(p->name);
 
-	/* Free object. */
-
-	print_func_free(p, 0);
-	printf("\n"
-	       "{\n"
-	       "\tdb_%s_unfill(p);\n"
-	       "\tfree(p);\n"
-	       "}\n"
-	       "\n", 
-	       p->name);
-
-	if (STRCT_HAS_QUEUE & p->flags) {
-		print_func_freeq(p, 0);
-		printf("\n"
-		       "{\n"
-		       "\tstruct %s *p;\n\n"
-		       "\tif (NULL == q)\n"
-		       "\t\treturn;\n"
-		       "\twhile (NULL != (p = TAILQ_FIRST(q))) {\n"
-		       "\t\tTAILQ_REMOVE(q, p, _entries);\n"
-		       "\t\tdb_%s_free(p);\n"
-		       "\t}\n\n"
-		       "\tfree(q);\n"
-		       "}\n"
-		       "\n", 
-		       p->name, p->name);
-	}
-
-	print_func_insert(p, 0);
-	printf("\n"
-	       "{\n"
-	       "\tstruct ksqlstmt *stmt;\n"
-	       "\tenum ksqlc c;\n"
-	       "\n"
-	       "\tksql_stmt_alloc(db, &stmt,\n"
-	       "\t\tstmts[STMT_%s_INSERT],\n"
-	       "\t\tSTMT_%s_INSERT);\n",
-	       caps, caps);
-	pos = 1;
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT == f->type ||
-		    FIELD_ROWID & f->flags)
-			continue;
-		if (FTYPE_INT == f->type)
-			printf("\tksql_bind_int");
-		else
-			printf("\tksql_bind_str");
-		printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
-		pos++;
-	}
-	puts("\tc = ksql_stmt_cstep(stmt);\n"
-	     "\tksql_stmt_free(stmt);\n"
-	     "\treturn(KSQL_CONSTRAINT != c);\n"
-	     "}\n"
-	     "");
-
-	/* 
-	 * Get object by identifier (external).
-	 * This needs to account for filling in foreign key references.
-	 */
-
-	if (NULL != p->rowid)
-		gen_strct_rowid(p, caps);
-
-	/* Generate the custom search functions. */
+	gen_strct_func_fill(p);
+	gen_strct_func_unfill(p);
+	gen_strct_func_free(p);
+	gen_strct_func_freeq(p);
+	gen_strct_func_insert(p, caps);
+	gen_strct_func_rowid(p, caps);
 
 	TAILQ_FOREACH(s, &p->sq, entries)
 		if (STYPE_SEARCH == s->type)
-			gen_strct_search(s, caps, searchnum++);
+			gen_strct_func_srch(s, caps, searchnum++);
 		else if (STYPE_LIST == s->type)
-			gen_strct_list(s, caps, searchnum++);
+			gen_strct_func_list(s, caps, searchnum++);
 		else
-			gen_strct_iterator(s, caps, searchnum++);
+			gen_strct_func_iter(s, caps, searchnum++);
 
 	free(caps);
 }
@@ -707,5 +746,5 @@ gen_source(const struct strctq *q, const char *header)
 	puts("");
 
 	TAILQ_FOREACH(p, q, entries)
-		gen_strct(p);
+		gen_strct_funcs(p);
 }

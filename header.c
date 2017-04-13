@@ -284,6 +284,14 @@ gen_header(const struct strctq *q)
 	puts("__BEGIN_DECLS\n"
 	     "");
 
+	print_commentt(0, COMMENT_C,
+		"Allocate and open the database in \"file\".\n"
+		"This returns a pointer to the database "
+		"in \"safe exit\" mode (see ksql(3)).\n"
+		"It returns NULL on memory allocation failure.");
+	print_func_open(1);
+	puts("");
+
 	TAILQ_FOREACH(p, q, entries)
 		gen_strct_funcs(p);
 

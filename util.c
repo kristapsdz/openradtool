@@ -34,6 +34,34 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	NULL,
 };
 
+void
+print_func_update(const struct update *u, int decl)
+{
+	const struct uref *ur;
+	size_t	 pos = 1;
+
+	printf("void%sdb_%s_update",
+		decl ? " " : "\n", u->parent->name);
+
+	if (NULL == u->name) {
+		TAILQ_FOREACH(ur, &u->mrq, entries)
+			printf("_%s", ur->name);
+		printf("_by");
+		TAILQ_FOREACH(ur, &u->crq, entries)
+			printf("_%s", ur->name);
+	} else 
+		printf("_%s", u->name);
+
+	printf("(struct ksql *db");
+
+	TAILQ_FOREACH(ur, &u->mrq, entries)
+		printf(", %sv%zu", ftypes[ur->field->type], pos++);
+	TAILQ_FOREACH(ur, &u->crq, entries)
+		printf(", %sv%zu", ftypes[ur->field->type], pos++);
+
+	printf(")%s", decl ? ";\n" : "");
+}
+
 /*
  * Generate the declaration for a search function "s".
  * The format of the declaration depends upon the search type.
@@ -192,9 +220,6 @@ print_comment(const char *doc, size_t tabs,
 	size_t		 i;
 	char		 last = '\0';
 
-	if (NULL == doc)
-		return;
-
 	assert(NULL != in);
 
 	if (NULL != pre) {
@@ -203,26 +228,28 @@ print_comment(const char *doc, size_t tabs,
 		puts(pre);
 	}
 
-	for (i = 0; i < tabs; i++)
-		putchar('\t');
-	printf("%s", in);
+	if (NULL != doc) {
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		printf("%s", in);
 
-	for (cp = doc; '\0' != *cp; cp++) {
-		if ('\n' == *cp) {
-			putchar('\n');
-			for (i = 0; i < tabs; i++)
-				putchar('\t');
-			printf("%s", in);
+		for (cp = doc; '\0' != *cp; cp++) {
+			if ('\n' == *cp) {
+				putchar('\n');
+				for (i = 0; i < tabs; i++)
+					putchar('\t');
+				printf("%s", in);
+				last = *cp;
+				continue;
+			}
+			if ('\\' == *cp && '"' == cp[1])
+				cp++;
+			putchar(*cp);
 			last = *cp;
-			continue;
 		}
-		if ('\\' == *cp && '"' == cp[1])
-			cp++;
-		putchar(*cp);
-		last = *cp;
+		if ('\n' != last)
+			putchar('\n');
 	}
-	if ('\n' != last)
-		putchar('\n');
 
 	if (NULL != post) {
 		for (i = 0; i < tabs; i++)
@@ -237,9 +264,6 @@ print_comment(const char *doc, size_t tabs,
 void
 print_commentt(size_t tabs, enum cmtt type, const char *cp)
 {
-
-	if (NULL == cp)
-		return;
 
 	if (COMMENT_C == type) 
 		print_comment(cp, tabs, "/*", " * ", " */");
@@ -261,9 +285,6 @@ print_commentv(size_t tabs, enum cmtt type, const char *fmt, ...)
 {
 	va_list		 ap;
 	char		*cp;
-
-	if (NULL == fmt)
-		return;
 
 	va_start(ap, fmt);
 	if (-1 == vasprintf(&cp, fmt, ap))

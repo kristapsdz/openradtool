@@ -159,8 +159,9 @@ TAILQ_HEAD(searchq, search);
  */
 struct	uref {
 	char		 *name;
+	struct field	 *field;
 	struct pos	  pos;
-	struct uent	 *parent;
+	struct update	 *parent;
 	TAILQ_ENTRY(uref) entries;
 };
 
@@ -234,6 +235,7 @@ void		 print_func_free(const struct strct *, int);
 void		 print_func_freeq(const struct strct *, int);
 void		 print_func_search(const struct search *, int);
 void		 print_func_unfill(const struct strct *, int);
+void		 print_func_update(const struct update *, int);
 
 __END_DECLS
 

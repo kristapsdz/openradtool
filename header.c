@@ -33,7 +33,8 @@ static void
 gen_strct_field(const struct field *p)
 {
 
-	print_commentt(1, COMMENT_C, p->doc);
+	if (NULL != p->doc)
+		print_commentt(1, COMMENT_C, p->doc);
 
 	switch (p->type) {
 	case (FTYPE_STRUCT):
@@ -86,6 +87,100 @@ gen_strct_structs(const struct strct *p)
 	}
 }
 
+static void
+gen_strct_func_update(const struct update *up)
+{
+	const struct uref *ref;
+	enum cmtt	 ct = COMMENT_C_FRAG_OPEN;
+	size_t		 pos;
+
+	if (NULL != up->doc) {
+		print_commentt(0, COMMENT_C_FRAG_OPEN, up->doc);
+		print_commentt(0, COMMENT_C_FRAG, "\n");
+		ct = COMMENT_C_FRAG;
+	}
+
+	print_commentv(0, ct,
+		"Updates the given fields in struct %s:",
+		up->parent->name);
+
+	pos = 1;
+	TAILQ_FOREACH(ref, &up->mrq, entries)
+		print_commentv(0, COMMENT_C_FRAG,
+			"\tv%zu: %s", pos++, ref->name);
+
+	print_commentt(0, COMMENT_C_FRAG,
+		"Constrains the updated records to:");
+
+	TAILQ_FOREACH(ref, &up->crq, entries)
+		print_commentv(0, COMMENT_C_FRAG,
+			"\tv%zu: %s", pos++, ref->name);
+
+	print_commentt(0, COMMENT_C_FRAG_CLOSE, NULL);
+	print_func_update(up, 1);
+	puts("");
+}
+
+/*
+ * Generate a custom search function declaration.
+ */
+static void
+gen_strct_func_search(const struct search *s)
+{
+	const struct sent *sent;
+	const struct sref *sr;
+	size_t	 pos = 1, first;
+
+	if (NULL != s->doc)
+		print_commentt(0, COMMENT_C_FRAG_OPEN, s->doc);
+	else if (STYPE_SEARCH == s->type)
+		print_commentv(0, COMMENT_C_FRAG_OPEN,
+			"Search for a specific %s.", 
+			s->parent->name);
+	else
+		print_commentv(0, COMMENT_C_FRAG_OPEN,
+			"Search for a set of %s.", 
+			s->parent->name);
+
+	print_commentv(0, COMMENT_C_FRAG,
+		"\nUses the given fields in struct %s:",
+	       s->parent->name);
+
+	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		printf(" * ");
+		first = 1;
+		TAILQ_FOREACH(sr, &sent->srq, entries) {
+			if (first) {
+				printf("\tv%zu: ", pos);
+				first = 0;
+			} else
+				putchar('.');
+			printf("%s", sr->name);
+		}
+		sr = TAILQ_LAST(&sent->srq, srefq);
+		puts("");
+		pos++;
+	}
+
+	if (STYPE_SEARCH == s->type)
+		print_commentv(0, COMMENT_C_FRAG_CLOSE,
+			"Returns a pointer or NULL on fail.\n"
+			"Free the pointer with db_%s_free().",
+			s->parent->name);
+	else if (STYPE_LIST == s->type)
+		print_commentv(0, COMMENT_C_FRAG_CLOSE,
+			"Always returns a queue pointer.\n"
+			"Free this with db_%s_freeq().",
+			s->parent->name);
+	else
+		print_commentv(0, COMMENT_C_FRAG_CLOSE,
+			"Invokes the given callback with "
+			"retrieved data.");
+
+	print_func_search(s, 1);
+	puts("");
+}
+
 /*
  * Generate the function declarations for a given structure.
  */
@@ -93,10 +188,8 @@ static void
 gen_strct_funcs(const struct strct *p)
 {
 	const struct search *s;
-	const struct sref *sr;
-	const struct sent *sent;
 	const struct field *f;
-	int	 first;
+	const struct update *u;
 	size_t	 pos;
 
 	if (NULL != p->rowid) {
@@ -159,55 +252,11 @@ gen_strct_funcs(const struct strct *p)
 	print_func_unfill(p, 1);
 	puts("");
 
-	TAILQ_FOREACH(s, &p->sq, entries) {
-		if (NULL != s->doc)
-			print_commentt(0, COMMENT_C_FRAG_OPEN, s->doc);
-		else if (STYPE_SEARCH == s->type)
-			print_commentv(0, COMMENT_C_FRAG_OPEN,
-				"Search for a specific %s.", p->name);
-		else
-			print_commentv(0, COMMENT_C_FRAG_OPEN,
-				"Search for a set of %s.", p->name);
+	TAILQ_FOREACH(s, &p->sq, entries)
+		gen_strct_func_search(s);
 
-		print_commentv(0, COMMENT_C_FRAG,
-			"\nUses the given fields in struct %s:",
-		       p->name);
-
-		pos = 1;
-		TAILQ_FOREACH(sent, &s->sntq, entries) {
-			printf(" * ");
-			first = 1;
-			TAILQ_FOREACH(sr, &sent->srq, entries) {
-				if (first) {
-					printf("\tv%zu: ", pos);
-					first = 0;
-				} else
-					putchar('.');
-				printf("%s", sr->name);
-			}
-			sr = TAILQ_LAST(&sent->srq, srefq);
-			puts("");
-			pos++;
-		}
-
-		if (STYPE_SEARCH == s->type)
-			print_commentv(0, COMMENT_C_FRAG_CLOSE,
-				"Returns a pointer or NULL on fail.\n"
-				"Free the pointer with db_%s_free().",
-				p->name);
-		else if (STYPE_LIST == s->type)
-			print_commentv(0, COMMENT_C_FRAG_CLOSE,
-				"Always returns a queue pointer.\n"
-				"Free this with db_%s_freeq().",
-				p->name);
-		else
-			print_commentv(0, COMMENT_C_FRAG_CLOSE,
-				"Invokes the given callback with "
-				"retrieved data.");
-
-		print_func_search(s, 1);
-		puts("");
-	}
+	TAILQ_FOREACH(u, &p->uq, entries)
+		gen_strct_func_update(u);
 }
 
 void

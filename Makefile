@@ -17,11 +17,19 @@ OBJS		 = header.o \
 		   source.o \
 		   sql.o \
 		   util.o
+HTMLS		 = index.html \
+		   kwebapp.1.html \
+		   kwebapp.5.html
+WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
 
 kwebapp: $(COMPAT_OBJS) $(OBJS)
 	$(CC) -o $@ $(COMPAT_OBJS) $(OBJS)
 
-www: index.svg index.html kwebapp.5.html kwebapp.1.html
+www: index.svg $(HTMLS)
+
+installwww: www
+	mkdir -p $(WWWDIR)
+	install -m 0444 $(HTMLS) index.css highlight.css index.svg $(WWWDIR)
 
 OBJS: extern.h
 

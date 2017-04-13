@@ -827,6 +827,24 @@ gen_source(const struct strctq *q, const char *header)
 		"Finally, all of the functions we'll use.");
 	puts("");
 
+	print_func_open(0);
+	puts("{\n"
+	     "\tstruct ksqlcfg cfg;\n"
+	     "\tstruct ksql *sql;\n"
+	     "\n"
+	     "\tmemset(&cfg, 0, sizeof(struct ksqlcfg));\n"
+	     "\tcfg.flags = KSQL_EXIT_ON_ERR |\n"
+	     "\t\tKSQL_FOREIGN_KEYS | KSQL_SAFE_EXIT;\n"
+	     "\tcfg.err = ksqlitemsg;\n"
+	     "\tcfg.dberr = ksqlitedbmsg;\n"
+	     "\n"
+	     "\tif (NULL == (sql = ksql_alloc(&cfg)))\n"
+	     "\t\treturn(NULL);\n"
+	     "\tksql_open(sql, file);\n"
+	     "\treturn(sql);\n"
+	     "}\n"
+	     "");
+
 	TAILQ_FOREACH(p, q, entries)
 		gen_funcs(p);
 }

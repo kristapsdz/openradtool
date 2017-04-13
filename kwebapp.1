@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: April 11 2017 $
+.Dd $Mdocdate: April 12 2017 $
 .Dt KWEBAPP 1
 .Os
 .Sh NAME
@@ -106,9 +106,9 @@ queue macros created for it as well.
 If there are any iterator statements, the function callback types are
 also generated.
 .Pp
-The following functions are then generated, taking
+The following functions are then generated per structure, letting
 .Dq foo
-to be the name of the structure object:
+to be the name of a sample structure object:
 .Bl -tag -width Ds
 .It Fn db_foo_free
 Frees a pointer created by
@@ -160,7 +160,29 @@ but producing a queue of responses.
 Again like
 .Fn db_foo_by__xxxx__yy_zz ,
 but invoking a function callback for the retrieved results.
+.It Fn db_foo_update_xxxx
+Run the named update function
+.Dq xxxx .
+The update functions are specified with
+.Cm update
+statements.
+.It Fn db_foo_update_xx_by_yy
+Like
+.Fn db_foo_update_xxxx ,
+but using an un-named update statement modifying
+.Dq xx
+constrained by
+.Dq yy .
 .El
+.Pp
+A
+.Fn db_open
+function is also provided.
+This function opens a database in
+.Dq safe exit
+mode as documented in
+.Xr ksql 3 .
+It uses the default logging facilities.
 .Pp
 All of these are fully documented in the header file.
 The structures are documented using the comments given in

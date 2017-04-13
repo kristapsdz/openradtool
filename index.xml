@@ -25,6 +25,10 @@
 				<span class="nm">kwebapp</span> is built to be fitted within a Makefile, just like your sources.
 				It is a <a href="https://www.bsd.lv">BSD.lv</a> project.
 			</p>
+			<p>
+				<strong>It does not have a stable release yet.</strong>
+				See the <a href="https://github.com/kristapsdz/kwebapp">GitHub repository</a> for sources.
+			</p>
 			<figure>
 				<img src="index.svg" alt="" />
 				<figcaption>

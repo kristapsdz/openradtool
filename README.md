@@ -13,12 +13,15 @@ struct user {
 ```
 
 This configuration is then translated into a C API (header file and
-implementation) and an SQL schema.  The API consists of "getters" and
-"setters", and is implemented in straight-forward C code you link
-directly into your application.
+implementation) and an SQL schema or update sequence.  The API consists
+of "getters" and "setters", and is implemented in straight-forward C
+code you link directly into your application.
 
 Why is *kwebapp* handy?  It removes a lot of "boilerplate" code querying
 the database and allocating objects.
+
+This repository mirrors the main repository on
+[BSD.lv](https://www.bsd.lv).  It is still very much under development!
 
 # License
 

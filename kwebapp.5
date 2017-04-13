@@ -31,63 +31,86 @@ tokens) configuration language with the following rough structure:
 .Bd -literal -offset indent
 [ "struct" structname
   "{"
-    [ "field" fieldname [ type [ typeinfo ] ] ";" ]+
-    [ searchtype terms [":" [ params ] ";" ]*
+    [ "field" fielddata ";" ]+
+    [ searchtype searchdata ";" ]*
     [ "comment" quoted_string ";" ]?
   "}"
 ]+
 .Ed
 .Pp
 In simple language, one or more structure definitions, each containing
-one or more fields.
+one or more fields or auxiliary structure data.
 A structure is a database table or C struct; whereas a field is a column
 or a struct member.
-The names of structures and fields must be unique case-insensitive
-alphanumeric strings starting with a letter.
-(Names may not be any C or SQL keyword.)
 In
 .Nm ,
-these are collectively called
-.Dq objects .
+structures and fields are collectively called
+.Dq objects ,
+and constitute the data of the system.
 .Pp
-Beyond objects, a structure may also contain a comment and a number of
-search fields.
-The latter include search functions (and possibly types) in the
-generated API on the given fields.
+In this document, an
+.Dq identifier
+is a case-insensitive alphanumeric non-empty string beginning with a
+letter, and a string literal is a double-quoted string (where internal
+double quotes may be escaped by a single preceding backslash).
 .Ss Structures
 A structure object defines a C structure or a database table.
+It is the foundational type of
+.Nm .
 Its definition begins with the word
 .Cm struct ,
-then the name of the structure, then a set of one or more
-.Cm fields
-within the curly braces.
+then the unique identifier of the structure, then structure data within
+the curly braces.
 .Bd -literal -offset indent
-"struct" structname "{" [ fields ]+ "}"
+"struct" structname
+  "{"
+    [ "field" fielddata ";" ]+
+    [ searchtype searchdata ";" ]*
+    [ "comment" quoted_string ";" ]?
+  "}"
 .Ed
 .Pp
 Structures may be mapped into by other structures from referencing
 fields, which are similar to foreign keys.
 In SQL terms, this abstracts the notion of inner joins on foreign keys.
+.Pp
+The contained elements may consist of one or more
+.Cm field
+describing data fields (see
+.Sx Fields ) ;
+optionally a
+.Cm comment
+for describing the structure (see
+.Sx Comments ) ;
+or zero or more
+.Cm searchtype ,
+which defines one of several search types on fields (see
+.Sx Searches ) .
 .Ss Fields
 A field object defines a C structure member and/or a database column.
 Each field consists of the word
 .Cm field
-followed by a field
+followed by an identifier
 .Cm name
-and
-.Cm type ,
+and, optionally, a
+.Cm type
 then additional information.
 .Bd -literal -offset indent
-"field" [name | name:target] type [typeinfo]+ ";"
+"field" [name | name:target] [ type [typeinfo]* ]? ";"
 .Ed
 .Pp
 The
 .Cm name
 may either be a standalone identifier or a
 .Dq foreign key
-referencing a field in another structure.
+referencing a field in another structure by the structure and field
+name.
+In this case, the referenced field must be a
+.Cm rowid .
+.Pp
 The
-.Cm type
+.Cm type ,
+if specified,
 may be one of
 .Cm struct ,
 .Cm int ,
@@ -97,19 +120,23 @@ The latter two are
 .Dq native
 types mapping into 64-bit integers and character strings, respectively.
 The former has the full syntax of
-.Pp
-.Dl \(dqstruct\(dq source:struct.field
+.Bd -literal -offset indent
+"struct" source:struct.field
+.Ed
 .Pp
 This special type joins the field
 .Cm source
 to the target structure and field
 .Cm struct.field .
-This special type differs from native type foreign keys in that it will
-be joined on database queries, while the native type is merely part of
-the definition.
+It differs from native type foreign keys in that it will be joined on
+database queries, while the native type is merely part of the
+definition.
 It is an error for a
 .Cm struct
 and native foreign key to reference different target fields.
+.Pp
+If unspecified, the type defaults to
+.Cm int .
 .Pp
 The
 .Cm typeinfo
@@ -145,7 +172,8 @@ This might change.
 .Ss Searches
 There are three types of
 .Cm searchtype
-searches: search for individual rows (i.e., on a unique column),
+searches that may be defined to produce searching functions on
+structures: search for individual rows (i.e., on a unique column),
 generate a queue of responses, or call a function for each retrieved
 result in an active query.
 These use the
@@ -154,7 +182,8 @@ These use the
 and
 .Cm iterate
 keywords, respectively.
-Searches either way are by field, and may be followed by parameters:
+.Pp
+Searches are always by field, and may be followed by parameters:
 .Bd -literal -offset indent
 searchtype field [,field]* [":" [params]* ]? ";"
 .Ed

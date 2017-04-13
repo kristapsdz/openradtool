@@ -153,6 +153,35 @@ struct	search {
 TAILQ_HEAD(searchq, search);
 
 /*
+ * An update reference.
+ * This resolves to be a native field in a structure for which update
+ * commands will be generated.
+ */
+struct	uref {
+	char		 *name;
+	struct pos	  pos;
+	struct uent	 *parent;
+	TAILQ_ENTRY(uref) entries;
+};
+
+TAILQ_HEAD(urefq, uref);
+
+/*
+ * A single update clause consisting of multiple fields to be modified
+ * depending upon the constraint fields.
+ */
+struct	update {
+	struct urefq	    mrq; /* fields to be modified chain */
+	struct urefq	    crq; /* constraint chain */
+	char		   *name; /* named or NULL */
+	char		   *doc; /* documentation */
+	struct strct	   *parent; /* up-reference */
+	TAILQ_ENTRY(update) entries;
+};
+
+TAILQ_HEAD(updateq, update);
+
+/*
  * A database/struct consisting of fields.
  * Structures depend upon other structures (see the FTYPE_REF in the
  * field), which is represented by the "height" value.
@@ -166,6 +195,7 @@ struct	strct {
 	struct fieldq	   fq; /* fields/columns/members */
 	struct searchq	   sq; /* search fields */
 	struct aliasq	   aq; /* join aliases */
+	struct updateq	   uq; /* update conditions */
 	unsigned int	   flags;
 #define	STRCT_HAS_QUEUE	   0x01 /* needs a queue interface */
 #define	STRCT_HAS_ITERATOR 0x02 /* needs iterator interface */

@@ -131,6 +131,13 @@ linkref(struct ref *ref)
 	} else if (NULL != ref->source->ref)
 		return(1);
 
+	if ( ! (FIELD_ROWID & ref->target->flags)) {
+		warnx("%s.%s: target is not a rowid",
+			ref->target->parent->name,
+			ref->target->name);
+		return(0);
+	}
+
 	/* Create linkage. */
 
 	ref->source->ref = calloc(1, sizeof(struct ref));

@@ -29,7 +29,7 @@ www: index.svg $(HTMLS)
 
 installwww: www
 	mkdir -p $(WWWDIR)
-	install -m 0444 $(HTMLS) index.css highlight.css index.svg $(WWWDIR)
+	install -m 0444 $(HTMLS) index.css highlight.css mandoc.css index.svg $(WWWDIR)
 
 OBJS: extern.h
 

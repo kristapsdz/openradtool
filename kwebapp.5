@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: April 12 2017 $
+.Dd $Mdocdate: April 13 2017 $
 .Dt KWEBAPP 5
 .Os
 .Sh NAME
@@ -33,20 +33,24 @@ tokens) configuration language with the following rough structure:
   "{"
     [ "field" fielddata ";" ]+
     [ searchtype searchdata ";" ]*
+    [ "update" updatedata ";" ]*
     [ "comment" quoted_string ";" ]?
   "}"
 ]+
 .Ed
 .Pp
 In simple language, one or more structure definitions, each containing
-one or more fields or auxiliary structure data.
-A structure is a database table or C struct; whereas a field is a column
-or a struct member.
+one or more fields and auxiliary structure data (search and update
+specifications, etc.).
 In
 .Nm ,
 structures and fields are collectively called
 .Dq objects ,
 and constitute the data of the system.
+A structure, documented in
+.Sx Structures ,
+is a database table or C struct; whereas a field is a column or a struct
+member.
 .Pp
 In this document, an
 .Dq identifier
@@ -66,6 +70,7 @@ the curly braces.
   "{"
     [ "field" fielddata ";" ]+
     [ searchtype searchdata ";" ]*
+    [ "update" updatedata ";" ]*
     [ "comment" quoted_string ";" ]?
   "}"
 .Ed
@@ -82,7 +87,11 @@ optionally a
 .Cm comment
 for describing the structure (see
 .Sx Comments ) ;
-or zero or more
+zero or more
+.Cm update
+statements that define how rows may be updated (see
+.Sx Updates ) ;
+and zero or more
 .Cm searchtype ,
 which defines one of several search types on fields (see
 .Sx Searches ) .
@@ -212,6 +221,40 @@ The
 is a unique identifier used in the C API for the search function and the
 .Cm comment
 is included in the API comments for the function.
+.Ss Updates
+Update statements define how the database will be updated.
+By default, there are no update functions defined.
+The syntax is as follows:
+.Bd -literal -offset indent
+"update" mfields ":" cfields [":" [params]* ]? ";"
+.Ed
+.Pp
+Both
+.Cm mfields
+and
+.Cm cfields
+are a sequence of one or more comma-separated native-type fields in the
+current structure.
+The former refers to the fields that will be modified; the latter refers
+to fields that will act as constraints.
+In other words, modify fields constraint by
+.Cm cfields
+to contain the
+.Cm cfields .
+Usually, the former will be the
+.Cm rowid
+and the former will be any other fields.
+.Pp
+The optional parameters may be one of
+.Bd -literal -offset indent
+"name" updatename | "comment" string_literal
+.Ed
+.Pp
+The
+.Cm name
+sets a unique name for the generated function, while
+.Cm comment
+is used for the API comments.
 .Sh EXAMPLES
 A simple session table is as follows:
 .Bd -literal

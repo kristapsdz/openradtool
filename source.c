@@ -201,7 +201,7 @@ gen_strct_func_list(const struct search *s, const char *caps, size_t num)
  * This does nothing if there is no rowid function defined.
  */
 static void
-gen_strct_func_rowid(const struct strct *p, const char *caps)
+gen_func_rowid(const struct strct *p, const char *caps)
 {
 
 	if (NULL == p->rowid)
@@ -286,7 +286,7 @@ gen_strct_func_srch(const struct search *s, const char *caps, size_t num)
  * function does nothing.
  */
 static void
-gen_strct_func_freeq(const struct strct *p)
+gen_func_freeq(const struct strct *p)
 {
 
 	if ( ! (STRCT_HAS_QUEUE & p->flags))
@@ -312,7 +312,7 @@ gen_strct_func_freeq(const struct strct *p)
  * Generate the "insert" function.
  */
 static void
-gen_strct_func_insert(const struct strct *p, const char *caps)
+gen_func_insert(const struct strct *p, const char *caps)
 {
 	const struct field *f;
 	size_t	 pos = 1;
@@ -349,7 +349,7 @@ gen_strct_func_insert(const struct strct *p, const char *caps)
  * Generate the "free" function.
  */
 static void
-gen_strct_func_free(const struct strct *p)
+gen_func_free(const struct strct *p)
 {
 
 	print_func_free(p, 0);
@@ -366,7 +366,7 @@ gen_strct_func_free(const struct strct *p)
  * Generate the "unfill" function.
  */
 static void
-gen_strct_func_unfill(const struct strct *p)
+gen_func_unfill(const struct strct *p)
 {
 	const struct field *f;
 
@@ -385,7 +385,7 @@ gen_strct_func_unfill(const struct strct *p)
  * Generate the "fill" function.
  */
 static void
-gen_strct_func_fill(const struct strct *p)
+gen_func_fill(const struct strct *p)
 {
 	const struct field *f;
 
@@ -399,48 +399,92 @@ gen_strct_func_fill(const struct strct *p)
 	     "\tmemset(p, 0, sizeof(*p));");
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_fill_field(f);
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if (FTYPE_STRUCT == f->type)
-			printf("\tdb_%s_fill(&p->%s, stmt, pos);\n",
-				f->name,
-				f->ref->target->parent->name);
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT != f->type)
+			continue;
+		printf("\tdb_%s_fill(&p->%s, stmt, pos);\n",
+			f->name, f->ref->target->parent->name);
+	}
 	printf("}\n"
 	       "\n");
 }
 
 /*
- * Provide the following function definitions:
- *
- *  (1) db_xxx_fill (fill from database)
- *  (2) db_xxx_unfill (clear internal structure memory)
- *  (3) db_xxx_free (public: free object)
- *  (4) db_xxx_get (public: get object)
- *
- * Also provide documentation for each function.
+ * Generate an "update" function.
  */
 static void
-gen_strct_funcs(const struct strct *p)
+gen_strct_func_update(const struct update *up, 
+	const char *caps, size_t num)
+{
+	const struct uref *ref;
+	size_t	 pos = 1;
+
+	print_func_update(up, 0);
+	printf("\n"
+	       "{\n"
+	       "\tstruct ksqlstmt *stmt;\n"
+	       "\tenum ksqlc c;\n"
+	       "\n"
+	       "\tksql_stmt_alloc(db, &stmt,\n"
+	       "\t\tstmts[STMT_%s_UPDATE_%zu],\n"
+	       "\t\tSTMT_%s_UPDATE_%zu);\n",
+	       caps, num, caps, num);
+	TAILQ_FOREACH(ref, &up->mrq, entries) {
+		if (FTYPE_INT == ref->field->type)
+			printf("\tksql_bind_int");
+		else
+			printf("\tksql_bind_str");
+		printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
+		pos++;
+	}
+	TAILQ_FOREACH(ref, &up->crq, entries) {
+		if (FTYPE_INT == ref->field->type)
+			printf("\tksql_bind_int");
+		else
+			printf("\tksql_bind_str");
+		printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
+		pos++;
+	}
+	puts("\tc = ksql_stmt_cstep(stmt);\n"
+	     "\tksql_stmt_free(stmt);\n"
+	     "\treturn(KSQL_CONSTRAINT != c);\n"
+	     "}\n"
+	     "");
+}
+
+/*
+ * Generate all of the functions we've defined in our header for the
+ * given structure "s".
+ */
+static void
+gen_funcs(const struct strct *p)
 {
 	const struct search *s;
+	const struct update *u;
 	char	*caps;
-	size_t	 searchnum = 0;
+	size_t	 pos;
 
 	caps = gen_strct_caps(p->name);
 
-	gen_strct_func_fill(p);
-	gen_strct_func_unfill(p);
-	gen_strct_func_free(p);
-	gen_strct_func_freeq(p);
-	gen_strct_func_insert(p, caps);
-	gen_strct_func_rowid(p, caps);
+	gen_func_fill(p);
+	gen_func_unfill(p);
+	gen_func_free(p);
+	gen_func_freeq(p);
+	gen_func_insert(p, caps);
+	gen_func_rowid(p, caps);
 
+	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
 		if (STYPE_SEARCH == s->type)
-			gen_strct_func_srch(s, caps, searchnum++);
+			gen_strct_func_srch(s, caps, pos++);
 		else if (STYPE_LIST == s->type)
-			gen_strct_func_list(s, caps, searchnum++);
+			gen_strct_func_list(s, caps, pos++);
 		else
-			gen_strct_func_iter(s, caps, searchnum++);
+			gen_strct_func_iter(s, caps, pos++);
+
+	pos = 0;
+	TAILQ_FOREACH(u, &p->uq, entries)
+		gen_strct_func_update(u, caps, pos++);
 
 	free(caps);
 }
@@ -454,19 +498,25 @@ gen_strct_funcs(const struct strct *p)
 static void
 gen_stmt_enum(const struct strct *p)
 {
-	char	*caps;
 	const struct search *s;
-	size_t	 snum = 0;
+	const struct update *u;
+	char	*caps;
+	size_t	 pos;
 
 	caps = gen_strct_caps(p->name);
 
 	if (NULL != p->rowid)
 		printf("\tSTMT_%s_BY_ROWID,\n", caps);
 
+	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
-		printf("\tSTMT_%s_BY_SEARCH_%zu,\n", caps, snum++);
+		printf("\tSTMT_%s_BY_SEARCH_%zu,\n", caps, pos++);
 
 	printf("\tSTMT_%s_INSERT,\n", caps);
+
+	pos = 0;
+	TAILQ_FOREACH(u, &p->uq, entries)
+		printf("\tSTMT_%s_UPDATE_%zu,\n", caps, pos++);
 
 	free(caps);
 }
@@ -589,11 +639,18 @@ gen_stmt(const struct strct *p)
 	const struct sent *sent;
 	const struct sref *sr;
 	const struct field *f;
+	const struct update *up;
+	const struct uref *ur;
 	int	 first;
-	size_t	 snum = 0;
+	size_t	 pos;
 	char	*caps;
 
 	caps = gen_strct_caps(p->name);
+
+	/* 
+	 * If we have rowid access, print it now.
+	 * This uses the usual recursive selection.
+	 */
 
 	if (NULL != p->rowid)  {
 		printf("\t/* STMT_%s_BY_ROWID */\n"
@@ -606,10 +663,16 @@ gen_stmt(const struct strct *p)
 			p->name, p->rowid->name);
 	}
 
+	/* 
+	 * Print custom search queries.
+	 * This also uses the recursive selection.
+	 */
+
+	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries) {
 		printf("\t/* STMT_%s_BY_SEARCH_%zu */\n"
 		       "\t\"SELECT ",
-			caps, snum++);
+			caps, pos++);
 		gen_stmt_schema(p, p, NULL);
 		printf("\" FROM %s", p->name);
 		gen_stmt_joins(p, p, NULL);
@@ -628,7 +691,10 @@ gen_stmt(const struct strct *p)
 		puts("\",");
 	}
 
-	/* TODO: DEFAULT_VALUES */
+	/* 
+	 * Insertion of a new record.
+	 * TODO: DEFAULT_VALUES.
+	 */
 
 	printf("\t/* STMT_%s_INSERT */\n"
 	       "\t\"INSERT INTO %s (", caps, p->name);
@@ -650,6 +716,22 @@ gen_stmt(const struct strct *p)
 		first = 0;
 	}
 	puts(")\",");
+	
+	/* Custom update queries. */
+
+	pos = 0;
+	TAILQ_FOREACH(up, &p->uq, entries) {
+		printf("\t/* STMT_%s_UPDATE_%zu */\n"
+		       "\t\"UPDATE %s SET",
+		       caps, pos++, p->name);
+		first = 1;
+		TAILQ_FOREACH(ur, &up->mrq, entries)
+			printf("%s%s=?", first ? " " : ",", ur->name);
+		printf(" WHERE");
+		TAILQ_FOREACH(ur, &up->crq, entries)
+			printf("%s%s=?", first ? " " : " AND", ur->name);
+		puts("\",");
+	}
 
 	free(caps);
 }
@@ -746,5 +828,5 @@ gen_source(const struct strctq *q, const char *header)
 	puts("");
 
 	TAILQ_FOREACH(p, q, entries)
-		gen_strct_funcs(p);
+		gen_funcs(p);
 }

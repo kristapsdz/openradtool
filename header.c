@@ -119,7 +119,9 @@ gen_strct_func_update(const struct update *up)
 		print_commentv(0, COMMENT_C_FRAG,
 			"\tv%zu: %s", pos++, ref->name);
 
-	print_commentt(0, COMMENT_C_FRAG_CLOSE, NULL);
+	print_commentt(0, COMMENT_C_FRAG_CLOSE,
+		"Returns zero on failure, non-zero on "
+		"constraint errors.");
 	print_func_update(up, 1);
 	puts("");
 }

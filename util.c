@@ -34,6 +34,14 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	NULL,
 };
 
+void
+print_func_open(int decl)
+{
+
+	printf("struct ksql *%sdb_open(const char *file)%s\n",
+		decl ? "" : "\n", decl ? ";" : "");
+}
+
 /*
  * Generate the "update" function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the

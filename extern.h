@@ -233,6 +233,7 @@ void		 print_func_insert(const struct strct *, int);
 void		 print_func_fill(const struct strct *, int);
 void		 print_func_free(const struct strct *, int);
 void		 print_func_freeq(const struct strct *, int);
+void		 print_func_open(int);
 void		 print_func_search(const struct search *, int);
 void		 print_func_unfill(const struct strct *, int);
 void		 print_func_update(const struct update *, int);

@@ -6,12 +6,14 @@ struct company {
 struct user {
   field company struct cid:company.id;
   field cid;
+  field email text unique;
   field name text;
   field uid int rowid;
   comment 
 	"A regular user.
 	 Comments on a new line.";
-  search name;
+  list cid;
+  iterate name;
 }
 
 struct session { 
@@ -22,7 +24,5 @@ struct session {
   field token int comment "Random cookie.";
   field id int rowid;
   comment "Authenticated session.";
-  search user.company.name,userid: name foo comment "Search by foos";
-  list id;
-  iterate id;
+  search user.company.name,id: name foo comment "Search by foos";
 }

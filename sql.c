@@ -64,9 +64,13 @@ gen_field(const struct field *f, int *first)
 		printf("\t%s %s", f->name, ftypes[FTYPE_INT]);
 		if (FIELD_ROWID & f->flags)
 			printf(" PRIMARY KEY");
+		else if (FIELD_UNIQUE & f->flags)
+			printf(" UNIQUE");
 		break;
 	case (FTYPE_TEXT):
 		printf("\t%s %s", f->name, ftypes[FTYPE_TEXT]);
+		if (FIELD_UNIQUE & f->flags)
+			printf(" UNIQUE");
 		break;
 	default:
 		break;
@@ -206,6 +210,8 @@ gen_diff_fields_new(const struct strct *s, const struct strct *ds)
 				ftypes[f->type]);
 			if (FIELD_ROWID & f->flags)
 				printf(" PRIMARY KEY");
+			else if (FIELD_UNIQUE & f->flags)
+				printf(" UNIQUE");
 			if (NULL != f->ref)
 				printf(" REFERENCES %s(%s)",
 					f->ref->target->parent->name,

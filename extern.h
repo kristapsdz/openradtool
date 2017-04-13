@@ -119,7 +119,7 @@ struct	sent {
 	char		 *name; /* canonical dot-form name or NULL */
 	struct alias	 *alias; /* resolved alias */
 	unsigned int	  flags; 
-#define	SENT_HAS_ROWID	  0x01 /* has a rowid in its refs */
+#define	SENT_IS_UNIQUE	  0x01 /* has a rowid/unique in its refs */
 	TAILQ_ENTRY(sent) entries;
 };
 
@@ -146,7 +146,7 @@ struct	search {
 	struct strct	   *parent; /* up-reference */
 	enum stype	    type; /* type of search */
 	unsigned int	    flags; 
-#define	SEARCH_HAS_ROWID    0x01 /* has a rowid somewhere */
+#define	SEARCH_IS_UNIQUE    0x01 /* has a rowid or unique somewhere */
 	TAILQ_ENTRY(search) entries;
 };
 

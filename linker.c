@@ -376,13 +376,13 @@ check_searchtype(const struct strct *p)
 	const struct search *srch;
 
 	TAILQ_FOREACH(srch, &p->sq, entries) {
-		if (SEARCH_HAS_ROWID & srch->flags && 
+		if (SEARCH_IS_UNIQUE & srch->flags && 
 		    STYPE_SEARCH != srch->type) 
 			warnx("%s:%zu:%zu: multiple-result search "
 				"on a unique field",
 				srch->pos.fname, srch->pos.line,
 				srch->pos.column);
-		if ( ! (SEARCH_HAS_ROWID & srch->flags) && 
+		if ( ! (SEARCH_IS_UNIQUE & srch->flags) && 
 		    STYPE_SEARCH == srch->type)
 			warnx("%s:%zu:%zu: single-result search "
 				"on a non-unique field",
@@ -412,9 +412,10 @@ resolve_search(struct search *srch)
 		if ( ! resolve_sref(ref, p))
 			return(0);
 		ref = TAILQ_LAST(&sent->srq, srefq);
-		if (FIELD_ROWID & ref->field->flags) {
-			sent->flags |= SENT_HAS_ROWID;
-			srch->flags |= SEARCH_HAS_ROWID;
+		if (FIELD_ROWID & ref->field->flags ||
+		    FIELD_UNIQUE & ref->field->flags) {
+			sent->flags |= SENT_IS_UNIQUE;
+			srch->flags |= SEARCH_IS_UNIQUE;
 		}
 		if (NULL == sent->name)
 			continue;

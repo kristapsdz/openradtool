@@ -34,13 +34,18 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	NULL,
 };
 
+/*
+ * Generate the "update" function for a given structure.
+ * If this is NOT a declaration ("decl"), then print a newline after the
+ * return type; otherwise, have it on one line.
+ */
 void
 print_func_update(const struct update *u, int decl)
 {
 	const struct uref *ur;
 	size_t	 pos = 1;
 
-	printf("void%sdb_%s_update",
+	printf("int%sdb_%s_update",
 		decl ? " " : "\n", u->parent->name);
 
 	if (NULL == u->name) {
@@ -113,6 +118,11 @@ print_func_search(const struct search *s, int decl)
 	printf(")%s", decl ? ";\n" : "");
 }
 
+/*
+ * Generate the "insert" function for a given structure.
+ * If this is NOT a declaration ("decl"), then print a newline after the
+ * return type; otherwise, have it on one line.
+ */
 void
 print_func_insert(const struct strct *p, int decl)
 {

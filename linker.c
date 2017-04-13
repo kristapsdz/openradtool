@@ -261,10 +261,18 @@ annotate(struct ref *ref, size_t height, size_t colour)
 	return(1);
 }
 
+/*
+ * Resolve a specific update reference by looking it up in our parent
+ * structure.
+ * Return zero on failure, non-zero on success.
+ */
 static int
 resolve_uref(struct uref *ref)
 {
 	struct field	*f;
+
+	assert(NULL == ref->field);
+	assert(NULL != ref->parent);
 
 	TAILQ_FOREACH(f, &ref->parent->parent->fq, entries)
 		if (0 == strcasecmp(f->name, ref->name))
@@ -281,9 +289,16 @@ resolve_uref(struct uref *ref)
 	else
 		return(1);
 
+	assert(NULL != ref->field);
 	return(0);
 }
 
+/*
+ * Resolve all of the fields managed by struct update.
+ * These are all local to the current structure.
+ * (This is a constraint of SQL.)
+ * Return zero on failure, non-zero on success.
+ */
 static int
 resolve_update(struct update *up)
 {

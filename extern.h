@@ -229,6 +229,7 @@ void		 print_commentt(size_t, enum cmtt, const char *);
 void		 print_commentv(size_t, enum cmtt, const char *, ...)
 			__attribute__((format(printf, 3, 4)));
 void		 print_func_by_rowid(const struct strct *, int);
+void		 print_func_close(int);
 void		 print_func_insert(const struct strct *, int);
 void		 print_func_fill(const struct strct *, int);
 void		 print_func_free(const struct strct *, int);

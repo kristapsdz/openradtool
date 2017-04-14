@@ -25,6 +25,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "extern.h"
 
@@ -300,6 +301,12 @@ print_comment(const char *doc, size_t tabs,
 void
 print_commentt(size_t tabs, enum cmtt type, const char *cp)
 {
+
+	if (COMMENT_C == type && 1 == tabs &&
+	    strlen(cp) <= 50) {
+		printf("\t/* %s */\n", cp);
+		return;
+	}
 
 	if (COMMENT_C == type) 
 		print_comment(cp, tabs, "/*", " * ", " */");

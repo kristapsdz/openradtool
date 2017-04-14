@@ -288,8 +288,16 @@ gen_header(const struct strctq *q)
 		"Allocate and open the database in \"file\".\n"
 		"This returns a pointer to the database "
 		"in \"safe exit\" mode (see ksql(3)).\n"
-		"It returns NULL on memory allocation failure.");
+		"It returns NULL on memory allocation failure.\n"
+		"The returned pointer must be closed with "
+		"db_close().");
 	print_func_open(1);
+	puts("");
+
+	print_commentt(0, COMMENT_C,
+		"Close the database opened by db_open().\n"
+		"Has no effect if \"p\" is NULL.");
+	print_func_close(1);
 	puts("");
 
 	TAILQ_FOREACH(p, q, entries)

@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: April 12 2017 $
+.Dd $Mdocdate: April 13 2017 $
 .Dt KWEBAPP 1
 .Os
 .Sh NAME
@@ -175,14 +175,16 @@ constrained by
 .Dq yy .
 .El
 .Pp
-A
+The convenience
 .Fn db_open
-function is also provided.
-This function opens a database in
+and
+.Fn db_close
+functions are also provided.
+These functions open and close a database in
 .Dq safe exit
 mode as documented in
 .Xr ksql 3 .
-It uses the default logging facilities.
+The former also installs the default logging facilities.
 .Pp
 All of these are fully documented in the header file.
 The structures are documented using the comments given in

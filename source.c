@@ -196,6 +196,42 @@ gen_strct_func_list(const struct search *s, const char *caps, size_t num)
 	       s->parent->name, s->parent->name);
 }
 
+static void
+gen_func_open(void)
+{
+
+	print_func_open(0);
+	puts("{\n"
+	     "\tstruct ksqlcfg cfg;\n"
+	     "\tstruct ksql *sql;\n"
+	     "\n"
+	     "\tmemset(&cfg, 0, sizeof(struct ksqlcfg));\n"
+	     "\tcfg.flags = KSQL_EXIT_ON_ERR |\n"
+	     "\t\tKSQL_FOREIGN_KEYS | KSQL_SAFE_EXIT;\n"
+	     "\tcfg.err = ksqlitemsg;\n"
+	     "\tcfg.dberr = ksqlitedbmsg;\n"
+	     "\n"
+	     "\tif (NULL == (sql = ksql_alloc(&cfg)))\n"
+	     "\t\treturn(NULL);\n"
+	     "\tksql_open(sql, file);\n"
+	     "\treturn(sql);\n"
+	     "}\n"
+	     "");
+}
+
+static void
+gen_func_close(void)
+{
+
+	print_func_close(0);
+	puts("{\n"
+	     "\tif (NULL == p)\n"
+	     "\t\treturn;\n"
+	     "\tksql_free(p);\n"
+	     "}\n"
+	     "");
+}
+
 /*
  * Print out the special rowid search function.
  * This does nothing if there is no rowid function defined.
@@ -413,7 +449,7 @@ gen_func_fill(const struct strct *p)
  * Generate an "update" function.
  */
 static void
-gen_strct_func_update(const struct update *up, 
+gen_func_update(const struct update *up, 
 	const char *caps, size_t num)
 {
 	const struct uref *ref;
@@ -484,7 +520,7 @@ gen_funcs(const struct strct *p)
 
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
-		gen_strct_func_update(u, caps, pos++);
+		gen_func_update(u, caps, pos++);
 
 	free(caps);
 }
@@ -496,7 +532,7 @@ gen_funcs(const struct strct *p)
  *  (2) all explicit search terms
  */
 static void
-gen_stmt_enum(const struct strct *p)
+gen_enum(const struct strct *p)
 {
 	const struct search *s;
 	const struct update *u;
@@ -630,7 +666,7 @@ gen_stmt_joins(const struct strct *orig,
 }
 
 /*
- * Fill in the statements noted in gen_stmt_enum().
+ * Fill in the statements noted in gen_enum().
  */
 static void
 gen_stmt(const struct strct *p)
@@ -790,7 +826,7 @@ gen_source(const struct strctq *q, const char *header)
 		"All SQL statements we'll define in \"stmts\".");
 	puts("enum\tstmt {");
 	TAILQ_FOREACH(p, q, entries)
-		gen_stmt_enum(p);
+		gen_enum(p);
 	puts("\tSTMT__MAX\n"
 	     "};\n"
 	     "");
@@ -827,23 +863,8 @@ gen_source(const struct strctq *q, const char *header)
 		"Finally, all of the functions we'll use.");
 	puts("");
 
-	print_func_open(0);
-	puts("{\n"
-	     "\tstruct ksqlcfg cfg;\n"
-	     "\tstruct ksql *sql;\n"
-	     "\n"
-	     "\tmemset(&cfg, 0, sizeof(struct ksqlcfg));\n"
-	     "\tcfg.flags = KSQL_EXIT_ON_ERR |\n"
-	     "\t\tKSQL_FOREIGN_KEYS | KSQL_SAFE_EXIT;\n"
-	     "\tcfg.err = ksqlitemsg;\n"
-	     "\tcfg.dberr = ksqlitedbmsg;\n"
-	     "\n"
-	     "\tif (NULL == (sql = ksql_alloc(&cfg)))\n"
-	     "\t\treturn(NULL);\n"
-	     "\tksql_open(sql, file);\n"
-	     "\treturn(sql);\n"
-	     "}\n"
-	     "");
+	gen_func_open();
+	gen_func_close();
 
 	TAILQ_FOREACH(p, q, entries)
 		gen_funcs(p);

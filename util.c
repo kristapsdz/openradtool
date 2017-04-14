@@ -34,12 +34,30 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	NULL,
 };
 
+/*
+ * Generate the convenience "open" function.
+ * If this is NOT a declaration ("decl"), then print a newline after the
+ * return type; otherwise, have it on one line.
+ */
 void
 print_func_open(int decl)
 {
 
 	printf("struct ksql *%sdb_open(const char *file)%s\n",
 		decl ? "" : "\n", decl ? ";" : "");
+}
+
+/*
+ * Generate the convenience "close" function.
+ * If this is NOT a declaration ("decl"), then print a newline after the
+ * return type; otherwise, have it on one line.
+ */
+void
+print_func_close(int decl)
+{
+
+	printf("void%sdb_close(struct ksql *p)%s\n",
+		decl ? " " : "\n", decl ? ";" : "");
 }
 
 /*

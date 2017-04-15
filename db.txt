@@ -15,7 +15,7 @@ struct user {
     "Search for users by full name.";
   update hash: uid;
   update email: uid;
-  search email,hash;
+  search email,hash: name creds;
   comment "A regular user.";
 }
 

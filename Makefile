@@ -51,6 +51,9 @@ db.h: kwebapp db.txt
 db.sql: kwebapp db.txt
 	./kwebapp -s db.txt >$@
 
+db.update.sql: kwebapp db.old.txt db.txt
+	./kwebapp -d db.old.txt db.txt >$@
+
 db.db: db.sql
 	rm -f $@
 	sqlite3 $@ < db.sql
@@ -83,25 +86,39 @@ db.sql.xml: db.sql
 	  highlight -l --enclose-pre --src-lang=sql -f db.sql ; \
 	  echo "</article>" ; ) >$@
 
+db.update.sql.xml: db.update.sql
+	( echo "<article data-sblg-article=\"1\">" ; \
+	  highlight -l --enclose-pre --src-lang=sql -f db.update.sql ; \
+	  echo "</article>" ; ) >$@
+
 db.c.html: db.c
 	highlight -s whitengrey -I -l --src-lang=c db.c >$@
 
 db.txt.html: db.txt
 	highlight -s whitengrey -I -l --src-lang=c db.txt >$@
 
+db.old.txt.html: db.old.txt
+	highlight -s whitengrey -I -l --src-lang=c db.old.txt >$@
+
 db.h.html: db.h
 	highlight -s whitengrey -I -l --src-lang=c db.h >$@
+
+db.sql.html: db.sql
+	highlight -s whitengrey -I -l --src-lang=sql db.sql >$@
+
+db.update.sql.html: db.update.sql
+	highlight -s whitengrey -I -l --src-lang=sql db.update.sql >$@
 
 highlight.css:
 	highlight --print-style -s whitengrey
 
-index.html: index.xml db.txt.xml db.txt.html db.h.xml db.h.html db.c.html db.sql.xml highlight.css
-	sblg -s cmdline -t index.xml -o- db.txt.xml db.h.xml db.sql.xml > $@
+index.html: index.xml db.txt.xml db.txt.html db.h.xml db.h.html db.c.html db.sql.xml db.sql.html db.update.sql.xml db.old.txt.html db.update.sql.html highlight.css
+	sblg -s cmdline -t index.xml -o- db.txt.xml db.h.xml db.sql.xml db.update.sql.xml > $@
 
 clean:
-	rm -f kwebapp $(COMPAT_OBJS) $(OBJS) db.c db.h db.o db.sql db.db test test.o
+	rm -f kwebapp $(COMPAT_OBJS) $(OBJS) db.c db.h db.o db.sql db.update.sql db.db test test.o
 	rm -f index.svg index.html highlight.css kwebapp.5.html kwebapp.1.html
-	rm -f db.txt.xml db.h.xml db.c.html db.h.html db.txt.html db.sql.xml
+	rm -f db.txt.xml db.h.xml db.c.html db.h.html db.txt.html db.sql.xml db.sql.html db.update.sql.xml db.old.txt.html db.update.sql.html
 
 distclean: clean
 	rm -f config.h config.log Makefile.configure

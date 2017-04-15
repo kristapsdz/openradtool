@@ -44,7 +44,7 @@ checkrowid(const struct field *f, int hasrowid)
 		return(0);
 	}
 
-	if (FTYPE_INT != f->type && FTYPE_TEXT != f->type) {
+	if (FTYPE_STRUCT == f->type) {
 		warnx("%s.%s: rowid on non-native field"
 			"type", f->parent->name, f->name);
 		return(0);
@@ -267,7 +267,7 @@ annotate(struct ref *ref, size_t height, size_t colour)
  * Return zero on failure, non-zero on success.
  */
 static int
-resolve_uref(struct uref *ref)
+resolve_uref(struct uref *ref, int crq)
 {
 	struct field	*f;
 
@@ -284,6 +284,10 @@ resolve_uref(struct uref *ref)
 			ref->pos.column);
 	else if (FTYPE_STRUCT == f->type)
 		warnx("%s:%zu:%zu: update term is a struct", 
+			ref->pos.fname, ref->pos.line,
+			ref->pos.column);
+	else if (crq && FTYPE_PASSWORD == f->type)
+		warnx("%s:%zu:%zu: update constraint is a password", 
 			ref->pos.fname, ref->pos.line,
 			ref->pos.column);
 	else
@@ -305,10 +309,10 @@ resolve_update(struct update *up)
 	struct uref	*ref;
 
 	TAILQ_FOREACH(ref, &up->mrq, entries)
-		if ( ! resolve_uref(ref))
+		if ( ! resolve_uref(ref, 0))
 			return(0);
 	TAILQ_FOREACH(ref, &up->crq, entries)
-		if ( ! resolve_uref(ref))
+		if ( ! resolve_uref(ref, 1))
 			return(0);
 
 	return(1);

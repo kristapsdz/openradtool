@@ -663,6 +663,13 @@ parse_config_field(struct parse *p, struct field *fd)
 		parse_config_field_info(p, fd);
 		return;
 	}
+	/* hash */
+	if (0 == strcasecmp(p->last.string, "password") ||
+	    0 == strcasecmp(p->last.string, "passwd")) {
+		fd->type = FTYPE_PASSWORD;
+		parse_config_field_info(p, fd);
+		return;
+	}
 	/* fall-through */
 	if (strcasecmp(p->last.string, "struct")) {
 		parse_errx(p, "unknown field type");
@@ -776,11 +783,26 @@ parse_config_search_terms(struct parse *p, struct sent *sent)
 	}
 
 	/*
-	 * Now fill in the search field's canonical structure name.
-	 * For example, if our fields are "user.company.name", this
-	 * would be "user.company".
+	 * Now fill in the search field's canonical and partial
+	 * structure name.
+	 * For example of the latter, if our fields are
+	 * "user.company.name", this would be "user.company".
 	 * For a singleton field (e.g., "userid"), this is NULL.
 	 */
+
+	TAILQ_FOREACH(sf, &sent->srq, entries) {
+		if (NULL == sent->fname) {
+			sent->fname = strdup(sf->name);
+			if (NULL == sent->fname)
+				err(EXIT_FAILURE, NULL);
+			continue;
+		}
+		sz = strlen(sent->fname) +
+		     strlen(sf->name) + 2;
+		sent->fname = realloc(sent->fname, sz);
+		strlcat(sent->fname, ".", sz);
+		strlcat(sent->fname, sf->name, sz);
+	}
 
 	TAILQ_FOREACH(sf, &sent->srq, entries) {
 		if (NULL == TAILQ_NEXT(sf, entries))
@@ -1303,6 +1325,7 @@ parse_free_search(struct search *p)
 			free(s->name);
 			free(s);
 		}
+		free(sent->fname);
 		free(sent->name);
 		free(sent);
 	}

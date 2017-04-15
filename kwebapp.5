@@ -123,12 +123,26 @@ if specified,
 may be one of
 .Cm struct ,
 .Cm int ,
+.Cm password ,
 or
 .Cm text .
-The latter two are
+The latter three are
 .Dq native
 types mapping into 64-bit integers and character strings, respectively.
-The former has the full syntax of
+.Pp
+The
+.Cm password
+field is special in that it converts an input password into a hash
+before insertion into the database.
+It also can properly search for password hashes by running the hash
+verification after extraction.
+Thus, there is a difference between a password field that is being
+inserted or updated (as a password, which is hashed) and extracted using
+a search (as a hash).
+.Pp
+The
+.Cm struct
+type has the full syntax of
 .Bd -literal -offset indent
 "struct" source:struct.field
 .Ed
@@ -221,6 +235,13 @@ The
 is a unique identifier used in the C API for the search function and the
 .Cm comment
 is included in the API comments for the function.
+.Pp
+.Em Note :
+if you're searching (in any way) on a
+.Cm password
+field, the field is omitted from the initial search, then hash-verified
+after being extracted from the database.
+Thus, this doesn't have the same performance as a normal search.
 .Ss Updates
 Update statements define how the database will be updated.
 By default, there are no update functions defined.
@@ -255,6 +276,14 @@ The
 sets a unique name for the generated function, while
 .Cm comment
 is used for the API comments.
+.Pp
+.Em Note :
+fields of type
+.Cm password
+are not allowed as
+.Cm cfields
+since they are not stored directly as comparable strings, but hashed
+with a unique salt.
 .Sh EXAMPLES
 A simple session table is as follows:
 .Bd -literal

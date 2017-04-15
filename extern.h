@@ -20,6 +20,7 @@
 enum	ftype {
 	FTYPE_INT, /* native */
 	FTYPE_TEXT, /* native */
+	FTYPE_PASSWORD, /* hashed password (text) */
 	FTYPE_STRUCT, /* only in C API (on reference) */
 	FTYPE__MAX
 };
@@ -116,7 +117,8 @@ struct	sent {
 	struct srefq	  srq; /* queue of search fields */
 	struct pos	  pos; /* parse point */
 	struct search	 *parent; /* up-reference */
-	char		 *name; /* canonical dot-form name or NULL */
+	char		 *name; /* sub-strutcure dot-form name or NULL */
+	char		 *fname; /* canonical dot-form name */
 	struct alias	 *alias; /* resolved alias */
 	unsigned int	  flags; 
 #define	SENT_IS_UNIQUE	  0x01 /* has a rowid/unique in its refs */

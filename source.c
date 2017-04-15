@@ -56,6 +56,8 @@ gen_strct_unfill_field(const struct field *f)
 			f->ref->tstrct,
 			f->name);
 		break;
+	case (FTYPE_PASSWORD):
+		/* FALLTHROUGH */
 	case (FTYPE_TEXT):
 		printf("\tfree(p->%s);\n", f->name);
 		break;
@@ -81,6 +83,8 @@ gen_strct_fill_field(const struct field *f)
 	case (FTYPE_INT):
 		puts("ksql_stmt_int(stmt, (*pos)++);");
 		break;
+	case (FTYPE_PASSWORD):
+		/* FALLTHROUGH */
 	case (FTYPE_TEXT):
 		printf("strdup(ksql_stmt_str(stmt, (*pos)++));\n"
 		     "\tif (NULL == p->%s) {\n"
@@ -102,7 +106,7 @@ gen_strct_func_iter(const struct search *s, const char *caps, size_t num)
 {
 	const struct sent *sent;
 	const struct sref *sr;
-	size_t	 pos = 1;
+	size_t	 pos;
 
 	assert(STYPE_ITERATE == s->type);
 
@@ -117,19 +121,48 @@ gen_strct_func_iter(const struct search *s, const char *caps, size_t num)
 	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
 	       s->parent->name, caps, num, caps, num);
 
+	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
 		sr = TAILQ_LAST(&sent->srq, srefq);
-		if (FTYPE_INT == sr->field->type)
-			printf("\tksql_bind_int");
-		else
-			printf("\tksql_bind_str");
-		printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
+		assert(FTYPE_STRUCT != sr->field->type);
+		if (FTYPE_PASSWORD != sr->field->type) {
+			if (FTYPE_INT == sr->field->type)
+				printf("\tksql_bind_int");
+			else
+				printf("\tksql_bind_str");
+			printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
+		}
 		pos++;
 	}
 
 	printf("\twhile (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
-	       "\t\tdb_%s_fill(&p, stmt, NULL);\n"
-	       "\t\t(*cb)(&p, arg);\n"
+	       "\t\tdb_%s_fill(&p, stmt, NULL);\n",
+	       s->parent->name);
+
+	/*
+	 * If we have any hashes, we're going to need to do the hash
+	 * check after the field has already been extracted from the
+	 * database.
+	 * If the hash doesn't match, don't run the callback.
+	 */
+
+	pos = 1;
+	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		sr = TAILQ_LAST(&sent->srq, srefq);
+		if (FTYPE_PASSWORD != sr->field->type) {
+			pos++;
+			continue;
+		}
+		printf("\t\tif (crypt_checkpass(v%zu, p.%s) < 0) {\n"
+		       "\t\t\tdb_%s_unfill(&p);\n"
+		       "\t\t\tcontinue;\n"
+		       "\t\t}\n",
+		       pos, sent->fname, s->parent->name);
+		pos++;
+	}
+
+	printf("\t\t(*cb)(&p, arg);\n"
+	       "\t\tdb_%s_unfill(&p);\n"
 	       "\t}\n"
 	       "\tksql_stmt_free(stmt);\n"
 	       "}\n"
@@ -146,7 +179,7 @@ gen_strct_func_list(const struct search *s, const char *caps, size_t num)
 {
 	const struct sent *sent;
 	const struct sref *sr;
-	size_t	 pos = 1;
+	size_t	 pos;
 
 	assert(STYPE_LIST == s->type);
 
@@ -170,13 +203,24 @@ gen_strct_func_list(const struct search *s, const char *caps, size_t num)
 	       s->parent->name, s->parent->name, 
 	       s->parent->name, caps, num, caps, num);
 
+	/*
+	 * If we have any hashes, we're going to need to do the hash
+	 * check after the field has already been extracted from the
+	 * database.
+	 * If the hash doesn't match, don't insert into the tailq.
+	 */
+
+	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
 		sr = TAILQ_LAST(&sent->srq, srefq);
-		if (FTYPE_INT == sr->field->type)
-			printf("\tksql_bind_int");
-		else
-			printf("\tksql_bind_str");
-		printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
+		assert(FTYPE_STRUCT != sr->field->type);
+		if (FTYPE_PASSWORD != sr->field->type) {
+			if (FTYPE_INT == sr->field->type)
+				printf("\tksql_bind_int");
+			else
+				printf("\tksql_bind_str");
+			printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
+		}
 		pos++;
 	}
 
@@ -186,14 +230,30 @@ gen_strct_func_list(const struct search *s, const char *caps, size_t num)
 	       "\t\t\tperror(NULL);\n"
 	       "\t\t\texit(EXIT_FAILURE);\n"
 	       "\t\t}\n"
-	       "\t\tdb_%s_fill(p, stmt, NULL);\n"
-	       "\t\tTAILQ_INSERT_TAIL(q, p, _entries);\n"
-	       "\t}\n"
-	       "\tksql_stmt_free(stmt);\n"
-	       "\treturn(q);\n"
-	       "}\n"
-	       "\n",
+	       "\t\tdb_%s_fill(p, stmt, NULL);\n",
 	       s->parent->name, s->parent->name);
+
+	pos = 1;
+	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		sr = TAILQ_LAST(&sent->srq, srefq);
+		if (FTYPE_PASSWORD != sr->field->type) {
+			pos++;
+			continue;
+		}
+		printf("\t\tif (crypt_checkpass(v%zu, p->%s) < 0) {\n"
+		       "\t\t\tdb_%s_free(p);\n"
+		       "\t\t\tcontinue;\n"
+		       "\t\t}\n",
+		       pos, sent->fname, s->parent->name);
+		pos++;
+	}
+
+	puts("\t\tTAILQ_INSERT_TAIL(q, p, _entries);\n"
+	     "\t}\n"
+	     "\tksql_stmt_free(stmt);\n"
+	     "\treturn(q);\n"
+	     "}\n"
+	     "");
 }
 
 static void
@@ -276,7 +336,7 @@ gen_strct_func_srch(const struct search *s, const char *caps, size_t num)
 {
 	const struct sent *sent;
 	const struct sref *sr;
-	size_t	 pos = 1;
+	size_t	 pos;
 
 	assert(STYPE_SEARCH == s->type);
 
@@ -291,13 +351,17 @@ gen_strct_func_srch(const struct search *s, const char *caps, size_t num)
 	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
 	       s->parent->name, caps, num, caps, num);
 
+	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
 		sr = TAILQ_LAST(&sent->srq, srefq);
-		if (FTYPE_INT == sr->field->type)
-			printf("\tksql_bind_int");
-		else
-			printf("\tksql_bind_str");
-		printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
+		assert(FTYPE_STRUCT != sr->field->type);
+		if (FTYPE_PASSWORD != sr->field->type) {
+			if (FTYPE_INT == sr->field->type)
+				printf("\tksql_bind_int");
+			else
+				printf("\tksql_bind_str");
+			printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
+		}
 		pos++;
 	}
 
@@ -307,13 +371,37 @@ gen_strct_func_srch(const struct search *s, const char *caps, size_t num)
 	       "\t\t\tperror(NULL);\n"
 	       "\t\t\texit(EXIT_FAILURE);\n"
 	       "\t\t}\n"
-	       "\t\tdb_%s_fill(p, stmt, NULL);\n"
-	       "\t}\n"
-	       "\tksql_stmt_free(stmt);\n"
-	       "\treturn(p);\n"
-	       "}\n"
-	       "\n",
+	       "\t\tdb_%s_fill(p, stmt, NULL);\n",
 	       s->parent->name, s->parent->name);
+
+	/*
+	 * If we have any hashes, we're going to need to do the hash
+	 * check after the field has already been extracted from the
+	 * database.
+	 * If the hash doesn't match, nullify.
+	 */
+
+	pos = 1;
+	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		sr = TAILQ_LAST(&sent->srq, srefq);
+		if (FTYPE_PASSWORD != sr->field->type) {
+			pos++;
+			continue;
+		}
+		printf("\t\tif (NULL != p && "
+			"crypt_checkpass(v%zu, p->%s) < 0) {\n"
+		       "\t\t\tdb_%s_free(p);\n"
+		       "\t\t\tp = NULL;\n"
+		       "\t\t}\n",
+		       pos, sent->fname, s->parent->name);
+		pos++;
+	}
+
+	puts("\t}\n"
+	     "\tksql_stmt_free(stmt);\n"
+	     "\treturn(p);\n"
+	     "}\n"
+	     "");
 }
 
 /*
@@ -351,28 +439,66 @@ static void
 gen_func_insert(const struct strct *p, const char *caps)
 {
 	const struct field *f;
-	size_t	 pos = 1;
+	size_t	 pos, npos;
 
 	print_func_insert(p, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
-	       "\tenum ksqlc c;\n"
-	       "\n"
-	       "\tksql_stmt_alloc(db, &stmt,\n"
+	       "\tenum ksqlc c;\n");
+
+	/* We need temporary space for hash generation. */
+
+	pos = 1;
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (FTYPE_PASSWORD == f->type)
+			printf("\tchar hash%zu[64];\n", pos++);
+
+	/* Actually generate hashes, if necessary. */
+
+	puts("");
+	pos = npos = 1;
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_PASSWORD == f->type) {
+			printf("\tcrypt_newhash(v%zu, "
+				"\"blowfish,a\", hash%zu, "
+				"sizeof(hash%zu));\n",
+				npos, pos, pos);
+			pos++;
+		} 
+		if (FTYPE_STRUCT == f->type ||
+		    FIELD_ROWID & f->flags)
+			continue;
+		npos++;
+	}
+	if (pos > 1)
+		puts("");
+
+	printf("\tksql_stmt_alloc(db, &stmt,\n"
 	       "\t\tstmts[STMT_%s_INSERT],\n"
 	       "\t\tSTMT_%s_INSERT);\n",
 	       caps, caps);
+
+	pos = npos = 1;
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_STRUCT == f->type ||
 		    FIELD_ROWID & f->flags)
 			continue;
+		assert(FTYPE_STRUCT != f->type);
+		if (FTYPE_PASSWORD == f->type) {
+			printf("\tksql_bind_str"
+				"(stmt, %zu, hash%zu);\n",
+				npos - 1, pos);
+			npos++;
+			pos++;
+			continue;
+		}
 		if (FTYPE_INT == f->type)
 			printf("\tksql_bind_int");
 		else
 			printf("\tksql_bind_str");
-		printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
-		pos++;
+		printf("(stmt, %zu, v%zu);\n", npos - 1, npos);
+		npos++;
 	}
 	puts("\tc = ksql_stmt_cstep(stmt);\n"
 	     "\tksql_stmt_free(stmt);\n"
@@ -453,33 +579,70 @@ gen_func_update(const struct update *up,
 	const char *caps, size_t num)
 {
 	const struct uref *ref;
-	size_t	 pos = 1;
+	size_t	 pos, npos;
 
 	print_func_update(up, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
-	       "\tenum ksqlc c;\n"
-	       "\n"
-	       "\tksql_stmt_alloc(db, &stmt,\n"
+	       "\tenum ksqlc c;\n");
+
+	/* Create hash buffer for modifying hashes. */
+
+	pos = 1;
+	TAILQ_FOREACH(ref, &up->mrq, entries)
+		if (FTYPE_PASSWORD == ref->field->type)
+			printf("\tchar hash%zu[64];\n", pos++);
+	puts("");
+
+	/* Create hash from password. */
+
+	npos = pos = 1;
+	TAILQ_FOREACH(ref, &up->mrq, entries) {
+		if (FTYPE_PASSWORD == ref->field->type) {
+			printf("\tcrypt_newhash(v%zu, "
+				"\"blowfish,a\", hash%zu, "
+				"sizeof(hash%zu));\n",
+				npos, pos, pos);
+			pos++;
+		} 
+		npos++;
+	}
+
+	if (pos > 1)
+		puts("");
+
+	printf("\tksql_stmt_alloc(db, &stmt,\n"
 	       "\t\tstmts[STMT_%s_UPDATE_%zu],\n"
 	       "\t\tSTMT_%s_UPDATE_%zu);\n",
 	       caps, num, caps, num);
+
+	npos = pos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
-		if (FTYPE_INT == ref->field->type)
-			printf("\tksql_bind_int");
-		else
-			printf("\tksql_bind_str");
-		printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
-		pos++;
+		assert(FTYPE_STRUCT != ref->field->type);
+		if (FTYPE_PASSWORD == ref->field->type) {
+			printf("\tksql_bind_str"
+			       "(stmt, %zu, hash%zu);\n",
+			       npos - 1, pos++);
+		} else {
+			if (FTYPE_INT == ref->field->type)
+				printf("\tksql_bind_int");
+			else
+				printf("\tksql_bind_str");
+			printf("(stmt, %zu, v%zu);\n", 
+				npos - 1, npos);
+		}
+		npos++;
 	}
 	TAILQ_FOREACH(ref, &up->crq, entries) {
+		assert(FTYPE_STRUCT != ref->field->type);
+		assert(FTYPE_PASSWORD != ref->field->type);
 		if (FTYPE_INT == ref->field->type)
 			printf("\tksql_bind_int");
 		else
 			printf("\tksql_bind_str");
-		printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
-		pos++;
+		printf("(stmt, %zu, v%zu);\n", npos - 1, npos);
+		npos++;
 	}
 	puts("\tc = ksql_stmt_cstep(stmt);\n"
 	     "\tksql_stmt_free(stmt);\n"
@@ -813,6 +976,7 @@ gen_source(const struct strctq *q, const char *header)
 	       "#include <stdio.h>\n"
 	       "#include <stdlib.h>\n"
 	       "#include <string.h>\n"
+	       "#include <unistd.h>\n"
 	       "\n"
 	       "#include <ksql.h>\n"
 	       "\n"

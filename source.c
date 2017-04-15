@@ -879,10 +879,12 @@ gen_stmt(const struct strct *p)
 		printf(" WHERE");
 		first = 1;
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
+			sr = TAILQ_LAST(&sent->srq, srefq);
+			if (FTYPE_PASSWORD == sr->field->type)
+				continue;
 			if ( ! first)
 				printf(" AND");
 			first = 0;
-			sr = TAILQ_LAST(&sent->srq, srefq);
 			printf(" %s.%s=?", 
 				NULL == sent->alias ?
 				p->name : sent->alias->alias,
@@ -952,6 +954,8 @@ gen_schema(const struct strct *p)
 
 	printf("#define SCHEMA_%s(_x) ", caps);
 	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT == f->type)
+			continue;
 		printf("STR(_x) \".%s\"", f->name);
 		if (TAILQ_NEXT(f, entries))
 			printf(" \",\" ");

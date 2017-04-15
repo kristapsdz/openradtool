@@ -445,7 +445,7 @@ gen_func_insert(const struct strct *p, const char *caps)
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
-	       "\tenum ksqlc c;\n");
+	       "\tint64_t id = -1;\n");
 
 	/* We need temporary space for hash generation. */
 
@@ -500,9 +500,10 @@ gen_func_insert(const struct strct *p, const char *caps)
 		printf("(stmt, %zu, v%zu);\n", npos - 1, npos);
 		npos++;
 	}
-	puts("\tc = ksql_stmt_cstep(stmt);\n"
+	puts("\tif (KSQL_DONE == ksql_stmt_cstep(stmt))\n"
+	     "\t\tksql_lastid(db, &id);\n"
 	     "\tksql_stmt_free(stmt);\n"
-	     "\treturn(KSQL_CONSTRAINT != c);\n"
+	     "\treturn(id);\n"
 	     "}\n"
 	     "");
 }

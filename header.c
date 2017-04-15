@@ -245,8 +245,8 @@ gen_strct_funcs(const struct strct *p)
 		printf(" *\tv%zu: %s\n", pos++, f->name);
 	}
 	print_commentt(0, COMMENT_C_FRAG_CLOSE,
-		"Returns zero on failure, non-zero "
-		"otherwise.");
+		"Returns the new row's identifier on "
+		"success or <0 otherwise.");
 	print_func_insert(p, 1);
 	puts("");
 

@@ -157,7 +157,7 @@ print_func_insert(const struct strct *p, int decl)
 	const struct field *f;
 	size_t	 pos = 1;
 
-	printf("int%sdb_%s_insert(struct ksql *db",
+	printf("int64_t%sdb_%s_insert(struct ksql *db",
 		decl ? " " : "\n", p->name);
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_STRUCT == f->type ||

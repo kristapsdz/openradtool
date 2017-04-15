@@ -111,8 +111,13 @@ gen_strct_func_update(const struct update *up)
 
 	pos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries)
-		print_commentv(0, COMMENT_C_FRAG,
-			"\tv%zu: %s", pos++, ref->name);
+		if (FTYPE_PASSWORD == ref->field->type) 
+			print_commentv(0, COMMENT_C_FRAG,
+				"\tv%zu: %s (pre-hashed password)", 
+				pos++, ref->name);
+		else
+			print_commentv(0, COMMENT_C_FRAG,
+				"\tv%zu: %s", pos++, ref->name);
 
 	print_commentt(0, COMMENT_C_FRAG,
 		"Constrains the updated records to:");
@@ -136,7 +141,7 @@ gen_strct_func_search(const struct search *s)
 {
 	const struct sent *sent;
 	const struct sref *sr;
-	size_t	 pos = 1, first;
+	size_t	 pos = 1;
 
 	if (NULL != s->doc)
 		print_commentt(0, COMMENT_C_FRAG_OPEN, s->doc);
@@ -154,18 +159,15 @@ gen_strct_func_search(const struct search *s)
 	       s->parent->name);
 
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
-		printf(" * ");
-		first = 1;
-		TAILQ_FOREACH(sr, &sent->srq, entries) {
-			if (first) {
-				printf("\tv%zu: ", pos);
-				first = 0;
-			} else
-				putchar('.');
-			printf("%s", sr->name);
-		}
-		puts("");
-		pos++;
+		sr = TAILQ_LAST(&sent->srq, srefq);
+		if (FTYPE_PASSWORD == sr->field->type)
+			print_commentv(0, COMMENT_C_FRAG,
+				"\tv%zu: %s (pre-hashed password)", 
+				pos++, sent->fname);
+		else
+			print_commentv(0, COMMENT_C_FRAG,
+				"\tv%zu: %s", pos++, 
+				sent->fname);
 	}
 
 	if (STYPE_SEARCH == s->type)
@@ -242,7 +244,14 @@ gen_strct_funcs(const struct strct *p)
 		if (FTYPE_STRUCT == f->type ||
 		    FIELD_ROWID & f->flags)
 			continue;
-		printf(" *\tv%zu: %s\n", pos++, f->name);
+		if (FTYPE_PASSWORD == f->type) 
+			print_commentv(0, COMMENT_C_FRAG,
+				"\tv%zu: %s (pre-hashed password)", 
+				pos++, f->name);
+		else
+			print_commentv(0, COMMENT_C_FRAG,
+				"\tv%zu: %s", 
+				pos++, f->name);
 	}
 	print_commentt(0, COMMENT_C_FRAG_CLOSE,
 		"Returns the new row's identifier on "

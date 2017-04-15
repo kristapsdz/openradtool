@@ -1,10 +1,14 @@
 body					{ font-family: "Fira Sans", sans-serif; 
 					  color: #444;
+					  margin: 0;
 				 	  font-size: 13pt; }
 a					{ color: #07889b; }
 header					{ width: 100%; 
-					  padding: 48pt 0;
-					  color: #000;
+					  padding: 64pt 0;
+					  background-color: #a0a0a0;
+					  color: #fff;
+					  text-shadow: 0 0 2px #666;
+					  margin-bottom: 2.2em;
 					  text-align: center; }
 h1					{ display: inline-block; 
 					  font-size: xx-large;
@@ -20,7 +24,7 @@ footer					{ text-align: center;
 					  font-size: smaller; }
 footer a				{ color: #66b98f; }
 .nm					{ font-style: italic; }
-article					{ width: 60%;
+article > section			{ width: 60%;
 					  margin-left: auto;
 					  margin-right: auto; }
 article[data-sblg-article]		{ width: 100%; }
@@ -28,7 +32,14 @@ code, pre.hl				{ font-family: "Fira Mono", monospace;
 					  font-size: 12pt; }
 pre.hl					{ overflow: hidden; }
 blockquote				{ font-size: larger; 
+					  background-color: #b0b0b0;
+					  color: #fff;
+					  text-shadow: 0 0 1px #333;
+					  margin: 2.2em 0;
+					  font-weight: 400;
+					  padding: 1em 20%;
 					  font-family: "Fira Mono", monospace; }
+blockquote a				{ text-shadow: none; }
 
 @media only screen and (max-width: 900px), only screen and (max-device-width: 900px) {
 article					{ width: 80%; }

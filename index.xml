@@ -38,11 +38,16 @@
 				</figure>
 				<p>
 					Consider the following <a href="kwebapp.5.html">kwebapp(5)</a> configuration file, <a href="db.txt.html">db.txt</a>.
-					It defines two objects, a <code>user</code> and a <code>session</code>, and establishes a relation between the
-					session and the user.
+					It defines three objects&#8212;a <code>user</code>, <code>company</code>, and
+					<code>session</code>&#8212;with relations between the three.
 					Each session, in this example, has a link to a user keyed by the <code>userid</code> field.
+					Then each user references a company by <code>cid</code>.
 				</p>
 				<article data-sblg-permlink="0" data-sblg-article="1"></article>
+				<p>
+					Beyond the objects themselves, I've also defined search functions, update functions, and comments
+					throughout.
+				</p>
 				<p>
 					When passed through <a href="kwebapp.1.html">kwebapp(1)</a>, this will generate the C source file, <a
 						href="db.c.html">db.c</a>; the C header file, <a href="db.h.html">db.h</a>; and the SQL schema

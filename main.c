@@ -38,7 +38,7 @@ enum	op {
 int
 main(int argc, char *argv[])
 {
-	FILE		*conf, *dconf = NULL;
+	FILE		*conf = NULL, *dconf = NULL;
 	const char	*confile = NULL, *dconfile = NULL,
 	      		*header = NULL;
 	struct strctq	*sq, *dsq = NULL;
@@ -84,7 +84,8 @@ main(int argc, char *argv[])
 	} else
 		confile = argv[0];
 
-	if (NULL == (conf = fopen(confile, "r")))
+	if (NULL == conf &&
+	    NULL == (conf = fopen(confile, "r")))
 		err(EXIT_FAILURE, "%s", confile);
 
 	if (NULL != dconfile && 

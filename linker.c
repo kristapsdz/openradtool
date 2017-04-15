@@ -561,6 +561,7 @@ parse_link(struct strctq *q)
 		}
 		colour++;
 	}
+	assert(sz > 0);
 
 	/*
 	 * Next, create unique names for all joins within a structure.

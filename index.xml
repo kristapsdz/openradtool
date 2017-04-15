@@ -14,65 +14,81 @@
 			<h1>kwebapp</h1> &#8212; web application source generator
 		</header>
 		<article>
-			<p>
-				<span class="nm">kwebapp</span> is an <a href="https://opensource.org/licenses/ISC">open source</a> system
-				generating the database API in C and SQL for your web application.
-				It accepts a configuration file that describes the <q>business logic</q> of your data: tables
-				(structures), fields (members), accessors, and so forth.
-				It then generates the source files you can build into your application.
-				The output uses <a href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for
-				the underlying <a href="https://sqlite.org">SQLite</a> database; however, the system itself has no dependencies.
-				<span class="nm">kwebapp</span> is built to be fitted within a Makefile, just like your sources.
-				It is a <a href="https://www.bsd.lv">BSD.lv</a> project.
-			</p>
-			<p>
-				<strong>It does not have a stable release yet.</strong>
-				See the <a href="https://github.com/kristapsdz/kwebapp">GitHub repository</a> for sources.
-			</p>
-			<figure>
-				<img src="index.svg" alt="" />
-				<figcaption>
-					Compilation sequence from configuration to output.
-				</figcaption>
-			</figure>
-			<p>
-				Consider the following <a href="kwebapp.5.html">kwebapp(5)</a> configuration file, <a href="db.txt.html">db.txt</a>.
-				It defines two objects, a <code>user</code> and a <code>session</code>, and establishes a relation between the
-				session and the user.
-				Each session, in this example, has a link to a user keyed by the <code>userid</code> field.
-			</p>
-			<article data-sblg-permlink="0" data-sblg-article="1"></article>
-			<p>
-				When passed through <a href="kwebapp.1.html">kwebapp(1)</a>, this generates the following C header file, <a
-					href="db.h.html">db.h</a>.
-			</p>
+			<section>
+				<p>
+					<span class="nm">kwebapp</span> is an <a href="https://opensource.org/licenses/ISC">open source</a> system
+					generating the database API in C and SQL for your web application.
+					It accepts a configuration file that describes the <q>business logic</q> of your data: tables
+					(structures), fields (members), accessors, and so forth.
+					It then generates the source files you can build into your application.
+					The output uses <a href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for
+					the underlying <a href="https://sqlite.org">SQLite</a> database; however, the system itself has no dependencies.
+					<span class="nm">kwebapp</span> is built to be fitted within a Makefile, just like your sources.
+					It is a <a href="https://www.bsd.lv">BSD.lv</a> project.
+				</p>
+				<p>
+					<strong>It does not have a stable release yet.</strong>
+					See the <a href="https://github.com/kristapsdz/kwebapp">GitHub repository</a> for sources.
+				</p>
+				<figure>
+					<img src="index.svg" alt="" />
+					<figcaption>
+						Compilation sequence from configuration to output.
+					</figcaption>
+				</figure>
+				<p>
+					Consider the following <a href="kwebapp.5.html">kwebapp(5)</a> configuration file, <a href="db.txt.html">db.txt</a>.
+					It defines two objects, a <code>user</code> and a <code>session</code>, and establishes a relation between the
+					session and the user.
+					Each session, in this example, has a link to a user keyed by the <code>userid</code> field.
+				</p>
+				<article data-sblg-permlink="0" data-sblg-article="1"></article>
+				<p>
+					When passed through <a href="kwebapp.1.html">kwebapp(1)</a>, this will generate the C source file, <a
+						href="db.c.html">db.c</a>; the C header file, <a href="db.h.html">db.h</a>; and the SQL schema
+					file, <a href="db.sql.html">db.sql</a>.
+				</p>
+			</section>
 			<blockquote>
 				<div>kwebapp -h <a href="db.txt.html">db.txt</a> &gt;<a href="db.h.html">db.h</a></div>
 				<div>kwebapp -c <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.c.html">db.c</a></div>
 			</blockquote>
-			<p>
-				The header file defines the C structures relating to each configured object and declares the functions necessary
-				to acquire and release from the underlying SQLite database.
-				Internally, the generated C code (<a href="db.c.html">db.c</a>) will perform the proper <q>inner join</q> logic on the objects.
-				The documentation is created by the system.
-			</p>
-			<article data-sblg-permlink="0" data-sblg-article="1"></article>
-			<p>
-				By compiling your application with <a href="db.c.html">db.c</a> and the header file <a
-					href="db.h.html">db.h</a>, you'll have a fully functional database backend without needing to worry
-				about managing the SQL invocations.
-			</p>
-			<p>
-				You can also manage your database directly by having <a href="kwebapp.1.html">kwebapp(1)</a> print out the database schema.
-			</p>
+			<section>
+				<p>
+					The header file defines the C structures relating to each configured object and declares the functions necessary
+					to acquire and release from the underlying SQLite database.
+					Internally, the generated C code (<a href="db.c.html">db.c</a>&#8212;not shown for the sake of brevity)
+					will perform the proper <q>inner join</q> logic on the objects.  The documentation is created by the
+					system.
+				</p>
+				<article data-sblg-permlink="0" data-sblg-article="1"></article>
+				<p>
+					By compiling your application with <a href="db.c.html">db.c</a> and the header file <a
+						href="db.h.html">db.h</a>, you'll have a fully functional database backend without needing to worry
+					about managing the SQL invocations.
+				</p>
+				<p>
+					You can also manage your database directly by having <a href="kwebapp.1.html">kwebapp(1)</a> print out the database schema.
+				</p>
+			</section>
 			<blockquote>
 				<div>kwebapp -s <a href="db.txt.html">db.txt</a> &gt;<a href="db.sql.html">db.sql</a></div>
+				<div>kwebapp -d <a href="db.old.txt.html">db.old.txt</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.update.sql.html">db.update.sql</a></div>
 			</blockquote>
-			<p>
-				Notice that some object fields, like the <code>user</code> structure inside of the section, are not part of the SQL.
-				Rather, they are generated within <a href="db.c.html">db.c</a> using the foreign keys below.
-			</p>
-			<article data-sblg-permlink="0" data-sblg-article="1"></article>
+			<section>
+				<p>
+					Notice that some object fields, like the <code>user</code> structure inside of the section, are not part of the SQL.
+					Rather, they are generated within <a href="db.c.html">db.c</a> using the foreign keys below.
+				</p>
+				<article data-sblg-permlink="0" data-sblg-article="1"></article>
+				<p>
+					The system also has a powerful feature in tracking database changes.
+					By using the <q>difference</q> mechanism, one can patch databases for added tables and columns.
+					For example, given an older configuration <a href="db.old.txt.html">db.old.txt</a>, one can see the
+					changes between the two by using the <b>-d</b> flag.
+				</p>
+				<article data-sblg-permlink="0" data-sblg-article="1"></article>
+			</section>
 		</article>
 		<footer>
 			Copyright &#xa9; 2017, <a href="mailto:kristaps@kcons.eu">Kristaps Dzonsons</a>

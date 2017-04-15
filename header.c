@@ -164,7 +164,6 @@ gen_strct_func_search(const struct search *s)
 				putchar('.');
 			printf("%s", sr->name);
 		}
-		sr = TAILQ_LAST(&sent->srq, srefq);
 		puts("");
 		pos++;
 	}

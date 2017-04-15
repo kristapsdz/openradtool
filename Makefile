@@ -2,7 +2,7 @@
 
 include Makefile.configure
 
-VERSION		 = 0.0.6
+VERSION		 = 0.0.7
 CFLAGS		+= -DVERSION=\"$(VERSION)\"
 COMPAT_OBJS	 = compat_err.o \
 		   compat_progname.o \
@@ -29,7 +29,7 @@ www: index.svg $(HTMLS)
 
 installwww: www
 	mkdir -p $(WWWDIR)
-	install -m 0444 $(HTMLS) index.css highlight.css mandoc.css index.svg $(WWWDIR)
+	install -m 0444 *.html *.css index.svg $(WWWDIR)
 
 OBJS: extern.h
 

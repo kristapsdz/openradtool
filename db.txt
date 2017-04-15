@@ -1,7 +1,6 @@
 struct company {
   field name text;
   field id int rowid;
-  field hash password;
   comment "Controlling organisation.";
 }
 
@@ -9,18 +8,14 @@ struct user {
   field company struct cid:company.id;
   field cid;
   field hash password;
-  field hash2 password;
   field email text unique;
   field name text comment "Full name.";
   field uid int rowid;
-  list cid;
   iterate name: comment
     "Search for users by full name.";
-  update cid: uid;
-  update hash, hash2: cid;
-  search company.hash,email,hash;
-  list company.hash,name,hash;
-  iterate company.hash,name,hash;
+  update hash: uid;
+  update email: uid;
+  search email,hash;
   comment "A regular user.";
 }
 

@@ -67,12 +67,13 @@ gen_field(const struct field *f, int *first)
 }
 
 static void
-gen_struct(const struct strct *p)
+gen_struct(const struct strct *p, int comments)
 {
 	const struct field *f;
 	int	 first = 1;
 
-	print_commentt(0, COMMENT_SQL, p->doc);
+	if (comments)
+		print_commentt(0, COMMENT_SQL, p->doc);
 
 	printf("CREATE TABLE %s (", p->name);
 	TAILQ_FOREACH(f, &p->fq, entries)
@@ -92,7 +93,7 @@ gen_sql(const struct strctq *q)
 	     "");
 
 	TAILQ_FOREACH(p, q, entries)
-		gen_struct(p);
+		gen_struct(p, 1);
 }
 
 /*
@@ -235,7 +236,7 @@ gen_diff(const struct strctq *sq, const struct strctq *dsq)
 			if (0 == strcasecmp(s->name, ds->name))
 				break;
 		if (NULL == ds)
-			gen_struct(s);
+			gen_struct(s, 0);
 	}
 
 	/* 

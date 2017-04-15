@@ -45,6 +45,8 @@ gen_strct_field(const struct field *p)
 		printf("\tint64_t %s;\n", p->name);
 		break;
 	case (FTYPE_TEXT):
+		/* FALLTHROUGH */
+	case (FTYPE_PASSWORD):
 		printf("\tchar *%s;\n", p->name);
 		break;
 	default:

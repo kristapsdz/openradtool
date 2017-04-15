@@ -32,6 +32,7 @@
 static	const char *const ftypes[FTYPE__MAX] = {
 	"int64_t ",
 	"const char *",
+	"const char *",
 	NULL,
 };
 

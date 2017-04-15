@@ -30,6 +30,7 @@
 static	const char *const ftypes[FTYPE__MAX] = {
 	"INTEGER",
 	"TEXT",
+	"TEXT",
 	NULL,
 };
 
@@ -56,26 +57,12 @@ gen_field(const struct field *f, int *first)
 		return;
 
 	printf("%s\n", *first ? "" : ",");
-
 	print_commentt(1, COMMENT_SQL, f->doc);
-
-	switch (f->type) {
-	case (FTYPE_INT):
-		printf("\t%s %s", f->name, ftypes[FTYPE_INT]);
-		if (FIELD_ROWID & f->flags)
-			printf(" PRIMARY KEY");
-		if (FIELD_UNIQUE & f->flags)
-			printf(" UNIQUE");
-		break;
-	case (FTYPE_TEXT):
-		printf("\t%s %s", f->name, ftypes[FTYPE_TEXT]);
-		if (FIELD_UNIQUE & f->flags)
-			printf(" UNIQUE");
-		break;
-	default:
-		break;
-	}
-
+	printf("\t%s %s", f->name, ftypes[f->type]);
+	if (FIELD_ROWID & f->flags)
+		printf(" PRIMARY KEY");
+	if (FIELD_UNIQUE & f->flags)
+		printf(" UNIQUE");
 	*first = 0;
 }
 

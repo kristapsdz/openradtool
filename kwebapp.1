@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: April 15 2017 $
+.Dd $Mdocdate: April 16 2017 $
 .Dt KWEBAPP 1
 .Os
 .Sh NAME
@@ -127,9 +127,13 @@ Only valid for objects having a
 If the structure object has any named searches, these are listed in
 place of the
 .Dq xxxx .
+The function accepts variables for all binary-operator fields to check
+(i.e., all except for those checking for null).
 .It Fn db_foo_by__xxxx__yy_zz
-If the structure has any anonymous searches, these are listed with an
-undescore preceding each search term.
+Like
+.Fn db_foo_by_xxxx ,
+but for nested structures.
+These are listed with an undescore preceding each search term.
 In the given example,
 .Dq xxxx
 is a field in the given structure and
@@ -166,7 +170,7 @@ Also like
 but invoking a function callback within the active query for each
 retrieved result.
 .It Fn db_foo_iterate_by__xxxx__yy_zz
-Again like
+Like
 .Fn db_foo_by__xxxx__yy_zz ,
 but invoking a function callback for the retrieved results.
 .It Fn db_foo_list_by_xxxx

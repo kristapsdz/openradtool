@@ -440,11 +440,15 @@ resolve_aliases(struct strct *orig, struct strct *p,
  * consistent with the fields that we're searching for.
  * In other words, running an iterator search on a unique row isn't
  * generally useful.
+ * Also warn if null-sensitive operators (isnull, notnull) will be run
+ * on non-null fields.
  */
 static void
 check_searchtype(const struct strct *p)
 {
 	const struct search *srch;
+	const struct sent *sent;
+	const struct sref *sr;
 
 	TAILQ_FOREACH(srch, &p->sq, entries) {
 		if (SEARCH_IS_UNIQUE & srch->flags && 
@@ -459,6 +463,18 @@ check_searchtype(const struct strct *p)
 				"on a non-unique field",
 				srch->pos.fname, srch->pos.line,
 				srch->pos.column);
+
+		TAILQ_FOREACH(sent, &srch->sntq, entries) {
+			sr = TAILQ_LAST(&sent->srq, srefq);
+			if ((OPTYPE_NOTNULL == sent->op ||
+			     OPTYPE_ISNULL == sent->op) &&
+			    ! (FIELD_NULL & sr->field->flags))
+				warnx("%s:%zu:%zu: null operator "
+					"on field that's never null",
+					sent->pos.fname, 
+					sent->pos.line,
+					sent->pos.column);
+		}
 	}
 }
 

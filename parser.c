@@ -218,6 +218,12 @@ static	const char *const badidents[] = {
 	NULL
 };
 
+static	const char *optypes[OPTYPE__MAX] = {
+	"eq", /* OPTYE_EQUAL */
+	"isnull", /* OPTYE_ISNULL */
+	"notnull", /* OPTYE_NOTNULL */
+};
+
 static void parse_errx(struct parse *, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
 
@@ -790,6 +796,31 @@ parse_config_search_terms(struct parse *p, struct sent *sent)
 		    TOK_COLON == p->lasttype)
 			break;
 
+		/* 
+		 * Parse the optional operator.
+		 * After the operator, we'll have no more fields.
+		 */
+
+		if (TOK_IDENT == p->lasttype) {
+			for (sent->op = 0; 
+			     OPTYPE__MAX != sent->op; sent->op++)
+				if (0 == strcasecmp(p->last.string, 
+				    optypes[sent->op]))
+					break;
+			if (OPTYPE__MAX == sent->op) {
+				parse_errx(p, "unknown operator");
+				return;
+			}
+			if (TOK_COMMA == parse_next(p) ||
+			    TOK_SEMICOLON == p->lasttype ||
+			    TOK_COLON == p->lasttype)
+				break;
+			parse_errx(p, "expected field separator");
+			return;
+		}
+
+		/* Next in field chain... */
+
 		if (TOK_PERIOD != p->lasttype) {
 			parse_errx(p, "expected field separator");
 			return;
@@ -1020,9 +1051,11 @@ parse_config_update(struct parse *p, struct strct *s)
  * Parse a search clause.
  * This has the following syntax:
  *
- *  "search" FIELD [, FIELD]* [":" search_terms ]? ";"
+ *  "search" [ search_terms ]+ [":" search_params ]? ";"
  *
- * The FIELD parts are parsed in parse_config_search_params().
+ * The terms (searchable field) parts are parsed in
+ * parse_config_search_terms().
+ * The params are in parse_config_search_params().
  * Returns zero on failure, non-zero on success.
  * FIXME: have return value be void and use lasttype.
  */

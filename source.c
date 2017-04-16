@@ -139,6 +139,8 @@ gen_strct_func_iter(const struct search *s, const char *caps, size_t num)
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		if (OPTYPE_EQUAL != sent->op)
+			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		assert(FTYPE_STRUCT != sr->field->type);
 		if (FTYPE_PASSWORD != sr->field->type) {
@@ -164,6 +166,8 @@ gen_strct_func_iter(const struct search *s, const char *caps, size_t num)
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		if (OPTYPE_EQUAL != sent->op)
+			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		if (FTYPE_PASSWORD != sr->field->type) {
 			pos++;
@@ -228,6 +232,8 @@ gen_strct_func_list(const struct search *s, const char *caps, size_t num)
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		if (OPTYPE_EQUAL != sent->op)
+			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		assert(FTYPE_STRUCT != sr->field->type);
 		if (FTYPE_PASSWORD != sr->field->type) {
@@ -251,6 +257,8 @@ gen_strct_func_list(const struct search *s, const char *caps, size_t num)
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		if (OPTYPE_EQUAL != sent->op)
+			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		if (FTYPE_PASSWORD != sr->field->type) {
 			pos++;
@@ -369,6 +377,8 @@ gen_strct_func_srch(const struct search *s, const char *caps, size_t num)
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		if (OPTYPE_EQUAL != sent->op)
+			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		assert(FTYPE_STRUCT != sr->field->type);
 		if (FTYPE_PASSWORD != sr->field->type) {
@@ -399,6 +409,8 @@ gen_strct_func_srch(const struct search *s, const char *caps, size_t num)
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		if (OPTYPE_EQUAL != sent->op)
+			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		if (FTYPE_PASSWORD != sr->field->type) {
 			pos++;
@@ -921,10 +933,21 @@ gen_stmt(const struct strct *p)
 			if ( ! first)
 				printf(" AND");
 			first = 0;
-			printf(" %s.%s=?", 
-				NULL == sent->alias ?
-				p->name : sent->alias->alias,
-				sr->name);
+			if (OPTYPE_EQUAL == sent->op)
+				printf(" %s.%s=?", 
+					NULL == sent->alias ?
+					p->name : sent->alias->alias,
+					sr->name);
+			else if (OPTYPE_ISNULL == sent->op)
+				printf(" %s.%s ISNULL",
+					NULL == sent->alias ?
+					p->name : sent->alias->alias,
+					sr->name);
+			else if (OPTYPE_NOTNULL == sent->op)
+				printf(" %s.%s NOTNULL",
+					NULL == sent->alias ?
+					p->name : sent->alias->alias,
+					sr->name);
 		}
 		puts("\",");
 	}

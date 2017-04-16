@@ -138,6 +138,8 @@ print_func_search(const struct search *s, int decl)
 			s->parent->name);
 
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		if (OPTYPE_EQUAL != sent->op)
+			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		assert(NULL != ftypes[sr->field->type]);
 		printf(", %sv%zu", 

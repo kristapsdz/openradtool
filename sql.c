@@ -63,6 +63,9 @@ gen_field(const struct field *f, int *first)
 		printf(" PRIMARY KEY");
 	if (FIELD_UNIQUE & f->flags)
 		printf(" UNIQUE");
+	if ( ! (FIELD_ROWID & f->flags) &&
+	     ! (FIELD_NULL & f->flags))
+		printf(" NOT NULL");
 	*first = 0;
 }
 
@@ -200,6 +203,9 @@ gen_diff_fields_new(const struct strct *s, const struct strct *ds)
 				printf(" PRIMARY KEY");
 			if (FIELD_UNIQUE & f->flags)
 				printf(" UNIQUE");
+			if ( ! (FIELD_ROWID & f->flags) &&
+			     ! (FIELD_NULL & f->flags))
+				printf(" NOT NULL");
 			if (NULL != f->ref)
 				printf(" REFERENCES %s(%s)",
 					f->ref->target->parent->name,

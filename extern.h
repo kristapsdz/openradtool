@@ -107,6 +107,16 @@ struct	sref {
 TAILQ_HEAD(srefq, sref);
 
 /*
+ * SQL operator to use.
+ */
+enum	optype {
+	OPTYPE_EQUAL = 0,
+	OPTYPE_ISNULL,
+	OPTYPE_NOTNULL,
+	OPTYPE__MAX
+};
+
+/*
  * A search entity.
  * For example, in a set of search criteria "user.company.name, userid",
  * this would be one of "user.company.name" or "userid", both of which
@@ -118,6 +128,7 @@ struct	sent {
 	struct srefq	  srq; /* queue of search fields */
 	struct pos	  pos; /* parse point */
 	struct search	 *parent; /* up-reference */
+	enum optype	  op; /* operator */
 	char		 *name; /* sub-strutcure dot-form name or NULL */
 	char		 *fname; /* canonical dot-form name */
 	struct alias	 *alias; /* resolved alias */

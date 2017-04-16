@@ -163,7 +163,8 @@ print_func_insert(const struct strct *p, int decl)
 		if (FTYPE_STRUCT == f->type ||
 		    FIELD_ROWID & f->flags)
 			continue;
-		printf(", %sv%zu", ftypes[f->type], pos++);
+		printf(", %s%sv%zu", ftypes[f->type], 
+			FIELD_NULL & f->flags ? "*" : "", pos++);
 	}
 	printf(")%s", decl ? ";\n" : "");
 }

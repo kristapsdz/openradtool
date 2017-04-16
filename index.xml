@@ -11,7 +11,16 @@
 	</head>
 	<body lang="en">
 		<header>
-			<h1>kwebapp</h1> &#8212; web application source generator
+			<div>
+				<h1>kwebapp</h1> <span>&#8212; web application source generator</span>
+			</div>
+			<nav>
+				<a href="https://github.com/kristapsdz/kwebapp">github</a>
+				<a href="kwebapp.1.html">kwebapp(1)</a>
+				<a href="kwebapp.5.html">kwebapp(5)</a>
+				<a href="snapshots/kwebapp.tar.gz">source</a>
+				<a href="snapshots">archive</a>
+			</nav>
 		</header>
 		<article>
 			<section>

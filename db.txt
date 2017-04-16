@@ -1,21 +1,37 @@
 struct company {
-  field name text;
+  field name text comment
+	"Name of the organisation.";
   field id int rowid;
   comment "Controlling organisation.";
 }
 
 struct user {
-  field company struct cid:company.id;
-  field cid;
-  field hash password;
-  field email text unique;
-  field name text comment "Full name.";
+  field company struct cid:company.id comment
+	"This struct will be filled in from an inner join
+	 on the \"cid\" variable.";
+  field cid int comment 
+	"A foreign key reference.";
+  field hash password comment
+	"Password hash.
+	 This is passed to inserts and updates as a password,
+	 then hashed within the implementation and extracted
+	 (in listings and searches) as the hash value.";
+  field email text unique comment
+	"Unique e-mail address.";
+  field name text comment 
+	"User's full name.";
   field uid int rowid;
   iterate name: comment
-    "Search for users by full name.";
+	"Create a function that searches for users by a given
+	 name; and, when found, invokes a callback function
+	 provided the user structure.";
+  search email,hash: name creds comment
+	"Search for a unique user with their e-mail and
+	 password.
+	 This is a quick way to verify that a user has entered
+	 the correct password for logging in.";
   update hash: uid;
   update email: uid;
-  search email,hash: name creds;
   comment "A regular user.";
 }
 

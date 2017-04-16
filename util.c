@@ -88,7 +88,8 @@ print_func_update(const struct update *u, int decl)
 	printf("(struct ksql *db");
 
 	TAILQ_FOREACH(ur, &u->mrq, entries)
-		printf(", %sv%zu", ftypes[ur->field->type], pos++);
+		printf(", %s%sv%zu", ftypes[ur->field->type], 
+			FIELD_NULL & ur->field->flags ? "*" : "", pos++);
 	TAILQ_FOREACH(ur, &u->crq, entries)
 		printf(", %sv%zu", ftypes[ur->field->type], pos++);
 

@@ -12,7 +12,7 @@
 	<body lang="en">
 		<header>
 			<div>
-				<h1>kwebapp</h1> <span>&#8212; web application source generator</span>
+				<h1>kwebapp</h1> <span>&#8212; web application source generator @VERSION@</span>
 			</div>
 			<nav>
 				<a href="https://github.com/kristapsdz/kwebapp">github</a>
@@ -28,16 +28,13 @@
 					<span class="nm">kwebapp</span> is an <a href="https://opensource.org/licenses/ISC">open source</a> system
 					generating the database API in C and SQL for your web application.
 					It accepts a configuration file that describes the <q>business logic</q> of your data: tables
-					(structures), fields (members), accessors, and so forth.
+					(structures), fields (members), accessors (searches and gets), modifiers (inserts and updates), and so
+					forth.
 					It then generates the source files you can build into your application.
 					The output uses <a href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for
 					the underlying <a href="https://sqlite.org">SQLite</a> database; however, the system itself has no dependencies.
 					<span class="nm">kwebapp</span> is built to be fitted within a Makefile, just like your sources.
 					It is a <a href="https://www.bsd.lv">BSD.lv</a> project.
-				</p>
-				<p>
-					<strong>It does not have a stable release yet.</strong>
-					See the <a href="https://github.com/kristapsdz/kwebapp">GitHub repository</a> for sources.
 				</p>
 				<figure>
 					<img src="index.svg" alt="" />
@@ -45,6 +42,15 @@
 						Compilation sequence from configuration to output.
 					</figcaption>
 				</figure>
+				<p>
+					<strong>It does not have a stable release yet.</strong>
+					See the <a href="https://github.com/kristapsdz/kwebapp">GitHub repository</a> for sources.
+				</p>
+			</section>
+			<blockquote>
+				<div>cat -n <a href="db.txt.html">db.txt</a></div>
+			</blockquote>
+			<section>
 				<p>
 					Consider the following <a href="kwebapp.5.html">kwebapp(5)</a> configuration file, <a href="db.txt.html">db.txt</a>.
 					It defines three objects&#8212;a <code>user</code>, <code>company</code>, and

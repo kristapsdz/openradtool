@@ -13,7 +13,9 @@ header					{ width: 100%;
 h1					{ display: inline-block; 
 					  font-size: xx-large;
 					  font-weight: 500; }
-header 					{ font-size: x-large; }
+header a				{ color: #eee; 
+					  display: inline-block;
+					  padding: 0 4pt; }
 figure					{ text-align: center; 
 					  margin: 2em 0; }
 figcaption				{ color: #888; 
@@ -43,12 +45,15 @@ blockquote a				{ text-shadow: none; }
 .hl .lin				{ color: #aaa; }
 
 @media only screen and (max-width: 900px), only screen and (max-device-width: 900px) {
-article					{ width: 80%; }
+article > section			{ width: 80%; }
+blockquote				{ padding: 1em 10%; }
 code, pre.hl				{ font-size: 10pt; }
 }
 
 @media only screen and (max-width: 700px), only screen and (max-device-width: 700px) {
-article					{ width: 96%; }
+article > section			{ width: 96%; }
+blockquote				{ padding: 1em 4%; 
+					  font-size: inherit; }
 figure img				{ width: 100%; 
 					  max-width: 480px; }
 h1					{ font-size: x-large; }

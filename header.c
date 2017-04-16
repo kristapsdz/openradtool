@@ -69,6 +69,14 @@ gen_strct_structs(const struct strct *p)
 	printf("struct\t%s {\n", p->name);
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_field(f);
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if ( ! (FIELD_NULL & f->flags))
+			continue;
+		print_commentv(1, COMMENT_C,
+			"Non-zero if \"%s\" field is null/unset.",
+			f->name);
+		printf("\tint has_%s;\n", f->name);
+	}
 	if (STRCT_HAS_QUEUE & p->flags)
 		printf("\tTAILQ_ENTRY(%s) _entries;\n", p->name);
 	puts("};\n"

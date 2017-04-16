@@ -77,7 +77,13 @@ gen_strct_fill_field(const struct field *f)
 	if (FTYPE_STRUCT == f->type)
 		return;
 
-	printf("\tp->%s = ", f->name);
+	if (FIELD_NULL & f->flags)
+		printf("\tp->has_%s = "
+			"! ksql_stmt_isnull(stmt, *pos);\n"
+		       "\tif (p->has_%s)\n"
+		       "\t\tp->%s = ", f->name, f->name, f->name);
+	else 
+		printf("\tp->%s = ", f->name);
 
 	switch(f->type) {
 	case (FTYPE_INT):
@@ -86,15 +92,25 @@ gen_strct_fill_field(const struct field *f)
 	case (FTYPE_PASSWORD):
 		/* FALLTHROUGH */
 	case (FTYPE_TEXT):
-		printf("strdup(ksql_stmt_str(stmt, (*pos)++));\n"
-		     "\tif (NULL == p->%s) {\n"
-		     "\t\tperror(NULL);\n"
-		     "\t\texit(EXIT_FAILURE);\n"
-		     "\t}\n", f->name);
+		puts("strdup(ksql_stmt_str(stmt, (*pos)++));");
 		break;
 	default:
 		break;
 	}
+
+	if (FIELD_NULL & f->flags) {
+		puts("\telse\n"
+		     "\t\t(*pos)++;");
+		if (FTYPE_TEXT == f->type || FTYPE_PASSWORD == f->type)
+			printf("\tif (p->has_%s && NULL == p->%s) {\n"
+			       "\t\tperror(NULL);\n"
+			       "\t\texit(EXIT_FAILURE);\n"
+			       "\t}\n", f->name, f->name);
+	} else if (FTYPE_TEXT == f->type || FTYPE_PASSWORD == f->type) 
+		printf("\tif (NULL == p->%s) {\n"
+		       "\t\tperror(NULL);\n"
+		       "\t\texit(EXIT_FAILURE);\n"
+		       "\t}\n", f->name);
 }
 
 /*

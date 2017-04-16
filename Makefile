@@ -21,15 +21,57 @@ HTMLS		 = index.html \
 		   kwebapp.1.html \
 		   kwebapp.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
+DOTAR		 = compat_err.c \
+		   compat_progname.c \
+		   compat_reallocarray.c \
+		   compat_strlcat.c \
+		   compat_strlcpy.c \
+		   compat_strtonum.c \
+		   configure \
+		   extern.h \
+		   header.c \
+		   kwebapp.1 \
+		   kwebapp.5 \
+		   linker.c \
+		   Makefile \
+		   main.c \
+		   parser.c \
+		   source.c \
+		   sql.c \
+		   test-PATH_MAX.c \
+		   test-capsicum.c \
+		   test-err.c \
+		   test-pledge.c \
+		   test-progname.c \
+		   test-reallocarray.c \
+		   test-sandbox_init.c \
+		   test-strlcat.c \
+		   test-strlcpy.c \
+		   test-strtonum.c \
+		   test.c \
+		   util.c
 
 kwebapp: $(COMPAT_OBJS) $(OBJS)
 	$(CC) -o $@ $(COMPAT_OBJS) $(OBJS)
 
-www: index.svg $(HTMLS)
+www: index.svg $(HTMLS) kwebapp.tar.gz kwebapp.tar.gz.sha512
 
 installwww: www
 	mkdir -p $(WWWDIR)
+	mkdir -p $(WWWDIR)/snapshots
 	install -m 0444 *.html *.css index.svg $(WWWDIR)
+	install -m 0444 kwebapp.tar.gz kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots
+	install -m 0444 kwebapp.tar.gz $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz
+	install -m 0444 kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz.sha512
+
+kwebapp.tar.gz.sha512: kwebapp.tar.gz
+	sha512 kwebapp.tar.gz >$@
+
+kwebapp.tar.gz: $(DOTAR)
+	mkdir -p .dist/kwebapp-$(VERSION)/
+	install -m 0444 $(DOTAR) .dist/kwebapp-$(VERSION)
+	( cd .dist/ && tar zcf ../$@ ./ )
+	rm -rf .dist/
 
 OBJS: extern.h
 
@@ -113,10 +155,12 @@ highlight.css:
 	highlight --print-style -s whitengrey
 
 index.html: index.xml db.txt.xml db.txt.html db.h.xml db.h.html db.c.html db.sql.xml db.sql.html db.update.sql.xml db.old.txt.html db.update.sql.html highlight.css
-	sblg -s cmdline -t index.xml -o- db.txt.xml db.h.xml db.sql.xml db.update.sql.xml > $@
+	sblg -s cmdline -t index.xml -o- db.txt.xml db.h.xml db.sql.xml db.update.sql.xml | \
+	       sed "s!@VERSION@!$(VERSION)!g" > $@
 
 clean:
-	rm -f kwebapp $(COMPAT_OBJS) $(OBJS) db.c db.h db.o db.sql db.update.sql db.db test test.o
+	rm -f kwebapp $(COMPAT_OBJS) $(OBJS) db.c db.h db.o db.sql db.update.sql db.db test test.o 
+	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
 	rm -f index.svg index.html highlight.css kwebapp.5.html kwebapp.1.html
 	rm -f db.txt.xml db.h.xml db.c.html db.h.html db.txt.html db.sql.xml db.sql.html db.update.sql.xml db.old.txt.html db.update.sql.html
 

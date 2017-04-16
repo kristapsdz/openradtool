@@ -131,8 +131,15 @@ linkref(struct ref *ref)
 	} else if (NULL != ref->source->ref)
 		return(1);
 
+	/* Make sure that the target is a rowid and not null. */
+
 	if ( ! (FIELD_ROWID & ref->target->flags)) {
 		warnx("%s.%s: target is not a rowid",
+			ref->target->parent->name,
+			ref->target->name);
+		return(0);
+	} else if (FIELD_NULL & ref->target->flags) {
+		warnx("%s.%s: target can't be null",
 			ref->target->parent->name,
 			ref->target->name);
 		return(0);

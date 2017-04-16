@@ -66,6 +66,7 @@ struct	field {
 	unsigned int	   flags; /* flags */
 #define	FIELD_ROWID	   0x01 /* this is a rowid field */
 #define	FIELD_UNIQUE	   0x02 /* this is a unique field */
+#define FIELD_NULL	   0x04 /* can be null */
 	TAILQ_ENTRY(field) entries;
 };
 

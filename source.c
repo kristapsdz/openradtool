@@ -627,6 +627,9 @@ gen_func_update(const struct update *up,
 	npos = pos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
 		if (FTYPE_PASSWORD == ref->field->type) {
+			if (FIELD_NULL & ref->field->flags)
+				printf("if (NULL != v%zu)\n"
+				       "\t", npos);
 			printf("\tcrypt_newhash(v%zu, "
 				"\"blowfish,a\", hash%zu, "
 				"sizeof(hash%zu));\n",
@@ -647,6 +650,11 @@ gen_func_update(const struct update *up,
 	npos = pos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
 		assert(FTYPE_STRUCT != ref->field->type);
+		if (FIELD_NULL & ref->field->flags)
+			printf("\tif (NULL == v%zu)\n"
+			       "\t\tksql_bind_null(stmt, %zu);\n"
+			       "\telse\n"
+			       "\t", npos, npos - 1);
 		if (FTYPE_PASSWORD == ref->field->type) {
 			printf("\tksql_bind_str"
 			       "(stmt, %zu, hash%zu);\n",
@@ -656,8 +664,10 @@ gen_func_update(const struct update *up,
 				printf("\tksql_bind_int");
 			else
 				printf("\tksql_bind_str");
-			printf("(stmt, %zu, v%zu);\n", 
-				npos - 1, npos);
+			printf("(stmt, %zu, %sv%zu);\n", 
+				npos - 1, 
+				FIELD_NULL & ref->field->flags ? 
+				"*" : "", npos);
 		}
 		npos++;
 	}

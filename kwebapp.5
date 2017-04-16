@@ -215,15 +215,16 @@ keywords, respectively.
 .Pp
 Searches are always by field, and may be followed by parameters:
 .Bd -literal -offset indent
-searchtype field [,field]* [":" [params]* ]? ";"
+searchtype term [,term]* [":" [params]* ]? ";"
 .Ed
 .Pp
 Here,
-.Cm field
-consists of the possibly-nested field names to search for.
+.Cm term
+consists of the possibly-nested field names to search for and an
+optional operator.
 Nested fields are in dotted-notation:
 .Bd -literal -offset indent
-[structure.]*field
+[structure.]*field [operator]?
 .Ed
 .Pp
 This would produce functions searching the field
@@ -231,6 +232,15 @@ This would produce functions searching the field
 within the
 .Cm struct
 structures as listed.
+Available operators are as follows:
+.Bl -tag -width Ds
+.It Dq eq
+Equality: search function will be given an input value to check against.
+.It Dq isnull
+Check whether the field is null.
+.It Dq notnull
+Check whether the field is not null.
+.El
 .Pp
 The search parameters are a series of key-value pairs:
 .Bd -literal -offset indent

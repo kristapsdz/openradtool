@@ -1,0 +1,10 @@
+struct user {
+  field uid int rowid;
+  comment 
+	"A regular user.
+	 Here is some whitespace.";
+}
+
+struct session {
+  field id int rowid;
+}

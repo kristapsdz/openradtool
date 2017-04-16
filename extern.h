@@ -110,9 +110,9 @@ TAILQ_HEAD(srefq, sref);
  * SQL operator to use.
  */
 enum	optype {
-	OPTYPE_EQUAL = 0,
-	OPTYPE_ISNULL,
-	OPTYPE_NOTNULL,
+	OPTYPE_EQUAL = 0, /* equality: x = ? */
+	OPTYPE_ISNULL, /* nullity: x isnull */
+	OPTYPE_NOTNULL, /* non-nullity: x notnull */
 	OPTYPE__MAX
 };
 

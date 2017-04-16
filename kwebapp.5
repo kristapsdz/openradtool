@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: April 13 2017 $
+.Dd $Mdocdate: April 15 2017 $
 .Dt KWEBAPP 5
 .Os
 .Sh NAME
@@ -165,7 +165,7 @@ The
 .Cm typeinfo
 may consist of the following:
 .Bd -literal -offset indent
-"rowid" | "unique" | "comment" quoted_string
+"rowid" | "null" | "unique" | "comment" quoted_string
 .Ed
 .Pp
 The
@@ -180,6 +180,13 @@ documents the field.
 A
 .Cm unique
 field is marked as having a unique SQL column value.
+A
+.Cm null
+field accepts null values, and is only available for native types.
+A
+.Cm rowid
+field may not also be
+.Cm null .
 .Ss Comments
 Each
 .Nm

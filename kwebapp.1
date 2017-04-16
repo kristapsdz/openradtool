@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: April 14 2017 $
+.Dd $Mdocdate: April 15 2017 $
 .Dt KWEBAPP 1
 .Os
 .Sh NAME
@@ -100,6 +100,15 @@ For each structure object in
 generates a C
 .Dq struct
 by that name containing all typed fields.
+Moreover, if any of the fields are defined with
+.Cm null ,
+an additional field of
+.Va has_xxxx
+is defined, where
+.Dq xxxx
+is the name of the field.
+This field will be non-zero if the field was not null during access;
+otherwise it will be zero.
 .Pp
 If there are any list statements on the object, the structure has
 queue macros created for it as well.
@@ -145,6 +154,12 @@ Insert a row and return its identifier.
 This accepts all native fields as parameters excluding
 .Cm rowid ,
 which is automatically set by the database.
+If any fields are specified as
+.Cm null ,
+they are passed into this functions as pointers.
+The null values must then be specified as
+.Dv NULL
+pointers.
 .It Fn db_foo_iterate_by_xxxx
 Also like
 .Fn db_foo_by_xxxx ,
@@ -171,6 +186,12 @@ Run the named update function
 The update functions are specified with
 .Cm update
 statements.
+If any fields are specified as
+.Cm null ,
+they are passed into this functions as pointers.
+Any null values must then be specified as
+.Dv NULL
+pointers.
 .It Fn db_foo_update_xx_by_yy
 Like
 .Fn db_foo_update_xxxx ,

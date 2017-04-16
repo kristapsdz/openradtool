@@ -538,8 +538,9 @@ parse_config_field_info(struct parse *p, struct field *fd)
 			/*
 			 * rowid must be on an integer type, must not be
 			 * on a foreign key reference, must not have its
-			 * parent already having a rowid, and must not
-			 * already be specified.
+			 * parent already having a rowid, must not take
+			 * null values, and must not already be
+			 * specified.
 			 */
 			if (FTYPE_INT != fd->type) {
 				parse_errx(p, "rowid for non-int type");
@@ -549,6 +550,9 @@ parse_config_field_info(struct parse *p, struct field *fd)
 				break;
 			} else if (NULL != fd->parent->rowid) {
 				parse_errx(p, "struct already has rowid");
+				break;
+			} else if (FIELD_NULL & fd->flags) {
+				parse_errx(p, "rowid can't be null");
 				break;
 			} else if (FIELD_UNIQUE & fd->flags) {
 				parse_warnx(p, "unique is redundant");
@@ -570,6 +574,20 @@ parse_config_field_info(struct parse *p, struct field *fd)
 				parse_warnx(p, "unique is redunant");
 			else
 				fd->flags |= FIELD_UNIQUE;
+			continue;
+		} else if (0 == strcasecmp(p->last.string, "null")) {
+			/*
+			 * null fields can't be rowids, nor can they be
+			 * struct types.
+			 */
+			if (FIELD_ROWID & fd->flags) {
+				parse_errx(p, "rowid can't be null");
+				break;
+			} else if (FTYPE_STRUCT == fd->type) {
+				parse_errx(p, "struct types can't be null");
+				break;
+			}
+			fd->flags |= FIELD_NULL;
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "comment")) {
 			if (TOK_LITERAL != parse_next(p)) {

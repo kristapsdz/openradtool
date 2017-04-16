@@ -476,9 +476,13 @@ gen_func_insert(const struct strct *p, const char *caps)
 	pos = npos = 1;
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_PASSWORD == f->type) {
-			printf("\tcrypt_newhash(v%zu, "
+			if (FIELD_NULL & f->flags)
+				printf("\tif (NULL != v%zu)\n"
+				       "\t", npos);
+			printf("\tcrypt_newhash(%sv%zu, "
 				"\"blowfish,a\", hash%zu, "
 				"sizeof(hash%zu));\n",
+				FIELD_NULL & f->flags ? "*" : "",
 				npos, pos, pos);
 			pos++;
 		} 
@@ -501,6 +505,11 @@ gen_func_insert(const struct strct *p, const char *caps)
 		    FIELD_ROWID & f->flags)
 			continue;
 		assert(FTYPE_STRUCT != f->type);
+		if (FIELD_NULL & f->flags)
+			printf("\tif (NULL == v%zu)\n"
+			       "\t\tksql_bind_null(stmt, %zu);\n"
+			       "\telse\n"
+			       "\t", npos, npos - 1);
 		if (FTYPE_PASSWORD == f->type) {
 			printf("\tksql_bind_str"
 				"(stmt, %zu, hash%zu);\n",
@@ -513,7 +522,8 @@ gen_func_insert(const struct strct *p, const char *caps)
 			printf("\tksql_bind_int");
 		else
 			printf("\tksql_bind_str");
-		printf("(stmt, %zu, v%zu);\n", npos - 1, npos);
+		printf("(stmt, %zu, %sv%zu);\n", npos - 1, 
+			FIELD_NULL & f->flags ? "*" : "", npos);
 		npos++;
 	}
 	puts("\tif (KSQL_DONE == ksql_stmt_cstep(stmt))\n"

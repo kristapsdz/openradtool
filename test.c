@@ -32,13 +32,13 @@ int
 main(void)
 {
 	struct ksql	*sql;
-	int64_t		 cid, uid, nuid;
+	int64_t		 cid, uid, nuid, val = 1;
 	struct user	*u, *u2, *u3;
 
 	if (NULL == (sql = db_open("db.db")))
 		errx(EXIT_FAILURE, "db.db");
 
-	if ((cid = db_company_insert(sql, "foo bar")) < 0)
+	if ((cid = db_company_insert(sql, "foo bar", &val)) < 0)
 		errx(EXIT_FAILURE, "db_company_insert");
 
 	uid = db_user_insert(sql, cid, 
@@ -57,6 +57,9 @@ main(void)
 
 	warnx("company name: %s", u->company.name);
 	warnx("company id: %" PRId64, u->company.id);
+	warnx("company has null: %s", u->company.has_somenum ? "no" : "yes");
+	if (u->company.has_somenum)
+		warnx("company somenum: %" PRId64, u->company.somenum);
 	warnx("cid: %" PRId64, u->cid);
 	warnx("hash: %s", u->hash);
 	warnx("email: %s", u->email);

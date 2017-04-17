@@ -52,8 +52,8 @@ main(void)
 	if (nuid >= 0)
 		errx(EXIT_FAILURE, "db_user_insert (duplicate)");
 
-	if (NULL == (u = db_user_by_rowid(sql, uid)))
-		errx(EXIT_FAILURE, "db_user_by_rowd");
+	if (NULL == (u = db_user_by__uid(sql, uid)))
+		errx(EXIT_FAILURE, "db_user_by__uid");
 
 	warnx("company name: %s", u->company.name);
 	warnx("company id: %" PRId64, u->company.id);

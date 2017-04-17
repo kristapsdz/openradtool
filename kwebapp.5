@@ -232,15 +232,9 @@ This would produce functions searching the field
 within the
 .Cm struct
 structures as listed.
-Available operators are as follows:
-.Bl -tag -width Ds
-.It Dq eq
-Equality: search function will be given an input value to check against.
-.It Dq isnull
-Check whether the field is null.
-.It Dq notnull
-Check whether the field is not null.
-.El
+See
+.Sx Operations
+for a list of available operators.
 .Pp
 The search parameters are a series of key-value pairs:
 .Bd -literal -offset indent
@@ -282,6 +276,13 @@ to contain the
 Usually, the former will be the
 .Cm rowid
 and the former will be any other fields.
+Each field in
+.Cm cfields
+may also accept an optional operator type as described in
+.Sx Operations .
+.Bd -literal -offset indent
+field [operator]?
+.Ed
 .Pp
 The optional parameters may be one of
 .Bd -literal -offset indent
@@ -301,6 +302,27 @@ are not allowed as
 .Cm cfields
 since they are not stored directly as comparable strings, but hashed
 with a unique salt.
+.Ss Operations
+When searching or updating (see
+.Sx Searches
+and
+.Sx Updates ) ,
+it's possible to provide several different ways of operating on fields.
+By default, the operator is for equality: when generating functions, the
+functions accept an input value that is checked against the stored
+field.
+These are specified as an optional term alongside a search field.
+.Pp
+What follows is a full list of operators:
+.Bl -tag -width Ds
+.It Dq eq
+Equality: search function will be given an input value to check against.
+This is the default.
+.It Dq isnull
+Check whether the field is null.
+.It Dq notnull
+Check whether the field is not null.
+.El
 .Sh EXAMPLES
 A simple session table is as follows:
 .Bd -literal

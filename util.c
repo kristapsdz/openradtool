@@ -219,21 +219,6 @@ print_func_unfill(const struct strct *p, int decl)
 }
 
 /*
- * Generate the "get by rowid" function for a given structure.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line.
- */
-void
-print_func_by_rowid(const struct strct *p, int decl)
-{
-
-	printf("struct %s *%sdb_%s_by_rowid"
-	       "(struct ksql *db, int64_t id)%s",
-	       p->name, decl ? "" : "\n", p->name,
-	       decl ? ";\n" : "");
-}
-
-/*
  * Generate the "fill" function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.

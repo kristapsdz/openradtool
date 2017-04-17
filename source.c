@@ -317,41 +317,6 @@ gen_func_close(void)
 }
 
 /*
- * Print out the special rowid search function.
- * This does nothing if there is no rowid function defined.
- */
-static void
-gen_func_rowid(const struct strct *p, const char *caps)
-{
-
-	if (NULL == p->rowid)
-		return;
-	print_func_by_rowid(p, 0);
-	printf("\n"
-	       "{\n"
-	       "\tstruct ksqlstmt *stmt;\n"
-	       "\tstruct %s *p = NULL;\n"
-	       "\n"
-	       "\tksql_stmt_alloc(db, &stmt,\n"
-	       "\t\tstmts[STMT_%s_BY_ROWID],\n"
-	       "\t\tSTMT_%s_BY_ROWID);\n"
-	       "\tksql_bind_int(stmt, 0, id);\n"
-	       "\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
-	       "\t\tp = malloc(sizeof(struct %s));\n"
-	       "\t\tif (NULL == p) {\n"
-	       "\t\t\tperror(NULL);\n"
-	       "\t\t\texit(EXIT_FAILURE);\n"
-	       "\t\t}\n"
-	       "\t\tdb_%s_fill(p, stmt, NULL);\n"
-	       "\t}\n"
-	       "\tksql_stmt_free(stmt);\n"
-	       "\treturn(p);\n"
-	       "}\n"
-	       "\n",
-	       p->name, caps, caps, p->name, p->name);
-}
-
-/*
  * Print out a search function for an STYPE_SEARCH.
  * This searches for a singular value.
  */
@@ -721,7 +686,6 @@ gen_funcs(const struct strct *p)
 	gen_func_free(p);
 	gen_func_freeq(p);
 	gen_func_insert(p, caps);
-	gen_func_rowid(p, caps);
 
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
@@ -740,10 +704,7 @@ gen_funcs(const struct strct *p)
 }
 
 /*
- * Generate a set of statements that will be used for this structure:
- *
- *  (1) get by rowid (if applicable)
- *  (2) all explicit search terms
+ * Generate a set of statements that will be used for this structure.
  */
 static void
 gen_enum(const struct strct *p)
@@ -754,9 +715,6 @@ gen_enum(const struct strct *p)
 	size_t	 pos;
 
 	caps = gen_strct_caps(p->name);
-
-	if (NULL != p->rowid)
-		printf("\tSTMT_%s_BY_ROWID,\n", caps);
 
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
@@ -896,22 +854,6 @@ gen_stmt(const struct strct *p)
 	char	*caps;
 
 	caps = gen_strct_caps(p->name);
-
-	/* 
-	 * If we have rowid access, print it now.
-	 * This uses the usual recursive selection.
-	 */
-
-	if (NULL != p->rowid)  {
-		printf("\t/* STMT_%s_BY_ROWID */\n"
-		       "\t\"SELECT ",
-		       caps);
-		gen_stmt_schema(p, p, NULL);
-		printf("\" FROM %s", p->name);
-		gen_stmt_joins(p, p, NULL);
-		printf(" WHERE %s.%s=?\",\n", 
-			p->name, p->rowid->name);
-	}
 
 	/* 
 	 * Print custom search queries.

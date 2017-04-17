@@ -6,9 +6,20 @@ configuration file, for example:
 
 ```
 struct user {
-  field name text comment "full name";
+  field name text null comment "full name (or null)";
+  field email text unique comment "unique e-mail";
+  field hash password comment "hashed password";
   field id int rowid comment "unique identifier";
+  search id: comment "search by user identifier";
+  search email,password: name creds comment "lookup by credentials";
   comment "a system user";
+}
+struct session {
+  field user struct uid:user.id;
+  field uid int comment "user bound to session";
+  field token int comment "unique session token";
+  field id int rowid;
+  comment "web session";
 }
 ```
 
@@ -20,16 +31,23 @@ code you link directly into your application.
 Why is *kwebapp* handy?  It removes a lot of "boilerplate" code querying
 the database and allocating objects.  Some more features:
 
-- automagic foreign key "inner joins" on returned structures
-- functions generated for updates, inserts, and queries
-- iterator (function callback), list (queue), and unique queries
-- querying on nested fields (foreign key references)
-- support for row identifiers, unique fields, and null fields
-- well-formed, readable C output
-- documentation in generated C and SQL output
-- difference engine between configuration helps database updates be
-  reasonable
-- password support with automatic hashing
+- Functions generated for modifying (updates), allocating (inserts), and
+  accessing (queries).
+- Automagic foreign key "INNER JOIN" when accessing structures.  You
+  specify nested structures in your configuration file, and *kwebapp*
+  creates the "join" functionality when querying for those objects.
+- Several types of accessors: iterator-based (function callback),
+  list-based (queue), and unique (selecting on unique fields).
+- Well-formed, readable C and SQL output describing functions (if
+  applicable), variables, structures, and so on.
+- "Difference calculator" between configuration files helps database
+  updates be reasonable by providing the necessary "ALTER TABLE" and so
+  on to help with versioning.  (Also protects against accidental
+  incompatible changes.)
+- Beyond the usual native type support, also supports "password" type
+  that has automatic hashing mechanism built-in during selection from
+  and insertion into the database.
+- Several different types of SQL query (and update) operators.
 
 This repository mirrors the main repository on
 [BSD.lv](https://www.bsd.lv).  It is still very much under development!

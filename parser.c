@@ -944,11 +944,14 @@ parse_config_search_params(struct parse *p, struct search *s)
  *
  * The fields ("ufield" for update field and "sfield" for select field)
  * are within the current structure.
+ * Note that "sfield" also contains an optional operator, just like in
+ * the search parameters.
  */
 static void
 parse_config_update(struct parse *p, struct strct *s)
 {
 	struct update	*up;
+	struct uref	*ur;
 
 	if (NULL == (up = calloc(1, sizeof(struct update))))
 		err(EXIT_FAILURE, NULL);
@@ -972,6 +975,9 @@ parse_config_update(struct parse *p, struct strct *s)
 	for (;;) {
 		if (TOK_COLON == parse_next(p))
 			break;
+
+		/* Separated with a comma. */
+
 		if (TOK_COMMA != p->lasttype) {
 			parse_errx(p, "expected fields separator");
 			return;
@@ -993,13 +999,32 @@ parse_config_update(struct parse *p, struct strct *s)
 		parse_errx(p, "expected select field");
 		return;
 	}
-	uref_alloc(p, p->last.string, up, &up->crq);
+	ur = uref_alloc(p, p->last.string, up, &up->crq);
 
 	for (;;) {
 		if (TOK_COLON == parse_next(p))
 			break;
 		else if (TOK_SEMICOLON == p->lasttype)
 			return;
+
+		/* Parse optional operator. */
+
+		if (TOK_IDENT == p->lasttype) {
+			for (ur->op = 0; 
+			     OPTYPE__MAX != ur->op; ur->op++)
+				if (0 == strcasecmp(p->last.string, 
+				    optypes[ur->op]))
+					break;
+			if (OPTYPE__MAX == ur->op) {
+				parse_errx(p, "unknown operator");
+				return;
+			}
+			if (TOK_COLON == parse_next(p))
+				break;
+			else if (TOK_SEMICOLON == p->lasttype)
+				return;
+		}
+
 		if (TOK_COMMA != p->lasttype) {
 			parse_errx(p, "expected fields separator");
 			return;
@@ -1007,7 +1032,7 @@ parse_config_update(struct parse *p, struct strct *s)
 			parse_errx(p, "expected select field");
 			return;
 		}
-		uref_alloc(p, p->last.string, up, &up->crq);
+		ur = uref_alloc(p, p->last.string, up, &up->crq);
 	}
 
 	/*

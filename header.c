@@ -101,7 +101,7 @@ gen_strct_structs(const struct strct *p)
  * Generate update functions for a structure.
  */
 static void
-gen_strct_func_update(const struct update *up)
+gen_func_update(const struct update *up)
 {
 	const struct uref *ref;
 	enum cmtt	 ct = COMMENT_C_FRAG_OPEN;
@@ -130,9 +130,17 @@ gen_strct_func_update(const struct update *up)
 	print_commentt(0, COMMENT_C_FRAG,
 		"Constrains the updated records to:");
 
-	TAILQ_FOREACH(ref, &up->crq, entries)
-		print_commentv(0, COMMENT_C_FRAG,
-			"\tv%zu: %s", pos++, ref->name);
+	TAILQ_FOREACH(ref, &up->crq, entries) {
+		if (OPTYPE_NOTNULL == ref->op) 
+			print_commentv(0, COMMENT_C_FRAG,
+				"\t%s (not null)", ref->name);
+		else if (OPTYPE_ISNULL == ref->op) 
+			print_commentv(0, COMMENT_C_FRAG,
+				"\t%s (is null)", ref->name);
+		else
+			print_commentv(0, COMMENT_C_FRAG,
+				"\tv%zu: %s", pos++, ref->name);
+	}
 
 	print_commentt(0, COMMENT_C_FRAG_CLOSE,
 		"Returns zero on failure, non-zero on "
@@ -145,7 +153,7 @@ gen_strct_func_update(const struct update *up)
  * Generate a custom search function declaration.
  */
 static void
-gen_strct_func_search(const struct search *s)
+gen_func_search(const struct search *s)
 {
 	const struct sent *sent;
 	const struct sref *sr;
@@ -168,7 +176,13 @@ gen_strct_func_search(const struct search *s)
 
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
 		sr = TAILQ_LAST(&sent->srq, srefq);
-		if (FTYPE_PASSWORD == sr->field->type)
+		if (OPTYPE_NOTNULL == sent->op)
+			print_commentv(0, COMMENT_C_FRAG,
+				"\t%s (not null)", sent->fname);
+		else if (OPTYPE_ISNULL == sent->op)
+			print_commentv(0, COMMENT_C_FRAG,
+				"\t%s (is null)", sent->fname);
+		else if (FTYPE_PASSWORD == sr->field->type)
 			print_commentv(0, COMMENT_C_FRAG,
 				"\tv%zu: %s (pre-hashed password)", 
 				pos++, sent->fname);
@@ -201,7 +215,7 @@ gen_strct_func_search(const struct search *s)
  * Generate the function declarations for a given structure.
  */
 static void
-gen_strct_funcs(const struct strct *p)
+gen_funcs(const struct strct *p)
 {
 	const struct search *s;
 	const struct field *f;
@@ -276,10 +290,10 @@ gen_strct_funcs(const struct strct *p)
 	puts("");
 
 	TAILQ_FOREACH(s, &p->sq, entries)
-		gen_strct_func_search(s);
+		gen_func_search(s);
 
 	TAILQ_FOREACH(u, &p->uq, entries)
-		gen_strct_func_update(u);
+		gen_func_update(u);
 }
 
 void
@@ -319,7 +333,7 @@ gen_header(const struct strctq *q)
 	puts("");
 
 	TAILQ_FOREACH(p, q, entries)
-		gen_strct_funcs(p);
+		gen_funcs(p);
 
 	puts("__END_DECLS\n"
 	     "\n"

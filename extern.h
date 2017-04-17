@@ -172,10 +172,11 @@ TAILQ_HEAD(searchq, search);
  * commands will be generated.
  */
 struct	uref {
-	char		 *name;
-	struct field	 *field;
-	struct pos	  pos;
-	struct update	 *parent;
+	char		 *name; /* name of field */
+	enum optype	  op; /* for constraints, SQL operator */
+	struct field	 *field; /* resolved field */
+	struct pos	  pos; /* position in parse */
+	struct update	 *parent; /* up-reference */
 	TAILQ_ENTRY(uref) entries;
 };
 

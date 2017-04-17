@@ -316,12 +316,17 @@ These are specified as an optional term alongside a search field.
 What follows is a full list of operators:
 .Bl -tag -width Ds
 .It Dq eq
-Equality: search function will be given an input value to check against.
+Equality (binary operator): search function will be given an input value
+to check against.
 This is the default.
+.It Dq neq
+Non-equality (binary operator).
+The inverse of
+.Dq eq .
 .It Dq isnull
-Check whether the field is null.
+Check whether the field is null (unary operator).
 .It Dq notnull
-Check whether the field is not null.
+Check whether the field is not null (unary operator).
 .El
 .Sh EXAMPLES
 A simple session table is as follows:

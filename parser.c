@@ -220,6 +220,7 @@ static	const char *const badidents[] = {
 
 static	const char *optypes[OPTYPE__MAX] = {
 	"eq", /* OPTYE_EQUAL */
+	"neq", /* OPTYE_NEQUAL */
 	"isnull", /* OPTYE_ISNULL */
 	"notnull", /* OPTYE_NOTNULL */
 };

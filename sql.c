@@ -50,14 +50,15 @@ gen_fkeys(const struct field *f, int *first)
 }
 
 static void
-gen_field(const struct field *f, int *first)
+gen_field(const struct field *f, int *first, int comments)
 {
 
 	if (FTYPE_STRUCT == f->type)
 		return;
 
 	printf("%s\n", *first ? "" : ",");
-	print_commentt(1, COMMENT_SQL, f->doc);
+	if (comments)
+		print_commentt(1, COMMENT_SQL, f->doc);
 	printf("\t%s %s", f->name, ftypes[f->type]);
 	if (FIELD_ROWID & f->flags)
 		printf(" PRIMARY KEY");
@@ -80,7 +81,7 @@ gen_struct(const struct strct *p, int comments)
 
 	printf("CREATE TABLE %s (", p->name);
 	TAILQ_FOREACH(f, &p->fq, entries)
-		gen_field(f, &first);
+		gen_field(f, &first, comments);
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_fkeys(f, &first);
 	puts("\n);\n"

@@ -686,6 +686,8 @@ gen_func_update(const struct update *up,
 	TAILQ_FOREACH(ref, &up->crq, entries) {
 		assert(FTYPE_STRUCT != ref->field->type);
 		assert(FTYPE_PASSWORD != ref->field->type);
+		if (OPTYPE_EQUAL != ref->op)
+			continue;
 		if (FTYPE_INT == ref->field->type)
 			printf("\tksql_bind_int");
 		else
@@ -986,11 +988,23 @@ gen_stmt(const struct strct *p)
 		       "\t\"UPDATE %s SET",
 		       caps, pos++, p->name);
 		first = 1;
-		TAILQ_FOREACH(ur, &up->mrq, entries)
-			printf("%s%s=?", first ? " " : ",", ur->name);
+		TAILQ_FOREACH(ur, &up->mrq, entries) {
+			putchar(first ? ' ' : ',');
+			first = 0;
+			printf("%s=?", ur->name);
+		}
 		printf(" WHERE");
-		TAILQ_FOREACH(ur, &up->crq, entries)
-			printf("%s%s=?", first ? " " : " AND", ur->name);
+		first = 1;
+		TAILQ_FOREACH(ur, &up->crq, entries) {
+			printf("%s", first ? " " : " AND ");
+			if (OPTYPE_EQUAL == ur->op)
+				printf("%s=?", ur->name);
+			else if (OPTYPE_ISNULL == ur->op)
+				printf("%s ISNULL", ur->name);
+			else if (OPTYPE_NOTNULL == ur->op)
+				printf("%s NOTNULL", ur->name);
+			first = 0;
+		}
 		puts("\",");
 	}
 

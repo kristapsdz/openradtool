@@ -1,10 +1,7 @@
 struct company {
   field name text comment
 	"Name of the organisation.";
-  field somenum int null comment
-	"Something that can be null.";
   field id int rowid;
-  update somenum: id;
   comment "Controlling organisation.";
 }
 

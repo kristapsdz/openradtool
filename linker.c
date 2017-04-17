@@ -305,6 +305,29 @@ resolve_uref(struct uref *ref, int crq)
 }
 
 /*
+ * Make sure that our constraint operator is consistent with the type
+ * named in the constraint.
+ * Returns zero on failure, non-zero on success.
+ * (For the time being, this always returns non-zero.)
+ */
+static int
+check_updatetype(struct update *up)
+{
+	struct uref	*ref;
+
+	TAILQ_FOREACH(ref, &up->crq, entries)
+		if ((OPTYPE_NOTNULL == ref->op ||
+		     OPTYPE_ISNULL == ref->op) &&
+		    ! (FIELD_NULL & ref->field->flags))
+			warnx("%s:%zu:%zu: null operator "
+				"on field that's never null",
+				ref->pos.fname, 
+				ref->pos.line,
+				ref->pos.column);
+	return(1);
+}
+
+/*
  * Resolve all of the fields managed by struct update.
  * These are all local to the current structure.
  * (This is a constraint of SQL.)
@@ -554,7 +577,8 @@ parse_link(struct strctq *q)
 				return(0);
 		}
 		TAILQ_FOREACH(u, &p->uq, entries)
-			if ( ! resolve_update(u))
+			if ( ! resolve_update(u) ||
+			     ! check_updatetype(u))
 				return(0);
 	}
 

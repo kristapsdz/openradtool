@@ -90,8 +90,11 @@ print_func_update(const struct update *u, int decl)
 	TAILQ_FOREACH(ur, &u->mrq, entries)
 		printf(", %s%sv%zu", ftypes[ur->field->type], 
 			FIELD_NULL & ur->field->flags ? "*" : "", pos++);
-	TAILQ_FOREACH(ur, &u->crq, entries)
+	TAILQ_FOREACH(ur, &u->crq, entries) {
+		if (OPTYPE_EQUAL != ur->op)
+			continue;
 		printf(", %sv%zu", ftypes[ur->field->type], pos++);
+	}
 
 	printf(")%s", decl ? ";\n" : "");
 }

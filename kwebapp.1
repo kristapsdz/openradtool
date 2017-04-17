@@ -190,12 +190,16 @@ Run the named update function
 The update functions are specified with
 .Cm update
 statements.
-If any fields are specified as
+The parameters passed to this function are first the fields to modify,
+then the fields that constrain which rows are updated.
+If any modified fields are specified as
 .Cm null ,
 they are passed into this functions as pointers.
 Any null values must then be specified as
 .Dv NULL
 pointers.
+Update fields are only specified for operations for binary-operator
+constraints, i.e., those not checking for null status.
 .It Fn db_foo_update_xx_by_yy
 Like
 .Fn db_foo_update_xxxx ,

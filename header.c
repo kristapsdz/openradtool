@@ -222,16 +222,6 @@ gen_funcs(const struct strct *p)
 	const struct update *u;
 	size_t	 pos;
 
-	if (NULL != p->rowid) {
-		print_commentv(0, COMMENT_C,
-		       "Return the %s with rowid \"id\".\n"
-		       "Returns NULL if no object was found.\n"
-		       "Pointer must be freed with db_%s_free().",
-		       p->name, p->name);
-		print_func_by_rowid(p, 1);
-		puts("");
-	}
-
 	print_commentv(0, COMMENT_C,
 	       "Call db_%s_unfill() and free \"p\".\n"
 	       "Has no effect if \"p\" is NULL.",

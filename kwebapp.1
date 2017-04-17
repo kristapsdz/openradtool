@@ -119,10 +119,6 @@ The following functions are then generated per structure, letting
 .Dq foo
 to be the name of a sample structure object:
 .Bl -tag -width Ds
-.It Fn db_foo_by_rowid
-Fetch a record by its unique identifier.
-Only valid for objects having a
-.Cm rowid .
 .It Fn db_foo_by_xxxx
 If the structure object has any named searches, these are listed in
 place of the
@@ -146,9 +142,7 @@ in the nested structure
 Zero and fill in a pointer from an open database query.
 This fills all nested structures as well.
 .It Fn db_foo_free
-Frees a pointer created by
-.Fn db_foo_by_rowid
-or a custom search.
+Frees a pointer returned by a unique search function.
 .It Fn db_foo_freeq
 Frees a queue (and its members) created by a listing function.
 This function is produced only if there are listing statements on a

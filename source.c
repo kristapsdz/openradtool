@@ -29,6 +29,13 @@
 
 #include "extern.h"
 
+static	const char *const optypes[OPTYPE__MAX] = {
+	"=", /* OPTYPE_EQUAL */
+	"!=", /* OPTYPE_NEQUAL */
+	"ISNULL", /* OPTYPE_ISNULL */
+	"NOTNULL", /* OPTYPE_NOTNULL */
+};
+
 static char *
 gen_strct_caps(const char *v)
 {
@@ -139,7 +146,7 @@ gen_strct_func_iter(const struct search *s, const char *caps, size_t num)
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
-		if (OPTYPE_EQUAL != sent->op)
+		if (OPTYPE_ISUNARY(sent->op))
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		assert(FTYPE_STRUCT != sr->field->type);
@@ -166,7 +173,7 @@ gen_strct_func_iter(const struct search *s, const char *caps, size_t num)
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
-		if (OPTYPE_EQUAL != sent->op)
+		if (OPTYPE_ISUNARY(sent->op))
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		if (FTYPE_PASSWORD != sr->field->type) {
@@ -232,7 +239,7 @@ gen_strct_func_list(const struct search *s, const char *caps, size_t num)
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
-		if (OPTYPE_EQUAL != sent->op)
+		if (OPTYPE_ISUNARY(sent->op))
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		assert(FTYPE_STRUCT != sr->field->type);
@@ -257,7 +264,7 @@ gen_strct_func_list(const struct search *s, const char *caps, size_t num)
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
-		if (OPTYPE_EQUAL != sent->op)
+		if (OPTYPE_ISUNARY(sent->op))
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		if (FTYPE_PASSWORD != sr->field->type) {
@@ -342,7 +349,7 @@ gen_strct_func_srch(const struct search *s, const char *caps, size_t num)
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
-		if (OPTYPE_EQUAL != sent->op)
+		if (OPTYPE_ISUNARY(sent->op))
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		assert(FTYPE_STRUCT != sr->field->type);
@@ -374,7 +381,7 @@ gen_strct_func_srch(const struct search *s, const char *caps, size_t num)
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
-		if (OPTYPE_EQUAL != sent->op)
+		if (OPTYPE_ISUNARY(sent->op))
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		if (FTYPE_PASSWORD != sr->field->type) {
@@ -651,7 +658,7 @@ gen_func_update(const struct update *up,
 	TAILQ_FOREACH(ref, &up->crq, entries) {
 		assert(FTYPE_STRUCT != ref->field->type);
 		assert(FTYPE_PASSWORD != ref->field->type);
-		if (OPTYPE_EQUAL != ref->op)
+		if (OPTYPE_ISUNARY(ref->op))
 			continue;
 		if (FTYPE_INT == ref->field->type)
 			printf("\tksql_bind_int");
@@ -877,21 +884,16 @@ gen_stmt(const struct strct *p)
 			if ( ! first)
 				printf(" AND");
 			first = 0;
-			if (OPTYPE_EQUAL == sent->op)
-				printf(" %s.%s=?", 
+			if (OPTYPE_ISUNARY(sent->op))
+				printf(" %s.%s %s",
 					NULL == sent->alias ?
 					p->name : sent->alias->alias,
-					sr->name);
-			else if (OPTYPE_ISNULL == sent->op)
-				printf(" %s.%s ISNULL",
+					sr->name, optypes[sent->op]);
+			else
+				printf(" %s.%s %s ?", 
 					NULL == sent->alias ?
 					p->name : sent->alias->alias,
-					sr->name);
-			else if (OPTYPE_NOTNULL == sent->op)
-				printf(" %s.%s NOTNULL",
-					NULL == sent->alias ?
-					p->name : sent->alias->alias,
-					sr->name);
+					sr->name, optypes[sent->op]);
 		}
 		puts("\",");
 	}
@@ -939,12 +941,12 @@ gen_stmt(const struct strct *p)
 		first = 1;
 		TAILQ_FOREACH(ur, &up->crq, entries) {
 			printf("%s", first ? " " : " AND ");
-			if (OPTYPE_EQUAL == ur->op)
-				printf("%s=?", ur->name);
-			else if (OPTYPE_ISNULL == ur->op)
-				printf("%s ISNULL", ur->name);
-			else if (OPTYPE_NOTNULL == ur->op)
-				printf("%s NOTNULL", ur->name);
+			if (OPTYPE_ISUNARY(ur->op))
+				printf("%s %s", ur->name, 
+					optypes[ur->op]);
+			else
+				printf("%s %s ?", ur->name,
+					optypes[ur->op]);
 			first = 0;
 		}
 		puts("\",");

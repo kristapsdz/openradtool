@@ -88,12 +88,18 @@ print_func_update(const struct update *u, int decl)
 	printf("(struct ksql *db");
 
 	TAILQ_FOREACH(ur, &u->mrq, entries)
-		printf(", %s%sv%zu", ftypes[ur->field->type], 
-			FIELD_NULL & ur->field->flags ? "*" : "", pos++);
+		printf(", %s%sv%zu", 
+			ftypes[ur->field->type], 
+			FIELD_NULL & ur->field->flags ? "*" : "", 
+			pos++);
+
+	/* Don't accept input for unary operation. */
+
 	TAILQ_FOREACH(ur, &u->crq, entries) {
-		if (OPTYPE_EQUAL != ur->op)
+		if (OPTYPE_ISUNARY(ur->op))
 			continue;
-		printf(", %sv%zu", ftypes[ur->field->type], pos++);
+		printf(", %sv%zu", 
+			ftypes[ur->field->type], pos++);
 	}
 
 	printf(")%s", decl ? ";\n" : "");
@@ -140,8 +146,10 @@ print_func_search(const struct search *s, int decl)
 		printf(", %s_cb cb, void *arg", 
 			s->parent->name);
 
+	/* Don't accept input for unary operation. */
+
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
-		if (OPTYPE_EQUAL != sent->op)
+		if (OPTYPE_ISUNARY(sent->op))
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		assert(NULL != ftypes[sr->field->type]);

@@ -111,10 +111,14 @@ TAILQ_HEAD(srefq, sref);
  */
 enum	optype {
 	OPTYPE_EQUAL = 0, /* equality: x = ? */
+	OPTYPE_NEQUAL, /* non-equality: x != ? */
 	OPTYPE_ISNULL, /* nullity: x isnull */
 	OPTYPE_NOTNULL, /* non-nullity: x notnull */
 	OPTYPE__MAX
 };
+
+#define	OPTYPE_ISBINARY(_x) ((_x) < OPTYPE_ISNULL)
+#define	OPTYPE_ISUNARY(_x) ((_x) >= OPTYPE_ISNULL)
 
 /*
  * A search entity.

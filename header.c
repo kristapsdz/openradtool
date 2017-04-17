@@ -60,13 +60,14 @@ gen_strct_field(const struct field *p)
  * listings declared on it.
  */
 static void
-gen_strct_structs(const struct strct *p)
+gen_struct(const struct strct *p)
 {
 	const struct field *f;
 
 	print_commentt(0, COMMENT_C, p->doc);
 
 	printf("struct\t%s {\n", p->name);
+
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_field(f);
 	TAILQ_FOREACH(f, &p->fq, entries) {
@@ -77,6 +78,7 @@ gen_strct_structs(const struct strct *p)
 			f->name);
 		printf("\tint has_%s;\n", f->name);
 	}
+
 	if (STRCT_HAS_QUEUE & p->flags)
 		printf("\tTAILQ_ENTRY(%s) _entries;\n", p->name);
 	puts("};\n"
@@ -301,7 +303,7 @@ gen_header(const struct strctq *q)
 	puts("");
 
 	TAILQ_FOREACH(p, q, entries)
-		gen_strct_structs(p);
+		gen_struct(p);
 
 	puts("__BEGIN_DECLS\n"
 	     "");

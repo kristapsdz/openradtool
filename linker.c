@@ -300,7 +300,6 @@ resolve_uref(struct uref *ref, int crq)
 	else
 		return(1);
 
-	assert(NULL != ref->field);
 	return(0);
 }
 

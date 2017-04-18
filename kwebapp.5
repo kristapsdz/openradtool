@@ -123,14 +123,15 @@ if specified,
 may be one of
 .Cm struct ,
 .Cm real ,
+.Cm blob ,
 .Cm int ,
 .Cm password ,
 or
 .Cm text .
-The latter four are
+The latter five are
 .Dq native
-types mapping into doubles, 64-bit integers and nil-terminated character
-strings, respectively.
+types mapping into doubles, sized buffers, 64-bit integers, and
+nil-terminated character strings, respectively.
 .Pp
 The
 .Cm password

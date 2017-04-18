@@ -32,6 +32,7 @@
 static	const char *const ftypes[FTYPE__MAX] = {
 	"int64_t ", /* FTYPE_INT */
 	"double ", /* FTYPE_REAL */
+	"const void *", /* FTYPE_BLOB */
 	"const char *", /* FTYPE_TEXT */
 	"const char *", /* FTYPE_PASSWORD */
 	NULL, /* FTYPE_STRUCT */
@@ -64,6 +65,20 @@ print_func_close(int decl)
 }
 
 /*
+ * Print the variables in a function declaration.
+ */
+static void
+print_func_variable(size_t pos, enum ftype t, unsigned int flags)
+{
+
+	assert(NULL != ftypes[t]);
+	if (FTYPE_BLOB == t)
+		printf(", size_t v%zu_sz", pos);
+	printf(", %s%sv%zu", ftypes[t], 
+		FIELD_NULL & flags ?  "*" : "", pos);
+}
+
+/*
  * Generate the "update" function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
@@ -89,19 +104,15 @@ print_func_update(const struct update *u, int decl)
 	printf("(struct ksql *db");
 
 	TAILQ_FOREACH(ur, &u->mrq, entries)
-		printf(", %s%sv%zu", 
-			ftypes[ur->field->type], 
-			FIELD_NULL & ur->field->flags ? "*" : "", 
-			pos++);
+		print_func_variable(pos++,
+			ur->field->type, ur->field->flags);
 
 	/* Don't accept input for unary operation. */
 
-	TAILQ_FOREACH(ur, &u->crq, entries) {
-		if (OPTYPE_ISUNARY(ur->op))
-			continue;
-		printf(", %sv%zu", 
-			ftypes[ur->field->type], pos++);
-	}
+	TAILQ_FOREACH(ur, &u->crq, entries)
+		if ( ! OPTYPE_ISUNARY(ur->op))
+			print_func_variable(pos++, 
+				ur->field->type, 0);
 
 	printf(")%s", decl ? ";\n" : "");
 }
@@ -153,9 +164,7 @@ print_func_search(const struct search *s, int decl)
 		if (OPTYPE_ISUNARY(sent->op))
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
-		assert(NULL != ftypes[sr->field->type]);
-		printf(", %sv%zu", 
-			ftypes[sr->field->type], pos++);
+		print_func_variable(pos++, sr->field->type, 0);
 	}
 
 	printf(")%s", decl ? ";\n" : "");
@@ -174,13 +183,10 @@ print_func_insert(const struct strct *p, int decl)
 
 	printf("int64_t%sdb_%s_insert(struct ksql *db",
 		decl ? " " : "\n", p->name);
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT == f->type ||
-		    FIELD_ROWID & f->flags)
-			continue;
-		printf(", %s%sv%zu", ftypes[f->type], 
-			FIELD_NULL & f->flags ? "*" : "", pos++);
-	}
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if ( ! (FTYPE_STRUCT == f->type ||
+		        FIELD_ROWID & f->flags))
+			print_func_variable(pos++, f->type, f->flags);
 	printf(")%s", decl ? ";\n" : "");
 }
 

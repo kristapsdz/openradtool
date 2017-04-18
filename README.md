@@ -44,9 +44,9 @@ the database and allocating objects.  Some more features:
   updates be reasonable by providing the necessary "ALTER TABLE" and so
   on to help with versioning.  (Also protects against accidental
   incompatible changes.)
-- Beyond the usual native type support, also supports "password" type
-  that has automatic hashing mechanism built-in during selection from
-  and insertion into the database.
+- Beyond the usual native type support (int, text, real, blob), also
+  supports "password" type that has automatic hashing mechanism built-in
+  during selection from and insertion into the database.
 - Several different types of SQL query (and update) operators.
 
 This repository mirrors the main repository on

@@ -21,6 +21,8 @@ struct user {
     (in listings and searches) as the hash value.";
   field email text unique comment
     "Unique e-mail address.";
+  field image blob null comment 
+    "A PNG image or something.";
   field name text comment 
     "User's full name.";
   field uid int rowid;

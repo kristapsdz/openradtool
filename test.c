@@ -23,6 +23,7 @@
 #endif
 #include <inttypes.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <ksql.h>
 
@@ -34,6 +35,7 @@ main(void)
 	struct ksql	*sql;
 	int64_t		 cid, uid, nuid, val = 1;
 	struct user	*u, *u2, *u3;
+	const char	*buf = "hello there";
 
 	if (NULL == (sql = db_open("db.db")))
 		errx(EXIT_FAILURE, "db.db");
@@ -42,12 +44,13 @@ main(void)
 		errx(EXIT_FAILURE, "db_company_insert");
 
 	uid = db_user_insert(sql, cid, 
-		"password", "foo@foo.com", "foo bar");
+		"password", "foo@foo.com", strlen(buf), 
+		(const void **)&buf, "foo bar");
 	if (uid < 0)
 		errx(EXIT_FAILURE, "db_user_insert");
 
 	nuid = db_user_insert(sql, cid, 
-		"password", "foo@foo.com", "foo bar");
+		"password", "foo@foo.com", 0, NULL, "foo bar");
 
 	if (nuid >= 0)
 		errx(EXIT_FAILURE, "db_user_insert (duplicate)");
@@ -64,6 +67,7 @@ main(void)
 	warnx("hash: %s", u->hash);
 	warnx("email: %s", u->email);
 	warnx("name: %s", u->name);
+	warnx("image size: %zu", u->image_sz);
 	warnx("uid: %" PRId64, u->uid);
 
 	u2 = db_user_by_creds(sql, "foo@foo.com", "password");

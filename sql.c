@@ -30,6 +30,7 @@
 static	const char *const ftypes[FTYPE__MAX] = {
 	"INTEGER", /* FTYPE_INT */
 	"REAL", /* FTYPE_REAL */
+	"BLOB", /* FTYPE_BLOB */
 	"TEXT", /* FTYPE_TEXT */
 	"TEXT", /* FTYPE_PASSWORD */
 	NULL, /* FTYPE_STRUCT */

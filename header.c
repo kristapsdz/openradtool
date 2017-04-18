@@ -44,6 +44,11 @@ gen_strct_field(const struct field *p)
 	case (FTYPE_REAL):
 		printf("\tdouble %s;\n", p->name);
 		break;
+	case (FTYPE_BLOB):
+		printf("\tvoid *%s;\n"
+		       "\tsize_t %s_sz;\n",
+		       p->name, p->name);
+		break;
 	case (FTYPE_INT):
 		printf("\tint64_t %s;\n", p->name);
 		break;

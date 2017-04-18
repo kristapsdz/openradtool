@@ -30,10 +30,11 @@
 #include "extern.h"
 
 static	const char *const ftypes[FTYPE__MAX] = {
-	"int64_t ",
-	"const char *",
-	"const char *",
-	NULL,
+	"int64_t ", /* FTYPE_INT */
+	"double ", /* FTYPE_REAL */
+	"const char *", /* FTYPE_TEXT */
+	"const char *", /* FTYPE_PASSWORD */
+	NULL, /* FTYPE_STRUCT */
 };
 
 /*

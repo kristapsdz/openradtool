@@ -29,6 +29,12 @@
 
 #include "extern.h"
 
+/*
+ * SQL operators.
+ * Some of these binary, some of these are unary.
+ * Use the OPTYPE_ISUNARY or OPTYPE_ISBINARY macro to determine where
+ * within the expressions this should sit.
+ */
 static	const char *const optypes[OPTYPE__MAX] = {
 	"=", /* OPTYPE_EQUAL */
 	"!=", /* OPTYPE_NEQUAL */
@@ -36,6 +42,35 @@ static	const char *const optypes[OPTYPE__MAX] = {
 	"NOTNULL", /* OPTYPE_NOTNULL */
 };
 
+/*
+ * Functions extracting from a statement.
+ * Note that FTYPE_TEXT and FTYPE_PASSWORD need a surrounding strdup.
+ */
+static	const char *const coltypes[FTYPE__MAX] = {
+	"ksql_stmt_int", /* FTYPE_INT */
+	"ksql_stmt_double", /* FTYPE_REAL */
+	"ksql_stmt_str", /* FTYPE_TEXT */
+	"ksql_stmt_str", /* FTYPE_PASSWORD */
+	NULL, /* FTYPE_STRUCT */
+};
+
+/*
+ * Functions binding an argument to a statement.
+ */
+static	const char *const bindtypes[FTYPE__MAX] = {
+	"ksql_bind_int", /* FTYPE_INT */
+	"ksql_bind_double", /* FTYPE_REAL */
+	"ksql_bind_str", /* FTYPE_TEXT */
+	"ksql_bind_str", /* FTYPE_PASSWORD */
+	NULL, /* FTYPE_STRUCT */
+};
+
+/*
+ * Put a structure name in capitals.
+ * Used for preprocessor definitions.
+ * FIXME: this should only happen once, or maybe be stored along with
+ * the structure itself.
+ */
 static char *
 gen_strct_caps(const char *v)
 {
@@ -92,18 +127,15 @@ gen_strct_fill_field(const struct field *f)
 	else 
 		printf("\tp->%s = ", f->name);
 
-	switch(f->type) {
-	case (FTYPE_INT):
-		puts("ksql_stmt_int(stmt, (*pos)++);");
-		break;
-	case (FTYPE_PASSWORD):
-		/* FALLTHROUGH */
-	case (FTYPE_TEXT):
-		puts("strdup(ksql_stmt_str(stmt, (*pos)++));");
-		break;
-	default:
-		break;
-	}
+	/* Some sequences need surrounding allocation. */
+
+	if (FTYPE_TEXT == f->type || 
+	    FTYPE_PASSWORD == f->type)
+		printf("strdup(%s(stmt, (*pos)++));\n", 
+			coltypes[f->type]);
+	else
+		printf("%s(stmt, (*pos)++);\n", 
+			coltypes[f->type]);
 
 	if (FIELD_NULL & f->flags) {
 		puts("\telse\n"
@@ -150,13 +182,10 @@ gen_strct_func_iter(const struct search *s, const char *caps, size_t num)
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		assert(FTYPE_STRUCT != sr->field->type);
-		if (FTYPE_PASSWORD != sr->field->type) {
-			if (FTYPE_INT == sr->field->type)
-				printf("\tksql_bind_int");
-			else
-				printf("\tksql_bind_str");
-			printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
-		}
+		if (FTYPE_PASSWORD != sr->field->type)
+			printf("\t%s(stmt, %zu, v%zu);\n", 
+				bindtypes[sr->field->type],
+				pos - 1, pos);
 		pos++;
 	}
 
@@ -243,13 +272,10 @@ gen_strct_func_list(const struct search *s, const char *caps, size_t num)
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		assert(FTYPE_STRUCT != sr->field->type);
-		if (FTYPE_PASSWORD != sr->field->type) {
-			if (FTYPE_INT == sr->field->type)
-				printf("\tksql_bind_int");
-			else
-				printf("\tksql_bind_str");
-			printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
-		}
+		if (FTYPE_PASSWORD != sr->field->type)
+			printf("\t%s(stmt, %zu, v%zu);\n", 
+				bindtypes[sr->field->type],
+				pos - 1, pos);
 		pos++;
 	}
 
@@ -353,13 +379,10 @@ gen_strct_func_srch(const struct search *s, const char *caps, size_t num)
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		assert(FTYPE_STRUCT != sr->field->type);
-		if (FTYPE_PASSWORD != sr->field->type) {
-			if (FTYPE_INT == sr->field->type)
-				printf("\tksql_bind_int");
-			else
-				printf("\tksql_bind_str");
-			printf("(stmt, %zu, v%zu);\n", pos - 1, pos);
-		}
+		if (FTYPE_PASSWORD != sr->field->type)
+			printf("\t%s(stmt, %zu, v%zu);\n", 
+				bindtypes[sr->field->type],
+				pos - 1, pos);
 		pos++;
 	}
 
@@ -495,18 +518,15 @@ gen_func_insert(const struct strct *p, const char *caps)
 			       "\telse\n"
 			       "\t", npos, npos - 1);
 		if (FTYPE_PASSWORD == f->type) {
-			printf("\tksql_bind_str"
-				"(stmt, %zu, hash%zu);\n",
+			printf("\t%s(stmt, %zu, hash%zu);\n",
+				bindtypes[f->type],
 				npos - 1, pos);
 			npos++;
 			pos++;
 			continue;
 		}
-		if (FTYPE_INT == f->type)
-			printf("\tksql_bind_int");
-		else
-			printf("\tksql_bind_str");
-		printf("(stmt, %zu, %sv%zu);\n", npos - 1, 
+		printf("\t%s(stmt, %zu, %sv%zu);\n", 
+			bindtypes[f->type], npos - 1, 
 			FIELD_NULL & f->flags ? "*" : "", npos);
 		npos++;
 	}
@@ -640,15 +660,12 @@ gen_func_update(const struct update *up,
 			       "\telse\n"
 			       "\t", npos, npos - 1);
 		if (FTYPE_PASSWORD == ref->field->type) {
-			printf("\tksql_bind_str"
-			       "(stmt, %zu, hash%zu);\n",
+			printf("\t%s(stmt, %zu, hash%zu);\n",
+			       bindtypes[ref->field->type],
 			       npos - 1, pos++);
 		} else {
-			if (FTYPE_INT == ref->field->type)
-				printf("\tksql_bind_int");
-			else
-				printf("\tksql_bind_str");
-			printf("(stmt, %zu, %sv%zu);\n", 
+			printf("\t%s(stmt, %zu, %sv%zu);\n", 
+				bindtypes[ref->field->type],
 				npos - 1, 
 				FIELD_NULL & ref->field->flags ? 
 				"*" : "", npos);
@@ -660,11 +677,9 @@ gen_func_update(const struct update *up,
 		assert(FTYPE_PASSWORD != ref->field->type);
 		if (OPTYPE_ISUNARY(ref->op))
 			continue;
-		if (FTYPE_INT == ref->field->type)
-			printf("\tksql_bind_int");
-		else
-			printf("\tksql_bind_str");
-		printf("(stmt, %zu, v%zu);\n", npos - 1, npos);
+		printf("\t%s(stmt, %zu, v%zu);\n", 
+			bindtypes[ref->field->type],
+			npos - 1, npos);
 		npos++;
 	}
 	puts("\tc = ksql_stmt_cstep(stmt);\n"

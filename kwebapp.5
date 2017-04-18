@@ -122,13 +122,15 @@ The
 if specified,
 may be one of
 .Cm struct ,
+.Cm real ,
 .Cm int ,
 .Cm password ,
 or
 .Cm text .
-The latter three are
+The latter four are
 .Dq native
-types mapping into 64-bit integers and character strings, respectively.
+types mapping into doubles, 64-bit integers and nil-terminated character
+strings, respectively.
 .Pp
 The
 .Cm password

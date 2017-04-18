@@ -49,6 +49,7 @@ static	const char *const optypes[OPTYPE__MAX] = {
 static	const char *const coltypes[FTYPE__MAX] = {
 	"ksql_stmt_int", /* FTYPE_INT */
 	"ksql_stmt_double", /* FTYPE_REAL */
+	"ksql_stmt_blob", /* FTYPE_BLOB (XXX: is special) */
 	"ksql_stmt_str", /* FTYPE_TEXT */
 	"ksql_stmt_str", /* FTYPE_PASSWORD */
 	NULL, /* FTYPE_STRUCT */
@@ -60,6 +61,7 @@ static	const char *const coltypes[FTYPE__MAX] = {
 static	const char *const bindtypes[FTYPE__MAX] = {
 	"ksql_bind_int", /* FTYPE_INT */
 	"ksql_bind_double", /* FTYPE_REAL */
+	"ksql_bind_blob", /* FTYPE_BLOB (XXX: is special) */
 	"ksql_bind_str", /* FTYPE_TEXT */
 	"ksql_bind_str", /* FTYPE_PASSWORD */
 	NULL, /* FTYPE_STRUCT */
@@ -98,6 +100,8 @@ gen_strct_unfill_field(const struct field *f)
 			f->ref->tstrct,
 			f->name);
 		break;
+	case (FTYPE_BLOB):
+		/* FALLTHROUGH */
 	case (FTYPE_PASSWORD):
 		/* FALLTHROUGH */
 	case (FTYPE_TEXT):
@@ -120,36 +124,117 @@ gen_strct_fill_field(const struct field *f)
 		return;
 
 	if (FIELD_NULL & f->flags)
-		printf("\tp->has_%s = "
-			"! ksql_stmt_isnull(stmt, *pos);\n"
-		       "\tif (p->has_%s)\n"
-		       "\t\tp->%s = ", f->name, f->name, f->name);
-	else 
-		printf("\tp->%s = ", f->name);
+		printf("\tp->has_%s = ! "
+			"ksql_stmt_isnull(stmt, *pos);\n",
+			f->name);
 
-	/* Some sequences need surrounding allocation. */
+	/*
+	 * Blob types need to have space allocated (and the space
+	 * variable set) before we extract from the database.
+	 * This sequence is very different from the other types, so make
+	 * it into its own conditional block for clarity.
+	 */
 
-	if (FTYPE_TEXT == f->type || 
-	    FTYPE_PASSWORD == f->type)
-		printf("strdup(%s(stmt, (*pos)++));\n", 
-			coltypes[f->type]);
-	else
-		printf("%s(stmt, (*pos)++);\n", 
-			coltypes[f->type]);
+	if (FTYPE_BLOB == f->type) {
+		/* 
+		 * First, prepare for the data.
+		 * We get the data size, then allocate space enough to
+		 * fill with that blob.
+		 * Error-check the allocation, of course.
+		 */
 
-	if (FIELD_NULL & f->flags) {
-		puts("\telse\n"
-		     "\t\t(*pos)++;");
-		if (FTYPE_TEXT == f->type || FTYPE_PASSWORD == f->type)
-			printf("\tif (p->has_%s && NULL == p->%s) {\n"
+		if (FIELD_NULL & f->flags)
+			printf("\tif (p->has_%s) {\n"
+			       "\t\tp->%s_sz = ksql_stmt_bytes"
+			        "(stmt, *pos);\n"
+			       "\t\tp->%s = malloc(p->%s_sz);\n"
+			       "\t\tif (NULL == p->%s) {\n"
+			       "\t\t\tperror(NULL);\n"
+			       "\t\t\texit(EXIT_FAILURE);\n"
+			       "\t\t}\n" 
+			       "\t}\n", f->name, f->name, 
+			       f->name, f->name, f->name);
+		else 
+			printf("\tp->%s_sz = ksql_stmt_bytes"
+				"(stmt, *pos);\n"
+			       "\tp->%s = malloc(p->%s_sz);\n"
+			       "\tif (NULL == p->%s) {\n"
 			       "\t\tperror(NULL);\n"
 			       "\t\texit(EXIT_FAILURE);\n"
-			       "\t}\n", f->name, f->name);
-	} else if (FTYPE_TEXT == f->type || FTYPE_PASSWORD == f->type) 
-		printf("\tif (NULL == p->%s) {\n"
-		       "\t\tperror(NULL);\n"
-		       "\t\texit(EXIT_FAILURE);\n"
-		       "\t}\n", f->name);
+			       "\t}\n", f->name,
+			       f->name, f->name, f->name);
+
+		/* Next, copy the data from the database. */
+
+		if (FIELD_NULL & f->flags)
+			printf("\tif (p->has_%s)\n"
+			       "\t\tmemcpy(p->%s, "
+			        "%s(stmt, (*pos)++), p->%s_sz);\n"
+			       "\telse\n"
+			       "\t\t(*pos)++;\n", f->name, 
+			       f->name, coltypes[f->type], f->name);
+		else 
+			printf("\tmemcpy(p->%s, "
+			        "%s(stmt, (*pos)++), p->%s_sz);\n",
+			       f->name, coltypes[f->type], f->name);
+	} else {
+		/*
+		 * Assign from the database.
+		 * Text fields use a strdup for the allocation.
+		 */
+
+		if (FIELD_NULL & f->flags)
+			printf("\tif (p->has_%s)\n"
+			       "\t\tp->%s = ", f->name, f->name);
+		else 
+			printf("\tp->%s = ", f->name);
+
+		if (FTYPE_TEXT == f->type || 
+		    FTYPE_PASSWORD == f->type)
+			printf("strdup(%s(stmt, (*pos)++));\n", 
+				coltypes[f->type]);
+		else
+			printf("%s(stmt, (*pos)++);\n", 
+				coltypes[f->type]);
+
+		/* NULL check for allocation. */
+
+		if (FIELD_NULL & f->flags) {
+			puts("\telse\n"
+			     "\t\t(*pos)++;");
+			if (FTYPE_TEXT == f->type || 
+			    FTYPE_PASSWORD == f->type)
+				printf("\tif (p->has_%s && "
+					"NULL == p->%s) {\n"
+				       "\t\tperror(NULL);\n"
+				       "\t\texit(EXIT_FAILURE);\n"
+				       "\t}\n", f->name, f->name);
+		} else if (FTYPE_TEXT == f->type || 
+			   FTYPE_PASSWORD == f->type) 
+			printf("\tif (NULL == p->%s) {\n"
+			       "\t\tperror(NULL);\n"
+			       "\t\texit(EXIT_FAILURE);\n"
+			       "\t}\n", f->name);
+	}
+}
+
+/*
+ * Generate the binding for a field of type "t" at field "pos".
+ * Set "ptr" to be non-zero if this is passed in as a pointer.
+ */
+static void
+gen_bindfunc(enum ftype t, size_t pos, int ptr)
+{
+
+	assert(FTYPE_STRUCT != t);
+	if (FTYPE_BLOB == t)
+		printf("\t%s(stmt, %zu, %sv%zu, v%zu_sz);\n",
+			bindtypes[t], pos - 1, 
+			ptr ? "*" : "", pos, pos);
+	else if (FTYPE_PASSWORD != t)
+		printf("\t%s(stmt, %zu, %sv%zu);\n", 
+			bindtypes[t], pos - 1, 
+			ptr ? "*" : "", pos);
 }
 
 /*
@@ -177,17 +262,11 @@ gen_strct_func_iter(const struct search *s, const char *caps, size_t num)
 	       s->parent->name, caps, num, caps, num);
 
 	pos = 1;
-	TAILQ_FOREACH(sent, &s->sntq, entries) {
-		if (OPTYPE_ISUNARY(sent->op))
-			continue;
-		sr = TAILQ_LAST(&sent->srq, srefq);
-		assert(FTYPE_STRUCT != sr->field->type);
-		if (FTYPE_PASSWORD != sr->field->type)
-			printf("\t%s(stmt, %zu, v%zu);\n", 
-				bindtypes[sr->field->type],
-				pos - 1, pos);
-		pos++;
-	}
+	TAILQ_FOREACH(sent, &s->sntq, entries)
+		if (OPTYPE_ISBINARY(sent->op)) {
+			sr = TAILQ_LAST(&sent->srq, srefq);
+			gen_bindfunc(sr->field->type, pos++, 0);
+		}
 
 	printf("\twhile (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
 	       "\t\tdb_%s_fill(&p, stmt, NULL);\n",
@@ -267,17 +346,11 @@ gen_strct_func_list(const struct search *s, const char *caps, size_t num)
 	 */
 
 	pos = 1;
-	TAILQ_FOREACH(sent, &s->sntq, entries) {
-		if (OPTYPE_ISUNARY(sent->op))
-			continue;
-		sr = TAILQ_LAST(&sent->srq, srefq);
-		assert(FTYPE_STRUCT != sr->field->type);
-		if (FTYPE_PASSWORD != sr->field->type)
-			printf("\t%s(stmt, %zu, v%zu);\n", 
-				bindtypes[sr->field->type],
-				pos - 1, pos);
-		pos++;
-	}
+	TAILQ_FOREACH(sent, &s->sntq, entries)
+		if (OPTYPE_ISBINARY(sent->op)) {
+			sr = TAILQ_LAST(&sent->srq, srefq);
+			gen_bindfunc(sr->field->type, pos++, 0);
+		}
 
 	printf("\twhile (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
 	       "\t\tp = malloc(sizeof(struct %s));\n"
@@ -374,17 +447,11 @@ gen_strct_func_srch(const struct search *s, const char *caps, size_t num)
 	       s->parent->name, caps, num, caps, num);
 
 	pos = 1;
-	TAILQ_FOREACH(sent, &s->sntq, entries) {
-		if (OPTYPE_ISUNARY(sent->op))
-			continue;
-		sr = TAILQ_LAST(&sent->srq, srefq);
-		assert(FTYPE_STRUCT != sr->field->type);
-		if (FTYPE_PASSWORD != sr->field->type)
-			printf("\t%s(stmt, %zu, v%zu);\n", 
-				bindtypes[sr->field->type],
-				pos - 1, pos);
-		pos++;
-	}
+	TAILQ_FOREACH(sent, &s->sntq, entries) 
+		if (OPTYPE_ISBINARY(sent->op)) {
+			sr = TAILQ_LAST(&sent->srq, srefq);
+			gen_bindfunc(sr->field->type, pos++, 0);
+		}
 
 	printf("\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
 	       "\t\tp = malloc(sizeof(struct %s));\n"
@@ -523,12 +590,9 @@ gen_func_insert(const struct strct *p, const char *caps)
 				npos - 1, pos);
 			npos++;
 			pos++;
-			continue;
-		}
-		printf("\t%s(stmt, %zu, %sv%zu);\n", 
-			bindtypes[f->type], npos - 1, 
-			FIELD_NULL & f->flags ? "*" : "", npos);
-		npos++;
+		} else
+			gen_bindfunc(f->type, 
+				npos++, FIELD_NULL & f->flags);
 	}
 	puts("\tif (KSQL_DONE == ksql_stmt_cstep(stmt))\n"
 	     "\t\tksql_lastid(db, &id);\n"
@@ -659,17 +723,13 @@ gen_func_update(const struct update *up,
 			       "\t\tksql_bind_null(stmt, %zu);\n"
 			       "\telse\n"
 			       "\t", npos, npos - 1);
-		if (FTYPE_PASSWORD == ref->field->type) {
+		if (FTYPE_PASSWORD == ref->field->type)
 			printf("\t%s(stmt, %zu, hash%zu);\n",
 			       bindtypes[ref->field->type],
 			       npos - 1, pos++);
-		} else {
-			printf("\t%s(stmt, %zu, %sv%zu);\n", 
-				bindtypes[ref->field->type],
-				npos - 1, 
-				FIELD_NULL & ref->field->flags ? 
-				"*" : "", npos);
-		}
+		else
+			gen_bindfunc(ref->field->type, npos,
+				FIELD_NULL & ref->field->flags);
 		npos++;
 	}
 	TAILQ_FOREACH(ref, &up->crq, entries) {

@@ -18,8 +18,9 @@
 #define EXTERN_H
 
 enum	ftype {
-	FTYPE_INT, /* native */
-	FTYPE_TEXT, /* native */
+	FTYPE_INT, /* native integer */
+	FTYPE_REAL, /* native real-value */
+	FTYPE_TEXT, /* native nil-terminated string */
 	FTYPE_PASSWORD, /* hashed password (text) */
 	FTYPE_STRUCT, /* only in C API (on reference) */
 	FTYPE__MAX

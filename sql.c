@@ -28,10 +28,11 @@
 #include "extern.h"
 
 static	const char *const ftypes[FTYPE__MAX] = {
-	"INTEGER",
-	"TEXT",
-	"TEXT",
-	NULL,
+	"INTEGER", /* FTYPE_INT */
+	"REAL", /* FTYPE_REAL */
+	"TEXT", /* FTYPE_TEXT */
+	"TEXT", /* FTYPE_PASSWORD */
+	NULL, /* FTYPE_STRUCT */
 };
 
 static void

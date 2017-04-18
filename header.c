@@ -41,6 +41,9 @@ gen_strct_field(const struct field *p)
 		printf("\tstruct %s %s;\n", 
 			p->ref->tstrct, p->name);
 		break;
+	case (FTYPE_REAL):
+		printf("\tdouble %s;\n", p->name);
+		break;
 	case (FTYPE_INT):
 		printf("\tint64_t %s;\n", p->name);
 		break;

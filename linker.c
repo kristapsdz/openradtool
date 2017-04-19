@@ -546,12 +546,28 @@ resolve_search(struct search *srch)
 	return(1);
 }
 
+static int
+check_unique(const struct unique *u)
+{
+	const struct nref *n;
+
+	TAILQ_FOREACH(n, &u->nq, entries) {
+		if (FTYPE_STRUCT != n->field->type)
+			continue;
+		warnx("%s:%zu:%zu: field not a native type",
+			n->pos.fname, n->pos.line, n->pos.column);
+		return(0);
+	}
+
+	return(1);
+}
+
 /*
  * Resolve the chain of unique fields.
  * These are all in the local structure.
  */
 static int
-resolve_unique(const struct unique *u)
+resolve_unique(struct unique *u)
 {
 	struct nref	*n;
 	struct field	*f;
@@ -655,7 +671,8 @@ parse_link(struct strctq *q)
 
 	TAILQ_FOREACH(p, q, entries)
 		TAILQ_FOREACH(n, &p->nq, entries)
-			if ( ! resolve_unique(n))
+			if ( ! resolve_unique(n) ||
+			     ! check_unique(n))
 				return(0);
 
 	/* See if our search type is wonky. */

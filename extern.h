@@ -190,6 +190,32 @@ struct	uref {
 TAILQ_HEAD(urefq, uref);
 
 /*
+ * A single field in the local structure that will be part of a unique
+ * chain of fields.
+ */
+struct	nref {
+	char		 *name; /* name of field */
+	struct field	 *field; /* resolved field */
+	struct pos	  pos; /* position in parse */
+	struct unique	 *parent; /* up-reference */
+	TAILQ_ENTRY(nref) entries;
+};
+
+TAILQ_HEAD(nrefq, nref);
+
+/*
+ * Define a sequence of fields in the given structure that combine to
+ * form a unique clause.
+ */
+struct	unique {
+	struct nrefq	    nq; /* constraint chain */
+	struct strct	   *parent; /* up-reference */
+	TAILQ_ENTRY(unique) entries;
+};
+
+TAILQ_HEAD(uniqueq, unique);
+
+/*
  * A single update clause consisting of multiple fields to be modified
  * depending upon the constraint fields.
  */
@@ -219,6 +245,7 @@ struct	strct {
 	struct searchq	   sq; /* search fields */
 	struct aliasq	   aq; /* join aliases */
 	struct updateq	   uq; /* update conditions */
+	struct uniqueq	   nq; /* unique constraints */
 	unsigned int	   flags;
 #define	STRCT_HAS_QUEUE	   0x01 /* needs a queue interface */
 #define	STRCT_HAS_ITERATOR 0x02 /* needs iterator interface */

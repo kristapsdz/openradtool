@@ -308,7 +308,7 @@ gen_schema(const struct strct *p)
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_STRUCT == f->type)
 			continue;
-		printf("\tDB__STR(_x) \".%s\"", f->name);
+		printf("\t#_x \".%s\"", f->name);
 		if (TAILQ_NEXT(f, entries))
 			puts(" \",\" \\");
 	}
@@ -340,7 +340,6 @@ gen_header(const struct strctq *q)
 		"Each macro must be given a unique alias name.\n"
 		"This allows for doing multiple inner joins on the "
 		"same table.");
-	puts("#define DB__STR(_name) #_name");
 	TAILQ_FOREACH(p, q, entries)
 		gen_schema(p);
 

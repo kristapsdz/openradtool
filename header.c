@@ -18,13 +18,11 @@
 
 #include <sys/queue.h>
 
-#include <ctype.h>
 #if HAVE_ERR
 # include <err.h>
 #endif
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "extern.h"
 
@@ -252,8 +250,8 @@ gen_funcs(const struct strct *p)
 	       "Fill in a %s from an open statement \"stmt\".\n"
 	       "This starts grabbing results from \"pos\", "
 	       "which may be NULL to start from zero.\n"
-	       "This uses the DB_SCHEMA_xxx for the table.",
-	       p->name);
+	       "This follows DB_SCHEMA_%s's order for columns.",
+	       p->name, p->cname);
 	print_func_fill(p, 1);
 	puts("");
 
@@ -305,13 +303,8 @@ static void
 gen_schema(const struct strct *p)
 {
 	const struct field *f;
-	const char *cp;
 
-	printf("#define DB_SCHEMA_");
-	for (cp = p->name; '\0' != *cp; cp++)
-		putchar(toupper((int)*cp));
-	puts("(_x) \\");
-
+	printf("#define DB_SCHEMA_%s(_x) \\\n", p->cname);
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_STRUCT == f->type)
 			continue;

@@ -68,25 +68,6 @@ static	const char *const bindtypes[FTYPE__MAX] = {
 };
 
 /*
- * Put a structure name in capitals.
- * Used for preprocessor definitions.
- * FIXME: this should only happen once, or maybe be stored along with
- * the structure itself.
- */
-static char *
-gen_strct_caps(const char *v)
-{
-	char 	*cp, *caps;
-
-	if (NULL == (caps = strdup(v)))
-		err(EXIT_FAILURE, NULL);
-	for (cp = caps; '\0' != *cp; cp++)
-		*cp = toupper((int)*cp);
-
-	return(caps);
-}
-
-/*
  * Fill an individual field from the database.
  */
 static void
@@ -215,7 +196,7 @@ gen_bindfunc(enum ftype t, size_t pos, int ptr)
  * This calls a function pointer with the retrieved data.
  */
 static void
-gen_strct_func_iter(const struct search *s, const char *caps, size_t num)
+gen_strct_func_iter(const struct search *s, size_t num)
 {
 	const struct sent *sent;
 	const struct sref *sr;
@@ -232,7 +213,8 @@ gen_strct_func_iter(const struct search *s, const char *caps, size_t num)
 	       "\tksql_stmt_alloc(db, &stmt,\n"
 	       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
 	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
-	       s->parent->name, caps, num, caps, num);
+	       s->parent->name, s->parent->cname, num, 
+	       s->parent->cname, num);
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries)
@@ -242,7 +224,7 @@ gen_strct_func_iter(const struct search *s, const char *caps, size_t num)
 		}
 
 	printf("\twhile (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
-	       "\t\tdb_%s_fill(&p, stmt, NULL);\n",
+	       "\t\tdb_%s_fill_r(&p, stmt, NULL);\n",
 	       s->parent->name);
 
 	/*
@@ -283,7 +265,7 @@ gen_strct_func_iter(const struct search *s, const char *caps, size_t num)
  * This searches for a multiplicity of values.
  */
 static void
-gen_strct_func_list(const struct search *s, const char *caps, size_t num)
+gen_strct_func_list(const struct search *s, size_t num)
 {
 	const struct sent *sent;
 	const struct sref *sr;
@@ -309,7 +291,8 @@ gen_strct_func_list(const struct search *s, const char *caps, size_t num)
 	       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
 	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
 	       s->parent->name, s->parent->name, 
-	       s->parent->name, caps, num, caps, num);
+	       s->parent->name, s->parent->cname, num, 
+	       s->parent->cname, num);
 
 	/*
 	 * If we have any hashes, we're going to need to do the hash
@@ -400,7 +383,7 @@ gen_func_close(void)
  * This searches for a singular value.
  */
 static void
-gen_strct_func_srch(const struct search *s, const char *caps, size_t num)
+gen_strct_func_srch(const struct search *s, size_t num)
 {
 	const struct sent *sent;
 	const struct sref *sr;
@@ -417,7 +400,8 @@ gen_strct_func_srch(const struct search *s, const char *caps, size_t num)
 	       "\tksql_stmt_alloc(db, &stmt,\n"
 	       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
 	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
-	       s->parent->name, caps, num, caps, num);
+	       s->parent->name, s->parent->cname, num, 
+	       s->parent->cname, num);
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
@@ -499,7 +483,7 @@ gen_func_freeq(const struct strct *p)
  * Generate the "insert" function.
  */
 static void
-gen_func_insert(const struct strct *p, const char *caps)
+gen_func_insert(const struct strct *p)
 {
 	const struct field *f;
 	size_t	 pos, npos;
@@ -544,7 +528,7 @@ gen_func_insert(const struct strct *p, const char *caps)
 	printf("\tksql_stmt_alloc(db, &stmt,\n"
 	       "\t\tstmts[STMT_%s_INSERT],\n"
 	       "\t\tSTMT_%s_INSERT);\n",
-	       caps, caps);
+	       p->cname, p->cname);
 
 	pos = npos = 1;
 	TAILQ_FOREACH(f, &p->fq, entries) {
@@ -696,8 +680,7 @@ gen_func_fill(const struct strct *p)
  * Generate an "update" function.
  */
 static void
-gen_func_update(const struct update *up, 
-	const char *caps, size_t num)
+gen_func_update(const struct update *up, size_t num)
 {
 	const struct uref *ref;
 	size_t	 pos, npos;
@@ -739,7 +722,8 @@ gen_func_update(const struct update *up,
 	printf("\tksql_stmt_alloc(db, &stmt,\n"
 	       "\t\tstmts[STMT_%s_UPDATE_%zu],\n"
 	       "\t\tSTMT_%s_UPDATE_%zu);\n",
-	       caps, num, caps, num);
+	       up->parent->cname, num, 
+	       up->parent->cname, num);
 
 	npos = pos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
@@ -784,10 +768,7 @@ gen_funcs(const struct strct *p)
 {
 	const struct search *s;
 	const struct update *u;
-	char	*caps;
 	size_t	 pos;
-
-	caps = gen_strct_caps(p->name);
 
 	gen_func_fill_r(p);
 	gen_func_fill(p);
@@ -795,22 +776,20 @@ gen_funcs(const struct strct *p)
 	gen_func_unfill(p);
 	gen_func_free(p);
 	gen_func_freeq(p);
-	gen_func_insert(p, caps);
+	gen_func_insert(p);
 
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
 		if (STYPE_SEARCH == s->type)
-			gen_strct_func_srch(s, caps, pos++);
+			gen_strct_func_srch(s, pos++);
 		else if (STYPE_LIST == s->type)
-			gen_strct_func_list(s, caps, pos++);
+			gen_strct_func_list(s, pos++);
 		else
-			gen_strct_func_iter(s, caps, pos++);
+			gen_strct_func_iter(s, pos++);
 
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
-		gen_func_update(u, caps, pos++);
-
-	free(caps);
+		gen_func_update(u, pos++);
 }
 
 /*
@@ -821,22 +800,17 @@ gen_enum(const struct strct *p)
 {
 	const struct search *s;
 	const struct update *u;
-	char	*caps;
 	size_t	 pos;
-
-	caps = gen_strct_caps(p->name);
 
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
-		printf("\tSTMT_%s_BY_SEARCH_%zu,\n", caps, pos++);
+		printf("\tSTMT_%s_BY_SEARCH_%zu,\n", p->cname, pos++);
 
-	printf("\tSTMT_%s_INSERT,\n", caps);
+	printf("\tSTMT_%s_INSERT,\n", p->cname);
 
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
-		printf("\tSTMT_%s_UPDATE_%zu,\n", caps, pos++);
-
-	free(caps);
+		printf("\tSTMT_%s_UPDATE_%zu,\n", p->cname, pos++);
 }
 
 /*
@@ -854,11 +828,7 @@ gen_stmt_schema(const struct strct *orig,
 	const struct field *f;
 	const struct alias *a = NULL;
 	int	 c;
-	char	*caps, *name = NULL;
-
-	/* Uppercase schema. */
-
-	caps = gen_strct_caps(p->name);
+	char	*name = NULL;
 
 	/* 
 	 * If applicable, looks up our alias and emit it as the alias
@@ -871,9 +841,9 @@ gen_stmt_schema(const struct strct *orig,
 			if (0 == strcasecmp(a->name, pname))
 				break;
 		assert(NULL != a);
-		printf("\",\" DB_SCHEMA_%s(%s) ", caps, a->alias);
+		printf("\",\" DB_SCHEMA_%s(%s) ", p->cname, a->alias);
 	} else
-		printf("\" DB_SCHEMA_%s(%s) ", caps, p->name);
+		printf("\" DB_SCHEMA_%s(%s) ", p->cname, p->name);
 
 	/*
 	 * Recursive step.
@@ -898,8 +868,6 @@ gen_stmt_schema(const struct strct *orig,
 			f->ref->target->parent, name);
 		free(name);
 	}
-
-	free(caps);
 }
 
 /*
@@ -961,9 +929,6 @@ gen_stmt(const struct strct *p)
 	const struct uref *ur;
 	int	 first;
 	size_t	 pos;
-	char	*caps;
-
-	caps = gen_strct_caps(p->name);
 
 	/* 
 	 * Print custom search queries.
@@ -974,7 +939,7 @@ gen_stmt(const struct strct *p)
 	TAILQ_FOREACH(s, &p->sq, entries) {
 		printf("\t/* STMT_%s_BY_SEARCH_%zu */\n"
 		       "\t\"SELECT ",
-			caps, pos++);
+			p->cname, pos++);
 		gen_stmt_schema(p, p, NULL);
 		printf("\" FROM %s", p->name);
 		gen_stmt_joins(p, p, NULL);
@@ -1007,7 +972,7 @@ gen_stmt(const struct strct *p)
 	 */
 
 	printf("\t/* STMT_%s_INSERT */\n"
-	       "\t\"INSERT INTO %s (", caps, p->name);
+	       "\t\"INSERT INTO %s (", p->cname, p->name);
 	first = 1;
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_STRUCT == f->type ||
@@ -1033,7 +998,7 @@ gen_stmt(const struct strct *p)
 	TAILQ_FOREACH(up, &p->uq, entries) {
 		printf("\t/* STMT_%s_UPDATE_%zu */\n"
 		       "\t\"UPDATE %s SET",
-		       caps, pos++, p->name);
+		       p->cname, pos++, p->name);
 		first = 1;
 		TAILQ_FOREACH(ur, &up->mrq, entries) {
 			putchar(first ? ' ' : ',');
@@ -1054,8 +1019,6 @@ gen_stmt(const struct strct *p)
 		}
 		puts("\",");
 	}
-
-	free(caps);
 }
 
 void

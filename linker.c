@@ -579,7 +579,7 @@ resolve_unique(struct unique *u)
 		if (NULL != (n->field = f))
 			continue;
 		warnx("%s:%zu:%zu: field not found",
-			f->pos.fname, f->pos.line, f->pos.column);
+			n->pos.fname, n->pos.line, n->pos.column);
 		return(0);
 	}
 

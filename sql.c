@@ -315,6 +315,8 @@ gen_diff(const struct strctq *sq, const struct strctq *dsq)
 		} else if ( ! gen_diff_fields_old(s, ds))
 			errors++;
 	}
+
+	/* TODO: see if unique fields are different. */
 	
 	return(errors ? 0 : 1);
 }

@@ -18,11 +18,13 @@
 
 #include <sys/queue.h>
 
+#include <ctype.h>
 #if HAVE_ERR
 # include <err.h>
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "extern.h"
 
@@ -296,6 +298,34 @@ gen_funcs(const struct strct *p)
 		gen_func_update(u);
 }
 
+/*
+ * Generate the schema for a given table.
+ * This macro accepts a single parameter that's given to all of the
+ * members so that a later SELECT can use INNER JOIN xxx AS yyy and have
+ * multiple joins on the same table.
+ */
+static void
+gen_schema(const struct strct *p)
+{
+	const struct field *f;
+	const char *cp;
+
+	printf("#define DB_SCHEMA_");
+	for (cp = p->name; '\0' != *cp; cp++)
+		putchar(*cp);
+	puts("(_x) \\");
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT == f->type)
+			continue;
+		printf("\tDB__STR(_x) \".%s\"", f->name);
+		if (TAILQ_NEXT(f, entries))
+			puts(" \",\" \\");
+	}
+	puts("");
+}
+
+
 void
 gen_header(const struct strctq *q)
 {
@@ -313,7 +343,19 @@ gen_header(const struct strctq *q)
 	TAILQ_FOREACH(p, q, entries)
 		gen_struct(p);
 
-	puts("__BEGIN_DECLS\n"
+	print_commentt(0, COMMENT_C,
+		"Define our table columns.\n"
+		"Use these when creating your own SQL statements,\n"
+		"combined with the db_xxxx_fill functions.\n"
+		"Each macro must be given a unique alias name.\n"
+		"This allows for doing multiple inner joins on the "
+		"same table.");
+	puts("#define DB__STR(_name) #_name");
+	TAILQ_FOREACH(p, q, entries)
+		gen_schema(p);
+
+	puts("\n"
+	     "__BEGIN_DECLS\n"
 	     "");
 
 	print_commentt(0, COMMENT_C,

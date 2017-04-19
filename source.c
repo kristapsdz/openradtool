@@ -812,7 +812,7 @@ gen_enum(const struct strct *p)
 }
 
 /*
- * Recursively generate a series of SCHEMA_xxx statements for getting
+ * Recursively generate a series of DB_SCHEMA_xxx statements for getting
  * data on a structure.
  * This will specify the schema of the top-level structure (pname is
  * NULL), then generate aliased schemas for all of the recursive
@@ -843,9 +843,9 @@ gen_stmt_schema(const struct strct *orig,
 			if (0 == strcasecmp(a->name, pname))
 				break;
 		assert(NULL != a);
-		printf("\",\" SCHEMA_%s(%s) ", caps, a->alias);
+		printf("\",\" DB_SCHEMA_%s(%s) ", caps, a->alias);
 	} else
-		printf("\" SCHEMA_%s(%s) ", caps, p->name);
+		printf("\" DB_SCHEMA_%s(%s) ", caps, p->name);
 
 	/*
 	 * Recursive step.
@@ -1030,32 +1030,6 @@ gen_stmt(const struct strct *p)
 	free(caps);
 }
 
-/*
- * Keep our select statements tidy by pre-defining the columns in all of
- * our tables in a handy CPP statement.
- */
-static void
-gen_schema(const struct strct *p)
-{
-	const struct field *f;
-	char	*caps;
-
-	caps = gen_strct_caps(p->name);
-
-	/* TODO: chop at 72 characters. */
-
-	printf("#define SCHEMA_%s(_x) ", caps);
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT == f->type)
-			continue;
-		printf("STR(_x) \".%s\"", f->name);
-		if (TAILQ_NEXT(f, entries))
-			printf(" \",\" ");
-	}
-	puts("");
-	free(caps);
-}
-
 void
 gen_source(const struct strctq *q, const char *header)
 {
@@ -1091,18 +1065,6 @@ gen_source(const struct strctq *q, const char *header)
 	puts("\tSTMT__MAX\n"
 	     "};\n"
 	     "");
-
-	/* A set of CPP defines for per-table schema. */
-
-	print_commentt(0, COMMENT_C,
-		"Define our table columns.\n"
-		"Do this as a series of macros because our\n"
-		"statements will use the \"AS\" feature when\n"
-		"generating its queries.");
-	puts("#define STR(_name) #_name");
-	TAILQ_FOREACH(p, q, entries)
-		gen_schema(p);
-	puts("");
 
 	/* Now the array of all statement. */
 

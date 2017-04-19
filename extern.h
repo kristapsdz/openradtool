@@ -63,6 +63,7 @@ struct	field {
 	char		  *name; /* column name */
 	struct ref	  *ref; /* "foreign key" reference */
 	char		  *doc; /* documentation */
+	struct pos	   pos; /* parse point */
 	enum ftype	   type; /* type of column */
 	struct strct	  *parent; /* parent reference */
 	unsigned int	   flags; /* flags */

@@ -546,6 +546,30 @@ resolve_search(struct search *srch)
 	return(1);
 }
 
+/*
+ * Resolve the chain of unique fields.
+ * These are all in the local structure.
+ */
+static int
+resolve_unique(const struct unique *u)
+{
+	struct nref	*n;
+	struct field	*f;
+
+	TAILQ_FOREACH(n, &u->nq, entries) {
+		TAILQ_FOREACH(f, &u->parent->fq, entries) 
+			if (0 == strcasecmp(f->name, n->name))
+				break;
+		if (NULL != (n->field = f))
+			continue;
+		warnx("%s:%zu:%zu: field not found",
+			f->pos.fname, f->pos.line, f->pos.column);
+		return(0);
+	}
+
+	return(1);
+}
+
 int
 parse_link(struct strctq *q)
 {
@@ -553,6 +577,7 @@ parse_link(struct strctq *q)
 	struct strct	 *p;
 	struct strct	**pa;
 	struct field	 *f;
+	struct unique	 *n;
 	struct search	 *srch;
 	size_t		  colour = 1, sz = 0, i = 0, hasrowid = 0;
 
@@ -626,6 +651,11 @@ parse_link(struct strctq *q)
 	TAILQ_FOREACH(p, q, entries)
 		TAILQ_FOREACH(srch, &p->sq, entries)
 			if ( ! resolve_search(srch))
+				return(0);
+
+	TAILQ_FOREACH(p, q, entries)
+		TAILQ_FOREACH(n, &p->nq, entries)
+			if ( ! resolve_unique(n))
 				return(0);
 
 	/* See if our search type is wonky. */

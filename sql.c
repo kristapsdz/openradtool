@@ -36,6 +36,28 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	NULL, /* FTYPE_STRUCT */
 };
 
+/*
+ * Generate the "UNIQUE" statements on this table.
+ */
+static void
+gen_unique(const struct unique *n, int *first)
+{
+	struct nref	*ref;
+	int		 ffirst = 1;
+
+	printf("%s\n\tUNIQUE(", *first ? "" : ",");
+
+	TAILQ_FOREACH(ref, &n->nq, entries) {
+		printf("%s%s", ffirst ? "" : ", ", ref->name);
+		ffirst = 0;
+	}
+	putchar(')');
+	*first = 0;
+}
+
+/*
+ * Generate the "FOREIGN KEY" statements on this table.
+ */
 static void
 gen_fkeys(const struct field *f, int *first)
 {
@@ -51,6 +73,9 @@ gen_fkeys(const struct field *f, int *first)
 	*first = 0;
 }
 
+/*
+ * Generate the columns for this table.
+ */
 static void
 gen_field(const struct field *f, int *first, int comments)
 {
@@ -72,10 +97,14 @@ gen_field(const struct field *f, int *first, int comments)
 	*first = 0;
 }
 
+/*
+ * Generate a table and all of its components.
+ */
 static void
 gen_struct(const struct strct *p, int comments)
 {
 	const struct field *f;
+	const struct unique *n;
 	int	 first = 1;
 
 	if (comments)
@@ -86,6 +115,8 @@ gen_struct(const struct strct *p, int comments)
 		gen_field(f, &first, comments);
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_fkeys(f, &first);
+	TAILQ_FOREACH(n, &p->nq, entries)
+		gen_unique(n, &first);
 	puts("\n);\n"
 	     "");
 }

@@ -34,6 +34,7 @@ tokens) configuration language with the following rough structure:
     [ "field" fielddata ";" ]+
     [ searchtype searchdata ";" ]*
     [ "update" updatedata ";" ]*
+    [ "unique" uniquedata ";" ]*
     [ "comment" quoted_string ";" ]?
   "}"
 ]+
@@ -71,6 +72,7 @@ the curly braces.
     [ "field" fielddata ";" ]+
     [ searchtype searchdata ";" ]*
     [ "update" updatedata ";" ]*
+    [ "unique" uniquedata ";" ]*
     [ "comment" quoted_string ";" ]?
   "}"
 .Ed
@@ -91,6 +93,10 @@ zero or more
 .Cm update
 statements that define how rows may be updated (see
 .Sx Updates ) ;
+zero or more
+.Cm unique
+statements that create unique constraints on multiple fields (see
+.Sx Uniques ) ;
 and zero or more
 .Cm searchtype ,
 which defines one of several search types on fields (see
@@ -256,6 +262,22 @@ if you're searching (in any way) on a
 field, the field is omitted from the initial search, then hash-verified
 after being extracted from the database.
 Thus, this doesn't have the same performance as a normal search.
+.Ss Uniques
+While individual fields may be marked
+.Cm unique
+on a per-column basis, multiple-column unique constraints may be
+specified with the
+.Cm unique
+structure-level keyword.
+The syntax is as follows:
+.Bd -literal -offset indent
+"unique" [fields]2+ ";"
+.Ed
+.Pp
+The
+.Cm fields
+must be in the local structure, and must be native types.
+There must be at least two fields in the statement.
 .Ss Updates
 Update statements define how the database will be updated.
 By default, there are no update functions defined.

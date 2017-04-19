@@ -237,6 +237,7 @@ TAILQ_HEAD(updateq, update);
  */
 struct	strct {
 	char		  *name; /* name of structure */
+	char		  *cname; /* name of structure (capitals) */
 	char		  *doc; /* documentation */
 	size_t		   height; /* dependency order */
 	size_t		   colour; /* used during linkage */

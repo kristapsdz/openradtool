@@ -1336,6 +1336,7 @@ parse_config(FILE *f, const char *fname)
 	struct strct	  *s;
 	struct parse	   p;
 	const char *const *cp;
+	char		  *caps;
 
 	if (NULL == (q = malloc(sizeof(struct strctq))))
 		err(EXIT_FAILURE, NULL);
@@ -1392,6 +1393,10 @@ parse_config(FILE *f, const char *fname)
 			err(EXIT_FAILURE, NULL);
 		if (NULL == (s->name = strdup(p.last.string)))
 			err(EXIT_FAILURE, NULL);
+		if (NULL == (s->cname = strdup(s->name)))
+			err(EXIT_FAILURE, NULL);
+		for (caps = s->cname; '\0' != *caps; caps++)
+			*caps = toupper((int)*caps);
 
 		TAILQ_INSERT_TAIL(q, s, entries);
 		TAILQ_INIT(&s->fq);
@@ -1593,6 +1598,7 @@ parse_free(struct strctq *q)
 		}
 		free(p->doc);
 		free(p->name);
+		free(p->cname);
 		free(p);
 	}
 	free(q);

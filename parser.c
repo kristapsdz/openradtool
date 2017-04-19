@@ -480,6 +480,30 @@ parse_next(struct parse *p)
 }
 
 /*
+ * Parse the quoted_string part following "comment".
+ * Attach it to the given "doc", possibly clearing out any prior
+ * comments.
+ * If this is the case, emit a warning.
+ */
+static int
+parse_comment(struct parse *p, char **doc)
+{
+
+	if (TOK_LITERAL != parse_next(p)) {
+		parse_errx(p, "expected quoted string");
+		return(0);
+	} else if (NULL != *doc) {
+		parse_warnx(p, "replaces prior comment");
+		free(*doc);
+	}
+
+	if (NULL == (*doc = strdup(p->last.string)))
+		err(EXIT_FAILURE, NULL);
+
+	return(1);
+}
+
+/*
  * Parse the linkage for a structure.
  * Its syntax is:
  *
@@ -532,10 +556,9 @@ static void
 parse_config_field_info(struct parse *p, struct field *fd)
 {
 
-	for (;;) {
+	while (TOK_ERR != p->lasttype && TOK_EOF != p->lasttype) {
 		if (TOK_SEMICOLON == parse_next(p))
 			break;
-
 		if (TOK_IDENT != p->lasttype) {
 			parse_errx(p, "unknown field info token");
 			break;
@@ -543,12 +566,13 @@ parse_config_field_info(struct parse *p, struct field *fd)
 
 		if (0 == strcasecmp(p->last.string, "rowid")) {
 			/*
-			 * rowid must be on an integer type, must not be
+			 * This must be on an integer type, must not be
 			 * on a foreign key reference, must not have its
 			 * parent already having a rowid, must not take
 			 * null values, and must not already be
 			 * specified.
 			 */
+
 			if (FTYPE_INT != fd->type) {
 				parse_errx(p, "rowid for non-int type");
 				break;
@@ -561,32 +585,36 @@ parse_config_field_info(struct parse *p, struct field *fd)
 			} else if (FIELD_NULL & fd->flags) {
 				parse_errx(p, "rowid can't be null");
 				break;
-			} else if (FIELD_UNIQUE & fd->flags) {
+			} 
+			
+			if (FIELD_UNIQUE & fd->flags) {
 				parse_warnx(p, "unique is redundant");
 				fd->flags &= ~FIELD_UNIQUE;
 			}
+
 			fd->flags |= FIELD_ROWID;
 			fd->parent->rowid = fd;
-			continue;
 		} else if (0 == strcasecmp(p->last.string, "unique")) {
 			/* 
-			 * unique must not be on a foreign key reference
+			 * This must not be on a foreign key reference
 			 * and is ignored for rowids.
 			 */
+
 			if (NULL != fd->ref) {
 				parse_errx(p, "unique on reference");
 				break;
-			} 
-			if (FIELD_ROWID & fd->flags)
+			} else if (FIELD_ROWID & fd->flags) {
 				parse_warnx(p, "unique is redunant");
-			else
-				fd->flags |= FIELD_UNIQUE;
-			continue;
+				continue;
+			}
+
+			fd->flags |= FIELD_UNIQUE;
 		} else if (0 == strcasecmp(p->last.string, "null")) {
 			/*
-			 * null fields can't be rowids, nor can they be
+			 * These fields can't be rowids, nor can they be
 			 * struct types.
 			 */
+
 			if (FIELD_ROWID & fd->flags) {
 				parse_errx(p, "rowid can't be null");
 				break;
@@ -594,21 +622,12 @@ parse_config_field_info(struct parse *p, struct field *fd)
 				parse_errx(p, "struct types can't be null");
 				break;
 			}
+
 			fd->flags |= FIELD_NULL;
-			continue;
 		} else if (0 == strcasecmp(p->last.string, "comment")) {
-			if (TOK_LITERAL != parse_next(p)) {
-				parse_errx(p, "expected comment string");
-				break;
-			}
-			free(fd->doc);
-			fd->doc = strdup(p->last.string);
-			if (NULL == fd->doc)
-				err(EXIT_FAILURE, NULL);
-			continue;
-		}
-		parse_errx(p, "unknown field info token");
-		break;
+			parse_comment(p, &fd->doc);
+		} else
+			parse_errx(p, "unknown field info token");
 	}
 }
 
@@ -719,7 +738,27 @@ parse_config_field(struct parse *p, struct field *fd)
 }
 
 /*
- * Allocate a search reference and add it to the parent queue.
+ * Allocate a unique reference and add it to the parent queue.
+ * Always returns the created pointer.
+ */
+static struct nref *
+nref_alloc(const struct parse *p, const char *name, 
+	struct unique *up)
+{
+	struct nref	*ref;
+
+	if (NULL == (ref = calloc(1, sizeof(struct nref))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (ref->name = strdup(name)))
+		err(EXIT_FAILURE, NULL);
+	ref->parent = up;
+	parse_point(p, &ref->pos);
+	TAILQ_INSERT_TAIL(&up->nq, ref, entries);
+	return(ref);
+}
+
+/*
+ * Allocate an update reference and add it to the parent queue.
  * Always returns the created pointer.
  */
 static struct uref *
@@ -893,11 +932,12 @@ parse_config_search_params(struct parse *p, struct search *s)
 	if (TOK_SEMICOLON == parse_next(p))
 		return;
 
-	for (;;) {
+	while (TOK_ERR != p->lasttype && TOK_EOF != p->lasttype) {
 		if (TOK_IDENT != p->lasttype) {
 			parse_errx(p, "expected search specifier");
 			break;
 		}
+
 		if (0 == strcasecmp("name", p->last.string)) {
 			if (TOK_IDENT != parse_next(p)) {
 				parse_errx(p, "expected search name");
@@ -922,15 +962,8 @@ parse_config_search_params(struct parse *p, struct search *s)
 			if (TOK_SEMICOLON == parse_next(p))
 				break;
 		} else if (0 == strcasecmp("comment", p->last.string)) {
-			if (TOK_LITERAL != parse_next(p)) {
-				parse_errx(p, "expected comment");
+			if ( ! parse_comment(p, &s->doc))
 				break;
-			} 
-			/* XXX: warn of prior */
-			free(s->doc);
-			s->doc = strdup(p->last.string);
-			if (NULL == s->doc)
-				err(EXIT_FAILURE, NULL);
 			if (TOK_SEMICOLON == parse_next(p))
 				break;
 		} else {
@@ -938,6 +971,46 @@ parse_config_search_params(struct parse *p, struct search *s)
 			break;
 		}
 	}
+}
+
+/*
+ * Parse a unique clause.
+ * This has the following syntax:
+ *
+ *  "unique" [field]2+ ";"
+ *
+ * The fields are within the current structure.
+ */
+static void
+parse_config_unique(struct parse *p, struct strct *s)
+{
+	struct unique	*up;
+	size_t		 num = 0;
+
+	if (NULL == (up = calloc(1, sizeof(struct unique))))
+		err(EXIT_FAILURE, NULL);
+
+	up->parent = s;
+	TAILQ_INIT(&up->nq);
+	TAILQ_INSERT_TAIL(&s->nq, up, entries);
+
+	while (TOK_ERR != p->lasttype && TOK_EOF != p->lasttype) {
+		if (TOK_IDENT != parse_next(p)) {
+			parse_errx(p, "expected unique field");
+			break;
+		}
+		nref_alloc(p, p->last.string, up);
+		num++;
+		if (TOK_SEMICOLON == parse_next(p))
+			break;
+		if (TOK_COMMA == p->lasttype)
+			continue;
+		parse_errx(p, "unknown unique token");
+	}
+
+	if (num < 2)
+		parse_errx(p, "at least two fields "
+			"required for unique constraint");
 }
 
 /*
@@ -1047,35 +1120,28 @@ parse_config_update(struct parse *p, struct strct *s)
 	 * This now consists of "name" and "comment".
 	 */
 
-	for (;;) {
+	while (TOK_ERR != p->lasttype && TOK_EOF != p->lasttype) {
 		if (TOK_SEMICOLON == parse_next(p))
 			break;
 		if (TOK_IDENT != p->lasttype) {
 			parse_errx(p, "expected update modifier");
 			return;
 		}
+
 		if (0 == strcasecmp(p->last.string, "name")) {
 			if (TOK_IDENT != parse_next(p)) {
 				parse_errx(p, "expected update name");
 				return;
 			}
+			/* FIXME: warn of prior */
 			free(up->name);
 			up->name = strdup(p->last.string);
 			if (NULL == up->name)
 				err(EXIT_FAILURE, NULL);
 		} else if (0 == strcasecmp(p->last.string, "comment")) {
-			if (TOK_LITERAL != parse_next(p)) {
-				parse_errx(p, "expected update comment");
-				return;
-			}
-			free(up->doc);
-			up->doc = strdup(p->last.string);
-			if (NULL == up->doc)
-				err(EXIT_FAILURE, NULL);
-		} else {
+			parse_comment(p, &up->doc);
+		} else
 			parse_errx(p, "unknown update parameter");
-			return;
-		}
 	}
 }
 
@@ -1144,10 +1210,12 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
  * elements within.
  * Its syntax is:
  * 
- *  "{" ["field" ident FIELD]+ "}"
- *
- * Where FIELD is defined in parse_config_field and ident is an
- * alphanumeric (starting with alpha) string.
+ *  "{" 
+ *    ["field" ident FIELD]+ 
+ *    [["iterate" | "search" | "list" ] search_fields]*
+ *    ["update" update_fields]*
+ *    ["comment" quoted_string]?
+ *  "}"
  */
 static void
 parse_config_struct(struct parse *p, struct strct *s)
@@ -1160,30 +1228,17 @@ parse_config_struct(struct parse *p, struct strct *s)
 		return;
 	}
 
-	for (;;) {
+	while (TOK_EOF != p->lasttype && TOK_ERR != p->lasttype) {
 		if (TOK_RBRACE == parse_next(p))
 			break;
-
 		if (TOK_IDENT != p->lasttype) {
 			parse_errx(p, "expected field entry type");
 			return;
 		}
 
 		if (0 == strcasecmp(p->last.string, "comment")) {
-			/*
-			 * A comment.
-			 * Attach it to the given structure, possibly
-			 * clearing out any prior comments.
-			 * XXX: augment comments?
-			 */
-			if (TOK_LITERAL != parse_next(p)) {
-				parse_errx(p, "expected comment string");
+			if ( ! parse_comment(p, &s->doc))
 				return;
-			}
-			free(s->doc);
-			s->doc = strdup(p->last.string);
-			if (NULL == s->doc)
-				err(EXIT_FAILURE, NULL);
 			if (TOK_SEMICOLON != parse_next(p)) {
 				parse_errx(p, "expected end of comment");
 				return;
@@ -1203,6 +1258,9 @@ parse_config_struct(struct parse *p, struct strct *s)
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "update")) {
 			parse_config_update(p, s);
+			continue;
+		} else if (0 == strcasecmp(p->last.string, "unique")) {
+			parse_config_unique(p, s);
 			continue;
 		}
 		
@@ -1340,6 +1398,7 @@ parse_config(FILE *f, const char *fname)
 		TAILQ_INIT(&s->sq);
 		TAILQ_INIT(&s->aq);
 		TAILQ_INIT(&s->uq);
+		TAILQ_INIT(&s->nq);
 		parse_config_struct(&p, s);
 	}
 
@@ -1418,6 +1477,20 @@ parse_free_search(struct search *p)
 }
 
 /*
+ * Free a unique reference.
+ * Does nothing if "p" is NULL.
+ */
+static void
+parse_free_nref(struct nref *u)
+{
+
+	if (NULL == u)
+		return;
+	free(u->name);
+	free(u);
+}
+
+/*
  * Free an update reference.
  * Does nothing if "p" is NULL.
  */
@@ -1429,6 +1502,26 @@ parse_free_uref(struct uref *u)
 		return;
 	free(u->name);
 	free(u);
+}
+
+/*
+ * Free a unique series.
+ * Does nothing if "p" is NULL.
+ */
+static void
+parse_free_unique(struct unique *p)
+{
+	struct nref	*u;
+
+	if (NULL == p)
+		return;
+
+	while (NULL != (u = TAILQ_FIRST(&p->nq))) {
+		TAILQ_REMOVE(&p->nq, u, entries);
+		parse_free_nref(u);
+	}
+
+	free(p);
 }
 
 /*
@@ -1469,6 +1562,7 @@ parse_free(struct strctq *q)
 	struct search	*s;
 	struct alias	*a;
 	struct update	*u;
+	struct unique	*n;
 
 	if (NULL == q)
 		return;
@@ -1492,6 +1586,10 @@ parse_free(struct strctq *q)
 		while (NULL != (u = TAILQ_FIRST(&p->uq))) {
 			TAILQ_REMOVE(&p->uq, u, entries);
 			parse_free_update(u);
+		}
+		while (NULL != (n = TAILQ_FIRST(&p->nq))) {
+			TAILQ_REMOVE(&p->nq, n, entries);
+			parse_free_unique(n);
 		}
 		free(p->doc);
 		free(p->name);

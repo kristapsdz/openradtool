@@ -37,11 +37,20 @@ main(void)
 	struct user	*u, *u2, *u3;
 	const char	*buf = "hello there";
 
+	/* 
+	 * Open the database.
+	 * It must already have been installed with a schema.
+	 */
+
 	if (NULL == (sql = db_open("db.db")))
 		errx(EXIT_FAILURE, "db.db");
+	
+	/* Insert our initial company record. */
 
 	if ((cid = db_company_insert(sql, "foo bar", &val)) < 0)
 		errx(EXIT_FAILURE, "db_company_insert");
+
+	/* Now insert our initial user. */
 
 	uid = db_user_insert(sql, cid, 
 		"password", "foo@foo.com", strlen(buf), 
@@ -49,14 +58,22 @@ main(void)
 	if (uid < 0)
 		errx(EXIT_FAILURE, "db_user_insert");
 
+	/*
+	 * Try to insert a user with the same e-mail.
+	 * This should fail because the e-mail is unique.
+	 */
+
 	nuid = db_user_insert(sql, cid, 
 		"password", "foo@foo.com", 0, NULL, "foo bar");
-
 	if (nuid >= 0)
 		errx(EXIT_FAILURE, "db_user_insert (duplicate)");
 
+	/* Now fetch the entry by its unique id. */
+
 	if (NULL == (u = db_user_by__uid(sql, uid)))
 		errx(EXIT_FAILURE, "db_user_by__uid");
+
+	/* Print it... */
 
 	warnx("company name: %s", u->company.name);
 	warnx("company id: %" PRId64, u->company.id);
@@ -70,9 +87,16 @@ main(void)
 	warnx("image size: %zu", u->image_sz);
 	warnx("uid: %" PRId64, u->uid);
 
+	/* Look up the same user by e-mail/password. */
+
 	u2 = db_user_by_creds(sql, "foo@foo.com", "password");
-	if (NULL == u2)
+	if (NULL == u2 || u2->uid != u->uid)
 		errx(EXIT_FAILURE, "db_user_by_creds");
+
+	/* 
+	 * Now try looking them up with the wrong password. 
+	 * This should return NULL.
+	 */
 
 	u3 = db_user_by_creds(sql, "foo@foo.com", "password2");
 	if (NULL != u3)
@@ -82,8 +106,15 @@ main(void)
 	db_user_free(u2);
 	db_user_free(u3);
 
+	/* Change the user's password. */
+
 	if ( ! db_user_update_hash_by_uid(sql, "password2", uid))
 		errx(EXIT_FAILURE, "db_user_update_hash");
+
+	/* 
+	 * Now do the same dance, checking for the changed password.
+	 * (It should have changed.)
+	 */
 
 	u2 = db_user_by_creds(sql, "foo@foo.com", "password");
 	if (NULL != u2)
@@ -95,6 +126,8 @@ main(void)
 
 	db_user_free(u2);
 	db_user_free(u3);
+
+	/* That's it!  Close up shop. */
 
 	db_close(sql);
 	return(EXIT_FAILURE);

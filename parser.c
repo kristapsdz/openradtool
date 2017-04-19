@@ -1205,7 +1205,6 @@ parse_config_struct(struct parse *p, struct strct *s)
 			parse_config_update(p, s);
 			continue;
 		}
-		 
 		
 		if (strcasecmp(p->last.string, "field")) {
 			parse_errx(p, "expected field entry type");
@@ -1248,6 +1247,7 @@ parse_config_struct(struct parse *p, struct strct *s)
 
 		fd->type = FTYPE_INT;
 		fd->parent = s;
+		parse_point(p, &fd->pos);
 		TAILQ_INSERT_TAIL(&s->fq, fd, entries);
 		parse_config_field(p, fd);
 	}

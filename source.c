@@ -87,34 +87,7 @@ gen_strct_caps(const char *v)
 }
 
 /*
- * Free ("unfill") an individual field that was filled from the
- * database (see gen_strct_fill_field()).
- */
-static void
-gen_strct_unfill_field(const struct field *f)
-{
-
-	switch(f->type) {
-	case (FTYPE_STRUCT):
-		printf("\tdb_%s_unfill(&p->%s);\n",
-			f->ref->tstrct,
-			f->name);
-		break;
-	case (FTYPE_BLOB):
-		/* FALLTHROUGH */
-	case (FTYPE_PASSWORD):
-		/* FALLTHROUGH */
-	case (FTYPE_TEXT):
-		printf("\tfree(p->%s);\n", f->name);
-		break;
-	default:
-		break;
-	}
-}
-
-/*
  * Fill an individual field from the database.
- * See gen_strct_unfill_field().
  */
 static void
 gen_strct_fill_field(const struct field *f)
@@ -289,7 +262,7 @@ gen_strct_func_iter(const struct search *s, const char *caps, size_t num)
 			continue;
 		}
 		printf("\t\tif (crypt_checkpass(v%zu, p.%s) < 0) {\n"
-		       "\t\t\tdb_%s_unfill(&p);\n"
+		       "\t\t\tdb_%s_unfill_r(&p);\n"
 		       "\t\t\tcontinue;\n"
 		       "\t\t}\n",
 		       pos, sent->fname, s->parent->name);
@@ -297,7 +270,7 @@ gen_strct_func_iter(const struct search *s, const char *caps, size_t num)
 	}
 
 	printf("\t\t(*cb)(&p, arg);\n"
-	       "\t\tdb_%s_unfill(&p);\n"
+	       "\t\tdb_%s_unfill_r(&p);\n"
 	       "\t}\n"
 	       "\tksql_stmt_free(stmt);\n"
 	       "}\n"
@@ -358,7 +331,7 @@ gen_strct_func_list(const struct search *s, const char *caps, size_t num)
 	       "\t\t\tperror(NULL);\n"
 	       "\t\t\texit(EXIT_FAILURE);\n"
 	       "\t\t}\n"
-	       "\t\tdb_%s_fill(p, stmt, NULL);\n",
+	       "\t\tdb_%s_fill_r(p, stmt, NULL);\n",
 	       s->parent->name, s->parent->name);
 
 	pos = 1;
@@ -459,7 +432,7 @@ gen_strct_func_srch(const struct search *s, const char *caps, size_t num)
 	       "\t\t\tperror(NULL);\n"
 	       "\t\t\texit(EXIT_FAILURE);\n"
 	       "\t\t}\n"
-	       "\t\tdb_%s_fill(p, stmt, NULL);\n",
+	       "\t\tdb_%s_fill_r(p, stmt, NULL);\n",
 	       s->parent->name, s->parent->name);
 
 	/*
@@ -612,7 +585,7 @@ gen_func_free(const struct strct *p)
 	print_func_free(p, 0);
 	printf("\n"
 	       "{\n"
-	       "\tdb_%s_unfill(p);\n"
+	       "\tdb_%s_unfill_r(p);\n"
 	       "\tfree(p);\n"
 	       "}\n"
 	       "\n", 
@@ -633,9 +606,68 @@ gen_func_unfill(const struct strct *p)
 	     "\tif (NULL == p)\n"
 	     "\t\treturn;");
 	TAILQ_FOREACH(f, &p->fq, entries)
-		gen_strct_unfill_field(f);
-	printf("}\n"
-	       "\n");
+		switch(f->type) {
+		case (FTYPE_BLOB):
+		case (FTYPE_PASSWORD):
+		case (FTYPE_TEXT):
+			printf("\tfree(p->%s);\n", f->name);
+			break;
+		default:
+			break;
+		}
+	puts("}\n"
+	     "");
+}
+
+/*
+ * Generate the nested "unfill" function.
+ */
+static void
+gen_func_unfill_r(const struct strct *p)
+{
+	const struct field *f;
+
+	printf("static void\n"
+	       "db_%s_unfill_r(struct %s *p)\n"
+	       "{\n"
+	       "\tif (NULL == p)\n"
+	       "\t\treturn;\n"
+	       "\n"
+	       "\tdb_%s_unfill(p);\n",
+	       p->name, p->name, p->name);
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (FTYPE_STRUCT == f->type)
+			printf("\tdb_%s_unfill_r(&p->%s);\n",
+				f->ref->tstrct, f->name);
+	puts("}\n"
+	     "");
+}
+
+/*
+ * Generate the "fill" function.
+ */
+static void
+gen_func_fill_r(const struct strct *p)
+{
+	const struct field *f;
+
+	printf("static void\n"
+	       "db_%s_fill_r(struct %s *p, "
+	       "struct ksqlstmt *stmt, size_t *pos)\n"
+	       "{\n"
+	       "\tsize_t i = 0;\n"
+	       "\n"
+	       "\tif (NULL == pos)\n"
+	       "\t\tpos = &i;\n"
+	       "\tdb_%s_fill(p, stmt, pos);\n",
+	       p->name, p->name, p->name);
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (FTYPE_STRUCT == f->type)
+			printf("\tdb_%s_fill_r(&p->%s, "
+				"stmt, pos);\n", f->name, 
+				f->ref->target->parent->name);
+	puts("}\n"
+	     "");
 }
 
 /*
@@ -656,14 +688,8 @@ gen_func_fill(const struct strct *p)
 	     "\tmemset(p, 0, sizeof(*p));");
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_fill_field(f);
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT != f->type)
-			continue;
-		printf("\tdb_%s_fill(&p->%s, stmt, pos);\n",
-			f->name, f->ref->target->parent->name);
-	}
-	printf("}\n"
-	       "\n");
+	puts("}\n"
+	     "");
 }
 
 /*
@@ -763,7 +789,9 @@ gen_funcs(const struct strct *p)
 
 	caps = gen_strct_caps(p->name);
 
+	gen_func_fill_r(p);
 	gen_func_fill(p);
+	gen_func_unfill_r(p);
 	gen_func_unfill(p);
 	gen_func_free(p);
 	gen_func_freeq(p);

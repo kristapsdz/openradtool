@@ -234,10 +234,9 @@ gen_funcs(const struct strct *p)
 	const struct update *u;
 	size_t	 pos;
 
-	print_commentv(0, COMMENT_C,
-	       "Call db_%s_unfill() and free \"p\".\n"
-	       "Has no effect if \"p\" is NULL.",
-	       p->name);
+	print_commentt(0, COMMENT_C,
+	       "Unfill resources and free \"p\".\n"
+	       "Has no effect if \"p\" is NULL.");
 	print_func_free(p, 1);
 	puts("");
 
@@ -253,8 +252,7 @@ gen_funcs(const struct strct *p)
 	       "Fill in a %s from an open statement \"stmt\".\n"
 	       "This starts grabbing results from \"pos\", "
 	       "which may be NULL to start from zero.\n"
-	       "This recursively invokes the \"fill\" function "
-	       "for all nested structures.",
+	       "This uses the DB_SCHEMA_xxx for the table.",
 	       p->name);
 	print_func_fill(p, 1);
 	puts("");
@@ -285,7 +283,6 @@ gen_funcs(const struct strct *p)
 
 	print_commentv(0, COMMENT_C,
 	       "Free memory allocated by db_%s_fill().\n"
-	       "Also frees for all contained structures.\n"
 	       "Has not effect if \"p\" is NULL.",
 	       p->name);
 	print_func_unfill(p, 1);
@@ -312,7 +309,7 @@ gen_schema(const struct strct *p)
 
 	printf("#define DB_SCHEMA_");
 	for (cp = p->name; '\0' != *cp; cp++)
-		putchar(*cp);
+		putchar(toupper((int)*cp));
 	puts("(_x) \\");
 
 	TAILQ_FOREACH(f, &p->fq, entries) {

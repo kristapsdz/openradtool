@@ -1010,6 +1010,7 @@ parse_config_unique(struct parse *p, struct strct *s)
 		err(EXIT_FAILURE, NULL);
 
 	up->parent = s;
+	parse_point(p, &up->pos);
 	TAILQ_INIT(&up->nq);
 	TAILQ_INSERT_TAIL(&s->nq, up, entries);
 

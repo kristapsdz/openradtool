@@ -21,6 +21,7 @@
 #if HAVE_ERR
 # include <err.h>
 #endif
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,6 +36,43 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	"TEXT", /* FTYPE_PASSWORD */
 	NULL, /* FTYPE_STRUCT */
 };
+
+static void gen_warnx(const struct pos *, const char *, ...)
+	__attribute__((format(printf, 2, 3)));
+static void diff_warnx(const struct pos *,
+		const struct pos *, const char *, ...)
+	__attribute__((format(printf, 3, 4)));
+
+static void
+gen_warnx(const struct pos *pos, const char *fmt, ...)
+{
+	va_list	 ap;
+	char	 buf[1024];
+
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+
+	fprintf(stderr, "%s:%zu:%zu: %s\n", 
+		pos->fname, pos->line, pos->column, buf);
+}
+
+static void
+diff_warnx(const struct pos *posold, 
+	const struct pos *posnew, const char *fmt, ...)
+{
+	va_list	 ap;
+	char	 buf[1024];
+
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+
+	fprintf(stderr, "%s:%zu:%zu -> %s:%zu:%zu: %s\n", 
+		posold->fname, posold->line, posold->column, 
+		posnew->fname, posnew->line, posnew->column, 
+		buf);
+}
 
 /*
  * Generate the "UNIQUE" statements on this table.
@@ -144,33 +182,30 @@ gen_diff_field(const struct field *f, const struct field *df)
 	int	 rc = 1;
 
 	if (f->type != df->type) {
-		warnx("%s.%s: type change from %s to %s",
-			f->parent->name, f->name,
-			ftypes[df->type],
-			ftypes[f->type]);
+		diff_warnx(&f->parent->pos, &df->parent->pos, 
+			"type change from %s to %s",
+			ftypes[df->type], ftypes[f->type]);
 		rc = 0;
 	} 
 
 	if (f->flags != df->flags) {
-		warnx("%s.%s: attribute change",
-			f->parent->name, f->name);
+		diff_warnx(&f->parent->pos, &df->parent->pos,
+			"attribute change");
 		rc = 0;
 	}
 
 	if ((NULL != f->ref && NULL == df->ref) ||
 	    (NULL == f->ref && NULL != df->ref)) {
-		warnx("%s.%s: reference change",
-			f->parent->name, f->name);
+		diff_warnx(&f->parent->pos, &df->parent->pos,
+			"foreign reference change");
 		rc = 0;
 	}
 
 	if (NULL != f->ref && NULL != df->ref &&
 	    (strcasecmp(f->ref->source->parent->name,
 			df->ref->source->parent->name))) {
-		warnx("%s.%s: reference source change from %s to %s",
-			f->parent->name, f->name,
-			f->ref->source->parent->name,
-			df->ref->source->parent->name);
+		diff_warnx(&f->parent->pos, &df->parent->pos,
+			"foreign reference source change");
 		rc = 0;
 	}
 
@@ -189,11 +224,9 @@ gen_diff_fields_old(const struct strct *s, const struct strct *ds)
 				break;
 
 		if (NULL == f && FTYPE_STRUCT == df->type) {
-			warnx("%s.%s: old inner joined field",
-				df->parent->name, df->name);
+			gen_warnx(&df->pos, "old inner joined field");
 		} else if (NULL == f) {
-			warnx("%s.%s: column was dropped",
-				df->parent->name, df->name);
+			gen_warnx(&df->pos, "column was dropped");
 			errors++;
 		} else if ( ! gen_diff_field(df, f))
 			errors++;
@@ -227,8 +260,7 @@ gen_diff_fields_new(const struct strct *s, const struct strct *ds)
 		 */
 
 		if (NULL == df && FTYPE_STRUCT == f->type) {
-			warnx("%s.%s: new inner joined field",
-				f->parent->name, f->name);
+			gen_warnx(&f->pos, "new inner joined field");
 		} else if (NULL == df) {
 			printf("ALTER TABLE %s ADD COLUMN %s %s",
 				f->parent->name, f->name, 
@@ -265,9 +297,7 @@ gen_diff_uniques_new(const struct strct *s, const struct strct *ds)
 				break;
 		if (NULL != uds) 
 			continue;
-		warnx("%s:%zu:%zu: new unique fields",
-			us->pos.fname, us->pos.line, 
-			us->pos.column);
+		gen_warnx(&us->pos, "new unique fields");
 		errs++;
 	}
 	return(0 == errs);
@@ -285,9 +315,7 @@ gen_diff_uniques_old(const struct strct *s, const struct strct *ds)
 				break;
 		if (NULL != us) 
 			continue;
-		warnx("%s:%zu:%zu: unique field disappeared",
-			uds->pos.fname, uds->pos.line, 
-			uds->pos.column);
+		gen_warnx(&uds->pos, "unique field disappeared");
 		errs++;
 	}
 
@@ -351,7 +379,7 @@ gen_diff(const struct strctq *sq, const struct strctq *dsq)
 			if (0 == strcasecmp(s->name, ds->name))
 				break;
 		if (NULL == s) {
-			warnx("%s: table was dropped", ds->name);
+			gen_warnx(&ds->pos, "table was dropped");
 			errors++;
 		} else if ( ! gen_diff_fields_old(s, ds))
 			errors++;

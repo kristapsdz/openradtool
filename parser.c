@@ -261,14 +261,15 @@ parse_point(const struct parse *p, struct pos *pp)
 }
 
 /*
- * Allocate a unique reference and add it to the parent queue.
+ * Allocate a unique reference and add it to the parent queue in order
+ * by alpha.
  * Always returns the created pointer.
  */
 static struct nref *
 nref_alloc(const struct parse *p, const char *name, 
 	struct unique *up)
 {
-	struct nref	*ref;
+	struct nref	*ref, *n;
 
 	if (NULL == (ref = calloc(1, sizeof(struct nref))))
 		err(EXIT_FAILURE, NULL);
@@ -276,7 +277,17 @@ nref_alloc(const struct parse *p, const char *name,
 		err(EXIT_FAILURE, NULL);
 	ref->parent = up;
 	parse_point(p, &ref->pos);
-	TAILQ_INSERT_TAIL(&up->nq, ref, entries);
+
+	/* Order alphabetically. */
+
+	TAILQ_FOREACH(n, &up->nq, entries)
+		if (strcasecmp(n->name, ref->name) >= 0)
+			break;
+	if (NULL == n)
+		TAILQ_INSERT_TAIL(&up->nq, ref, entries);
+	else
+		TAILQ_INSERT_BEFORE(n, ref, entries);
+
 	return(ref);
 }
 
@@ -991,8 +1002,9 @@ parse_config_search_params(struct parse *p, struct search *s)
 static void
 parse_config_unique(struct parse *p, struct strct *s)
 {
-	struct unique	*up;
-	size_t		 num = 0;
+	struct unique	*up, *upp;
+	struct nref	*n;
+	size_t		 sz, num = 0;
 
 	if (NULL == (up = calloc(1, sizeof(struct unique))))
 		err(EXIT_FAILURE, NULL);
@@ -1015,9 +1027,34 @@ parse_config_unique(struct parse *p, struct strct *s)
 		parse_errx(p, "unknown unique token");
 	}
 
-	if (num < 2)
+	if (num < 2) {
 		parse_errx(p, "at least two fields "
 			"required for unique constraint");
+		return;
+	}
+
+	/* Establish canonical name of search. */
+
+	sz = 0;
+	TAILQ_FOREACH(n, &up->nq, entries) {
+		sz += strlen(n->name) + 1; /* comma */
+		up->cname = realloc(up->cname, sz + 1);
+		if (NULL == up->cname)
+			err(EXIT_FAILURE, NULL);
+		strlcat(up->cname, n->name, sz + 1);
+		strlcat(up->cname, ",", sz + 1);
+	}
+	assert(sz > 0);
+	up->cname[sz - 1] = '\0';
+
+	/* Check for duplicate unique constraint. */
+
+	TAILQ_FOREACH(upp, &s->nq, entries) {
+		if (upp == up || strcasecmp(upp->cname, up->cname)) 
+			continue;
+		parse_errx(p, "duplicate unique constraint");
+		return;
+	}
 }
 
 /*

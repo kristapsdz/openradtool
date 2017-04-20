@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: April 18 2017 $
+.Dd $Mdocdate: April 19 2017 $
 .Dt KWEBAPP 5
 .Os
 .Sh NAME
@@ -278,6 +278,8 @@ The
 .Cm fields
 must be in the local structure, and must be native types.
 There must be at least two fields in the statement.
+There can be only one unique statement per combination of fields (in any
+order).
 .Ss Updates
 Update statements define how the database will be updated.
 By default, there are no update functions defined.

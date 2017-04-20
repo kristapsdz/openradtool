@@ -228,6 +228,8 @@ static	const char *optypes[OPTYPE__MAX] = {
 
 static void parse_errx(struct parse *, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
+static void parse_warnx(struct parse *p, const char *, ...)
+	__attribute__((format(printf, 2, 3)));
 
 /*
  * Push a single character into the retaining buffer.
@@ -256,6 +258,83 @@ parse_point(const struct parse *p, struct pos *pp)
 	pp->fname = p->fname;
 	pp->line = p->line;
 	pp->column = p->column;
+}
+
+/*
+ * Allocate a unique reference and add it to the parent queue.
+ * Always returns the created pointer.
+ */
+static struct nref *
+nref_alloc(const struct parse *p, const char *name, 
+	struct unique *up)
+{
+	struct nref	*ref;
+
+	if (NULL == (ref = calloc(1, sizeof(struct nref))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (ref->name = strdup(name)))
+		err(EXIT_FAILURE, NULL);
+	ref->parent = up;
+	parse_point(p, &ref->pos);
+	TAILQ_INSERT_TAIL(&up->nq, ref, entries);
+	return(ref);
+}
+
+/*
+ * Allocate an update reference and add it to the parent queue.
+ * Always returns the created pointer.
+ */
+static struct uref *
+uref_alloc(const struct parse *p, const char *name, 
+	struct update *up, struct urefq *q)
+{
+	struct uref	*ref;
+
+	if (NULL == (ref = calloc(1, sizeof(struct uref))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (ref->name = strdup(name)))
+		err(EXIT_FAILURE, NULL);
+	ref->parent = up;
+	parse_point(p, &ref->pos);
+	TAILQ_INSERT_TAIL(q, ref, entries);
+	return(ref);
+}
+
+/*
+ * Allocate a search reference and add it to the parent queue.
+ * Always returns the created pointer.
+ */
+static struct sref *
+sref_alloc(const struct parse *p, const char *name, struct sent *up)
+{
+	struct sref	*ref;
+
+	if (NULL == (ref = calloc(1, sizeof(struct sref))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (ref->name = strdup(name)))
+		err(EXIT_FAILURE, NULL);
+	ref->parent = up;
+	parse_point(p, &ref->pos);
+	TAILQ_INSERT_TAIL(&up->srq, ref, entries);
+	return(ref);
+}
+
+/*
+ * Allocate a search entity and add it to the parent queue.
+ * Always returns the created pointer.
+ */
+static struct sent *
+sent_alloc(const struct parse *p, struct search *up)
+{
+	struct sent	*sent;
+
+	if (NULL == (sent = calloc(1, sizeof(struct sent))))
+		err(EXIT_FAILURE, NULL);
+	sent->parent = up;
+	parse_point(p, &sent->pos);
+	TAILQ_INIT(&sent->srq);
+	TAILQ_INSERT_TAIL(&up->sntq, sent, entries);
+	return(sent);
 }
 
 /*
@@ -736,83 +815,6 @@ parse_config_field(struct parse *p, struct field *fd)
 
 	parse_config_field_struct(p, fd->ref);
 	parse_config_field_info(p, fd);
-}
-
-/*
- * Allocate a unique reference and add it to the parent queue.
- * Always returns the created pointer.
- */
-static struct nref *
-nref_alloc(const struct parse *p, const char *name, 
-	struct unique *up)
-{
-	struct nref	*ref;
-
-	if (NULL == (ref = calloc(1, sizeof(struct nref))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (ref->name = strdup(name)))
-		err(EXIT_FAILURE, NULL);
-	ref->parent = up;
-	parse_point(p, &ref->pos);
-	TAILQ_INSERT_TAIL(&up->nq, ref, entries);
-	return(ref);
-}
-
-/*
- * Allocate an update reference and add it to the parent queue.
- * Always returns the created pointer.
- */
-static struct uref *
-uref_alloc(const struct parse *p, const char *name, 
-	struct update *up, struct urefq *q)
-{
-	struct uref	*ref;
-
-	if (NULL == (ref = calloc(1, sizeof(struct uref))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (ref->name = strdup(name)))
-		err(EXIT_FAILURE, NULL);
-	ref->parent = up;
-	parse_point(p, &ref->pos);
-	TAILQ_INSERT_TAIL(q, ref, entries);
-	return(ref);
-}
-
-/*
- * Allocate a search reference and add it to the parent queue.
- * Always returns the created pointer.
- */
-static struct sref *
-sref_alloc(const struct parse *p, const char *name, struct sent *up)
-{
-	struct sref	*ref;
-
-	if (NULL == (ref = calloc(1, sizeof(struct sref))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (ref->name = strdup(name)))
-		err(EXIT_FAILURE, NULL);
-	ref->parent = up;
-	parse_point(p, &ref->pos);
-	TAILQ_INSERT_TAIL(&up->srq, ref, entries);
-	return(ref);
-}
-
-/*
- * Allocate a search entity and add it to the parent queue.
- * Always returns the created pointer.
- */
-static struct sent *
-sent_alloc(const struct parse *p, struct search *up)
-{
-	struct sent	*sent;
-
-	if (NULL == (sent = calloc(1, sizeof(struct sent))))
-		err(EXIT_FAILURE, NULL);
-	sent->parent = up;
-	parse_point(p, &sent->pos);
-	TAILQ_INIT(&sent->srq);
-	TAILQ_INSERT_TAIL(&up->sntq, sent, entries);
-	return(sent);
 }
 
 /*

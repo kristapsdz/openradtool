@@ -18,6 +18,7 @@
 
 #include <sys/queue.h>
 
+#include <assert.h>
 #include <ctype.h>
 #if HAVE_ERR
 # include <err.h>
@@ -836,7 +837,7 @@ parse_config_search_terms(struct parse *p, struct sent *sent)
 	}
 	sref_alloc(p, p->last.string, sent);
 
-	for (;;) {
+	while (TOK_ERR != p->lasttype && TOK_EOF != p->lasttype) {
 		if (TOK_COMMA == parse_next(p) ||
 		    TOK_SEMICOLON == p->lasttype ||
 		    TOK_COLON == p->lasttype)
@@ -971,6 +972,10 @@ parse_config_search_params(struct parse *p, struct search *s)
 			break;
 		}
 	}
+
+	assert(TOK_SEMICOLON == p->lasttype ||
+	       (TOK_ERR == p->lasttype || 
+		TOK_EOF == p->lasttype));
 }
 
 /*
@@ -1154,10 +1159,8 @@ parse_config_update(struct parse *p, struct strct *s)
  * The terms (searchable field) parts are parsed in
  * parse_config_search_terms().
  * The params are in parse_config_search_params().
- * Returns zero on failure, non-zero on success.
- * FIXME: have return value be void and use lasttype.
  */
-static int
+static void
 parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 {
 	struct search	*srch;
@@ -1170,38 +1173,30 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 	parse_point(p, &srch->pos);
 	TAILQ_INIT(&srch->sntq);
 	TAILQ_INSERT_TAIL(&s->sq, srch, entries);
+
 	if (STYPE_LIST == stype)
 		s->flags |= STRCT_HAS_QUEUE;
 	else if (STYPE_ITERATE == stype)
 		s->flags |= STRCT_HAS_ITERATOR;
 
-	/* Per-field. */
+	/* We need at least one search term. */
 
 	sent = sent_alloc(p, srch);
 	parse_config_search_terms(p, sent);
 
-	if (TOK_COLON == p->lasttype) {
-		parse_config_search_params(p, srch);
-		return(1);
-	} else if (TOK_SEMICOLON == p->lasttype)
-		return(1);
+	/* Now for remaining terms... */
 
-	if (TOK_COMMA != p->lasttype)
-		return(0);
-
-	for (;;) {
+	while (TOK_COMMA == p->lasttype) {
 		sent = sent_alloc(p, srch);
 		parse_config_search_terms(p, sent);
-		if (TOK_SEMICOLON == p->lasttype)
-			return(1);
-		else if (TOK_COLON == p->lasttype)
-			break;
-		else if (TOK_COMMA != p->lasttype)
-			return(0);
 	}
 
-	parse_config_search_params(p, srch);
-	return(1);
+	if (TOK_COLON == p->lasttype)
+		parse_config_search_params(p, srch);
+
+	assert(TOK_SEMICOLON == p->lasttype ||
+	       (TOK_ERR == p->lasttype || 
+		TOK_EOF == p->lasttype));
 }
 
 /*
@@ -1245,16 +1240,13 @@ parse_config_struct(struct parse *p, struct strct *s)
 			}
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "search")) {
-			if ( ! parse_config_search(p, s, STYPE_SEARCH)) 
-				return;
+			parse_config_search(p, s, STYPE_SEARCH);
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "list")) {
-			if ( ! parse_config_search(p, s, STYPE_LIST)) 
-				return;
+			parse_config_search(p, s, STYPE_LIST);
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "iterate")) {
-			if ( ! parse_config_search(p, s, STYPE_ITERATE)) 
-				return;
+			parse_config_search(p, s, STYPE_ITERATE);
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "update")) {
 			parse_config_update(p, s);

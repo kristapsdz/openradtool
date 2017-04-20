@@ -253,6 +253,47 @@ gen_diff_fields_new(const struct strct *s, const struct strct *ds)
 	return(errors ? -1 : count ? 1 : 0);
 }
 
+static int
+gen_diff_uniques_new(const struct strct *s, const struct strct *ds)
+{
+	struct unique	*us, *uds;
+	size_t		 errs = 0;
+
+	TAILQ_FOREACH(us, &s->nq, entries) {
+		TAILQ_FOREACH(uds, &ds->nq, entries)
+			if (0 == strcasecmp(uds->cname, us->cname))
+				break;
+		if (NULL != uds) 
+			continue;
+		warnx("%s:%zu:%zu: new unique fields",
+			us->pos.fname, us->pos.line, 
+			us->pos.column);
+		errs++;
+	}
+	return(0 == errs);
+}
+
+static int
+gen_diff_uniques_old(const struct strct *s, const struct strct *ds)
+{
+	struct unique	*us, *uds;
+	size_t		 errs = 0;
+
+	TAILQ_FOREACH(uds, &ds->nq, entries) {
+		TAILQ_FOREACH(us, &s->nq, entries)
+			if (0 == strcasecmp(uds->cname, us->cname))
+				break;
+		if (NULL != us) 
+			continue;
+		warnx("%s:%zu:%zu: unique field disappeared",
+			uds->pos.fname, uds->pos.line, 
+			uds->pos.column);
+		errs++;
+	}
+
+	return(0 == errs);
+}
+
 int
 gen_diff(const struct strctq *sq, const struct strctq *dsq)
 {
@@ -316,7 +357,25 @@ gen_diff(const struct strctq *sq, const struct strctq *dsq)
 			errors++;
 	}
 
-	/* TODO: see if unique fields are different. */
-	
+	/*
+	 * Test for old and new unique fields.
+	 * We'll test both for newly added unique fields (all done by
+	 * canonical name) and also lost uinque fields.
+	 * Obviously this is only for matching table entries.
+	 */
+
+	TAILQ_FOREACH(s, sq, entries) 
+		TAILQ_FOREACH(ds, dsq, entries) {
+			if (strcasecmp(s->name, ds->name))
+				continue;
+			errors += ! gen_diff_uniques_new(s, ds);
+		}
+	TAILQ_FOREACH(ds, dsq, entries) 
+		TAILQ_FOREACH(s, sq, entries) {
+			if (strcasecmp(s->name, ds->name))
+				continue;
+			errors += ! gen_diff_uniques_old(s, ds);
+		}
+
 	return(errors ? 0 : 1);
 }

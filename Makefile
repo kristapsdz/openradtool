@@ -2,7 +2,7 @@
 
 include Makefile.configure
 
-VERSION		 = 0.0.12
+VERSION		 = 0.0.13
 CFLAGS		+= -DVERSION=\"$(VERSION)\"
 COMPAT_OBJS	 = compat_err.o \
 		   compat_progname.o \

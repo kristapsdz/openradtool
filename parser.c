@@ -1430,6 +1430,7 @@ parse_config(FILE *f, const char *fname)
 		for (caps = s->cname; '\0' != *caps; caps++)
 			*caps = toupper((int)*caps);
 
+		parse_point(&p, &s->pos);
 		TAILQ_INSERT_TAIL(q, s, entries);
 		TAILQ_INIT(&s->fq);
 		TAILQ_INIT(&s->sq);

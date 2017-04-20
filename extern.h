@@ -242,6 +242,7 @@ struct	strct {
 	char		  *cname; /* name of structure (capitals) */
 	char		  *doc; /* documentation */
 	size_t		   height; /* dependency order */
+	struct pos	   pos; /* parse point */
 	size_t		   colour; /* used during linkage */
 	struct field	  *rowid; /* optional rowid */
 	struct fieldq	   fq; /* fields/columns/members */

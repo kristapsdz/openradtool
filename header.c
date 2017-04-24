@@ -42,20 +42,20 @@ gen_strct_field(const struct field *p)
 			p->ref->tstrct, p->name);
 		break;
 	case (FTYPE_REAL):
-		printf("\tdouble %s;\n", p->name);
+		printf("\tdouble\t %s;\n", p->name);
 		break;
 	case (FTYPE_BLOB):
-		printf("\tvoid *%s;\n"
-		       "\tsize_t %s_sz;\n",
+		printf("\tvoid\t*%s;\n"
+		       "\tsize_t\t %s_sz;\n",
 		       p->name, p->name);
 		break;
 	case (FTYPE_INT):
-		printf("\tint64_t %s;\n", p->name);
+		printf("\tint64_t\t %s;\n", p->name);
 		break;
 	case (FTYPE_TEXT):
 		/* FALLTHROUGH */
 	case (FTYPE_PASSWORD):
-		printf("\tchar *%s;\n", p->name);
+		printf("\tchar\t*%s;\n", p->name);
 		break;
 	default:
 		break;
@@ -72,7 +72,8 @@ gen_struct(const struct strct *p)
 {
 	const struct field *f;
 
-	print_commentt(0, COMMENT_C, p->doc);
+	if (NULL != p->doc)
+		print_commentt(0, COMMENT_C, p->doc);
 
 	printf("struct\t%s {\n", p->name);
 

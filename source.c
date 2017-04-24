@@ -648,8 +648,8 @@ gen_func_fill_r(const struct strct *p)
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if (FTYPE_STRUCT == f->type)
 			printf("\tdb_%s_fill_r(&p->%s, "
-				"stmt, pos);\n", f->name, 
-				f->ref->target->parent->name);
+				"stmt, pos);\n", 
+				f->ref->tstrct, f->name);
 	puts("}\n"
 	     "");
 }

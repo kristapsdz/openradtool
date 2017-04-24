@@ -311,7 +311,7 @@ print_commentt(size_t tabs, enum cmtt type, const char *cp)
 {
 
 	if (COMMENT_C == type && 1 == tabs &&
-	    strlen(cp) <= 50) {
+	    NULL == strchr(cp, '\n') && strlen(cp) <= 50) {
 		printf("\t/* %s */\n", cp);
 		return;
 	}

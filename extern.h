@@ -233,6 +233,20 @@ struct	update {
 TAILQ_HEAD(updateq, update);
 
 /*
+ * A single delete clause that depending upon the constraint fields.
+ * (This is like "struct update", but w/o a modification chain.)
+ */
+struct	del {
+	struct urefq	 crq; /* constraint chain */
+	char		*name; /* named or NULL */
+	char		*doc; /* documentation */
+	struct strct	*parent; /* up-reference */
+	TAILQ_ENTRY(del) entries;
+};
+
+TAILQ_HEAD(delq, del);
+
+/*
  * A database/struct consisting of fields.
  * Structures depend upon other structures (see the FTYPE_REF in the
  * field), which is represented by the "height" value.
@@ -250,6 +264,7 @@ struct	strct {
 	struct aliasq	   aq; /* join aliases */
 	struct updateq	   uq; /* update conditions */
 	struct uniqueq	   nq; /* unique constraints */
+	struct delq	   dq; /* delete constraints */
 	unsigned int	   flags;
 #define	STRCT_HAS_QUEUE	   0x01 /* needs a queue interface */
 #define	STRCT_HAS_ITERATOR 0x02 /* needs iterator interface */
@@ -258,12 +273,15 @@ struct	strct {
 
 TAILQ_HEAD(strctq, strct);
 
+/*
+ * Type of comment.
+ */
 enum	cmtt {
-	COMMENT_C,
-	COMMENT_C_FRAG,
-	COMMENT_C_FRAG_CLOSE,
-	COMMENT_C_FRAG_OPEN,
-	COMMENT_SQL
+	COMMENT_C, /* self-contained C comment */
+	COMMENT_C_FRAG, /* C w/o open or close */
+	COMMENT_C_FRAG_CLOSE, /* C w/o open */
+	COMMENT_C_FRAG_OPEN, /* C w/o close */
+	COMMENT_SQL /* self-contained SQL comment */
 };
 
 __BEGIN_DECLS

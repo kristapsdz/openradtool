@@ -1437,6 +1437,7 @@ parse_config(FILE *f, const char *fname)
 		TAILQ_INIT(&s->aq);
 		TAILQ_INIT(&s->uq);
 		TAILQ_INIT(&s->nq);
+		TAILQ_INIT(&s->dq);
 		parse_config_struct(&p, s);
 	}
 
@@ -1567,6 +1568,28 @@ parse_free_unique(struct unique *p)
  * Does nothing if "p" is NULL.
  */
 static void
+parse_free_delete(struct del *p)
+{
+	struct uref	*u;
+
+	if (NULL == p)
+		return;
+
+	while (NULL != (u = TAILQ_FIRST(&p->crq))) {
+		TAILQ_REMOVE(&p->crq, u, entries);
+		parse_free_uref(u);
+	}
+
+	free(p->doc);
+	free(p->name);
+	free(p);
+}
+
+/*
+ * Free an update series.
+ * Does nothing if "p" is NULL.
+ */
+static void
 parse_free_update(struct update *p)
 {
 	struct uref	*u;
@@ -1596,6 +1619,7 @@ void
 parse_free(struct strctq *q)
 {
 	struct strct	*p;
+	struct del	*d;
 	struct field	*f;
 	struct search	*s;
 	struct alias	*a;
@@ -1624,6 +1648,10 @@ parse_free(struct strctq *q)
 		while (NULL != (u = TAILQ_FIRST(&p->uq))) {
 			TAILQ_REMOVE(&p->uq, u, entries);
 			parse_free_update(u);
+		}
+		while (NULL != (d = TAILQ_FIRST(&p->dq))) {
+			TAILQ_REMOVE(&p->dq, d, entries);
+			parse_free_delete(d);
 		}
 		while (NULL != (n = TAILQ_FIRST(&p->nq))) {
 			TAILQ_REMOVE(&p->nq, n, entries);

@@ -277,6 +277,10 @@ static int
 resolve_uref(struct uref *ref, int crq)
 {
 	struct field	*f;
+	const char	*type;
+
+	type = UP_MODIFY == ref->parent->type ? 
+		"update" : "delete";
 
 	assert(NULL == ref->field);
 	assert(NULL != ref->parent);
@@ -286,17 +290,17 @@ resolve_uref(struct uref *ref, int crq)
 			break;
 
 	if (NULL == (ref->field = f))
-		warnx("%s:%zu:%zu: update term not found",
+		warnx("%s:%zu:%zu: %s term not found",
 			ref->pos.fname, ref->pos.line,
-			ref->pos.column);
+			ref->pos.column, type);
 	else if (FTYPE_STRUCT == f->type)
-		warnx("%s:%zu:%zu: update term is a struct", 
+		warnx("%s:%zu:%zu: %s term is a struct", 
 			ref->pos.fname, ref->pos.line,
-			ref->pos.column);
+			ref->pos.column, type);
 	else if (crq && FTYPE_PASSWORD == f->type)
-		warnx("%s:%zu:%zu: update constraint is a password", 
+		warnx("%s:%zu:%zu: %s constraint is a password", 
 			ref->pos.fname, ref->pos.line,
-			ref->pos.column);
+			ref->pos.column, type);
 	else
 		return(1);
 
@@ -336,6 +340,8 @@ static int
 resolve_update(struct update *up)
 {
 	struct uref	*ref;
+
+	/* Will always be empty for UPT_DELETE. */
 
 	TAILQ_FOREACH(ref, &up->mrq, entries)
 		if ( ! resolve_uref(ref, 0))
@@ -617,6 +623,10 @@ parse_link(struct strctq *q)
 				return(0);
 		}
 		TAILQ_FOREACH(u, &p->uq, entries)
+			if ( ! resolve_update(u) ||
+			     ! check_updatetype(u))
+				return(0);
+		TAILQ_FOREACH(u, &p->dq, entries)
 			if ( ! resolve_update(u) ||
 			     ! check_updatetype(u))
 				return(0);

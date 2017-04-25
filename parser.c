@@ -46,6 +46,9 @@ enum	tok {
 	TOK_EOF /* end of file! */
 };
 
+#define	PARSE_STOP(_p) \
+	(TOK_ERR == (_p)->lasttype || TOK_EOF == (_p)->lasttype)
+
 struct	parse {
 	union {
 		char *string;
@@ -1062,18 +1065,19 @@ parse_config_unique(struct parse *p, struct strct *s)
  * Parse an update clause.
  * This has the following syntax:
  *
- *  "update" ufield [,ufield]* 
+ *  "update" [ ufield [,ufield]* ]?
  *       ":" sfield [,sfield]*
  *     [ ":" [ "name" name | "comment" quoted_string ]* ] ?
  *       ";"
  *
  * The fields ("ufield" for update field and "sfield" for select field)
  * are within the current structure.
+ * These are only for UPT_MODIFY parses.
  * Note that "sfield" also contains an optional operator, just like in
  * the search parameters.
  */
 static void
-parse_config_update(struct parse *p, struct strct *s)
+parse_config_update(struct parse *p, struct strct *s, enum upt type)
 {
 	struct update	*up;
 	struct uref	*ur;
@@ -1081,36 +1085,37 @@ parse_config_update(struct parse *p, struct strct *s)
 	if (NULL == (up = calloc(1, sizeof(struct update))))
 		err(EXIT_FAILURE, NULL);
 	up->parent = s;
+	up->type = type;
 	TAILQ_INIT(&up->mrq);
 	TAILQ_INIT(&up->crq);
-	TAILQ_INSERT_TAIL(&s->uq, up, entries);
+
+	if (UP_MODIFY == up->type)
+		TAILQ_INSERT_TAIL(&s->uq, up, entries);
+	else
+		TAILQ_INSERT_TAIL(&s->dq, up, entries);
 
 	/* 
-	 * Start with the fields that will be updated.
+	 * For modifiers, start with the fields that will be updated.
 	 * (At least one field will be updated.)
 	 * This is followed by a colon.
 	 */
 
-	if (TOK_IDENT != parse_next(p)) {
-		parse_errx(p, "expected field to modify");
-		return;
-	}
-	uref_alloc(p, p->last.string, up, &up->mrq);
-
-	for (;;) {
-		if (TOK_COLON == parse_next(p))
-			break;
-
-		/* Separated with a comma. */
-
-		if (TOK_COMMA != p->lasttype) {
-			parse_errx(p, "expected fields separator");
-			return;
-		} else if (TOK_IDENT != parse_next(p)) {
+	if (UP_MODIFY == up->type) {
+		if (TOK_IDENT != parse_next(p)) {
 			parse_errx(p, "expected field to modify");
 			return;
 		}
 		uref_alloc(p, p->last.string, up, &up->mrq);
+		while (TOK_COLON != parse_next(p)) {
+			if (TOK_COMMA != p->lasttype) {
+				parse_errx(p, "expected separator");
+				return;
+			} else if (TOK_IDENT != parse_next(p)) {
+				parse_errx(p, "expected modify field");
+				return;
+			}
+			uref_alloc(p, p->last.string, up, &up->mrq);
+		}
 	}
 
 	/*
@@ -1126,10 +1131,8 @@ parse_config_update(struct parse *p, struct strct *s)
 	}
 	ur = uref_alloc(p, p->last.string, up, &up->crq);
 
-	for (;;) {
-		if (TOK_COLON == parse_next(p))
-			break;
-		else if (TOK_SEMICOLON == p->lasttype)
+	while (TOK_COLON != parse_next(p)) {
+		if (TOK_SEMICOLON == p->lasttype)
 			return;
 
 		/* Parse optional operator. */
@@ -1289,7 +1292,10 @@ parse_config_struct(struct parse *p, struct strct *s)
 			parse_config_search(p, s, STYPE_ITERATE);
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "update")) {
-			parse_config_update(p, s);
+			parse_config_update(p, s, UP_MODIFY);
+			continue;
+		} else if (0 == strcasecmp(p->last.string, "delete")) {
+			parse_config_update(p, s, UP_DELETE);
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "unique")) {
 			parse_config_unique(p, s);
@@ -1568,28 +1574,6 @@ parse_free_unique(struct unique *p)
  * Does nothing if "p" is NULL.
  */
 static void
-parse_free_delete(struct del *p)
-{
-	struct uref	*u;
-
-	if (NULL == p)
-		return;
-
-	while (NULL != (u = TAILQ_FIRST(&p->crq))) {
-		TAILQ_REMOVE(&p->crq, u, entries);
-		parse_free_uref(u);
-	}
-
-	free(p->doc);
-	free(p->name);
-	free(p);
-}
-
-/*
- * Free an update series.
- * Does nothing if "p" is NULL.
- */
-static void
 parse_free_update(struct update *p)
 {
 	struct uref	*u;
@@ -1619,7 +1603,6 @@ void
 parse_free(struct strctq *q)
 {
 	struct strct	*p;
-	struct del	*d;
 	struct field	*f;
 	struct search	*s;
 	struct alias	*a;
@@ -1649,9 +1632,9 @@ parse_free(struct strctq *q)
 			TAILQ_REMOVE(&p->uq, u, entries);
 			parse_free_update(u);
 		}
-		while (NULL != (d = TAILQ_FIRST(&p->dq))) {
-			TAILQ_REMOVE(&p->dq, d, entries);
-			parse_free_delete(d);
+		while (NULL != (u = TAILQ_FIRST(&p->dq))) {
+			TAILQ_REMOVE(&p->dq, u, entries);
+			parse_free_update(u);
 		}
 		while (NULL != (n = TAILQ_FIRST(&p->nq))) {
 			TAILQ_REMOVE(&p->nq, n, entries);

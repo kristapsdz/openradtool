@@ -218,33 +218,28 @@ struct	unique {
 TAILQ_HEAD(uniqueq, unique);
 
 /*
+ * Type of modifier.
+ */
+enum	upt {
+	UP_MODIFY, /* generate an "update" entry */
+	UP_DELETE /* generate a "delete" entry */
+};
+
+/*
  * A single update clause consisting of multiple fields to be modified
  * depending upon the constraint fields.
  */
 struct	update {
-	struct urefq	    mrq; /* fields to be modified chain */
+	struct urefq	    mrq; /* modified fields or empty for del */
 	struct urefq	    crq; /* constraint chain */
 	char		   *name; /* named or NULL */
 	char		   *doc; /* documentation */
+	enum upt	    type; /* type of update */
 	struct strct	   *parent; /* up-reference */
 	TAILQ_ENTRY(update) entries;
 };
 
 TAILQ_HEAD(updateq, update);
-
-/*
- * A single delete clause that depending upon the constraint fields.
- * (This is like "struct update", but w/o a modification chain.)
- */
-struct	del {
-	struct urefq	 crq; /* constraint chain */
-	char		*name; /* named or NULL */
-	char		*doc; /* documentation */
-	struct strct	*parent; /* up-reference */
-	TAILQ_ENTRY(del) entries;
-};
-
-TAILQ_HEAD(delq, del);
 
 /*
  * A database/struct consisting of fields.
@@ -263,8 +258,8 @@ struct	strct {
 	struct searchq	   sq; /* search fields */
 	struct aliasq	   aq; /* join aliases */
 	struct updateq	   uq; /* update conditions */
+	struct updateq	   dq; /* delete constraints */
 	struct uniqueq	   nq; /* unique constraints */
-	struct delq	   dq; /* delete constraints */
 	unsigned int	   flags;
 #define	STRCT_HAS_QUEUE	   0x01 /* needs a queue interface */
 #define	STRCT_HAS_ITERATOR 0x02 /* needs iterator interface */

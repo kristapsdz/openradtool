@@ -28,7 +28,7 @@
 					<span class="nm">kwebapp</span> is an <a href="https://opensource.org/licenses/ISC">open source</a> system
 					generating the database API in C and SQL for your web application.
 					It accepts a configuration file that describes the <q>business logic</q> of your data: tables
-					(structures), fields (members), accessors (searches and gets), modifiers (inserts and updates), and so
+					(structures), fields (members), accessors (searches and gets), modifiers (inserts, updates, deletes), and so
 					forth.
 					It generates the source files you can build into your application.
 				</p>
@@ -63,8 +63,9 @@
 				</p>
 				<article data-sblg-permlink="0" data-sblg-article="1"></article>
 				<p>
-					Beyond the objects themselves, I've also defined search functions, update functions, and comments
-					throughout.
+					Beyond the objects themselves, I've also defined search functions, update functions, deletion functions,
+					and so on for illustrative purposes.
+					(A normal application would have more, but for brevity&#8230;)
 				</p>
 				<p>
 					When passed through <a href="kwebapp.1.html">kwebapp(1)</a>, this will generate the C source file, <a
@@ -109,6 +110,15 @@
 					By using the <q>difference</q> mechanism, one can patch databases for added tables and columns.
 					For example, given an older configuration <a href="db.old.txt.html">db.old.txt</a>, one can see the
 					changes between the two by using the <b>-d</b> flag.
+				</p>
+				<article data-sblg-permlink="0" data-sblg-article="1"></article>
+			</section>
+			<blockquote>
+				<div>Status as of <b>@VERSION@</b>?</div>
+			</blockquote>
+			<section>
+				<p>
+					Below a list of features that I'd like to implement in coming versions.
 				</p>
 				<article data-sblg-permlink="0" data-sblg-article="1"></article>
 			</section>

@@ -49,6 +49,8 @@ the database and allocating objects.  Some more features:
   during selection from and insertion into the database.
 - Several different types of SQL query (and update) operators.
 
+See the [TODO](TODO.md) for what still needs to be done.
+
 This repository mirrors the main repository on
 [BSD.lv](https://www.bsd.lv).  It is still very much under development!
 

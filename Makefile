@@ -162,9 +162,14 @@ db.update.sql.html: db.update.sql
 highlight.css:
 	highlight --print-style -s whitengrey
 
-index.html: index.xml db.txt.xml db.txt.html db.h.xml db.h.html db.c.html db.sql.xml db.sql.html db.update.sql.xml db.old.txt.html db.update.sql.html highlight.css
-	sblg -s cmdline -t index.xml -o- db.txt.xml db.h.xml db.sql.xml db.update.sql.xml | \
+index.html: index.xml db.txt.xml db.txt.html db.h.xml db.h.html db.c.html db.sql.xml db.sql.html db.update.sql.xml db.old.txt.html db.update.sql.html TODO.xml highlight.css
+	sblg -s cmdline -t index.xml -o- db.txt.xml db.h.xml db.sql.xml db.update.sql.xml TODO.xml | \
 	       sed "s!@VERSION@!$(VERSION)!g" > $@
+
+TODO.xml: TODO.md
+	( echo "<article data-sblg-article=\"1\">" ; \
+	  lowdown -Thtml TODO.md ; \
+	  echo "</article>" ; ) >$@
 
 clean:
 	rm -f kwebapp $(COMPAT_OBJS) $(OBJS) db.c db.h db.o db.sql db.update.sql db.db test test.o 

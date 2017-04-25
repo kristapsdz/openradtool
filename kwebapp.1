@@ -138,6 +138,21 @@ means a field
 .Dq zz
 in the nested structure
 .Dq yy .
+.It Fn db_foo_delete_xxxx
+Run the named delete function
+.Dq xxxx .
+The delete functions are specified with
+.Cm delete
+statements.
+The parameters passed to this function are
+the fields that constrain which rows are deleted.
+Parameters are only specified for operations for binary-operator
+constraints, i.e., those not checking for null status.
+.It Fn db_foo_delete_by_yy
+Like
+.Fn db_foo_delete_xxxx ,
+but using an un-named delete statement constrained by
+.Dq yy .
 .It Fn db_foo_fill
 Zero and fill in a pointer from an open database query.
 This fills all nested structures as well.

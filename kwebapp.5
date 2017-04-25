@@ -34,6 +34,7 @@ tokens) configuration language with the following rough structure:
     [ "field" fielddata ";" ]+
     [ searchtype searchdata ";" ]*
     [ "update" updatedata ";" ]*
+    [ "delete" deletedata ";" ]*
     [ "unique" uniquedata ";" ]*
     [ "comment" quoted_string ";" ]?
   "}"
@@ -72,6 +73,7 @@ the curly braces.
     [ "field" fielddata ";" ]+
     [ searchtype searchdata ";" ]*
     [ "update" updatedata ";" ]*
+    [ "delete" deletedata ";" ]*
     [ "unique" uniquedata ";" ]*
     [ "comment" quoted_string ";" ]?
   "}"
@@ -91,7 +93,9 @@ for describing the structure (see
 .Sx Comments ) ;
 zero or more
 .Cm update
-statements that define how rows may be updated (see
+or
+.Cm delete
+statements that define how rows may be updated and deleted (see
 .Sx Updates ) ;
 zero or more
 .Cm unique
@@ -281,11 +285,13 @@ There must be at least two fields in the statement.
 There can be only one unique statement per combination of fields (in any
 order).
 .Ss Updates
-Update statements define how the database will be updated.
-By default, there are no update functions defined.
+Update statements (update and delete) define how the database will be
+modified.
+By default, there are no update or delete functions defined.
 The syntax is as follows:
 .Bd -literal -offset indent
 "update" mfields ":" cfields [":" [params]* ]? ";"
+"delete" cfields [":" [params]* ]? ";"
 .Ed
 .Pp
 Both
@@ -300,6 +306,10 @@ In other words, modify fields constraint by
 .Cm cfields
 to contain the
 .Cm cfields .
+.Po
+(The
+.Cm delete
+statement obviously does not accept fields to modify.)
 Usually, the former will be the
 .Cm rowid
 and the former will be any other fields.
@@ -313,7 +323,7 @@ field [operator]?
 .Pp
 The optional parameters may be one of
 .Bd -literal -offset indent
-"name" updatename | "comment" string_literal
+"name" name | "comment" string_literal
 .Ed
 .Pp
 The

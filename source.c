@@ -677,7 +677,7 @@ gen_func_fill(const struct strct *p)
 }
 
 /*
- * Generate an "update" function.
+ * Generate an update or delete function.
  */
 static void
 gen_func_update(const struct update *up, size_t num)
@@ -719,11 +719,18 @@ gen_func_update(const struct update *up, size_t num)
 	if (pos > 1)
 		puts("");
 
-	printf("\tksql_stmt_alloc(db, &stmt,\n"
-	       "\t\tstmts[STMT_%s_UPDATE_%zu],\n"
-	       "\t\tSTMT_%s_UPDATE_%zu);\n",
-	       up->parent->cname, num, 
-	       up->parent->cname, num);
+	if (UP_MODIFY == up->type)
+		printf("\tksql_stmt_alloc(db, &stmt,\n"
+		       "\t\tstmts[STMT_%s_UPDATE_%zu],\n"
+		       "\t\tSTMT_%s_UPDATE_%zu);\n",
+		       up->parent->cname, num, 
+		       up->parent->cname, num);
+	else
+		printf("\tksql_stmt_alloc(db, &stmt,\n"
+		       "\t\tstmts[STMT_%s_DELETE_%zu],\n"
+		       "\t\tSTMT_%s_DELETE_%zu);\n",
+		       up->parent->cname, num, 
+		       up->parent->cname, num);
 
 	npos = pos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
@@ -790,6 +797,9 @@ gen_funcs(const struct strct *p)
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
 		gen_func_update(u, pos++);
+	pos = 0;
+	TAILQ_FOREACH(u, &p->dq, entries)
+		gen_func_update(u, pos++);
 }
 
 /*
@@ -811,6 +821,9 @@ gen_enum(const struct strct *p)
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
 		printf("\tSTMT_%s_UPDATE_%zu,\n", p->cname, pos++);
+	pos = 0;
+	TAILQ_FOREACH(u, &p->dq, entries)
+		printf("\tSTMT_%s_DELETE_%zu,\n", p->cname, pos++);
 }
 
 /*
@@ -1006,6 +1019,27 @@ gen_stmt(const struct strct *p)
 			printf("%s=?", ur->name);
 		}
 		printf(" WHERE");
+		first = 1;
+		TAILQ_FOREACH(ur, &up->crq, entries) {
+			printf("%s", first ? " " : " AND ");
+			if (OPTYPE_ISUNARY(ur->op))
+				printf("%s %s", ur->name, 
+					optypes[ur->op]);
+			else
+				printf("%s %s ?", ur->name,
+					optypes[ur->op]);
+			first = 0;
+		}
+		puts("\",");
+	}
+
+	/* Custom delete queries. */
+
+	pos = 0;
+	TAILQ_FOREACH(up, &p->dq, entries) {
+		printf("\t/* STMT_%s_DELETE_%zu */\n"
+		       "\t\"DELETE FROM %s WHERE",
+		       p->cname, pos++, p->name);
 		first = 1;
 		TAILQ_FOREACH(ur, &up->crq, entries) {
 			printf("%s", first ? " " : " AND ");

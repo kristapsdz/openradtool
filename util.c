@@ -89,8 +89,12 @@ print_func_update(const struct update *u, int decl)
 	const struct uref *ur;
 	size_t	 pos = 1;
 
-	printf("int%sdb_%s_update",
-		decl ? " " : "\n", u->parent->name);
+	if (UP_MODIFY == u->type)
+		printf("int%sdb_%s_update",
+			decl ? " " : "\n", u->parent->name);
+	else
+		printf("int%sdb_%s_delete",
+			decl ? " " : "\n", u->parent->name);
 
 	if (NULL == u->name) {
 		TAILQ_FOREACH(ur, &u->mrq, entries)

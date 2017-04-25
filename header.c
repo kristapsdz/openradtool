@@ -109,7 +109,7 @@ gen_struct(const struct strct *p)
 }
 
 /*
- * Generate update functions for a structure.
+ * Generate update/delete functions for a structure.
  */
 static void
 gen_func_update(const struct update *up)
@@ -124,24 +124,29 @@ gen_func_update(const struct update *up)
 		ct = COMMENT_C_FRAG;
 	}
 
-	print_commentv(0, ct,
-		"Updates the given fields in struct %s:",
-		up->parent->name);
+	/* Only update functions have this part. */
 
-	pos = 1;
-	TAILQ_FOREACH(ref, &up->mrq, entries)
-		if (FTYPE_PASSWORD == ref->field->type) 
-			print_commentv(0, COMMENT_C_FRAG,
-				"\tv%zu: %s (pre-hashed password)", 
-				pos++, ref->name);
-		else
-			print_commentv(0, COMMENT_C_FRAG,
-				"\tv%zu: %s", pos++, ref->name);
+	if (UP_MODIFY == up->type) {
+		print_commentv(0, ct,
+			"Updates the given fields in struct %s:",
+			up->parent->name);
+		pos = 1;
+		TAILQ_FOREACH(ref, &up->mrq, entries)
+			if (FTYPE_PASSWORD == ref->field->type) 
+				print_commentv(0, COMMENT_C_FRAG,
+					"\tv%zu: %s (password)", 
+					pos++, ref->name);
+			else
+				print_commentv(0, COMMENT_C_FRAG,
+					"\tv%zu: %s", 
+					pos++, ref->name);
+		print_commentt(0, COMMENT_C_FRAG,
+			"Constrains the updated records to:");
+	} else
+		print_commentt(0, ct,
+			"Constrains the deleted records to:");
 
-	print_commentt(0, COMMENT_C_FRAG,
-		"Constrains the updated records to:");
-
-	TAILQ_FOREACH(ref, &up->crq, entries) {
+	TAILQ_FOREACH(ref, &up->crq, entries)
 		if (OPTYPE_NOTNULL == ref->op) 
 			print_commentv(0, COMMENT_C_FRAG,
 				"\t%s (not null)", ref->name);
@@ -151,7 +156,6 @@ gen_func_update(const struct update *up)
 		else
 			print_commentv(0, COMMENT_C_FRAG,
 				"\tv%zu: %s", pos++, ref->name);
-	}
 
 	print_commentt(0, COMMENT_C_FRAG_CLOSE,
 		"Returns zero on failure, non-zero on "
@@ -289,8 +293,9 @@ gen_funcs(const struct strct *p)
 
 	TAILQ_FOREACH(s, &p->sq, entries)
 		gen_func_search(s);
-
 	TAILQ_FOREACH(u, &p->uq, entries)
+		gen_func_update(u);
+	TAILQ_FOREACH(u, &p->dq, entries)
 		gen_func_update(u);
 }
 

@@ -50,4 +50,5 @@ struct session {
   iterate user.company.name,mtime: name foo comment 
     "Search for company's logged-in users.";
   comment "Authenticated session.";
+  delete id;
 }

@@ -96,9 +96,13 @@ print_func_update(const struct update *u, int decl)
 		printf("int%sdb_%s_delete",
 			decl ? " " : "\n", u->parent->name);
 
-	if (NULL == u->name) {
+	if (NULL == u->name && UP_MODIFY == u->type) {
 		TAILQ_FOREACH(ur, &u->mrq, entries)
 			printf("_%s", ur->name);
+		printf("_by");
+		TAILQ_FOREACH(ur, &u->crq, entries)
+			printf("_%s", ur->name);
+	} else if (NULL == u->name) {
 		printf("_by");
 		TAILQ_FOREACH(ur, &u->crq, entries)
 			printf("_%s", ur->name);

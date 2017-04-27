@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<articles>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
+			<h3>0.1.0</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-04-27">2017-04-27</time>
+		</header>
+		<aside>
+			<p>
+				Initial stable internals.
+				I'm still going to change the generated API function names before adding features, but the system is already in
+				use.
+			</p>
+		</aside>
+	</article>
+</articles>

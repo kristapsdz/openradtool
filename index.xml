@@ -46,7 +46,9 @@
 					It is a <a href="https://www.bsd.lv">BSD.lv</a> project.
 				</p>
 				<p>
-					<strong>It does not have a stable release yet.</strong>
+					Although <span class="nm">kwebapp</span> has a stable release, the generated API is still undergoing
+					some changes.
+					If you plan on using the system, please be aware of that!
 					See the <a href="https://github.com/kristapsdz/kwebapp">GitHub repository</a> for sources.
 				</p>
 			</section>
@@ -120,6 +122,12 @@
 				<p>
 					Below a list of features that I'd like to implement in coming versions.
 				</p>
+				<article data-sblg-permlink="0" data-sblg-article="1"></article>
+			</section>
+			<blockquote>
+				<div>Release notes</div>
+			</blockquote>
+			<section id="versions">
 				<article data-sblg-permlink="0" data-sblg-article="1"></article>
 			</section>
 		</article>

@@ -39,8 +39,7 @@ blockquote				{ font-size: larger;
 					  text-shadow: 0 0 1px #333;
 					  margin: 2.2em 0;
 					  font-weight: 400;
-					  padding: 1em 20%;
-					  font-family: "Fira Mono", monospace; }
+					  padding: 1em 20%; }
 blockquote a				{ text-shadow: none; }
 .hl .lin				{ color: #aaa; }
 #versions header > *			{ display: inline-block; }

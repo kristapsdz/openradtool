@@ -49,7 +49,8 @@
 					Although <span class="nm">kwebapp</span> has a stable release, the generated API is still undergoing
 					some changes.
 					If you plan on using the system, please be aware of that!
-					See the <a href="https://github.com/kristapsdz/kwebapp">GitHub repository</a> for sources.
+					See the <a href="https://github.com/kristapsdz/kwebapp">GitHub repository</a> for issue tracking and
+					versioning.
 				</p>
 			</section>
 			<blockquote>
@@ -78,6 +79,7 @@
 			<blockquote>
 				<div>kwebapp -h <a href="db.txt.html">db.txt</a> &gt;<a href="db.h.html">db.h</a></div>
 				<div>kwebapp -c <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.c.html">db.c</a></div>
+				<div>cc -o test main.c <a href="db.c.html">db.c</a> -lksql -lsqlite3</div>
 			</blockquote>
 			<section>
 				<p>
@@ -100,6 +102,7 @@
 			<blockquote>
 				<div>kwebapp -s <a href="db.txt.html">db.txt</a> &gt;<a href="db.sql.html">db.sql</a></div>
 				<div>kwebapp -d <a href="db.old.txt.html">db.old.txt</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.update.sql.html">db.update.sql</a></div>
+				<div>sqlite3 db.db &lt; <a href="db.sql.html">db.sql</a></div>
 			</blockquote>
 			<section>
 				<p>
@@ -116,7 +119,7 @@
 				<article data-sblg-permlink="0" data-sblg-article="1"></article>
 			</section>
 			<blockquote>
-				<div>Status as of <b>@VERSION@</b>?</div>
+				<div>Status as of version <i>@VERSION@</i></div>
 			</blockquote>
 			<section>
 				<p>

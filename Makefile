@@ -2,7 +2,7 @@
 
 include Makefile.configure
 
-VERSION		 = 0.0.14
+VERSION		 = 0.1.0
 CFLAGS		+= -DVERSION=\"$(VERSION)\"
 COMPAT_OBJS	 = compat_err.o \
 		   compat_progname.o \
@@ -50,6 +50,12 @@ DOTAR		 = compat_err.c \
 		   test-strtonum.c \
 		   test.c \
 		   util.c
+XMLS		 = db.txt.xml \
+		   db.h.xml \
+		   db.sql.xml \
+		   db.update.sql.xml \
+		   TODO.xml \
+		   versions.xml
 
 kwebapp: $(COMPAT_OBJS) $(OBJS)
 	$(CC) -o $@ $(COMPAT_OBJS) $(OBJS)
@@ -162,8 +168,8 @@ db.update.sql.html: db.update.sql
 highlight.css:
 	highlight --print-style -s whitengrey
 
-index.html: index.xml db.txt.xml db.txt.html db.h.xml db.h.html db.c.html db.sql.xml db.sql.html db.update.sql.xml db.old.txt.html db.update.sql.html TODO.xml highlight.css
-	sblg -s cmdline -t index.xml -o- db.txt.xml db.h.xml db.sql.xml db.update.sql.xml TODO.xml | \
+index.html: index.xml $(XMLS) db.txt.html db.h.html db.c.html db.sql.html db.old.txt.html db.update.sql.html highlight.css
+	sblg -s cmdline -t index.xml -o- $(XMLS) | \
 	       sed "s!@VERSION@!$(VERSION)!g" > $@
 
 TODO.xml: TODO.md

@@ -3,7 +3,7 @@ body					{ font-family: "Fira Sans", sans-serif;
 					  margin: 0;
 				 	  font-size: 13pt; }
 a					{ color: #07889b; }
-header					{ width: 100%; 
+body > header				{ width: 100%; 
 					  padding: 64pt 0;
 					  background-color: #a0a0a0;
 					  color: #fff;
@@ -13,7 +13,7 @@ header					{ width: 100%;
 h1					{ display: inline-block; 
 					  font-size: xx-large;
 					  font-weight: 500; }
-header a				{ color: #eee; 
+body > header a				{ color: #eee; 
 					  display: inline-block;
 					  padding: 0 4pt; }
 figure					{ text-align: center; 
@@ -43,6 +43,12 @@ blockquote				{ font-size: larger;
 					  font-family: "Fira Mono", monospace; }
 blockquote a				{ text-shadow: none; }
 .hl .lin				{ color: #aaa; }
+#versions header > *			{ display: inline-block; }
+#versions header > address		{ display: none; }
+#versions h3				{ font-size: inherit; 
+					  margin: 0; }
+#versions h3:before			{ content: 'Version '; }
+#versions time:before			{ content: ' : '; }
 
 @media only screen and (max-width: 900px), only screen and (max-device-width: 900px) {
 article > section			{ width: 80%; }

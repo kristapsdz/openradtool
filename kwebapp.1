@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: April 25 2017 $
+.Dd $Mdocdate: April 29 2017 $
 .Dt KWEBAPP 1
 .Os
 .Sh NAME
@@ -22,7 +22,7 @@
 .Nd create web application API and database layer
 .Sh SYNOPSIS
 .Nm kwebapp
-.Op Fl hns
+.Op Fl Cns
 .Op Fl c Ar header
 .Op Fl d Ar oldconfig
 .Op Ar config
@@ -37,7 +37,7 @@ database.
 It is a way of reducing the often-repeated code of serialising and
 de-serialising simple structures from a database.
 By default, it generates the C header file
-.Pq see Fl h .
+.Pq see Fl C .
 Its arguments are as follows:
 .Bl -tag -width Ds
 .It Fl c Ar header
@@ -53,7 +53,7 @@ sequence that updates
 a
 .Xr kwebapp 5
 file, with the new configuration.
-.It Fl h
+.It Fl C
 Create the
 .Sx C header
 file.

@@ -181,7 +181,7 @@ clean:
 	rm -f kwebapp $(COMPAT_OBJS) $(OBJS) db.c db.h db.o db.sql db.update.sql db.db test test.o 
 	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
 	rm -f index.svg index.html highlight.css kwebapp.5.html kwebapp.1.html
-	rm -f db.txt.xml db.h.xml db.c.html db.h.html db.txt.html db.sql.xml db.sql.html db.update.sql.xml db.old.txt.html db.update.sql.html
+	rm -f db.txt.xml db.h.xml db.c.html db.h.html db.txt.html db.sql.xml db.sql.html db.update.sql.xml db.old.txt.html db.update.sql.html TODO.xml
 
 distclean: clean
 	rm -f config.h config.log Makefile.configure

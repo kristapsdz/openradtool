@@ -89,18 +89,18 @@ main(void)
 
 	/* Look up the same user by e-mail/password. */
 
-	u2 = db_user_get_by_creds(sql, "foo@foo.com", "password");
+	u2 = db_user_get_creds(sql, "foo@foo.com", "password");
 	if (NULL == u2 || u2->uid != u->uid)
-		errx(EXIT_FAILURE, "db_user_get_by_creds");
+		errx(EXIT_FAILURE, "db_user_get_creds");
 
 	/* 
 	 * Now try looking them up with the wrong password. 
 	 * This should return NULL.
 	 */
 
-	u3 = db_user_get_by_creds(sql, "foo@foo.com", "password2");
+	u3 = db_user_get_creds(sql, "foo@foo.com", "password2");
 	if (NULL != u3)
-		errx(EXIT_FAILURE, "db_user_get_by_creds");
+		errx(EXIT_FAILURE, "db_user_get_creds");
 
 	db_user_free(u);
 	db_user_free(u2);
@@ -116,13 +116,13 @@ main(void)
 	 * (It should have changed.)
 	 */
 
-	u2 = db_user_get_by_creds(sql, "foo@foo.com", "password");
+	u2 = db_user_get_creds(sql, "foo@foo.com", "password");
 	if (NULL != u2)
-		errx(EXIT_FAILURE, "db_user_get_by_creds");
+		errx(EXIT_FAILURE, "db_user_get_creds");
 
-	u3 = db_user_get_by_creds(sql, "foo@foo.com", "password2");
+	u3 = db_user_get_creds(sql, "foo@foo.com", "password2");
 	if (NULL == u3)
-		errx(EXIT_FAILURE, "db_user_get_by_creds");
+		errx(EXIT_FAILURE, "db_user_get_creds");
 
 	db_user_free(u2);
 	db_user_free(u3);

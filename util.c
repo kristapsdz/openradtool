@@ -138,18 +138,19 @@ print_func_search(const struct search *s, int decl)
 	size_t	 pos = 1;
 
 	if (STYPE_SEARCH == s->type)
-		printf("struct %s *%sdb_%s_get_by", 
+		printf("struct %s *%sdb_%s_get", 
 			s->parent->name, decl ? "" : "\n", 
 			s->parent->name);
 	else if (STYPE_LIST == s->type)
-		printf("struct %s_q *%sdb_%s_list_by", 
+		printf("struct %s_q *%sdb_%s_list", 
 			s->parent->name, decl ? "" : "\n", 
 			s->parent->name);
 	else
-		printf("void%sdb_%s_iterate_by",
+		printf("void%sdb_%s_iterate",
 			decl ? " " : "\n", s->parent->name);
 
 	if (NULL == s->name) {
+		printf("_by");
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
 			putchar('_');
 			TAILQ_FOREACH(sr, &sent->srq, entries)

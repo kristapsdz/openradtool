@@ -48,6 +48,8 @@
 				<p>
 					Although <span class="nm">kwebapp</span> has a stable release, the generated API is still undergoing
 					some changes.
+					Moreover, it currently hardcodes OpenBSD-specific functions in its output
+					(e.g., <a href="http://man.openbsd.org/crypt_newhash.3">crypt_newhash(3)</a>).
 					If you plan on using the system, please be aware of that!
 					See the <a href="https://github.com/kristapsdz/kwebapp">GitHub repository</a> for issue tracking and
 					versioning.

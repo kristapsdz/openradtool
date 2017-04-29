@@ -143,7 +143,7 @@ Frees a pointer returned by a unique search function.
 Frees a queue (and its members) created by a listing function.
 This function is produced only if there are listing statements on a
 given structure.
-.It Fn db_foo_get_by_xxxx
+.It Fn db_foo_get_xxxx
 If the structure object has any named searches, these are listed in
 place of the
 .Dq xxxx .
@@ -151,9 +151,10 @@ The function accepts variables for all binary-operator fields to check
 (i.e., all except for those checking for null).
 .It Fn db_foo_get_by__xxxx__yy_zz
 Like
-.Fn db_foo_get_by_xxxx ,
-but for nested structures.
-These are listed with an undescore preceding each search term.
+.Fn db_foo_get_xxxx ,
+but for (possibly-nested) structures.
+These are listed with a double-undescore preceding each search term, and
+a single underscore separating nested fields.
 In the given example,
 .Dq xxxx
 is a field in the given structure and
@@ -173,18 +174,18 @@ they are passed into this functions as pointers.
 The null values must then be specified as
 .Dv NULL
 pointers.
-.It Fn db_foo_iterate_by_xxxx
-Also like
-.Fn db_foo_get_by_xxxx ,
+.It Fn db_foo_iterate_xxxx
+Like
+.Fn db_foo_get_xxxx ,
 but invoking a function callback within the active query for each
 retrieved result.
 .It Fn db_foo_iterate_by__xxxx__yy_zz
 Like
 .Fn db_foo_get_by__xxxx__yy_zz ,
 but invoking a function callback for the retrieved results.
-.It Fn db_foo_list_by_xxxx
+.It Fn db_foo_list_xxxx
 Like
-.Fn db_foo_get_by_xxxx ,
+.Fn db_foo_get_xxxx ,
 but producing a queue of responses.
 .It Fn db_foo_list_by__xxxx__yy_zz
 Like
@@ -218,16 +219,18 @@ constrained by
 .Dq yy .
 .El
 .Pp
-The convenience
-.Fn db_open
-and
-.Fn db_close
-functions are also provided.
-These functions open and close a database in
+There are also several convenience functions for the database:
+.Bl -tag -width Ds
+.It Fn db_open
+Open a database in
 .Dq safe exit
 mode as documented in
 .Xr ksql 3 .
-The former also installs the default logging facilities.
+Also installs the default logging facilities.
+.It Fn db_close
+Closes a database opened by
+.Fn db_open .
+.El
 .Pp
 All of these are fully documented in the header file.
 The structures are documented using the comments given in

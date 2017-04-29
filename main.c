@@ -50,7 +50,7 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "c:d:hns")))
+	while (-1 != (c = getopt(argc, argv, "c:Cd:ns")))
 		switch (c) {
 		case ('c'):
 			op = OP_SOURCE;
@@ -60,7 +60,7 @@ main(int argc, char *argv[])
 			op = OP_DIFF;
 			dconfile = optarg;
 			break;
-		case ('h'):
+		case ('C'):
 			op = OP_HEADER;
 			break;
 		case ('n'):
@@ -143,7 +143,7 @@ main(int argc, char *argv[])
 usage:
 	fprintf(stderr, 
 		"usage: %s "
-		"[-hns] "
+		"[-Cns] "
 		"[-c header] "
 		"[-d config] "
 		"[config]\n",

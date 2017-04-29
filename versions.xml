@@ -14,4 +14,24 @@
 			</p>
 		</aside>
 	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
+			<h3>0.1.1</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-04-29">2017-04-29</time>
+		</header>
+		<aside>
+			<p>
+				Have the singleton search function (e.g., <q>search foo: name bar</q>) use the operator <q>get</q> in generated
+				function names.
+				Before, these would be (following the example) <code>db_foo_by_foo</code>.
+				Now they're <code>db_foo_get_by_foo</code>.
+				This is more consistent with the other search functions.
+			</p>
+			<p>
+				Renamed the <b>-h</b> flag to <b>-C</b>.
+				(Source in lowercase, header in uppercase.)
+			</p>
+		</aside>
+	</article>
 </articles>

@@ -102,7 +102,7 @@ db.c: kwebapp db.txt
 	./kwebapp -c db.h db.txt >$@
 
 db.h: kwebapp db.txt
-	./kwebapp -h db.txt >$@
+	./kwebapp -C db.txt >$@
 
 db.sql: kwebapp db.txt
 	./kwebapp -s db.txt >$@

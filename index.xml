@@ -79,7 +79,7 @@
 				</p>
 			</section>
 			<blockquote>
-				<div>kwebapp -h <a href="db.txt.html">db.txt</a> &gt;<a href="db.h.html">db.h</a></div>
+				<div>kwebapp -C <a href="db.txt.html">db.txt</a> &gt;<a href="db.h.html">db.h</a></div>
 				<div>kwebapp -c <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.c.html">db.c</a></div>
 				<div>cc -o test main.c <a href="db.c.html">db.c</a> -lksql -lsqlite3</div>
 			</blockquote>

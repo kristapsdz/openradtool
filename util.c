@@ -68,7 +68,7 @@ print_func_close(int decl)
  * Print the variables in a function declaration.
  */
 static void
-print_func_variable(size_t pos, enum ftype t, unsigned int flags)
+print_var(size_t pos, enum ftype t, unsigned int flags)
 {
 
 	assert(NULL != ftypes[t]);
@@ -112,15 +112,13 @@ print_func_update(const struct update *u, int decl)
 	printf("(struct ksql *db");
 
 	TAILQ_FOREACH(ur, &u->mrq, entries)
-		print_func_variable(pos++,
-			ur->field->type, ur->field->flags);
+		print_var(pos++, ur->field->type, ur->field->flags);
 
 	/* Don't accept input for unary operation. */
 
 	TAILQ_FOREACH(ur, &u->crq, entries)
 		if ( ! OPTYPE_ISUNARY(ur->op))
-			print_func_variable(pos++, 
-				ur->field->type, 0);
+			print_var(pos++, ur->field->type, 0);
 
 	printf(")%s", decl ? ";\n" : "");
 }
@@ -140,7 +138,7 @@ print_func_search(const struct search *s, int decl)
 	size_t	 pos = 1;
 
 	if (STYPE_SEARCH == s->type)
-		printf("struct %s *%sdb_%s_by", 
+		printf("struct %s *%sdb_%s_get_by", 
 			s->parent->name, decl ? "" : "\n", 
 			s->parent->name);
 	else if (STYPE_LIST == s->type)
@@ -172,7 +170,7 @@ print_func_search(const struct search *s, int decl)
 		if (OPTYPE_ISUNARY(sent->op))
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
-		print_func_variable(pos++, sr->field->type, 0);
+		print_var(pos++, sr->field->type, 0);
 	}
 
 	printf(")%s", decl ? ";\n" : "");
@@ -194,7 +192,7 @@ print_func_insert(const struct strct *p, int decl)
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if ( ! (FTYPE_STRUCT == f->type ||
 		        FIELD_ROWID & f->flags))
-			print_func_variable(pos++, f->type, f->flags);
+			print_var(pos++, f->type, f->flags);
 	printf(")%s", decl ? ";\n" : "");
 }
 

@@ -70,8 +70,8 @@ main(void)
 
 	/* Now fetch the entry by its unique id. */
 
-	if (NULL == (u = db_user_by__uid(sql, uid)))
-		errx(EXIT_FAILURE, "db_user_by__uid");
+	if (NULL == (u = db_user_get_by__uid(sql, uid)))
+		errx(EXIT_FAILURE, "db_user_get_by__uid");
 
 	/* Print it... */
 
@@ -89,18 +89,18 @@ main(void)
 
 	/* Look up the same user by e-mail/password. */
 
-	u2 = db_user_by_creds(sql, "foo@foo.com", "password");
+	u2 = db_user_get_by_creds(sql, "foo@foo.com", "password");
 	if (NULL == u2 || u2->uid != u->uid)
-		errx(EXIT_FAILURE, "db_user_by_creds");
+		errx(EXIT_FAILURE, "db_user_get_by_creds");
 
 	/* 
 	 * Now try looking them up with the wrong password. 
 	 * This should return NULL.
 	 */
 
-	u3 = db_user_by_creds(sql, "foo@foo.com", "password2");
+	u3 = db_user_get_by_creds(sql, "foo@foo.com", "password2");
 	if (NULL != u3)
-		errx(EXIT_FAILURE, "db_user_by_creds");
+		errx(EXIT_FAILURE, "db_user_get_by_creds");
 
 	db_user_free(u);
 	db_user_free(u2);
@@ -109,20 +109,20 @@ main(void)
 	/* Change the user's password. */
 
 	if ( ! db_user_update_hash_by_uid(sql, "password2", uid))
-		errx(EXIT_FAILURE, "db_user_update_hash");
+		errx(EXIT_FAILURE, "db_user_update_hash_by_uid");
 
 	/* 
 	 * Now do the same dance, checking for the changed password.
 	 * (It should have changed.)
 	 */
 
-	u2 = db_user_by_creds(sql, "foo@foo.com", "password");
+	u2 = db_user_get_by_creds(sql, "foo@foo.com", "password");
 	if (NULL != u2)
-		errx(EXIT_FAILURE, "db_user_by_creds");
+		errx(EXIT_FAILURE, "db_user_get_by_creds");
 
-	u3 = db_user_by_creds(sql, "foo@foo.com", "password2");
+	u3 = db_user_get_by_creds(sql, "foo@foo.com", "password2");
 	if (NULL == u3)
-		errx(EXIT_FAILURE, "db_user_by_creds");
+		errx(EXIT_FAILURE, "db_user_get_by_creds");
 
 	db_user_free(u2);
 	db_user_free(u3);

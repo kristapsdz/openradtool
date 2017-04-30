@@ -160,7 +160,7 @@ gen_func_update(const struct update *up)
 	print_commentt(0, COMMENT_C_FRAG_CLOSE,
 		"Returns zero on failure, non-zero on "
 		"constraint errors.");
-	print_func_update(up, 1);
+	print_func_db_update(up, 1);
 	puts("");
 }
 
@@ -222,7 +222,7 @@ gen_func_search(const struct search *s)
 			"Invokes the given callback with "
 			"retrieved data.");
 
-	print_func_search(s, 1);
+	print_func_db_search(s, 1);
 	puts("");
 }
 
@@ -240,14 +240,14 @@ gen_funcs(const struct strct *p)
 	print_commentt(0, COMMENT_C,
 	       "Unfill resources and free \"p\".\n"
 	       "Has no effect if \"p\" is NULL.");
-	print_func_free(p, 1);
+	print_func_db_free(p, 1);
 	puts("");
 
 	if (STRCT_HAS_QUEUE & p->flags) {
 		print_commentv(0, COMMENT_C,
 		     "Unfill and free all queue members.\n"
 		     "Has no effect if \"q\" is NULL.");
-		print_func_freeq(p, 1);
+		print_func_db_freeq(p, 1);
 		puts("");
 	}
 
@@ -257,7 +257,7 @@ gen_funcs(const struct strct *p)
 	       "which may be NULL to start from zero.\n"
 	       "This follows DB_SCHEMA_%s's order for columns.",
 	       p->name, p->cname);
-	print_func_fill(p, 1);
+	print_func_db_fill(p, 1);
 	puts("");
 
 	print_commentt(0, COMMENT_C_FRAG_OPEN,
@@ -281,14 +281,14 @@ gen_funcs(const struct strct *p)
 	print_commentt(0, COMMENT_C_FRAG_CLOSE,
 		"Returns the new row's identifier on "
 		"success or <0 otherwise.");
-	print_func_insert(p, 1);
+	print_func_db_insert(p, 1);
 	puts("");
 
 	print_commentv(0, COMMENT_C,
 	       "Free memory allocated by db_%s_fill().\n"
 	       "Has not effect if \"p\" is NULL.",
 	       p->name);
-	print_func_unfill(p, 1);
+	print_func_db_unfill(p, 1);
 	puts("");
 
 	TAILQ_FOREACH(s, &p->sq, entries)
@@ -360,13 +360,13 @@ gen_c_header(const struct strctq *q)
 		"It returns NULL on memory allocation failure.\n"
 		"The returned pointer must be closed with "
 		"db_close().");
-	print_func_open(1);
+	print_func_db_open(1);
 	puts("");
 
 	print_commentt(0, COMMENT_C,
 		"Close the database opened by db_open().\n"
 		"Has no effect if \"p\" is NULL.");
-	print_func_close(1);
+	print_func_db_close(1);
 	puts("");
 
 	TAILQ_FOREACH(p, q, entries)

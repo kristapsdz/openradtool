@@ -294,15 +294,18 @@ int		 gen_diff(const struct strctq *,
 void		 print_commentt(size_t, enum cmtt, const char *);
 void		 print_commentv(size_t, enum cmtt, const char *, ...)
 			__attribute__((format(printf, 3, 4)));
-void		 print_func_close(int);
-void		 print_func_insert(const struct strct *, int);
-void		 print_func_fill(const struct strct *, int);
-void		 print_func_free(const struct strct *, int);
-void		 print_func_freeq(const struct strct *, int);
-void		 print_func_open(int);
-void		 print_func_search(const struct search *, int);
-void		 print_func_unfill(const struct strct *, int);
-void		 print_func_update(const struct update *, int);
+
+void		 print_func_db_close(int);
+void		 print_func_db_open(int);
+void		 print_func_db_insert(const struct strct *, int);
+void		 print_func_db_fill(const struct strct *, int);
+void		 print_func_db_free(const struct strct *, int);
+void		 print_func_db_freeq(const struct strct *, int);
+void		 print_func_db_search(const struct search *, int);
+void		 print_func_db_unfill(const struct strct *, int);
+void		 print_func_db_update(const struct update *, int);
+
+void		 print_func_json_data(const struct strct *, int);
 
 __END_DECLS
 

@@ -285,9 +285,8 @@ int		 parse_link(struct strctq *);
 struct strctq	*parse_config(FILE *, const char *);
 void		 parse_free(struct strctq *);
 
-void		 gen_c_header(const struct strctq *);
-void		 gen_c_source(const struct strctq *, const char *);
-void		 gen_json_source(const struct strctq *, const char *);
+void		 gen_c_header(const struct strctq *, int);
+void		 gen_c_source(const struct strctq *, int, const char *);
 void		 gen_sql(const struct strctq *);
 int		 gen_diff(const struct strctq *,
 			const struct strctq *);

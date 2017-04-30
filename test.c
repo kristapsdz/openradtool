@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include <ksql.h>
+#include <kcgijson.h>
 
 #include "db.h"
 

@@ -230,7 +230,7 @@ gen_func_search(const struct search *s)
  * Generate the function declarations for a given structure.
  */
 static void
-gen_funcs(const struct strct *p)
+gen_funcs(const struct strct *p, int json)
 {
 	const struct search *s;
 	const struct field *f;
@@ -297,6 +297,25 @@ gen_funcs(const struct strct *p)
 		gen_func_update(u);
 	TAILQ_FOREACH(u, &p->dq, entries)
 		gen_func_update(u);
+
+	if (json) {
+		print_commentv(0, COMMENT_C,
+			"Print out the fields of a %s in JSON "
+			"including nested structures.\n"
+			"Omits any password entries.\n"
+			"See json_%s_obj() for the full object.",
+			p->name, p->name);
+		print_func_json_data(p, 1);
+		puts("");
+		print_commentv(0, COMMENT_C,
+			"Emit the JSON key-value pair for the "
+			"object:\n"
+			"\t\"%s\" : { [data]+ }\n"
+			"See json_%s_data() for the data.",
+			p->name, p->name);
+		print_func_json_obj(p, 1);
+		puts("");
+	}
 }
 
 /*
@@ -323,7 +342,7 @@ gen_schema(const struct strct *p)
 
 
 void
-gen_c_header(const struct strctq *q)
+gen_c_header(const struct strctq *q, int json)
 {
 	const struct strct *p;
 
@@ -370,7 +389,7 @@ gen_c_header(const struct strctq *q)
 	puts("");
 
 	TAILQ_FOREACH(p, q, entries)
-		gen_funcs(p);
+		gen_funcs(p, json);
 
 	puts("__END_DECLS\n"
 	     "\n"

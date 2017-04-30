@@ -10,19 +10,20 @@ COMPAT_OBJS	 = compat_err.o \
 		   compat_strlcat.o \
 		   compat_strlcpy.o \
 		   compat_strtonum.o
-OBJS		 = header.o \
+OBJS		 = comments.o \
+		   header.o \
 		   linker.o \
 		   main.o \
 		   parser.o \
 		   protos.o \
 		   source.o \
-		   sql.o \
-		   util.o
+		   sql.o
 HTMLS		 = index.html \
 		   kwebapp.1.html \
 		   kwebapp.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
-DOTAR		 = compat_err.c \
+DOTAR		 = comments.c \
+		   compat_err.c \
 		   compat_progname.c \
 		   compat_reallocarray.c \
 		   compat_strlcat.c \
@@ -50,8 +51,7 @@ DOTAR		 = compat_err.c \
 		   test-strlcat.c \
 		   test-strlcpy.c \
 		   test-strtonum.c \
-		   test.c \
-		   util.c
+		   test.c
 XMLS		 = db.txt.xml \
 		   db.h.xml \
 		   db.sql.xml \

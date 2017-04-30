@@ -14,6 +14,7 @@ OBJS		 = header.o \
 		   linker.o \
 		   main.o \
 		   parser.o \
+		   protos.o \
 		   source.o \
 		   sql.o \
 		   util.o
@@ -36,6 +37,7 @@ DOTAR		 = compat_err.c \
 		   Makefile \
 		   main.c \
 		   parser.c \
+		   protos.c \
 		   source.c \
 		   sql.c \
 		   test-PATH_MAX.c \

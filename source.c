@@ -1056,7 +1056,7 @@ gen_stmt(const struct strct *p)
 }
 
 void
-gen_source(const struct strctq *q, const char *header)
+gen_c_source(const struct strctq *q, const char *header)
 {
 	const struct strct *p;
 

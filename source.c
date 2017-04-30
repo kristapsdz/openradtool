@@ -55,6 +55,15 @@ static	const char *const coltypes[FTYPE__MAX] = {
 	NULL, /* FTYPE_STRUCT */
 };
 
+static	const char *const puttypes[FTYPE__MAX] = {
+	"kjson_putintp", /* FTYPE_INT */
+	"kjson_putdoublep", /* FTYPE_REAL */
+	NULL, /* FTYPE_BLOB (XXX: is special) */
+	"kjson_putstringp", /* FTYPE_TEXT */
+	NULL, /* FTYPE_PASSWORD (don't print) */
+	NULL, /* FTYPE_STRUCT */
+};
+
 /*
  * Functions binding an argument to a statement.
  */
@@ -766,12 +775,47 @@ gen_func_update(const struct update *up, size_t num)
 	     "");
 }
 
+static void
+gen_func_json_obj(const struct strct *p)
+{
+
+	print_func_json_obj(p, 0);
+	puts("\n"
+	     "{");
+	printf("\tkjson_objp_open(r, \"%s\");\n"
+	       "\tjson_%s_data(r, p);\n", p->name, p->name);
+	puts("\tkjson_obj_close(r);\n"
+	     "}\n"
+	     "");
+}
+
+static void
+gen_func_json_data(const struct strct *p)
+{
+	const struct field *f;
+
+	print_func_json_data(p, 0);
+	puts("\n"
+	     "{");
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT == f->type)
+			printf("\tjson_%s_obj(r, &p->%s);\n",
+				f->ref->tstrct, f->name);
+		if (NULL == puttypes[f->type])
+			continue;
+		printf("\t%s(r, \"%s\", p->%s);\n", 
+			puttypes[f->type], f->name, f->name);
+	}
+	puts("}\n"
+	     "");
+}
+
 /*
  * Generate all of the functions we've defined in our header for the
  * given structure "s".
  */
 static void
-gen_funcs(const struct strct *p)
+gen_funcs(const struct strct *p, int json)
 {
 	const struct search *s;
 	const struct update *u;
@@ -784,6 +828,11 @@ gen_funcs(const struct strct *p)
 	gen_func_free(p);
 	gen_func_freeq(p);
 	gen_func_insert(p);
+
+	if (json) {
+		gen_func_json_data(p);
+		gen_func_json_obj(p);
+	}
 
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
@@ -1056,7 +1105,7 @@ gen_stmt(const struct strct *p)
 }
 
 void
-gen_c_source(const struct strctq *q, const char *header)
+gen_c_source(const struct strctq *q, int json, const char *header)
 {
 	const struct strct *p;
 
@@ -1067,15 +1116,18 @@ gen_c_source(const struct strctq *q, const char *header)
 
 	/* Start with all headers we'll need. */
 
-	printf("#include <sys/queue.h>\n"
-	       "\n"
-	       "#include <stdio.h>\n"
-	       "#include <stdlib.h>\n"
-	       "#include <string.h>\n"
-	       "#include <unistd.h>\n"
-	       "\n"
-	       "#include <ksql.h>\n"
-	       "\n"
+	puts("#include <sys/queue.h>\n"
+	     "\n"
+	     "#include <stdio.h>\n"
+	     "#include <stdlib.h>\n"
+	     "#include <string.h>\n"
+	     "#include <unistd.h>\n"
+	     "\n"
+	     "#include <ksql.h>");
+	if (json)
+		puts("#include <kcgijson.h>");
+
+	printf("\n"
 	       "#include \"%s\"\n"
 	       "\n",
 	       header);
@@ -1115,5 +1167,5 @@ gen_c_source(const struct strctq *q, const char *header)
 	gen_func_close();
 
 	TAILQ_FOREACH(p, q, entries)
-		gen_funcs(p);
+		gen_funcs(p, json);
 }

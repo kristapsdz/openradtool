@@ -12,7 +12,6 @@ COMPAT_OBJS	 = compat_err.o \
 		   compat_strtonum.o
 OBJS		 = comments.o \
 		   header.o \
-		   json.o \
 		   linker.o \
 		   main.o \
 		   parser.o \
@@ -33,7 +32,6 @@ DOTAR		 = comments.c \
 		   configure \
 		   extern.h \
 		   header.c \
-		   json.c \
 		   kwebapp.1 \
 		   kwebapp.5 \
 		   linker.c \
@@ -94,7 +92,7 @@ kwebapp.tar.gz: $(DOTAR)
 OBJS: extern.h
 
 test: test.o db.o db.db
-	$(CC) -L/usr/local/lib -o $@ test.o db.o -lksql -lsqlite3
+	$(CC) -L/usr/local/lib -o $@ test.o db.o -lksql -lsqlite3 -lkcgijson -lkcgi -lz
 
 db.o: db.c db.h
 	$(CC) $(CFLAGS) -I/usr/local/include -o $@ -c db.c
@@ -103,10 +101,10 @@ test.o: test.c db.h
 	$(CC) $(CFLAGS) -I/usr/local/include -o $@ -c test.c
 
 db.c: kwebapp db.txt
-	./kwebapp -c db.h db.txt >$@
+	./kwebapp -j -c db.h db.txt >$@
 
 db.h: kwebapp db.txt
-	./kwebapp -C db.txt >$@
+	./kwebapp -j -C db.txt >$@
 
 db.sql: kwebapp db.txt
 	./kwebapp -s db.txt >$@

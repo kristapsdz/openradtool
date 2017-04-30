@@ -30,8 +30,8 @@
 enum	op {
 	OP_NOOP,
 	OP_DIFF,
-	OP_HEADER,
-	OP_SOURCE,
+	OP_C_HEADER,
+	OP_C_SOURCE,
 	OP_SQL
 };
 
@@ -42,18 +42,18 @@ main(int argc, char *argv[])
 	const char	*confile = NULL, *dconfile = NULL,
 	      		*header = NULL;
 	struct strctq	*sq, *dsq = NULL;
-	int		 c, rc = 1;
-	enum op		 op = OP_HEADER;
+	int		 c, rc = 1, json = 0;
+	enum op		 op = OP_C_HEADER;
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio rpath", NULL))
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "c:Cd:ns")))
+	while (-1 != (c = getopt(argc, argv, "c:Cd:jns")))
 		switch (c) {
 		case ('c'):
-			op = OP_SOURCE;
+			op = OP_C_SOURCE;
 			header = optarg;
 			break;
 		case ('d'):
@@ -61,7 +61,10 @@ main(int argc, char *argv[])
 			dconfile = optarg;
 			break;
 		case ('C'):
-			op = OP_HEADER;
+			op = OP_C_HEADER;
+			break;
+		case ('j'):
+			json = 1;
 			break;
 		case ('n'):
 			op = OP_NOOP;
@@ -128,10 +131,10 @@ main(int argc, char *argv[])
 
 	/* Finally, (optionally) generate output. */
 
-	if (OP_SOURCE == op)
-		gen_c_source(sq, header);
-	else if (OP_HEADER == op)
-		gen_c_header(sq);
+	if (OP_C_SOURCE == op)
+		gen_c_source(sq, json, header);
+	else if (OP_C_HEADER == op)
+		gen_c_header(sq, json);
 	else if (OP_SQL == op)
 		gen_sql(sq);
 	else if (OP_DIFF == op)
@@ -143,7 +146,7 @@ main(int argc, char *argv[])
 usage:
 	fprintf(stderr, 
 		"usage: %s "
-		"[-Cns] "
+		"[-Cjns] "
 		"[-c header] "
 		"[-d config] "
 		"[config]\n",

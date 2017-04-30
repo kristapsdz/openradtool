@@ -44,7 +44,7 @@ static	const char *const ftypes[FTYPE__MAX] = {
  * return type; otherwise, have it on one line.
  */
 void
-print_func_open(int decl)
+print_func_db_open(int decl)
 {
 
 	printf("struct ksql *%sdb_open(const char *file)%s\n",
@@ -57,7 +57,7 @@ print_func_open(int decl)
  * return type; otherwise, have it on one line.
  */
 void
-print_func_close(int decl)
+print_func_db_close(int decl)
 {
 
 	printf("void%sdb_close(struct ksql *p)%s\n",
@@ -84,7 +84,7 @@ print_var(size_t pos, enum ftype t, unsigned int flags)
  * return type; otherwise, have it on one line.
  */
 void
-print_func_update(const struct update *u, int decl)
+print_func_db_update(const struct update *u, int decl)
 {
 	const struct uref *ur;
 	size_t	 pos = 1;
@@ -131,7 +131,7 @@ print_func_update(const struct update *u, int decl)
  * FIXME: line wrapping.
  */
 void
-print_func_search(const struct search *s, int decl)
+print_func_db_search(const struct search *s, int decl)
 {
 	const struct sent *sent;
 	const struct sref *sr;
@@ -183,7 +183,7 @@ print_func_search(const struct search *s, int decl)
  * return type; otherwise, have it on one line.
  */
 void
-print_func_insert(const struct strct *p, int decl)
+print_func_db_insert(const struct strct *p, int decl)
 {
 	const struct field *f;
 	size_t	 pos = 1;
@@ -203,7 +203,7 @@ print_func_insert(const struct strct *p, int decl)
  * return type; otherwise, have it on one line.
  */
 void
-print_func_freeq(const struct strct *p, int decl)
+print_func_db_freeq(const struct strct *p, int decl)
 {
 
 	assert(STRCT_HAS_QUEUE & p->flags);
@@ -218,7 +218,7 @@ print_func_freeq(const struct strct *p, int decl)
  * return type; otherwise, have it on one line.
  */
 void
-print_func_free(const struct strct *p, int decl)
+print_func_db_free(const struct strct *p, int decl)
 {
 
 	printf("void%sdb_%s_free(struct %s *p)%s",
@@ -232,7 +232,7 @@ print_func_free(const struct strct *p, int decl)
  * return type; otherwise, have it on one line.
  */
 void
-print_func_unfill(const struct strct *p, int decl)
+print_func_db_unfill(const struct strct *p, int decl)
 {
 
 	printf("void%sdb_%s_unfill(struct %s *p)%s",
@@ -246,7 +246,7 @@ print_func_unfill(const struct strct *p, int decl)
  * return type; otherwise, have it on one line.
  */
 void
-print_func_fill(const struct strct *p, int decl)
+print_func_db_fill(const struct strct *p, int decl)
 {
 
 	printf("void%sdb_%s_fill(struct %s *p, "
@@ -254,4 +254,14 @@ print_func_fill(const struct strct *p, int decl)
 	       decl ? " " : "\n",
 	       p->name, p->name,
 	       decl ? ";\n" : "");
+}
+
+void
+print_func_json_data(const struct strct *p, int decl)
+{
+
+	printf("void%sjson_%s_data(struct kjsonreq *r, "
+		"const struct %s *p)%s",
+		decl ? " " : "\n", p->name, 
+		p->name, decl ? ";\n" : "");
 }

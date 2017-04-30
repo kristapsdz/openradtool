@@ -287,6 +287,7 @@ void		 parse_free(struct strctq *);
 
 void		 gen_c_header(const struct strctq *);
 void		 gen_c_source(const struct strctq *, const char *);
+void		 gen_json_source(const struct strctq *, const char *);
 void		 gen_sql(const struct strctq *);
 int		 gen_diff(const struct strctq *,
 			const struct strctq *);
@@ -306,6 +307,7 @@ void		 print_func_db_unfill(const struct strct *, int);
 void		 print_func_db_update(const struct update *, int);
 
 void		 print_func_json_data(const struct strct *, int);
+void		 print_func_json_obj(const struct strct *, int);
 
 __END_DECLS
 

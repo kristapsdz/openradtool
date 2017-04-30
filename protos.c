@@ -265,3 +265,13 @@ print_func_json_data(const struct strct *p, int decl)
 		decl ? " " : "\n", p->name, 
 		p->name, decl ? ";\n" : "");
 }
+
+void
+print_func_json_obj(const struct strct *p, int decl)
+{
+
+	printf("void%sjson_%s_obj(struct kjsonreq *r, "
+		"const struct %s *p)%s",
+		decl ? " " : "\n", p->name, 
+		p->name, decl ? ";\n" : "");
+}

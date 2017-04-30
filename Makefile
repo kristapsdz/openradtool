@@ -12,6 +12,7 @@ COMPAT_OBJS	 = compat_err.o \
 		   compat_strtonum.o
 OBJS		 = comments.o \
 		   header.o \
+		   json.o \
 		   linker.o \
 		   main.o \
 		   parser.o \
@@ -32,6 +33,7 @@ DOTAR		 = comments.c \
 		   configure \
 		   extern.h \
 		   header.c \
+		   json.c \
 		   kwebapp.1 \
 		   kwebapp.5 \
 		   linker.c \

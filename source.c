@@ -204,7 +204,7 @@ gen_strct_func_iter(const struct search *s, size_t num)
 
 	assert(STYPE_ITERATE == s->type);
 
-	print_func_search(s, 0);
+	print_func_db_search(s, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
@@ -273,7 +273,7 @@ gen_strct_func_list(const struct search *s, size_t num)
 
 	assert(STYPE_LIST == s->type);
 
-	print_func_search(s, 0);
+	print_func_db_search(s, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
@@ -346,7 +346,7 @@ static void
 gen_func_open(void)
 {
 
-	print_func_open(0);
+	print_func_db_open(0);
 	puts("{\n"
 	     "\tstruct ksqlcfg cfg;\n"
 	     "\tstruct ksql *sql;\n"
@@ -369,7 +369,7 @@ static void
 gen_func_close(void)
 {
 
-	print_func_close(0);
+	print_func_db_close(0);
 	puts("{\n"
 	     "\tif (NULL == p)\n"
 	     "\t\treturn;\n"
@@ -391,7 +391,7 @@ gen_strct_func_srch(const struct search *s, size_t num)
 
 	assert(STYPE_SEARCH == s->type);
 
-	print_func_search(s, 0);
+	print_func_db_search(s, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
@@ -463,7 +463,7 @@ gen_func_freeq(const struct strct *p)
 	if ( ! (STRCT_HAS_QUEUE & p->flags))
 		return;
 
-	print_func_freeq(p, 0);
+	print_func_db_freeq(p, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct %s *p;\n\n"
@@ -488,7 +488,7 @@ gen_func_insert(const struct strct *p)
 	const struct field *f;
 	size_t	 pos, npos;
 
-	print_func_insert(p, 0);
+	print_func_db_insert(p, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
@@ -566,7 +566,7 @@ static void
 gen_func_free(const struct strct *p)
 {
 
-	print_func_free(p, 0);
+	print_func_db_free(p, 0);
 	printf("\n"
 	       "{\n"
 	       "\tdb_%s_unfill_r(p);\n"
@@ -584,7 +584,7 @@ gen_func_unfill(const struct strct *p)
 {
 	const struct field *f;
 
-	print_func_unfill(p, 0);
+	print_func_db_unfill(p, 0);
 	puts("\n"
 	     "{\n"
 	     "\tif (NULL == p)\n"
@@ -662,7 +662,7 @@ gen_func_fill(const struct strct *p)
 {
 	const struct field *f;
 
-	print_func_fill(p, 0);
+	print_func_db_fill(p, 0);
 	puts("\n"
 	     "{\n"
 	     "\tsize_t i = 0;\n"
@@ -685,7 +685,7 @@ gen_func_update(const struct update *up, size_t num)
 	const struct uref *ref;
 	size_t	 pos, npos;
 
-	print_func_update(up, 0);
+	print_func_db_update(up, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"

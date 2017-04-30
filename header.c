@@ -323,7 +323,7 @@ gen_schema(const struct strct *p)
 
 
 void
-gen_header(const struct strctq *q)
+gen_c_header(const struct strctq *q)
 {
 	const struct strct *p;
 

@@ -129,9 +129,9 @@ main(int argc, char *argv[])
 	/* Finally, (optionally) generate output. */
 
 	if (OP_SOURCE == op)
-		gen_source(sq, header);
+		gen_c_source(sq, header);
 	else if (OP_HEADER == op)
-		gen_header(sq);
+		gen_c_header(sq);
 	else if (OP_SQL == op)
 		gen_sql(sq);
 	else if (OP_DIFF == op)

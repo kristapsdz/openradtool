@@ -798,6 +798,11 @@ gen_func_json_data(const struct strct *p)
 	puts("\n"
 	     "{");
 	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_BLOB == f->type)
+			fprintf(stderr, "%s:%zu:%zu: blob "
+				"type not supported yet!\n", 
+				f->pos.fname, f->pos.line,
+				f->pos.column);
 		if (FTYPE_STRUCT == f->type)
 			printf("\tjson_%s_obj(r, &p->%s);\n",
 				f->ref->tstrct, f->name);

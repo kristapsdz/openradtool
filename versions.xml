@@ -2,6 +2,20 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.1.2</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-05-02">2017-05-02</time>
+		</header>
+		<aside>
+			<p>
+				Introduce <b>-j</b>, which also emits JSON output functions using <a
+					href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a>'s interface.
+				These complete the chain of exporting data from a database directly to client applications.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.1.1</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-04-29">2017-04-29</time>

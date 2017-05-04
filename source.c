@@ -58,7 +58,7 @@ static	const char *const coltypes[FTYPE__MAX] = {
 static	const char *const puttypes[FTYPE__MAX] = {
 	"kjson_putintp", /* FTYPE_INT */
 	"kjson_putdoublep", /* FTYPE_REAL */
-	NULL, /* FTYPE_BLOB (XXX: is special) */
+	"kjson_putstringp", /* FTYPE_BLOB (XXX: is special) */
 	"kjson_putstringp", /* FTYPE_TEXT */
 	NULL, /* FTYPE_PASSWORD (don't print) */
 	NULL, /* FTYPE_STRUCT */
@@ -793,24 +793,65 @@ static void
 gen_func_json_data(const struct strct *p)
 {
 	const struct field *f;
+	size_t	 pos;
 
 	print_func_json_data(p, 0);
 	puts("\n"
 	     "{");
+
+	/* Declare our base64 buffers. */
+
+	pos = 0;
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (FTYPE_BLOB == f->type) 
+			printf("\tchar *buf%zu;\n", ++pos);
+
+	if (pos > 0)
+		puts("\tsize_t sz;\n");
+
+	pos = 0;
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_BLOB != f->type) 
+			continue;
+		pos++;
+		printf("\tsz = (p->%s_sz + 2) / 3 * 4 + 1;\n"
+		       "\tbuf%zu = malloc(sz);\n"
+		       "\tif (NULL == buf%zu) {\n"
+		       "\t\tperror(NULL);\n"
+		       "\t\texit(EXIT_FAILURE);\n"
+		       "\t}\n"
+		       "\tb64_ntop(p->%s, p->%s_sz, buf%zu, sz);\n",
+		       f->name, pos, pos, f->name, f->name, pos);
+	}
+
+	if (pos > 0)
+		puts("");
+
+	pos = 0;
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_BLOB == f->type)
-			fprintf(stderr, "%s:%zu:%zu: blob "
-				"type not supported yet!\n", 
-				f->pos.fname, f->pos.line,
-				f->pos.column);
-		if (FTYPE_STRUCT == f->type)
+			printf("\t%s(r, \"%s\", buf%zu);\n",
+				puttypes[f->type], f->name,
+				++pos);
+		else if (FTYPE_STRUCT == f->type)
 			printf("\tjson_%s_obj(r, &p->%s);\n",
 				f->ref->tstrct, f->name);
-		if (NULL == puttypes[f->type])
-			continue;
-		printf("\t%s(r, \"%s\", p->%s);\n", 
-			puttypes[f->type], f->name, f->name);
+		if (NULL != puttypes[f->type])
+			printf("\t%s(r, \"%s\", p->%s);\n", 
+				puttypes[f->type], f->name, 
+				f->name);
 	}
+
+	/* Free our temporary base64 buffers. */
+
+	pos = 0;
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_BLOB == f->type && 0 == pos)
+			puts("");
+		if (FTYPE_BLOB == f->type) 
+			printf("\tfree(buf%zu);\n", ++pos);
+	}
+
 	puts("}\n"
 	     "");
 }
@@ -1121,8 +1162,18 @@ gen_c_source(const struct strctq *q, int json, const char *header)
 
 	/* Start with all headers we'll need. */
 
-	puts("#include <sys/queue.h>\n"
-	     "\n"
+	puts("#include <sys/queue.h>");
+
+	TAILQ_FOREACH(p, q, entries) 
+		if (STRCT_HAS_BLOB & p->flags) {
+			print_commentt(0, COMMENT_C,
+				"Required for b64_ntop().");
+			puts("#include <netinet/in.h>\n"
+			     "#include <resolv.h>");
+			break;
+		}
+
+	puts("\n"
 	     "#include <stdio.h>\n"
 	     "#include <stdlib.h>\n"
 	     "#include <string.h>\n"
@@ -1131,6 +1182,7 @@ gen_c_source(const struct strctq *q, int json, const char *header)
 	     "#include <ksql.h>");
 	if (json)
 		puts("#include <kcgijson.h>");
+
 
 	printf("\n"
 	       "#include \"%s\"\n"

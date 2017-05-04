@@ -829,17 +829,21 @@ gen_func_json_data(const struct strct *p)
 
 	pos = 0;
 	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FIELD_NULL & f->flags)
+			printf("\tif ( ! p->has_%s)\n"
+			       "\t\tkjson_putnullp(r, \"%s\");\n"
+			       "\telse\n"
+			       "\t",
+			       f->name, f->name);
 		if (FTYPE_BLOB == f->type)
 			printf("\t%s(r, \"%s\", buf%zu);\n",
-				puttypes[f->type], f->name,
-				++pos);
+				puttypes[f->type], f->name, ++pos);
 		else if (FTYPE_STRUCT == f->type)
 			printf("\tjson_%s_obj(r, &p->%s);\n",
 				f->ref->tstrct, f->name);
 		if (NULL != puttypes[f->type])
 			printf("\t%s(r, \"%s\", p->%s);\n", 
-				puttypes[f->type], f->name, 
-				f->name);
+				puttypes[f->type], f->name, f->name);
 	}
 
 	/* Free our temporary base64 buffers. */

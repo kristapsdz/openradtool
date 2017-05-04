@@ -263,6 +263,7 @@ struct	strct {
 	unsigned int	   flags;
 #define	STRCT_HAS_QUEUE	   0x01 /* needs a queue interface */
 #define	STRCT_HAS_ITERATOR 0x02 /* needs iterator interface */
+#define	STRCT_HAS_BLOB	   0x04 /* needs resolv.h */
 	TAILQ_ENTRY(strct) entries;
 };
 

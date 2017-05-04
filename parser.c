@@ -804,6 +804,7 @@ parse_config_field(struct parse *p, struct field *fd)
 	/* blob */
 	if (0 == strcasecmp(p->last.string, "blob")) {
 		fd->type = FTYPE_BLOB;
+		fd->parent->flags |= STRCT_HAS_BLOB;
 		parse_config_field_info(p, fd);
 		return;
 	}

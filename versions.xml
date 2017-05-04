@@ -2,6 +2,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.1.3</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-05-04">2017-05-04</time>
+		</header>
+		<aside>
+			<p>
+				Handle empty (<q>null</q>) values as specified in the configuration when exporting to JSON.
+				Also, properly handle blob values as base64-encoded strings.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.1.2</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-05-02">2017-05-02</time>

@@ -25,8 +25,6 @@ More longer-term:
 More output types (not necessarily "long-term" work, but also not really
 imminent):
 
-- Build JSON types given the "struct" definitions.  This is
-  straightforward using kcgijson.
 - Create kcgi validators for all fields.  This can be accomplished
   fairly easily for 90% of use cases.  (E.g., have a "min" and "max"
   that checks numeric ranges or string length.)

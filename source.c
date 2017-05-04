@@ -819,9 +819,12 @@ gen_func_json_data(const struct strct *p)
 		       "\tif (NULL == buf%zu) {\n"
 		       "\t\tperror(NULL);\n"
 		       "\t\texit(EXIT_FAILURE);\n"
-		       "\t}\n"
-		       "\tb64_ntop(p->%s, p->%s_sz, buf%zu, sz);\n",
-		       f->name, pos, pos, f->name, f->name, pos);
+		       "\t}\n", f->name, pos, pos);
+		if (FIELD_NULL & f->flags)
+			printf("\tif (p->has_%s)\n"
+			       "\t", f->name);
+		printf("\tb64_ntop(p->%s, p->%s_sz, buf%zu, sz);\n",
+		       f->name, f->name, pos);
 	}
 
 	if (pos > 0)
@@ -841,7 +844,7 @@ gen_func_json_data(const struct strct *p)
 		else if (FTYPE_STRUCT == f->type)
 			printf("\tjson_%s_obj(r, &p->%s);\n",
 				f->ref->tstrct, f->name);
-		if (NULL != puttypes[f->type])
+		else if (NULL != puttypes[f->type])
 			printf("\t%s(r, \"%s\", p->%s);\n", 
 				puttypes[f->type], f->name, f->name);
 	}

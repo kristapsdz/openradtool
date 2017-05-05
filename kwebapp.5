@@ -178,7 +178,8 @@ The
 .Cm typeinfo
 may consist of the following:
 .Bd -literal -offset indent
-"rowid" | "null" | "unique" | "comment" quoted_string
+"rowid" | "null" | "unique" | "noexport" | 
+"comment" quoted_string
 .Ed
 .Pp
 The
@@ -200,6 +201,10 @@ A
 .Cm rowid
 field may not also be
 .Cm null .
+Finally,
+.Cm noexport
+fields are never exported using the JSON interface.
+This is useful for sensitive internal information.
 .Ss Comments
 Each
 .Nm

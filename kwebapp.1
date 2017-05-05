@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: May 4 2017 $
+.Dd $Mdocdate: May 5 2017 $
 .Dt KWEBAPP 1
 .Os
 .Sh NAME
@@ -40,7 +40,9 @@ de-serialising simple structures from a database.
 By default, it generates the C header file
 .Pq see Fl C
 and requires generated output to be linked with
-.Xr ksql 3 .
+.Xr ksql 3
+and optionally
+.Xr kcgijson 3 .
 Its arguments are as follows:
 .Bl -tag -width Ds
 .It Fl c Ar header
@@ -103,6 +105,19 @@ keyword in
 you'll need the
 .In sys/queue.h
 header as well.
+If
+.Fl j
+was specified, you'll also need
+.In kcgijson.h
+and
+.In kcgi.h
+.Po
+see
+.Xr kcgijson 3
+and
+.Xr kcgi 3
+for details
+.Pc  
 .Pp
 For each structure object in
 .Ar config ,

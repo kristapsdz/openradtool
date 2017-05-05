@@ -13,14 +13,14 @@ struct user {
   search id: comment "search by user identifier";
   search email,password: name creds comment "lookup by credentials";
   comment "a system user";
-}
+};
 struct session {
   field user struct uid:user.id;
   field uid int comment "user bound to session";
   field token int comment "unique session token";
   field id int rowid;
   comment "web session";
-}
+};
 ```
 
 This configuration is then translated into a C API (header file and

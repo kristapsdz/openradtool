@@ -803,7 +803,8 @@ gen_func_json_data(const struct strct *p)
 
 	pos = 0;
 	TAILQ_FOREACH(f, &p->fq, entries)
-		if (FTYPE_BLOB == f->type) 
+		if (FTYPE_BLOB == f->type &&
+		    ! (FIELD_NOEXPORT & f->flags)) 
 			printf("\tchar *buf%zu;\n", ++pos);
 
 	if (pos > 0)
@@ -812,6 +813,8 @@ gen_func_json_data(const struct strct *p)
 	pos = 0;
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_BLOB != f->type) 
+			continue;
+		if (FIELD_NOEXPORT & f->flags)
 			continue;
 		pos++;
 		printf("\tsz = (p->%s_sz + 2) / 3 * 4 + 1;\n"
@@ -832,6 +835,8 @@ gen_func_json_data(const struct strct *p)
 
 	pos = 0;
 	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FIELD_NOEXPORT & f->flags)
+			continue;
 		if (FIELD_NULL & f->flags)
 			printf("\tif ( ! p->has_%s)\n"
 			       "\t\tkjson_putnullp(r, \"%s\");\n"
@@ -853,6 +858,8 @@ gen_func_json_data(const struct strct *p)
 
 	pos = 0;
 	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FIELD_NOEXPORT & f->flags)
+			continue;
 		if (FTYPE_BLOB == f->type && 0 == pos)
 			puts("");
 		if (FTYPE_BLOB == f->type) 

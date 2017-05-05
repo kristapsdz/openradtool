@@ -2,6 +2,20 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.1.4</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-05-04">2017-05-04</time>
+		</header>
+		<aside>
+			<p>
+				Require a semicolon after <q>struct</q> statements.
+				This is future-proofing for options following the <q>struct</q> data.
+				Also added a <q>noexport</q> field option that disallows fields from being JSON-exported.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.1.3</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-05-04">2017-05-04</time>

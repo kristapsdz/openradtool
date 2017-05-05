@@ -642,8 +642,9 @@ parse_config_field_struct(struct parse *p, struct ref *r)
  * Read auxiliary information for a field.
  * Its syntax is:
  *
- *   ["rowid" | "unique" | "comment" string_literal]* ";"
+ *   [options | "comment" string_literal]* ";"
  *
+ * The options are any of "rowid", "unique", or "noexport".
  * This will continue processing until the semicolon is reached.
  */
 static void
@@ -688,6 +689,12 @@ parse_config_field_info(struct parse *p, struct field *fd)
 
 			fd->flags |= FIELD_ROWID;
 			fd->parent->rowid = fd;
+		} else if (0 == strcasecmp(p->last.string, "noexport")) {
+			if (NULL != fd->ref) {
+				parse_errx(p, "noexport on reference");
+				break;
+			}
+			fd->flags |= FIELD_NOEXPORT;
 		} else if (0 == strcasecmp(p->last.string, "unique")) {
 			/* 
 			 * This must not be on a foreign key reference

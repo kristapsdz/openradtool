@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: May 2 2017 $
+.Dd $Mdocdate: May 4 2017 $
 .Dt KWEBAPP 1
 .Os
 .Sh NAME
@@ -261,6 +261,9 @@ The key is the field name and the value is a string for text types,
 decimal number for reals, integer for integers, and base64-encoded
 string for blobs.
 If a field is null, it is serialised as a null value.
+Fields marked
+.Cm noexport
+are not included in the enumeration, nor are passwords.
 .It Fn json_foo_obj
 Print the entire structure as a key-value pair where the key is the
 structure name and the value is an object consisting of

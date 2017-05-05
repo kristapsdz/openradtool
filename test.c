@@ -14,18 +14,16 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "config.h"
-
 #include <sys/queue.h>
 
-#if HAVE_ERR
-# include <err.h>
-#endif
+#include <err.h>
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <ksql.h>
+#include <kcgi.h>
 #include <kcgijson.h>
 
 #include "db.h"

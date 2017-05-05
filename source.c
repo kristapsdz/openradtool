@@ -812,9 +812,8 @@ gen_func_json_data(const struct strct *p)
 
 	pos = 0;
 	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_BLOB != f->type) 
-			continue;
-		if (FIELD_NOEXPORT & f->flags)
+		if (FTYPE_BLOB != f->type || 
+		    FIELD_NOEXPORT & f->flags)
 			continue;
 		pos++;
 		printf("\tsz = (p->%s_sz + 2) / 3 * 4 + 1;\n"

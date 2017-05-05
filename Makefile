@@ -149,6 +149,9 @@ db.update.sql.xml: db.update.sql
 	  highlight -l --enclose-pre --src-lang=sql -f db.update.sql ; \
 	  echo "</article>" ; ) >$@
 
+test.c.html: test.c
+	highlight -s whitengrey -I -l --src-lang=c test.c >$@
+
 db.c.html: db.c
 	highlight -s whitengrey -I -l --src-lang=c db.c >$@
 
@@ -170,7 +173,7 @@ db.update.sql.html: db.update.sql
 highlight.css:
 	highlight --print-style -s whitengrey
 
-index.html: index.xml $(XMLS) db.txt.html db.h.html db.c.html db.sql.html db.old.txt.html db.update.sql.html highlight.css
+index.html: index.xml $(XMLS) db.txt.html db.h.html db.c.html db.sql.html db.old.txt.html db.update.sql.html test.c.html highlight.css
 	sblg -s cmdline -t index.xml -o- $(XMLS) | \
 	       sed "s!@VERSION@!$(VERSION)!g" > $@
 
@@ -183,7 +186,7 @@ clean:
 	rm -f kwebapp $(COMPAT_OBJS) $(OBJS) db.c db.h db.o db.sql db.update.sql db.db test test.o 
 	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
 	rm -f index.svg index.html highlight.css kwebapp.5.html kwebapp.1.html
-	rm -f db.txt.xml db.h.xml db.c.html db.h.html db.txt.html db.sql.xml db.sql.html db.update.sql.xml db.old.txt.html db.update.sql.html TODO.xml
+	rm -f db.txt.xml db.h.xml db.c.html db.h.html db.txt.html db.sql.xml db.sql.html db.update.sql.xml db.old.txt.html db.update.sql.html TODO.xml test.c.html
 
 distclean: clean
 	rm -f config.h config.log Makefile.configure

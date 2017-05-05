@@ -261,6 +261,9 @@ The key is the field name and the value is a string for text types,
 decimal number for reals, integer for integers, and base64-encoded
 string for blobs.
 If a field is null, it is serialised as a null value.
+Fields marked
+.Cm noexport
+are not included in the enumeration, nor are passwords.
 .It Fn json_foo_obj
 Print the entire structure as a key-value pair where the key is the
 structure name and the value is an object consisting of

@@ -1,8 +1,8 @@
 # Introduction
 
 *kwebapp* translates business logic of a database application---objects
-and queries---into C and SQL code.  The business logic is given as a
-configuration file, for example:
+and queries---into C and SQL ([SQLite](https://sqlite.org)) code.  The
+business logic is given as a configuration file, for example:
 
 ```
 struct user {
@@ -28,6 +28,12 @@ implementation) and an SQL schema or update sequence.  The API consists
 of "getters" and "setters", and is implemented in straight-forward C
 code you link directly into your application.
 
+The generated files are currently
+[OpenBSD](https://www.openbsd.org)-only and use
+[ksql(3)](https://kristaps.bsd.lv/ksql) to wrap around SQLite and
+(optionally)
+[kcgi(3)](https://kristaps.bsd.lv/kcgi) for JSON output.
+
 Why is *kwebapp* handy?  It removes a lot of "boilerplate" code querying
 the database and allocating objects.  Some more features:
 
@@ -48,6 +54,7 @@ the database and allocating objects.  Some more features:
   supports "password" type that has automatic hashing mechanism built-in
   during selection from and insertion into the database.
 - Several different types of SQL query (and update) operators.
+- Optional JSON output functions.
 
 See the [TODO](TODO.md) for what still needs to be done.
 

@@ -6,7 +6,7 @@ struct company {
     "Simply a check for null values.";
   list somenum isnull;
   comment "Controlling organisation.";
-}
+};
 
 struct user {
   field company struct cid:company.id comment
@@ -39,7 +39,7 @@ struct user {
   update hash: uid;
   update email: uid;
   comment "A regular user.";
-}
+};
 
 struct session { 
   field user struct userid:user.uid;
@@ -51,4 +51,4 @@ struct session {
     "Search for company's logged-in users.";
   comment "Authenticated session.";
   delete id;
-}
+};

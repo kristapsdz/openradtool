@@ -37,7 +37,7 @@ tokens) configuration language with the following rough structure:
     [ "delete" deletedata ";" ]*
     [ "unique" uniquedata ";" ]*
     [ "comment" quoted_string ";" ]?
-  "}"
+  "};"
 ]+
 .Ed
 .Pp
@@ -76,7 +76,7 @@ the curly braces.
     [ "delete" deletedata ";" ]*
     [ "unique" uniquedata ";" ]*
     [ "comment" quoted_string ";" ]?
-  "}"
+  "};"
 .Ed
 .Pp
 Structures may be mapped into by other structures from referencing
@@ -371,7 +371,7 @@ struct user {
   field name text;
   field id int rowid;
   comment "A regular user.";
-}
+};
 
 struct session {
   field user struct userid:user.id;
@@ -380,7 +380,7 @@ struct session {
   field token comment "Random cookie.";
   field id int rowid;
   comment "Authenticated session.";
-}
+};
 .Ed
 .Pp
 This generates two C structures,

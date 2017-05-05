@@ -1254,7 +1254,7 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
  *    [["iterate" | "search" | "list" ] search_fields]*
  *    ["update" update_fields]*
  *    ["comment" quoted_string]?
- *  "}"
+ *  "};"
  */
 static void
 parse_config_struct(struct parse *p, struct strct *s)
@@ -1267,7 +1267,7 @@ parse_config_struct(struct parse *p, struct strct *s)
 		return;
 	}
 
-	while (TOK_EOF != p->lasttype && TOK_ERR != p->lasttype) {
+	while ( ! PARSE_STOP(p)) {
 		if (TOK_RBRACE == parse_next(p))
 			break;
 		if (TOK_IDENT != p->lasttype) {
@@ -1347,6 +1347,14 @@ parse_config_struct(struct parse *p, struct strct *s)
 		parse_point(p, &fd->pos);
 		TAILQ_INSERT_TAIL(&s->fq, fd, entries);
 		parse_config_field(p, fd);
+	}
+
+	if (PARSE_STOP(p))
+		return;
+
+	if (TOK_SEMICOLON != parse_next(p)) {
+		parse_errx(p, "expected semicolon");
+		return;
 	}
 
 	if (TAILQ_EMPTY(&s->fq)) {

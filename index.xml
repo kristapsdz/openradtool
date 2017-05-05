@@ -78,14 +78,15 @@
 				</p>
 				<p>
 					When passed through <a href="kwebapp.1.html">kwebapp(1)</a>, this will generate the C source file, <a
-						href="db.c.html">db.c</a>; the C header file, <a href="db.h.html">db.h</a>; and the SQL schema
-					file, <a href="db.sql.html">db.sql</a>.
+						href="db.c.html">db.c</a>; the C header file, <a href="db.h.html">db.h</a>; and (later) the SQL
+					schema file, <a href="db.sql.html">db.sql</a>.
+					These will be called by our sample application, <a href="test.c.html">test.c</a>.
 				</p>
 			</section>
 			<blockquote>
-				<div>kwebapp -C <a href="db.txt.html">db.txt</a> &gt;<a href="db.h.html">db.h</a></div>
-				<div>kwebapp -c <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.c.html">db.c</a></div>
-				<div>cc -o test main.c <a href="db.c.html">db.c</a> -lksql -lsqlite3</div>
+				<div>kwebapp -jC <a href="db.txt.html">db.txt</a> &gt;<a href="db.h.html">db.h</a></div>
+				<div>kwebapp -jc <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.c.html">db.c</a></div>
+				<div>cc -o test main.c <a href="db.c.html">db.c</a> -lksql -lsqlite3 -lkcgijson -lkcgi -lz</div>
 			</blockquote>
 			<section>
 				<p>

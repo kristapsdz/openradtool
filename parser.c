@@ -690,10 +690,6 @@ parse_config_field_info(struct parse *p, struct field *fd)
 			fd->flags |= FIELD_ROWID;
 			fd->parent->rowid = fd;
 		} else if (0 == strcasecmp(p->last.string, "noexport")) {
-			if (NULL != fd->ref) {
-				parse_errx(p, "noexport on reference");
-				break;
-			}
 			fd->flags |= FIELD_NOEXPORT;
 		} else if (0 == strcasecmp(p->last.string, "unique")) {
 			/* 

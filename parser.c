@@ -690,6 +690,8 @@ parse_config_field_info(struct parse *p, struct field *fd)
 			fd->flags |= FIELD_ROWID;
 			fd->parent->rowid = fd;
 		} else if (0 == strcasecmp(p->last.string, "noexport")) {
+			if (FTYPE_PASSWORD == fd->type)
+				parse_warnx(p, "noexport is redundant");
 			fd->flags |= FIELD_NOEXPORT;
 		} else if (0 == strcasecmp(p->last.string, "unique")) {
 			/* 

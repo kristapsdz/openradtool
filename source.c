@@ -834,8 +834,15 @@ gen_func_json_data(const struct strct *p)
 
 	pos = 0;
 	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FIELD_NOEXPORT & f->flags)
+		if (FIELD_NOEXPORT & f->flags) {
+			print_commentv(1, COMMENT_C, "Omitting %s: "
+				"marked no export.", f->name);
 			continue;
+		} else if (FTYPE_PASSWORD == f->type) {
+			print_commentv(1, COMMENT_C, "Omitting %s: "
+				"is a password hash.", f->name);
+			continue;
+		}
 		if (FIELD_NULL & f->flags)
 			printf("\tif ( ! p->has_%s)\n"
 			       "\t\tkjson_putnullp(r, \"%s\");\n"
@@ -848,7 +855,7 @@ gen_func_json_data(const struct strct *p)
 		else if (FTYPE_STRUCT == f->type)
 			printf("\tjson_%s_obj(r, &p->%s);\n",
 				f->ref->tstrct, f->name);
-		else if (NULL != puttypes[f->type])
+		else
 			printf("\t%s(r, \"%s\", p->%s);\n", 
 				puttypes[f->type], f->name, f->name);
 	}

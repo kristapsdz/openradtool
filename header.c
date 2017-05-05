@@ -101,7 +101,10 @@ gen_struct(const struct strct *p)
 
 	if (STRCT_HAS_ITERATOR & p->flags) {
 		print_commentv(0, COMMENT_C, 
-			"Callback of %s for iteration.", p->name);
+			"Callback of %s for iteration.\n"
+			"The arg parameter is the opaque pointer "
+			"passed into the iterate function.",
+			p->name);
 		printf("typedef void (*%s_cb)"
 		       "(const struct %s *v, void *arg);\n\n", 
 		       p->name, p->name);
@@ -302,7 +305,8 @@ gen_funcs(const struct strct *p, int json)
 		print_commentv(0, COMMENT_C,
 			"Print out the fields of a %s in JSON "
 			"including nested structures.\n"
-			"Omits any password entries.\n"
+			"Omits any password entries or those "
+			"marked \"noexport\".\n"
 			"See json_%s_obj() for the full object.",
 			p->name, p->name);
 		print_func_json_data(p, 1);

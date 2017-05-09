@@ -66,16 +66,30 @@ print_func_db_close(int decl)
 
 /*
  * Print the variables in a function declaration.
+ * The "col" is the current position in the output line.
+ * Returns the current position in the output line.
  */
-static void
-print_var(size_t pos, enum ftype t, unsigned int flags)
+static int
+print_var(size_t pos, size_t col, enum ftype t, unsigned int flags)
 {
+
+	putchar(',');
+	if (col >= 72) {
+		printf("\n\t");
+		col = 0;
+	} else {
+		putchar(' ');
+		col++;
+	}
 
 	assert(NULL != ftypes[t]);
 	if (FTYPE_BLOB == t)
-		printf(", size_t v%zu_sz", pos);
-	printf(", %s%sv%zu", ftypes[t], 
+		col += printf("size_t v%zu_sz, ", pos);
+
+	col += printf("%s%sv%zu", ftypes[t], 
 		FIELD_NULL & flags ?  "*" : "", pos);
+
+	return(col);
 }
 
 /*
@@ -88,37 +102,40 @@ print_func_db_update(const struct update *u, int decl)
 {
 	const struct uref *ur;
 	size_t	 pos = 1;
+	int	 col = 0;
 
 	if (UP_MODIFY == u->type)
-		printf("int%sdb_%s_update",
+		col += printf("int%sdb_%s_update",
 			decl ? " " : "\n", u->parent->name);
 	else
-		printf("int%sdb_%s_delete",
+		col += printf("int%sdb_%s_delete",
 			decl ? " " : "\n", u->parent->name);
 
 	if (NULL == u->name && UP_MODIFY == u->type) {
 		TAILQ_FOREACH(ur, &u->mrq, entries)
-			printf("_%s", ur->name);
-		printf("_by");
+			col += printf("_%s", ur->name);
+		col += printf("_by");
 		TAILQ_FOREACH(ur, &u->crq, entries)
-			printf("_%s", ur->name);
+			col += printf("_%s", ur->name);
 	} else if (NULL == u->name) {
-		printf("_by");
+		col += printf("_by");
 		TAILQ_FOREACH(ur, &u->crq, entries)
-			printf("_%s", ur->name);
+			col += printf("_%s", ur->name);
 	} else 
-		printf("_%s", u->name);
+		col += printf("_%s", u->name);
 
-	printf("(struct ksql *db");
+	col += printf("(struct ksql *db");
 
 	TAILQ_FOREACH(ur, &u->mrq, entries)
-		print_var(pos++, ur->field->type, ur->field->flags);
+		col = print_var(pos++, col, 
+			ur->field->type, ur->field->flags);
 
 	/* Don't accept input for unary operation. */
 
 	TAILQ_FOREACH(ur, &u->crq, entries)
 		if ( ! OPTYPE_ISUNARY(ur->op))
-			print_var(pos++, ur->field->type, 0);
+			col = print_var(pos++, col, 
+				ur->field->type, 0);
 
 	printf(")%s", decl ? ";\n" : "");
 }
@@ -136,33 +153,35 @@ print_func_db_search(const struct search *s, int decl)
 	const struct sent *sent;
 	const struct sref *sr;
 	size_t	 pos = 1;
+	int	 col = 0;
 
 	if (STYPE_SEARCH == s->type)
-		printf("struct %s *%sdb_%s_get", 
+		col += printf("struct %s *%sdb_%s_get", 
 			s->parent->name, decl ? "" : "\n", 
 			s->parent->name);
 	else if (STYPE_LIST == s->type)
-		printf("struct %s_q *%sdb_%s_list", 
+		col += printf("struct %s_q *%sdb_%s_list", 
 			s->parent->name, decl ? "" : "\n", 
 			s->parent->name);
 	else
-		printf("void%sdb_%s_iterate",
+		col += printf("void%sdb_%s_iterate",
 			decl ? " " : "\n", s->parent->name);
 
 	if (NULL == s->name) {
-		printf("_by");
+		col += printf("_by");
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
 			putchar('_');
+			col++;
 			TAILQ_FOREACH(sr, &sent->srq, entries)
-				printf("_%s", sr->name);
+				col += printf("_%s", sr->name);
 		}
 	} else 
-		printf("_%s", s->name);
+		col += printf("_%s", s->name);
 
-	printf("(struct ksql *db");
+	col += printf("(struct ksql *db");
 
 	if (STYPE_ITERATE == s->type)
-		printf(", %s_cb cb, void *arg", 
+		col += printf(", %s_cb cb, void *arg", 
 			s->parent->name);
 
 	/* Don't accept input for unary operation. */
@@ -171,7 +190,7 @@ print_func_db_search(const struct search *s, int decl)
 		if (OPTYPE_ISUNARY(sent->op))
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
-		print_var(pos++, sr->field->type, 0);
+		col = print_var(pos++, col, sr->field->type, 0);
 	}
 
 	printf(")%s", decl ? ";\n" : "");
@@ -187,13 +206,16 @@ print_func_db_insert(const struct strct *p, int decl)
 {
 	const struct field *f;
 	size_t	 pos = 1;
+	int	 col = 0;
 
-	printf("int64_t%sdb_%s_insert(struct ksql *db",
-		decl ? " " : "\n", p->name);
+	col += printf("int64_t%sdb_%s_insert("
+		"struct ksql *db", decl ? " " : "\n", p->name);
+
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if ( ! (FTYPE_STRUCT == f->type ||
 		        FIELD_ROWID & f->flags))
-			print_var(pos++, f->type, f->flags);
+			col = print_var(pos++, col, f->type, f->flags);
+
 	printf(")%s", decl ? ";\n" : "");
 }
 

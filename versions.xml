@@ -9,6 +9,7 @@
 		<aside>
 			<p>
 				Add field validation routines.
+				See the <b>-v</b> flag in <a href="kwebapp.1.html">kwebapp(1)</a>.
 				This uses the field type (and modifiers) to create 
 				<a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> validation routines.
 			</p>

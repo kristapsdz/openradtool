@@ -149,7 +149,7 @@ main(int argc, char *argv[])
 usage:
 	fprintf(stderr, 
 		"usage: %s "
-		"[-Cjns] "
+		"[-Cjnsv] "
 		"[-c header] "
 		"[-d config] "
 		"[config]\n",

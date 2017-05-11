@@ -233,7 +233,7 @@ gen_func_search(const struct search *s)
  * Generate the function declarations for a given structure.
  */
 static void
-gen_funcs(const struct strct *p, int json)
+gen_funcs(const struct strct *p, int json, int valids)
 {
 	const struct search *s;
 	const struct field *f;
@@ -320,6 +320,12 @@ gen_funcs(const struct strct *p, int json)
 		print_func_json_obj(p, 1);
 		puts("");
 	}
+
+	if (valids) {
+		TAILQ_FOREACH(f, &p->fq, entries)
+			print_func_valid(f, 1);
+		puts("");
+	}
 }
 
 /*
@@ -344,9 +350,13 @@ gen_schema(const struct strct *p)
 	puts("");
 }
 
-
+/*
+ * Generate the C header file.
+ * If "json" is non-zero, this generates the JSON formatters.
+ * If "valids" is non-zero, this generates the field validators.
+ */
 void
-gen_c_header(const struct strctq *q, int json)
+gen_c_header(const struct strctq *q, int json, int valids)
 {
 	const struct strct *p;
 
@@ -393,7 +403,7 @@ gen_c_header(const struct strctq *q, int json)
 	puts("");
 
 	TAILQ_FOREACH(p, q, entries)
-		gen_funcs(p, json);
+		gen_funcs(p, json, valids);
 
 	puts("__END_DECLS\n"
 	     "\n"

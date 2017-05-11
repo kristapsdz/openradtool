@@ -322,9 +322,14 @@ gen_funcs(const struct strct *p, int json, int valids)
 	}
 
 	if (valids) {
-		TAILQ_FOREACH(f, &p->fq, entries)
+		TAILQ_FOREACH(f, &p->fq, entries) {
+			print_commentv(0, COMMENT_C,
+				"Validation routines for the %s "
+				"field in struct %s.", 
+				f->name, p->name);
 			print_func_valid(f, 1);
-		puts("");
+			puts("");
+		}
 	}
 }
 

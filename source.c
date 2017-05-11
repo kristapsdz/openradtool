@@ -776,6 +776,23 @@ gen_func_update(const struct update *up, size_t num)
 }
 
 static void
+gen_func_valids(const struct strct *p)
+{
+	const struct field *f;
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT == f->type)
+			continue;
+		print_func_valid(f, 0);
+		puts("{\n"
+		     "\treturn(0);\n"
+		     "}\n"
+		     "");
+	}
+
+}
+
+static void
 gen_func_json_obj(const struct strct *p)
 {
 
@@ -881,7 +898,7 @@ gen_func_json_data(const struct strct *p)
  * given structure "s".
  */
 static void
-gen_funcs(const struct strct *p, int json)
+gen_funcs(const struct strct *p, int json, int valids)
 {
 	const struct search *s;
 	const struct update *u;
@@ -899,6 +916,9 @@ gen_funcs(const struct strct *p, int json)
 		gen_func_json_data(p);
 		gen_func_json_obj(p);
 	}
+
+	if (valids)
+		gen_func_valids(p);
 
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
@@ -1170,8 +1190,16 @@ gen_stmt(const struct strct *p)
 	}
 }
 
+/*
+ * Generate the C source file from "q" structure objects.
+ * If "json" is non-zero, this generates the JSON formatters.
+ * If "valids" is non-zero, this generates the field validators.
+ * The "header" is what's noted as an inclusion.
+ * (Your header file, see gen_c_header, should have the same name.)
+ */
 void
-gen_c_source(const struct strctq *q, int json, const char *header)
+gen_c_source(const struct strctq *q, 
+	int json, int valids, const char *header)
 {
 	const struct strct *p;
 
@@ -1200,6 +1228,8 @@ gen_c_source(const struct strctq *q, int json, const char *header)
 	     "#include <unistd.h>\n"
 	     "\n"
 	     "#include <ksql.h>");
+	if (valids)
+		puts("#include <kcgi.h>");
 	if (json)
 		puts("#include <kcgijson.h>");
 
@@ -1244,5 +1274,5 @@ gen_c_source(const struct strctq *q, int json, const char *header)
 	gen_func_close();
 
 	TAILQ_FOREACH(p, q, entries)
-		gen_funcs(p, json);
+		gen_funcs(p, json, valids);
 }

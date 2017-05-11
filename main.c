@@ -42,7 +42,7 @@ main(int argc, char *argv[])
 	const char	*confile = NULL, *dconfile = NULL,
 	      		*header = NULL;
 	struct strctq	*sq, *dsq = NULL;
-	int		 c, rc = 1, json = 0;
+	int		 c, rc = 1, json = 0, valids = 0;
 	enum op		 op = OP_C_HEADER;
 
 #if HAVE_PLEDGE
@@ -50,7 +50,7 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "c:Cd:jns")))
+	while (-1 != (c = getopt(argc, argv, "c:Cd:jnsv")))
 		switch (c) {
 		case ('c'):
 			op = OP_C_SOURCE;
@@ -71,6 +71,9 @@ main(int argc, char *argv[])
 			break;
 		case ('s'):
 			op = OP_SQL;
+			break;
+		case ('v'):
+			valids = 1;
 			break;
 		default:
 			goto usage;
@@ -132,9 +135,9 @@ main(int argc, char *argv[])
 	/* Finally, (optionally) generate output. */
 
 	if (OP_C_SOURCE == op)
-		gen_c_source(sq, json, header);
+		gen_c_source(sq, json, valids, header);
 	else if (OP_C_HEADER == op)
-		gen_c_header(sq, json);
+		gen_c_header(sq, json, valids);
 	else if (OP_SQL == op)
 		gen_sql(sq);
 	else if (OP_DIFF == op)

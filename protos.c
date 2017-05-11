@@ -289,6 +289,16 @@ print_func_json_data(const struct strct *p, int decl)
 }
 
 void
+print_func_valid(const struct field *p, int decl)
+{
+
+	printf("int%svalid_%s_%s(struct kpair *p)%s",
+		decl ? " " : "\n", 
+		p->parent->name, p->name,
+		decl ? ";\n" : "\n");
+}
+
+void
 print_func_json_obj(const struct strct *p, int decl)
 {
 

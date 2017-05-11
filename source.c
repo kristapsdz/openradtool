@@ -784,12 +784,27 @@ gen_func_valids(const struct strct *p)
 		if (FTYPE_STRUCT == f->type)
 			continue;
 		print_func_valid(f, 0);
-		puts("{\n"
-		     "\treturn(0);\n"
-		     "}\n"
+		puts("{");
+		switch (f->type) {
+		case (FTYPE_INT):
+			puts("\treturn(kvalid_int(p));");
+			break;
+		case (FTYPE_REAL):
+			puts("\treturn(kvalid_double(p));");
+			break;
+		case (FTYPE_TEXT):
+			puts("\treturn(kvalid_string(p));");
+			break;
+		case (FTYPE_PASSWORD):
+			puts("\treturn(kvalid_string(p));");
+			break;
+		default:
+			puts("\treturn(1);");
+			break;
+		}
+		puts("}\n"
 		     "");
 	}
-
 }
 
 static void
@@ -1221,8 +1236,12 @@ gen_c_source(const struct strctq *q,
 			break;
 		}
 
-	puts("\n"
-	     "#include <stdio.h>\n"
+	puts("");
+	if (valids) {
+		puts("#include <stdarg.h>");
+		puts("#include <stdint.h>");
+	}
+	puts("#include <stdio.h>\n"
 	     "#include <stdlib.h>\n"
 	     "#include <string.h>\n"
 	     "#include <unistd.h>\n"

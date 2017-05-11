@@ -25,6 +25,4 @@ More longer-term:
 More output types (not necessarily "long-term" work, but also not really
 imminent):
 
-- Create kcgi validators for all fields.  This can be accomplished
-  fairly easily for 90% of use cases.  (E.g., have a "min" and "max"
-  that checks numeric ranges or string length.)
+- Add limitations for field validation (e.g., non-empty strings).

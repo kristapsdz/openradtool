@@ -32,7 +32,7 @@ The generated files are currently
 [OpenBSD](https://www.openbsd.org)-only and use
 [ksql(3)](https://kristaps.bsd.lv/ksql) to wrap around SQLite and
 (optionally)
-[kcgi(3)](https://kristaps.bsd.lv/kcgi) for JSON output.
+[kcgi(3)](https://kristaps.bsd.lv/kcgi) for JSON or validation output.
 
 Why is *kwebapp* handy?  It removes a lot of "boilerplate" code querying
 the database and allocating objects.  Some more features:
@@ -55,6 +55,8 @@ the database and allocating objects.  Some more features:
   during selection from and insertion into the database.
 - Several different types of SQL query (and update) operators.
 - Optional JSON output functions.
+- Optional field validation ([kcgi(3)](https://kristaps.bsd.lv/kcgi))
+  functions.
 
 See the [TODO](TODO.md) for what still needs to be done.
 

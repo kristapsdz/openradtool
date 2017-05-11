@@ -22,7 +22,7 @@
 .Nd create web application API and database layer
 .Sh SYNOPSIS
 .Nm kwebapp
-.Op Fl Cjns
+.Op Fl Cjnsv
 .Op Fl c Ar header
 .Op Fl d Ar oldconfig
 .Op Ar config
@@ -33,7 +33,8 @@ utility accepts a configuration file
 .Ar config
 .Pq defaulting to standard input
 and creates source files defining a web application's C API to its
-database; and optionally, the API from data objects to output JSON.
+database; and optionally, the API from data objects to output JSON and
+field (input) validation functions.
 It is a way of reducing the often-repeated code of serialising and
 de-serialising simple structures from a database.
 .Pp
@@ -72,6 +73,10 @@ Parse only (dry-run).
 Create the full
 .Sx SQL schema
 file.
+.It Fl v
+Add field input validation functions.
+This will also require linking to
+.Xr kcgi 3 .
 .It Ar config
 A configuration file in the
 .Xr kwebapp 5
@@ -110,14 +115,16 @@ If
 was specified, you'll also need
 .In kcgijson.h
 and
-.In kcgi.h
+.In kcgi.h ,
+with just the latter for
+.Fl v
 .Po
 see
 .Xr kcgijson 3
 and
 .Xr kcgi 3
 for details
-.Pc  
+.Pc .
 .Pp
 For each structure object in
 .Ar config ,
@@ -283,6 +290,23 @@ are not included in the enumeration, nor are passwords.
 Print the entire structure as a key-value pair where the key is the
 structure name and the value is an object consisting of
 .Fn json_foo_data .
+.El
+.Pp
+If the
+.Fl v
+flag was specified, field input validation functions are generated.
+You'll need to link with
+.Xr kcgi 3 .
+Given the same structure
+.Dq foo ,
+the following are generated:
+.Bl -tag -width Ds
+.It Fn valid_foo_xxxx
+Validate the field
+.Dq xxxx
+in the structure.
+This should be used in place of raw validation functions such as
+.Xr kvalid_int 3 .
 .El
 .Pp
 All of these are fully documented in the header file.

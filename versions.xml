@@ -2,6 +2,20 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.1.5</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-05-12">2017-05-12</time>
+		</header>
+		<aside>
+			<p>
+				Add field validation routines.
+				This uses the field type (and modifiers) to create 
+				<a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> validation routines.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.1.4</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-05-05">2017-05-05</time>

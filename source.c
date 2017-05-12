@@ -1206,6 +1206,24 @@ gen_stmt(const struct strct *p)
 }
 
 /*
+ * Generate a single "struct kvalid" with the given validation function
+ * and the form name, which we have as "struct-field".
+ */
+static void
+gen_valid_struct(const struct strct *p)
+{
+	const struct field *f;
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT == f->type)
+			continue;
+		printf("\t{ valid_%s_%s, \"%s-%s\" },\n",
+			p->name, f->name,
+			p->name, f->name);
+	}
+}
+
+/*
  * Generate the C source file from "q" structure objects.
  * If "json" is non-zero, this generates the JSON formatters.
  * If "valids" is non-zero, this generates the field validators.
@@ -1282,6 +1300,20 @@ gen_c_source(const struct strctq *q,
 		gen_stmt(p);
 	puts("};");
 	puts("");
+
+	/*
+	 * Validation array.
+	 * This is declared in the header file, but we define it now.
+	 * All of the functions have been defined in the header file.
+	 */
+
+	if (valids) {
+		puts("const struct kvalid valid_keys[VALID__MAX] = {");
+		TAILQ_FOREACH(p, q, entries)
+			gen_valid_struct(p);
+		puts("};\n"
+		     "");
+	}
 
 	/* Define our functions. */
 

@@ -2,6 +2,21 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.1.6</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-05-16">2017-05-16</time>
+		</header>
+		<aside>
+			<p>
+				Add full validation sequence required by <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a>, specifically
+				<code>khttp_parse(3)</code>.
+				With this in place, applications can push the given structure directly into the HTTP parser without needing to
+				create the array themselves.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.1.5</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-05-12">2017-05-12</time>

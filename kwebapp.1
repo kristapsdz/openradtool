@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: May 5 2017 $
+.Dd $Mdocdate: May 11 2017 $
 .Dt KWEBAPP 1
 .Os
 .Sh NAME
@@ -52,7 +52,7 @@ Create the
 file implementing the header file
 .Ar header .
 .It Fl d Ar oldconfig
-Generate an
+Create the
 .Sx SQL update
 sequence that updates
 .Ar oldconfig ,
@@ -64,7 +64,7 @@ Create the
 .Sx C header
 file.
 .It Fl j
-Emit JSON output functions as well as the database routines.
+Add JSON output functions.
 This will also require linking to
 .Xr kcgijson 3 .
 .It Fl n
@@ -295,6 +295,8 @@ structure name and the value is an object consisting of
 If the
 .Fl v
 flag was specified, field input validation functions are generated.
+A full validation array is given for all fields, although these need not
+be used by the calling application.
 You'll need to link with
 .Xr kcgi 3 .
 Given the same structure
@@ -307,6 +309,24 @@ Validate the field
 in the structure.
 This should be used in place of raw validation functions such as
 .Xr kvalid_int 3 .
+.It Vt enum valid_keys
+An enumeration of all fields that accept validators.
+The enumeration entries are VALID_FOO_XXXX, where
+.Dq XXXX
+is the field name.
+The last enumeration value is always
+.Dv VALID__MAX .
+.It Vt const struct kvalid valid_keys[VALID__MAX]
+A validation array for
+.Xr khttp_parse 3 .
+This uses the
+.Vn valid_foo_xxxx
+functions as described above and names corresponding HTML form entries
+as
+.Dq foo-xxxx ,
+where again,
+.Dq xxxx
+is the field name.
 .El
 .Pp
 All of these are fully documented in the header file.

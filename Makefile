@@ -101,10 +101,10 @@ test.o: test.c db.h
 	$(CC) $(CFLAGS) -I/usr/local/include -o $@ -c test.c
 
 db.c: kwebapp db.txt
-	./kwebapp -j -c db.h db.txt >$@
+	./kwebapp -vj -c db.h db.txt >$@
 
 db.h: kwebapp db.txt
-	./kwebapp -j -C db.txt >$@
+	./kwebapp -vj -C db.txt >$@
 
 db.sql: kwebapp db.txt
 	./kwebapp -s db.txt >$@

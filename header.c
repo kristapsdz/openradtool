@@ -18,6 +18,7 @@
 
 #include <sys/queue.h>
 
+#include <ctype.h>
 #if HAVE_ERR
 # include <err.h>
 #endif
@@ -356,6 +357,28 @@ gen_schema(const struct strct *p)
 }
 
 /*
+ * List valid keys for all native fields of a structure.
+ */
+static void
+gen_valid_enums(const struct strct *p)
+{
+	const struct field *f;
+	const char	*cp;
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT == f->type)
+			continue;
+		printf("\tVALID_");
+		for (cp = p->name; '\0' != *cp; cp++)
+			putchar(toupper((int)*cp));
+		putchar('_');
+		for (cp = f->name; '\0' != *cp; cp++)
+			putchar(toupper((int)*cp));
+		puts(",");
+	}
+}
+
+/*
  * Generate the C header file.
  * If "json" is non-zero, this generates the JSON formatters.
  * If "valids" is non-zero, this generates the field validators.
@@ -386,6 +409,31 @@ gen_c_header(const struct strctq *q, int json, int valids)
 		"same table.");
 	TAILQ_FOREACH(p, q, entries)
 		gen_schema(p);
+
+	if (valids) {
+		puts("");
+		print_commentt(0, COMMENT_C,
+			"All of the fields we validate.\n"
+			"These are as VALID_XXX_YYY, where XXX is "
+			"the structure and YYY is the field.\n"
+			"Only native types are listed.");
+		puts("enum\tvalid_keys {");
+		TAILQ_FOREACH(p, q, entries)
+			gen_valid_enums(p);
+		puts("\tVALID__MAX");
+		puts("};\n"
+		     "");
+		print_commentt(0, COMMENT_C,
+			"Validation fields.\n"
+			"Pass this directly into khttp_parse(3) "
+			"to use them as-is.\n"
+			"The functions are \"valid_xxx_yyy\", "
+			"where \"xxx\" is the struct and \"yyy\" "
+			"the field, and can be used standalone.\n"
+			"The form inputs are named \"xxx-yyy\".");
+		puts("extern const struct kvalid "
+		      "valid_keys[VALID__MAX];");
+	}
 
 	puts("\n"
 	     "__BEGIN_DECLS\n"

@@ -103,6 +103,11 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
+	if (json && (OP_SQL == op || OP_DIFF == op)) 
+		warnx("-j meaningless with SQL output");
+	if (valids && (OP_SQL == op || OP_DIFF == op)) 
+		warnx("-v meaningless with SQL output");
+
 	/*
 	 * First, parse the file.
 	 * This pulls all of the data from the configuration file.

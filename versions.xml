@@ -9,6 +9,7 @@
 		<aside>
 			<p>
 				Add limit clauses to make validation more meaningful.
+				(See the <b>limit</b> field clause in <a href="kwebapp.5.html">kwebapp(5)</a>.)
 				Now input values can be limited.
 			</p>
 		</aside>

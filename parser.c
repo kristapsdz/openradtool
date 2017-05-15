@@ -678,6 +678,7 @@ static void
 parse_validate(struct parse *p, struct field *fd)
 {
 	enum vtype	 vt;
+	enum tok	 tok;
 	struct fvalid	*v;
 
 	if (FTYPE_STRUCT == fd->type) {
@@ -724,11 +725,14 @@ parse_validate(struct parse *p, struct field *fd)
 		v->d.value.integer = p->last.integer;
 		break;
 	case (FTYPE_REAL):
-		if (TOK_DECIMAL != parse_next(p)) {
+		tok = parse_next(p);
+		if (TOK_DECIMAL != tok && TOK_INTEGER != tok) {
 			parse_errx(p, "expected decimal");
 			return;
 		}
-		v->d.value.decimal = p->last.decimal;
+		v->d.value.decimal = 
+			TOK_DECIMAL == tok ? p->last.decimal :
+			p->last.integer;
 		break;
 	case (FTYPE_BLOB):
 	case (FTYPE_TEXT):
@@ -909,6 +913,13 @@ parse_config_field(struct parse *p, struct field *fd)
 	if (0 == strcasecmp(p->last.string, "int") ||
 	    0 == strcasecmp(p->last.string, "integer")) {
 		fd->type = FTYPE_INT;
+		parse_config_field_info(p, fd);
+		return;
+	}
+	/* double */
+	if (0 == strcasecmp(p->last.string, "real") ||
+	    0 == strcasecmp(p->last.string, "double")) {
+		fd->type = FTYPE_REAL;
 		parse_config_field_info(p, fd);
 		return;
 	}

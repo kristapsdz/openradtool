@@ -579,7 +579,7 @@ parse_next(struct parse *p)
 					"malformed decimal"));
 			p->lasttype = TOK_DECIMAL;
 		} else {
-			p->last.decimal = strtonum
+			p->last.integer = strtonum
 				(p->buf, -INT64_MAX, INT64_MAX, &ep);
 			if (NULL != ep)
 				return(parse_errx(p, 
@@ -690,6 +690,7 @@ parse_validate(struct parse *p, struct field *fd)
 		return;
 	}
 
+	vt = VALIDATE__MAX;
 	if (0 == strcasecmp(p->last.string, "gt"))
 		vt = VALIDATE_GT;
 	else if (0 == strcasecmp(p->last.string, "ge"))
@@ -698,7 +699,8 @@ parse_validate(struct parse *p, struct field *fd)
 		vt = VALIDATE_LT;
 	else if (0 == strcasecmp(p->last.string, "le"))
 		vt = VALIDATE_LE;
-	else {
+
+	if (VALIDATE__MAX == vt) {
 		parse_errx(p, "unknown constraint type");
 		return;
 	}
@@ -732,7 +734,7 @@ parse_validate(struct parse *p, struct field *fd)
 	case (FTYPE_TEXT):
 	case (FTYPE_PASSWORD):
 		if (TOK_INTEGER != parse_next(p)) {
-			parse_errx(p, "expected decimal");
+			parse_errx(p, "expected length");
 			return;
 		} 
 		if (p->last.integer < 0 ||
@@ -802,7 +804,7 @@ parse_config_field_info(struct parse *p, struct field *fd)
 			if (FTYPE_PASSWORD == fd->type)
 				parse_warnx(p, "noexport is redundant");
 			fd->flags |= FIELD_NOEXPORT;
-		} else if (0 == strcasecmp(p->last.string, "validate")) {
+		} else if (0 == strcasecmp(p->last.string, "limit")) {
 			parse_validate(p, fd);
 		} else if (0 == strcasecmp(p->last.string, "unique")) {
 			/* 

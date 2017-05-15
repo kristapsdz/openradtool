@@ -179,7 +179,7 @@ The
 may consist of the following:
 .Bd -literal -offset indent
 "rowid" | "null" | "unique" | "noexport" | 
-"comment" quoted_string
+"limit" limit_op limit_val | "comment" quoted_string
 .Ed
 .Pp
 The
@@ -205,6 +205,30 @@ Finally,
 .Cm noexport
 fields are never exported using the JSON interface.
 This is useful for sensitive internal information.
+.Pp
+Zero or more limit clauses are used when generating validation
+functions.
+They are only available for native types.
+The limitation clause consists of an operator and the value checked
+against.
+The operators available are
+.Cm ge ,
+.Cm le ,
+.Cm gt ,
+and
+.Cm lt .
+Respectively, these mean the field should be greater than or equal to,
+less than or equal to, greater than, or less than the given value.
+If the field type is
+.Cm text ,
+.Cm password ,
+or
+.Cm blob ,
+this refers to the string (or binary) length in bytes.
+For numeric types, it's the value itself.
+The given value must match the field type: an integer (which may be
+signed) for integers, integer or real-valued for real, or a positive
+integer for lengths.
 .Ss Comments
 Each
 .Nm

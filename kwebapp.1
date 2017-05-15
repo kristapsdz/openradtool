@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: May 11 2017 $
+.Dd $Mdocdate: May 12 2017 $
 .Dt KWEBAPP 1
 .Os
 .Sh NAME
@@ -309,6 +309,11 @@ Validate the field
 in the structure.
 This should be used in place of raw validation functions such as
 .Xr kvalid_int 3 .
+The validation function will at least validate the type.
+If limitation clauses are given to a field, those will also be emitted
+within this function.
+.Em Note :
+structs are not validated.
 .It Vt enum valid_keys
 An enumeration of all fields that accept validators.
 The enumeration entries are VALID_FOO_XXXX, where

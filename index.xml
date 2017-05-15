@@ -44,7 +44,7 @@
 						href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for the underlying <a
 						href="https://sqlite.org">SQLite</a> database; however, the system itself has no dependencies.
 					You can optionally generate JSON formatters for exporting data and validation routines for HTML
-					forms&#8212;these will also require a <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> dependency.
+					form input&#8212;these will also require a <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> dependency.
 					The generated SQL file are for use by <a href="https://sqlite.org">SQLite</a>.
 				</p>
 				<p>

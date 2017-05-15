@@ -59,7 +59,8 @@ enum	vtype {
 	VALIDATE_GE, /* greater than-eq length or value */
 	VALIDATE_LE, /* less than-eq length or value */
 	VALIDATE_GT, /* greater than length or value */
-	VALIDATE_LT /* less than length or value */
+	VALIDATE_LT, /* less than length or value */
+	VALIDATE__MAX
 };
 
 /*

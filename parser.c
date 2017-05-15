@@ -23,6 +23,7 @@
 #if HAVE_ERR
 # include <err.h>
 #endif
+#include <errno.h>
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -33,17 +34,18 @@
 
 enum	tok {
 	TOK_NONE, /* special case: just starting */
+	TOK_COLON, /* : */
+	TOK_COMMA, /* ; */
+	TOK_DECIMAL, /* decimal-valued number */
+	TOK_EOF, /* end of file! */
+	TOK_ERR, /* error! */
 	TOK_IDENT, /* alphanumeric (starting with alpha) */
 	TOK_INTEGER, /* integer */
 	TOK_LBRACE, /* { */
-	TOK_RBRACE, /* } */
-	TOK_PERIOD, /* } */
-	TOK_COLON, /* : */
-	TOK_SEMICOLON, /* ; */
-	TOK_COMMA, /* ; */
 	TOK_LITERAL, /* "text" */
-	TOK_ERR, /* error! */
-	TOK_EOF /* end of file! */
+	TOK_PERIOD, /* } */
+	TOK_RBRACE, /* } */
+	TOK_SEMICOLON /* ; */
 };
 
 #define	PARSE_STOP(_p) \
@@ -53,6 +55,7 @@ struct	parse {
 	union {
 		char *string;
 		int64_t integer;
+		double decimal;
 	} last; /* last parsed if TOK_IDENT or TOK_INTEGER */
 	enum tok	 lasttype; /* last parse type */
 	char		*buf; /* buffer for storing up reads */
@@ -459,8 +462,9 @@ parse_nextchar(struct parse *p)
 static enum tok
 parse_next(struct parse *p)
 {
-	int		 c, last;
+	int		 c, last, hasdot;
 	const char	*ep = NULL;
+	char		*epp = NULL;
 
 	if (TOK_ERR == p->lasttype || 
 	    TOK_EOF == p->lasttype) 
@@ -527,13 +531,25 @@ parse_next(struct parse *p)
 		p->last.string = p->buf;
 		p->lasttype = TOK_LITERAL;
 	} else if (isdigit(c)) {
+		hasdot = 0;
 		p->bufsz = 0;
 		buf_push(p, c);
 		do {
 			c = parse_nextchar(p);
-			if (isdigit(c))
+			/*
+			 * Check for a decimal number: if we encounter a
+			 * full-stop within the number, we convert to a
+			 * decimal value.
+			 * But only for the first decimal point.
+			 */
+			if ('.' == c) {
+				if (hasdot)
+					break;
+				hasdot = 1;
+			}
+			if (isdigit(c) || '.' == c)
 				buf_push(p, c);
-		} while (isdigit(c));
+		} while (isdigit(c) || '.' == c);
 
 		if (ferror(p->f)) {
 			parse_err(p);
@@ -542,13 +558,22 @@ parse_next(struct parse *p)
 			parse_ungetc(p, c);
 
 		buf_push(p, '\0');
-		p->last.integer = strtonum
-			(p->buf, -INT64_MAX, INT64_MAX, &ep);
-		if (NULL != ep) {
-			parse_errx(p, "malformed integer");
-			return(p->lasttype);
+		if (hasdot) {
+			p->last.decimal = strtod(p->buf, &epp);
+			if (epp == p->buf || ERANGE == errno) {
+				parse_errx(p, "malformed real");
+				return(p->lasttype);
+			}
+			p->lasttype = TOK_DECIMAL;
+		} else {
+			p->last.decimal = strtonum
+				(p->buf, -INT64_MAX, INT64_MAX, &ep);
+			if (NULL != ep) {
+				parse_errx(p, "malformed integer");
+				return(p->lasttype);
+			}
+			p->lasttype = TOK_INTEGER;
 		}
-		p->lasttype = TOK_INTEGER;
 	} else if (isalpha(c)) {
 		p->bufsz = 0;
 		buf_push(p, c);

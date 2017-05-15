@@ -150,6 +150,7 @@ gen_func_update(const struct update *up)
 		print_commentt(0, ct,
 			"Constrains the deleted records to:");
 
+	pos = 1;
 	TAILQ_FOREACH(ref, &up->crq, entries)
 		if (OPTYPE_NOTNULL == ref->op) 
 			print_commentv(0, COMMENT_C_FRAG,

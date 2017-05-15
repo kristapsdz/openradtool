@@ -358,7 +358,7 @@ sent_alloc(const struct parse *p, struct search *up)
  * Trigger a "hard" error condition: stream error or EOF.
  * This sets the lasttype appropriately.
  */
-static void
+static enum tok
 parse_err(struct parse *p)
 {
 
@@ -367,6 +367,8 @@ parse_err(struct parse *p)
 		p->lasttype = TOK_ERR;
 	} else 
 		p->lasttype = TOK_EOF;
+
+	return(p->lasttype);
 }
 
 /*
@@ -463,7 +465,7 @@ parse_nextchar(struct parse *p)
 static enum tok
 parse_next(struct parse *p)
 {
-	int		 c, last, hasdot;
+	int		 c, last, hasdot, minus = 0;
 	const char	*ep = NULL;
 	char		*epp = NULL;
 
@@ -480,9 +482,21 @@ parse_next(struct parse *p)
 		c = parse_nextchar(p);
 	} while (isspace(c));
 
-	if (feof(p->f) || ferror(p->f)) {
-		parse_err(p);
-		return(p->lasttype);
+	if (feof(p->f) || ferror(p->f))
+		return(parse_err(p));
+
+	/* 
+	 * The "-" appears before integers and doubles.
+	 * It has no other syntactic function.
+	 */
+
+	if ('-' == c) {
+		c = parse_nextchar(p);
+		if (feof(p->f) || ferror(p->f))
+			return(parse_err(p));
+		if ( ! isdigit(c))
+			return(parse_errx(p, "expected digit"));
+		minus = 1;
 	}
 
 	/*
@@ -523,10 +537,8 @@ parse_next(struct parse *p)
 			last = c;
 		} 
 
-		if (ferror(p->f)) {
-			parse_err(p);
-			return(p->lasttype);
-		} 
+		if (ferror(p->f))
+			return(parse_err(p));
 
 		buf_push(p, '\0');
 		p->last.string = p->buf;
@@ -534,6 +546,8 @@ parse_next(struct parse *p)
 	} else if (isdigit(c)) {
 		hasdot = 0;
 		p->bufsz = 0;
+		if (minus)
+			buf_push(p, '-');
 		buf_push(p, c);
 		do {
 			c = parse_nextchar(p);
@@ -552,10 +566,9 @@ parse_next(struct parse *p)
 				buf_push(p, c);
 		} while (isdigit(c) || '.' == c);
 
-		if (ferror(p->f)) {
-			parse_err(p);
-			return(p->lasttype);
-		} else if ( ! feof(p->f))
+		if (ferror(p->f))
+			return(parse_err(p));
+		else if ( ! feof(p->f))
 			parse_ungetc(p, c);
 
 		buf_push(p, '\0');
@@ -582,10 +595,9 @@ parse_next(struct parse *p)
 				buf_push(p, c);
 		} while (isalnum(c));
 
-		if (ferror(p->f)) {
-			parse_err(p);
-			return(p->lasttype);
-		} else if ( ! feof(p->f))
+		if (ferror(p->f))
+			return(parse_err(p));
+		else if ( ! feof(p->f))
 			parse_ungetc(p, c);
 
 		buf_push(p, '\0');
@@ -662,6 +674,79 @@ parse_config_field_struct(struct parse *p, struct ref *r)
 		err(EXIT_FAILURE, NULL);
 }
 
+static void
+parse_validate(struct parse *p, struct field *fd)
+{
+	enum vtype	 vt;
+	struct fvalid	*v;
+
+	if (FTYPE_STRUCT == fd->type) {
+		parse_errx(p, "no validation on structs");
+		return;
+	}
+
+	if (TOK_IDENT != parse_next(p)) {
+		parse_errx(p, "expected constraint type");
+		return;
+	}
+
+	if (0 == strcasecmp(p->last.string, "gt"))
+		vt = VALIDATE_GT;
+	else if (0 == strcasecmp(p->last.string, "ge"))
+		vt = VALIDATE_GE;
+	else if (0 == strcasecmp(p->last.string, "lt"))
+		vt = VALIDATE_LT;
+	else if (0 == strcasecmp(p->last.string, "le"))
+		vt = VALIDATE_LE;
+	else {
+		parse_errx(p, "unknown constraint type");
+		return;
+	}
+
+	if (NULL == (v = calloc(1, sizeof(struct fvalid))))
+		err(EXIT_FAILURE, NULL);
+	v->type = vt;
+	TAILQ_INSERT_TAIL(&fd->fvq, v, entries);
+
+	/*
+	 * For now, we have only a scalar value.
+	 * In the future, this will have some conditionalising.
+	 */
+
+	switch (fd->type) {
+	case (FTYPE_INT):
+		if (TOK_INTEGER != parse_next(p)) {
+			parse_errx(p, "expected integer");
+			return;
+		}
+		v->d.value.integer = p->last.integer;
+		break;
+	case (FTYPE_REAL):
+		if (TOK_DECIMAL != parse_next(p)) {
+			parse_errx(p, "expected decimal");
+			return;
+		}
+		v->d.value.decimal = p->last.decimal;
+		break;
+	case (FTYPE_BLOB):
+	case (FTYPE_TEXT):
+	case (FTYPE_PASSWORD):
+		if (TOK_INTEGER != parse_next(p)) {
+			parse_errx(p, "expected decimal");
+			return;
+		} 
+		if (p->last.integer < 0 ||
+		    (uint64_t)p->last.integer > SIZE_MAX) {
+			parse_errx(p, "length out of range");
+			return;
+		}
+		v->d.value.len = p->last.integer;
+		break;
+	default:
+		abort();
+	}
+}
+
 /*
  * Read auxiliary information for a field.
  * Its syntax is:
@@ -717,6 +802,8 @@ parse_config_field_info(struct parse *p, struct field *fd)
 			if (FTYPE_PASSWORD == fd->type)
 				parse_warnx(p, "noexport is redundant");
 			fd->flags |= FIELD_NOEXPORT;
+		} else if (0 == strcasecmp(p->last.string, "validate")) {
+			parse_validate(p, fd);
 		} else if (0 == strcasecmp(p->last.string, "unique")) {
 			/* 
 			 * This must not be on a foreign key reference
@@ -1374,6 +1461,7 @@ parse_config_struct(struct parse *p, struct strct *s)
 		fd->type = FTYPE_INT;
 		fd->parent = s;
 		parse_point(p, &fd->pos);
+		TAILQ_INIT(&fd->fvq);
 		TAILQ_INSERT_TAIL(&s->fq, fd, entries);
 		parse_config_field(p, fd);
 	}
@@ -1521,9 +1609,14 @@ parse_free_ref(struct ref *p)
 static void
 parse_free_field(struct field *p)
 {
+	struct fvalid *fv;
 
 	if (NULL == p)
 		return;
+	while (NULL != (fv = TAILQ_FIRST(&p->fvq))) {
+		TAILQ_REMOVE(&p->fvq, fv, entries);
+		free(fv);
+	}
 	parse_free_ref(p->ref);
 	free(p->doc);
 	free(p->name);

@@ -2,9 +2,22 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.1.7</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-05-15">2017-05-15</time>
+		</header>
+		<aside>
+			<p>
+				Add limit clauses to make validation more meaningful.
+				Now input values can be limited.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.1.6</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2017-05-16">2017-05-16</time>
+			<time datetime="2017-05-13">2017-05-13</time>
 		</header>
 		<aside>
 			<p>

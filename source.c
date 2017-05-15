@@ -23,6 +23,7 @@
 #if HAVE_ERR
 # include <err.h>
 #endif
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -74,6 +75,31 @@ static	const char *const bindtypes[FTYPE__MAX] = {
 	"ksql_bind_str", /* FTYPE_TEXT */
 	"ksql_bind_str", /* FTYPE_PASSWORD */
 	NULL, /* FTYPE_STRUCT */
+};
+
+/*
+ * Basic validation functions for given types.
+ */
+static	const char *const validtypes[FTYPE__MAX] = {
+	"kvalid_int", /* FTYPE_INT */
+	"kvalid_double", /* FTYPE_REAL */
+	NULL, /* FTYPE_BLOB */
+	"kvalid_string", /* FTYPE_TEXT */
+	"kvalid_string", /* FTYPE_PASSWORD */
+	NULL, /* FTYPE_STRUCT */
+};
+
+/*
+ * Binary relations for known validation types.
+ * NOTE: THESE ARE THE NEGATED FORMS.
+ * So VALIDATE_GE y means "greater-equal to y", which we render as "NOT"
+ * greater-equal, which is less-than.
+ */
+static	const char *const validbins[VALIDATE__MAX] = {
+	"<", /* VALIDATE_GE */
+	">", /* VALIDATE_LE */
+	"<=", /* VALIDATE_GT */
+	">=", /* VALIDATE_LT */
 };
 
 /*
@@ -775,33 +801,59 @@ gen_func_update(const struct update *up, size_t num)
 	     "");
 }
 
+/*
+ * For the given validation field "v", generate the clause that results
+ * in failure of the validation.
+ * Assume that the basic type validation has passed.
+ */
+static void
+gen_func_valid_types(const struct field *f, const struct fvalid *v)
+{
+
+	assert(v->type < VALIDATE__MAX);
+	switch (f->type) {
+	case (FTYPE_INT):
+		printf("\tif (p->parsed.i %s %" PRId64 ")\n"
+		       "\t\treturn(0);\n",
+		       validbins[v->type], v->d.value.integer);
+		break;
+	case (FTYPE_REAL):
+		printf("\tif (p->parsed.d %s %g)\n"
+		       "\t\treturn(0);\n",
+		       validbins[v->type], v->d.value.decimal);
+		break;
+	default:
+		printf("\tif (p->valsz %s %zu)\n"
+		       "\t\treturn(0);\n",
+		       validbins[v->type], v->d.value.len);
+		break;
+	}
+}
+
+/*
+ * Generate the validation function for the given field.
+ * This does not apply to structs.
+ * It first validates the basic type (e.g., string or int), then runs
+ * the custom validators.
+ */
 static void
 gen_func_valids(const struct strct *p)
 {
 	const struct field *f;
+	const struct fvalid *v;
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_STRUCT == f->type)
 			continue;
 		print_func_valid(f, 0);
 		puts("{");
-		switch (f->type) {
-		case (FTYPE_INT):
-			puts("\treturn(kvalid_int(p));");
-			break;
-		case (FTYPE_REAL):
-			puts("\treturn(kvalid_double(p));");
-			break;
-		case (FTYPE_TEXT):
-			puts("\treturn(kvalid_string(p));");
-			break;
-		case (FTYPE_PASSWORD):
-			puts("\treturn(kvalid_string(p));");
-			break;
-		default:
-			puts("\treturn(1);");
-			break;
-		}
+		if (NULL != validtypes[f->type])
+			printf("\tif ( ! %s(p))\n"
+			       "\t\treturn(0);\n",
+			       validtypes[f->type]);
+		TAILQ_FOREACH(v, &f->fvq, entries) 
+			gen_func_valid_types(f, v);
+		puts("\treturn(1);");
 		puts("}\n"
 		     "");
 	}

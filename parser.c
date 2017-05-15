@@ -232,7 +232,7 @@ static	const char *optypes[OPTYPE__MAX] = {
 	"notnull", /* OPTYE_NOTNULL */
 };
 
-static void parse_errx(struct parse *, const char *, ...)
+static enum tok parse_errx(struct parse *, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
 static void parse_warnx(struct parse *p, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
@@ -396,7 +396,7 @@ parse_warnx(struct parse *p, const char *fmt, ...)
  * This sets the lasttype appropriately.
  * XXX: limited to 1024 bytes of message content.
  */
-static void
+static enum tok
 parse_errx(struct parse *p, const char *fmt, ...)
 {
 	char	 buf[1024];
@@ -413,6 +413,7 @@ parse_errx(struct parse *p, const char *fmt, ...)
 			p->fname, p->line, p->column);
 
 	p->lasttype = TOK_ERR;
+	return(p->lasttype);
 }
 
 static void
@@ -560,18 +561,16 @@ parse_next(struct parse *p)
 		buf_push(p, '\0');
 		if (hasdot) {
 			p->last.decimal = strtod(p->buf, &epp);
-			if (epp == p->buf || ERANGE == errno) {
-				parse_errx(p, "malformed real");
-				return(p->lasttype);
-			}
+			if (epp == p->buf || ERANGE == errno)
+				return(parse_errx(p, 
+					"malformed decimal"));
 			p->lasttype = TOK_DECIMAL;
 		} else {
 			p->last.decimal = strtonum
 				(p->buf, -INT64_MAX, INT64_MAX, &ep);
-			if (NULL != ep) {
-				parse_errx(p, "malformed integer");
-				return(p->lasttype);
-			}
+			if (NULL != ep)
+				return(parse_errx(p, 
+					"malformed integer"));
 			p->lasttype = TOK_INTEGER;
 		}
 	} else if (isalpha(c)) {
@@ -593,7 +592,7 @@ parse_next(struct parse *p)
 		p->last.string = p->buf;
 		p->lasttype = TOK_IDENT;
 	} else
-		parse_errx(p, "unknown input token");
+		return(parse_errx(p, "unknown input token"));
 
 	return(p->lasttype);
 }

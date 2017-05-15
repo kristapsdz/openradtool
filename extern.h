@@ -55,6 +55,32 @@ struct	ref {
 	struct field	*parent; /* parent reference */
 };
 
+enum	vtype {
+	VALIDATE_GE, /* greater than-eq length or value */
+	VALIDATE_LE, /* less than-eq length or value */
+	VALIDATE_GT, /* greater than length or value */
+	VALIDATE_LT /* less than length or value */
+};
+
+/*
+ * A field validation clause.
+ * By default, fields are validated only as to their type.
+ * This allows for more advanced validation.
+ */
+struct	fvalid {
+	enum vtype	 type; /* type of validation */
+	union {
+		union {
+			int64_t integer;
+			double decimal;
+			size_t len;
+		} value; /* a length/value */
+	} d; /* data associated with validation */
+	TAILQ_ENTRY(fvalid) entries;
+};
+
+TAILQ_HEAD(fvalidq, fvalid);
+
 /*
  * A field defining a database/struct mapping.
  * This can be either reflected in the database, in the C API, or both.
@@ -66,6 +92,7 @@ struct	field {
 	struct pos	   pos; /* parse point */
 	enum ftype	   type; /* type of column */
 	struct strct	  *parent; /* parent reference */
+	struct fvalidq	   fvq; /* validation */
 	unsigned int	   flags; /* flags */
 #define	FIELD_ROWID	   0x01 /* this is a rowid field */
 #define	FIELD_UNIQUE	   0x02 /* this is a unique field */

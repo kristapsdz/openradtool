@@ -92,13 +92,13 @@ kwebapp.tar.gz: $(DOTAR)
 OBJS: extern.h
 
 test: test.o db.o db.db
-	$(CC) -L/usr/local/lib -o $@ test.o db.o -lksql -lsqlite3 -lkcgijson -lkcgi -lz
+	$(CC) -Wextra -L/usr/local/lib -o $@ test.o db.o -lksql -lsqlite3 -lkcgijson -lkcgi -lz
 
 db.o: db.c db.h
-	$(CC) $(CFLAGS) -I/usr/local/include -o $@ -c db.c
+	$(CC) $(CFLAGS) -Wextra -I/usr/local/include -o $@ -c db.c
 
 test.o: test.c db.h
-	$(CC) $(CFLAGS) -I/usr/local/include -o $@ -c test.c
+	$(CC) $(CFLAGS) -Wextra -I/usr/local/include -o $@ -c test.c
 
 db.c: kwebapp db.txt
 	./kwebapp -vj -c db.h db.txt >$@

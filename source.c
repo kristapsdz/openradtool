@@ -38,7 +38,12 @@
  */
 static	const char *const optypes[OPTYPE__MAX] = {
 	"=", /* OPTYPE_EQUAL */
+	">=", /* OPTYPE_GE */
+	">", /* OPTYPE_GT */
+	"<=", /* OPTYPE_LE */
+	"<", /* OPTYPE_LT */
 	"!=", /* OPTYPE_NEQUAL */
+	/* Unary types... */
 	"ISNULL", /* OPTYPE_ISNULL */
 	"NOTNULL", /* OPTYPE_NOTNULL */
 };

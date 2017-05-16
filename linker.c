@@ -470,8 +470,9 @@ resolve_aliases(struct strct *orig, struct strct *p,
  * generally useful.
  * Also warn if null-sensitive operators (isnull, notnull) will be run
  * on non-null fields.
+ * Return zero on failure, non-zero on success.
  */
-static void
+static int
 check_searchtype(const struct strct *p)
 {
 	const struct search *srch;
@@ -502,16 +503,24 @@ check_searchtype(const struct strct *p)
 					sent->pos.fname, 
 					sent->pos.line,
 					sent->pos.column);
-			if ((OPTYPE_EQUAL != sent->op &&
-		  	     OPTYPE_ISBINARY(sent->op)) &&
-			    FTYPE_PASSWORD == sr->field->type)
+			/* 
+			 * FIXME: we should (in theory) allow for the
+			 * unary types and equality binary types.
+			 * But for now, mandate equality.
+			 */
+			if (OPTYPE_EQUAL != sent->op &&
+			    FTYPE_PASSWORD == sr->field->type) {
 				warnx("%s:%zu:%zu: password field "
 					"only processes equality",
 					sent->pos.fname,
 					sent->pos.line,
 					sent->pos.column);
+				return(0);
+			}
 		}
 	}
+
+	return(1);
 }
 
 /*
@@ -696,7 +705,8 @@ parse_link(struct strctq *q)
 	/* See if our search type is wonky. */
 
 	TAILQ_FOREACH(p, q, entries)
-		check_searchtype(p);
+		if ( ! check_searchtype(p))
+			return(0);
 
 	/* 
 	 * Copy the list into a temporary array.

@@ -13,6 +13,8 @@ usable without them, but they'll soon be required.
 - Duplicate "unnamed" functions.  Right now there's no check for
   duplicate function names.  For example, we might have two update
   functions for the same thing.  This is pretty easy to check.
+- Allow for unary operators and binary equality (eq, neq) on password
+  fields.  Right now, I only allow equality.
 
 More longer-term:
 

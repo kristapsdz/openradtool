@@ -502,6 +502,14 @@ check_searchtype(const struct strct *p)
 					sent->pos.fname, 
 					sent->pos.line,
 					sent->pos.column);
+			if ((OPTYPE_EQUAL != sent->op &&
+		  	     OPTYPE_ISBINARY(sent->op)) &&
+			    FTYPE_PASSWORD == sr->field->type)
+				warnx("%s:%zu:%zu: password field "
+					"only processes equality",
+					sent->pos.fname,
+					sent->pos.line,
+					sent->pos.column);
 		}
 	}
 }

@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: May 5 2017 $
+.Dd $Mdocdate: May 15 2017 $
 .Dt KWEBAPP 5
 .Os
 .Sh NAME
@@ -380,19 +380,24 @@ These are specified as an optional term alongside a search field.
 .Pp
 What follows is a full list of operators:
 .Bl -tag -width Ds
-.It Dq eq
-Equality (binary operator): search function will be given an input value
-to check against.
-This is the default.
-.It Dq neq
-Non-equality (binary operator).
-The inverse of
-.Dq eq .
-.It Dq isnull
-Check whether the field is null (unary operator).
-.It Dq notnull
-Check whether the field is not null (unary operator).
+.It Cm eq , neq
+Equality or non-equality binary operator.
+The
+.Cm eq
+operator is the default.
+.It Cm lt , gt
+Less than or greater than binary operators.
+For text, the comparison is lexical; otherwise, it is by value.
+.It Cm le , ge
+Less than/equality or greater than/equality binary operators.
+For text, the comparison is lexical; otherwise, it is by value.
+.It Cm isnull , notnull
+Unary operator to check whether the field is null or not null.
 .El
+.Pp
+.Em Note :
+.Cm password
+fields do not accept any operator but the default check for equality.
 .Sh EXAMPLES
 A simple session table is as follows:
 .Bd -literal

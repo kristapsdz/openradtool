@@ -1,5 +1,5 @@
 struct company {
-  field name text comment
+  field name text limit gt 0 comment
     "Name of the organisation.";
   field id int rowid;
   field somenum int null comment
@@ -14,12 +14,12 @@ struct user {
     on the \"cid\" variable.";
   field cid int comment 
     "A foreign key reference.";
-  field hash password comment
+  field hash password limit gt 0 comment
     "Password hash.
     This is passed to inserts and updates as a password,
     then hashed within the implementation and extracted
     (in listings and searches) as the hash value.";
-  field email text unique comment
+  field email text limit gt 0 unique comment
     "Unique e-mail address.";
   field image blob null comment 
     "A PNG image or something.";

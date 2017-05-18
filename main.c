@@ -32,6 +32,7 @@ enum	op {
 	OP_DIFF,
 	OP_C_HEADER,
 	OP_C_SOURCE,
+	OP_JAVASCRIPT,
 	OP_SQL
 };
 
@@ -50,7 +51,7 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "c:Cd:jnsv")))
+	while (-1 != (c = getopt(argc, argv, "c:Cd:jJnsv")))
 		switch (c) {
 		case ('c'):
 			op = OP_C_SOURCE;
@@ -65,6 +66,9 @@ main(int argc, char *argv[])
 			break;
 		case ('j'):
 			json = 1;
+			break;
+		case ('J'):
+			op = OP_JAVASCRIPT;
 			break;
 		case ('n'):
 			op = OP_NOOP;
@@ -103,10 +107,10 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	if (json && (OP_SQL == op || OP_DIFF == op)) 
-		warnx("-j meaningless with SQL output");
-	if (valids && (OP_SQL == op || OP_DIFF == op)) 
-		warnx("-v meaningless with SQL output");
+	if (json && (OP_C_HEADER != op && OP_C_SOURCE != op)) 
+		warnx("-j meaningless with non-C output");
+	if (valids && (OP_C_HEADER != op && OP_C_SOURCE != op)) 
+		warnx("-v meaningless with non-C output");
 
 	/*
 	 * First, parse the file.
@@ -147,6 +151,8 @@ main(int argc, char *argv[])
 		gen_sql(sq);
 	else if (OP_DIFF == op)
 		rc = gen_diff(sq, dsq);
+	else if (OP_JAVASCRIPT == op)
+		gen_javascript(sq);
 
 	parse_free(sq);
 	return(rc ? EXIT_SUCCESS : EXIT_FAILURE);
@@ -154,7 +160,7 @@ main(int argc, char *argv[])
 usage:
 	fprintf(stderr, 
 		"usage: %s "
-		"[-Cjnsv] "
+		"[-CjJnsv] "
 		"[-c header] "
 		"[-d config] "
 		"[config]\n",

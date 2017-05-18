@@ -13,6 +13,7 @@ COMPAT_OBJS	 = compat_err.o \
 OBJS		 = comments.o \
 		   header.o \
 		   linker.o \
+		   javascript.o \
 		   main.o \
 		   parser.o \
 		   protos.o \

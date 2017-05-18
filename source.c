@@ -1192,25 +1192,31 @@ gen_stmt(const struct strct *p)
 	 */
 
 	printf("\t/* STMT_%s_INSERT */\n"
-	       "\t\"INSERT INTO %s (", p->cname, p->name);
+	       "\t\"INSERT INTO %s ", p->cname, p->name);
 	first = 1;
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_STRUCT == f->type ||
 		    FIELD_ROWID & f->flags)
 			continue;
+		if (first)
+			putchar('(');
 		printf("%s%s", first ? "" : ",", f->name);
 		first = 0;
 	}
-	printf(") VALUES (");
-	first = 1;
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT == f->type ||
-		    FIELD_ROWID & f->flags)
-			continue;
-		printf("%s?", first ? "" : ",");
-		first = 0;
-	}
-	puts(")\",");
+
+	if (0 == first) {
+		printf(") VALUES (");
+		first = 1;
+		TAILQ_FOREACH(f, &p->fq, entries) {
+			if (FTYPE_STRUCT == f->type ||
+			    FIELD_ROWID & f->flags)
+				continue;
+			printf("%s?", first ? "" : ",");
+			first = 0;
+		}
+		puts(")\",");
+	} else
+		puts("DEFAULT VALUES\",");
 	
 	/* Custom update queries. */
 

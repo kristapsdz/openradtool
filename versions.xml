@@ -2,6 +2,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.1.8</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-05-18">2017-05-18</time>
+		</header>
+		<aside>
+			<p>
+				Handle empty insertions by using <code>DEFAULT VALUES</code> on the insertion.
+				Accept inequality operators for search, update, and delete constraints.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.1.7</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-05-15">2017-05-15</time>

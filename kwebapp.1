@@ -22,7 +22,7 @@
 .Nd create web application API and database layer
 .Sh SYNOPSIS
 .Nm kwebapp
-.Op Fl Cjnsv
+.Op Fl CjJnsv
 .Op Fl c Ar header
 .Op Fl d Ar oldconfig
 .Op Ar config
@@ -32,11 +32,34 @@ The
 utility accepts a configuration file
 .Ar config
 .Pq defaulting to standard input
-and creates source files defining a web application's C API to its
-database; and optionally, the API from data objects to output JSON and
-field (input) validation functions.
-It is a way of reducing the often-repeated code of serialising and
-de-serialising simple structures from a database.
+and creates source files:
+.Bl -bullet
+.It
+C API to the database (see
+.Fl C
+and
+.Fl c ) ;
+and optionally, the API from data objects to JSON output and field input
+validation functions (see
+.Fl j
+and
+.Fl v )
+.It
+SQL defining the database itself (see
+.Fl s )
+.It
+SQL defining the difference between configuration versions (painless
+updating of database schema) (see
+.Fl d )
+.It
+JavaScript for filling in DOM trees with data given by
+.Fl j
+(see
+.Fl J )
+.El
+.Pp
+These reduce the often-repeated code of serialising and de-serialising
+structures from a database into a web application.
 .Pp
 By default, it generates the C header file
 .Pq see Fl C
@@ -67,6 +90,10 @@ file.
 Add JSON output functions.
 This will also require linking to
 .Xr kcgijson 3 .
+.It Fl J
+Create the
+.Sx JavaScript
+file for receiving JSON objects and filling in DOM elements.
 .It Fl n
 Parse only (dry-run).
 .It Fl s
@@ -325,7 +352,7 @@ The last enumeration value is always
 A validation array for
 .Xr khttp_parse 3 .
 This uses the
-.Vn valid_foo_xxxx
+.Fn valid_foo_xxxx
 functions as described above and names corresponding HTML form entries
 as
 .Dq foo-xxxx ,
@@ -361,6 +388,45 @@ to the new configuration
 The configuration files are considered incompatible if they contain
 destructive differences: dropped objects (structures or fields) or
 different fields (types, references, attributes).
+.Ss JavaScript
+Emits a standards-compliant JavaScript file filling JSON output (with
+.Fl j )
+into a DOM tree, usually acquired from an AJAX request to the web
+application.
+(This process is not managed by
+.Nm . )
+.Pp
+To use the interface, simply include the generated file as a script,
+create objects given the JSON output of
+.Fl j ,
+and invoke the object's
+.Fn fill
+method with the DOM tree node.
+Given a structure
+.Dq foo
+and an AJAX response
+.Dq response ,
+this might look like:
+.Bd -literal -offset indent
+var obj = JSON.parse(response);
+var e = document.getElementById('foo');
+new foo(obj).fill(e);
+.Ed
+.Pp
+For each field in the structure, this method will operate on elements
+under the element with id
+.Dq foo
+having classes as follows:
+.Bl -tag -width Ds
+.It Li foo-xxxx-text
+Replaces the contents of the element with the field value.
+This is only applicable for non-blob native types.
+.It Li foo-xxxx-obj
+For structures, creates and invokes the
+.Fn fill
+method on the nested structure at the given element and its descendents.
+This is only applicable for structure types.
+.El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

@@ -96,16 +96,31 @@ print_commentt(size_t tabs, enum cmtt type, const char *cp)
 		return;
 	}
 
-	if (COMMENT_C == type) 
+	switch (type) {
+	case (COMMENT_C):
 		print_comment(cp, tabs, "/*", " * ", " */");
-	else if (COMMENT_C_FRAG == type) 
-		print_comment(cp, tabs, NULL, " * ", NULL);
-	else if (COMMENT_C_FRAG_CLOSE == type) 
+		break;
+	case (COMMENT_JS):
+		print_comment(cp, tabs, "/**", " * ", " */");
+		break;
+	case (COMMENT_C_FRAG_CLOSE):
+	case (COMMENT_JS_FRAG_CLOSE):
 		print_comment(cp, tabs, NULL, " * ", " */");
-	else if (COMMENT_C_FRAG_OPEN == type) 
+		break;
+	case (COMMENT_C_FRAG_OPEN):
 		print_comment(cp, tabs, "/*", " * ", NULL);
-	else
+		break;
+	case (COMMENT_JS_FRAG_OPEN):
+		print_comment(cp, tabs, "/**", " * ", NULL);
+		break;
+	case (COMMENT_C_FRAG):
+	case (COMMENT_JS_FRAG):
+		print_comment(cp, tabs, NULL, " * ", NULL);
+		break;
+	default:
 		print_comment(cp, tabs, NULL, "-- ", NULL);
+		break;
+	}
 }
 
 /*

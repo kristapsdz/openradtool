@@ -311,6 +311,10 @@ enum	cmtt {
 	COMMENT_C_FRAG, /* C w/o open or close */
 	COMMENT_C_FRAG_CLOSE, /* C w/o open */
 	COMMENT_C_FRAG_OPEN, /* C w/o close */
+	COMMENT_JS, /* self-contained jsdoc */
+	COMMENT_JS_FRAG, /* jsdoc w/o open or close */
+	COMMENT_JS_FRAG_CLOSE, /* jsdoc w/o open */
+	COMMENT_JS_FRAG_OPEN, /* jsdoc w/o close */
 	COMMENT_SQL /* self-contained SQL comment */
 };
 

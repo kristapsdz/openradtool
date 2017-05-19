@@ -6,14 +6,12 @@ digraph {
 	bin[label="kwebapp(1)"];
 
 	subgraph cluster0 {
-		src[label="C source"];
-		head[label="C header"];
-		sql[label="SQL schema"];
-		update[label="SQL update"];
+		src[label="C"];
+		js[label="JavaScript"];
+		sql[label="SQL"];
 	}
 	cfg -> bin;
 	bin -> src;
-	bin -> head;
+	bin -> js;
 	bin -> sql;
-	bin -> update;
 }

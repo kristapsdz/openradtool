@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: May 15 2017 $
+.Dd $Mdocdate: May 19 2017 $
 .Dt KWEBAPP 1
 .Os
 .Sh NAME
@@ -421,12 +421,26 @@ having classes as follows:
 .It Li foo-xxxx-text
 Replaces the contents of the element with the field value.
 This is only applicable for non-blob native types.
+.It Li foo-has-xxxx
+Remove the
+.Dq hide
+class if the object is null, otherwise add the
+.Dq hide
+class.
+.It Li foo-no-xxxx
+Add the
+.Dq hide
+class if the object is null, otherwise remove the
+.Dq hide
+class.
 .It Li foo-xxxx-obj
 For structures, creates and invokes the
 .Fn fill
 method on the nested structure at the given element and its descendents.
 This is only applicable for structure types.
 .El
+.Pp
+The JavaScript file is fully documented in the JSDoc format.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

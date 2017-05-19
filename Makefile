@@ -54,11 +54,17 @@ DOTAR		 = comments.c \
 		   test-strtonum.c \
 		   test.c
 XMLS		 = db.txt.xml \
-		   db.h.xml \
-		   db.sql.xml \
-		   db.update.sql.xml \
+		   test.xml.xml \
 		   TODO.xml \
 		   versions.xml
+IHTMLS		 = db.txt.html \
+		   db.h.html \
+		   db.c.html \
+		   db.sql.html \
+		   db.old.txt.html \
+		   db.update.sql.html \
+		   db.js.html \
+		   test.c.html 
 
 kwebapp: $(COMPAT_OBJS) $(OBJS)
 	$(CC) -o $@ $(COMPAT_OBJS) $(OBJS)
@@ -110,6 +116,9 @@ db.h: kwebapp db.txt
 db.sql: kwebapp db.txt
 	./kwebapp -s db.txt >$@
 
+db.js: kwebapp db.txt
+	./kwebapp -J db.txt >$@
+
 db.update.sql: kwebapp db.old.txt db.txt
 	./kwebapp -d db.old.txt db.txt >$@
 
@@ -153,6 +162,11 @@ db.update.sql.xml: db.update.sql
 test.c.html: test.c
 	highlight -s whitengrey -I -l --src-lang=c test.c >$@
 
+test.xml.xml: test.xml
+	( echo "<article data-sblg-article=\"1\">" ; \
+	  highlight -l --enclose-pre --src-lang=xml -f test.xml ; \
+	  echo "</article>" ; ) >$@
+
 db.c.html: db.c
 	highlight -s whitengrey -I -l --src-lang=c db.c >$@
 
@@ -168,13 +182,16 @@ db.h.html: db.h
 db.sql.html: db.sql
 	highlight -s whitengrey -I -l --src-lang=sql db.sql >$@
 
+db.js.html: db.js
+	highlight -s whitengrey -I -l --src-lang=js db.js >$@
+
 db.update.sql.html: db.update.sql
 	highlight -s whitengrey -I -l --src-lang=sql db.update.sql >$@
 
 highlight.css:
 	highlight --print-style -s whitengrey
 
-index.html: index.xml $(XMLS) db.txt.html db.h.html db.c.html db.sql.html db.old.txt.html db.update.sql.html test.c.html highlight.css
+index.html: index.xml $(XMLS) $(IHTMLS) highlight.css
 	sblg -s cmdline -t index.xml -o- $(XMLS) | \
 	       sed "s!@VERSION@!$(VERSION)!g" > $@
 
@@ -184,10 +201,10 @@ TODO.xml: TODO.md
 	  echo "</article>" ; ) >$@
 
 clean:
-	rm -f kwebapp $(COMPAT_OBJS) $(OBJS) db.c db.h db.o db.sql db.update.sql db.db test test.o 
+	rm -f kwebapp $(COMPAT_OBJS) $(OBJS) db.c db.h db.o db.sql db.js db.update.sql db.db test test.o 
 	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
 	rm -f index.svg index.html highlight.css kwebapp.5.html kwebapp.1.html
-	rm -f db.txt.xml db.h.xml db.c.html db.h.html db.txt.html db.sql.xml db.sql.html db.update.sql.xml db.old.txt.html db.update.sql.html TODO.xml test.c.html
+	rm -f db.txt.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
 
 distclean: clean
 	rm -f config.h config.log Makefile.configure

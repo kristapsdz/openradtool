@@ -23,8 +23,3 @@ More longer-term:
   in the main area.
 - Allow for prepopulating databases with some initial fields.
 - When deletions occur, override the "ON DELETE" clause.
-
-More output types (not necessarily "long-term" work, but also not really
-imminent):
-
-- Add limitations for field validation (e.g., non-empty strings).

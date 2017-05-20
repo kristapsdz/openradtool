@@ -33,18 +33,6 @@ gen_jsdoc_field(const struct field *f)
 		return;
 
 	if (FIELD_NULL & f->flags) {
-		if (FTYPE_STRUCT == f->type) {
-			print_commentv(2, COMMENT_JS_FRAG,
-				"%s-%s-obj: invoke %s.fill() method "
-				"with %s data (if non-null)",
-				f->parent->name, f->name, 
-				f->ref->tstrct, f->name);
-		} else {
-			print_commentv(2, COMMENT_JS_FRAG,
-				"%s-%s-text: replace contents "
-				"with %s data (if non-null)",
-				f->parent->name, f->name, f->name);
-		}
 		print_commentv(2, COMMENT_JS_FRAG,
 			"%s-has-%s: \"hide\" class "
 			"removed if %s not null, otherwise "
@@ -55,19 +43,29 @@ gen_jsdoc_field(const struct field *f)
 			"added if %s not null, otherwise "
 			"\"hide\" class is removed",
 			f->parent->name, f->name, f->name);
+	} 
+
+	if (FTYPE_STRUCT == f->type) {
+		print_commentv(2, COMMENT_JS_FRAG,
+			"%s-%s-obj: invoke %s.fill() method "
+			"with %s data%s",
+			f->parent->name, f->name, 
+			f->ref->tstrct, f->name,
+			FIELD_NULL & f->flags ? 
+			" (if non-null)" : "");
 	} else {
-		if (FTYPE_STRUCT == f->type) {
-			print_commentv(2, COMMENT_JS_FRAG,
-				"%s-%s-obj: invoke %s.fill() method "
-				"with %s data",
-				f->parent->name, f->name, 
-				f->ref->tstrct, f->name);
-		} else {
-			print_commentv(2, COMMENT_JS_FRAG,
-				"%s-%s-text: replace contents "
-				"with %s data",
-				f->parent->name, f->name, f->name);
-		}
+		print_commentv(2, COMMENT_JS_FRAG,
+			"%s-%s-text: replace contents "
+			"with %s data%s",
+			f->parent->name, f->name, f->name,
+			FIELD_NULL & f->flags ? 
+			" (if non-null)" : "");
+		print_commentv(2, COMMENT_JS_FRAG,
+			"%s-%s-value: replace \"value\" "
+			"attribute with %s data%s",
+			f->parent->name, f->name, f->name,
+			FIELD_NULL & f->flags ? 
+			" (if non-null)" : "");
 	}
 }
 
@@ -95,7 +93,15 @@ gen_js_field(const struct field *f)
 	} else
 		indent = 3;
 
-	if (FTYPE_STRUCT == f->type) 
+	if (FTYPE_STRUCT != f->type) {
+		print_src(indent,
+			"_replcl(e, '%s-%s-text', this.obj.%s);",
+			f->parent->name, f->name, f->name);
+		print_src(indent,
+			"_attrcl(e, 'value', "
+			"'%s-%s-value', this.obj.%s);",
+			f->parent->name, f->name, f->name);
+	} else
 		print_src(indent,
 			"list = e.getElementsByClassName"
 			     "('%s-%s-obj');\n"
@@ -105,10 +111,6 @@ gen_js_field(const struct field *f)
 		        "}",
 		        f->parent->name, f->name, 
 		        f->ref->tstrct, f->name);
-	else
-		print_src(indent,
-			"_replcl(e, '%s-%s-text', this.obj.%s);",
-			f->parent->name, f->name, f->name);
 
 	if (FIELD_NULL & f->flags)
 		puts("\t\t\t}");
@@ -122,6 +124,23 @@ gen_javascript(const struct strctq *sq)
 
 	puts("(function(root) {\n"
 	     "\t'use strict';\n"
+	     "\n"
+	     "\tfunction _attr(e, attr, text)\n"
+	     "\t{\n"
+	     "\t\tif (null === e)\n"
+	     "\t\t\treturn;\n"
+	     "\t\te.setAttribute(attr, text);\n"
+	     "\t}\n"
+	     "\n"
+	     "\tfunction _attrcl(e, attr, name, text)\n"
+	     "\t{\n"
+	     "\t\tvar list, i;\n"
+	     "\t\tif (null === e)\n"
+	     "\t\t\treturn;\n"
+	     "\t\tlist = e.getElementsByClassName(name);\n"
+	     "\t\tfor (i = 0; i < list.length; i++)\n"
+	     "\t\t\t_attr(list[i], attr, text);\n"
+	     "\t}\n"
 	     "\n"
 	     "\tfunction _repl(e, text)\n"
 	     "\t{\n"

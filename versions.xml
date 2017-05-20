@@ -2,6 +2,20 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.1.10</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-05-20">2017-05-20</time>
+		</header>
+		<aside>
+			<p>
+				Generate <a href="https://usejsdoc.org">jsdoc</a> along with the JavaScript <b>-J</b> output.
+				Also handle the <code>foo-xxxx-value</code> class, where <q>foo</q> is the structure and <q>xxxx</q> is the
+				field, for auto-population of form elements.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.1.9</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-05-19">2017-05-19</time>

@@ -16,6 +16,7 @@ OBJS		 = comments.o \
 		   javascript.o \
 		   main.o \
 		   parser.o \
+		   printer.o \
 		   protos.o \
 		   source.o \
 		   sql.o

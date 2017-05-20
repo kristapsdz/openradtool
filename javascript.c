@@ -18,9 +18,6 @@
 
 #include <sys/queue.h>
 
-#if HAVE_ERR
-# include <err.h>
-#endif
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -77,11 +74,13 @@ gen_jsdoc_field(const struct field *f)
 static void
 gen_js_field(const struct field *f)
 {
+	size_t	 indent;
 
 	if (FIELD_NOEXPORT & f->flags || FTYPE_BLOB == f->type)
 		return;
 
 	if (FIELD_NULL & f->flags) {
+		indent = 4;
 		printf("\t\t\tif (null === this.obj.%s) {\n"
 		       "\t\t\t\t_hidecl(e, '%s-has-%s');\n"
 		       "\t\t\t\t_showcl(e, '%s-no-%s');\n"
@@ -93,33 +92,26 @@ gen_js_field(const struct field *f)
 		       f->parent->name, f->name,
 		       f->parent->name, f->name,
 		       f->parent->name, f->name);
-		if (FTYPE_STRUCT == f->type) 
-			printf("\t\t\t\tlist = e.getElementsByClassName"
-				     "('%s-%s-obj');\n"
-			       "\t\t\tstrct = new %s(this.obj.%s);\n"
-			       "\t\t\tfor (i = 0; i < list.length; i++)\n"
-			       "\t\t\t\tstrct.fill(list[i]);\n",
-			       f->parent->name, f->name, 
-			       f->ref->tstrct, f->name);
-		else
-			printf("\t\t\t\t_replcl(e, '%s-%s-text', this.obj.%s);\n",
-				f->parent->name, f->name, 
-				f->name);
+	} else
+		indent = 3;
+
+	if (FTYPE_STRUCT == f->type) 
+		print_src(indent,
+			"list = e.getElementsByClassName"
+			     "('%s-%s-obj');\n"
+		        "strct = new %s(this.obj.%s);\n"
+		        "for (i = 0; i < list.length; i++) {\n"
+		        "strct.fill(list[i]);\n"
+		        "}",
+		        f->parent->name, f->name, 
+		        f->ref->tstrct, f->name);
+	else
+		print_src(indent,
+			"_replcl(e, '%s-%s-text', this.obj.%s);",
+			f->parent->name, f->name, f->name);
+
+	if (FIELD_NULL & f->flags)
 		puts("\t\t\t}");
-	} else {
-		if (FTYPE_STRUCT == f->type) 
-			printf("\t\t\tlist = e.getElementsByClassName"
-				     "('%s-%s-obj');\n"
-			       "\t\t\tstrct = new %s(this.obj.%s);\n"
-			       "\t\t\tfor (i = 0; i < list.length; i++)\n"
-			       "\t\t\t\tstrct.fill(list[i]);\n",
-			       f->parent->name, f->name, 
-			       f->ref->tstrct, f->name);
-		else 
-			printf("\t\t\t_replcl(e, '%s-%s-text', this.obj.%s);\n",
-				f->parent->name, f->name, 
-				f->name);
-	}
 }
 
 void

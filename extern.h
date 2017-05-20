@@ -336,6 +336,8 @@ void		 print_commentt(size_t, enum cmtt, const char *);
 void		 print_commentv(size_t, enum cmtt, const char *, ...)
 			__attribute__((format(printf, 3, 4)));
 
+void		 print_src(size_t, const char *, ...);
+
 void		 print_func_db_close(int);
 void		 print_func_db_open(int);
 void		 print_func_db_insert(const struct strct *, int);

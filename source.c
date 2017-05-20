@@ -113,6 +113,7 @@ static	const char *const validbins[VALIDATE__MAX] = {
 static void
 gen_strct_fill_field(const struct field *f)
 {
+	size_t	 indent;
 
 	if (FTYPE_STRUCT == f->type)
 		return;
@@ -137,40 +138,26 @@ gen_strct_fill_field(const struct field *f)
 		 * Error-check the allocation, of course.
 		 */
 
-		if (FIELD_NULL & f->flags)
-			printf("\tif (p->has_%s) {\n"
-			       "\t\tp->%s_sz = ksql_stmt_bytes"
-			        "(stmt, *pos);\n"
-			       "\t\tp->%s = malloc(p->%s_sz);\n"
-			       "\t\tif (NULL == p->%s) {\n"
-			       "\t\t\tperror(NULL);\n"
-			       "\t\t\texit(EXIT_FAILURE);\n"
-			       "\t\t}\n" 
-			       "\t}\n", f->name, f->name, 
-			       f->name, f->name, f->name);
-		else 
-			printf("\tp->%s_sz = ksql_stmt_bytes"
-				"(stmt, *pos);\n"
-			       "\tp->%s = malloc(p->%s_sz);\n"
-			       "\tif (NULL == p->%s) {\n"
-			       "\t\tperror(NULL);\n"
-			       "\t\texit(EXIT_FAILURE);\n"
-			       "\t}\n", f->name,
-			       f->name, f->name, f->name);
+		if (FIELD_NULL & f->flags) {
+			printf("\tif (p->has_%s) {\n", f->name);
+			indent = 2;
+		} else
+			indent = 1;
 
-		/* Next, copy the data from the database. */
+		print_src(indent,
+			"p->%s_sz = ksql_stmt_bytes(stmt, *pos);\n"
+		        "p->%s = malloc(p->%s_sz);\n"
+		        "if (NULL == p->%s) {\n"
+		        "perror(NULL);\n"
+		        "exit(EXIT_FAILURE);\n"
+		        "}\n"
+			"memcpy(p->%s, %s(stmt, (*pos)++), p->%s_sz);",
+			f->name, f->name, f->name, f->name,
+			f->name, coltypes[f->type], f->name);
 
-		if (FIELD_NULL & f->flags)
-			printf("\tif (p->has_%s)\n"
-			       "\t\tmemcpy(p->%s, "
-			        "%s(stmt, (*pos)++), p->%s_sz);\n"
-			       "\telse\n"
-			       "\t\t(*pos)++;\n", f->name, 
-			       f->name, coltypes[f->type], f->name);
-		else 
-			printf("\tmemcpy(p->%s, "
-			        "%s(stmt, (*pos)++), p->%s_sz);\n",
-			       f->name, coltypes[f->type], f->name);
+		if (FIELD_NULL & f->flags) 
+			puts("\t} else\n"
+			     "\t\t(*pos)++;");
 	} else {
 		/*
 		 * Assign from the database.

@@ -52,21 +52,29 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "O:jv")))
+	while (-1 != (c = getopt(argc, argv, "O:F:")))
 		switch (c) {
 		case ('O'):
-			if (0 == strcasecmp(optarg, "csource"))
+			if (0 == strcmp(optarg, "csource"))
 				op = OP_C_SOURCE;
-			else if (0 == strcasecmp(optarg, "cheader"))
+			else if (0 == strcmp(optarg, "cheader"))
 				op = OP_C_HEADER;
-			else if (0 == strcasecmp(optarg, "sqldiff"))
+			else if (0 == strcmp(optarg, "sqldiff"))
 				op = OP_DIFF;
-			else if (0 == strcasecmp(optarg, "sql"))
+			else if (0 == strcmp(optarg, "sql"))
 				op = OP_SQL;
-			else if (0 == strcasecmp(optarg, "javascript"))
+			else if (0 == strcmp(optarg, "javascript"))
 				op = OP_JAVASCRIPT;
-			else if (0 == strcasecmp(optarg, "none"))
+			else if (0 == strcmp(optarg, "none"))
 				op = OP_NOOP;
+			else
+				goto usage;
+			break;
+		case ('F'):
+			if (0 == strcmp(optarg, "with-json"))
+				json = 1;
+			else if (0 == strcmp(optarg, "with-valids"))
+				valids = 1;
 			else
 				goto usage;
 			break;
@@ -172,7 +180,8 @@ main(int argc, char *argv[])
 
 usage:
 	fprintf(stderr, 
-		"usage: %s [-jv] "
+		"usage: %s "
+		"[-F options] "
 		"[-O output] "
 		"[oldconfig|header] [config]\n",
 		getprogname());

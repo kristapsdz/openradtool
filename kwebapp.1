@@ -224,7 +224,7 @@ place of the
 .Dq xxxx .
 The function accepts variables for all binary-operator fields to check
 (i.e., all except for those checking for null).
-.It Fn db_foo_get_by__xxxx__yy_zz
+.It Fn db_foo_get_by__xxxx_op1__yy_zz_op2
 Like
 .Fn db_foo_get_xxxx ,
 but for (possibly-nested) structures.
@@ -232,12 +232,16 @@ These are listed with a double-undescore preceding each search term, and
 a single underscore separating nested fields.
 In the given example,
 .Dq xxxx
-is a field in the given structure and
+is a field in the given structure with operation
+.Dq op1
+and
 .Dq yy_zz
 means a field
 .Dq zz
 in the nested structure
-.Dq yy .
+.Dq yy
+with operation
+.Dq op2 .
 .It Fn db_foo_insert
 Insert a row and return its identifier.
 This accepts all native fields as parameters excluding
@@ -254,17 +258,17 @@ Like
 .Fn db_foo_get_xxxx ,
 but invoking a function callback within the active query for each
 retrieved result.
-.It Fn db_foo_iterate_by__xxxx__yy_zz
+.It Fn db_foo_iterate_by__xxxx_op1__yy_zz_op2
 Like
-.Fn db_foo_get_by__xxxx__yy_zz ,
+.Fn db_foo_get_by__xxxx_op1__yy_zz_op2 ,
 but invoking a function callback for the retrieved results.
 .It Fn db_foo_list_xxxx
 Like
 .Fn db_foo_get_xxxx ,
 but producing a queue of responses.
-.It Fn db_foo_list_by__xxxx__yy_zz
+.It Fn db_foo_list_by__xxxx_op1__yy_zz_op2
 Like
-.Fn db_foo_get_by__xxxx__yy_zz ,
+.Fn db_foo_get_by__xxxx_op1__yy_zz_op2 ,
 but producing a queue of responses.
 .It Fn db_foo_unfill
 Release resources filled from a database query.

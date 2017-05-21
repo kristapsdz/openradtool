@@ -38,6 +38,18 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	NULL, /* FTYPE_STRUCT */
 };
 
+static	const char *const optypes[OPTYPE__MAX] = {
+	"eq", /* OPTYE_EQUAL */
+	"ge", /* OPTYPE_GE */
+	"gt", /* OPTYPE_GT */
+	"le", /* OPTYPE_LE */
+	"lt", /* OPTYPE_LT */
+	"neq", /* OPTYE_NEQUAL */
+	/* Unary types... */
+	"isnull", /* OPTYE_ISNULL */
+	"notnull", /* OPTYE_NOTNULL */
+};
+
 /*
  * Generate the convenience "open" function.
  * If this is NOT a declaration ("decl"), then print a newline after the
@@ -174,6 +186,7 @@ print_func_db_search(const struct search *s, int decl)
 			col++;
 			TAILQ_FOREACH(sr, &sent->srq, entries)
 				col += printf("_%s", sr->name);
+			col += printf("_%s", optypes[sent->op]);
 		}
 	} else 
 		col += printf("_%s", s->name);

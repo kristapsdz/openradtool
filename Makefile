@@ -2,7 +2,7 @@
 
 include Makefile.configure
 
-VERSION		 = 0.1.9
+VERSION		 = 0.2.0
 CFLAGS		+= -DVERSION=\"$(VERSION)\"
 COMPAT_OBJS	 = compat_err.o \
 		   compat_progname.o \
@@ -109,19 +109,19 @@ test.o: test.c db.h
 	$(CC) $(CFLAGS) -Wextra -I/usr/local/include -o $@ -c test.c
 
 db.c: kwebapp db.txt
-	./kwebapp -vj -c db.h db.txt >$@
+	./kwebapp -Ocsource -vj db.h db.txt >$@
 
 db.h: kwebapp db.txt
-	./kwebapp -vj -C db.txt >$@
+	./kwebapp -Ocheader -vj db.txt >$@
 
 db.sql: kwebapp db.txt
-	./kwebapp -s db.txt >$@
+	./kwebapp -Osql db.txt >$@
 
 db.js: kwebapp db.txt
-	./kwebapp -J db.txt >$@
+	./kwebapp -Ojavascript db.txt >$@
 
 db.update.sql: kwebapp db.old.txt db.txt
-	./kwebapp -d db.old.txt db.txt >$@
+	./kwebapp -Osqldiff db.old.txt db.txt >$@
 
 db.db: db.sql
 	rm -f $@

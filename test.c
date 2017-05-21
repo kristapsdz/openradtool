@@ -69,8 +69,8 @@ main(void)
 
 	/* Now fetch the entry by its unique id. */
 
-	if (NULL == (u = db_user_get_by__uid(sql, uid)))
-		errx(EXIT_FAILURE, "db_user_get_by__uid");
+	if (NULL == (u = db_user_get_by_uid_eq(sql, uid)))
+		errx(EXIT_FAILURE, "db_user_get_by_uid_eq");
 
 	/* Print it... */
 
@@ -107,8 +107,8 @@ main(void)
 
 	/* Change the user's password. */
 
-	if ( ! db_user_update_hash_by_uid(sql, "password2", uid))
-		errx(EXIT_FAILURE, "db_user_update_hash_by_uid");
+	if ( ! db_user_update_hash_by_uid_eq(sql, "password2", uid))
+		errx(EXIT_FAILURE, "db_user_update_hash_by_uid_eq");
 
 	/* 
 	 * Now do the same dance, checking for the changed password.

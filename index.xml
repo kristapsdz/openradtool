@@ -43,8 +43,8 @@
 					The system itself has no dependencies; however, the generated C files use <a
 						href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for the underlying <a
 						href="https://sqlite.org">SQLite</a> database.
-					If optionally generating JSON formatters for exporting data (<b>-j</b>) or validation routines for HTML
-					form input (<b>-v</b>), you will also require <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a>.
+					If optionally generating JSON formatters for exporting data (<b>-F</b><i>with-json</i>) or validation routines for HTML
+					form input (<b>-F</b><i>with-valids</i>), you will also require <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a>.
 					The generated SQL file are for use by <a href="https://sqlite.org">SQLite</a>.
 					The JavaScript files are <q><a href="http://vanilla-js.com/">vanilla</a></q> and have no framework
 					dependencies.
@@ -82,12 +82,12 @@
 					We start by passing this through <a href="kwebapp.1.html">kwebapp(1)</a> and generating the C source
 					file (<a href="db.c.html">db.c</a>) and the C header file <a href="db.h.html">db.h</a>.
 					We generate JSON output functions and <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> HTML input
-					validation functions as well with <b>-j</b> and <b>-v</b>, respectively.
+					validation functions as well with <b>-F</b><i>with-json</i> and <b>-F</b><i>with-valids</i>, respectively.
 				</p>
 			</section>
 			<blockquote>
-				<div>kwebapp -vjC <a href="db.txt.html">db.txt</a> &gt;<a href="db.h.html">db.h</a></div>
-				<div>kwebapp -vjc <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.c.html">db.c</a></div>
+				<div>kwebapp -Ocheader -Fwith-valids -Fwith-json <a href="db.txt.html">db.txt</a> &gt;<a href="db.h.html">db.h</a></div>
+				<div>kwebapp -Ocsource -Fwith-valids -Fwith-json <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.c.html">db.c</a></div>
 			</blockquote>
 			<section>
 				<p>
@@ -130,8 +130,8 @@
 				</p>
 			</section>
 			<blockquote>
-				<div>kwebapp -s <a href="db.txt.html">db.txt</a> &gt;<a href="db.sql.html">db.sql</a></div>
-				<div>kwebapp -d <a href="db.old.txt.html">db.old.txt</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.update.sql.html">db.update.sql</a></div>
+				<div>kwebapp -Osql <a href="db.txt.html">db.txt</a> &gt;<a href="db.sql.html">db.sql</a></div>
+				<div>kwebapp -Osqldiff <a href="db.old.txt.html">db.old.txt</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.update.sql.html">db.update.sql</a></div>
 				<div>sqlite3 db.db &lt; <a href="db.sql.html">db.sql</a></div>
 			</blockquote>
 			<section>
@@ -153,7 +153,7 @@
 				</p>
 			</section>
 			<blockquote>
-				<div>kwebapp -J <a href="db.txt.html">db.txt</a> &gt;<a href="db.js.html">db.js</a></div>
+				<div>kwebapp -Ojavascript <a href="db.txt.html">db.txt</a> &gt;<a href="db.js.html">db.js</a></div>
 			</blockquote>
 			<section>
 				<p>

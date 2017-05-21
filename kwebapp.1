@@ -204,11 +204,13 @@ The parameters passed to this function are
 the fields that constrain which rows are deleted.
 Parameters are only specified for operations for binary-operator
 constraints, i.e., those not checking for null status.
-.It Fn db_foo_delete_by_yy
+.It Fn db_foo_delete_by_yy_op
 Like
 .Fn db_foo_delete_xxxx ,
 but using an un-named delete statement constrained by
-.Dq yy .
+.Dq yy
+with operation
+.Dq op .
 .It Fn db_foo_fill
 Zero and fill in a pointer from an open database query.
 This fills all nested structures as well.
@@ -224,12 +226,10 @@ place of the
 .Dq xxxx .
 The function accepts variables for all binary-operator fields to check
 (i.e., all except for those checking for null).
-.It Fn db_foo_get_by__xxxx_op1__yy_zz_op2
+.It Fn db_foo_get_by_xxxx_op1_yy_zz_op2
 Like
 .Fn db_foo_get_xxxx ,
 but for (possibly-nested) structures.
-These are listed with a double-undescore preceding each search term, and
-a single underscore separating nested fields.
 In the given example,
 .Dq xxxx
 is a field in the given structure with operation
@@ -289,13 +289,15 @@ Any null values must then be specified as
 pointers.
 Update fields are only specified for operations for binary-operator
 constraints, i.e., those not checking for null status.
-.It Fn db_foo_update_xx_by_yy
+.It Fn db_foo_update_xx_by_yy_op
 Like
 .Fn db_foo_update_xxxx ,
 but using an un-named update statement modifying
 .Dq xx
 constrained by
-.Dq yy .
+.Dq yy
+with operation
+.Dq op .
 .El
 .Pp
 There are also several convenience functions for the database:

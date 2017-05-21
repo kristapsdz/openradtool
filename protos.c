@@ -128,11 +128,13 @@ print_func_db_update(const struct update *u, int decl)
 			col += printf("_%s", ur->name);
 		col += printf("_by");
 		TAILQ_FOREACH(ur, &u->crq, entries)
-			col += printf("_%s", ur->name);
+			col += printf("_%s_%s", 
+				ur->name, optypes[ur->op]);
 	} else if (NULL == u->name) {
 		col += printf("_by");
 		TAILQ_FOREACH(ur, &u->crq, entries)
-			col += printf("_%s", ur->name);
+			col += printf("_%s_%s", 
+				ur->name, optypes[ur->op]);
 	} else 
 		col += printf("_%s", u->name);
 
@@ -182,8 +184,6 @@ print_func_db_search(const struct search *s, int decl)
 	if (NULL == s->name) {
 		col += printf("_by");
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
-			putchar('_');
-			col++;
 			TAILQ_FOREACH(sr, &sent->srq, entries)
 				col += printf("_%s", sr->name);
 			col += printf("_%s", optypes[sent->op]);

@@ -71,9 +71,9 @@ main(int argc, char *argv[])
 				goto usage;
 			break;
 		case ('F'):
-			if (0 == strcmp(optarg, "with-json"))
+			if (0 == strcmp(optarg, "json"))
 				json = 1;
-			else if (0 == strcmp(optarg, "with-valids"))
+			else if (0 == strcmp(optarg, "valids"))
 				valids = 1;
 			else
 				goto usage;
@@ -129,9 +129,9 @@ main(int argc, char *argv[])
 #endif
 
 	if (json && (OP_C_HEADER != op && OP_C_SOURCE != op)) 
-		warnx("-j meaningless with non-C output");
+		warnx("-Fjson meaningless with non-C output");
 	if (valids && (OP_C_HEADER != op && OP_C_SOURCE != op)) 
-		warnx("-v meaningless with non-C output");
+		warnx("-Fvalids meaningless with non-C output");
 
 	/*
 	 * First, parse the file.

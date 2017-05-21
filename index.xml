@@ -77,10 +77,12 @@
 					Beyond the objects themselves, I've also defined search functions, update functions, deletion functions,
 					and so on for illustrative purposes.
 					(A normal application would have more, but for brevity&#8230;)
+					If your application has more specific queries to perform, it exports table schemas and <q>fill</q>
+					functions to make it easy for customisation.
 				</p>
 				<p>
-					We start by passing this through <a href="kwebapp.1.html">kwebapp(1)</a> and generating the C source
-					file (<a href="db.c.html">db.c</a>) and the C header file <a href="db.h.html">db.h</a>.
+					We start by passing this configuration through <a href="kwebapp.1.html">kwebapp(1)</a> and generating
+					the C source file (<a href="db.c.html">db.c</a>) and the C header file <a href="db.h.html">db.h</a>.
 					We generate JSON output functions and <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> HTML input
 					validation functions as well with <b>-F</b><i>with-json</i> and <b>-F</b><i>with-valids</i>, respectively.
 				</p>
@@ -93,15 +95,18 @@
 				<p>
 					This invocation will generate source files built to be part of a web application chain.  On a modern <a
 						href="https://www.openbsd.org">OpenBSD</a> system, this may be linked to sources driving a <a
-						href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> CGI script as follows.
+						href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> CGI script.
 					Each function and structure in the header file is documented thoroughly.
 					The source files are also documented (more sparsely) to guide developers in reading through the
 					implementation.
 				</p>
 				<p>
-					Note the <b>-static</b> invocation, which is required for running CGI binaries within the default
+					Note the <b>-static</b> in the following invocation, which is required for running CGI binaries within
+					the default
 					file-system jail on OpenBSD web servers (see <a href="http://man.openbsd.org/httpd.8">httpd(8)</a>,
 					which I use as a reference web server).
+				</p>
+				<p>
 					The required libraries are <b>-l</b><i>ksql</i> for the database routines,
 					<b>-l</b><i>kcgijson</i> for the JSON output, and
 					<b>-l</b><i>kcgi</i> for the input validation (and a library dependency for <b>-l</b><i>kcgijson</i>).
@@ -117,14 +122,14 @@
 			<section>
 				<p>
 					Applications not wishing to deal with input or output (for example, a management application or
-					system daemon) should omit the <b>-j</b> and <b>-v</b> flags.
+					system daemon) should omit the <b>-F</b><i>with-json</i> and <b>-F</b><i>with-valids</i> flags.
 					These can then be compiled without static linking (omitting <b>-static</b>) and the non-SQLite related
 					libraries.
 				</p>
 				<p>
-					To create the initial database, use the <b>-s</b> flag documented in <a href="kwebapp.1.html">kwebapp(1)</a>.
+					To create the initial database, use the following invocation as documented in <a href="kwebapp.1.html">kwebapp(1)</a>.
 					A feature I use a lot in <span class="nm">kwebapp</span> is to track differences in the database schema
-					by using the <b>-d</b> flag.
+					by using the <b>-O</b><i>sqldiff</i> flag.
 					This allows me to double-check that upgrades to my database won't be incompatible.
 					It also generates the correct invocations without having me fat-finger mistakes in the upgraded database.
 				</p>
@@ -138,17 +143,18 @@
 				<p>
 					Notice that some object fields, like the <code>user</code> structure inside of the section, are not part of the SQL.
 					Rather, they are generated within <a href="db.c.html">db.c</a> using the foreign keys.
-					Also note that the SQL file (with <b>-s</b>) is thoroughly documented.
+					Also note that the SQL schema file is thoroughly documented.
 					I suggest using <a href="https://kristaps.bsd.lv/sqliteconvert/">sqliteconvert</a> if you'd like to
 					browse the SQL documentation for any non-trivial application.
 				</p>
 				<p>
-					In general, I'll use <b>-s</b> when first generating the database, and <b>-d</b> when upgrading existing databases.
+					In general, I'll use <b>-O</b><i>sql</i> when first generating the database, and <b>-O</b><i>sqldiff</i>
+					when upgrading existing databases.
 					There are times when the database changes radically, at which point I'll usually dump and manually update.
 				</p>
 				<p>
-					The last part of the toolchain is to handle the output of <b>-j</b> in the browser itself.
-					With the <b>-J</b> flag, <a href="kwebapp.1.html">kwebapp(1)</a> will also generate JavaScript files to
+					The last part of the toolchain is to handle the output of <b>-F</b><i>with-json</i> in the browser itself.
+					With <b>-O</b><i>javascript</i> flag, <a href="kwebapp.1.html">kwebapp(1)</a> will also generate JavaScript files to
 					assist in filling in data for your front-end web application code.
 				</p>
 			</section>
@@ -157,9 +163,10 @@
 			</blockquote>
 			<section>
 				<p>
-					The JavaScript is useful when fetching information from your CGI script that was produced with <b>-j</b>.
+					The JavaScript is useful when fetching information from your CGI script that was produced with <b>-F</b><i>with-json</i>.
 					It has an easy interface for replacing certain tags in your HTML DOM tree with data.
-					For example,
+					All of this is documented using <a href="https://usejsdoc.org">jsdoc</a> notation.
+					For example, consider the following:
 				</p>
 				<article data-sblg-permlink="0" data-sblg-article="1"></article>
 				<p>

@@ -9,7 +9,7 @@
 		<aside>
 			<p>
 				Flag day: use the <b>-O</b> flag to specify output type (hence minor bump).
-				Also move <b>-v</b> and <b>-j</b> into <b>-F</b><i>with-valids</i> and <b>-F</b><i>with-json</b> as part of the new <b>-F</b> flag.
+				Also move <b>-v</b> and <b>-j</b> into <b>-F</b><i>with-valids</i> and <b>-F</b><i>with-json</i> as part of the new <b>-F</b> flag.
 				This cleans up a lot of options and leaves the door open for new output formats and configuration options.
 			</p>
 			<p>

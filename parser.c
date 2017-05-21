@@ -225,7 +225,7 @@ static	const char *const badidents[] = {
 	NULL
 };
 
-static	const char *optypes[OPTYPE__MAX] = {
+static	const char *const optypes[OPTYPE__MAX] = {
 	"eq", /* OPTYE_EQUAL */
 	"ge", /* OPTYPE_GE */
 	"gt", /* OPTYPE_GT */

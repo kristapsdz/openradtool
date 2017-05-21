@@ -23,6 +23,7 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "extern.h"
@@ -44,37 +45,33 @@ main(int argc, char *argv[])
 	      		*header = NULL;
 	struct strctq	*sq, *dsq = NULL;
 	int		 c, rc = 1, json = 0, valids = 0;
-	enum op		 op = OP_C_HEADER;
+	enum op		 op = OP_NOOP;
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio rpath", NULL))
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "c:Cd:jJnsv")))
+	while (-1 != (c = getopt(argc, argv, "O:jv")))
 		switch (c) {
-		case ('c'):
-			op = OP_C_SOURCE;
-			header = optarg;
-			break;
-		case ('d'):
-			op = OP_DIFF;
-			dconfile = optarg;
-			break;
-		case ('C'):
-			op = OP_C_HEADER;
+		case ('O'):
+			if (0 == strcasecmp(optarg, "csource"))
+				op = OP_C_SOURCE;
+			else if (0 == strcasecmp(optarg, "cheader"))
+				op = OP_C_HEADER;
+			else if (0 == strcasecmp(optarg, "sqldiff"))
+				op = OP_DIFF;
+			else if (0 == strcasecmp(optarg, "sql"))
+				op = OP_SQL;
+			else if (0 == strcasecmp(optarg, "javascript"))
+				op = OP_JAVASCRIPT;
+			else if (0 == strcasecmp(optarg, "none"))
+				op = OP_NOOP;
+			else
+				goto usage;
 			break;
 		case ('j'):
 			json = 1;
-			break;
-		case ('J'):
-			op = OP_JAVASCRIPT;
-			break;
-		case ('n'):
-			op = OP_NOOP;
-			break;
-		case ('s'):
-			op = OP_SQL;
 			break;
 		case ('v'):
 			valids = 1;
@@ -85,6 +82,22 @@ main(int argc, char *argv[])
 
 	argc -= optind;
 	argv += optind;
+
+	/* C source and diff take mandatory first argument. */
+
+	if (OP_C_SOURCE == op) {
+		if (0 == argc)
+			goto usage;
+		header = argv[0];
+		argv++;
+		argc--;
+	} else if (OP_DIFF == op) {
+		if (0 == argc)
+			goto usage;
+		dconfile = argv[0];
+		argv++;
+		argc--;
+	}
 
 	if (0 == argc) {
 		confile = "<stdin>";
@@ -159,11 +172,9 @@ main(int argc, char *argv[])
 
 usage:
 	fprintf(stderr, 
-		"usage: %s "
-		"[-CjJnsv] "
-		"[-c header] "
-		"[-d config] "
-		"[config]\n",
+		"usage: %s [-jv] "
+		"[-O output] "
+		"[oldconfig|header] [config]\n",
 		getprogname());
 	return(EXIT_FAILURE);
 }

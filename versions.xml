@@ -2,13 +2,17 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
-			<h3>0.1.10</h3>
+			<h3>0.2.0</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-05-20">2017-05-20</time>
 		</header>
 		<aside>
 			<p>
-				Generate <a href="https://usejsdoc.org">jsdoc</a> along with the JavaScript <b>-J</b> output.
+				Flag day: use the <b>-O</b> flag to specify output type (hence minor bump).
+				This cleans up a lot of options and leaves the door open for new output formats.
+			</p>
+			<p>
+				Generate <a href="https://usejsdoc.org">jsdoc</a> along with the JavaScript <b>-O</b><i>javascript</i> output.
 				Also handle the <code>foo-xxxx-value</code> class, where <q>foo</q> is the structure and <q>xxxx</q> is the
 				field, for auto-population of form elements.
 			</p>

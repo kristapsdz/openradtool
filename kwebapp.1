@@ -22,9 +22,9 @@
 .Nd create web application API and database layer
 .Sh SYNOPSIS
 .Nm kwebapp
-.Op Fl CjJnsv
-.Op Fl c Ar header
-.Op Fl d Ar oldconfig
+.Op Fl jv
+.Op Fl O Ar output
+.Op Ar header|oldconfig
 .Op Ar config
 .Sh DESCRIPTION
 The
@@ -36,9 +36,9 @@ and creates source files:
 .Bl -bullet
 .It
 C API to the database (see
-.Fl C
+.Fl O Ns Ar csource
 and
-.Fl c ) ;
+.Fl O Ns Ar cheader ) ;
 and optionally, the API from data objects to JSON output and field input
 validation functions (see
 .Fl j
@@ -46,64 +46,74 @@ and
 .Fl v )
 .It
 SQL defining the database itself (see
-.Fl s )
+.Fl O Ns Ar sql )
 .It
 SQL defining the difference between configuration versions (painless
 updating of database schema) (see
-.Fl d )
+.Fl O Ns Ar sqldiff )
 .It
 JavaScript for filling in DOM trees with data given by
 .Fl j
 (see
-.Fl J )
+.Fl O Ns Ar javascript )
 .El
 .Pp
 These reduce the often-repeated code of serialising and de-serialising
 structures from a database into a web application.
 .Pp
-By default, it generates the C header file
-.Pq see Fl C
-and requires generated output to be linked with
-.Xr ksql 3
-and optionally
-.Xr kcgijson 3 .
+By default, it parses the configuration file for errors
+.Pq see Fl O Ns Ar none
 Its arguments are as follows:
 .Bl -tag -width Ds
-.It Fl c Ar header
-Create the
-.Sx C source
-file implementing the header file
-.Ar header .
-.It Fl d Ar oldconfig
-Create the
+.It Fl O Ar output
+Choose the type of output.
+Choices are
+.Ar csource
+for the
+.Sx C source ,
+.Ar cheader
+for the
+.Sx C header ,
+.Ar javascript
+for the
+.Sx JavaScript
+front-end code,
+.Ar none
+for not producing output (validation only),
+.Ar sql
+for the
+.Sx SQL schema ,
+and
+.Ar sqldiff
+for the
 .Sx SQL update
-sequence that updates
-.Ar oldconfig ,
-a
-.Xr kwebapp 5
-file, with the new configuration.
-.It Fl C
-Create the
-.Sx C header
-file.
+sequence that updates an old configuration file's schema.
 .It Fl j
-Add JSON output functions.
+Add JSON output functions to
+.Fl O Ns Ar csource
+and
+.Fl O Ns Ar cheader .
 This will also require linking to
 .Xr kcgijson 3 .
-.It Fl J
-Create the
-.Sx JavaScript
-file for receiving JSON objects and filling in DOM elements.
-.It Fl n
-Parse only (dry-run).
-.It Fl s
-Create the full
-.Sx SQL schema
-file.
 .It Fl v
-Add field input validation functions.
+Add field input validation functions to
+.Fl O Ns Ar csource
+and
+.Fl O Ns Ar cheader .
 This will also require linking to
 .Xr kcgi 3 .
+.It Ar header|oldconfig
+If
+.Fl O Ns Ar csource
+is specified, the
+.Ar header
+is required for the header file (see
+.Fl O Ns Ar cheader ) .
+If
+.Fl O Ns Ar sqldiff
+is specified, the
+.Ar oldconfig
+is required for the prior configuration to differentiate.
 .It Ar config
 A configuration file in the
 .Xr kwebapp 5
@@ -111,7 +121,7 @@ format.
 .El
 .Pp
 In all instances (except for
-.Fl n ) ,
+.Fl O Ns Ar none ) ,
 the generated file is produced on standard output.
 See the
 .Sx EXAMPLES
@@ -471,8 +481,8 @@ Given a data layer defined in
 the following produce all of the code necessary for a web application to
 manipulate and output its data:
 .Bd -literal  -offset indent
-$ kwebapp -j -C db.txt >extern.h
-$ kwebapp -j -c extern.h db.txt >db.c
+$ kwebapp -Ocheader -j db.txt >extern.h
+$ kwebapp -Ocsource -j extern.h db.txt >db.c
 .Ed
 .Pp
 Assuming a

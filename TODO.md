@@ -23,3 +23,6 @@ More longer-term:
   in the main area.
 - Allow for prepopulating databases with some initial fields.
 - When deletions occur, override the "ON DELETE" clause.
+- Allow for JavaScript options to allow custom callbacks.
+- Allow for JavaScript list/iterator support.
+- Allow for export JSON list/iterator support.

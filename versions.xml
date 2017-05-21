@@ -9,7 +9,8 @@
 		<aside>
 			<p>
 				Flag day: use the <b>-O</b> flag to specify output type (hence minor bump).
-				This cleans up a lot of options and leaves the door open for new output formats.
+				Also move <b>-v</b> and <b>-j</b> into <b>-F</b><i>with-valids</i> and <b>-F</b><i>with-json</b> as part of the new <b>-F</b> flag.
+				This cleans up a lot of options and leaves the door open for new output formats and configuration options.
 			</p>
 			<p>
 				Generate <a href="https://usejsdoc.org">jsdoc</a> along with the JavaScript <b>-O</b><i>javascript</i> output.

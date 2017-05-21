@@ -43,8 +43,8 @@
 					The system itself has no dependencies; however, the generated C files use <a
 						href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for the underlying <a
 						href="https://sqlite.org">SQLite</a> database.
-					If optionally generating JSON formatters for exporting data (<b>-F</b><i>with-json</i>) or validation routines for HTML
-					form input (<b>-F</b><i>with-valids</i>), you will also require <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a>.
+					If optionally generating JSON formatters for exporting data (<b>-F</b><i>json</i>) or validation routines for HTML
+					form input (<b>-F</b><i>valids</i>), you will also require <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a>.
 					The generated SQL file are for use by <a href="https://sqlite.org">SQLite</a>.
 					The JavaScript files are <q><a href="http://vanilla-js.com/">vanilla</a></q> and have no framework
 					dependencies.
@@ -84,12 +84,12 @@
 					We start by passing this configuration through <a href="kwebapp.1.html">kwebapp(1)</a> and generating
 					the C source file (<a href="db.c.html">db.c</a>) and the C header file <a href="db.h.html">db.h</a>.
 					We generate JSON output functions and <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> HTML input
-					validation functions as well with <b>-F</b><i>with-json</i> and <b>-F</b><i>with-valids</i>, respectively.
+					validation functions as well with <b>-F</b><i>json</i> and <b>-F</b><i>valids</i>, respectively.
 				</p>
 			</section>
 			<blockquote>
-				<div>kwebapp -Ocheader -Fwith-valids -Fwith-json <a href="db.txt.html">db.txt</a> &gt;<a href="db.h.html">db.h</a></div>
-				<div>kwebapp -Ocsource -Fwith-valids -Fwith-json <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.c.html">db.c</a></div>
+				<div>kwebapp -Ocheader -Fvalids -Fjson <a href="db.txt.html">db.txt</a> &gt;<a href="db.h.html">db.h</a></div>
+				<div>kwebapp -Ocsource -Fvalids -Fjson <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.c.html">db.c</a></div>
 			</blockquote>
 			<section>
 				<p>
@@ -122,7 +122,7 @@
 			<section>
 				<p>
 					Applications not wishing to deal with input or output (for example, a management application or
-					system daemon) should omit the <b>-F</b><i>with-json</i> and <b>-F</b><i>with-valids</i> flags.
+					system daemon) should omit the <b>-F</b><i>json</i> and <b>-F</b><i>valids</i> flags.
 					These can then be compiled without static linking (omitting <b>-static</b>) and the non-SQLite related
 					libraries.
 				</p>
@@ -153,7 +153,7 @@
 					There are times when the database changes radically, at which point I'll usually dump and manually update.
 				</p>
 				<p>
-					The last part of the toolchain is to handle the output of <b>-F</b><i>with-json</i> in the browser itself.
+					The last part of the toolchain is to handle the output of <b>-F</b><i>json</i> in the browser itself.
 					With <b>-O</b><i>javascript</i> flag, <a href="kwebapp.1.html">kwebapp(1)</a> will also generate JavaScript files to
 					assist in filling in data for your front-end web application code.
 				</p>
@@ -163,7 +163,7 @@
 			</blockquote>
 			<section>
 				<p>
-					The JavaScript is useful when fetching information from your CGI script that was produced with <b>-F</b><i>with-json</i>.
+					The JavaScript is useful when fetching information from your CGI script that was produced with <b>-F</b><i>json</i>.
 					It has an easy interface for replacing certain tags in your HTML DOM tree with data.
 					All of this is documented using <a href="https://usejsdoc.org">jsdoc</a> notation.
 					For example, consider the following:

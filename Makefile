@@ -109,10 +109,10 @@ test.o: test.c db.h
 	$(CC) $(CFLAGS) -Wextra -I/usr/local/include -o $@ -c test.c
 
 db.c: kwebapp db.txt
-	./kwebapp -Ocsource -vj db.h db.txt >$@
+	./kwebapp -Ocsource -Fwith-valids -Fwith-json db.h db.txt >$@
 
 db.h: kwebapp db.txt
-	./kwebapp -Ocheader -vj db.txt >$@
+	./kwebapp -Ocheader -Fwith-valids -Fwith-json db.txt >$@
 
 db.sql: kwebapp db.txt
 	./kwebapp -Osql db.txt >$@

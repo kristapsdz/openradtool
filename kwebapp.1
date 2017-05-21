@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: May 20 2017 $
+.Dd $Mdocdate: May 21 2017 $
 .Dt KWEBAPP 1
 .Os
 .Sh NAME
@@ -22,7 +22,7 @@
 .Nd create web application API and database layer
 .Sh SYNOPSIS
 .Nm kwebapp
-.Op Fl jv
+.Op Fl F Ar options
 .Op Fl O Ar output
 .Op Ar header|oldconfig
 .Op Ar config
@@ -41,9 +41,9 @@ and
 .Fl O Ns Ar cheader ) ;
 and optionally, the API from data objects to JSON output and field input
 validation functions (see
-.Fl j
+.Fl F Ns Ar with-json
 and
-.Fl v )
+.Fl F Ns Ar with-valids )
 .It
 SQL defining the database itself (see
 .Fl O Ns Ar sql )
@@ -53,7 +53,7 @@ updating of database schema) (see
 .Fl O Ns Ar sqldiff )
 .It
 JavaScript for filling in DOM trees with data given by
-.Fl j
+.Fl F Ns Ar with-json
 (see
 .Fl O Ns Ar javascript )
 .El
@@ -65,6 +65,26 @@ By default, it parses the configuration file for errors
 .Pq see Fl O Ns Ar none
 Its arguments are as follows:
 .Bl -tag -width Ds
+.It Fl F Ar options
+Options when producing output.
+Choices are
+.Ar with-json ,
+to produce JSON output functions in
+.Fl O Ns Ar csource
+and
+.Fl O Ns Ar cheader
+output (requires linking to
+.Xr kcgijson 3 ) ;
+and
+.Ar with-valids
+to produce
+.Xr kcgi 3
+validation functions in
+.Fl O Ns Ar csource
+and
+.Fl O Ns Ar cheader
+output (requires linking to
+.Xr kcgi 3 ) .
 .It Fl O Ar output
 Choose the type of output.
 Choices are
@@ -88,20 +108,6 @@ and
 for the
 .Sx SQL update
 sequence that updates an old configuration file's schema.
-.It Fl j
-Add JSON output functions to
-.Fl O Ns Ar csource
-and
-.Fl O Ns Ar cheader .
-This will also require linking to
-.Xr kcgijson 3 .
-.It Fl v
-Add field input validation functions to
-.Fl O Ns Ar csource
-and
-.Fl O Ns Ar cheader .
-This will also require linking to
-.Xr kcgi 3 .
 .It Ar header|oldconfig
 If
 .Fl O Ns Ar csource
@@ -148,13 +154,13 @@ you'll need the
 .In sys/queue.h
 header as well.
 If
-.Fl j
+.Fl F Ns Ar with-json
 was specified, you'll also need
 .In kcgijson.h
 and
 .In kcgi.h ,
 with just the latter for
-.Fl v
+.Fl F Ns Ar with-valids
 .Po
 see
 .Xr kcgijson 3
@@ -302,7 +308,7 @@ Closes a database opened by
 .El
 .Pp
 If the
-.Fl j
+.Fl F Ns Ar with-json
 flag was specified, JSON-specific functions are also generated for each
 structure object.
 If you use this flag, you'll need to link with
@@ -330,7 +336,7 @@ structure name and the value is an object consisting of
 .El
 .Pp
 If the
-.Fl v
+.Fl F Ns Ar with-valids
 flag was specified, field input validation functions are generated.
 A full validation array is given for all fields, although these need not
 be used by the calling application.
@@ -400,7 +406,7 @@ destructive differences: dropped objects (structures or fields) or
 different fields (types, references, attributes).
 .Ss JavaScript
 Emits a standards-compliant JavaScript file filling JSON output (with
-.Fl j )
+.Fl F Ns Ar with-json )
 into a DOM tree, usually acquired from an AJAX request to the web
 application.
 (This process is not managed by
@@ -408,7 +414,7 @@ application.
 .Pp
 To use the interface, simply include the generated file as a script,
 create objects given the JSON output of
-.Fl j ,
+.Fl F Ns Ar with-json ,
 and invoke the object's
 .Fn fill
 method with the DOM tree node.
@@ -481,8 +487,8 @@ Given a data layer defined in
 the following produce all of the code necessary for a web application to
 manipulate and output its data:
 .Bd -literal  -offset indent
-$ kwebapp -Ocheader -j db.txt >extern.h
-$ kwebapp -Ocsource -j extern.h db.txt >db.c
+$ kwebapp -Ocheader -Fwith-json db.txt >extern.h
+$ kwebapp -Ocsource -Fwith-json extern.h db.txt >db.c
 .Ed
 .Pp
 Assuming a

@@ -2,6 +2,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.2.2</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-05-23">2017-05-23</time>
+		</header>
+		<aside>
+			<p>
+				Fix bug in recursive reference checker.
+				This now works properly and allows [properly] for self-referencing structures for native type references.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.2.1</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-05-22">2017-05-22</time>

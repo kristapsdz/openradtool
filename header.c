@@ -321,6 +321,16 @@ gen_funcs(const struct strct *p, int json, int valids)
 			p->name, p->name);
 		print_func_json_obj(p, 1);
 		puts("");
+		if (STRCT_HAS_QUEUE & p->flags) {
+			print_commentv(0, COMMENT_C,
+				"Emit the JSON key-value pair for the "
+				"array:\n"
+				"\t\"%s_q\" : [ [{data}]+ ]\n"
+				"See json_%s_data() for the data.",
+				p->name, p->name);
+			print_func_json_array(p, 1);
+			puts("");
+		}
 	}
 
 	if (valids) {

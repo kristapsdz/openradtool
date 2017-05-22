@@ -856,13 +856,26 @@ gen_func_json_obj(const struct strct *p)
 {
 
 	print_func_json_obj(p, 0);
-	puts("\n"
-	     "{");
-	printf("\tkjson_objp_open(r, \"%s\");\n"
-	       "\tjson_%s_data(r, p);\n", p->name, p->name);
-	puts("\tkjson_obj_close(r);\n"
-	     "}\n"
-	     "");
+	printf("{\n"
+	       "\tkjson_objp_open(r, \"%s\");\n"
+	       "\tjson_%s_data(r, p);\n"
+	       "\tkjson_obj_close(r);\n"
+	       "}\n\n", p->name, p->name);
+
+	if (STRCT_HAS_QUEUE & p->flags) {
+		print_func_json_array(p, 0);
+		printf("{\n"
+		       "\tstruct %s *p;\n"
+		       "\n"
+		       "\tkjson_arrayp_open(r, \"%s_q\");\n"
+		       "\tTAILQ_FOREACH(p, q, _entries) {\n"
+		       "\t\tkjson_obj_open(r);\n"
+		       "\t\tjson_%s_data(r, p);\n"
+		       "\t\tkjson_obj_close(r);\n"
+		       "\t}\n"
+		       "\tkjson_array_close(r);\n"
+		       "}\n\n", p->name, p->name, p->name);
+	}
 }
 
 static void

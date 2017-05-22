@@ -61,13 +61,6 @@ static int
 checktargettype(const struct ref *ref)
 {
 
-	if (ref->target->parent == ref->source->parent) {
-		warnx("%s.%s: referencing within struct",
-			ref->parent->parent->name,
-			ref->parent->name);
-		return(0);
-	}
-
 	/* Our actual reference objects may not be structs. */
 
 	if (FTYPE_STRUCT == ref->target->type ||
@@ -229,11 +222,31 @@ resolve_field_target(struct ref *ref, struct strctq *q)
 }
 
 /*
+ * Recursively check for... recursion.
+ * Returns zero if the reference is recursive, non-zero otherwise.
+ */
+static int
+check_recursive(struct ref *ref, const struct strct *check)
+{
+	struct field	*f;
+	struct strct	*p;
+
+	assert(NULL != ref);
+
+	if ((p = ref->target->parent) == check)
+		return(0);
+
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (FTYPE_STRUCT == f->type)
+			if ( ! check_recursive(f->ref, check))
+				return(0);
+
+	return(1);
+}
+
+/*
  * Recursively annotate our height from each node.
  * We only do this for FTYPE_STRUCT objects.
- * This makes sure that we don't loop around at any point in our
- * dependencies: this means that we don't do a chain of structures
- * that ends up being self-referential.
  */
 static int
 annotate(struct ref *ref, size_t height, size_t colour)
@@ -649,30 +662,37 @@ parse_link(struct strctq *q)
 				return(0);
 	}
 
+	/* Check for reference recursion. */
+
+	TAILQ_FOREACH(p, q, entries)
+		TAILQ_FOREACH(f, &p->fq, entries)
+			if (FTYPE_STRUCT == f->type) {
+				if (check_recursive(f->ref, p))
+					continue;
+				warnx("%s:%zu:%zu: recursive "
+					"reference", f->pos.fname, 
+					f->pos.line, f->pos.column);
+				return(0);
+			}
+
 	/* 
 	 * Now follow and order all outbound links for structs.
 	 * From the get-go, we don't descend into structures that we've
 	 * already coloured.
-	 * FIXME: instead, have this just descend from each node and
-	 * search for finding "again" this node, which would mean a
-	 * loop.
-	 * We can envision situations where we might want to allow
-	 * nested situations, but we'll leave that up to the user not to
-	 * use a struct and do it all manually.
+	 * This establishes a "height" that we'll use when ordering our
+	 * structures in the header file.
 	 */
 
 	TAILQ_FOREACH(p, q, entries) {
 		sz++;
 		if (p->colour)
 			continue;
-		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (FTYPE_STRUCT != f->type)
-				continue;
-			assert(NULL != f->ref);
-			p->colour = colour;
-			if ( ! annotate(f->ref, 1, colour))
-				return(0);
-		}
+		TAILQ_FOREACH(f, &p->fq, entries)
+			if (FTYPE_STRUCT == f->type) {
+				p->colour = colour;
+				if ( ! annotate(f->ref, 1, colour))
+					return(0);
+			}
 		colour++;
 	}
 	assert(sz > 0);

@@ -20,3 +20,5 @@ More longer-term:
 - Allow for JavaScript options to allow custom callbacks.
 - Allow for JavaScript list/iterator support.
 - Allow for export JSON list/iterator support.
+- Have the configure script also build in certain functions; e.g., the
+  encryption function.

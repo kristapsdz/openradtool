@@ -326,6 +326,14 @@ Given the same structure
 .Dq foo ,
 the following are generated:
 .Bl -tag -width Ds
+.It Fn json_foo_array
+Print the list of structure as a key-value pair where the key is the
+structure name and the value is an array consisting of
+.Fn json_foo_data
+objects.
+This is only produced if the structure has
+.Cm list
+queries stipulated.
 .It Fn json_foo_data
 Enumerate only the fields of the structure in JSON dictionary format.
 The key is the field name and the value is a string for text types,

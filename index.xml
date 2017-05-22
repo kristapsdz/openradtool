@@ -33,6 +33,9 @@
 					It generates the source files (C header, C source, SQL schema, SQL update schema, JavaScript) for your
 					application.
 				</p>
+				<p>
+					Yes, C&#8212;as in <a href="https://learnbchs.org">BCHS</a>.
+				</p>
 				<figure>
 					<img src="index.svg" alt="" />
 					<figcaption>
@@ -40,7 +43,7 @@
 					</figcaption>
 				</figure>
 				<p>
-					The system itself has no dependencies; however, the generated C files use <a
+					The system has no run-time dependencies; however, the generated C files use <a
 						href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for the underlying <a
 						href="https://sqlite.org">SQLite</a> database.
 					If optionally generating JSON formatters for exporting data (<b>-F</b><i>json</i>) or validation routines for HTML
@@ -51,8 +54,7 @@
 				</p>
 				<p>
 					<span class="nm">kwebapp</span> is a <a href="https://www.bsd.lv">BSD.lv</a> project.
-					Although it has had stable releases, the generated C API is still undergoing some changes.
-					Moreover, the C source output currently hardcodes OpenBSD-specific functions in its output
+					For the time being, the C source output currently hardcodes OpenBSD-specific functions in its output
 					(e.g., <a href="http://man.openbsd.org/crypt_newhash.3">crypt_newhash(3)</a> and so on).
 					If you plan on using the system, please be aware of that!
 					See the <a href="https://github.com/kristapsdz/kwebapp">GitHub repository</a> for issue tracking and
@@ -71,6 +73,10 @@
 					Each <code>session</code>, in this example, has a link to a <code>user</code> keyed by the
 					<code>userid</code> field.
 					Then each <code>user</code> references a <code>company</code> by <code>cid</code>.
+				</p>
+				<p>
+					The configuration is fairly readable: structures and fields, with field types and limits (string length
+					or numeric value) and other options (nullity, whether a row identifier, etc.).
 				</p>
 				<article data-sblg-permlink="0" data-sblg-article="1"></article>
 				<p>

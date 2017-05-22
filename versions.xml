@@ -2,6 +2,22 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.2.1</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-05-22">2017-05-22</time>
+		</header>
+		<aside>
+			<p>
+				Finally fix naming of anonymous query (search, list, iterate), update, and delete functions.
+				This now uses the basic syntax of <code>db_xx_get_by_yy_op</code>, where <q>xx</q> is the structure, <q>yy</q>
+				is the field, and <q>op</q> is the operation.
+				Adding the <q>op</q> field disambiguates fields.
+				(The operation also makes the earlier double-underscore unneeded.)
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.2.0</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-05-20">2017-05-20</time>

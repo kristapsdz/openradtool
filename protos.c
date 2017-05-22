@@ -311,12 +311,32 @@ print_func_valid(const struct field *p, int decl)
 		decl ? ";\n" : "\n");
 }
 
+/*
+ * Generate the JSON array function for a given structure.
+ * If this is NOT a declaration ("decl"), then print a newline after the
+ * return type; otherwise, have it on one line followed by a newline.
+ */
+void
+print_func_json_array(const struct strct *p, int decl)
+{
+
+	printf("void%sjson_%s_array(struct kjsonreq *r, "
+		"const struct %s_q *q)%s\n",
+		decl ? " " : "\n", p->name, 
+		p->name, decl ? ";" : "");
+}
+
+/*
+ * Generate the JSON object function for a given structure.
+ * If this is NOT a declaration ("decl"), then print a newline after the
+ * return type; otherwise, have it on one line followed by a newline.
+ */
 void
 print_func_json_obj(const struct strct *p, int decl)
 {
 
 	printf("void%sjson_%s_obj(struct kjsonreq *r, "
-		"const struct %s *p)%s",
+		"const struct %s *p)%s\n",
 		decl ? " " : "\n", p->name, 
-		p->name, decl ? ";\n" : "");
+		p->name, decl ? ";" : "");
 }

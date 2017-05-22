@@ -14,6 +14,9 @@
 				Adding the <q>op</q> field disambiguates fields.
 				(The operation also makes the earlier double-underscore unneeded.)
 			</p>
+			<p>
+				Also add functions to print JSON arrays if and only if a structure has list iterators specified.
+			</p>
 		</aside>
 	</article>
 	<article data-sblg-article="1" data-sblg-tags="version">

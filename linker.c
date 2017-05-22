@@ -248,7 +248,7 @@ check_recursive(struct ref *ref, const struct strct *check)
  * Recursively annotate our height from each node.
  * We only do this for FTYPE_STRUCT objects.
  */
-static int
+static void
 annotate(struct ref *ref, size_t height, size_t colour)
 {
 	struct field	*f;
@@ -256,29 +256,15 @@ annotate(struct ref *ref, size_t height, size_t colour)
 
 	p = ref->target->parent;
 
-	if (p->colour == colour &&
-	    ref->source->parent->height > p->height) {
-		warnx("loop in assignment: %s.%s -> %s.%s",
-			ref->source->parent->name,
-			ref->source->name,
-			ref->target->parent->name,
-			ref->target->name);
-		return(0);
-	} else if (p->colour == colour)
-		return(1);
+	if (p->colour == colour)
+		return;
 
 	p->colour = colour;
 	p->height += height;
 
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT != f->type)
-			continue;
-		assert(NULL != f->ref);
-		if ( ! annotate(f->ref, height + 1, colour))
-			return(0);
-	}
-
-	return(1);
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (FTYPE_STRUCT == f->type)
+			annotate(f->ref, height + 1, colour);
 }
 
 /*
@@ -690,8 +676,7 @@ parse_link(struct strctq *q)
 		TAILQ_FOREACH(f, &p->fq, entries)
 			if (FTYPE_STRUCT == f->type) {
 				p->colour = colour;
-				if ( ! annotate(f->ref, 1, colour))
-					return(0);
+				annotate(f->ref, 1, colour);
 			}
 		colour++;
 	}

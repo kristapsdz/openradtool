@@ -4,12 +4,14 @@
 		<header>
 			<h3>0.2.2</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2017-05-23">2017-05-23</time>
+			<time datetime="2017-05-25">2017-05-25</time>
 		</header>
 		<aside>
 			<p>
 				Fix bug in recursive reference checker.
 				This now works properly and allows [properly] for self-referencing structures for native type references.
+				Add special function to JSON print iterate entries.
+				These work together with the iterate functions and accept their callback syntax.
 			</p>
 		</aside>
 	</article>

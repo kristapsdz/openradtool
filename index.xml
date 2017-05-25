@@ -59,6 +59,8 @@
 					If you plan on using the system, please be aware of that!
 					See the <a href="https://github.com/kristapsdz/kwebapp">GitHub repository</a> for issue tracking and
 					versioning.
+					To use <span class="nm">kwebapp</span>, just unpack, run <code>./configure</code>, <code>make</code>,
+					then <code>make install</code>.
 				</p>
 			</section>
 			<blockquote>

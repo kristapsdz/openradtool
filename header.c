@@ -331,6 +331,18 @@ gen_funcs(const struct strct *p, int json, int valids)
 			print_func_json_array(p, 1);
 			puts("");
 		}
+		if (STRCT_HAS_ITERATOR & p->flags) {
+			print_commentv(0, COMMENT_C,
+				"Emit the object as a standalone "
+				"part of (presumably) an array:\n"
+				"\t\"{ data }\n"
+				"See json_%s_data() for the data.\n"
+				"The \"void\" argument is taken "
+				"to be a kjsonreq as if were invoked "
+				"from an iterator.", p->name);
+			print_func_json_iterate(p, 1);
+			puts("");
+		}
 	}
 
 	if (valids) {

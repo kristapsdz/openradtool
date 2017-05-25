@@ -351,6 +351,7 @@ void		 print_func_db_update(const struct update *, int);
 void		 print_func_json_array(const struct strct *, int);
 void		 print_func_json_data(const struct strct *, int);
 void		 print_func_json_obj(const struct strct *, int);
+void		 print_func_json_iterate(const struct strct *, int);
 
 void		 print_func_valid(const struct field *, int);
 

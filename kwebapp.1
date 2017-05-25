@@ -343,6 +343,18 @@ If a field is null, it is serialised as a null value.
 Fields marked
 .Cm noexport
 are not included in the enumeration, nor are passwords.
+.It Fn json_foo_iterate
+Print a "blank" object consisting only of the structure data (see
+.Fn json_foo_data )
+within JSON object braces.
+The calling convention (passing a
+.Vt "void *"
+as the
+.Vt "struct kjsonreq" )
+makes for easy integration with iterate functions.
+This is only produced if the structure has
+.Cm iterate
+queries stipulated.
 .It Fn json_foo_obj
 Print the entire structure as a key-value pair where the key is the
 structure name and the value is an object consisting of

@@ -292,16 +292,6 @@ print_func_db_fill(const struct strct *p, int decl)
 }
 
 void
-print_func_json_data(const struct strct *p, int decl)
-{
-
-	printf("void%sjson_%s_data(struct kjsonreq *r, "
-		"const struct %s *p)%s",
-		decl ? " " : "\n", p->name, 
-		p->name, decl ? ";\n" : "");
-}
-
-void
 print_func_valid(const struct field *p, int decl)
 {
 
@@ -309,6 +299,21 @@ print_func_valid(const struct field *p, int decl)
 		decl ? " " : "\n", 
 		p->parent->name, p->name,
 		decl ? ";\n" : "\n");
+}
+
+/*
+ * Generate the JSON internal data function for a given structure.
+ * If this is NOT a declaration ("decl"), then print a newline after the
+ * return type; otherwise, have it on one line followed by a newline.
+ */
+void
+print_func_json_data(const struct strct *p, int decl)
+{
+
+	printf("void%sjson_%s_data(struct kjsonreq *r, "
+		"const struct %s *p)%s",
+		decl ? " " : "\n", p->name, 
+		p->name, decl ? ";\n" : "");
 }
 
 /*
@@ -337,6 +342,23 @@ print_func_json_obj(const struct strct *p, int decl)
 
 	printf("void%sjson_%s_obj(struct kjsonreq *r, "
 		"const struct %s *p)%s\n",
+		decl ? " " : "\n", p->name, 
+		p->name, decl ? ";" : "");
+}
+
+/*
+ * Create the iterator function for JSON.
+ * This is meant to be called by an "iterator" function with the
+ * kjsonreq set to be the private data.
+ * If this is NOT a declaration ("decl"), then print a newline after the
+ * return type; otherwise, have it on one line followed by a newline.
+ */
+void
+print_func_json_iterate(const struct strct *p, int decl)
+{
+
+	printf("void%sjson_%s_iterate(const struct %s *p, "
+	        "void *arg)%s\n",
 		decl ? " " : "\n", p->name, 
 		p->name, decl ? ";" : "");
 }

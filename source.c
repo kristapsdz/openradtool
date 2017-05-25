@@ -876,6 +876,17 @@ gen_func_json_obj(const struct strct *p)
 		       "\tkjson_array_close(r);\n"
 		       "}\n\n", p->name, p->name, p->name);
 	}
+
+	if (STRCT_HAS_ITERATOR & p->flags) {
+		print_func_json_iterate(p, 0);
+		printf("{\n"
+		       "\tstruct kjsonreq *r = arg;\n"
+		       "\n"
+		       "\tkjson_obj_open(r);\n"
+		       "\tjson_%s_data(r, p);\n"
+		       "\tkjson_obj_close(r);\n"
+		       "}\n\n", p->name);
+	}
 }
 
 static void

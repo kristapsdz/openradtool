@@ -2,6 +2,18 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.2.3</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-05-29">2017-05-29</time>
+		</header>
+		<aside>
+			<p>
+				One-liner so that <q>unique</q> fields can be foreign keys (but not <q>struct</q>s).
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.2.2</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-05-25">2017-05-25</time>

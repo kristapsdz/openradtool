@@ -821,8 +821,8 @@ parse_config_field_info(struct parse *p, struct field *fd)
 			 * and is ignored for rowids.
 			 */
 
-			if (NULL != fd->ref) {
-				parse_errx(p, "unique on reference");
+			if (FTYPE_STRUCT == fd->type) {
+				parse_errx(p, "unique on struct");
 				break;
 			} else if (FIELD_ROWID & fd->flags) {
 				parse_warnx(p, "unique is redunant");

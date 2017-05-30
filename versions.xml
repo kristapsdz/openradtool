@@ -4,11 +4,14 @@
 		<header>
 			<h3>0.2.3</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2017-05-29">2017-05-29</time>
+			<time datetime="2017-05-30">2017-05-30</time>
 		</header>
 		<aside>
 			<p>
 				One-liner so that <q>unique</q> fields can be foreign keys (but not <q>struct</q>s).
+				Also add the <q>epoch</q> native type that uses the <code>time_t</code> type for the C API.
+				For OpenBSD with 64-bit signed integral time, this is just an alias for <code>int</code> except for the type
+				in the API.
 			</p>
 		</aside>
 	</article>

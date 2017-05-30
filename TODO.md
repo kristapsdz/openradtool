@@ -21,4 +21,10 @@ More longer-term:
 - Allow for JavaScript options to allow custom callbacks.
 - Allow for JavaScript list/iterator support.
 - Have the configure script also build in certain functions; e.g., the
-  encryption function.
+  encryption function.  (See portability notes.)
+
+Portability notes (for now all OpenBSD-only):
+
+- Validation for FTYPE\_EPOCH will need 32-bit check.
+- b64\_ntop() portability.
+- crypt\_checkpass() and family portability.

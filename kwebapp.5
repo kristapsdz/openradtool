@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: May 15 2017 $
+.Dd $Mdocdate: May 18 2017 $
 .Dt KWEBAPP 5
 .Os
 .Sh NAME
@@ -135,13 +135,17 @@ may be one of
 .Cm real ,
 .Cm blob ,
 .Cm int ,
+.Cm epoch ,
 .Cm password ,
 or
 .Cm text .
-The latter five are
+Except for
+.Cm struct ,
+these are
 .Dq native
-types mapping into doubles, sized buffers, 64-bit integers, and
-nil-terminated character strings, respectively.
+types mapping into doubles, sized buffers, 64-bit integers, time_t
+values (64-bit integer alias) and nil-terminated character strings,
+respectively.
 .Pp
 The
 .Cm password
@@ -153,7 +157,7 @@ Thus, there is a difference between a password field that is being
 inserted or updated (as a password, which is hashed) and extracted using
 a search (as a hash).
 .Pp
-The
+The non-native
 .Cm struct
 type has the full syntax of
 .Bd -literal -offset indent
@@ -399,7 +403,7 @@ Unary operator to check whether the field is null or not null.
 .Cm password
 fields do not accept any operator but the default check for equality.
 .Sh EXAMPLES
-A simple session table is as follows:
+A trivial example is as follows:
 .Bd -literal
 struct user {
   field name text;
@@ -412,6 +416,7 @@ struct session {
   field userid comment "Associated user.";
   field altuserid:user.id;
   field token comment "Random cookie.";
+  field ctime epoch comment "Creation time.";
   field id int rowid;
   comment "Authenticated session.";
 };

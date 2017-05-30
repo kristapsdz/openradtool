@@ -29,6 +29,7 @@
 #include "extern.h"
 
 static	const char *const ftypes[FTYPE__MAX] = {
+	"INTEGER", /* FTYPE_EPOCH */
 	"INTEGER", /* FTYPE_INT */
 	"REAL", /* FTYPE_REAL */
 	"BLOB", /* FTYPE_BLOB */
@@ -124,6 +125,9 @@ gen_field(const struct field *f, int *first, int comments)
 	printf("%s\n", *first ? "" : ",");
 	if (comments)
 		print_commentt(1, COMMENT_SQL, f->doc);
+	if (FTYPE_EPOCH == f->type)
+		print_commentt(1, COMMENT_SQL, 
+			"(Stored as a UNIX epoch value.)");
 	printf("\t%s %s", f->name, ftypes[f->type]);
 	if (FIELD_ROWID & f->flags)
 		printf(" PRIMARY KEY");

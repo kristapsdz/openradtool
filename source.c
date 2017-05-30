@@ -53,6 +53,7 @@ static	const char *const optypes[OPTYPE__MAX] = {
  * Note that FTYPE_TEXT and FTYPE_PASSWORD need a surrounding strdup.
  */
 static	const char *const coltypes[FTYPE__MAX] = {
+	"ksql_stmt_int", /* FTYPE_EPOCH */
 	"ksql_stmt_int", /* FTYPE_INT */
 	"ksql_stmt_double", /* FTYPE_REAL */
 	"ksql_stmt_blob", /* FTYPE_BLOB (XXX: is special) */
@@ -62,6 +63,7 @@ static	const char *const coltypes[FTYPE__MAX] = {
 };
 
 static	const char *const puttypes[FTYPE__MAX] = {
+	"kjson_putintp", /* FTYPE_EPOCH */
 	"kjson_putintp", /* FTYPE_INT */
 	"kjson_putdoublep", /* FTYPE_REAL */
 	"kjson_putstringp", /* FTYPE_BLOB (XXX: is special) */
@@ -74,6 +76,7 @@ static	const char *const puttypes[FTYPE__MAX] = {
  * Functions binding an argument to a statement.
  */
 static	const char *const bindtypes[FTYPE__MAX] = {
+	"ksql_bind_int", /* FTYPE_EPOCH */
 	"ksql_bind_int", /* FTYPE_INT */
 	"ksql_bind_double", /* FTYPE_REAL */
 	"ksql_bind_blob", /* FTYPE_BLOB (XXX: is special) */
@@ -86,6 +89,7 @@ static	const char *const bindtypes[FTYPE__MAX] = {
  * Basic validation functions for given types.
  */
 static	const char *const validtypes[FTYPE__MAX] = {
+	"kvalid_int", /* FTYPE_EPOCH */
 	"kvalid_int", /* FTYPE_INT */
 	"kvalid_double", /* FTYPE_REAL */
 	NULL, /* FTYPE_BLOB */
@@ -804,6 +808,7 @@ gen_func_valid_types(const struct field *f, const struct fvalid *v)
 
 	assert(v->type < VALIDATE__MAX);
 	switch (f->type) {
+	case (FTYPE_EPOCH):
 	case (FTYPE_INT):
 		printf("\tif (p->parsed.i %s %" PRId64 ")\n"
 		       "\t\treturn(0);\n",

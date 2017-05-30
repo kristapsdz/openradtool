@@ -18,6 +18,7 @@
 #define EXTERN_H
 
 enum	ftype {
+	FTYPE_EPOCH, /* epoch (time_t) */
 	FTYPE_INT, /* native integer */
 	FTYPE_REAL, /* native real-value */
 	FTYPE_BLOB, /* native blob */

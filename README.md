@@ -25,8 +25,8 @@ struct session {
 
 This configuration is then translated into a C API (header file and
 implementation) and an SQL schema or update sequence.  The API consists
-of "getters" and "setters", and is implemented in straight-forward C
-code you link directly into your application.
+of "getters", "setters", updaters, and deleters; and is implemented in
+straight-forward C code you link directly into your application.
 
 The generated files are currently
 [OpenBSD](https://www.openbsd.org)-only and use
@@ -53,7 +53,8 @@ the database and allocating objects.  Some more features:
 - Beyond the usual native type support (int, text, real, blob), also
   supports "password" type that has automatic hashing mechanism built-in
   during selection from and insertion into the database.
-- Several different types of SQL query (and update) operators.
+- Several different types of SQL query (and update and delete)
+  operators.
 - Optional JSON output functions.
 - Optional field validation ([kcgi(3)](https://kristaps.bsd.lv/kcgi))
   functions.

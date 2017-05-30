@@ -45,7 +45,7 @@ struct session {
   field user struct userid:user.uid;
   field userid int comment "Associated user.";
   field token int comment "Random cookie.";
-  field mtime int;
+  field mtime epoch;
   field id int rowid;
   iterate user.company.name,mtime: name foo comment 
     "Search for company's logged-in users.";

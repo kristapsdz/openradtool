@@ -722,6 +722,7 @@ parse_validate(struct parse *p, struct field *fd)
 	 */
 
 	switch (fd->type) {
+	case (FTYPE_EPOCH):
 	case (FTYPE_INT):
 		if (TOK_INTEGER != parse_next(p)) {
 			parse_errx(p, "expected integer");
@@ -918,6 +919,12 @@ parse_config_field(struct parse *p, struct field *fd)
 	if (0 == strcasecmp(p->last.string, "int") ||
 	    0 == strcasecmp(p->last.string, "integer")) {
 		fd->type = FTYPE_INT;
+		parse_config_field_info(p, fd);
+		return;
+	}
+	/* epoch */
+	if (0 == strcasecmp(p->last.string, "epoch")) {
+		fd->type = FTYPE_EPOCH;
 		parse_config_field_info(p, fd);
 		return;
 	}

@@ -186,10 +186,19 @@ gen_diff_field(const struct field *f, const struct field *df)
 	int	 rc = 1;
 
 	if (f->type != df->type) {
-		diff_warnx(&f->parent->pos, &df->parent->pos, 
-			"type change from %s to %s",
-			ftypes[df->type], ftypes[f->type]);
-		rc = 0;
+		if ((f->type == FTYPE_EPOCH &&
+		     df->type == FTYPE_INT) ||
+		    (f->type == FTYPE_INT &&
+		     df->type == FTYPE_EPOCH)) {
+			diff_warnx(&f->parent->pos, &df->parent->pos, 
+				"harmless type change between "
+				"epoch and integer");
+		} else {
+			diff_warnx(&f->parent->pos, &df->parent->pos, 
+				"type change from %s to %s",
+				ftypes[df->type], ftypes[f->type]);
+			rc = 0;
+		}
 	} 
 
 	if (f->flags != df->flags) {

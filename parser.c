@@ -225,6 +225,12 @@ static	const char *const badidents[] = {
 	NULL
 };
 
+static	const char *const modtypes[MODTYPE__MAX] = {
+	"set", /* MODTYPE_SET */
+	"inc", /* MODTYPE_INC */
+	"dec", /* MODTYPE_DEC */
+};
+
 static	const char *const optypes[OPTYPE__MAX] = {
 	"eq", /* OPTYE_EQUAL */
 	"ge", /* OPTYPE_GE */
@@ -1247,8 +1253,29 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 			parse_errx(p, "expected field to modify");
 			return;
 		}
-		uref_alloc(p, p->last.string, up, &up->mrq);
+		ur = uref_alloc(p, p->last.string, up, &up->mrq);
 		while (TOK_COLON != parse_next(p)) {
+			/*
+			 * See if we're going to accept a modifier,
+			 * which defaults to "set".
+			 * We only allow non-setters for numeric types,
+			 * but we'll check that during linking.
+			 */
+
+			if (TOK_IDENT == p->lasttype) {
+				for (ur->mod = 0; 
+				     MODTYPE__MAX != ur->mod; ur->mod++)
+					if (0 == strcasecmp
+					    (p->last.string, 
+					     modtypes[ur->mod]))
+						break;
+				if (MODTYPE__MAX == ur->mod) {
+					parse_errx(p, "bad modifier");
+					return;
+				} else if (TOK_COLON == parse_next(p))
+					break;
+			}
+
 			if (TOK_COMMA != p->lasttype) {
 				parse_errx(p, "expected separator");
 				return;
@@ -1256,7 +1283,7 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 				parse_errx(p, "expected modify field");
 				return;
 			}
-			uref_alloc(p, p->last.string, up, &up->mrq);
+			ur = uref_alloc(p, p->last.string, up, &up->mrq);
 		}
 	}
 

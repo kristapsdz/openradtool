@@ -1234,7 +1234,11 @@ gen_stmt(const struct strct *p)
 	} else
 		puts("DEFAULT VALUES\",");
 	
-	/* Custom update queries. */
+	/* 
+	 * Custom update queries. 
+	 * Our updates can have modifications where they modify the
+	 * given field (instead of setting it externally).
+	 */
 
 	pos = 0;
 	TAILQ_FOREACH(up, &p->uq, entries) {
@@ -1245,7 +1249,14 @@ gen_stmt(const struct strct *p)
 		TAILQ_FOREACH(ur, &up->mrq, entries) {
 			putchar(first ? ' ' : ',');
 			first = 0;
-			printf("%s=?", ur->name);
+			if (MODTYPE_INC == ur->mod) 
+				printf("%s = %s + ?", 
+					ur->name, ur->name);
+			else if (MODTYPE_DEC == ur->mod) 
+				printf("%s = %s - ?", 
+					ur->name, ur->name);
+			else
+				printf("%s = ?", ur->name);
 		}
 		printf(" WHERE");
 		first = 1;

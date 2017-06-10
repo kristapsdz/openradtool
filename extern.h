@@ -158,6 +158,13 @@ enum	optype {
 #define	OPTYPE_ISBINARY(_x) ((_x) < OPTYPE_ISNULL)
 #define	OPTYPE_ISUNARY(_x) ((_x) >= OPTYPE_ISNULL)
 
+enum	modtype {
+	MODTYPE_SET = 0, /* direct set (default) */
+	MODTYPE_INC, /* x = x + ? */
+	MODTYPE_DEC, /* x = x - ? */
+	MODTYPE__MAX
+};
+
 /*
  * A search entity.
  * For example, in a set of search criteria "user.company.name, userid",
@@ -216,6 +223,7 @@ TAILQ_HEAD(searchq, search);
 struct	uref {
 	char		 *name; /* name of field */
 	enum optype	  op; /* for constraints, SQL operator */
+	enum modtype	  mod; /* for modifiers */
 	struct field	 *field; /* resolved field */
 	struct pos	  pos; /* position in parse */
 	struct update	 *parent; /* up-reference */

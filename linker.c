@@ -330,6 +330,31 @@ check_updatetype(struct update *up)
 }
 
 /*
+ * Make sure that our modification type is numeric.
+ * (Text-based modifications with "add" or "sub" or otherwise don't
+ * really make sense.
+ */
+static int
+check_modtype(const struct uref *ref)
+{
+
+	assert(MODTYPE__MAX != ref->mod);
+
+	if (MODTYPE_SET == ref->mod ||
+	    FTYPE_EPOCH == ref->field->type ||
+	    FTYPE_INT == ref->field->type ||
+	    FTYPE_REAL == ref->field->type)
+		return(1);
+
+	warnx("%s:%zu:%zu: update modification on "
+		"invalid field type (not numeric)",
+		ref->pos.fname,
+		ref->pos.line,
+		ref->pos.column);
+	return(0);
+}
+
+/*
  * Resolve all of the fields managed by struct update.
  * These are all local to the current structure.
  * (This is a constraint of SQL.)
@@ -342,9 +367,12 @@ resolve_update(struct update *up)
 
 	/* Will always be empty for UPT_DELETE. */
 
-	TAILQ_FOREACH(ref, &up->mrq, entries)
+	TAILQ_FOREACH(ref, &up->mrq, entries) {
 		if ( ! resolve_uref(ref, 0))
 			return(0);
+		if ( ! check_modtype(ref))
+			return(0);
+	}
 	TAILQ_FOREACH(ref, &up->crq, entries)
 		if ( ! resolve_uref(ref, 1))
 			return(0);

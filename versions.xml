@@ -2,6 +2,20 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.2.4</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-06-11">2017-06-11</time>
+		</header>
+		<aside>
+			<p>
+				Add the ability for <q>update</q> fields to accept a modifier.
+				This translates into the SQL equivalent to <code>update foo set x = x + ?</code>.
+				Right now, only the <code>inc</code> and <code>dec</code> modifiers are supported, but it's easy to add in new ones.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.2.3</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-05-30">2017-05-30</time>

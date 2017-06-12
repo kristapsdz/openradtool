@@ -59,6 +59,7 @@ static	const char *const coltypes[FTYPE__MAX] = {
 	"ksql_stmt_blob", /* FTYPE_BLOB (XXX: is special) */
 	"ksql_stmt_str", /* FTYPE_TEXT */
 	"ksql_stmt_str", /* FTYPE_PASSWORD */
+	"ksql_stmt_str", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 };
 
@@ -69,6 +70,7 @@ static	const char *const puttypes[FTYPE__MAX] = {
 	"kjson_putstringp", /* FTYPE_BLOB (XXX: is special) */
 	"kjson_putstringp", /* FTYPE_TEXT */
 	NULL, /* FTYPE_PASSWORD (don't print) */
+	"kjson_putstringp", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 };
 
@@ -82,6 +84,7 @@ static	const char *const bindtypes[FTYPE__MAX] = {
 	"ksql_bind_blob", /* FTYPE_BLOB (XXX: is special) */
 	"ksql_bind_str", /* FTYPE_TEXT */
 	"ksql_bind_str", /* FTYPE_PASSWORD */
+	"ksql_bind_str", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 };
 
@@ -95,6 +98,7 @@ static	const char *const validtypes[FTYPE__MAX] = {
 	NULL, /* FTYPE_BLOB */
 	"kvalid_string", /* FTYPE_TEXT */
 	"kvalid_string", /* FTYPE_PASSWORD */
+	"kvalid_email", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 };
 
@@ -176,7 +180,8 @@ gen_strct_fill_field(const struct field *f)
 			printf("\tp->%s = ", f->name);
 
 		if (FTYPE_TEXT == f->type || 
-		    FTYPE_PASSWORD == f->type)
+		    FTYPE_PASSWORD == f->type ||
+		    FTYPE_EMAIL == f->type)
 			printf("strdup(%s(stmt, (*pos)++));\n", 
 				coltypes[f->type]);
 		else
@@ -189,14 +194,16 @@ gen_strct_fill_field(const struct field *f)
 			puts("\telse\n"
 			     "\t\t(*pos)++;");
 			if (FTYPE_TEXT == f->type || 
-			    FTYPE_PASSWORD == f->type)
+			    FTYPE_PASSWORD == f->type ||
+			    FTYPE_EMAIL == f->type)
 				printf("\tif (p->has_%s && "
 					"NULL == p->%s) {\n"
 				       "\t\tperror(NULL);\n"
 				       "\t\texit(EXIT_FAILURE);\n"
 				       "\t}\n", f->name, f->name);
 		} else if (FTYPE_TEXT == f->type || 
-			   FTYPE_PASSWORD == f->type) 
+			   FTYPE_PASSWORD == f->type ||
+			   FTYPE_EMAIL == f->type) 
 			printf("\tif (NULL == p->%s) {\n"
 			       "\t\tperror(NULL);\n"
 			       "\t\texit(EXIT_FAILURE);\n"
@@ -626,6 +633,7 @@ gen_func_unfill(const struct strct *p)
 		case (FTYPE_BLOB):
 		case (FTYPE_PASSWORD):
 		case (FTYPE_TEXT):
+		case (FTYPE_EMAIL):
 			printf("\tfree(p->%s);\n", f->name);
 			break;
 		default:

@@ -36,6 +36,7 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	"const void *", /* FTYPE_BLOB */
 	"const char *", /* FTYPE_TEXT */
 	"const char *", /* FTYPE_PASSWORD */
+	"const char *", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 };
 

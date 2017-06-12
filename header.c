@@ -58,6 +58,8 @@ gen_strct_field(const struct field *p)
 		break;
 	case (FTYPE_TEXT):
 		/* FALLTHROUGH */
+	case (FTYPE_EMAIL):
+		/* FALLTHROUGH */
 	case (FTYPE_PASSWORD):
 		printf("\tchar\t*%s;\n", p->name);
 		break;

@@ -24,6 +24,7 @@ enum	ftype {
 	FTYPE_BLOB, /* native blob */
 	FTYPE_TEXT, /* native nil-terminated string */
 	FTYPE_PASSWORD, /* hashed password (text) */
+	FTYPE_EMAIL, /* email (text) */
 	FTYPE_STRUCT, /* only in C API (on reference) */
 	FTYPE__MAX
 };

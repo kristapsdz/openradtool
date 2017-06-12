@@ -2,6 +2,21 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.2.5</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-06-12">2017-06-12</time>
+		</header>
+		<aside>
+			<p>
+				Add <code>eq</code> operator for validation.
+				(Probably not used for numeric, but useful for strings in some circumstances.)
+				Also add <code>email</code> type.
+				This is just a string type with special validation.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.2.4</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-06-11">2017-06-11</time>

@@ -35,6 +35,7 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	"BLOB", /* FTYPE_BLOB */
 	"TEXT", /* FTYPE_TEXT */
 	"TEXT", /* FTYPE_PASSWORD */
+	"TEXT", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 };
 
@@ -193,7 +194,14 @@ gen_diff_field(const struct field *f, const struct field *df)
 			diff_warnx(&f->parent->pos, &df->parent->pos, 
 				"harmless type change between "
 				"epoch and integer");
-		} else {
+		} else if ((f->type == FTYPE_TEXT &&
+			    df->type == FTYPE_EMAIL) ||
+			   (f->type == FTYPE_EMAIL &&
+			    df->type == FTYPE_TEXT)) {
+			diff_warnx(&f->parent->pos, &df->parent->pos, 
+				"harmless type change between "
+				"e-mail and text");
+		} else { 
 			diff_warnx(&f->parent->pos, &df->parent->pos, 
 				"type change from %s to %s",
 				ftypes[df->type], ftypes[f->type]);

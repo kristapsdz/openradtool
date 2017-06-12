@@ -957,6 +957,12 @@ parse_config_field(struct parse *p, struct field *fd)
 		parse_config_field_info(p, fd);
 		return;
 	}
+	/* email */
+	if (0 == strcasecmp(p->last.string, "email")) {
+		fd->type = FTYPE_EMAIL;
+		parse_config_field_info(p, fd);
+		return;
+	}
 	/* hash */
 	if (0 == strcasecmp(p->last.string, "password") ||
 	    0 == strcasecmp(p->last.string, "passwd")) {

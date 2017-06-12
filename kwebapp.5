@@ -136,16 +136,21 @@ may be one of
 .Cm blob ,
 .Cm int ,
 .Cm epoch ,
-.Cm password ,
+.Cm text ,
+.Cm email ,
 or
-.Cm text .
+.Cm password .
 Except for
 .Cm struct ,
 these are
 .Dq native
-types mapping into doubles, sized buffers, 64-bit integers, time_t
+types mapping into doubles, sized buffers, 64-bit integers,
+.Vt time_t
 values (64-bit integer alias) and nil-terminated character strings,
 respectively.
+(The
+.Cm email
+type is text with extra validation.)
 .Pp
 The
 .Cm password
@@ -227,6 +232,7 @@ less than or equal to, greater than, less than, or equal to the given
 value.
 If the field type is
 .Cm text ,
+.Cm email ,
 .Cm password ,
 or
 .Cm blob ,

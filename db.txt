@@ -19,7 +19,7 @@ struct user {
     This is passed to inserts and updates as a password,
     then hashed within the implementation and extracted
     (in listings and searches) as the hash value.";
-  field email text limit gt 0 unique comment
+  field email email unique comment
     "Unique e-mail address.";
   field image blob null comment 
     "A PNG image or something.";

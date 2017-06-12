@@ -109,6 +109,7 @@ static	const char *const validbins[VALIDATE__MAX] = {
 	">", /* VALIDATE_LE */
 	"<=", /* VALIDATE_GT */
 	">=", /* VALIDATE_LT */
+	"!=", /* VALIDATE_EQ */
 };
 
 /*

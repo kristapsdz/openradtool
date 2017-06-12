@@ -243,6 +243,14 @@ static	const char *const optypes[OPTYPE__MAX] = {
 	"notnull", /* OPTYE_NOTNULL */
 };
 
+static	const char *const vtypes[VALIDATE__MAX] = {
+	"ge", /* VALIDATE_GE */
+	"le", /* VALIDATE_LE */
+	"gt", /* VALIDATE_GT */
+	"lt", /* VALIDATE_LT */
+	"eq", /* VALIDATE_EQ */
+};
+
 static enum tok parse_errx(struct parse *, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
 static void parse_warnx(struct parse *p, const char *, ...)
@@ -702,15 +710,9 @@ parse_validate(struct parse *p, struct field *fd)
 		return;
 	}
 
-	vt = VALIDATE__MAX;
-	if (0 == strcasecmp(p->last.string, "gt"))
-		vt = VALIDATE_GT;
-	else if (0 == strcasecmp(p->last.string, "ge"))
-		vt = VALIDATE_GE;
-	else if (0 == strcasecmp(p->last.string, "lt"))
-		vt = VALIDATE_LT;
-	else if (0 == strcasecmp(p->last.string, "le"))
-		vt = VALIDATE_LE;
+	for (vt = 0; vt < VALIDATE__MAX; vt++)
+		if (0 == strcasecmp(p->last.string, vtypes[vt]))
+			break;
 
 	if (VALIDATE__MAX == vt) {
 		parse_errx(p, "unknown constraint type");

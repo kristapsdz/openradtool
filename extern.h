@@ -344,6 +344,14 @@ struct	enm {
 TAILQ_HEAD(enmq, enm);
 
 /*
+ * Hold entire parse sequence results.
+ */
+struct	config {
+	struct strctq	sq; /* all structures */
+	struct enmq	eq; /* all enumerations */
+};
+
+/*
  * Type of comment.
  */
 enum	cmtt {
@@ -360,9 +368,9 @@ enum	cmtt {
 
 __BEGIN_DECLS
 
-int		 parse_link(struct strctq *);
-struct strctq	*parse_config(FILE *, const char *);
-void		 parse_free(struct strctq *);
+int		 parse_link(struct config *);
+struct config	*parse_config(FILE *, const char *);
+void		 parse_free(struct config *);
 
 void		 gen_c_header(const struct strctq *, int, int);
 void		 gen_c_source(const struct strctq *, 

@@ -43,7 +43,7 @@ main(int argc, char *argv[])
 	FILE		*conf = NULL, *dconf = NULL;
 	const char	*confile = NULL, *dconfile = NULL,
 	      		*header = NULL;
-	struct strctq	*sq, *dsq = NULL;
+	struct config	*cfg, *dcfg = NULL;
 	int		 c, rc = 1, json = 0, valids = 0;
 	enum op		 op = OP_NOOP;
 
@@ -140,11 +140,11 @@ main(int argc, char *argv[])
 	 * Also parse the "diff" configuration, if it exists.
 	 */
 
-	sq = parse_config(conf, confile);
+	cfg = parse_config(conf, confile);
 	fclose(conf);
 
 	if (NULL != dconf) {
-		dsq = parse_config(dconf, dconfile);
+		dcfg = parse_config(dconf, dconfile);
 		fclose(dconf);
 	}
 
@@ -155,27 +155,27 @@ main(int argc, char *argv[])
 	 * configuration files.
 	 */
 
-	if ((NULL == sq || ! parse_link(sq)) ||
-	    (NULL != dconfile && (NULL == dsq || ! parse_link(dsq)))) {
-		parse_free(sq);
-		parse_free(dsq);
+	if ((NULL == cfg || ! parse_link(cfg)) ||
+	    (NULL != dconfile && (NULL == dcfg || ! parse_link(dcfg)))) {
+		parse_free(cfg);
+		parse_free(dcfg);
 		return(EXIT_FAILURE);
 	}
 
 	/* Finally, (optionally) generate output. */
 
 	if (OP_C_SOURCE == op)
-		gen_c_source(sq, json, valids, header);
+		gen_c_source(&cfg->sq, json, valids, header);
 	else if (OP_C_HEADER == op)
-		gen_c_header(sq, json, valids);
+		gen_c_header(&cfg->sq, json, valids);
 	else if (OP_SQL == op)
-		gen_sql(sq);
+		gen_sql(&cfg->sq);
 	else if (OP_DIFF == op)
-		rc = gen_diff(sq, dsq);
+		rc = gen_diff(&cfg->sq, &dcfg->sq);
 	else if (OP_JAVASCRIPT == op)
-		gen_javascript(sq);
+		gen_javascript(&cfg->sq);
 
-	parse_free(sq);
+	parse_free(cfg);
 	return(rc ? EXIT_SUCCESS : EXIT_FAILURE);
 
 usage:

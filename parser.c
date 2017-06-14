@@ -1653,7 +1653,7 @@ parse_struct_data(struct parse *p, struct strct *s)
  * Verify and allocate an enum, then start parsing it.
  */
 static void
-parse_enum(struct parse *p)
+parse_enum(struct parse *p, struct enmq *q)
 {
 	struct enm	*e;
 	char		*caps;
@@ -1673,7 +1673,7 @@ parse_enum(struct parse *p)
 		*caps = toupper((int)*caps);
 
 	parse_point(p, &e->pos);
-	/*TAILQ_INSERT_TAIL(q, s, entries);*/
+	TAILQ_INSERT_TAIL(q, e, entries);
 	TAILQ_INIT(&e->eq);
 	parse_enum_data(p, e);
 }
@@ -1731,16 +1731,17 @@ parse_struct(struct parse *p, struct strctq *q)
  * Where STRUCT is defined in parse_struct_data and ident is a unique,
  * alphanumeric (starting with alpha), non-reserved string.
  */
-struct strctq *
+struct config *
 parse_config(FILE *f, const char *fname)
 {
-	struct strctq	  *q;
-	struct parse	   p;
+	struct parse	 p;
+	struct config	*cfg;
 
-	if (NULL == (q = malloc(sizeof(struct strctq))))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (cfg = calloc(1, sizeof(struct config))))
+		return(NULL);
 
-	TAILQ_INIT(q);
+	TAILQ_INIT(&cfg->sq);
+	TAILQ_INIT(&cfg->eq);
 
 	memset(&p, 0, sizeof(struct parse));
 	p.column = 0;
@@ -1765,13 +1766,13 @@ parse_config(FILE *f, const char *fname)
 
 		if (0 == strcasecmp(p.last.string, "struct")) {
 			if (TOK_IDENT == parse_next(&p)) {
-				parse_struct(&p, q);
+				parse_struct(&p, &cfg->sq);
 				continue;
 			}
 			parse_errx(&p, "expected struct name");
 		} else if (0 == strcasecmp(p.last.string, "enum")) {
 			if (TOK_IDENT == parse_next(&p)) {
-				parse_enum(&p);
+				parse_enum(&p, &cfg->eq);
 				continue;
 			}
 			parse_errx(&p, "expected struct name");
@@ -1779,16 +1780,16 @@ parse_config(FILE *f, const char *fname)
 			parse_errx(&p, "unknown top-level type");
 	}
 
-	if (TAILQ_EMPTY(q)) {
+	if (TAILQ_EMPTY(&cfg->sq)) {
 		warnx("%s: no structures", fname);
 		goto error;
 	}
 
 	free(p.buf);
-	return(q);
+	return(cfg);
 error:
 	free(p.buf);
-	parse_free(q);
+	parse_free(cfg);
 	return(NULL);
 }
 
@@ -1933,11 +1934,36 @@ parse_free_update(struct update *p)
 }
 
 /*
+ * Free an enumeration.
+ * Does nothing if "p" is NULL.
+ */
+static void
+parse_free_enum(struct enm *e)
+{
+	struct eitem	*ei;
+
+	if (NULL == e)
+		return;
+
+	while (NULL != (ei = TAILQ_FIRST(&e->eq))) {
+		TAILQ_REMOVE(&e->eq, ei, entries);
+		free(ei->name);
+		free(ei->doc);
+		free(ei);
+	}
+
+	free(e->name);
+	free(e->cname);
+	free(e->doc);
+	free(e);
+}
+
+/*
  * Free all resources from the queue of structures.
  * Does nothing if "q" is empty or NULL.
  */
 void
-parse_free(struct strctq *q)
+parse_free(struct config *cfg)
 {
 	struct strct	*p;
 	struct field	*f;
@@ -1945,12 +1971,18 @@ parse_free(struct strctq *q)
 	struct alias	*a;
 	struct update	*u;
 	struct unique	*n;
+	struct enm	*e;
 
-	if (NULL == q)
+	if (NULL == cfg)
 		return;
 
-	while (NULL != (p = TAILQ_FIRST(q))) {
-		TAILQ_REMOVE(q, p, entries);
+	while (NULL != (e = TAILQ_FIRST(&cfg->eq))) {
+		TAILQ_REMOVE(&cfg->eq, e, entries);
+		parse_free_enum(e);
+	}
+
+	while (NULL != (p = TAILQ_FIRST(&cfg->sq))) {
+		TAILQ_REMOVE(&cfg->sq, p, entries);
 		while (NULL != (f = TAILQ_FIRST(&p->fq))) {
 			TAILQ_REMOVE(&p->fq, f, entries);
 			parse_free_field(f);
@@ -1982,5 +2014,6 @@ parse_free(struct strctq *q)
 		free(p->cname);
 		free(p);
 	}
-	free(q);
+
+	free(cfg);
 }

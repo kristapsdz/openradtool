@@ -315,6 +315,35 @@ struct	strct {
 TAILQ_HEAD(strctq, strct);
 
 /*
+ * A single item within an enumeration.
+ */
+struct	eitem {
+	char		  *name; /* item name */
+	int64_t		   value; /* numeric value */
+	char		  *doc; /* documentation */
+	struct pos	   pos; /* parse point */
+	struct enm	  *parent; /* parent enumeration */
+	TAILQ_ENTRY(eitem) entries;
+};
+
+TAILQ_HEAD(eitemq, eitem);
+
+/*
+ * An enumeration of possible values.
+ * These are used as field types.
+ */
+struct	enm {
+	char		*name; /* name of enumeration */
+	char		*cname; /* capitalised name */
+	char		*doc; /* documentation */
+	struct pos	 pos; /* parse point */
+	struct eitemq	 eq; /* items in enumeration */
+	TAILQ_ENTRY(enm) entries;
+};
+
+TAILQ_HEAD(enmq, enm);
+
+/*
  * Type of comment.
  */
 enum	cmtt {

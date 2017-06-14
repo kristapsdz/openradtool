@@ -285,6 +285,20 @@ parse_point(const struct parse *p, struct pos *pp)
 	pp->column = p->column;
 }
 
+static int
+check_badidents(struct parse *p, const char *s)
+{
+	const char *const *cp;
+
+	for (cp = badidents; NULL != *cp; cp++)
+		if (0 == strcasecmp(*cp, s)) {
+			parse_errx(p, "illegal identifier");
+			return(0);
+		}
+
+	return(1);
+}
+
 /*
  * Allocate a unique reference and add it to the parent queue in order
  * by alpha.
@@ -875,7 +889,7 @@ parse_config_field_info(struct parse *p, struct field *fd)
  * parse_config_field_info().
  */
 static void
-parse_config_field(struct parse *p, struct field *fd)
+parse_field(struct parse *p, struct field *fd)
 {
 
 	if (TOK_SEMICOLON == parse_next(p))
@@ -1420,23 +1434,58 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 }
 
 /*
- * Read an individual structure.
- * This opens and closes the structure, then reads all of the field
- * elements within.
+ * Parse an enumeration item.
+ * Its syntax is:
+ *
+ *  "item" ident value [comment quoted_string]? ";"
+ *
+ * The identifier has already been parsed: this starts at the value.
+ * Both the identifier and the value must be unique within the parent
+ * enumeration.
+ */
+static void
+parse_item(struct parse *p, struct eitem *ei)
+{
+	struct eitem	*eei;
+
+	if (TOK_INTEGER != parse_next(p)) {
+		parse_errx(p, "expected item value");
+		return;
+	}
+
+	ei->value = p->last.integer;
+
+	TAILQ_FOREACH(eei, &ei->parent->eq, entries) 
+		if (ei != eei && ei->value == eei->value) {
+			parse_errx(p, "duplicate item value");
+			return;
+		}
+
+	while ( ! PARSE_STOP(p) && TOK_IDENT == parse_next(p))
+		if (strcasecmp(p->last.string, "comment"))
+			parse_errx(p, "unknown item data type");
+		else
+			parse_comment(p, &ei->doc);
+
+	if ( ! PARSE_STOP(p) && TOK_SEMICOLON != p->lasttype)
+		parse_errx(p, "expected semicolon");
+}
+
+/*
+ * Read an individual enumeration.
+ * This opens and closes the enumeration, then reads all of the enum
+ * data within.
  * Its syntax is:
  * 
  *  "{" 
- *    ["field" ident FIELD]+ 
- *    [["iterate" | "search" | "list" ] search_fields]*
- *    ["update" update_fields]*
+ *    ["item" ident ITEM]+ 
  *    ["comment" quoted_string]?
  *  "};"
  */
 static void
-parse_config_struct(struct parse *p, struct strct *s)
+parse_enum_data(struct parse *p, struct enm *e)
 {
-	struct field	  *fd;
-	const char *const *cp;
+	struct eitem	*ei;
 
 	if (TOK_LBRACE != parse_next(p)) {
 		parse_errx(p, "expected left brace");
@@ -1447,7 +1496,88 @@ parse_config_struct(struct parse *p, struct strct *s)
 		if (TOK_RBRACE == parse_next(p))
 			break;
 		if (TOK_IDENT != p->lasttype) {
-			parse_errx(p, "expected field entry type");
+			parse_errx(p, "expected enum data type");
+			return;
+		}
+
+		if (0 == strcasecmp(p->last.string, "comment")) {
+			if ( ! parse_comment(p, &e->doc))
+				return;
+			if (TOK_SEMICOLON != parse_next(p)) {
+				parse_errx(p, "expected end of comment");
+				return;
+			}
+			continue;
+		} else if (strcasecmp(p->last.string, "item")) {
+			parse_errx(p, "unknown enum data type ");
+			return;
+		}
+
+		/* Now we have a new item: validate and parse it. */
+
+		if (TOK_IDENT != parse_next(p)) {
+			parse_errx(p, "expected item name");
+			return;
+		} else if ( ! check_badidents(p, p->last.string))
+			return;
+
+		TAILQ_FOREACH(ei, &e->eq, entries) {
+			if (strcasecmp(ei->name, p->last.string))
+				continue;
+			parse_errx(p, "duplicate item name");
+			return;
+		}
+
+		if (NULL == (ei = calloc(1, sizeof(struct eitem))))
+			err(EXIT_FAILURE, NULL);
+		if (NULL == (ei->name = strdup(p->last.string)))
+			err(EXIT_FAILURE, NULL);
+
+		parse_point(p, &ei->pos);
+		TAILQ_INSERT_TAIL(&e->eq, ei, entries);
+		ei->parent = e;
+		parse_item(p, ei);
+	}
+
+	if (PARSE_STOP(p))
+		return;
+
+	if (TOK_SEMICOLON != parse_next(p))
+		parse_errx(p, "expected semicolon");
+	else if (TAILQ_EMPTY(&e->eq))
+		parse_errx(p, "no items in enumeration");
+}
+
+/*
+ * Read an individual structure.
+ * This opens and closes the structure, then reads all of the field
+ * elements within.
+ * Its syntax is:
+ * 
+ *  "{" 
+ *    ["field" ident FIELD]+ 
+ *    [["iterate" | "search" | "list" ] search_fields]*
+ *    ["update" update_fields]*
+ *    ["delete" delete_fields]*
+ *    ["unique" unique_fields]*
+ *    ["comment" quoted_string]?
+ *  "};"
+ */
+static void
+parse_struct_data(struct parse *p, struct strct *s)
+{
+	struct field	 *fd;
+
+	if (TOK_LBRACE != parse_next(p)) {
+		parse_errx(p, "expected left brace");
+		return;
+	}
+
+	while ( ! PARSE_STOP(p)) {
+		if (TOK_RBRACE == parse_next(p))
+			break;
+		if (TOK_IDENT != p->lasttype) {
+			parse_errx(p, "expected struct data type");
 			return;
 		}
 
@@ -1477,41 +1607,25 @@ parse_config_struct(struct parse *p, struct strct *s)
 		} else if (0 == strcasecmp(p->last.string, "unique")) {
 			parse_config_unique(p, s);
 			continue;
-		}
-		
-		if (strcasecmp(p->last.string, "field")) {
-			parse_errx(p, "expected field entry type");
+		} else if (strcasecmp(p->last.string, "field")) {
+			parse_errx(p, "unknown struct data type ");
 			return;
 		}
 
-		/* Now we have a new field. */
+		/* Now we have a new field: validate and parse. */
 
 		if (TOK_IDENT != parse_next(p)) {
 			parse_errx(p, "expected field name");
 			return;
-		}
-
-		/* Disallow duplicate names. */
+		} else if ( ! check_badidents(p, p->last.string))
+			return;
 
 		TAILQ_FOREACH(fd, &s->fq, entries) {
 			if (strcasecmp(fd->name, p->last.string))
 				continue;
-			parse_errx(p, "duplicate name");
+			parse_errx(p, "duplicate field name");
 			return;
 		}
-
-		/* Disallow bad names. */
-
-		for (cp = badidents; NULL != *cp; cp++)
-			if (0 == strcasecmp(*cp, p->last.string)) {
-				parse_errx(p, "illegal identifier");
-				return;
-			}
-
-		/*
-		 * Allocate the field entry by name and then continue
-		 * parsing the field attributes.
-		 */
 
 		if (NULL == (fd = calloc(1, sizeof(struct field))))
 			err(EXIT_FAILURE, NULL);
@@ -1523,22 +1637,86 @@ parse_config_struct(struct parse *p, struct strct *s)
 		parse_point(p, &fd->pos);
 		TAILQ_INIT(&fd->fvq);
 		TAILQ_INSERT_TAIL(&s->fq, fd, entries);
-		parse_config_field(p, fd);
+		parse_field(p, fd);
 	}
 
 	if (PARSE_STOP(p))
 		return;
 
-	if (TOK_SEMICOLON != parse_next(p)) {
+	if (TOK_SEMICOLON != parse_next(p)) 
 		parse_errx(p, "expected semicolon");
-		return;
-	}
+	else if (TAILQ_EMPTY(&s->fq))
+		parse_errx(p, "no fields in struct");
+}
 
-	if (TAILQ_EMPTY(&s->fq)) {
-		warnx("%s:%zu:%zu: no fields",
-			p->fname, p->line, p->column);
-		p->lasttype = TOK_ERR;
-	}
+/*
+ * Verify and allocate an enum, then start parsing it.
+ */
+static void
+parse_enum(struct parse *p)
+{
+	struct enm	*e;
+	char		*caps;
+
+	/* Disallow bad names. */
+
+	if ( ! check_badidents(p, p->last.string))
+		return;
+
+	if (NULL == (e = calloc(1, sizeof(struct enm))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (e->name = strdup(p->last.string)))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (e->cname = strdup(e->name)))
+		err(EXIT_FAILURE, NULL);
+	for (caps = e->cname; '\0' != *caps; caps++)
+		*caps = toupper((int)*caps);
+
+	parse_point(p, &e->pos);
+	/*TAILQ_INSERT_TAIL(q, s, entries);*/
+	TAILQ_INIT(&e->eq);
+	parse_enum_data(p, e);
+}
+
+/*
+ * Verify and allocate a struct, then start parsing its fields and
+ * ancillary entries.
+ */
+static void
+parse_struct(struct parse *p, struct strctq *q)
+{
+	struct strct	*s;
+	char		*caps;
+
+	/* Disallow duplicate and bad names. */
+
+	TAILQ_FOREACH(s, q, entries)
+		if (0 == strcasecmp(s->name, p->last.string)) {
+			parse_errx(p, "duplicate name");
+			return;
+		}
+
+	if ( ! check_badidents(p, p->last.string))
+		return;
+
+	if (NULL == (s = calloc(1, sizeof(struct strct))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (s->name = strdup(p->last.string)))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (s->cname = strdup(s->name)))
+		err(EXIT_FAILURE, NULL);
+	for (caps = s->cname; '\0' != *caps; caps++)
+		*caps = toupper((int)*caps);
+
+	parse_point(p, &s->pos);
+	TAILQ_INSERT_TAIL(q, s, entries);
+	TAILQ_INIT(&s->fq);
+	TAILQ_INIT(&s->sq);
+	TAILQ_INIT(&s->aq);
+	TAILQ_INIT(&s->uq);
+	TAILQ_INIT(&s->nq);
+	TAILQ_INIT(&s->dq);
+	parse_struct_data(p, s);
 }
 
 /*
@@ -1548,19 +1726,16 @@ parse_config_struct(struct parse *p, struct strct *s)
  * Then continue until we've read all structures.
  * Its syntax is:
  *
- *  [ "struct" ident STRUCT ]+
+ *  [ "struct" ident STRUCT | "enum" ident ENUM ]+
  *
- * Where STRUCT is defined in parse_config_struct and ident is a unique,
+ * Where STRUCT is defined in parse_struct_data and ident is a unique,
  * alphanumeric (starting with alpha), non-reserved string.
  */
 struct strctq *
 parse_config(FILE *f, const char *fname)
 {
 	struct strctq	  *q;
-	struct strct	  *s;
 	struct parse	   p;
-	const char *const *cp;
-	char		  *caps;
 
 	if (NULL == (q = malloc(sizeof(struct strctq))))
 		err(EXIT_FAILURE, NULL);
@@ -1579,58 +1754,29 @@ parse_config(FILE *f, const char *fname)
 		else if (TOK_EOF == p.lasttype)
 			break;
 
-		if (TOK_IDENT != p.lasttype ||
-		    strcasecmp(p.last.string, "struct")) {
-			parse_errx(&p, "expected struct");
-			goto error;
+		/* Our top-level identifier. */
+
+		if (TOK_IDENT != p.lasttype) {
+			parse_errx(&p, "expected top-level type");
+			continue;
 		}
 
-		if (TOK_IDENT != parse_next(&p)) {
-			parse_errx(&p, NULL);
-			goto error;
-		}
+		/* Parse whether we're struct or enum. */
 
-		/* Disallow duplicate names. */
-
-		TAILQ_FOREACH(s, q, entries) {
-			if (strcasecmp(s->name, p.last.string))
+		if (0 == strcasecmp(p.last.string, "struct")) {
+			if (TOK_IDENT == parse_next(&p)) {
+				parse_struct(&p, q);
 				continue;
-			parse_errx(&p, "duplicate name");
-			goto error;
-		}
-
-		/* Disallow bad names. */
-
-		for (cp = badidents; NULL != *cp; cp++)
-			if (0 == strcasecmp(*cp, p.last.string)) {
-				parse_errx(&p, "illegal identifier");
-				goto error;
 			}
-
-		/*
-		 * Create the new structure with the given name and add
-		 * it to the queue of structures.
-		 * Then parse its fields.
-		 */
-
-		if (NULL == (s = calloc(1, sizeof(struct strct))))
-			err(EXIT_FAILURE, NULL);
-		if (NULL == (s->name = strdup(p.last.string)))
-			err(EXIT_FAILURE, NULL);
-		if (NULL == (s->cname = strdup(s->name)))
-			err(EXIT_FAILURE, NULL);
-		for (caps = s->cname; '\0' != *caps; caps++)
-			*caps = toupper((int)*caps);
-
-		parse_point(&p, &s->pos);
-		TAILQ_INSERT_TAIL(q, s, entries);
-		TAILQ_INIT(&s->fq);
-		TAILQ_INIT(&s->sq);
-		TAILQ_INIT(&s->aq);
-		TAILQ_INIT(&s->uq);
-		TAILQ_INIT(&s->nq);
-		TAILQ_INIT(&s->dq);
-		parse_config_struct(&p, s);
+			parse_errx(&p, "expected struct name");
+		} else if (0 == strcasecmp(p.last.string, "enum")) {
+			if (TOK_IDENT == parse_next(&p)) {
+				parse_enum(&p);
+				continue;
+			}
+			parse_errx(&p, "expected struct name");
+		} else
+			parse_errx(&p, "unknown top-level type");
 	}
 
 	if (TAILQ_EMPTY(q)) {

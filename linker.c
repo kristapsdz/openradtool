@@ -637,7 +637,7 @@ resolve_unique(struct unique *u)
 }
 
 int
-parse_link(struct strctq *q)
+parse_link(struct config *cfg)
 {
 	struct update	 *u;
 	struct strct	 *p;
@@ -652,7 +652,7 @@ parse_link(struct strctq *q)
 	 * While here, check for duplicate rowids.
 	 */
 
-	TAILQ_FOREACH(p, q, entries) {
+	TAILQ_FOREACH(p, &cfg->sq, entries) {
 		hasrowid = 0;
 		TAILQ_FOREACH(f, &p->fq, entries) {
 			if (FIELD_ROWID & f->flags)
@@ -661,7 +661,7 @@ parse_link(struct strctq *q)
 			if (NULL == f->ref)
 				continue;
 			if ( ! resolve_field_source(f->ref, p) ||
-			     ! resolve_field_target(f->ref, q) ||
+			     ! resolve_field_target(f->ref, &cfg->sq) ||
 			     ! linkref(f->ref) ||
 			     ! checktargettype(f->ref))
 				return(0);
@@ -678,7 +678,7 @@ parse_link(struct strctq *q)
 
 	/* Check for reference recursion. */
 
-	TAILQ_FOREACH(p, q, entries)
+	TAILQ_FOREACH(p, &cfg->sq, entries)
 		TAILQ_FOREACH(f, &p->fq, entries)
 			if (FTYPE_STRUCT == f->type) {
 				if (check_recursive(f->ref, p))
@@ -697,7 +697,7 @@ parse_link(struct strctq *q)
 	 * structures in the header file.
 	 */
 
-	TAILQ_FOREACH(p, q, entries) {
+	TAILQ_FOREACH(p, &cfg->sq, entries) {
 		sz++;
 		if (p->colour)
 			continue;
@@ -719,17 +719,17 @@ parse_link(struct strctq *q)
 	 */
 
 	i = 0;
-	TAILQ_FOREACH(p, q, entries)
+	TAILQ_FOREACH(p, &cfg->sq, entries)
 		resolve_aliases(p, p, &i, NULL);
 
 	/* Resolve search terms. */
 
-	TAILQ_FOREACH(p, q, entries)
+	TAILQ_FOREACH(p, &cfg->sq, entries)
 		TAILQ_FOREACH(srch, &p->sq, entries)
 			if ( ! resolve_search(srch))
 				return(0);
 
-	TAILQ_FOREACH(p, q, entries)
+	TAILQ_FOREACH(p, &cfg->sq, entries)
 		TAILQ_FOREACH(n, &p->nq, entries)
 			if ( ! resolve_unique(n) ||
 			     ! check_unique(n))
@@ -737,7 +737,7 @@ parse_link(struct strctq *q)
 
 	/* See if our search type is wonky. */
 
-	TAILQ_FOREACH(p, q, entries)
+	TAILQ_FOREACH(p, &cfg->sq, entries)
 		if ( ! check_searchtype(p))
 			return(0);
 
@@ -751,15 +751,15 @@ parse_link(struct strctq *q)
 		err(EXIT_FAILURE, NULL);
 
 	i = 0;
-	while (NULL != (p = TAILQ_FIRST(q))) {
-		TAILQ_REMOVE(q, p, entries);
+	while (NULL != (p = TAILQ_FIRST(&cfg->sq))) {
+		TAILQ_REMOVE(&cfg->sq, p, entries);
 		assert(i < sz);
 		pa[i++] = p;
 	}
 	assert(i == sz);
 	qsort(pa, sz, sizeof(struct strct *), parse_cmp);
 	for (i = 0; i < sz; i++)
-		TAILQ_INSERT_HEAD(q, pa[i], entries);
+		TAILQ_INSERT_HEAD(&cfg->sq, pa[i], entries);
 
 	free(pa);
 	return(1);

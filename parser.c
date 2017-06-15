@@ -1686,7 +1686,13 @@ parse_enum(struct parse *p, struct enmq *q)
 	struct enm	*e;
 	char		*caps;
 
-	/* Disallow bad names. */
+	/* Disallow duplicate and bad names. */
+
+	TAILQ_FOREACH(e, q, entries)
+		if (0 == strcasecmp(e->name, p->last.string)) {
+			parse_errx(p, "duplicate name");
+			return;
+		}
 
 	if ( ! check_badidents(p, p->last.string))
 		return;

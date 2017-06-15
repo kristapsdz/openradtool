@@ -1007,6 +1007,7 @@ parse_field(struct parse *p, struct field *fd)
 	}
 	/* enum */
 	if (0 == strcasecmp(p->last.string, "enum")) {
+		fd->type = FTYPE_ENUM;
 		parse_field_enum(p, fd);
 		parse_config_field_info(p, fd);
 		return;

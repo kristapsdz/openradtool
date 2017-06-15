@@ -26,6 +26,7 @@ enum	ftype {
 	FTYPE_PASSWORD, /* hashed password (text) */
 	FTYPE_EMAIL, /* email (text) */
 	FTYPE_STRUCT, /* only in C API (on reference) */
+	FTYPE_ENUM,
 	FTYPE__MAX
 };
 
@@ -383,7 +384,7 @@ int		 parse_link(struct config *);
 struct config	*parse_config(FILE *, const char *);
 void		 parse_free(struct config *);
 
-void		 gen_c_header(const struct strctq *, int, int);
+void		 gen_c_header(const struct config *, int, int);
 void		 gen_c_source(const struct strctq *, 
 			int, int, const char *);
 void		 gen_sql(const struct strctq *);

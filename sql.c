@@ -37,6 +37,7 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	"TEXT", /* FTYPE_PASSWORD */
 	"TEXT", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
+	"INTEGER", /* FTYPE_ENUM */
 };
 
 static void gen_warnx(const struct pos *, const char *, ...)

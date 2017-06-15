@@ -61,6 +61,7 @@ static	const char *const coltypes[FTYPE__MAX] = {
 	"ksql_stmt_str", /* FTYPE_PASSWORD */
 	"ksql_stmt_str", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
+	"ksql_stmt_int", /* FTYPE_ENUM */
 };
 
 static	const char *const puttypes[FTYPE__MAX] = {
@@ -72,6 +73,7 @@ static	const char *const puttypes[FTYPE__MAX] = {
 	NULL, /* FTYPE_PASSWORD (don't print) */
 	"kjson_putstringp", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
+	"kjson_putintp", /* FTYPE_ENUM */
 };
 
 /*
@@ -86,6 +88,7 @@ static	const char *const bindtypes[FTYPE__MAX] = {
 	"ksql_bind_str", /* FTYPE_PASSWORD */
 	"ksql_bind_str", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
+	"ksql_bind_int", /* FTYPE_ENUM */
 };
 
 /*
@@ -100,6 +103,7 @@ static	const char *const validtypes[FTYPE__MAX] = {
 	"kvalid_string", /* FTYPE_PASSWORD */
 	"kvalid_email", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
+	"kvalid_int", /* FTYPE_ENUM */
 };
 
 /*
@@ -817,6 +821,7 @@ gen_func_valid_types(const struct field *f, const struct fvalid *v)
 
 	assert(v->type < VALIDATE__MAX);
 	switch (f->type) {
+	case (FTYPE_ENUM):
 	case (FTYPE_EPOCH):
 	case (FTYPE_INT):
 		printf("\tif (p->parsed.i %s %" PRId64 ")\n"

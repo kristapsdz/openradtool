@@ -183,8 +183,9 @@ resolve_field_source(struct ref *ref, struct strct *s)
 		return(1);
 	}
 
-	warnx("%s.%s: unknown reference source", 
-		s->name, ref->sfield);
+	warnx("%s:%zu%zu: unknown reference target",
+		ref->parent->pos.fname, ref->parent->pos.line, 
+		ref->parent->pos.column);
 	return(0);
 }
 
@@ -215,9 +216,30 @@ resolve_field_target(struct ref *ref, struct strctq *q)
 			return(1);
 		}
 	}
+	warnx("%s:%zu%zu: unknown reference target",
+		ref->parent->pos.fname, ref->parent->pos.line, 
+		ref->parent->pos.column);
+	return(0);
+}
 
-	warnx("%s.%s: unknown reference target",
-		ref->tstrct, ref->tfield);
+/*
+ * Resolve an enumeration.
+ * This returns zero if the resolution fails, non-zero otherwise.
+ * In the success case, it sets the enumeration link.
+ */
+static int
+resolve_field_enum(struct eref *ref, struct enmq *q)
+{
+	struct enm	*e;
+
+	TAILQ_FOREACH(e, q, entries)
+		if (0 == strcasecmp(e->name, ref->ename)) {
+			ref->enm = e;
+			return(1);
+		}
+	warnx("%s:%zu:%zu: unknown enum reference",
+		ref->parent->pos.fname, ref->parent->pos.line, 
+		ref->parent->pos.column);
 	return(0);
 }
 
@@ -658,12 +680,14 @@ parse_link(struct config *cfg)
 			if (FIELD_ROWID & f->flags)
 				if ( ! checkrowid(f, hasrowid++))
 					return(0);
-			if (NULL == f->ref)
-				continue;
-			if ( ! resolve_field_source(f->ref, p) ||
+			if (NULL != f->ref &&
+			    (! resolve_field_source(f->ref, p) ||
 			     ! resolve_field_target(f->ref, &cfg->sq) ||
 			     ! linkref(f->ref) ||
-			     ! checktargettype(f->ref))
+			     ! checktargettype(f->ref)))
+				return(0);
+			if (NULL != f->eref &&
+			    ! resolve_field_enum(f->eref, &cfg->eq))
 				return(0);
 		}
 		TAILQ_FOREACH(u, &p->uq, entries)

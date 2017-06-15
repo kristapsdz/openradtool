@@ -86,12 +86,52 @@ struct	fvalid {
 TAILQ_HEAD(fvalidq, fvalid);
 
 /*
+ * A single item within an enumeration.
+ */
+struct	eitem {
+	char		  *name; /* item name */
+	int64_t		   value; /* numeric value */
+	char		  *doc; /* documentation */
+	struct pos	   pos; /* parse point */
+	struct enm	  *parent; /* parent enumeration */
+	TAILQ_ENTRY(eitem) entries;
+};
+
+TAILQ_HEAD(eitemq, eitem);
+
+/*
+ * An enumeration of possible values.
+ * These are used as field types.
+ */
+struct	enm {
+	char		*name; /* name of enumeration */
+	char		*cname; /* capitalised name */
+	char		*doc; /* documentation */
+	struct pos	 pos; /* parse point */
+	struct eitemq	 eq; /* items in enumeration */
+	TAILQ_ENTRY(enm) entries;
+};
+
+TAILQ_HEAD(enmq, enm);
+
+/*
+ * If a field is an enumeration type, this records the name of the
+ * enumeration; then, during linkage, the enumeration itself.
+ */
+struct	eref {
+	char		*ename; /* name of enumeration */
+	struct enm	*enm; /* enumeration (after linkage) */
+	struct field	*parent; /* up-reference */
+};
+
+/*
  * A field defining a database/struct mapping.
  * This can be either reflected in the database, in the C API, or both.
  */
 struct	field {
 	char		  *name; /* column name */
-	struct ref	  *ref; /* "foreign key" reference */
+	struct ref	  *ref; /* "foreign key" ref (or null) */
+	struct eref	  *eref;  /* enumeration ref (or null) */
 	char		  *doc; /* documentation */
 	struct pos	   pos; /* parse point */
 	enum ftype	   type; /* type of column */
@@ -313,35 +353,6 @@ struct	strct {
 };
 
 TAILQ_HEAD(strctq, strct);
-
-/*
- * A single item within an enumeration.
- */
-struct	eitem {
-	char		  *name; /* item name */
-	int64_t		   value; /* numeric value */
-	char		  *doc; /* documentation */
-	struct pos	   pos; /* parse point */
-	struct enm	  *parent; /* parent enumeration */
-	TAILQ_ENTRY(eitem) entries;
-};
-
-TAILQ_HEAD(eitemq, eitem);
-
-/*
- * An enumeration of possible values.
- * These are used as field types.
- */
-struct	enm {
-	char		*name; /* name of enumeration */
-	char		*cname; /* capitalised name */
-	char		*doc; /* documentation */
-	struct pos	 pos; /* parse point */
-	struct eitemq	 eq; /* items in enumeration */
-	TAILQ_ENTRY(enm) entries;
-};
-
-TAILQ_HEAD(enmq, enm);
 
 /*
  * Hold entire parse sequence results.

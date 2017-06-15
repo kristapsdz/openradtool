@@ -169,6 +169,26 @@ and
 for details
 .Pc .
 .Pp
+For each enumeration object in
+.Ar config ,
+.Nm
+generates a C
+.Dq enum
+with the name as the enumeration's unique name.
+The enumeration is then given a series of values for each item in the
+enumeration object.
+These are prefixed with the capitalised enumeration name, followed by an
+underscore, followed by the item name.
+For example, if the enumeration is named
+.Dq foo
+and the item is named
+.Dq bar ,
+the enumeration value will be
+.Dq FOO_bar .
+The enumeration constant is defined to be the item's value.
+So a value of 5 for the given item would produce
+.Dq FOO_bar = 5 .
+.Pp
 For each structure object in
 .Ar config ,
 .Nm
@@ -184,6 +204,8 @@ is defined, where
 is the name of the field.
 This field will be non-zero if the field was not null during access;
 otherwise it will be zero.
+If any fields are defined as enumerations, they will be given the
+enumeration type.
 .Pp
 If there are any list statements on the object, the structure has
 queue macros created for it as well.

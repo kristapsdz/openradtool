@@ -63,6 +63,10 @@ gen_strct_field(const struct field *p)
 	case (FTYPE_PASSWORD):
 		printf("\tchar\t*%s;\n", p->name);
 		break;
+	case (FTYPE_ENUM):
+		printf("\tenum %s %s;\n", 
+			p->eref->ename, p->name);
+		break;
 	default:
 		break;
 	}
@@ -412,7 +416,7 @@ gen_valid_enums(const struct strct *p)
  * If "valids" is non-zero, this generates the field validators.
  */
 void
-gen_c_header(const struct strctq *q, int json, int valids)
+gen_c_header(const struct config *cfg, int json, int valids)
 {
 	const struct strct *p;
 
@@ -425,7 +429,7 @@ gen_c_header(const struct strctq *q, int json, int valids)
 	       "DO NOT EDIT!");
 	puts("");
 
-	TAILQ_FOREACH(p, q, entries)
+	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_struct(p);
 
 	print_commentt(0, COMMENT_C,
@@ -435,7 +439,7 @@ gen_c_header(const struct strctq *q, int json, int valids)
 		"Each macro must be given a unique alias name.\n"
 		"This allows for doing multiple inner joins on the "
 		"same table.");
-	TAILQ_FOREACH(p, q, entries)
+	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_schema(p);
 
 	if (valids) {
@@ -446,7 +450,7 @@ gen_c_header(const struct strctq *q, int json, int valids)
 			"the structure and YYY is the field.\n"
 			"Only native types are listed.");
 		puts("enum\tvalid_keys {");
-		TAILQ_FOREACH(p, q, entries)
+		TAILQ_FOREACH(p, &cfg->sq, entries)
 			gen_valid_enums(p);
 		puts("\tVALID__MAX");
 		puts("};\n"
@@ -483,7 +487,7 @@ gen_c_header(const struct strctq *q, int json, int valids)
 	print_func_db_close(1);
 	puts("");
 
-	TAILQ_FOREACH(p, q, entries)
+	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_funcs(p, json, valids);
 
 	puts("__END_DECLS\n"

@@ -38,6 +38,7 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	"const char *", /* FTYPE_PASSWORD */
 	"const char *", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
+	NULL, /* FTYPE_ENUM */
 };
 
 static	const char *const optypes[OPTYPE__MAX] = {
@@ -84,7 +85,8 @@ print_func_db_close(int decl)
  * Returns the current position in the output line.
  */
 static int
-print_var(size_t pos, size_t col, enum ftype t, unsigned int flags)
+print_var(size_t pos, size_t col, 
+	const struct field *f, unsigned int flags)
 {
 
 	putchar(',');
@@ -96,11 +98,24 @@ print_var(size_t pos, size_t col, enum ftype t, unsigned int flags)
 		col++;
 	}
 
-	assert(NULL != ftypes[t]);
-	if (FTYPE_BLOB == t)
-		col += printf("size_t v%zu_sz, ", pos);
+	/* Handle enumeration first. */
 
-	col += printf("%s%sv%zu", ftypes[t], 
+	if (FTYPE_ENUM == f->type) {
+		col += printf("enum %s %sv%zu", f->eref->ename,
+			FIELD_NULL & flags ? "*" : "", pos);
+		return(col);
+	}
+
+	/* 
+	 * We don't have structures, so assert.
+	 * Then print blob size followed by data.
+	 */
+
+	assert(NULL != ftypes[f->type]);
+
+	if (FTYPE_BLOB == f->type)
+		col += printf("size_t v%zu_sz, ", pos);
+	col += printf("%s%sv%zu", ftypes[f->type], 
 		FIELD_NULL & flags ?  "*" : "", pos);
 
 	return(col);
@@ -144,14 +159,13 @@ print_func_db_update(const struct update *u, int decl)
 
 	TAILQ_FOREACH(ur, &u->mrq, entries)
 		col = print_var(pos++, col, 
-			ur->field->type, ur->field->flags);
+			ur->field, ur->field->flags);
 
 	/* Don't accept input for unary operation. */
 
 	TAILQ_FOREACH(ur, &u->crq, entries)
 		if ( ! OPTYPE_ISUNARY(ur->op))
-			col = print_var(pos++, col, 
-				ur->field->type, 0);
+			col = print_var(pos++, col, ur->field, 0);
 
 	printf(")%s", decl ? ";\n" : "");
 }
@@ -205,7 +219,7 @@ print_func_db_search(const struct search *s, int decl)
 		if (OPTYPE_ISUNARY(sent->op))
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
-		col = print_var(pos++, col, sr->field->type, 0);
+		col = print_var(pos++, col, sr->field, 0);
 	}
 
 	printf(")%s", decl ? ";\n" : "");
@@ -229,7 +243,7 @@ print_func_db_insert(const struct strct *p, int decl)
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if ( ! (FTYPE_STRUCT == f->type ||
 		        FIELD_ROWID & f->flags))
-			col = print_var(pos++, col, f->type, f->flags);
+			col = print_var(pos++, col, f, f->flags);
 
 	printf(")%s", decl ? ";\n" : "");
 }

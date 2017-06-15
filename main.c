@@ -167,7 +167,7 @@ main(int argc, char *argv[])
 	if (OP_C_SOURCE == op)
 		gen_c_source(&cfg->sq, json, valids, header);
 	else if (OP_C_HEADER == op)
-		gen_c_header(&cfg->sq, json, valids);
+		gen_c_header(cfg, json, valids);
 	else if (OP_SQL == op)
 		gen_sql(&cfg->sq);
 	else if (OP_DIFF == op)

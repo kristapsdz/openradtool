@@ -852,6 +852,7 @@ gen_func_valids(const struct strct *p)
 {
 	const struct field *f;
 	const struct fvalid *v;
+	const struct eitem *ei;
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_STRUCT == f->type)
@@ -862,6 +863,20 @@ gen_func_valids(const struct strct *p)
 			printf("\tif ( ! %s(p))\n"
 			       "\t\treturn(0);\n",
 			       validtypes[f->type]);
+
+		/* Enumeration: check against knowns. */
+
+		if (FTYPE_ENUM == f->type) {
+			puts("\tswitch(p->parsed.i) {");
+			TAILQ_FOREACH(ei, &f->eref->enm->eq, entries)
+				printf("\t\tcase %" PRId64 ":\n",
+					ei->value);
+			puts("\t\t\tbreak;\n"
+			     "\t\tdefault:\n"
+			     "\t\t\treturn(0);\n"
+			     "\t}");
+		}
+
 		TAILQ_FOREACH(v, &f->fvq, entries) 
 			gen_func_valid_types(f, v);
 		puts("\treturn(1);");

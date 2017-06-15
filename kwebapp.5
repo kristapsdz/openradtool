@@ -29,7 +29,8 @@ to generate C source and header files that drive a database.
 It is a free-form (white-space is not significant beyond separating
 tokens) configuration language with the following rough structure:
 .Bd -literal -offset indent
-[ "struct" structname
+config :== [ enum | struct ]+
+struct :== "struct" structname
   "{"
     [ "field" fielddata ";" ]+
     [ searchtype searchdata ";" ]*
@@ -38,12 +39,18 @@ tokens) configuration language with the following rough structure:
     [ "unique" uniquedata ";" ]*
     [ "comment" quoted_string ";" ]?
   "};"
-]+
+enum :== "enum" enumname
+  "{"
+    [ "item" enumdata ";" ]+
+    [ "comment" quoted_string ";" ]?
+  "};"
 .Ed
 .Pp
-In simple language, one or more structure definitions, each containing
-one or more fields and auxiliary structure data (search and update
-specifications, etc.).
+In simple language, one or more structure definitions and zero or more
+enumerations.
+.Pp
+Each structure containing one or more fields and auxiliary structure
+data (search and update specifications, etc.).
 In
 .Nm ,
 structures and fields are collectively called
@@ -53,6 +60,11 @@ A structure, documented in
 .Sx Structures ,
 is a database table or C struct; whereas a field is a column or a struct
 member.
+.Pp
+Enumerations, documented in
+.Sx Enumerations ,
+define fixed constants used in field definitions.
+They're used only for validation.
 .Pp
 In this document, an
 .Dq identifier
@@ -135,6 +147,7 @@ may be one of
 .Cm real ,
 .Cm blob ,
 .Cm int ,
+.Cm enum ,
 .Cm epoch ,
 .Cm text ,
 .Cm email ,
@@ -145,12 +158,21 @@ Except for
 these are
 .Dq native
 types mapping into doubles, sized buffers, 64-bit integers,
+an enumeration (see below),
 .Vt time_t
 values (64-bit integer alias) and nil-terminated character strings,
 respectively.
 (The
 .Cm email
 type is text with extra validation.)
+.Pp
+The
+.Cm enum
+type is followed by the enumeration name, and is represented in the C
+API as the given enumeration and in SQL as an integer.
+See
+.Sx Enumerations
+for more documentation.
 .Pp
 The
 .Cm password
@@ -187,7 +209,7 @@ The
 .Cm typeinfo
 may consist of the following:
 .Bd -literal -offset indent
-"rowid" | "null" | "unique" | "noexport" | 
+"rowid" | "null" | "unique" | "noexport" |
 "limit" limit_op limit_val | "comment" quoted_string
 .Ed
 .Pp
@@ -241,6 +263,29 @@ For numeric types, it's the value itself.
 The given value must match the field type: an integer (which may be
 signed) for integers, integer or real-valued for real, or a positive
 integer for lengths.
+.Ss Enumerations
+Enumerations are top-level objects in
+.Nm
+and are used to create constant values or validation.
+They are defined as follows:
+.Bd -literal -offset indent
+"enum" enumname
+  "{"
+    [ "item" name value [ comment quoted_string ]? ";" ]+
+    [ "comment" quoted_string ";" ]?
+  "};"
+.Ed
+.Pp
+The enumeration
+.Cm enumname
+must be unique.
+The
+.Cm name
+must be unique within an enumeration.
+The
+.Cm value
+is the named constant's value expressed as an integer.
+It must also be unique within the enumeration object.
 .Ss Comments
 Each
 .Nm

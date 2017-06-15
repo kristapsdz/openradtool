@@ -794,7 +794,7 @@ static void
 parse_config_field_info(struct parse *p, struct field *fd)
 {
 
-	while (TOK_ERR != p->lasttype && TOK_EOF != p->lasttype) {
+	while ( ! PARSE_STOP(p)) {
 		if (TOK_SEMICOLON == parse_next(p))
 			break;
 		if (TOK_IDENT != p->lasttype) {
@@ -873,6 +873,27 @@ parse_config_field_info(struct parse *p, struct field *fd)
 		} else
 			parse_errx(p, "unknown field info token");
 	}
+}
+
+/*
+ * Parse information about an enumeration type.
+ * This just includes the enumeration name.
+ */
+static void
+parse_field_enum(struct parse *p, struct field *fd)
+{
+
+	if (TOK_IDENT != parse_next(p)) {
+		parse_errx(p, "expected enum name");
+		return;
+	}
+
+	if (NULL == (fd->eref = calloc(1, sizeof(struct eref))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (fd->eref->ename = strdup(p->last.string)))
+		err(EXIT_FAILURE, NULL);
+
+	fd->eref->parent = fd;
 }
 
 /*
@@ -981,6 +1002,12 @@ parse_field(struct parse *p, struct field *fd)
 	if (0 == strcasecmp(p->last.string, "password") ||
 	    0 == strcasecmp(p->last.string, "passwd")) {
 		fd->type = FTYPE_PASSWORD;
+		parse_config_field_info(p, fd);
+		return;
+	}
+	/* enum */
+	if (0 == strcasecmp(p->last.string, "enum")) {
+		parse_field_enum(p, fd);
 		parse_config_field_info(p, fd);
 		return;
 	}
@@ -1794,22 +1821,6 @@ error:
 }
 
 /*
- * Free a field reference.
- * Does nothing if "p" is NULL.
- */
-static void
-parse_free_ref(struct ref *p)
-{
-
-	if (NULL == p)
-		return;
-	free(p->sfield);
-	free(p->tfield);
-	free(p->tstrct);
-	free(p);
-}
-
-/*
  * Free a field entity.
  * Does nothing if "p" is NULL.
  */
@@ -1824,7 +1835,16 @@ parse_free_field(struct field *p)
 		TAILQ_REMOVE(&p->fvq, fv, entries);
 		free(fv);
 	}
-	parse_free_ref(p->ref);
+	if (NULL != p->ref) {
+		free(p->ref->sfield);
+		free(p->ref->tfield);
+		free(p->ref->tstrct);
+		free(p->ref);
+	}
+	if (NULL != p->eref) {
+		free(p->eref->ename);
+		free(p->eref);
+	}
 	free(p->doc);
 	free(p->name);
 	free(p);

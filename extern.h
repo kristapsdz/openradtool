@@ -26,7 +26,7 @@ enum	ftype {
 	FTYPE_PASSWORD, /* hashed password (text) */
 	FTYPE_EMAIL, /* email (text) */
 	FTYPE_STRUCT, /* only in C API (on reference) */
-	FTYPE_ENUM,
+	FTYPE_ENUM, /* enumeration (integer alias) */
 	FTYPE__MAX
 };
 

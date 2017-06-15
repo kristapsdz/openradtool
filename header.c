@@ -22,6 +22,7 @@
 #if HAVE_ERR
 # include <err.h>
 #endif
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -70,6 +71,29 @@ gen_strct_field(const struct field *p)
 	default:
 		break;
 	}
+}
+
+/*
+ * Generate our enumerations.
+ */
+static void
+gen_enum(const struct enm *e)
+{
+	const struct eitem *ei;
+
+	if (NULL != e->doc)
+		print_commentt(0, COMMENT_C, e->doc);
+
+	printf("enum\t%s {\n", e->name);
+	TAILQ_FOREACH(ei, &e->eq, entries) {
+		if (NULL != ei->doc)
+			print_commentt(1, COMMENT_C, ei->doc);
+		printf("\t%s_%s = %" PRId64 "%s\n",
+			e->cname, ei->name, ei->value, 
+			TAILQ_NEXT(ei, entries) ? "," : "");
+	}
+	puts("};\n"
+	     "");
 }
 
 /*
@@ -419,6 +443,7 @@ void
 gen_c_header(const struct config *cfg, int json, int valids)
 {
 	const struct strct *p;
+	const struct enm *e;
 
 	puts("#ifndef DB_H\n"
 	     "#define DB_H\n"
@@ -428,6 +453,9 @@ gen_c_header(const struct config *cfg, int json, int valids)
 	       "kwebapp " VERSION ".\n"
 	       "DO NOT EDIT!");
 	puts("");
+
+	TAILQ_FOREACH(e, &cfg->eq, entries)
+		gen_enum(e);
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_struct(p);

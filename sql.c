@@ -344,12 +344,88 @@ gen_diff_uniques_old(const struct strct *s, const struct strct *ds)
 	return(0 == errs);
 }
 
+/*
+ * Compare the enumeration objects in both files.
+ * This does the usual check of new <-> old, then old -> new.
+ * Returns the number of errors.
+ */
+static size_t
+gen_diff_enums(const struct config *cfg, const struct config *dcfg)
+{
+	const struct enm *e, *de;
+	const struct eitem *ei, *dei;
+	size_t	 errors = 0;
+
+	/*
+	 * First, compare the current to the old enumerations.
+	 * For enumerations found in both, error on disparities.
+	 */
+
+	TAILQ_FOREACH(e, &cfg->eq, entries) {
+		TAILQ_FOREACH(de, &dcfg->eq, entries)
+			if (0 == strcasecmp(e->name, de->name))
+				break;
+		if (NULL == de) {
+			gen_warnx(&e->pos, "new enumeration");
+			continue;
+		}
+		
+		/* Compare current to old entries. */
+
+		TAILQ_FOREACH(ei, &e->eq, entries) {
+			TAILQ_FOREACH(dei, &de->eq, entries)
+				if (0 == strcasecmp
+				    (ei->name, dei->name))
+					break;
+			if (NULL != dei && 
+			    ei->value != dei->value) {
+				gen_warnx(&ei->pos, "item "
+					"has changed value");
+				errors++;
+			} else if (NULL == dei)
+				gen_warnx(&ei->pos, "new item");
+		}
+
+		/* Compare old to current entries. */
+
+		TAILQ_FOREACH(dei, &de->eq, entries) {
+			TAILQ_FOREACH(ei, &e->eq, entries)
+				if (0 == strcasecmp
+				    (ei->name, dei->name))
+					break;
+			if (NULL != ei)
+				continue;
+			gen_warnx(&dei->pos, "lost old item");
+			errors++;
+		}
+	}
+
+	/*
+	 * Now we've compared enumerations that are new or already exist
+	 * between the two, so make sure we didn't lose any.
+	 */
+
+	TAILQ_FOREACH(de, &dcfg->eq, entries) {
+		TAILQ_FOREACH(e, &cfg->eq, entries)
+			if (0 == strcasecmp(e->name, de->name))
+				break;
+		if (NULL != e) 
+			continue;
+		gen_warnx(&de->pos, "lost old enumeration");
+		errors++;
+	}
+
+	return(errors);
+}
+
 int
-gen_diff(const struct strctq *sq, const struct strctq *dsq)
+gen_diff(const struct config *cfg, const struct config *dcfg)
 {
 	const struct strct *s, *ds;
 	size_t	 errors = 0;
 	int	 rc;
+
+	errors += gen_diff_enums(cfg, dcfg);
 
 	puts("PRAGMA foreign_keys=ON;\n"
 	     "");
@@ -362,8 +438,8 @@ gen_diff(const struct strctq *sq, const struct strctq *dsq)
 	 * We do this first to handle ADD COLUMN dependencies.
 	 */
 
-	TAILQ_FOREACH(s, sq, entries) {
-		TAILQ_FOREACH(ds, dsq, entries)
+	TAILQ_FOREACH(s, &cfg->sq, entries) {
+		TAILQ_FOREACH(ds, &dcfg->sq, entries)
 			if (0 == strcasecmp(s->name, ds->name))
 				break;
 		if (NULL == ds)
@@ -378,8 +454,8 @@ gen_diff(const struct strctq *sq, const struct strctq *dsq)
 	 * error.
 	 */
 
-	TAILQ_FOREACH(s, sq, entries) {
-		TAILQ_FOREACH(ds, dsq, entries)
+	TAILQ_FOREACH(s, &cfg->sq, entries) {
+		TAILQ_FOREACH(ds, &dcfg->sq, entries)
 			if (0 == strcasecmp(s->name, ds->name))
 				break;
 		if (NULL == ds)
@@ -396,8 +472,8 @@ gen_diff(const struct strctq *sq, const struct strctq *dsq)
 	 * Also see if there are old fields that are different.
 	 */
 
-	TAILQ_FOREACH(ds, dsq, entries) {
-		TAILQ_FOREACH(s, sq, entries)
+	TAILQ_FOREACH(ds, &dcfg->sq, entries) {
+		TAILQ_FOREACH(s, &cfg->sq, entries)
 			if (0 == strcasecmp(s->name, ds->name))
 				break;
 		if (NULL == s) {
@@ -414,14 +490,14 @@ gen_diff(const struct strctq *sq, const struct strctq *dsq)
 	 * Obviously this is only for matching table entries.
 	 */
 
-	TAILQ_FOREACH(s, sq, entries) 
-		TAILQ_FOREACH(ds, dsq, entries) {
+	TAILQ_FOREACH(s, &cfg->sq, entries) 
+		TAILQ_FOREACH(ds, &dcfg->sq, entries) {
 			if (strcasecmp(s->name, ds->name))
 				continue;
 			errors += ! gen_diff_uniques_new(s, ds);
 		}
-	TAILQ_FOREACH(ds, dsq, entries) 
-		TAILQ_FOREACH(s, sq, entries) {
+	TAILQ_FOREACH(ds, &dcfg->sq, entries) 
+		TAILQ_FOREACH(s, &cfg->sq, entries) {
 			if (strcasecmp(s->name, ds->name))
 				continue;
 			errors += ! gen_diff_uniques_old(s, ds);

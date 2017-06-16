@@ -171,7 +171,7 @@ main(int argc, char *argv[])
 	else if (OP_SQL == op)
 		gen_sql(&cfg->sq);
 	else if (OP_DIFF == op)
-		rc = gen_diff(&cfg->sq, &dcfg->sq);
+		rc = gen_diff(cfg, dcfg);
 	else if (OP_JAVASCRIPT == op)
 		gen_javascript(&cfg->sq);
 

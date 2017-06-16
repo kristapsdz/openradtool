@@ -388,8 +388,8 @@ void		 gen_c_header(const struct config *, int, int);
 void		 gen_c_source(const struct strctq *, 
 			int, int, const char *);
 void		 gen_sql(const struct strctq *);
-int		 gen_diff(const struct strctq *,
-			const struct strctq *);
+int		 gen_diff(const struct config *,
+			const struct config *);
 void		 gen_javascript(const struct strctq *);
 
 void		 print_commentt(size_t, enum cmtt, const char *);

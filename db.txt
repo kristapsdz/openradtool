@@ -8,12 +8,20 @@ struct company {
   comment "Controlling organisation.";
 };
 
+enum gender {
+  item male 0;
+  item female 1;
+  item other 2;
+};
+
 struct user {
   field company struct cid:company.id comment
     "This struct will be filled in from an inner join
     on the \"cid\" variable.";
   field cid int comment 
     "A foreign key reference.";
+  field gender enum gender comment
+    "User's gender.";
   field hash password limit gt 0 comment
     "Password hash.
     This is passed to inserts and updates as a password,

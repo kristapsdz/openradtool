@@ -2,6 +2,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.2.7</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-06-16">2017-06-16</time>
+		</header>
+		<aside>
+			<p>
+				Add <code>sqldiff</code> mode support for enumerations.
+				This makes sure that enumeration objects are consistent (non-destructive) across configurations.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.2.6</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-06-15">2017-06-15</time>

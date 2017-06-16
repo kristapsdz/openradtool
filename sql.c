@@ -379,8 +379,8 @@ gen_diff_enums(const struct config *cfg, const struct config *dcfg)
 					break;
 			if (NULL != dei && 
 			    ei->value != dei->value) {
-				gen_warnx(&ei->pos, "item "
-					"has changed value");
+				diff_warnx(&ei->pos, &dei->pos,
+					"item has changed value");
 				errors++;
 			} else if (NULL == dei)
 				gen_warnx(&ei->pos, "new item");

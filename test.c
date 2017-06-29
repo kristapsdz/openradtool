@@ -51,7 +51,7 @@ main(void)
 
 	/* Now insert our initial user. */
 
-	uid = db_user_insert(sql, cid, 
+	uid = db_user_insert(sql, cid, GENDER_male,
 		"password", "foo@foo.com", strlen(buf), 
 		(const void **)&buf, "foo bar");
 	if (uid < 0)
@@ -62,7 +62,7 @@ main(void)
 	 * This should fail because the e-mail is unique.
 	 */
 
-	nuid = db_user_insert(sql, cid, 
+	nuid = db_user_insert(sql, cid, GENDER_male,
 		"password", "foo@foo.com", 0, NULL, "foo bar");
 	if (nuid >= 0)
 		errx(EXIT_FAILURE, "db_user_insert (duplicate)");

@@ -44,7 +44,8 @@ main(int argc, char *argv[])
 	const char	*confile = NULL, *dconfile = NULL,
 	      		*header = NULL;
 	struct config	*cfg, *dcfg = NULL;
-	int		 c, rc = 1, json = 0, valids = 0;
+	int		 c, rc = 1, json = 0, valids = 0,
+			 splitproc = 0;
 	enum op		 op = OP_NOOP;
 
 #if HAVE_PLEDGE
@@ -73,16 +74,12 @@ main(int argc, char *argv[])
 		case ('F'):
 			if (0 == strcmp(optarg, "json"))
 				json = 1;
+			else if (0 == strcmp(optarg, "splitproc"))
+				splitproc = 1;
 			else if (0 == strcmp(optarg, "valids"))
 				valids = 1;
 			else
 				goto usage;
-			break;
-		case ('j'):
-			json = 1;
-			break;
-		case ('v'):
-			valids = 1;
 			break;
 		default:
 			goto usage;
@@ -129,9 +126,11 @@ main(int argc, char *argv[])
 #endif
 
 	if (json && (OP_C_HEADER != op && OP_C_SOURCE != op)) 
-		warnx("-Fjson meaningless with non-C output");
+		warnx("-Fjson invalid with non-C output");
+	if (splitproc && OP_C_SOURCE != op)
+		warnx("-Fsplitproc invalid with non-C source output");
 	if (valids && (OP_C_HEADER != op && OP_C_SOURCE != op)) 
-		warnx("-Fvalids meaningless with non-C output");
+		warnx("-Fvalids invalid with non-C output");
 
 	/*
 	 * First, parse the file.
@@ -165,7 +164,8 @@ main(int argc, char *argv[])
 	/* Finally, (optionally) generate output. */
 
 	if (OP_C_SOURCE == op)
-		gen_c_source(&cfg->sq, json, valids, header);
+		gen_c_source(&cfg->sq, json, 
+			valids, splitproc, header);
 	else if (OP_C_HEADER == op)
 		gen_c_header(cfg, json, valids);
 	else if (OP_SQL == op)

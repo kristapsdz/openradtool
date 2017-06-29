@@ -85,6 +85,12 @@ and
 .Fl O Ns Ar cheader
 output (requires linking to
 .Xr kcgi 3 ) .
+The
+.Ar splitproc
+choice causes
+.Fl O Ns Ar csource
+to use a split-process database model (see
+.Xr ksql_alloc_child 3 ) .
 .It Fl O Ar output
 Choose the type of output.
 Choices are
@@ -329,6 +335,9 @@ Open a database in
 .Dq safe exit
 mode as documented in
 .Xr ksql 3 .
+If
+.Fl F Ns Ar splitproc
+is specified, this uses the split-process model.
 Also installs the default logging facilities.
 .It Fn db_close
 Closes a database opened by

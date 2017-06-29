@@ -385,8 +385,14 @@ gen_strct_func_list(const struct search *s, size_t num)
 	     "");
 }
 
+/*
+ * Generate database opening.
+ * We don't use the generic invocation, as we want foreign keys.
+ * If "splitproc" is specified, use ksql_alloc_child instead of the
+ * usual allocation method.
+ */
 static void
-gen_func_open(void)
+gen_func_open(int splitproc)
 {
 
 	print_func_db_open(0);
@@ -399,8 +405,12 @@ gen_func_open(void)
 	     "\t\tKSQL_FOREIGN_KEYS | KSQL_SAFE_EXIT;\n"
 	     "\tcfg.err = ksqlitemsg;\n"
 	     "\tcfg.dberr = ksqlitedbmsg;\n"
-	     "\n"
-	     "\tif (NULL == (sql = ksql_alloc(&cfg)))\n"
+	     "");
+	if (splitproc)
+		puts("\tsql = ksql_alloc_child(&cfg, NULL, NULL);");
+	else
+		puts("\tsql = ksql_alloc(&cfg);");
+	puts("\tif (NULL == sql)\n"
 	     "\t\treturn(NULL);\n"
 	     "\tksql_open(sql, file);\n"
 	     "\treturn(sql);\n"
@@ -408,6 +418,9 @@ gen_func_open(void)
 	     "");
 }
 
+/*
+ * Close and free the database.
+ */
 static void
 gen_func_close(void)
 {
@@ -416,6 +429,7 @@ gen_func_close(void)
 	puts("{\n"
 	     "\tif (NULL == p)\n"
 	     "\t\treturn;\n"
+	     "\tksql_close(p);\n"
 	     "\tksql_free(p);\n"
 	     "}\n"
 	     "");
@@ -1350,8 +1364,8 @@ gen_valid_struct(const struct strct *p)
  * (Your header file, see gen_c_header, should have the same name.)
  */
 void
-gen_c_source(const struct strctq *q, 
-	int json, int valids, const char *header)
+gen_c_source(const struct strctq *q, int json, 
+	int valids, int splitproc, const char *header)
 {
 	const struct strct *p;
 
@@ -1440,7 +1454,7 @@ gen_c_source(const struct strctq *q,
 		"Finally, all of the functions we'll use.");
 	puts("");
 
-	gen_func_open();
+	gen_func_open(splitproc);
 	gen_func_close();
 
 	TAILQ_FOREACH(p, q, entries)

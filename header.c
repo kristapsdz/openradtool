@@ -438,9 +438,11 @@ gen_valid_enums(const struct strct *p)
  * Generate the C header file.
  * If "json" is non-zero, this generates the JSON formatters.
  * If "valids" is non-zero, this generates the field validators.
+ * For "splitproc", note that db_open uses ksql_alloc_child.
  */
 void
-gen_c_header(const struct config *cfg, int json, int valids)
+gen_c_header(const struct config *cfg, 
+	int json, int valids, int splitproc)
 {
 	const struct strct *p;
 	const struct enm *e;
@@ -499,13 +501,24 @@ gen_c_header(const struct config *cfg, int json, int valids)
 	     "__BEGIN_DECLS\n"
 	     "");
 
-	print_commentt(0, COMMENT_C,
+	print_commentt(0, COMMENT_C_FRAG_OPEN,
 		"Allocate and open the database in \"file\".\n"
 		"This returns a pointer to the database "
 		"in \"safe exit\" mode (see ksql(3)).\n"
 		"It returns NULL on memory allocation failure.\n"
 		"The returned pointer must be closed with "
 		"db_close().");
+	if (splitproc)
+		print_commentt(0, COMMENT_C_FRAG,
+			"Note: the database has been opened in a\n"
+			"child process, so the application may be\n"
+			"sandboxed liberally.");
+	else
+		print_commentt(0, COMMENT_C_FRAG,
+			"Note: if you're using a sandbox, you must\n"
+			"accommodate for the SQLite database within\n"
+			"process memory.");
+	print_commentt(0, COMMENT_C_FRAG_CLOSE, NULL);
 	print_func_db_open(1);
 	puts("");
 

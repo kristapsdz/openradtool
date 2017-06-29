@@ -127,8 +127,8 @@ main(int argc, char *argv[])
 
 	if (json && (OP_C_HEADER != op && OP_C_SOURCE != op)) 
 		warnx("-Fjson invalid with non-C output");
-	if (splitproc && OP_C_SOURCE != op)
-		warnx("-Fsplitproc invalid with non-C source output");
+	if (splitproc && (OP_C_HEADER != op && OP_C_SOURCE != op)) 
+		warnx("-Fsplitproc invalid with non-C output");
 	if (valids && (OP_C_HEADER != op && OP_C_SOURCE != op)) 
 		warnx("-Fvalids invalid with non-C output");
 
@@ -167,7 +167,7 @@ main(int argc, char *argv[])
 		gen_c_source(&cfg->sq, json, 
 			valids, splitproc, header);
 	else if (OP_C_HEADER == op)
-		gen_c_header(cfg, json, valids);
+		gen_c_header(cfg, json, valids, splitproc);
 	else if (OP_SQL == op)
 		gen_sql(&cfg->sq);
 	else if (OP_DIFF == op)

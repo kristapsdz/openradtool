@@ -1222,10 +1222,6 @@ gen_stmt(const struct strct *p)
 		gen_stmt_schema(p, p, NULL);
 		printf("\" FROM %s", p->name);
 		gen_stmt_joins(p, p, NULL);
-		if (TAILQ_EMPTY(&s->sntq)) {
-			puts("\",");
-			continue;
-		}
 		printf(" WHERE");
 		first = 1;
 		TAILQ_FOREACH(sent, &s->sntq, entries) {

@@ -197,14 +197,14 @@ print_func_db_search(const struct search *s, int decl)
 		col += printf("void%sdb_%s_iterate",
 			decl ? " " : "\n", s->parent->name);
 
-	if (NULL == s->name) {
+	if (NULL == s->name && ! TAILQ_EMPTY(&s->sntq)) {
 		col += printf("_by");
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
 			TAILQ_FOREACH(sr, &sent->srq, entries)
 				col += printf("_%s", sr->name);
 			col += printf("_%s", optypes[sent->op]);
 		}
-	} else 
+	} else if (NULL != s->name)
 		col += printf("_%s", s->name);
 
 	col += printf("(struct ksql *db");

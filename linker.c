@@ -529,6 +529,14 @@ check_searchtype(const struct strct *p)
 	const struct sref *sr;
 
 	TAILQ_FOREACH(srch, &p->sq, entries) {
+		if (STYPE_SEARCH == srch->type &&
+		    TAILQ_EMPTY(&srch->sntq)) {
+			warnx("%s:%zu:%zu: unique result search "
+				"without parameters",
+				srch->pos.fname, srch->pos.line,
+				srch->pos.column);
+			return(0);
+		}
 		if (SEARCH_IS_UNIQUE & srch->flags && 
 		    STYPE_SEARCH != srch->type) 
 			warnx("%s:%zu:%zu: multiple-result search "

@@ -283,6 +283,8 @@ they are passed into this functions as pointers.
 The null values must then be specified as
 .Dv NULL
 pointers.
+.It Fn db_foo_iterate
+Iterate over all rows.
 .It Fn db_foo_iterate_xxxx
 Like
 .Fn db_foo_get_xxxx ,
@@ -292,6 +294,8 @@ retrieved result.
 Like
 .Fn db_foo_get_by__xxxx_op1__yy_zz_op2 ,
 but invoking a function callback for the retrieved results.
+.It Fn db_foo_list
+Get a queue of all rows.
 .It Fn db_foo_list_xxxx
 Like
 .Fn db_foo_get_xxxx ,

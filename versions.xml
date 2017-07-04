@@ -2,6 +2,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.2.10</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-07-05">2017-07-05</time>
+		</header>
+		<aside>
+			<p>
+				Fix a bug that crept into the last release where iterate/list terms with an empty constraint set resulted in a
+				dangling <code>WHERE</code> in the generated SQL.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.2.9</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-07-04">2017-07-04</time>

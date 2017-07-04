@@ -1030,8 +1030,8 @@ parse_field(struct parse *p, struct field *fd)
 }
 
 /*
- * Parse the field used in a search.  This is the FIELD designation in
- * parse_config_search().
+ * Parse the field used in a search.
+ * This is the search_terms designation in parse_config_search().
  * This may consist of nested structures, which uses dot-notation to
  * signify the field within a field's reference structure.
  *
@@ -1040,15 +1040,18 @@ parse_field(struct parse *p, struct field *fd)
  * FIXME: disallow name "rowid".
  */
 static void
-parse_config_search_terms(struct parse *p, struct sent *sent)
+parse_config_search_terms(struct parse *p, struct search *srch)
 {
 	struct sref	*sf;
 	size_t		 sz;
+	struct sent	*sent;
 
-	if (TOK_IDENT != parse_next(p)) {
+	if (TOK_IDENT != p->lasttype) {
 		parse_errx(p, "expected field identifier");
 		return;
 	}
+
+	sent = sent_alloc(p, srch);
 	sref_alloc(p, p->last.string, sent);
 
 	while (TOK_ERR != p->lasttype && TOK_EOF != p->lasttype) {
@@ -1413,20 +1416,18 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 }
 
 /*
- * Parse a search clause.
- * This has the following syntax:
+ * Parse a search clause as follows:
  *
- *  "search" [ search_terms ]+ [":" search_params ]? ";"
+ *  "search" [ search_terms ]* [":" search_params ]? ";"
  *
- * The terms (searchable field) parts are parsed in
+ * The optional terms (searchable field) parts are parsed in
  * parse_config_search_terms().
- * The params are in parse_config_search_params().
+ * The optional params are in parse_config_search_params().
  */
 static void
 parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 {
 	struct search	*srch;
-	struct sent	*sent;
 
 	if (NULL == (srch = calloc(1, sizeof(struct search))))
 		err(EXIT_FAILURE, NULL);
@@ -1441,24 +1442,32 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 	else if (STYPE_ITERATE == stype)
 		s->flags |= STRCT_HAS_ITERATOR;
 
-	/* We need at least one search term. */
+	/*
+	 * If we have an identifier up next, then consider it the
+	 * prelude to a set of search terms.
+	 * If we don't, we either have a semicolon (end), a colon (start
+	 * of info), or error.
+	 */
 
-	sent = sent_alloc(p, srch);
-	parse_config_search_terms(p, sent);
-
-	/* Now for remaining terms... */
-
-	while (TOK_COMMA == p->lasttype) {
-		sent = sent_alloc(p, srch);
-		parse_config_search_terms(p, sent);
+	if (TOK_IDENT == parse_next(p)) {
+		parse_config_search_terms(p, srch);
+		/* Now for remaining terms... */
+		while (TOK_COMMA == p->lasttype) {
+			parse_next(p);
+			parse_config_search_terms(p, srch);
+		}
+	} else {
+		if (TOK_SEMICOLON == p->lasttype || PARSE_STOP(p))
+			return;
+		if (TOK_COLON != p->lasttype) {
+			parse_errx(p, "expected field identifier");
+			return;
+		}
 	}
 
 	if (TOK_COLON == p->lasttype)
 		parse_config_search_params(p, srch);
-
-	assert(TOK_SEMICOLON == p->lasttype ||
-	       (TOK_ERR == p->lasttype || 
-		TOK_EOF == p->lasttype));
+	assert(TOK_SEMICOLON == p->lasttype || PARSE_STOP(p));
 }
 
 /*

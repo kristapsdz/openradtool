@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: June 12 2017 $
+.Dd $Mdocdate: June 15 2017 $
 .Dt KWEBAPP 5
 .Os
 .Sh NAME
@@ -314,13 +314,16 @@ keywords, respectively.
 .Pp
 Searches are always by field, and may be followed by parameters:
 .Bd -literal -offset indent
-searchtype term [,term]* [":" [params]* ]? ";"
+searchtype [term [,term]*]? [":" [params]* ]? ";"
 .Ed
 .Pp
 Here,
 .Cm term
 consists of the possibly-nested field names to search for and an
 optional operator.
+(Searchers of type
+.Cm search
+require at least one field.)
 Nested fields are in dotted-notation:
 .Bd -literal -offset indent
 [structure.]*field [operator]?

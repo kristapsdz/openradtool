@@ -2,6 +2,25 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.2.11</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-07-06">2017-07-06</time>
+		</header>
+		<aside>
+			<p>
+				Add more power to the JavaScript output and clarify its operation.
+				First, clarify how the root DOM element is handled as to whether it can have classes to be filled in.
+				(Yes.)
+				Second, add a <code>fillInner()</code> function to handle cases where the root shouldn't be filled in.
+				Finally, add a <code>fillArray</code> that fills from an array of objects.
+				This removes the first element, clears the root element, then clones, fills in, and appends the first element
+				for all objects.
+				The <code>fillInner()</code> functionality comes in handy to protect nested objects from clobbering each other.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.2.10</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-07-05">2017-07-05</time>

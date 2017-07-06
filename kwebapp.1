@@ -479,7 +479,8 @@ To use the interface, simply include the generated file as a script,
 create objects given the JSON output of
 .Fl F Ns Ar json ,
 and invoke the object's
-.Fn fill
+.Fn fill ,
+.Fn fillInner ,
 and
 .Fn fillArray
 methods with the DOM tree node.
@@ -495,7 +496,7 @@ new foo(obj).fill(e);
 .Ed
 .Pp
 For each field in the structure, this method will operate on elements
-under the element with id
+within (and including) the element with id
 .Dq foo
 having classes as follows:
 .Bl -tag -width Ds
@@ -526,7 +527,18 @@ method on the nested structure at the given element and its descendents.
 This is only applicable for structure types.
 .El
 .Pp
-The JavaScript file is fully documented in the JSDoc format.
+Alternatively, the
+.Fn fillInner
+method may be used to exclude the root element.
+Lastly, the
+.Fn fillArray
+method invokes
+.Fn fill
+repeatedly over an array of objects by removing, then subsequently
+cloning and appending the first element of the give DOM root.
+.Pp
+The JavaScript methods and variables are fully documented in the JSDoc
+format.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

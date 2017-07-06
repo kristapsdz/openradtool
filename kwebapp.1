@@ -480,7 +480,9 @@ create objects given the JSON output of
 .Fl F Ns Ar json ,
 and invoke the object's
 .Fn fill
-method with the DOM tree node.
+and
+.Fn fillArray
+methods with the DOM tree node.
 Given a structure
 .Dq foo
 and an AJAX response
@@ -519,7 +521,7 @@ class if the object is null, otherwise remove the
 class.
 .It Li foo-xxxx-obj
 For structures, creates and invokes the
-.Fn fill
+.Fn fillInner
 method on the nested structure at the given element and its descendents.
 This is only applicable for structure types.
 .El

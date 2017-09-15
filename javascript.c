@@ -130,7 +130,7 @@ gen_javascript(const struct strctq *sq)
 	 * it); _replcl, which is like _attrcl but for _repl; _hide,
 	 * which adds the "hide" class to an element; and _show, which
 	 * removes the "hide" class.
-	 * These use _elemlist, which is like getElementsByClassName
+	 * These use _elemList, which is like getElementsByClassName
 	 * except that it also considers the root and returns an array,
 	 * not an HTMLCollection.
 	 */
@@ -150,12 +150,12 @@ gen_javascript(const struct strctq *sq)
 	     "\t\tvar list, i;\n"
 	     "\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
-	     "\t\tlist = _elemlist(e, name, inc);\n"
+	     "\t\tlist = _elemList(e, name, inc);\n"
 	     "\t\tfor (i = 0; i < list.length; i++)\n"
 	     "\t\t\t_attr(list[i], attr, text);\n"
 	     "\t}\n"
 	     "\n"
-	     "\tfunction _elemlist(e, cls, inc)\n"
+	     "\tfunction _elemList(e, cls, inc)\n"
 	     "\t{\n"
 	     "\t\tvar a = [], list, i;\n"
 	     "\t\tif (null === e)\n"
@@ -182,7 +182,7 @@ gen_javascript(const struct strctq *sq)
 	     "\t\tvar list, i;\n"
 	     "\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
-	     "\t\tlist = _elemlist(e, name, inc);\n"
+	     "\t\tlist = _elemList(e, name, inc);\n"
 	     "\t\tfor (i = 0; i < list.length; i++)\n"
 	     "\t\t\t_repl(list[i], text);\n"
 	     "\t}\n"
@@ -201,7 +201,7 @@ gen_javascript(const struct strctq *sq)
 	     "\t\tvar list, i;\n"
 	     "\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
-	     "\t\tlist = _elemlist(e, name, inc);\n"
+	     "\t\tlist = _elemList(e, name, inc);\n"
 	     "\t\tfor (i = 0; i < list.length; i++)\n"
 	     "\t\t\t_hide(list[i]);\n"
 	     "\t}\n"
@@ -220,7 +220,7 @@ gen_javascript(const struct strctq *sq)
 	     "\t\tvar list, i;\n"
 	     "\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
-	     "\t\tlist = _elemlist(e, name, inc);\n"
+	     "\t\tlist = _elemList(e, name, inc);\n"
 	     "\t\tfor (i = 0; i < list.length; i++)\n"
 	     "\t\t\t_show(list[i]);\n"
 	     "\t}\n"

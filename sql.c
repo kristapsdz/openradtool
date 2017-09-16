@@ -28,6 +28,18 @@
 
 #include "extern.h"
 
+static	const char *const realtypes[FTYPE__MAX] = {
+	"epoch", /* FTYPE_EPOCH */
+	"int", /* FTYPE_INT */
+	"real", /* FTYPE_REAL */
+	"blob", /* FTYPE_BLOB */
+	"text", /* FTYPE_TEXT */
+	"password", /* FTYPE_PASSWORD */
+	"email", /* FTYPE_EMAIL */
+	"struct", /* FTYPE_STRUCT */
+	"enum", /* FTYPE_ENUM */
+};
+
 static	const char *const ftypes[FTYPE__MAX] = {
 	"INTEGER", /* FTYPE_EPOCH */
 	"INTEGER", /* FTYPE_INT */
@@ -43,6 +55,9 @@ static	const char *const ftypes[FTYPE__MAX] = {
 static void gen_warnx(const struct pos *, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
 static void diff_warnx(const struct pos *,
+		const struct pos *, const char *, ...)
+	__attribute__((format(printf, 3, 4)));
+static void diff_errx(const struct pos *,
 		const struct pos *, const char *, ...)
 	__attribute__((format(printf, 3, 4)));
 
@@ -61,6 +76,23 @@ gen_warnx(const struct pos *pos, const char *fmt, ...)
 }
 
 static void
+diff_errx(const struct pos *posold, 
+	const struct pos *posnew, const char *fmt, ...)
+{
+	va_list	 ap;
+	char	 buf[1024];
+
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+
+	fprintf(stderr, "%s:%zu:%zu -> %s:%zu:%zu: error: %s\n", 
+		posold->fname, posold->line, posold->column, 
+		posnew->fname, posnew->line, posnew->column, 
+		buf);
+}
+
+static void
 diff_warnx(const struct pos *posold, 
 	const struct pos *posnew, const char *fmt, ...)
 {
@@ -71,7 +103,7 @@ diff_warnx(const struct pos *posold,
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 
-	fprintf(stderr, "%s:%zu:%zu -> %s:%zu:%zu: %s\n", 
+	fprintf(stderr, "%s:%zu:%zu -> %s:%zu:%zu: warning: %s\n", 
 		posold->fname, posold->line, posold->column, 
 		posnew->fname, posnew->line, posnew->column, 
 		buf);
@@ -187,38 +219,52 @@ gen_diff_field(const struct field *f, const struct field *df)
 {
 	int	 rc = 1;
 
+	/*
+	 * Type change.
+	 * We might change semantic types (e.g., enum to int), which is
+	 * not technically wrong because we'd still be an INTEGER, but
+	 * might have changed input expectations.
+	 * Thus, we warn in those cases, and error otherwise.
+	 */
+
 	if (f->type != df->type) {
-		if ((f->type == FTYPE_EPOCH &&
-		     df->type == FTYPE_INT) ||
-		    (f->type == FTYPE_INT &&
-		     df->type == FTYPE_EPOCH)) {
-			diff_warnx(&f->parent->pos, &df->parent->pos, 
-				"harmless type change between "
-				"epoch and integer");
+		if ((FTYPE_EPOCH == f->type ||
+		     FTYPE_INT == f->type ||
+		     FTYPE_ENUM == f->type) &&
+		    (FTYPE_EPOCH == df->type ||
+		     FTYPE_INT == df->type ||
+		     FTYPE_ENUM == df->type)) {
+			diff_warnx(&f->pos, &df->pos, 
+				"change between integer "
+				"alias types: %s to %s",
+				realtypes[f->type], 
+				realtypes[df->type]);
 		} else if ((f->type == FTYPE_TEXT &&
 			    df->type == FTYPE_EMAIL) ||
 			   (f->type == FTYPE_EMAIL &&
 			    df->type == FTYPE_TEXT)) {
-			diff_warnx(&f->parent->pos, &df->parent->pos, 
-				"harmless type change between "
-				"e-mail and text");
+			diff_warnx(&f->pos, &df->pos, 
+				"change between text "
+				"alias types: %s to %s",
+				realtypes[f->type], 
+				realtypes[df->type]);
 		} else { 
-			diff_warnx(&f->parent->pos, &df->parent->pos, 
-				"type change from %s to %s",
-				ftypes[df->type], ftypes[f->type]);
+			diff_errx(&f->pos, &df->pos, 
+				"type change: %s to %s",
+				realtypes[f->type], 
+				realtypes[df->type]);
 			rc = 0;
 		}
 	} 
 
 	if (f->flags != df->flags) {
-		diff_warnx(&f->parent->pos, &df->parent->pos,
-			"attribute change");
+		diff_errx(&f->pos, &df->pos, "attribute change");
 		rc = 0;
 	}
 
 	if ((NULL != f->ref && NULL == df->ref) ||
 	    (NULL == f->ref && NULL != df->ref)) {
-		diff_warnx(&f->parent->pos, &df->parent->pos,
+		diff_errx(&f->pos, &df->pos, 
 			"foreign reference change");
 		rc = 0;
 	}
@@ -226,7 +272,7 @@ gen_diff_field(const struct field *f, const struct field *df)
 	if (NULL != f->ref && NULL != df->ref &&
 	    (strcasecmp(f->ref->source->parent->name,
 			df->ref->source->parent->name))) {
-		diff_warnx(&f->parent->pos, &df->parent->pos,
+		diff_errx(&f->pos, &df->pos,
 			"foreign reference source change");
 		rc = 0;
 	}
@@ -379,7 +425,7 @@ gen_diff_enums(const struct config *cfg, const struct config *dcfg)
 					break;
 			if (NULL != dei && 
 			    ei->value != dei->value) {
-				diff_warnx(&ei->pos, &dei->pos,
+				diff_errx(&ei->pos, &dei->pos,
 					"item has changed value");
 				errors++;
 			} else if (NULL == dei)

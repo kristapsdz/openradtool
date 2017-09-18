@@ -2,6 +2,20 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.2.12</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-09-18">2017-09-18</time>
+		</header>
+		<aside>
+			<p>
+				Bug-fix generated JavaScript.
+				Also clarified some warnings and errors generated during the link phase.
+				Lastly, inherit <code>CFLAGS</code> during configuration and use <b>-Wextra</b> during compilation.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.2.11</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-07-06">2017-07-06</time>

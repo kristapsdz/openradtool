@@ -126,6 +126,18 @@ struct	eref {
 };
 
 /*
+ * Update/delete action.
+ * Defaults to UPACT_NONE (no special action).
+ */
+enum	upact {
+	UPACT_NONE = 0,
+	UPACT_RESTRICT,
+	UPACT_NULLIFY,
+	UPACT_CASCADE,
+	UPACT_DEFAULT
+};
+
+/*
  * A field defining a database/struct mapping.
  * This can be either reflected in the database, in the C API, or both.
  */
@@ -136,6 +148,8 @@ struct	field {
 	char		  *doc; /* documentation */
 	struct pos	   pos; /* parse point */
 	enum ftype	   type; /* type of column */
+	enum upact	   actdel; /* delete action */
+	enum upact	   actup; /* update action */
 	struct strct	  *parent; /* parent reference */
 	struct fvalidq	   fvq; /* validation */
 	unsigned int	   flags; /* flags */
@@ -312,18 +326,6 @@ enum	upt {
 };
 
 /*
- * Update/delete action.
- * Defaults to UPACT_NONE (no special action).
- */
-enum	upact {
-	UPACT_NONE = 0,
-	UPACT_RESTRICT,
-	UPACT_NULLIFY,
-	UPACT_CASCADE,
-	UPACT_DEFAULT
-};
-
-/*
  * A single update clause consisting of multiple fields to be modified
  * depending upon the constraint fields.
  */
@@ -333,7 +335,6 @@ struct	update {
 	char		   *name; /* named or NULL */
 	char		   *doc; /* documentation */
 	enum upt	    type; /* type of update */
-	enum upact	    action; /* delete/update action */
 	struct strct	   *parent; /* up-reference */
 	TAILQ_ENTRY(update) entries;
 };

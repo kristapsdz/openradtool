@@ -666,47 +666,6 @@ parse_comment(struct parse *p, char **doc)
 	return(1);
 }
 
-/*
- * Parse the linkage for a structure.
- * Its syntax is:
- *
- *   source_field:target_struct.target_field
- *
- * These are queried later in the linkage phase.
- */
-static void
-parse_config_field_struct(struct parse *p, struct ref *r)
-{
-
-	if (TOK_IDENT != parse_next(p)) {
-		parse_errx(p, "expected source field");
-		return;
-	} else if (NULL == (r->sfield = strdup(p->last.string)))
-		err(EXIT_FAILURE, NULL);
-	
-	if (TOK_COLON != parse_next(p)) {
-		parse_errx(p, "expected colon");
-		return;
-	}
-
-	if (TOK_IDENT != parse_next(p)) {
-		parse_errx(p, "expected struct table");
-		return;
-	} else if (NULL == (r->tstrct = strdup(p->last.string)))
-		err(EXIT_FAILURE, NULL);
-
-	if (TOK_PERIOD != parse_next(p)) {
-		parse_errx(p, "expected period");
-		return;
-	}
-
-	if (TOK_IDENT != parse_next(p)) {
-		parse_errx(p, "expected struct field");
-		return;
-	} else if (NULL == (r->tfield = strdup(p->last.string)))
-		err(EXIT_FAILURE, NULL);
-}
-
 static void
 parse_validate(struct parse *p, struct field *fd)
 {
@@ -779,6 +738,32 @@ parse_validate(struct parse *p, struct field *fd)
 	default:
 		abort();
 	}
+}
+
+/*
+ * Parse the action taken on a foreign key's delete or update.
+ * This can be one of none, restrict, nullify, cascade, or default.
+ */
+static void
+parse_action(struct parse *p, enum upact *act)
+{
+
+	*act = UPACT_NONE;
+
+	if (TOK_IDENT != parse_next(p))
+		parse_errx(p, "expected action");
+	else if (0 == strcasecmp(p->last.string, "none"))
+		*act = UPACT_NONE;
+	else if (0 == strcasecmp(p->last.string, "restrict"))
+		*act = UPACT_RESTRICT;
+	else if (0 == strcasecmp(p->last.string, "nullify"))
+		*act = UPACT_NULLIFY;
+	else if (0 == strcasecmp(p->last.string, "cascade"))
+		*act = UPACT_CASCADE;
+	else if (0 == strcasecmp(p->last.string, "default"))
+		*act = UPACT_DEFAULT;
+	else
+		parse_errx(p, "unknown action");
 }
 
 /*
@@ -870,6 +855,18 @@ parse_config_field_info(struct parse *p, struct field *fd)
 			fd->flags |= FIELD_NULL;
 		} else if (0 == strcasecmp(p->last.string, "comment")) {
 			parse_comment(p, &fd->doc);
+		} else if (0 == strcasecmp(p->last.string, "actup")) {
+			if (NULL == fd->ref || FTYPE_STRUCT == fd->type) {
+				parse_errx(p, "action on non-reference");
+				break;
+			}
+			parse_action(p, &fd->actup);
+		} else if (0 == strcasecmp(p->last.string, "actdel")) {
+			if (NULL == fd->ref || FTYPE_STRUCT == fd->type) {
+				parse_errx(p, "action on non-reference");
+				break;
+			}
+			parse_action(p, &fd->actdel);
 		} else
 			parse_errx(p, "unknown field info token");
 	}
@@ -905,8 +902,7 @@ parse_field_enum(struct parse *p, struct field *fd)
  * By default, fields are integers.  TYPE can be "int", "integer",
  * "text", or "txt".  
  * A reference clause triggers a foreign key reference.
- * The TYPEINFO depends upon the type and is processed by the
- * parse_config_field_struct() (for structs) but is always followed by
+ * The TYPEINFO depends upon the type and is processed by
  * parse_config_field_info().
  */
 static void
@@ -1019,13 +1015,21 @@ parse_field(struct parse *p, struct field *fd)
 	}
 
 	fd->type = FTYPE_STRUCT;
-	fd->ref = calloc(1, sizeof(struct ref));
-	if (NULL == fd->ref)
+
+	if (NULL != fd->ref) {
+		parse_errx(p, "reference cannot self-define target");
+		return;
+	} else if (NULL == (fd->ref = calloc(1, sizeof(struct ref))))
 		err(EXIT_FAILURE, NULL);
 
 	fd->ref->parent = fd;
 
-	parse_config_field_struct(p, fd->ref);
+	if (TOK_IDENT != parse_next(p)) {
+		parse_errx(p, "expected source field");
+		return;
+	} else if (NULL == (fd->ref->sfield = strdup(p->last.string)))
+		err(EXIT_FAILURE, NULL);
+
 	parse_config_field_info(p, fd);
 }
 
@@ -1263,30 +1267,6 @@ parse_config_unique(struct parse *p, struct strct *s)
 }
 
 /*
- * Parse the action taken on a delete or update.
- * This can be one of none, restrict, nullify, cascade, or default.
- */
-static void
-parse_action(struct parse *p, struct update *up)
-{
-
-	if (TOK_IDENT != parse_next(p))
-		parse_errx(p, "expected action");
-	else if (0 == strcasecmp(p->last.string, "none"))
-		up->action = UPACT_NONE;
-	else if (0 == strcasecmp(p->last.string, "restrict"))
-		up->action = UPACT_RESTRICT;
-	else if (0 == strcasecmp(p->last.string, "nullify"))
-		up->action = UPACT_NULLIFY;
-	else if (0 == strcasecmp(p->last.string, "cascade"))
-		up->action = UPACT_CASCADE;
-	else if (0 == strcasecmp(p->last.string, "default"))
-		up->action = UPACT_DEFAULT;
-	else
-		parse_errx(p, "unknown action");
-}
-
-/*
  * Parse an update clause.
  * This has the following syntax:
  *
@@ -1435,8 +1415,6 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 				err(EXIT_FAILURE, NULL);
 		} else if (0 == strcasecmp(p->last.string, "comment")) {
 			parse_comment(p, &up->doc);
-		} else if (0 == strcasecmp(p->last.string, "action")) {
-			parse_action(p, up);
 		} else
 			parse_errx(p, "unknown update parameter");
 	}

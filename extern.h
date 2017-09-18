@@ -312,6 +312,18 @@ enum	upt {
 };
 
 /*
+ * Update/delete action.
+ * Defaults to UPACT_NONE (no special action).
+ */
+enum	upact {
+	UPACT_NONE = 0,
+	UPACT_RESTRICT,
+	UPACT_NULLIFY,
+	UPACT_CASCADE,
+	UPACT_DEFAULT
+};
+
+/*
  * A single update clause consisting of multiple fields to be modified
  * depending upon the constraint fields.
  */
@@ -321,6 +333,7 @@ struct	update {
 	char		   *name; /* named or NULL */
 	char		   *doc; /* documentation */
 	enum upt	    type; /* type of update */
+	enum upact	    action; /* delete/update action */
 	struct strct	   *parent; /* up-reference */
 	TAILQ_ENTRY(update) entries;
 };

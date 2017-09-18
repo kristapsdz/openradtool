@@ -1263,12 +1263,37 @@ parse_config_unique(struct parse *p, struct strct *s)
 }
 
 /*
+ * Parse the action taken on a delete or update.
+ * This can be one of none, restrict, nullify, cascade, or default.
+ */
+static void
+parse_action(struct parse *p, struct update *up)
+{
+
+	if (TOK_IDENT != parse_next(p))
+		parse_errx(p, "expected action");
+	else if (0 == strcasecmp(p->last.string, "none"))
+		up->action = UPACT_NONE;
+	else if (0 == strcasecmp(p->last.string, "restrict"))
+		up->action = UPACT_RESTRICT;
+	else if (0 == strcasecmp(p->last.string, "nullify"))
+		up->action = UPACT_NULLIFY;
+	else if (0 == strcasecmp(p->last.string, "cascade"))
+		up->action = UPACT_CASCADE;
+	else if (0 == strcasecmp(p->last.string, "default"))
+		up->action = UPACT_DEFAULT;
+	else
+		parse_errx(p, "unknown action");
+}
+
+/*
  * Parse an update clause.
  * This has the following syntax:
  *
  *  "update" [ ufield [,ufield]* ]?
  *       ":" sfield [,sfield]*
- *     [ ":" [ "name" name | "comment" quoted_string ]* ] ?
+ *     [ ":" [ "name" name | "comment" quoted_string |
+ *     	       "action" action ]* ] ?
  *       ";"
  *
  * The fields ("ufield" for update field and "sfield" for select field)
@@ -1410,6 +1435,8 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 				err(EXIT_FAILURE, NULL);
 		} else if (0 == strcasecmp(p->last.string, "comment")) {
 			parse_comment(p, &up->doc);
+		} else if (0 == strcasecmp(p->last.string, "action")) {
+			parse_action(p, up);
 		} else
 			parse_errx(p, "unknown update parameter");
 	}

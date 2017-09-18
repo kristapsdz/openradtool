@@ -350,6 +350,10 @@ gen_javascript(const struct strctq *sq)
 		     "\t\t\t}\n"
 		     "\t\t};");
 
+		/*puts("\t\tthis.prepareForm(e) {");
+		TAILQ_FOREACH(f, &s->fq, entries) {
+		}*/
+
 		puts("\t}\n"
 		     "");
 	}

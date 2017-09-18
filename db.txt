@@ -15,10 +15,10 @@ enum gender {
 };
 
 struct user {
-  field company struct cid:company.id comment
+  field company struct cid comment
     "This struct will be filled in from an inner join
     on the \"cid\" variable.";
-  field cid int comment 
+  field cid:company.id int comment 
     "A foreign key reference.";
   field gender enum gender comment
     "User's gender.";
@@ -50,8 +50,8 @@ struct user {
 };
 
 struct session { 
-  field user struct userid:user.uid;
-  field userid int comment "Associated user.";
+  field user struct userid;
+  field userid:user.uid int comment "Associated user.";
   field token int comment "Random cookie.";
   field mtime epoch;
   field id int rowid;

@@ -23,11 +23,30 @@
 # include <err.h>
 #endif
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "extern.h"
+
+static void gen_errx(const struct pos *, const char *, ...)
+	__attribute__((format(printf, 2, 3)));
+
+static void
+gen_errx(const struct pos *pos, const char *fmt, ...)
+{
+	va_list	 ap;
+	char	 buf[1024];
+
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+
+	fprintf(stderr, "%s:%zu:%zu: error: %s\n", 
+		pos->fname, pos->line, pos->column, buf);
+}
+
 
 /*
  * Check that a given row identifier is valid.
@@ -38,188 +57,123 @@ static int
 checkrowid(const struct field *f, int hasrowid)
 {
 
-	if (hasrowid) {
-		warnx("%s.%s: multiple rowids on "
-			"structure", f->parent->name, f->name);
-		return(0);
-	}
-
-	if (FTYPE_STRUCT == f->type) {
-		warnx("%s.%s: rowid on non-native field"
-			"type", f->parent->name, f->name);
-		return(0);
-	}
-
-	return(1);
-}
-
-/*
- * Reference rules: we can't reference from or to a struct, nor can the
- * target and source be of a different type.
- */
-static int
-checktargettype(const struct ref *ref)
-{
-
-	/* Our actual reference objects may not be structs. */
-
-	if (FTYPE_STRUCT == ref->target->type ||
-	    FTYPE_STRUCT == ref->source->type) {
-		warnx("%s.%s: referencing a struct",
-			ref->parent->parent->name,
-			ref->parent->name);
-		return(0);
-	} 
-
-	/* Our reference objects must have equivalent types. */
-
-	if (ref->source->type != ref->target->type) {
-		warnx("%s.%s: referencing a different type",
-			ref->parent->parent->name,
-			ref->parent->name);
-		return(0);
-	}
-
-	if ( ! (FIELD_ROWID & ref->target->flags)) 
-		warnx("%s.%s: referenced target %s.%s is not "
-			"a unique field",
-			ref->parent->parent->name,
-			ref->parent->name,
-			ref->target->parent->name,
-			ref->target->name);
-
-	return(1);
-}
-
-/*
- * When we're parsing a structure's reference, we need to create the
- * referring information to the source field, which is the actual
- * reference itself.
- * Return zero on failure, non-zero on success.
- */
-static int
-linkref(struct ref *ref)
-{
-
-	assert(NULL != ref->parent);
-	assert(NULL != ref->source);
-	assert(NULL != ref->target);
-
-	if (FTYPE_STRUCT != ref->parent->type)
+	if (hasrowid)
+		gen_errx(&f->pos, "multiple rowids");
+	else if (FTYPE_STRUCT == f->type)
+		gen_errx(&f->pos, "rowid on non-native type");
+	else
 		return(1);
 
-	/*
-	 * If our source field is already a reference, make sure it
-	 * points to the same thing we point to.
-	 * Otherwise, it's an error.
-	 */
-
-	if (NULL != ref->source->ref &&
-	    (strcasecmp(ref->tfield, ref->source->ref->tfield) ||
-	     strcasecmp(ref->tstrct, ref->source->ref->tstrct))) {
-		warnx("%s.%s: redeclaration of reference",
-			ref->parent->parent->name,
-			ref->parent->name);
-		return(0);
-	} else if (NULL != ref->source->ref)
-		return(1);
-
-	/* Make sure that the target is a rowid and not null. */
-
-	if ( ! (FIELD_ROWID & ref->target->flags)) {
-		warnx("%s.%s: target is not a rowid",
-			ref->target->parent->name,
-			ref->target->name);
-		return(0);
-	} else if (FIELD_NULL & ref->target->flags) {
-		warnx("%s.%s: target can't be null",
-			ref->target->parent->name,
-			ref->target->name);
-		return(0);
-	}
-
-	/* Create linkage. */
-
-	ref->source->ref = calloc(1, sizeof(struct ref));
-	if (NULL == ref->source->ref)
-		err(EXIT_FAILURE, NULL);
-
-	ref->source->ref->parent = ref->source;
-	ref->source->ref->source = ref->source;
-	ref->source->ref->target = ref->target;
-
-	ref->source->ref->sfield = strdup(ref->sfield);
-	ref->source->ref->tfield = strdup(ref->tfield);
-	ref->source->ref->tstrct = strdup(ref->tstrct);
-
-	if (NULL == ref->source->ref->sfield ||
-	    NULL == ref->source->ref->tfield ||
-	    NULL == ref->source->ref->tstrct)
-		err(EXIT_FAILURE, NULL);
-
-	return(1);
+	return(0);
 }
 
 /*
  * Check the source field (case insensitive).
+ * This applies to all reference types, "struct" and otherwise.
  * Return zero on failure, non-zero on success.
- * On success, this sets the "source" field for the referrent.
+ * On success, this sets the "source" field for the referrer.
  */
 static int
-resolve_field_source(struct ref *ref, struct strct *s)
+resolve_field_source(struct field *f)
 {
-	struct field	*f;
+	struct field	*ff;
 
-	if (NULL != ref->source)
-		return(1);
+	assert(NULL == f->ref->source);
+	assert(NULL == f->ref->target);
 
-	assert(NULL == ref->source);
-	assert(NULL == ref->target);
-
-	TAILQ_FOREACH(f, &s->fq, entries) {
-		if (strcasecmp(f->name, ref->sfield))
-			continue;
-		ref->source = f;
+	if (FTYPE_STRUCT != f->type) {
+		/* 
+		 * This is a non-struct reference, where the sfield is
+		 * going to be the field name itself.
+		 * We also know that it's valid, so no need to check
+		 * more.
+		 */
+		assert(0 == strcmp(f->name, f->ref->sfield));
+		f->ref->source = f;
 		return(1);
 	}
 
-	warnx("%s:%zu%zu: unknown reference target",
-		ref->parent->pos.fname, ref->parent->pos.line, 
-		ref->parent->pos.column);
-	return(0);
+	/*
+	 * Look up the source.
+	 * Then copy over the source's targets into our own.
+	 */
+
+	assert(NULL == f->ref->tfield);
+	assert(NULL == f->ref->tstrct);
+
+	TAILQ_FOREACH(ff, &f->parent->fq, entries)
+		if (0 == strcasecmp(ff->name, f->ref->sfield)) {
+			f->ref->source = ff;
+			break;
+		}
+
+	if (NULL == f->ref->source) {
+		gen_errx(&f->pos, "unknown reference source");
+		return(0);
+	} else if (NULL == f->ref->source->ref) {
+		gen_errx(&f->pos, "reference to non-foreign key");
+		return(0);
+	} else if (FTYPE_STRUCT == f->ref->source->type) {
+		gen_errx(&f->pos, "reference to non-native type");
+		return(0);
+	} else if (FIELD_NULL & f->ref->source->flags) {
+		gen_errx(&f->pos, "source may not be null");
+		return(0);
+	} 
+
+	assert(NULL != f->ref->source->ref->tfield);
+	assert(NULL != f->ref->source->ref->tstrct);
+
+	f->ref->tfield = strdup(f->ref->source->ref->tfield);
+	f->ref->tstrct = strdup(f->ref->source->ref->tstrct);
+
+	if (NULL == f->ref->tfield || NULL == f->ref->tstrct) 
+		err(EXIT_FAILURE, NULL);
+
+	return(1);
 }
 
 /*
- * Check that the target structure and field exist (case insensitive).
+ * Check that the target structure and field exist (case insensitive)
+ * and are appropriate.
  * Return zero on failure, non-zero on success.
  * On success, this sets the "target" field for the referrent.
  */
 static int
-resolve_field_target(struct ref *ref, struct strctq *q)
+resolve_field_target(struct field *f, struct strctq *q)
 {
 	struct strct	*p;
-	struct field	*f;
+	struct field	*ff;
 
-	if (NULL != ref->target)
-		return(1);
-
-	assert(NULL != ref->source);
-	assert(NULL == ref->target);
+	assert(NULL != f->ref->source);
+	assert(NULL == f->ref->target);
+	assert(NULL != f->ref->tfield);
+	assert(NULL != f->ref->tstrct);
 
 	TAILQ_FOREACH(p, q, entries) {
-		if (strcasecmp(p->name, ref->tstrct))
+		if (strcasecmp(p->name, f->ref->tstrct))
 			continue;
-		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (strcasecmp(f->name, ref->tfield))
+		TAILQ_FOREACH(ff, &p->fq, entries) {
+			if (strcasecmp(ff->name, f->ref->tfield))
 				continue;
-			ref->target = f;
-			return(1);
+			f->ref->target = ff;
+			break;
 		}
 	}
-	warnx("%s:%zu%zu: unknown reference target",
-		ref->parent->pos.fname, ref->parent->pos.line, 
-		ref->parent->pos.column);
-	return(0);
+
+	if (NULL == f->ref->target) {
+		gen_errx(&f->pos, "unknown reference target");
+		return(0);
+	} else if (f->ref->source->type != f->ref->target->type) {
+		gen_errx(&f->pos, "target type mismatch");
+		return(0);
+	} else if ( ! (FIELD_ROWID & f->ref->target->flags) &&
+	            ! (FIELD_UNIQUE & f->ref->target->flags)) {
+		gen_errx(&f->pos, "target is not a rowid or unique");
+		return(0);
+	}
+
+	return(1);
 }
 
 /*
@@ -237,9 +191,8 @@ resolve_field_enum(struct eref *ref, struct enmq *q)
 			ref->enm = e;
 			return(1);
 		}
-	warnx("%s:%zu:%zu: unknown enum reference",
-		ref->parent->pos.fname, ref->parent->pos.line, 
-		ref->parent->pos.column);
+
+	gen_errx(&ref->parent->pos, "unknown enum reference");
 	return(0);
 }
 
@@ -677,22 +630,26 @@ parse_link(struct config *cfg)
 	struct search	 *srch;
 	size_t		  colour = 1, sz = 0, i = 0, hasrowid = 0;
 
+	/* Check for row identifier validity. */
+
+	TAILQ_FOREACH(p, &cfg->sq, entries) {
+		hasrowid = 0;
+		TAILQ_FOREACH(f, &p->fq, entries)
+			if (FIELD_ROWID & f->flags &&
+			    ! checkrowid(f, hasrowid++))
+				return(0);
+	}
+
 	/* 
 	 * First, establish linkage between nodes.
 	 * While here, check for duplicate rowids.
 	 */
 
 	TAILQ_FOREACH(p, &cfg->sq, entries) {
-		hasrowid = 0;
 		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (FIELD_ROWID & f->flags)
-				if ( ! checkrowid(f, hasrowid++))
-					return(0);
 			if (NULL != f->ref &&
-			    (! resolve_field_source(f->ref, p) ||
-			     ! resolve_field_target(f->ref, &cfg->sq) ||
-			     ! linkref(f->ref) ||
-			     ! checktargettype(f->ref)))
+			    (! resolve_field_source(f) ||
+			     ! resolve_field_target(f, &cfg->sq)))
 				return(0);
 			if (NULL != f->eref &&
 			    ! resolve_field_enum(f->eref, &cfg->eq))

@@ -1,4 +1,4 @@
-.\"	$OpenBSD$
+.\"	$Id$
 .\"
 .\" Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
 .\"
@@ -91,10 +91,6 @@ the curly braces.
   "};"
 .Ed
 .Pp
-Structures may be mapped into by other structures from referencing
-fields, which are similar to foreign keys.
-In SQL terms, this abstracts the notion of inner joins on foreign keys.
-.Pp
 The contained elements may consist of one or more
 .Cm field
 describing data fields (see
@@ -137,73 +133,68 @@ may either be a standalone identifier or a
 referencing a field in another structure by the structure and field
 name.
 In this case, the referenced field must be a
-.Cm rowid .
+.Cm rowid
+or
+.Cm unique ,
+and have the same type.
 .Pp
 The
 .Cm type ,
 if specified,
-may be one of
-.Cm struct ,
-.Cm real ,
-.Cm blob ,
-.Cm int ,
-.Cm enum ,
-.Cm epoch ,
-.Cm text ,
-.Cm email ,
-or
-.Cm password .
-Except for
-.Cm struct ,
-these are
-.Dq native
-types mapping into doubles, sized buffers, 64-bit integers,
-an enumeration (see below),
-.Vt time_t
-values (64-bit integer alias) and nil-terminated character strings,
-respectively.
-(The
-.Cm email
-type is text with extra validation.)
-.Pp
-The
-.Cm enum
-type is followed by the enumeration name, and is represented in the C
-API as the given enumeration and in SQL as an integer.
+may be one of the following:
+.Bl -tag -width Ds
+.It Cm struct
+A non-native type filled in by joining the given field with its referent
+structure.
+It cannot be a foreign key: instead, the
+.Cm struct
+keyword must be followed by the field name in the structure defining the
+foreign key reference, which may not have the
+.Cm null
+attribute.
+This type is
+.Dq non-native
+because it is not represented in the database schema, and is instead
+filled in with the referenced row.
+In the C API, this is represented by a
+.Vt struct name
+of the referent structure.
+.It Cm real
+Native type mapping into a double-precision float.
+.It Cm blob
+Native type mapping into a fixed-size binary buffer.
+.It Cm int
+Native type mapping into a 64-bit integer,
+.Vt int64_t .
+.It Cm enum
+Native type mapping into a 64-bit integer, constrained to valid
+enumeration values.
+Represented in the C API as an
+.Vt enum name ,
+with the name as given.
 See
 .Sx Enumerations
 for more documentation.
-.Pp
-The
-.Cm password
-field is special in that it converts an input password into a hash
+.It Cm epoch
+Native type mapping into a 64-bit integer, constrained to valid
+.Vt time_t
+values and similarly represented in the C API.
+.It Cm text
+Native type mapping into a nil-terminated character string, usually
+encoded in UTF-8.
+.It Cm email
+Native type mapping into a nil-terminated character string, constrained
+to e-mail address format.
+.It Cm password
+Native type mapping into a nil-terminated character string.
+This field is special in that it converts an input password into a hash
 before insertion into the database.
 It also can properly search for password hashes by running the hash
 verification after extraction.
 Thus, there is a difference between a password field that is being
 inserted or updated (as a password, which is hashed) and extracted using
 a search (as a hash).
-.Pp
-The non-native
-.Cm struct
-type has the full syntax of
-.Bd -literal -offset indent
-"struct" source:struct.field
-.Ed
-.Pp
-This special type joins the field
-.Cm source
-to the target structure and field
-.Cm struct.field .
-It differs from native type foreign keys in that it will be joined on
-database queries, while the native type is merely part of the
-definition.
-It is an error for a
-.Cm struct
-and native foreign key to reference different target fields.
-.Pp
-If unspecified, the type defaults to
-.Cm int .
+.El
 .Pp
 The
 .Cm typeinfo

@@ -40,6 +40,14 @@ static	const char *const realtypes[FTYPE__MAX] = {
 	"enum", /* FTYPE_ENUM */
 };
 
+static	const char *const upacts[UPACT__MAX] = {
+	"NO ACTION", /* UPACT_NONE */
+	"RESTRICT", /* UPACT_RESTRICT */
+	"SET NULL", /* UPACT_NULLIFY */
+	"CASCADE", /* UPACT_CASCADE */
+	"SET DEFAULT", /* UPACT_DEFAULT */
+};
+
 static	const char *const ftypes[FTYPE__MAX] = {
 	"INTEGER", /* FTYPE_EPOCH */
 	"INTEGER", /* FTYPE_INT */
@@ -109,6 +117,16 @@ diff_warnx(const struct pos *posold,
 		buf);
 }
 
+static void
+gen_prologue(int *prol)
+{
+
+	if (1 == *prol)
+		return;
+	puts("PRAGMA foreign_keys=ON;\n");
+	*prol = 1;
+}
+
 /*
  * Generate the "UNIQUE" statements on this table.
  */
@@ -143,6 +161,12 @@ gen_fkeys(const struct field *f, int *first)
 		f->ref->source->name,
 		f->ref->target->parent->name,
 		f->ref->target->name);
+	
+	if (UPACT_NONE != f->actdel)
+		printf(" ON DELETE %s", upacts[f->actdel]);
+	if (UPACT_NONE != f->actup)
+		printf(" ON UPDATE %s", upacts[f->actup]);
+
 	*first = 0;
 }
 
@@ -304,7 +328,8 @@ gen_diff_fields_old(const struct strct *s, const struct strct *ds)
 }
 
 static int
-gen_diff_fields_new(const struct strct *s, const struct strct *ds)
+gen_diff_fields_new(const struct strct *s, 
+	const struct strct *ds, int *prologue)
 {
 	const struct field *f, *df;
 	size_t	 count = 0, errors = 0;
@@ -330,6 +355,7 @@ gen_diff_fields_new(const struct strct *s, const struct strct *ds)
 		if (NULL == df && FTYPE_STRUCT == f->type) {
 			gen_warnx(&f->pos, "new inner joined field");
 		} else if (NULL == df) {
+			gen_prologue(prologue);
 			printf("ALTER TABLE %s ADD COLUMN %s %s",
 				f->parent->name, f->name, 
 				ftypes[f->type]);
@@ -469,12 +495,9 @@ gen_diff(const struct config *cfg, const struct config *dcfg)
 {
 	const struct strct *s, *ds;
 	size_t	 errors = 0;
-	int	 rc;
+	int	 rc, prol = 0;
 
 	errors += gen_diff_enums(cfg, dcfg);
-
-	puts("PRAGMA foreign_keys=ON;\n"
-	     "");
 
 	/*
 	 * Start by looking through all structures in the new queue and
@@ -488,8 +511,10 @@ gen_diff(const struct config *cfg, const struct config *dcfg)
 		TAILQ_FOREACH(ds, &dcfg->sq, entries)
 			if (0 == strcasecmp(s->name, ds->name))
 				break;
-		if (NULL == ds)
+		if (NULL == ds) {
+			gen_prologue(&prol);
 			gen_struct(s, 0);
+		}
 	}
 
 	/* 
@@ -506,7 +531,7 @@ gen_diff(const struct config *cfg, const struct config *dcfg)
 				break;
 		if (NULL == ds)
 			continue;
-		if ((rc = gen_diff_fields_new(s, ds)) < 0)
+		if ((rc = gen_diff_fields_new(s, ds, &prol)) < 0)
 			errors++;
 		else if (rc)
 			puts("");

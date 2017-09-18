@@ -32,6 +32,22 @@
 
 static void gen_errx(const struct pos *, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
+static void gen_warnx(const struct pos *, const char *, ...)
+	__attribute__((format(printf, 2, 3)));
+
+static void
+gen_warnx(const struct pos *pos, const char *fmt, ...)
+{
+	va_list	 ap;
+	char	 buf[1024];
+
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+
+	fprintf(stderr, "%s:%zu:%zu: warning: %s\n", 
+		pos->fname, pos->line, pos->column, buf);
+}
 
 static void
 gen_errx(const struct pos *pos, const char *fmt, ...)
@@ -264,17 +280,11 @@ resolve_uref(struct uref *ref, int crq)
 			break;
 
 	if (NULL == (ref->field = f))
-		warnx("%s:%zu:%zu: %s term not found",
-			ref->pos.fname, ref->pos.line,
-			ref->pos.column, type);
+		gen_errx(&ref->pos, "term not found");
 	else if (FTYPE_STRUCT == f->type)
-		warnx("%s:%zu:%zu: %s term is a struct", 
-			ref->pos.fname, ref->pos.line,
-			ref->pos.column, type);
+		gen_errx(&ref->pos, "term is a struct");
 	else if (crq && FTYPE_PASSWORD == f->type)
-		warnx("%s:%zu:%zu: %s constraint is a password", 
-			ref->pos.fname, ref->pos.line,
-			ref->pos.column, type);
+		gen_errx(&ref->pos, "term is a password");
 	else
 		return(1);
 
@@ -296,11 +306,8 @@ check_updatetype(struct update *up)
 		if ((OPTYPE_NOTNULL == ref->op ||
 		     OPTYPE_ISNULL == ref->op) &&
 		    ! (FIELD_NULL & ref->field->flags))
-			warnx("%s:%zu:%zu: null operator "
-				"on field that's never null",
-				ref->pos.fname, 
-				ref->pos.line,
-				ref->pos.column);
+			gen_warnx(&ref->pos, "null operator "
+				"on field that's never null");
 	return(1);
 }
 
@@ -321,11 +328,8 @@ check_modtype(const struct uref *ref)
 	    FTYPE_REAL == ref->field->type)
 		return(1);
 
-	warnx("%s:%zu:%zu: update modification on "
-		"invalid field type (not numeric)",
-		ref->pos.fname,
-		ref->pos.line,
-		ref->pos.column);
+	gen_errx(&ref->pos, "update modification on "
+		"invalid field type (not numeric)");
 	return(0);
 }
 
@@ -372,9 +376,7 @@ resolve_sref(struct sref *ref, struct strct *s)
 	/* Did we find the field in our structure? */
 
 	if (NULL == (ref->field = f)) {
-		warnx("%s:%zu:%zu: search term not found",
-			ref->pos.fname, ref->pos.line,
-			ref->pos.column);
+		gen_errx(&ref->pos, "search term not found");
 		return(0);
 	}
 
@@ -386,16 +388,10 @@ resolve_sref(struct sref *ref, struct strct *s)
 	if (NULL == TAILQ_NEXT(ref, entries)) {
 		if (FTYPE_STRUCT != f->type) 
 			return(1);
-		warnx("%s:%zu:%zu: search term leaf field "
-			"is a struct", 
-			ref->pos.fname, ref->pos.line,
-			ref->pos.column);
+		gen_errx(&ref->pos, "terminal field is a struct");
 		return(0);
 	} else if (FTYPE_STRUCT != f->type) {
-		warnx("%s:%zu:%zu: search term node field "
-			"is not a struct", 
-			ref->pos.fname, ref->pos.line,
-			ref->pos.column);
+		gen_errx(&ref->pos, "non-terminal not a struct");
 		return(0);
 	}
 
@@ -484,35 +480,26 @@ check_searchtype(const struct strct *p)
 	TAILQ_FOREACH(srch, &p->sq, entries) {
 		if (STYPE_SEARCH == srch->type &&
 		    TAILQ_EMPTY(&srch->sntq)) {
-			warnx("%s:%zu:%zu: unique result search "
-				"without parameters",
-				srch->pos.fname, srch->pos.line,
-				srch->pos.column);
+			gen_errx(&srch->pos, "unique result search "
+				"without parameters");
 			return(0);
 		}
 		if (SEARCH_IS_UNIQUE & srch->flags && 
 		    STYPE_SEARCH != srch->type) 
-			warnx("%s:%zu:%zu: multiple-result search "
-				"on a unique field",
-				srch->pos.fname, srch->pos.line,
-				srch->pos.column);
+			gen_warnx(&srch->pos, "multiple-result search "
+				"on a unique field");
 		if ( ! (SEARCH_IS_UNIQUE & srch->flags) && 
 		    STYPE_SEARCH == srch->type)
-			warnx("%s:%zu:%zu: single-result search "
-				"on a non-unique field",
-				srch->pos.fname, srch->pos.line,
-				srch->pos.column);
+			gen_warnx(&srch->pos, "single-result search "
+				"on a non-unique field");
 
 		TAILQ_FOREACH(sent, &srch->sntq, entries) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
 			if ((OPTYPE_NOTNULL == sent->op ||
 			     OPTYPE_ISNULL == sent->op) &&
 			    ! (FIELD_NULL & sr->field->flags))
-				warnx("%s:%zu:%zu: null operator "
-					"on field that's never null",
-					sent->pos.fname, 
-					sent->pos.line,
-					sent->pos.column);
+				gen_warnx(&sent->pos, "null operator "
+					"on field that's never null");
 			/* 
 			 * FIXME: we should (in theory) allow for the
 			 * unary types and equality binary types.
@@ -520,11 +507,8 @@ check_searchtype(const struct strct *p)
 			 */
 			if (OPTYPE_EQUAL != sent->op &&
 			    FTYPE_PASSWORD == sr->field->type) {
-				warnx("%s:%zu:%zu: password field "
-					"only processes equality",
-					sent->pos.fname,
-					sent->pos.line,
-					sent->pos.column);
+				gen_errx(&sent->pos, "password field "
+					"only processes equality");
 				return(0);
 			}
 		}
@@ -587,8 +571,7 @@ check_unique(const struct unique *u)
 	TAILQ_FOREACH(n, &u->nq, entries) {
 		if (FTYPE_STRUCT != n->field->type)
 			continue;
-		warnx("%s:%zu:%zu: field not a native type",
-			n->pos.fname, n->pos.line, n->pos.column);
+		gen_errx(&n->pos, "field not a native type");
 		return(0);
 	}
 
@@ -611,8 +594,7 @@ resolve_unique(struct unique *u)
 				break;
 		if (NULL != (n->field = f))
 			continue;
-		warnx("%s:%zu:%zu: field not found",
-			n->pos.fname, n->pos.line, n->pos.column);
+		gen_errx(&n->pos, "field not found");
 		return(0);
 	}
 
@@ -672,9 +654,7 @@ parse_link(struct config *cfg)
 			if (FTYPE_STRUCT == f->type) {
 				if (check_recursive(f->ref, p))
 					continue;
-				warnx("%s:%zu:%zu: recursive "
-					"reference", f->pos.fname, 
-					f->pos.line, f->pos.column);
+				gen_errx(&f->pos, "recursive ref");
 				return(0);
 			}
 

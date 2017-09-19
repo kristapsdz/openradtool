@@ -285,6 +285,14 @@ gen_diff_field(const struct field *f, const struct field *df)
 		diff_errx(&f->pos, &df->pos, "attribute change");
 		rc = 0;
 	}
+	if (f->actdel != df->actdel) {
+		diff_errx(&f->pos, &df->pos, "delete action change");
+		rc = 0;
+	}
+	if (f->actup != df->actup) {
+		diff_errx(&f->pos, &df->pos, "update action change");
+		rc = 0;
+	}
 
 	if ((NULL != f->ref && NULL == df->ref) ||
 	    (NULL == f->ref && NULL != df->ref)) {
@@ -370,6 +378,12 @@ gen_diff_fields_new(const struct strct *s,
 				printf(" REFERENCES %s(%s)",
 					f->ref->target->parent->name,
 					f->ref->target->name);
+			if (UPACT_NONE != f->actup)
+				printf(" ON UPDATE %s", 
+					upacts[f->actup]);
+			if (UPACT_NONE != f->actdel)
+				printf(" ON DELETE %s", 
+					upacts[f->actdel]);
 			puts(";");
 			count++;
 		} else if ( ! gen_diff_field(f, df))

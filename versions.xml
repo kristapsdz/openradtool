@@ -12,8 +12,8 @@
 				Earlier, <code>struct</code> types could specify the linkage from another field to a foreign key.
 				Now, the linkage must be specified within the other field itself.
 				This clears up the situation where a structure and the referring field had different types.
-				It also allows all foreign key information (e.g., <code>on delete</code> modifiers) to exist on the referring
-				field itself.
+				It also allows all foreign key information (e.g., <code>on delete</code> modifiers) to exist unambiguously on
+				the referring field itself.
 			</p>
 			<p>
 				Add the <code>actup</code> and <code>actdel</code> modifiers on a foreign key reference.

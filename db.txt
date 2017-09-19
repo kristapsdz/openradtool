@@ -18,7 +18,7 @@ struct user {
   field company struct cid comment
     "This struct will be filled in from an inner join
     on the \"cid\" variable.";
-  field cid:company.id int comment 
+  field cid:company.id int actdel cascade comment 
     "A foreign key reference.";
   field gender enum gender comment
     "User's gender.";

@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: July 4 2017 $
+.Dd $Mdocdate: September 18 2017 $
 .Dt KWEBAPP 5
 .Os
 .Sh NAME
@@ -143,9 +143,10 @@ The
 if specified,
 may be one of the following:
 .Bl -tag -width Ds
-.It Cm struct
-A non-native type filled in by joining the given field with its referent
-structure.
+.It Cm struct Ar field
+A non-native type filled in by joining the given
+.Ar field
+with its referent structure.
 It cannot be a foreign key: instead, the
 .Cm struct
 keyword must be followed by the field name in the structure defining the
@@ -199,47 +200,38 @@ a search (as a hash).
 The
 .Cm typeinfo
 may consist of the following:
-.Bd -literal -offset indent
-"rowid" | "null" | "unique" | "noexport" |
-"limit" limit_op limit_val | "comment" quoted_string
-.Ed
-.Pp
-The
-.Cm rowid
-means (in SQL terms) that the field is a primary key.
+.Bl -tag -width Ds
+.It Cm rowid
+The field is an SQL primary key.
 This is only available for the
 .Cm int
 type and may only appear for one field in a given structure.
-The quoted comment string after
-.Cm comment
-documents the field.
-A
-.Cm unique
-field is marked as having a unique SQL column value.
-A
-.Cm null
-field accepts null values, and is only available for native types.
+.It Cm null
+Accepts null SQL or C values, and is only available for native types.
 A
 .Cm rowid
 field may not also be
 .Cm null .
-Finally,
-.Cm noexport
-fields are never exported using the JSON interface.
+.It Cm unique
+Has a unique SQL column value.
+.It Cm noexport
+Never exported using the JSON interface.
 This is useful for sensitive internal information.
-.Pp
-Zero or more limit clauses are used when generating validation
-functions.
-They are only available for native types.
-The limitation clause consists of an operator and the value checked
-against.
-The operators available are
-.Cm ge ,
-.Cm le ,
-.Cm gt ,
-.Cm lt ,
+.It Cm limit Ar limit_op limit_val
+Used when generating validation functions.
+Only available for native types.
+The
+.Ar limit_op
+argument consists of an operator the
+.Ar limit_val
+is checked against.
+Available operators are
+.Ar ge ,
+.Ar le ,
+.Ar gt ,
+.Ar lt ,
 and
-.Cm eq .
+.Ar eq .
 Respectively, these mean the field should be greater than or equal to,
 less than or equal to, greater than, less than, or equal to the given
 value.
@@ -254,6 +246,32 @@ For numeric types, it's the value itself.
 The given value must match the field type: an integer (which may be
 signed) for integers, integer or real-valued for real, or a positive
 integer for lengths.
+.It Cm comment Ar quoted_string
+Documents the field using the quoted string.
+.It Cm actup Ar action
+SQL actions taken when the field is updated.
+May be one of
+.Ar none
+.Pq do nothing ,
+.Ar restrict ,
+.Pq disallow if having child referents ,
+.Ar nullify
+.Pq set child referents to null ,
+.Ar cascade ,
+.Pq propogate operation to referents ,
+or
+.Ar default
+.Pq set child referents to their default values .
+This is only available on foreign key references.
+.It Cm actdel Ar action
+Like
+.Cm actup
+but on deletion of the field in the database.
+.El
+.Pp
+A field declaration may consist of any number of
+.Cm typeinfo
+statements.
 .Ss Enumerations
 Enumerations are top-level objects in
 .Nm

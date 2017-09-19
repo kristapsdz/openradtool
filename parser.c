@@ -925,7 +925,7 @@ parse_field(struct parse *p, struct field *fd)
 			err(EXIT_FAILURE, NULL);
 
 		if (TOK_IDENT != parse_next(p)) {
-			parse_errx(p, "expected target field");
+			parse_errx(p, "expected target struct");
 			return;
 		}
 		fd->ref->tstrct = strdup(p->last.string);
@@ -938,14 +938,17 @@ parse_field(struct parse *p, struct field *fd)
 		}
 
 		if (TOK_IDENT != parse_next(p)) {
-			parse_errx(p, "expected field type");
+			parse_errx(p, "expected target field");
 			return;
 		}
 		fd->ref->tfield = strdup(p->last.string);
 		if (NULL == fd->ref->tfield)
 			err(EXIT_FAILURE, NULL);
 
-		if (TOK_IDENT != parse_next(p)) {
+		if (TOK_SEMICOLON == parse_next(p))
+			return;
+
+		if (TOK_IDENT != p->lasttype) {
 			parse_errx(p, "expected field type");
 			return;
 		}

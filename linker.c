@@ -267,10 +267,6 @@ static int
 resolve_uref(struct uref *ref, int crq)
 {
 	struct field	*f;
-	const char	*type;
-
-	type = UP_MODIFY == ref->parent->type ? 
-		"update" : "delete";
 
 	assert(NULL == ref->field);
 	assert(NULL != ref->parent);

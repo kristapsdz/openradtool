@@ -20,10 +20,10 @@ body > header				{ width: 100%;
 					  background-color: #07889b;
 					  padding: 8pt 24pt;
 					  border-bottom-left-radius: 8pt; }
-#breadcrumbs > div:first-child > div	{ width: 20pt;
+#breadcrumbs > div:first-child > div	{ width: 8pt;
 					  background-color: #a0a0a0;
 					  border-top-right-radius: 4pt; }
-#breadcrumbs > div:last-child > div	{ width: 20pt;
+#breadcrumbs > div:last-child > div	{ width: 8pt;
 					  background-color: #a0a0a0;
 					  border-top-left-radius: 4pt; }
 #header					{ margin-top: 64pt; 
@@ -70,16 +70,18 @@ blockquote a				{ text-shadow: none; }
 #versions time:before			{ content: ' : '; }
 
 @media only screen and (max-width: 900px), only screen and (max-device-width: 900px) {
-article > section			{ width: 80%; }
-blockquote				{ padding: 1em 10%; }
-code, pre.hl				{ font-size: 10pt; }
+ article > section			{ width: 80%; }
+ blockquote				{ padding: 1em 10%; }
+ code, pre.hl				{ font-size: 10pt; }
 }
 
 @media only screen and (max-width: 700px), only screen and (max-device-width: 700px) {
-article > section			{ width: 96%; }
-blockquote				{ padding: 1em 4%; 
-					  font-size: inherit; }
-figure img				{ width: 100%; 
-					  max-width: 480px; }
-h1					{ font-size: x-large; }
+ article > section			{ width: 96%; }
+ blockquote				{ padding: 1em 4%; 
+ 					  font-size: inherit; }
+ figure img				{ width: 100%; 
+ 					  max-width: 480px; }
+ h1					{ font-size: x-large; }
+ #breadcrumbs > div:nth-child(2) > div	{ padding: 8pt 4pt; 
+	 				  font-size: 12pt; }
 }

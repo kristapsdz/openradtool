@@ -4,16 +4,36 @@ body					{ font-family: "Fira Sans", sans-serif;
 				 	  font-size: 13pt; }
 a					{ color: #07889b; }
 body > header				{ width: 100%; 
-					  padding: 64pt 0;
+					  padding-bottom: 64pt;
 					  background-color: #a0a0a0;
 					  color: #fff;
-					  text-shadow: 0 0 2px #666;
+					  font-size: 0;
 					  margin-bottom: 2.2em;
 					  text-align: center; }
+#breadcrumbs > *			{ display: inline-block; 
+					  background-color: #07889b;
+					  vertical-align: top;
+					  font-size: 13pt;
+					  color: #ccc; }
+#breadcrumbs > div:nth-child(2) 	{ background-color: #a0a0a0; }
+#breadcrumbs > div:nth-child(2) > div	{ border-bottom-right-radius: 8pt; 
+					  background-color: #07889b;
+					  padding: 8pt 24pt;
+					  border-bottom-left-radius: 8pt; }
+#breadcrumbs > div:first-child > div	{ width: 20pt;
+					  background-color: #a0a0a0;
+					  border-top-right-radius: 4pt; }
+#breadcrumbs > div:last-child > div	{ width: 20pt;
+					  background-color: #a0a0a0;
+					  border-top-left-radius: 4pt; }
+#header					{ margin-top: 64pt; 
+					  font-size: 13pt;
+					  text-shadow: 0 0 2px #666; }
 h1					{ display: inline-block; 
 					  font-size: xx-large;
 					  font-weight: 500; }
-body > header a				{ color: #eee; 
+#breadcrumbs a				{ color: #fff; }
+#header a				{ color: #eee; 
 					  display: inline-block;
 					  padding: 0 4pt; }
 figure					{ text-align: center; 

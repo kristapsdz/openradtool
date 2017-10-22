@@ -9,18 +9,32 @@
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
 		<link rel="stylesheet" href="https://code.cdn.mozilla.net/fonts/fira.css" />
 	</head>
-	<body lang="en">
+	<body lang="en" itemscope="itemscope" itemtype="http://schema.org/SoftwareApplication">
 		<header>
-			<div>
-				<h1>kwebapp</h1> <span>&#8212; web application source generator @VERSION@</span>
-			</div>
-			<nav>
-				<a href="https://github.com/kristapsdz/kwebapp">github</a>
-				<a href="kwebapp.1.html">kwebapp(1)</a>
-				<a href="kwebapp.5.html">kwebapp(5)</a>
-				<a href="snapshots/kwebapp.tar.gz">source</a>
-				<a href="snapshots">archive</a>
-			</nav>
+			<section id="breadcrumbs">
+				<div><div>&#160;</div></div>
+				<div>
+					<div>
+						BSD.lv tools for BCHS: 
+						<a href="https://kristaps.bsd.lv/kcgi">kcgi</a>, 
+						<a href="https://kristaps.bsd.lv/ksql">ksql</a>, 
+						<a href="https://kristaps.bsd.lv/kwebapp">kwebapp</a>
+					</div>
+				</div>
+				<div><div>&#160;</div></div>
+			</section>
+			<section id="header">
+				<div>
+					<h1 itemprop="name">kwebapp</h1> <span>&#8212; <span itemprop="description">web application source generator</span> @VERSION@</span>
+				</div>
+				<nav>
+					<a href="https://github.com/kristapsdz/kwebapp">github</a>
+					<a href="kwebapp.1.html">kwebapp(1)</a>
+					<a href="kwebapp.5.html">kwebapp(5)</a>
+					<a href="snapshots/kwebapp.tar.gz">source</a>
+					<a href="snapshots">archive</a>
+				</nav>
+			</section>
 		</header>
 		<article>
 			<section>

@@ -1604,6 +1604,7 @@ parse_enum_data(struct parse *p, struct enm *e)
  *    [["iterate" | "search" | "list" ] search_fields]*
  *    ["update" update_fields]*
  *    ["delete" delete_fields]*
+ *    ["insert"]*
  *    ["unique" unique_fields]*
  *    ["comment" quoted_string]?
  *  "};"
@@ -1648,6 +1649,13 @@ parse_struct_data(struct parse *p, struct strct *s)
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "delete")) {
 			parse_config_update(p, s, UP_DELETE);
+			continue;
+		} else if (0 == strcasecmp(p->last.string, "insert")) {
+			s->flags |= STRCT_HAS_INSERT;
+			if (TOK_SEMICOLON != parse_next(p)) {
+				parse_errx(p, "expected end of comment");
+				return;
+			}
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "unique")) {
 			parse_config_unique(p, s);

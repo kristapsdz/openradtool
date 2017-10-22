@@ -4,13 +4,8 @@ include Makefile.configure
 
 VERSION		 = 0.2.12
 CFLAGS		+= -DVERSION=\"$(VERSION)\"
-COMPAT_OBJS	 = compat_err.o \
-		   compat_progname.o \
-		   compat_reallocarray.o \
-		   compat_strlcat.o \
-		   compat_strlcpy.o \
-		   compat_strtonum.o
 OBJS		 = comments.o \
+		   compats.o \
 		   header.o \
 		   linker.o \
 		   javascript.o \
@@ -25,12 +20,7 @@ HTMLS		 = index.html \
 		   kwebapp.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
 DOTAR		 = comments.c \
-		   compat_err.c \
-		   compat_progname.c \
-		   compat_reallocarray.c \
-		   compat_strlcat.c \
-		   compat_strlcpy.c \
-		   compat_strtonum.c \
+		   compats.c \
 		   configure \
 		   extern.h \
 		   header.c \
@@ -43,16 +33,7 @@ DOTAR		 = comments.c \
 		   protos.c \
 		   source.c \
 		   sql.c \
-		   test-PATH_MAX.c \
-		   test-capsicum.c \
-		   test-err.c \
-		   test-pledge.c \
-		   test-progname.c \
-		   test-reallocarray.c \
-		   test-sandbox_init.c \
-		   test-strlcat.c \
-		   test-strlcpy.c \
-		   test-strtonum.c \
+		   tests.c \
 		   test.c
 XMLS		 = db.txt.xml \
 		   test.xml.xml \
@@ -67,8 +48,8 @@ IHTMLS		 = db.txt.html \
 		   db.js.html \
 		   test.c.html 
 
-kwebapp: $(COMPAT_OBJS) $(OBJS)
-	$(CC) -o $@ $(COMPAT_OBJS) $(OBJS)
+kwebapp: $(OBJS)
+	$(CC) -o $@ $(OBJS)
 
 www: index.svg $(HTMLS) kwebapp.tar.gz kwebapp.tar.gz.sha512
 
@@ -127,9 +108,7 @@ db.db: db.sql
 	rm -f $@
 	sqlite3 $@ < db.sql
 
-$(COMPAT_OBJS) $(OBJS): config.h
-
-$(OBJS): extern.h
+$(OBJS): config.h extern.h
 
 kwebapp.5.html: kwebapp.5
 	mandoc -Thtml -Ostyle=mandoc.css kwebapp.5 >$@
@@ -202,7 +181,7 @@ TODO.xml: TODO.md
 	  echo "</article>" ; ) >$@
 
 clean:
-	rm -f kwebapp $(COMPAT_OBJS) $(OBJS) db.c db.h db.o db.sql db.js db.update.sql db.db test test.o 
+	rm -f kwebapp $(OBJS) db.c db.h db.o db.sql db.js db.update.sql db.db test test.o 
 	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
 	rm -f index.svg index.html highlight.css kwebapp.5.html kwebapp.1.html
 	rm -f db.txt.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml

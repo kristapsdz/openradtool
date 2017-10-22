@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: September 18 2017 $
+.Dd $Mdocdate: September 19 2017 $
 .Dt KWEBAPP 5
 .Os
 .Sh NAME
@@ -36,6 +36,7 @@ struct :== "struct" structname
     [ searchtype searchdata ";" ]*
     [ "update" updatedata ";" ]*
     [ "delete" deletedata ";" ]*
+    [ "insert" ";" ]*
     [ "unique" uniquedata ";" ]*
     [ "comment" quoted_string ";" ]?
   "};"
@@ -86,6 +87,7 @@ the curly braces.
     [ searchtype searchdata ";" ]*
     [ "update" updatedata ";" ]*
     [ "delete" deletedata ";" ]*
+    [ "insert" ";" ]*
     [ "unique" uniquedata ";" ]*
     [ "comment" quoted_string ";" ]?
   "};"
@@ -109,10 +111,13 @@ zero or more
 .Cm unique
 statements that create unique constraints on multiple fields (see
 .Sx Uniques ) ;
-and zero or more
+zero or more
 .Cm searchtype ,
 which defines one of several search types on fields (see
-.Sx Searches ) .
+.Sx Searches ) ,
+and optionally an
+.Cm insert ,
+which stipulates that insert functions be generated.
 .Ss Fields
 A field object defines a C structure member and/or a database column.
 Each field consists of the word

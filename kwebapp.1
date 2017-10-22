@@ -283,6 +283,9 @@ they are passed into this functions as pointers.
 The null values must then be specified as
 .Dv NULL
 pointers.
+This function is only generated if the
+.Cm insert
+statement is specified for the given structure.
 .It Fn db_foo_iterate
 Iterate over all rows.
 .It Fn db_foo_iterate_xxxx

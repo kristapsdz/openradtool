@@ -316,11 +316,14 @@ gen_funcs(const struct strct *p, int json, int valids)
 				"\tv%zu: %s", 
 				pos++, f->name);
 	}
-	print_commentt(0, COMMENT_C_FRAG_CLOSE,
-		"Returns the new row's identifier on "
-		"success or <0 otherwise.");
-	print_func_db_insert(p, 1);
-	puts("");
+
+	if (STRCT_HAS_INSERT & p->flags) {
+		print_commentt(0, COMMENT_C_FRAG_CLOSE,
+			"Returns the new row's identifier on "
+			"success or <0 otherwise.");
+		print_func_db_insert(p, 1);
+		puts("");
+	}
 
 	print_commentv(0, COMMENT_C,
 	       "Free memory allocated by db_%s_fill().\n"

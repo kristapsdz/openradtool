@@ -546,6 +546,7 @@ gen_func_insert(const struct strct *p)
 	size_t	 pos, npos;
 
 	print_func_db_insert(p, 0);
+
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
@@ -1041,7 +1042,9 @@ gen_funcs(const struct strct *p, int json, int valids)
 	gen_func_unfill(p);
 	gen_func_free(p);
 	gen_func_freeq(p);
-	gen_func_insert(p);
+
+	if (STRCT_HAS_INSERT & p->flags)
+		gen_func_insert(p);
 
 	if (json) {
 		gen_func_json_data(p);

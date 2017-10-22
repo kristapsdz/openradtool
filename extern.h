@@ -371,12 +371,25 @@ struct	strct {
 
 TAILQ_HEAD(strctq, strct);
 
+TAILQ_HEAD(roleq, role);
+
+struct	role {
+	char		  *name; /* unique name of role */
+	struct role	  *parent; /* parent (or NULL) */
+	struct roleq	   subrq; /* sub-roles */
+	struct pos	   pos; /* parse point */
+	TAILQ_ENTRY(role)  entries;
+};
+
 /*
  * Hold entire parse sequence results.
  */
 struct	config {
 	struct strctq	sq; /* all structures */
 	struct enmq	eq; /* all enumerations */
+	struct roleq	rq; /* all roles */
+	unsigned int	flags;
+#define	CFG_HAS_ROLES 	0x01 /* has roles */
 };
 
 /*

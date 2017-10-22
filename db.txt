@@ -1,3 +1,12 @@
+roles {
+ role kristaps {
+  role meng;
+  role foo;
+ };
+ role bar;
+ role meng;
+};
+
 struct company {
   field name text limit gt 0 comment
     "Name of the organisation.";

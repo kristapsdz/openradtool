@@ -1738,6 +1738,114 @@ parse_enum(struct parse *p, struct enmq *q)
 }
 
 /*
+ * Return zero if the name already exists, non-zero otherwise.
+ * This is a recursive function.
+ */
+static int
+check_rolename(const struct roleq *rq, const char *name) 
+{
+	const struct role *r;
+
+	TAILQ_FOREACH(r, rq, entries) {
+		if (0 == strcasecmp(r->name, name))
+			return(0);
+		if ( ! check_rolename(&r->subrq, name))
+			return(0);
+	}
+
+	return(1);
+}
+
+/*
+ * Parse an individual role, which may be a subset of another role
+ * designation.
+ * Its syntax is:
+ *
+ *  "role" name ["{" [ ROLE ]* "}"]? ";"
+ */
+static void
+parse_role(struct parse *p, struct config *cfg,
+	struct role *parent, struct roleq *rq)
+{
+	struct role	*r;
+
+	if (TOK_IDENT != p->lasttype ||
+	    strcasecmp(p->last.string, "role")) {
+		parse_errx(p, "expected \"role\"");
+		return;
+	} else if (TOK_IDENT != parse_next(p)) {
+		parse_errx(p, "expected role name");
+		return;
+	}
+
+	if ( ! check_rolename(&cfg->rq, p->last.string)) {
+		parse_errx(p, "duplicate role name");
+		return;
+	} else if ( ! check_badidents(p, p->last.string))
+		return;
+
+	if (NULL == (r = calloc(1, sizeof(struct role))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (r->name = strdup(p->last.string)))
+		err(EXIT_FAILURE, NULL);
+
+	r->parent = parent;
+	parse_point(p, &r->pos);
+
+	TAILQ_INIT(&r->subrq);
+	TAILQ_INSERT_TAIL(rq, r, entries);
+
+	if (TOK_LBRACE == parse_next(p)) {
+		while ( ! PARSE_STOP(p)) {
+			if (TOK_RBRACE == parse_next(p))
+				break;
+			parse_role(p, cfg, r, &r->subrq);
+		}
+		parse_next(p);
+	}
+
+	if (PARSE_STOP(p))
+		return;
+	if (TOK_SEMICOLON != p->lasttype)
+		parse_errx(p, "expected semicolon");
+}
+
+/*
+ * This means that we're a role-based system.
+ * Parse out our role tree.
+ * See parse_role() for the ROLE sequence;
+ * Its syntax is:
+ *
+ *  "roles" "{" [ ROLE ]* "}" ";"
+ */
+static void
+parse_roles(struct parse *p, struct config *cfg)
+{
+
+	if (CFG_HAS_ROLES & cfg->flags) {
+		parse_errx(p, "roles already specified");
+		return;
+	} 
+	cfg->flags |= CFG_HAS_ROLES;
+	
+	if (TOK_LBRACE != parse_next(p)) {
+		parse_errx(p, "expected left brace");
+		return;
+	}
+
+	while ( ! PARSE_STOP(p)) {
+		if (TOK_RBRACE == parse_next(p))
+			break;
+		parse_role(p, cfg, NULL, &cfg->rq);
+	}
+
+	if (PARSE_STOP(p))
+		return;
+	if (TOK_SEMICOLON != parse_next(p)) 
+		parse_errx(p, "expected semicolon");
+}
+
+/*
  * Verify and allocate a struct, then start parsing its fields and
  * ancillary entries.
  */
@@ -1801,6 +1909,7 @@ parse_config(FILE *f, const char *fname)
 
 	TAILQ_INIT(&cfg->sq);
 	TAILQ_INIT(&cfg->eq);
+	TAILQ_INIT(&cfg->rq);
 
 	memset(&p, 0, sizeof(struct parse));
 	p.column = 0;
@@ -1821,20 +1930,20 @@ parse_config(FILE *f, const char *fname)
 			continue;
 		}
 
-		/* Parse whether we're struct or enum. */
+		/* Parse whether we're struct, enum, or roles. */
 
-		if (0 == strcasecmp(p.last.string, "struct")) {
-			if (TOK_IDENT == parse_next(&p)) {
+		if (0 == strcasecmp(p.last.string, "roles")) {
+			parse_roles(&p, cfg);
+		} else if (0 == strcasecmp(p.last.string, "struct")) {
+			if (TOK_IDENT == parse_next(&p))
 				parse_struct(&p, &cfg->sq);
-				continue;
-			}
-			parse_errx(&p, "expected struct name");
+			else
+				parse_errx(&p, "expected struct name");
 		} else if (0 == strcasecmp(p.last.string, "enum")) {
-			if (TOK_IDENT == parse_next(&p)) {
+			if (TOK_IDENT == parse_next(&p))
 				parse_enum(&p, &cfg->eq);
-				continue;
-			}
-			parse_errx(&p, "expected struct name");
+			else
+				parse_errx(&p, "expected enum name");
 		} else
 			parse_errx(&p, "unknown top-level type");
 	}
@@ -2011,6 +2120,25 @@ parse_free_enum(struct enm *e)
 }
 
 /*
+ * Free a role (recursive function).
+ * Does nothing if "r" is NULL.
+ */
+static void
+parse_free_role(struct role *r)
+{
+	struct role	*rr;
+
+	if (NULL == r)
+		return;
+	while (NULL != (rr = TAILQ_FIRST(&r->subrq))) {
+		TAILQ_REMOVE(&r->subrq, rr, entries);
+		parse_free_role(rr);
+	}
+	free(r->name);
+	free(r);
+}
+
+/*
  * Free all resources from the queue of structures.
  * Does nothing if "q" is empty or NULL.
  */
@@ -2024,6 +2152,7 @@ parse_free(struct config *cfg)
 	struct update	*u;
 	struct unique	*n;
 	struct enm	*e;
+	struct role	*r;
 
 	if (NULL == cfg)
 		return;
@@ -2031,6 +2160,11 @@ parse_free(struct config *cfg)
 	while (NULL != (e = TAILQ_FIRST(&cfg->eq))) {
 		TAILQ_REMOVE(&cfg->eq, e, entries);
 		parse_free_enum(e);
+	}
+
+	while (NULL != (r = TAILQ_FIRST(&cfg->rq))) {
+		TAILQ_REMOVE(&cfg->rq, r, entries);
+		parse_free_role(r);
 	}
 
 	while (NULL != (p = TAILQ_FIRST(&cfg->sq))) {

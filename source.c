@@ -239,7 +239,8 @@ gen_bindfunc(enum ftype t, size_t pos, int ptr)
  * This calls a function pointer with the retrieved data.
  */
 static void
-gen_strct_func_iter(const struct search *s, size_t num)
+gen_strct_func_iter(const struct config *cfg,
+	const struct search *s, size_t num)
 {
 	const struct sent *sent;
 	const struct sref *sr;
@@ -247,16 +248,20 @@ gen_strct_func_iter(const struct search *s, size_t num)
 
 	assert(STYPE_ITERATE == s->type);
 
-	print_func_db_search(s, 0);
+	print_func_db_search(s, CFG_HAS_ROLES & cfg->flags, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
-	       "\tstruct %s p;\n"
-	       "\n"
-	       "\tksql_stmt_alloc(db, &stmt,\n"
+	       "\tstruct %s p;\n",
+	       s->parent->name);
+	if (CFG_HAS_ROLES & cfg->flags)
+		puts("\tstruct ksql *db = ctx->db;\n");
+	else
+		puts("");
+	printf("\tksql_stmt_alloc(db, &stmt,\n"
 	       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
 	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
-	       s->parent->name, s->parent->cname, num, 
+	       s->parent->cname, num, 
 	       s->parent->cname, num);
 
 	pos = 1;
@@ -308,7 +313,8 @@ gen_strct_func_iter(const struct search *s, size_t num)
  * This searches for a multiplicity of values.
  */
 static void
-gen_strct_func_list(const struct search *s, size_t num)
+gen_strct_func_list(const struct config *cfg, 
+	const struct search *s, size_t num)
 {
 	const struct sent *sent;
 	const struct sref *sr;
@@ -316,14 +322,18 @@ gen_strct_func_list(const struct search *s, size_t num)
 
 	assert(STYPE_LIST == s->type);
 
-	print_func_db_search(s, 0);
+	print_func_db_search(s, CFG_HAS_ROLES & cfg->flags, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
 	       "\tstruct %s_q *q;\n"
-	       "\tstruct %s *p;\n"
-	       "\n"
-	       "\tq = malloc(sizeof(struct %s_q));\n"
+	       "\tstruct %s *p;\n",
+	       s->parent->name, s->parent->name);
+	if (CFG_HAS_ROLES & cfg->flags)
+		puts("\tstruct ksql *db = ctx->db;\n");
+	else
+		puts("");
+	printf("\tq = malloc(sizeof(struct %s_q));\n"
 	       "\tif (NULL == q) {\n"
 	       "\t\tperror(NULL);\n"
 	       "\t\texit(EXIT_FAILURE);\n"
@@ -333,7 +343,6 @@ gen_strct_func_list(const struct search *s, size_t num)
 	       "\tksql_stmt_alloc(db, &stmt,\n"
 	       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
 	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
-	       s->parent->name, s->parent->name, 
 	       s->parent->name, s->parent->cname, num, 
 	       s->parent->cname, num);
 
@@ -399,13 +408,13 @@ gen_func_open(const struct config *cfg, int splitproc)
 
 	puts("{\n"
 	     "\tstruct ksqlcfg cfg;\n"
-	     "\tstruct ksql *sql;");
+	     "\tstruct ksql *db;");
 
 	if (CFG_HAS_ROLES & cfg->flags)
-		puts("\tstruct kwbp *kp;\n"
+		puts("\tstruct kwbp *ctx;\n"
 		     "\n"
-		     "\tkp = malloc(sizeof(struct kwbp));\n"
-		     "\tif (NULL == kp)\n"
+		     "\tctx = malloc(sizeof(struct kwbp));\n"
+		     "\tif (NULL == ctx)\n"
 		     "\t\treturn(NULL);");
 
 	puts("\n"
@@ -421,20 +430,21 @@ gen_func_open(const struct config *cfg, int splitproc)
 		puts("\tsql = ksql_alloc(&cfg);");
 
 	if (CFG_HAS_ROLES & cfg->flags)
-		puts("\tif (NULL == sql) {\n"
-		     "\t\tfree(kp);\n"
+		puts("\tif (NULL == db) {\n"
+		     "\t\tfree(ctx);\n"
 		     "\t\treturn(NULL);\n"
-		     "\t}");
+		     "\t}\n"
+		     "\tctx->db = db;");
 	else
-		puts("\tif (NULL == sql)\n"
+		puts("\tif (NULL == db)\n"
 		     "\t\treturn(NULL);");
 
-	puts("\tksql_open(sql, file);");
+	puts("\tksql_open(db, file);");
 
 	if (CFG_HAS_ROLES & cfg->flags) 
-		puts("\treturn(kp);");
+		puts("\treturn(ctx);");
 	else
-		puts("\treturn(sql);");
+		puts("\treturn(db);");
 
 	puts("}\n"
 	     "");
@@ -469,7 +479,8 @@ gen_func_close(const struct config *cfg)
  * This searches for a singular value.
  */
 static void
-gen_strct_func_srch(const struct search *s, size_t num)
+gen_strct_func_srch(const struct config *cfg,
+	const struct search *s, size_t num)
 {
 	const struct sent *sent;
 	const struct sref *sr;
@@ -477,17 +488,21 @@ gen_strct_func_srch(const struct search *s, size_t num)
 
 	assert(STYPE_SEARCH == s->type);
 
-	print_func_db_search(s, 0);
+	print_func_db_search(s, CFG_HAS_ROLES & cfg->flags, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
-	       "\tstruct %s *p = NULL;\n"
-	       "\n"
-	       "\tksql_stmt_alloc(db, &stmt,\n"
+	       "\tstruct %s *p = NULL;\n",
+	       s->parent->name);
+	if (CFG_HAS_ROLES & cfg->flags)
+		puts("\tstruct ksql *db = ctx->db;\n");
+	else
+		puts("");
+
+	printf("\tksql_stmt_alloc(db, &stmt,\n"
 	       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
 	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
-	       s->parent->name, s->parent->cname, num, 
-	       s->parent->cname, num);
+	       s->parent->cname, num, s->parent->cname, num);
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
@@ -569,17 +584,20 @@ gen_func_freeq(const struct strct *p)
  * Generate the "insert" function.
  */
 static void
-gen_func_insert(const struct strct *p)
+gen_func_insert(const struct config *cfg, const struct strct *p)
 {
 	const struct field *f;
 	size_t	 pos, npos;
 
-	print_func_db_insert(p, 0);
+	print_func_db_insert(p, CFG_HAS_ROLES & cfg->flags, 0);
 
-	printf("\n"
-	       "{\n"
-	       "\tstruct ksqlstmt *stmt;\n"
-	       "\tint64_t id = -1;\n");
+	puts("\n"
+	     "{\n"
+	     "\tstruct ksqlstmt *stmt;\n"
+	     "\tint64_t id = -1;");
+
+	if (CFG_HAS_ROLES & cfg->flags)
+		puts("\tstruct ksql *db = ctx->db;");
 
 	/* We need temporary space for hash generation. */
 
@@ -1079,7 +1097,7 @@ gen_funcs(const struct config *cfg,
 	gen_func_freeq(p);
 
 	if (STRCT_HAS_INSERT & p->flags)
-		gen_func_insert(p);
+		gen_func_insert(cfg, p);
 
 	if (json) {
 		gen_func_json_data(p);
@@ -1092,11 +1110,11 @@ gen_funcs(const struct config *cfg,
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
 		if (STYPE_SEARCH == s->type)
-			gen_strct_func_srch(s, pos++);
+			gen_strct_func_srch(cfg, s, pos++);
 		else if (STYPE_LIST == s->type)
-			gen_strct_func_list(s, pos++);
+			gen_strct_func_list(cfg, s, pos++);
 		else
-			gen_strct_func_iter(s, pos++);
+			gen_strct_func_iter(cfg, s, pos++);
 
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries)

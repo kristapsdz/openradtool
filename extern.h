@@ -430,11 +430,11 @@ void		 print_src(size_t, const char *, ...);
 
 void		 print_func_db_close(int, int);
 void		 print_func_db_open(int, int);
-void		 print_func_db_insert(const struct strct *, int);
+void		 print_func_db_insert(const struct strct *, int, int);
 void		 print_func_db_fill(const struct strct *, int);
 void		 print_func_db_free(const struct strct *, int);
 void		 print_func_db_freeq(const struct strct *, int);
-void		 print_func_db_search(const struct search *, int);
+void		 print_func_db_search(const struct search *, int, int);
 void		 print_func_db_unfill(const struct strct *, int);
 void		 print_func_db_update(const struct update *, int, int);
 

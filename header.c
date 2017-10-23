@@ -206,7 +206,7 @@ gen_func_update(const struct config *cfg, const struct update *up)
  * Generate a custom search function declaration.
  */
 static void
-gen_func_search(const struct search *s)
+gen_func_search(const struct config *cfg, const struct search *s)
 {
 	const struct sent *sent;
 	const struct sref *sr;
@@ -224,8 +224,8 @@ gen_func_search(const struct search *s)
 			s->parent->name);
 
 	print_commentv(0, COMMENT_C_FRAG,
-		"\nUses the given fields in struct %s:",
-	       s->parent->name);
+		"Uses the given fields in struct %s:",
+		s->parent->name);
 
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
 		sr = TAILQ_LAST(&sent->srq, srefq);
@@ -260,7 +260,7 @@ gen_func_search(const struct search *s)
 			"Invokes the given callback with "
 			"retrieved data.");
 
-	print_func_db_search(s, 1);
+	print_func_db_search(s, CFG_HAS_ROLES & cfg->flags, 1);
 	puts("");
 }
 
@@ -299,30 +299,29 @@ gen_funcs(const struct config *cfg,
 	print_func_db_fill(p, 1);
 	puts("");
 
-	print_commentt(0, COMMENT_C_FRAG_OPEN,
-		"Insert a new row into the database.\n"
-		"Only native (and non-rowid) fields may "
-		"be set.");
-	pos = 1;
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT == f->type ||
-		    FIELD_ROWID & f->flags)
-			continue;
-		if (FTYPE_PASSWORD == f->type) 
-			print_commentv(0, COMMENT_C_FRAG,
-				"\tv%zu: %s (pre-hashed password)", 
-				pos++, f->name);
-		else
-			print_commentv(0, COMMENT_C_FRAG,
-				"\tv%zu: %s", 
-				pos++, f->name);
-	}
-
 	if (STRCT_HAS_INSERT & p->flags) {
+		print_commentt(0, COMMENT_C_FRAG_OPEN,
+			"Insert a new row into the database.\n"
+			"Only native (and non-rowid) fields may "
+			"be set.");
+		pos = 1;
+		TAILQ_FOREACH(f, &p->fq, entries) {
+			if (FTYPE_STRUCT == f->type ||
+			    FIELD_ROWID & f->flags)
+				continue;
+			if (FTYPE_PASSWORD == f->type) 
+				print_commentv(0, COMMENT_C_FRAG,
+					"\tv%zu: %s (pre-hashed password)", 
+					pos++, f->name);
+			else
+				print_commentv(0, COMMENT_C_FRAG,
+					"\tv%zu: %s", 
+					pos++, f->name);
+		}
 		print_commentt(0, COMMENT_C_FRAG_CLOSE,
 			"Returns the new row's identifier on "
 			"success or <0 otherwise.");
-		print_func_db_insert(p, 1);
+		print_func_db_insert(p, CFG_HAS_ROLES & cfg->flags, 1);
 		puts("");
 	}
 
@@ -334,7 +333,7 @@ gen_funcs(const struct config *cfg,
 	puts("");
 
 	TAILQ_FOREACH(s, &p->sq, entries)
-		gen_func_search(s);
+		gen_func_search(cfg, s);
 	TAILQ_FOREACH(u, &p->uq, entries)
 		gen_func_update(cfg, u);
 	TAILQ_FOREACH(u, &p->dq, entries)

@@ -183,10 +183,11 @@ print_func_db_update(const struct update *u, int priv, int decl)
  * The format of the declaration depends upon the search type.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
+ * If "priv" is non-zero, accept a kwbp instead of ksql.
  * FIXME: line wrapping.
  */
 void
-print_func_db_search(const struct search *s, int decl)
+print_func_db_search(const struct search *s, int priv, int decl)
 {
 	const struct sent *sent;
 	const struct sref *sr;
@@ -215,7 +216,10 @@ print_func_db_search(const struct search *s, int decl)
 	} else if (NULL != s->name)
 		col += printf("_%s", s->name);
 
-	col += printf("(struct ksql *db");
+	if (priv)
+		col += printf("(struct kwbp *ctx");
+	else
+		col += printf("(struct ksql *db");
 
 	if (STYPE_ITERATE == s->type)
 		col += printf(", %s_cb cb, void *arg", 
@@ -237,16 +241,22 @@ print_func_db_search(const struct search *s, int decl)
  * Generate the "insert" function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
+ * If "priv" is non-zero, accept a kwbp instead of ksql.
  */
 void
-print_func_db_insert(const struct strct *p, int decl)
+print_func_db_insert(const struct strct *p, int priv, int decl)
 {
 	const struct field *f;
 	size_t	 pos = 1;
 	int	 col = 0;
 
-	col += printf("int64_t%sdb_%s_insert("
-		"struct ksql *db", decl ? " " : "\n", p->name);
+	col += printf("int64_t%sdb_%s_insert(", 
+		decl ? " " : "\n", p->name);
+
+	if (priv)
+		col += printf("struct kwbp *ctx");
+	else
+		col += printf("struct ksql *db");
 
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if ( ! (FTYPE_STRUCT == f->type ||

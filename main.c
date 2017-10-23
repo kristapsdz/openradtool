@@ -164,8 +164,7 @@ main(int argc, char *argv[])
 	/* Finally, (optionally) generate output. */
 
 	if (OP_C_SOURCE == op)
-		gen_c_source(&cfg->sq, json, 
-			valids, splitproc, header);
+		gen_c_source(cfg, json, valids, splitproc, header);
 	else if (OP_C_HEADER == op)
 		gen_c_header(cfg, json, valids, splitproc);
 	else if (OP_SQL == op)

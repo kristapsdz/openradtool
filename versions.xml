@@ -2,7 +2,7 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
-			<h3>0.3.1</h3>
+			<h3>0.3.0</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-09-18">2017-09-18</time>
 		</header>
@@ -10,15 +10,6 @@
 			<p>
 				Require the <code>insert</code> statement within a structure to generate insertion functions.
 			</p>
-		</aside>
-	</article>
-	<article data-sblg-article="1" data-sblg-tags="version">
-		<header>
-			<h3>0.3.0</h3>
-			<address>Kristaps Dzonsons</address>
-			<time datetime="2017-09-18">2017-09-18</time>
-		</header>
-		<aside>
 			<p>
 				Disambiguate the configuration grammar with respect to structure linking.
 				Earlier, <code>struct</code> types could specify the linkage from another field to a foreign key.

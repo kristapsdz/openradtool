@@ -1,10 +1,8 @@
 roles {
  role kristaps {
-  role meng;
   role foo;
  };
  role bar;
- role meng;
 };
 
 struct company {

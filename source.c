@@ -1496,9 +1496,9 @@ gen_c_source(const struct config *cfg, int json,
 
 	print_commentt(0, COMMENT_C,
 		"Our full set of SQL statements.\n"
-		"We define these beforehand because that's how ksql\n"
+		"We define these beforehand because that's how ksql "
 		"handles statement generation.\n"
-		"Notice the \"AS\" part: this allows for multiple\n"
+		"Notice the \"AS\" part: this allows for multiple "
 		"inner joins without ambiguity.");
 	puts("static\tconst char *const stmts[STMT__MAX] = {");
 	TAILQ_FOREACH(p, &cfg->sq, entries)

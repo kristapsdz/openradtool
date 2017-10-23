@@ -517,21 +517,15 @@ gen_c_header(const struct config *cfg,
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_struct(p);
 
-	/*
-	 * Don't expose information about the underlying table if we're
-	 * not also providing the ksql object.
-	 */
-	if ( ! (CFG_HAS_ROLES & cfg->flags)) {
-		print_commentt(0, COMMENT_C,
-			"Define our table columns.\n"
-			"Use these when creating your own SQL statements, "
-			"combined with the db_xxxx_fill functions.\n"
-			"Each macro must be given a unique alias name.\n"
-			"This allows for doing multiple inner joins on the "
-			"same table.");
-		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_schema(p);
-	}
+	print_commentt(0, COMMENT_C,
+		"Define our table columns.\n"
+		"Use these when creating your own SQL statements, "
+		"combined with the db_xxxx_fill functions.\n"
+		"Each macro must be given a unique alias name.\n"
+		"This allows for doing multiple inner joins on the "
+		"same table.");
+	TAILQ_FOREACH(p, &cfg->sq, entries)
+		gen_schema(p);
 
 	if (valids) {
 		puts("");

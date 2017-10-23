@@ -132,9 +132,15 @@ print_comment(const char *doc, size_t tabs,
 void
 print_commentt(size_t tabs, enum cmtt type, const char *cp)
 {
+	size_t	maxcol;
+
+	if (tabs >= 4)
+		maxcol = 40;
+	else
+		maxcol = MAXCOLS - (tabs * 4);
 
 	if (COMMENT_C == type && 1 == tabs &&
-	    NULL == strchr(cp, '\n') && strlen(cp) <= 50) {
+	    NULL == strchr(cp, '\n') && strlen(cp) < maxcol) {
 		printf("\t/* %s */\n", cp);
 		return;
 	}

@@ -449,23 +449,23 @@ gen_func_open(const struct config *cfg, int splitproc)
 {
 
 	print_commentt(0, COMMENT_C_FRAG_OPEN,
-		"Allocate and open the database in \"file\".\n"
+		"Allocate and open the database in \"file\". "
 		"This opens the database in \"safe exit\" mode "
 		"(see ksql(3)).");
 	if (splitproc)
 		print_commentt(0, COMMENT_C_FRAG,
-			"Note: the database has been opened in a\n"
-			"child process, so the application may be\n"
+			"Note: the database has been opened in a "
+			"child process, so the application may be "
 			"sandboxed liberally.");
 	else
 		print_commentt(0, COMMENT_C_FRAG,
-			"Note: if you're using a sandbox, you must\n"
-			"accommodate for the SQLite database within\n"
+			"Note: if you're using a sandbox, you must "
+			"accommodate for the SQLite database within "
 			"process memory.");
 	if (CFG_HAS_ROLES & cfg->flags)
 		print_commentt(0, COMMENT_C_FRAG,
 			"Returns an opaque pointer or NULL on "
-			"memory exhaustion");
+			"memory exhaustion.");
 	else
 		print_commentt(0, COMMENT_C_FRAG,
 			"Returns a pointer to the database or "
@@ -517,15 +517,21 @@ gen_c_header(const struct config *cfg,
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_struct(p);
 
-	print_commentt(0, COMMENT_C,
-		"Define our table columns.\n"
-		"Use these when creating your own SQL statements,\n"
-		"combined with the db_xxxx_fill functions.\n"
-		"Each macro must be given a unique alias name.\n"
-		"This allows for doing multiple inner joins on the "
-		"same table.");
-	TAILQ_FOREACH(p, &cfg->sq, entries)
-		gen_schema(p);
+	/*
+	 * Don't expose information about the underlying table if we're
+	 * not also providing the ksql object.
+	 */
+	if ( ! (CFG_HAS_ROLES & cfg->flags)) {
+		print_commentt(0, COMMENT_C,
+			"Define our table columns.\n"
+			"Use these when creating your own SQL statements, "
+			"combined with the db_xxxx_fill functions.\n"
+			"Each macro must be given a unique alias name.\n"
+			"This allows for doing multiple inner joins on the "
+			"same table.");
+		TAILQ_FOREACH(p, &cfg->sq, entries)
+			gen_schema(p);
+	}
 
 	if (valids) {
 		puts("");

@@ -55,14 +55,16 @@ static	const char *const optypes[OPTYPE__MAX] = {
 
 /*
  * Generate the convenience "open" function.
+ * If "priv" is non-zero, return a kwbp instead of ksql.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
  */
 void
-print_func_db_open(int decl)
+print_func_db_open(int priv, int decl)
 {
 
-	printf("struct ksql *%sdb_open(const char *file)%s\n",
+	printf("struct %s *%sdb_open(const char *file)%s\n",
+		priv ? "kwbp" : "ksql",
 		decl ? "" : "\n", decl ? ";" : "");
 }
 
@@ -72,11 +74,12 @@ print_func_db_open(int decl)
  * return type; otherwise, have it on one line.
  */
 void
-print_func_db_close(int decl)
+print_func_db_close(int priv, int decl)
 {
 
-	printf("void%sdb_close(struct ksql *p)%s\n",
-		decl ? " " : "\n", decl ? ";" : "");
+	printf("void%sdb_close(struct %s *p)%s\n",
+		decl ? " " : "\n", priv ? "kwbp" : "ksql",
+		decl ? ";" : "");
 }
 
 /*

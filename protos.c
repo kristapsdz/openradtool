@@ -70,6 +70,7 @@ print_func_db_open(int priv, int decl)
 
 /*
  * Generate the convenience "close" function.
+ * If "priv" is non-zero, accept a kwbp instead of ksql.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
  */
@@ -128,9 +129,10 @@ print_var(size_t pos, size_t col,
  * Generate the "update" function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
+ * If "priv" is non-zero, accept a kwbp instead of ksql.
  */
 void
-print_func_db_update(const struct update *u, int decl)
+print_func_db_update(const struct update *u, int priv, int decl)
 {
 	const struct uref *ur;
 	size_t	 pos = 1;
@@ -158,7 +160,10 @@ print_func_db_update(const struct update *u, int decl)
 	} else 
 		col += printf("_%s", u->name);
 
-	col += printf("(struct ksql *db");
+	if (priv)
+		col += printf("(struct kwbp *ctx");
+	else
+		col += printf("(struct ksql *db");
 
 	TAILQ_FOREACH(ur, &u->mrq, entries)
 		col = print_var(pos++, col, 

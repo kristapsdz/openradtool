@@ -768,16 +768,21 @@ gen_func_fill(const struct strct *p)
  * Generate an update or delete function.
  */
 static void
-gen_func_update(const struct update *up, size_t num)
+gen_func_update(const struct config *cfg,
+	const struct update *up, size_t num)
 {
 	const struct uref *ref;
 	size_t	 pos, npos;
 
-	print_func_db_update(up, 0);
-	printf("\n"
-	       "{\n"
-	       "\tstruct ksqlstmt *stmt;\n"
-	       "\tenum ksqlc c;\n");
+	print_func_db_update(up, CFG_HAS_ROLES & cfg->flags, 0);
+	puts("\n"
+	     "{\n"
+	     "\tstruct ksqlstmt *stmt;\n"
+	     "\tenum ksqlc c;");
+	if (CFG_HAS_ROLES & cfg->flags)
+		puts("\tstruct ksql *db = cfg->db;\n");
+	else
+		puts("");
 
 	/* Create hash buffer for modifying hashes. */
 
@@ -1059,7 +1064,8 @@ gen_func_json_data(const struct strct *p)
  * given structure "s".
  */
 static void
-gen_funcs(const struct strct *p, int json, int valids)
+gen_funcs(const struct config *cfg, 
+	const struct strct *p, int json, int valids)
 {
 	const struct search *s;
 	const struct update *u;
@@ -1094,10 +1100,10 @@ gen_funcs(const struct strct *p, int json, int valids)
 
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
-		gen_func_update(u, pos++);
+		gen_func_update(cfg, u, pos++);
 	pos = 0;
 	TAILQ_FOREACH(u, &p->dq, entries)
-		gen_func_update(u, pos++);
+		gen_func_update(cfg, u, pos++);
 }
 
 /*
@@ -1503,5 +1509,5 @@ gen_c_source(const struct config *cfg, int json,
 	gen_func_close(cfg);
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		gen_funcs(p, json, valids);
+		gen_funcs(cfg, p, json, valids);
 }

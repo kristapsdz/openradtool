@@ -798,7 +798,7 @@ gen_func_update(const struct config *cfg,
 	     "\tstruct ksqlstmt *stmt;\n"
 	     "\tenum ksqlc c;");
 	if (CFG_HAS_ROLES & cfg->flags)
-		puts("\tstruct ksql *db = cfg->db;\n");
+		puts("\tstruct ksql *db = ctx->db;\n");
 	else
 		puts("");
 
@@ -808,7 +808,8 @@ gen_func_update(const struct config *cfg,
 	TAILQ_FOREACH(ref, &up->mrq, entries)
 		if (FTYPE_PASSWORD == ref->field->type)
 			printf("\tchar hash%zu[64];\n", pos++);
-	puts("");
+	if ( ! TAILQ_EMPTY(&up->mrq))
+		puts("");
 
 	/* Create hash from password. */
 

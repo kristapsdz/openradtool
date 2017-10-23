@@ -415,7 +415,7 @@ void		 parse_free(struct config *);
 
 void		 gen_c_header(const struct config *, 
 			int, int, int);
-void		 gen_c_source(const struct strctq *, 
+void		 gen_c_source(const struct config *, 
 			int, int, int, const char *);
 void		 gen_sql(const struct strctq *);
 int		 gen_diff(const struct config *,

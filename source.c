@@ -1364,14 +1364,14 @@ gen_valid_struct(const struct strct *p)
 }
 
 /*
- * Generate the C source file from "q" structure objects.
+ * Generate the C source file from "cfg"s structure objects.
  * If "json" is non-zero, this generates the JSON formatters.
  * If "valids" is non-zero, this generates the field validators.
  * The "header" is what's noted as an inclusion.
  * (Your header file, see gen_c_header, should have the same name.)
  */
 void
-gen_c_source(const struct strctq *q, int json, 
+gen_c_source(const struct config *cfg, int json, 
 	int valids, int splitproc, const char *header)
 {
 	const struct strct *p;
@@ -1385,7 +1385,7 @@ gen_c_source(const struct strctq *q, int json,
 
 	puts("#include <sys/queue.h>");
 
-	TAILQ_FOREACH(p, q, entries) 
+	TAILQ_FOREACH(p, &cfg->sq, entries) 
 		if (STRCT_HAS_BLOB & p->flags) {
 			print_commentt(0, COMMENT_C,
 				"Required for b64_ntop().");
@@ -1421,7 +1421,7 @@ gen_c_source(const struct strctq *q, int json,
 	print_commentt(0, COMMENT_C,
 		"All SQL statements we'll define in \"stmts\".");
 	puts("enum\tstmt {");
-	TAILQ_FOREACH(p, q, entries)
+	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_enum(p);
 	puts("\tSTMT__MAX\n"
 	     "};\n"
@@ -1436,7 +1436,7 @@ gen_c_source(const struct strctq *q, int json,
 		"Notice the \"AS\" part: this allows for multiple\n"
 		"inner joins without ambiguity.");
 	puts("static\tconst char *const stmts[STMT__MAX] = {");
-	TAILQ_FOREACH(p, q, entries)
+	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_stmt(p);
 	puts("};");
 	puts("");
@@ -1449,7 +1449,7 @@ gen_c_source(const struct strctq *q, int json,
 
 	if (valids) {
 		puts("const struct kvalid valid_keys[VALID__MAX] = {");
-		TAILQ_FOREACH(p, q, entries)
+		TAILQ_FOREACH(p, &cfg->sq, entries)
 			gen_valid_struct(p);
 		puts("};\n"
 		     "");
@@ -1464,6 +1464,6 @@ gen_c_source(const struct strctq *q, int json,
 	gen_func_open(splitproc);
 	gen_func_close();
 
-	TAILQ_FOREACH(p, q, entries)
+	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_funcs(p, json, valids);
 }

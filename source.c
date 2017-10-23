@@ -1055,8 +1055,10 @@ gen_func_json_data(const struct strct *p)
 			printf("\t%s(r, \"%s\", buf%zu);\n",
 				puttypes[f->type], f->name, ++pos);
 		else if (FTYPE_STRUCT == f->type)
-			printf("\tjson_%s_obj(r, &p->%s);\n",
-				f->ref->tstrct, f->name);
+			printf("\tkjson_objp_open(r, \"%s\");\n"
+			       "\tjson_%s_data(r, &p->%s);\n"
+			       "\tkjson_obj_close(r);\n",
+				f->name, f->ref->tstrct, f->name);
 		else
 			printf("\t%s(r, \"%s\", p->%s);\n", 
 				puttypes[f->type], f->name, f->name);

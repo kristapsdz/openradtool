@@ -29,23 +29,28 @@
 
 #include "extern.h"
 
+#define	MAXCOLS 70
+
 /*
  * Generate a (possibly) multi-line comment with "tabs" number of
  * preceding tab spaces.
  * This uses the standard comment syntax as seen in this comment itself.
- *
  * FIXME: don't allow comment-end string.
- * FIXME: wrap at 72 characters.
  */
 static void
 print_comment(const char *doc, size_t tabs, 
 	const char *pre, const char *in, const char *post)
 {
-	const char	*cp;
-	size_t		 i;
+	const char	*cp, *cpp;
+	size_t		 i, curcol, maxcol;
 	char		 last = '\0';
 
 	assert(NULL != in);
+
+	if (tabs >= 4)
+		maxcol = 40;
+	else
+		maxcol = MAXCOLS - (tabs * 4);
 
 	if (NULL != pre) {
 		for (i = 0; i < tabs; i++)
@@ -58,20 +63,58 @@ print_comment(const char *doc, size_t tabs,
 			putchar('\t');
 		printf("%s", in);
 
+		curcol = 0;
 		for (cp = doc; '\0' != *cp; cp++) {
+			/*
+			 * Newline check.
+			 * If we're at a newline, then emit the leading
+			 * in-comment marker.
+			 */
+
 			if ('\n' == *cp) {
 				putchar('\n');
 				for (i = 0; i < tabs; i++)
 					putchar('\t');
 				printf("%s", in);
 				last = *cp;
+				curcol = 0;
 				continue;
 			}
+
+			/* Escaped quotation marks. */
+
 			if ('\\' == *cp && '"' == cp[1])
 				cp++;
+
+			/*
+			 * If we're starting a word, see whether the
+			 * word will extend beyond our line boundaries.
+			 * If it does, and if the last character wasn't
+			 * a newline, then emit a newline.
+			 */
+
+			if ((' ' == last || '\t' == last) && 
+			    (' ' != *cp && '\t' != *cp)) {
+				for (cpp = cp; '\0' != *cpp; cpp++)
+					if (' ' == *cpp || 
+					    '\t' == *cpp)
+						break;
+				if (curcol + (cpp - cp) > maxcol) {
+					putchar('\n');
+					for (i = 0; i < tabs; i++)
+						putchar('\t');
+					printf("%s", in);
+					curcol = 0;
+				}
+			}
+
 			putchar(*cp);
 			last = *cp;
+			curcol++;
 		}
+
+		/* Newline-terminate. */
+
 		if ('\n' != last)
 			putchar('\n');
 	}

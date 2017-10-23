@@ -149,7 +149,7 @@ gen_struct(const struct strct *p)
  * Generate update/delete functions for a structure.
  */
 static void
-gen_func_update(const struct update *up)
+gen_func_update(const struct config *cfg, const struct update *up)
 {
 	const struct uref *ref;
 	enum cmtt	 ct = COMMENT_C_FRAG_OPEN;
@@ -198,7 +198,7 @@ gen_func_update(const struct update *up)
 	print_commentt(0, COMMENT_C_FRAG_CLOSE,
 		"Returns zero on failure, non-zero on "
 		"constraint errors.");
-	print_func_db_update(up, 1);
+	print_func_db_update(up, CFG_HAS_ROLES & cfg->flags, 1);
 	puts("");
 }
 
@@ -268,7 +268,8 @@ gen_func_search(const struct search *s)
  * Generate the function declarations for a given structure.
  */
 static void
-gen_funcs(const struct strct *p, int json, int valids)
+gen_funcs(const struct config *cfg,
+	const struct strct *p, int json, int valids)
 {
 	const struct search *s;
 	const struct field *f;
@@ -335,9 +336,9 @@ gen_funcs(const struct strct *p, int json, int valids)
 	TAILQ_FOREACH(s, &p->sq, entries)
 		gen_func_search(s);
 	TAILQ_FOREACH(u, &p->uq, entries)
-		gen_func_update(u);
+		gen_func_update(cfg, u);
 	TAILQ_FOREACH(u, &p->dq, entries)
-		gen_func_update(u);
+		gen_func_update(cfg, u);
 
 	if (json) {
 		print_commentv(0, COMMENT_C,
@@ -560,7 +561,7 @@ gen_c_header(const struct config *cfg,
 	gen_func_close(cfg);
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		gen_funcs(p, json, valids);
+		gen_funcs(cfg, p, json, valids);
 
 	puts("__END_DECLS\n"
 	     "\n"

@@ -436,7 +436,7 @@ void		 print_func_db_free(const struct strct *, int);
 void		 print_func_db_freeq(const struct strct *, int);
 void		 print_func_db_search(const struct search *, int);
 void		 print_func_db_unfill(const struct strct *, int);
-void		 print_func_db_update(const struct update *, int);
+void		 print_func_db_update(const struct update *, int, int);
 
 void		 print_func_json_array(const struct strct *, int);
 void		 print_func_json_data(const struct strct *, int);

@@ -425,9 +425,9 @@ gen_func_open(const struct config *cfg, int splitproc)
 	     "\tcfg.dberr = ksqlitedbmsg;\n"
 	     "");
 	if (splitproc)
-		puts("\tsql = ksql_alloc_child(&cfg, NULL, NULL);");
+		puts("\tdb = ksql_alloc_child(&cfg, NULL, NULL);");
 	else
-		puts("\tsql = ksql_alloc(&cfg);");
+		puts("\tdb = ksql_alloc(&cfg);");
 
 	if (CFG_HAS_ROLES & cfg->flags)
 		puts("\tif (NULL == db) {\n"

@@ -438,6 +438,58 @@ gen_valid_enums(const struct strct *p)
 }
 
 /*
+ * We need to handle several different facets here: if the
+ * system is operating in RBAC mode and whether the database is
+ * being opened in split-process mode.
+ * This changes the documentation for db_open, but we keep the
+ * documentation for db_close to be symmetric.
+ */
+static void
+gen_func_open(const struct config *cfg, int splitproc)
+{
+
+	print_commentt(0, COMMENT_C_FRAG_OPEN,
+		"Allocate and open the database in \"file\".\n"
+		"This opens the database in \"safe exit\" mode "
+		"(see ksql(3)).");
+	if (splitproc)
+		print_commentt(0, COMMENT_C_FRAG,
+			"Note: the database has been opened in a\n"
+			"child process, so the application may be\n"
+			"sandboxed liberally.");
+	else
+		print_commentt(0, COMMENT_C_FRAG,
+			"Note: if you're using a sandbox, you must\n"
+			"accommodate for the SQLite database within\n"
+			"process memory.");
+	if (CFG_HAS_ROLES & cfg->flags)
+		print_commentt(0, COMMENT_C_FRAG,
+			"Returns an opaque pointer or NULL on "
+			"memory exhaustion");
+	else
+		print_commentt(0, COMMENT_C_FRAG,
+			"Returns a pointer to the database or "
+			"NULL on memory exhaustion.");
+	print_commentt(0, COMMENT_C_FRAG_CLOSE,
+		"The returned pointer must be closed with "
+		"db_close().");
+
+	print_func_db_open(CFG_HAS_ROLES & cfg->flags, 1);
+	puts("");
+}
+
+static void
+gen_func_close(const struct config *cfg)
+{
+
+	print_commentt(0, COMMENT_C,
+		"Close the context opened by db_open().\n"
+		"Has no effect if \"p\" is NULL.");
+	print_func_db_close(CFG_HAS_ROLES & cfg->flags, 1);
+	puts("");
+}
+
+/*
  * Generate the C header file.
  * If "json" is non-zero, this generates the JSON formatters.
  * If "valids" is non-zero, this generates the field validators.
@@ -504,32 +556,8 @@ gen_c_header(const struct config *cfg,
 	     "__BEGIN_DECLS\n"
 	     "");
 
-	print_commentt(0, COMMENT_C_FRAG_OPEN,
-		"Allocate and open the database in \"file\".\n"
-		"This returns a pointer to the database "
-		"in \"safe exit\" mode (see ksql(3)).\n"
-		"It returns NULL on memory allocation failure.\n"
-		"The returned pointer must be closed with "
-		"db_close().");
-	if (splitproc)
-		print_commentt(0, COMMENT_C_FRAG,
-			"Note: the database has been opened in a\n"
-			"child process, so the application may be\n"
-			"sandboxed liberally.");
-	else
-		print_commentt(0, COMMENT_C_FRAG,
-			"Note: if you're using a sandbox, you must\n"
-			"accommodate for the SQLite database within\n"
-			"process memory.");
-	print_commentt(0, COMMENT_C_FRAG_CLOSE, NULL);
-	print_func_db_open(1);
-	puts("");
-
-	print_commentt(0, COMMENT_C,
-		"Close the database opened by db_open().\n"
-		"Has no effect if \"p\" is NULL.");
-	print_func_db_close(1);
-	puts("");
+	gen_func_open(cfg, splitproc);
+	gen_func_close(cfg);
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_funcs(p, json, valids);

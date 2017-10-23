@@ -392,14 +392,23 @@ gen_strct_func_list(const struct search *s, size_t num)
  * usual allocation method.
  */
 static void
-gen_func_open(int splitproc)
+gen_func_open(const struct config *cfg, int splitproc)
 {
 
-	print_func_db_open(0);
+	print_func_db_open(CFG_HAS_ROLES & cfg->flags, 0);
+
 	puts("{\n"
 	     "\tstruct ksqlcfg cfg;\n"
-	     "\tstruct ksql *sql;\n"
-	     "\n"
+	     "\tstruct ksql *sql;");
+
+	if (CFG_HAS_ROLES & cfg->flags)
+		puts("\tstruct kwbp *kp;\n"
+		     "\n"
+		     "\tkp = malloc(sizeof(struct kwbp));\n"
+		     "\tif (NULL == kp)\n"
+		     "\t\treturn(NULL);");
+
+	puts("\n"
 	     "\tmemset(&cfg, 0, sizeof(struct ksqlcfg));\n"
 	     "\tcfg.flags = KSQL_EXIT_ON_ERR |\n"
 	     "\t\tKSQL_FOREIGN_KEYS | KSQL_SAFE_EXIT;\n"
@@ -410,28 +419,48 @@ gen_func_open(int splitproc)
 		puts("\tsql = ksql_alloc_child(&cfg, NULL, NULL);");
 	else
 		puts("\tsql = ksql_alloc(&cfg);");
-	puts("\tif (NULL == sql)\n"
-	     "\t\treturn(NULL);\n"
-	     "\tksql_open(sql, file);\n"
-	     "\treturn(sql);\n"
-	     "}\n"
+
+	if (CFG_HAS_ROLES & cfg->flags)
+		puts("\tif (NULL == sql) {\n"
+		     "\t\tfree(kp);\n"
+		     "\t\treturn(NULL);\n"
+		     "\t}");
+	else
+		puts("\tif (NULL == sql)\n"
+		     "\t\treturn(NULL);");
+
+	puts("\tksql_open(sql, file);");
+
+	if (CFG_HAS_ROLES & cfg->flags) 
+		puts("\treturn(kp);");
+	else
+		puts("\treturn(sql);");
+
+	puts("}\n"
 	     "");
 }
 
 /*
- * Close and free the database.
+ * Close and free the database context.
+ * This is sensitive to whether we have roles.
  */
 static void
-gen_func_close(void)
+gen_func_close(const struct config *cfg)
 {
 
-	print_func_db_close(0);
+	print_func_db_close(CFG_HAS_ROLES & cfg->flags, 0);
 	puts("{\n"
 	     "\tif (NULL == p)\n"
-	     "\t\treturn;\n"
-	     "\tksql_close(p);\n"
-	     "\tksql_free(p);\n"
-	     "}\n"
+	     "\t\treturn;");
+	if (CFG_HAS_ROLES & cfg->flags) {
+		puts("\tksql_close(p->db);\n"
+	             "\tksql_free(p->db);\n"
+		     "\tfree(p);");
+	} else 
+		puts("\tksql_close(p);\n"
+	             "\tksql_free(p);");
+
+	puts("}\n"
 	     "");
 }
 
@@ -1427,6 +1456,15 @@ gen_c_source(const struct config *cfg, int json,
 	     "};\n"
 	     "");
 
+	if (CFG_HAS_ROLES & cfg->flags) {
+		print_commentt(0, COMMENT_C,
+			"Definition of our opaque \"kwbp\", which "
+			"contains role information.");
+		puts("struct\tkwbp {\n"
+		     "\tstruct ksql *db;\n"
+		     "};\n");
+	}
+
 	/* Now the array of all statement. */
 
 	print_commentt(0, COMMENT_C,
@@ -1461,8 +1499,8 @@ gen_c_source(const struct config *cfg, int json,
 		"Finally, all of the functions we'll use.");
 	puts("");
 
-	gen_func_open(splitproc);
-	gen_func_close();
+	gen_func_open(cfg, splitproc);
+	gen_func_close(cfg);
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_funcs(p, json, valids);

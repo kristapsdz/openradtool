@@ -35,6 +35,15 @@ static void gen_errx(const struct pos *, const char *, ...)
 static void gen_warnx(const struct pos *, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
 
+static	const char *const rolemapts[ROLEMAP__MAX] = {
+	"delete", /* ROLEMAP_DELETE */
+	"insert", /* ROLEMAP_INSERT */
+	"iterate", /* ROLEMAP_ITERATE */
+	"list", /* ROLEMAP_LIST */
+	"search", /* ROLEMAP_SEARCH */
+	"update", /* ROLEMAP_UPDATE */
+};
+
 static void
 gen_warnx(const struct pos *pos, const char *fmt, ...)
 {
@@ -597,6 +606,128 @@ resolve_unique(struct unique *u)
 	return(1);
 }
 
+/*
+ * Given a single roleset "rs", look it up recursively in the queue
+ * given by "rq", which should initially be invoked by the top-level
+ * queue of the configuration.
+ * On success, sets the associated role and returns non-zero.
+ * On failure, returns zero.
+ */
+static int
+resolve_roles(struct roleset *rs, struct roleq *rq)
+{
+	struct role 	*r;
+
+	TAILQ_FOREACH(r, rq, entries) {
+		if (0 == strcasecmp(rs->name, r->name)) {
+			rs->role = r;
+			return(1);
+		} else if (resolve_roles(rs, &r->subrq))
+			return(1);
+	}
+
+	return(0);
+}
+
+/*
+ * Given the rolemap "rm", look through all its rolesets ("roles") and
+ * match the roles to those given in the configuration "cfg".
+ * Return the number of bad matches (zero means all good).
+ * Reports its errors.
+ */
+static size_t
+resolve_roleset(struct rolemap *rm, struct config *cfg)
+{
+	struct roleset	*rs;
+	size_t		 i = 0;
+
+	TAILQ_FOREACH(rs, &rm->setq, entries) {
+		if (resolve_roles(rs, &cfg->rq))
+			continue;
+		gen_errx(&rs->parent->pos, "unknown role: %s", rs->name);
+		i++;
+	}
+
+	return(i);
+}
+
+/*
+ * Given the rolemap "rm", which we know to have a unique name and type
+ * in "p", assign to the correspending function type in "p".
+ * Return zero on failure to lookup, non-zero on success.
+ * On success, the rolemap is assigned into the structure.
+ */
+static int
+resolve_rolemap(struct rolemap *rm, struct strct *p)
+{
+	struct update	*u;
+	struct search	*s;
+
+	switch (rm->type) {
+	case ROLEMAP_DELETE:
+		TAILQ_FOREACH(u, &p->dq, entries) 
+			if (NULL != u->name &&
+			    0 == strcasecmp(u->name, rm->name)) {
+				assert(NULL == u->rolemap);
+				u->rolemap = rm;
+				return(1);
+			}
+		break;
+	case ROLEMAP_INSERT:
+		assert(NULL == p->irolemap);
+		p->irolemap = rm;
+		return(1);
+	case ROLEMAP_ITERATE:
+		TAILQ_FOREACH(s, &p->sq, entries) 
+			if (STYPE_ITERATE == s->type &&
+		  	    NULL != s->name &&
+			    0 == strcasecmp(s->name, rm->name)) {
+				assert(NULL == s->rolemap);
+				s->rolemap = rm;
+				return(1);
+			}
+		break;
+	case ROLEMAP_LIST:
+		TAILQ_FOREACH(s, &p->sq, entries) 
+			if (STYPE_LIST == s->type &&
+		  	    NULL != s->name &&
+			    0 == strcasecmp(s->name, rm->name)) {
+				assert(NULL == s->rolemap);
+				s->rolemap = rm;
+				return(1);
+			}
+		break;
+	case ROLEMAP_SEARCH:
+		TAILQ_FOREACH(s, &p->sq, entries)
+			if (STYPE_SEARCH == s->type &&
+			    NULL != s->name &&
+			    0 == strcasecmp(s->name, rm->name)) {
+				assert(NULL == s->rolemap);
+				s->rolemap = rm;
+				return(1);
+			}
+		break;
+	case ROLEMAP_UPDATE:
+		TAILQ_FOREACH(u, &p->uq, entries) 
+			if (NULL != u->name &&
+			    0 == strcasecmp(u->name, rm->name)) {
+				assert(NULL == u->rolemap);
+				u->rolemap = rm;
+				return(1);
+			}
+		break;
+	default:
+		abort();
+	}
+
+	gen_errx(&rm->pos, "corresponding %s function not found%s%s",
+		rolemapts[rm->type],
+		ROLEMAP_INSERT == rm->type ? "" : ": ",
+		ROLEMAP_INSERT == rm->type ? "" : rm->name);
+
+	return(0);
+}
+
 int
 parse_link(struct config *cfg)
 {
@@ -605,8 +736,9 @@ parse_link(struct config *cfg)
 	struct strct	**pa;
 	struct field	 *f;
 	struct unique	 *n;
+	struct rolemap	 *rm;
 	struct search	 *srch;
-	size_t		  colour = 1, sz = 0, i = 0, hasrowid = 0;
+	size_t		  colour = 1, sz = 0, i, hasrowid = 0;
 
 	/* Check for row identifier validity. */
 
@@ -618,8 +750,23 @@ parse_link(struct config *cfg)
 				return(0);
 	}
 
+	/* Check rolemap function name and role name linkage. */
+
+	i = 0;
+	TAILQ_FOREACH(p, &cfg->sq, entries) {
+		TAILQ_FOREACH(rm, &p->rq, entries)
+			if ( ! resolve_rolemap(rm, p))
+				i++;
+			else
+				i += resolve_roleset(rm, cfg);
+		if (NULL != p->irolemap)
+			i += resolve_roleset(p->irolemap, cfg);
+	}
+	if (i > 0)
+		return(0);
+
 	/* 
-	 * First, establish linkage between nodes.
+	 * Establish linkage between nodes.
 	 * While here, check for duplicate rowids.
 	 */
 

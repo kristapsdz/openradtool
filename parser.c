@@ -1940,6 +1940,24 @@ check_rolename(const struct roleq *rq, const char *name)
 	return(1);
 }
 
+static struct role *
+role_alloc(struct parse *p, const char *name, struct role *parent)
+{
+	struct role	*r;
+
+	if (NULL == (r = calloc(1, sizeof(struct role))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (r->name = strdup(name)))
+		err(EXIT_FAILURE, NULL);
+
+	r->parent = parent;
+	parse_point(p, &r->pos);
+	TAILQ_INIT(&r->subrq);
+	if (NULL != parent)
+		TAILQ_INSERT_TAIL(&parent->subrq, r, entries);
+	return(r);
+}
+
 /*
  * Parse an individual role, which may be a subset of another role
  * designation.
@@ -1948,8 +1966,7 @@ check_rolename(const struct roleq *rq, const char *name)
  *  "role" name ["{" [ ROLE ]* "}"]? ";"
  */
 static void
-parse_role(struct parse *p, struct config *cfg,
-	struct role *parent, struct roleq *rq)
+parse_role(struct parse *p, struct config *cfg, struct role *parent)
 {
 	struct role	*r;
 
@@ -1965,28 +1982,21 @@ parse_role(struct parse *p, struct config *cfg,
 	if ( ! check_rolename(&cfg->rq, p->last.string)) {
 		parse_errx(p, "duplicate role name");
 		return;
-	} else if (0 == strcasecmp(p->last.string, "default")) {
-		parse_errx(p, "\"default\" is reserved");
+	} else if (0 == strcasecmp(p->last.string, "default") ||
+	           0 == strcasecmp(p->last.string, "none") ||
+	           0 == strcasecmp(p->last.string, "all")) {
+		parse_errx(p, "reserved role name");
 		return;
 	} else if ( ! check_badidents(p, p->last.string))
 		return;
 
-	if (NULL == (r = calloc(1, sizeof(struct role))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (r->name = strdup(p->last.string)))
-		err(EXIT_FAILURE, NULL);
-
-	r->parent = parent;
-	parse_point(p, &r->pos);
-
-	TAILQ_INIT(&r->subrq);
-	TAILQ_INSERT_TAIL(rq, r, entries);
+	r = role_alloc(p, p->last.string, parent);
 
 	if (TOK_LBRACE == parse_next(p)) {
 		while ( ! PARSE_STOP(p)) {
 			if (TOK_RBRACE == parse_next(p))
 				break;
-			parse_role(p, cfg, r, &r->subrq);
+			parse_role(p, cfg, r);
 		}
 		parse_next(p);
 	}
@@ -2008,13 +2018,29 @@ parse_role(struct parse *p, struct config *cfg,
 static void
 parse_roles(struct parse *p, struct config *cfg)
 {
+	struct role	*r;
 
 	if (CFG_HAS_ROLES & cfg->flags) {
 		parse_errx(p, "roles already specified");
 		return;
 	} 
 	cfg->flags |= CFG_HAS_ROLES;
-	
+
+	/*
+	 * Start by allocating the reserved roles.
+	 * These are "none", "default", and "all".
+	 * Make the "all" one the parent of everything.
+	 */
+
+	r = role_alloc(p, "none", NULL);
+	TAILQ_INSERT_TAIL(&cfg->rq, r, entries);
+
+	r = role_alloc(p, "default", NULL);
+	TAILQ_INSERT_TAIL(&cfg->rq, r, entries);
+
+	r = role_alloc(p, "all", NULL);
+	TAILQ_INSERT_TAIL(&cfg->rq, r, entries);
+
 	if (TOK_LBRACE != parse_next(p)) {
 		parse_errx(p, "expected left brace");
 		return;
@@ -2023,7 +2049,8 @@ parse_roles(struct parse *p, struct config *cfg)
 	while ( ! PARSE_STOP(p)) {
 		if (TOK_RBRACE == parse_next(p))
 			break;
-		parse_role(p, cfg, NULL, &cfg->rq);
+		/* Pass in "all" role as top-level. */
+		parse_role(p, cfg, r);
 	}
 
 	if (PARSE_STOP(p))

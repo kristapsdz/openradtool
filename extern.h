@@ -342,6 +342,40 @@ struct	update {
 
 TAILQ_HEAD(updateq, update);
 
+enum	rolemapt {
+	ROLEMAP_DELETE = 0,
+	ROLEMAP_INSERT,
+	ROLEMAP_ITERATE,
+	ROLEMAP_LIST,
+	ROLEMAP_SEARCH,
+	ROLEMAP_UPDATE,
+	ROLEMAP__MAX
+};
+
+TAILQ_HEAD(rolesetq, roleset);
+
+/*
+ * Maps a given operation (like an insert named "foo") with a set of
+ * roles with permission to perform the operation (setq).
+ */
+struct	rolemap {
+	char		    *name; /* name of operation */
+	enum rolemapt	     type; /* type */
+	struct rolesetq	     setq; /* allowed roles */
+	TAILQ_ENTRY(rolemap) entries;
+};
+
+TAILQ_HEAD(rolemapq, rolemap);
+
+/*
+ * One of a set of roles allows to perform the given parent operation.
+ */
+struct	roleset {
+	char		    *name; /* name of role */
+	struct rolemap	    *parent; /* which operation */
+	TAILQ_ENTRY(roleset) entries;
+};
+
 /*
  * A database/struct consisting of fields.
  * Structures depend upon other structures (see the FTYPE_REF in the
@@ -361,6 +395,7 @@ struct	strct {
 	struct updateq	   uq; /* update conditions */
 	struct updateq	   dq; /* delete constraints */
 	struct uniqueq	   nq; /* unique constraints */
+	struct rolemapq	   rq; /* role assignments */
 	unsigned int	   flags;
 #define	STRCT_HAS_QUEUE	   0x01 /* needs a queue interface */
 #define	STRCT_HAS_ITERATOR 0x02 /* needs iterator interface */

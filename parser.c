@@ -67,6 +67,15 @@ struct	parse {
 	FILE		*f; /* current parser */
 };
 
+static	const char *const rolemapts[ROLEMAP__MAX] = {
+	"delete", /* ROLEMAP_DELETE */
+	"insert", /* ROLEMAP_INSERT */
+	"iterate", /* ROLEMAP_ITERATE */
+	"list", /* ROLEMAP_LIST */
+	"search", /* ROLEMAP_SEARCH */
+	"update", /* ROLEMAP_UPDATE */
+};
+
 /*
  * Disallowed field names.
  * The SQL ones are from https://sqlite.org/lang_keywords.html.
@@ -1593,6 +1602,176 @@ parse_enum_data(struct parse *p, struct enm *e)
 		parse_errx(p, "no items in enumeration");
 }
 
+static struct roleset *
+roleset_alloc(struct rolesetq *rq, 
+	const char *name, struct rolemap *parent)
+{
+	struct roleset	*rs;
+
+	if (NULL == (rs = malloc(sizeof(struct roleset))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (rs->name = strdup(name)))
+		err(EXIT_FAILURE, NULL);
+	rs->parent = parent;
+	TAILQ_INSERT_TAIL(rq, rs, entries);
+	return(rs);
+}
+
+/*
+ * For a given structure "s", allow access to functions (insert, delete,
+ * etc.) based on a set of roles.
+ * This is invoked within parse_struct_date().
+ * Its syntax is as follows:
+ *
+ *   "roles" name ["," name ]* "{" [ROLE ";"]* "};"
+ *
+ * The roles ("ROLE") can be as follows, where "NAME" is the name of the
+ * item as described in the structure.
+ * Naturally, only named items can be dealt with.
+ *
+ *   "insert"
+ *   "delete" NAME
+ *   "search" NAME
+ *   "update" NAME
+ *   "list" NAME
+ *   "iterate" NAME
+ */
+static void
+parse_config_roles(struct parse *p, struct strct *s)
+{
+	struct roleset	*rs, *rrs;
+	struct rolemap	*rm;
+	struct rolesetq	 rq;
+	enum rolemapt	 type;
+
+	TAILQ_INIT(&rq);
+
+	/*
+	 * First, gather up all of the roles that we're going to
+	 * associate with whatever comes next.
+	 * If anything happens during any of these routines, we enter
+	 * the "cleanup" label, which cleans up the "rq" queue.
+	 */
+
+	if (TOK_IDENT != parse_next(p)) {
+		parse_errx(p, "expected role name");
+		return;
+	}
+	rs = roleset_alloc(&rq, p->last.string, NULL);
+
+	while ( ! PARSE_STOP(p) && TOK_LBRACE != parse_next(p)) {
+		if (TOK_COMMA != p->lasttype) {
+			parse_errx(p, "expected comma");
+			goto cleanup;
+		} else if (TOK_IDENT != parse_next(p)) {
+			parse_errx(p, "expected role name");
+			goto cleanup;
+		}
+		TAILQ_FOREACH(rs, &rq, entries) {
+			if (strcasecmp(rs->name, p->last.string))
+				continue;
+			parse_errx(p, "duplicate role name");
+			goto cleanup;
+		}
+		rs = roleset_alloc(&rq, p->last.string, NULL);
+	}
+
+	/* If something bad has happened, clean up. */
+
+	if (PARSE_STOP(p) || TOK_LBRACE != p->lasttype)
+		goto cleanup;
+
+	/* 
+	 * Next phase: read through the constraints.
+	 * Apply the roles above to each of the constraints, possibly
+	 * making them along the way.
+	 * We need to deep-copy the constraints instead of copying the
+	 * pointer because we might be applying the same roleset to
+	 * different constraint types.
+	 */
+
+	while ( ! PARSE_STOP(p) && TOK_RBRACE != parse_next(p)) {
+		if (TOK_IDENT != p->lasttype) {
+			parse_errx(p, "expected role constraint type");
+			goto cleanup;
+		}
+		for (type = 0; type < ROLEMAP__MAX; type++) 
+			if (0 == strcasecmp
+			    (p->last.string, rolemapts[type]))
+				break;
+		if (ROLEMAP__MAX == type) {
+			parse_errx(p, "unknown role constraint type");
+			goto cleanup;
+		}
+		if (ROLEMAP_INSERT != type &&
+		    TOK_IDENT != parse_next(p)) {
+			parse_errx(p, "expected role constraint name");
+			goto cleanup;
+		}
+
+		/* Lookup rolemap: if not found, allocate anew. */
+
+		TAILQ_FOREACH(rm, &s->rq, entries) {
+			if (rm->type != type)
+				continue;
+			if (ROLEMAP_INSERT != type &&
+			    strcasecmp(rm->name, p->last.string))
+				continue;
+			break;
+		}
+
+		if (NULL == rm) {
+			rm = malloc(sizeof(struct rolemap));
+			if (NULL == rm)
+				err(EXIT_FAILURE, NULL);
+			TAILQ_INIT(&rm->setq);
+			rm->type = type;
+			rm->name = NULL;
+			if (ROLEMAP_INSERT != type) {
+				rm->name = strdup(p->last.string);
+				if (NULL == rm->name)
+					err(EXIT_FAILURE, NULL);
+			} 
+			TAILQ_INSERT_TAIL(&s->rq, rm, entries);
+		} 
+
+		/*
+		 * Now go through the rolemap's set and append the new
+		 * set entries if not already specified.
+		 * We deep-copy the roleset.
+		 */
+
+		TAILQ_FOREACH(rs, &rq, entries) {
+			TAILQ_FOREACH(rrs, &rm->setq, entries) {
+				if (strcasecmp(rrs->name, rs->name))
+					continue;
+				parse_warnx(p, "duplicate role "
+					"assigned to constraint");
+				break;
+			}
+			if (NULL != rrs)
+				continue;
+			rrs = roleset_alloc(&rm->setq, rs->name, rm);
+		}
+
+		if (TOK_SEMICOLON != parse_next(p)) {
+			parse_errx(p, "expected semicolon");
+			goto cleanup;
+		}
+	}
+
+	if ( ! PARSE_STOP(p) && TOK_RBRACE == p->lasttype)
+		if (TOK_SEMICOLON != parse_next(p))
+			parse_errx(p, "expected semicolon");
+
+cleanup:
+	while (NULL != (rs = TAILQ_FIRST(&rq))) {
+		TAILQ_REMOVE(&rq, rs, entries);
+		free(rs->name);
+		free(rs);
+	}
+}
+
 /*
  * Read an individual structure.
  * This opens and closes the structure, then reads all of the field
@@ -1607,6 +1786,7 @@ parse_enum_data(struct parse *p, struct enm *e)
  *    ["insert"]*
  *    ["unique" unique_fields]*
  *    ["comment" quoted_string]?
+ *    ["roles" role_fields]*
  *  "};"
  */
 static void
@@ -1659,6 +1839,9 @@ parse_struct_data(struct parse *p, struct strct *s)
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "unique")) {
 			parse_config_unique(p, s);
+			continue;
+		} else if (0 == strcasecmp(p->last.string, "roles")) {
+			parse_config_roles(p, s);
 			continue;
 		} else if (strcasecmp(p->last.string, "field")) {
 			parse_errx(p, "unknown struct data type ");
@@ -1886,6 +2069,7 @@ parse_struct(struct parse *p, struct strctq *q)
 	TAILQ_INIT(&s->uq);
 	TAILQ_INIT(&s->nq);
 	TAILQ_INIT(&s->dq);
+	TAILQ_INIT(&s->rq);
 	parse_struct_data(p, s);
 }
 

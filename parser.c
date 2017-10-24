@@ -1732,6 +1732,7 @@ parse_config_roles(struct parse *p, struct strct *s)
 				if (NULL == rm->name)
 					err(EXIT_FAILURE, NULL);
 			} 
+			parse_point(p, &rm->pos);
 			TAILQ_INSERT_TAIL(&s->rq, rm, entries);
 		} 
 

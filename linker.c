@@ -632,13 +632,16 @@ resolve_roles(struct roleset *rs, struct roleq *rq)
 /*
  * Given the rolemap "rm", look through all its rolesets ("roles") and
  * match the roles to those given in the configuration "cfg".
+ * Then make sure that the matched roles, if any, don't overlap in the
+ * tree of roles.
  * Return the number of bad matches (zero means all good).
  * Reports its errors.
  */
 static size_t
 resolve_roleset(struct rolemap *rm, struct config *cfg)
 {
-	struct roleset	*rs;
+	struct roleset	*rs, *rrs;
+	struct role	*rp;
 	size_t		 i = 0;
 
 	TAILQ_FOREACH(rs, &rm->setq, entries) {
@@ -646,6 +649,29 @@ resolve_roleset(struct rolemap *rm, struct config *cfg)
 			continue;
 		gen_errx(&rs->parent->pos, "unknown role: %s", rs->name);
 		i++;
+	}
+
+	/*
+	 * For each valid role in the roleset, see if another role is
+	 * specified that's a parent of the current role.
+	 */
+
+	TAILQ_FOREACH(rs, &rm->setq, entries) {
+		if (NULL == rs->role)
+			continue;
+		TAILQ_FOREACH(rrs, &rm->setq, entries) {
+			if (rrs == rs || NULL == (rp = rrs->role))
+				continue;
+			assert(rp != rs->role);
+			for ( ; NULL != rp; rp = rp->parent)
+				if (rp == rs->role)
+					break;
+			if (NULL == rp)
+				continue;
+			gen_errx(&rs->parent->pos, 
+				"overlapping role: %s", rs->name);
+			i++;
+		}
 	}
 
 	return(i);
@@ -750,7 +776,11 @@ parse_link(struct config *cfg)
 				return(0);
 	}
 
-	/* Check rolemap function name and role name linkage. */
+	/* 
+	 * Check rolemap function name and role name linkage.
+	 * Also make sure that any given rolemap doesn't refer to nested
+	 * roles (e.g., a role and one if its ancestors).
+	 */
 
 	i = 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries) {

@@ -654,10 +654,12 @@ resolve_roleset(struct rolemap *rm, struct config *cfg)
 	/*
 	 * For each valid role in the roleset, see if another role is
 	 * specified that's a parent of the current role.
+	 * Don't use top-level roles, since by definition they don't
+	 * overlap with anything else.
 	 */
 
 	TAILQ_FOREACH(rs, &rm->setq, entries) {
-		if (NULL == rs->role)
+		if (NULL == rs->role || NULL == rs->role->parent)
 			continue;
 		TAILQ_FOREACH(rrs, &rm->setq, entries) {
 			if (rrs == rs || NULL == (rp = rrs->role))

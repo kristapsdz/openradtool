@@ -1781,6 +1781,9 @@ parse_role(struct parse *p, struct config *cfg,
 	if ( ! check_rolename(&cfg->rq, p->last.string)) {
 		parse_errx(p, "duplicate role name");
 		return;
+	} else if (0 == strcasecmp(p->last.string, "default")) {
+		parse_errx(p, "\"default\" is reserved");
+		return;
 	} else if ( ! check_badidents(p, p->last.string))
 		return;
 

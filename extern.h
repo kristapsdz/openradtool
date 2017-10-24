@@ -17,6 +17,27 @@
 #ifndef EXTERN_H
 #define EXTERN_H
 
+/*
+ * We use many queues.
+ * Here they are...
+ */
+TAILQ_HEAD(aliasq, alias);
+TAILQ_HEAD(eitemq, eitem);
+TAILQ_HEAD(enmq, enm);
+TAILQ_HEAD(fieldq, field);
+TAILQ_HEAD(fvalidq, fvalid);
+TAILQ_HEAD(nrefq, nref);
+TAILQ_HEAD(rolemapq, rolemap);
+TAILQ_HEAD(roleq, role);
+TAILQ_HEAD(rolesetq, roleset);
+TAILQ_HEAD(searchq, search);
+TAILQ_HEAD(sentq, sent);
+TAILQ_HEAD(srefq, sref);
+TAILQ_HEAD(strctq, strct);
+TAILQ_HEAD(uniqueq, unique);
+TAILQ_HEAD(updateq, update);
+TAILQ_HEAD(urefq, uref);
+
 enum	ftype {
 	FTYPE_EPOCH, /* epoch (time_t) */
 	FTYPE_INT, /* native integer */
@@ -84,8 +105,6 @@ struct	fvalid {
 	TAILQ_ENTRY(fvalid) entries;
 };
 
-TAILQ_HEAD(fvalidq, fvalid);
-
 /*
  * A single item within an enumeration.
  */
@@ -97,8 +116,6 @@ struct	eitem {
 	struct enm	  *parent; /* parent enumeration */
 	TAILQ_ENTRY(eitem) entries;
 };
-
-TAILQ_HEAD(eitemq, eitem);
 
 /*
  * An enumeration of possible values.
@@ -112,8 +129,6 @@ struct	enm {
 	struct eitemq	 eq; /* items in enumeration */
 	TAILQ_ENTRY(enm) entries;
 };
-
-TAILQ_HEAD(enmq, enm);
 
 /*
  * If a field is an enumeration type, this records the name of the
@@ -161,8 +176,6 @@ struct	field {
 	TAILQ_ENTRY(field) entries;
 };
 
-TAILQ_HEAD(fieldq, field);
-
 /*
  * An alias gives a unique name to each *possible* search entity.
  * For any structure, this will consist of all possible paths into
@@ -178,8 +191,6 @@ struct 	alias {
 	TAILQ_ENTRY(alias) entries;
 };
 
-TAILQ_HEAD(aliasq, alias);
-
 /*
  * A single field reference within a chain.
  * For example, in a chain of "user.company.name", which presumes
@@ -194,8 +205,6 @@ struct	sref {
 	struct sent	 *parent; /* up-reference */
 	TAILQ_ENTRY(sref) entries;
 };
-
-TAILQ_HEAD(srefq, sref);
 
 /*
  * SQL operator to use.
@@ -223,17 +232,19 @@ enum	modtype {
 	MODTYPE__MAX
 };
 
+/*
+ * The type of function that a rolemap is associated with.
+ * Most functions (all except for "insert") are also tagged with a name.
+ */
 enum	rolemapt {
-	ROLEMAP_DELETE = 0,
-	ROLEMAP_INSERT,
-	ROLEMAP_ITERATE,
-	ROLEMAP_LIST,
-	ROLEMAP_SEARCH,
-	ROLEMAP_UPDATE,
+	ROLEMAP_DELETE = 0, /* delete */
+	ROLEMAP_INSERT, /* insert */
+	ROLEMAP_ITERATE, /* iterate */
+	ROLEMAP_LIST, /* list */
+	ROLEMAP_SEARCH, /* search */
+	ROLEMAP_UPDATE, /* update */
 	ROLEMAP__MAX
 };
-
-TAILQ_HEAD(rolesetq, roleset);
 
 /*
  * Maps a given operation (like an insert named "foo") with a set of
@@ -247,14 +258,13 @@ struct	rolemap {
 	TAILQ_ENTRY(rolemap) entries;
 };
 
-TAILQ_HEAD(rolemapq, rolemap);
-
 /*
  * One of a set of roles allows to perform the given parent operation.
+ * A roleset (after linkage) will map into an actual role.
  */
 struct	roleset {
 	char		    *name; /* name of role */
-	struct role	    *role;
+	struct role	    *role; /* post-linkage association */
 	struct rolemap	    *parent; /* which operation */
 	TAILQ_ENTRY(roleset) entries;
 };
@@ -280,8 +290,11 @@ struct	sent {
 	TAILQ_ENTRY(sent) entries;
 };
 
-TAILQ_HEAD(sentq, sent);
-
+/*
+ * Type of search.
+ * We have many different kinds of search functions, each represented by
+ * the same "struct search", without different semantics.
+ */
 enum	stype {
 	STYPE_SEARCH, /* singular response */
 	STYPE_LIST, /* queue of responses */
@@ -302,13 +315,11 @@ struct	search {
 	char		   *doc; /* documentation */
 	struct strct	   *parent; /* up-reference */
 	enum stype	    type; /* type of search */
-	struct rolemap	   *rolemap;
+	struct rolemap	   *rolemap; /* roles assigned to search */
 	unsigned int	    flags; 
 #define	SEARCH_IS_UNIQUE    0x01 /* has a rowid or unique somewhere */
 	TAILQ_ENTRY(search) entries;
 };
-
-TAILQ_HEAD(searchq, search);
 
 /*
  * An update reference.
@@ -325,8 +336,6 @@ struct	uref {
 	TAILQ_ENTRY(uref) entries;
 };
 
-TAILQ_HEAD(urefq, uref);
-
 /*
  * A single field in the local structure that will be part of a unique
  * chain of fields.
@@ -339,8 +348,6 @@ struct	nref {
 	TAILQ_ENTRY(nref) entries;
 };
 
-TAILQ_HEAD(nrefq, nref);
-
 /*
  * Define a sequence of fields in the given structure that combine to
  * form a unique clause.
@@ -352,8 +359,6 @@ struct	unique {
 	char		   *cname; /* canonical name */
 	TAILQ_ENTRY(unique) entries;
 };
-
-TAILQ_HEAD(uniqueq, unique);
 
 /*
  * Type of modifier.
@@ -377,8 +382,6 @@ struct	update {
 	struct rolemap	   *rolemap;
 	TAILQ_ENTRY(update) entries;
 };
-
-TAILQ_HEAD(updateq, update);
 
 /*
  * A database/struct consisting of fields.
@@ -409,10 +412,12 @@ struct	strct {
 	TAILQ_ENTRY(strct) entries;
 };
 
-TAILQ_HEAD(strctq, strct);
-
-TAILQ_HEAD(roleq, role);
-
+/*
+ * Roles are used in the RBAC mechanism of the system.
+ * It's just a name possibly nested within another role.
+ * In a structure, a function can be associated with a "rolemap" that
+ * maps back into roles permitted for the function.
+ */
 struct	role {
 	char		  *name; /* unique name of role */
 	struct role	  *parent; /* parent (or NULL) */

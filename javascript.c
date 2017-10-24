@@ -306,7 +306,7 @@ gen_javascript(const struct strctq *sq)
 		print_commentv(2, COMMENT_JS,
 			"Like fill() but for an array of %s.\n"
 			"This will remove the first element within "
-			"#e then repeatedly clone and re-append it,\n"
+			"#e then repeatedly clone and re-append it, "
 			"filling in the cloned subtree with the "
 			"array.\n"
 			"If #e is not an array, it is construed "

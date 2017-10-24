@@ -490,6 +490,24 @@ gen_func_close(const struct config *cfg)
 }
 
 /*
+ * Recursively list all of our roles as ROLE_xxx, where "xxx" is the
+ * lowercased name of the role.
+ */
+static void
+gen_role(const struct role *r)
+{
+	const struct role *rr;
+	const char *cp;
+
+	printf("\tROLE_");
+	for (cp = r->name; '\0' != *cp; cp++)
+		putchar(tolower((unsigned char)*cp));
+	puts(",");
+	TAILQ_FOREACH(rr, &r->subrq, entries)
+		gen_role(rr);
+}
+
+/*
  * Generate the C header file.
  * If "json" is non-zero, this generates the JSON formatters.
  * If "valids" is non-zero, this generates the field validators.
@@ -501,6 +519,7 @@ gen_c_header(const struct config *cfg,
 {
 	const struct strct *p;
 	const struct enm *e;
+	const struct role *r;
 
 	puts("#ifndef DB_H\n"
 	     "#define DB_H\n"
@@ -513,6 +532,21 @@ gen_c_header(const struct config *cfg,
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		gen_enum(e);
+
+	if ( ! TAILQ_EMPTY(&cfg->rq)) {
+		print_commentt(0, COMMENT_C,
+			"Our roles for access control.\n"
+			"When the database is first opened, "
+			"the system is set to ROLE_default.\n"
+			"Roles may then be set using the "
+			"kwbp_role() function.");
+		puts("enum\tkwbp_role {");
+		TAILQ_FOREACH(r, &cfg->rq, entries)
+			gen_role(r);
+		puts("\tROLE_default\n"
+		     "};\n"
+		     "");
+	}
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_struct(p);

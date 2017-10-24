@@ -25,6 +25,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "extern.h"
 
@@ -494,17 +495,35 @@ gen_func_close(const struct config *cfg)
  * lowercased name of the role.
  */
 static void
-gen_role(const struct role *r)
+gen_role(const struct role *r, int *nf)
 {
 	const struct role *rr;
 	const char *cp;
 
+	if (*nf)
+		puts(",");
+	else
+		*nf = 1;
+
+	if (0 == strcasecmp(r->name, "none")) 
+		print_commentt(1, COMMENT_C,
+			"This role will never be allowed to do "
+			"anything, ever.");
+	else if (0 == strcasecmp(r->name, "all")) 
+		print_commentt(1, COMMENT_C,
+			"This role is allowed to do everything.");
+	else if (0 == strcasecmp(r->name, "default"))
+		print_commentt(1, COMMENT_C,
+			"The default role.\n"
+			"This is assigned when db_open() is called.\n"
+			"It should be limited only to those "
+			"functions required to narrow the role.");
+
 	printf("\tROLE_");
 	for (cp = r->name; '\0' != *cp; cp++)
 		putchar(tolower((unsigned char)*cp));
-	puts(",");
 	TAILQ_FOREACH(rr, &r->subrq, entries)
-		gen_role(rr);
+		gen_role(rr, nf);
 }
 
 /*
@@ -520,6 +539,7 @@ gen_c_header(const struct config *cfg,
 	const struct strct *p;
 	const struct enm *e;
 	const struct role *r;
+	int	 i = 0;
 
 	puts("#ifndef DB_H\n"
 	     "#define DB_H\n"
@@ -542,8 +562,8 @@ gen_c_header(const struct config *cfg,
 			"kwbp_role() function.");
 		puts("enum\tkwbp_role {");
 		TAILQ_FOREACH(r, &cfg->rq, entries)
-			gen_role(r);
-		puts("\tROLE_default\n"
+			gen_role(r, &i);
+		puts("\n"
 		     "};\n"
 		     "");
 	}

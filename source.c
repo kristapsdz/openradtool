@@ -441,9 +441,10 @@ gen_func_open(const struct config *cfg, int splitproc)
 
 	puts("\tksql_open(db, file);");
 
-	if (CFG_HAS_ROLES & cfg->flags) 
-		puts("\treturn(ctx);");
-	else
+	if (CFG_HAS_ROLES & cfg->flags) {
+		puts("\tctx->role = ROLE_default;\n"
+		     "\treturn(ctx);");
+	} else
 		puts("\treturn(db);");
 
 	puts("}\n"
@@ -1487,8 +1488,13 @@ gen_c_source(const struct config *cfg, int json,
 		print_commentt(0, COMMENT_C,
 			"Definition of our opaque \"kwbp\", which "
 			"contains role information.");
-		puts("struct\tkwbp {\n"
-		     "\tstruct ksql *db;\n"
+		puts("struct\tkwbp {");
+		print_commentt(1, COMMENT_C,
+			"Hidden database connection");
+		puts("\tstruct ksql *db;");
+		print_commentt(1, COMMENT_C,
+			"Current RBAC role.");
+		puts("\tenum kwbp_role role;\n"
 		     "};\n");
 	}
 

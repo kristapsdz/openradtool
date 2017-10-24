@@ -1656,6 +1656,9 @@ parse_config_roles(struct parse *p, struct strct *s)
 	if (TOK_IDENT != parse_next(p)) {
 		parse_errx(p, "expected role name");
 		return;
+	} else if (0 == strcasecmp("none", p->last.string)) {
+		parse_errx(p, "cannot assign \"none\" role");
+		return;
 	}
 	rs = roleset_alloc(&rq, p->last.string, NULL);
 
@@ -1665,6 +1668,9 @@ parse_config_roles(struct parse *p, struct strct *s)
 			goto cleanup;
 		} else if (TOK_IDENT != parse_next(p)) {
 			parse_errx(p, "expected role name");
+			goto cleanup;
+		} else if (0 == strcasecmp(p->last.string, "none")) {
+			parse_errx(p, "cannot assign \"none\" role");
 			goto cleanup;
 		}
 		TAILQ_FOREACH(rs, &rq, entries) {
@@ -1961,6 +1967,7 @@ role_alloc(struct parse *p, const char *name, struct role *parent)
 /*
  * Parse an individual role, which may be a subset of another role
  * designation.
+ * It may not be a reserved role.
  * Its syntax is:
  *
  *  "role" name ["{" [ ROLE ]* "}"]? ";"
@@ -1979,13 +1986,13 @@ parse_role(struct parse *p, struct config *cfg, struct role *parent)
 		return;
 	}
 
-	if ( ! check_rolename(&cfg->rq, p->last.string)) {
-		parse_errx(p, "duplicate role name");
-		return;
-	} else if (0 == strcasecmp(p->last.string, "default") ||
-	           0 == strcasecmp(p->last.string, "none") ||
-	           0 == strcasecmp(p->last.string, "all")) {
+	if (0 == strcasecmp(p->last.string, "default") ||
+	    0 == strcasecmp(p->last.string, "none") ||
+	    0 == strcasecmp(p->last.string, "all")) {
 		parse_errx(p, "reserved role name");
+		return;
+	} else if ( ! check_rolename(&cfg->rq, p->last.string)) {
+		parse_errx(p, "duplicate role name");
 		return;
 	} else if ( ! check_badidents(p, p->last.string))
 		return;

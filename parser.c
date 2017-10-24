@@ -2326,6 +2326,26 @@ parse_free_role(struct role *r)
 }
 
 /*
+ * Free a rolemap and its rolesets.
+ * Does nothing if "rm" is NULL.
+ */
+static void
+parse_free_rolemap(struct rolemap *rm)
+{
+	struct roleset	*r;
+
+	if (NULL == rm)
+		return;
+	while (NULL != (r = TAILQ_FIRST(&rm->setq))) {
+		TAILQ_REMOVE(&rm->setq, r, entries);
+		free(r->name);
+		free(r);
+	}
+	free(rm->name);
+	free(rm);
+}
+
+/*
  * Free all resources from the queue of structures.
  * Does nothing if "q" is empty or NULL.
  */
@@ -2340,6 +2360,7 @@ parse_free(struct config *cfg)
 	struct unique	*n;
 	struct enm	*e;
 	struct role	*r;
+	struct rolemap	*rm;
 
 	if (NULL == cfg)
 		return;
@@ -2363,6 +2384,10 @@ parse_free(struct config *cfg)
 		while (NULL != (s = TAILQ_FIRST(&p->sq))) {
 			TAILQ_REMOVE(&p->sq, s, entries);
 			parse_free_search(s);
+		}
+		while (NULL != (rm = TAILQ_FIRST(&p->rq))) {
+			TAILQ_REMOVE(&p->rq, rm, entries);
+			parse_free_rolemap(rm);
 		}
 		while (NULL != (a = TAILQ_FIRST(&p->aq))) {
 			TAILQ_REMOVE(&p->aq, a, entries);

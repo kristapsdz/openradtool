@@ -378,6 +378,7 @@ struct	update {
 	char		   *name; /* named or NULL */
 	char		   *doc; /* documentation */
 	enum upt	    type; /* type of update */
+	struct pos	    pos; /* parse point */
 	struct strct	   *parent; /* up-reference */
 	struct rolemap	   *rolemap;
 	TAILQ_ENTRY(update) entries;

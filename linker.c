@@ -662,7 +662,7 @@ resolve_roleset(struct rolemap *rm, struct config *cfg)
 	 */
 
 	TAILQ_FOREACH(rs, &rm->setq, entries) {
-		if (NULL == rs->role || NULL == rs->role->parent)
+		if (NULL == rs->role)
 			continue;
 		TAILQ_FOREACH(rrs, &rm->setq, entries) {
 			if (rrs == rs || NULL == (rp = rrs->role))

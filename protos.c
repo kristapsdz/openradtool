@@ -72,7 +72,7 @@ void
 print_func_db_role(int decl)
 {
 
-	printf("void%sdb_role(struct kwbp *p, enum role r)%s\n",
+	printf("void%sdb_role(struct kwbp *ctx, enum kwbp_role r)%s\n",
 		decl ? " " : "\n", 
 		decl ? ";" : "");
 }

@@ -1304,6 +1304,7 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 		err(EXIT_FAILURE, NULL);
 	up->parent = s;
 	up->type = type;
+	parse_point(p, &up->pos);
 	TAILQ_INIT(&up->mrq);
 	TAILQ_INIT(&up->crq);
 

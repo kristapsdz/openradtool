@@ -381,7 +381,9 @@ resolve_sref(struct sref *ref, struct strct *s)
 	/* Did we find the field in our structure? */
 
 	if (NULL == (ref->field = f)) {
-		gen_errx(&ref->pos, "search term not found");
+		gen_errx(&ref->pos, 
+			"search term not found: %s", 
+			ref->name);
 		return(0);
 	}
 

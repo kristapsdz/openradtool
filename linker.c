@@ -762,19 +762,15 @@ resolve_roleset_cover(struct strct *p, struct config *cfg)
 		if (NULL == rs->role)
 			continue;
 		TAILQ_FOREACH(u, &p->dq, entries) 
-			if (NULL != u->name)
-				i += resolve_roleset_coverset
-					(rs, &u->rolemap,
-					 ROLEMAP_DELETE, u->name);
+			i += resolve_roleset_coverset
+				(rs, &u->rolemap,
+				 ROLEMAP_DELETE, u->name);
 		TAILQ_FOREACH(u, &p->uq, entries) 
-			if (NULL != u->name)
-				i += resolve_roleset_coverset
-					(rs, &u->rolemap,
-					 ROLEMAP_UPDATE, u->name);
+			i += resolve_roleset_coverset
+				(rs, &u->rolemap,
+				 ROLEMAP_UPDATE, u->name);
 		TAILQ_FOREACH(s, &p->sq, entries)
-			if (NULL == s->name)
-				continue;
-			else if (STYPE_ITERATE == s->type)
+			if (STYPE_ITERATE == s->type)
 				i += resolve_roleset_coverset
 					(rs, &s->rolemap, 
 					 ROLEMAP_ITERATE, s->name);

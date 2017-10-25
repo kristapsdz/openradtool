@@ -691,7 +691,8 @@ resolve_roleset(struct rolemap *rm, struct config *cfg)
  */
 static size_t
 resolve_roleset_coverset(const struct roleset *rs, 
-	struct rolemap **rm, enum rolemapt type, const char *name)
+	struct rolemap **rm, enum rolemapt type, 
+	const char *name, struct strct *p)
 {
 	struct roleset	*rrs;
 
@@ -712,6 +713,7 @@ resolve_roleset_coverset(const struct roleset *rs,
 			err(EXIT_FAILURE, NULL);
 		TAILQ_INIT(&(*rm)->setq);
 		(*rm)->pos = rs->parent->pos;
+		TAILQ_INSERT_TAIL(&p->rq, *rm, entries);
 	}
 
 	/* See if our role overlaps. */
@@ -764,26 +766,26 @@ resolve_roleset_cover(struct strct *p, struct config *cfg)
 		TAILQ_FOREACH(u, &p->dq, entries) 
 			i += resolve_roleset_coverset
 				(rs, &u->rolemap,
-				 ROLEMAP_DELETE, u->name);
+				 ROLEMAP_DELETE, u->name, p);
 		TAILQ_FOREACH(u, &p->uq, entries) 
 			i += resolve_roleset_coverset
 				(rs, &u->rolemap,
-				 ROLEMAP_UPDATE, u->name);
+				 ROLEMAP_UPDATE, u->name, p);
 		TAILQ_FOREACH(s, &p->sq, entries)
 			if (STYPE_ITERATE == s->type)
 				i += resolve_roleset_coverset
 					(rs, &s->rolemap, 
-					 ROLEMAP_ITERATE, s->name);
+					 ROLEMAP_ITERATE, s->name, p);
 			else if (STYPE_LIST == s->type)
 				i += resolve_roleset_coverset
 					(rs, &s->rolemap, 
-					 ROLEMAP_LIST, s->name);
+					 ROLEMAP_LIST, s->name, p);
 			else if (STYPE_SEARCH == s->type)
 				i += resolve_roleset_coverset
 					(rs, &s->rolemap, 
-					 ROLEMAP_SEARCH, s->name);
+					 ROLEMAP_SEARCH, s->name, p);
 		i += resolve_roleset_coverset
-			(rs, &p->irolemap, ROLEMAP_INSERT, NULL);
+			(rs, &p->irolemap, ROLEMAP_INSERT, NULL, p);
 	}
 	
 	return(i);

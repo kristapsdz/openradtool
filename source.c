@@ -582,6 +582,49 @@ gen_func_freeq(const struct strct *p)
 }
 
 /*
+ * When accepting only given roles, print the roles rooted at "r".
+ * Don't print out the ROLE_all, but continue through it.
+ */
+static void
+gen_role(const struct role *r)
+{
+	const struct role *rr;
+	const char	*cp;
+
+	if (strcasecmp(r->name, "all")) {
+		printf("\tcase ROLE_");
+		for (cp = r->name; '\0' != *cp; cp++)
+			putchar(tolower((unsigned char)*cp));
+		puts(":");
+	}
+	TAILQ_FOREACH(rr, &r->subrq, entries)
+		gen_role(rr);
+}
+
+/*
+ * When accepting only given roles, recursively print all of those roles
+ * out now.
+ * Also print a comment stating what we're doing.
+ */
+static void
+gen_rolemap(const struct rolemap *rm)
+{
+	const struct roleset *rs;
+
+	puts("");
+	print_commentt(1, COMMENT_C, 
+		"Restrict to allowed roles.");
+	puts("\n"
+	     "\tswitch (ctx->role) {");
+	TAILQ_FOREACH(rs, &rm->setq, entries)
+		gen_role(rs->role);
+	puts("\t\tbreak;\n"
+	     "\tdefault:\n"
+	     "\t\tabort();\n"
+	     "\t}");
+}
+
+/*
  * Generate the "insert" function.
  */
 static void
@@ -606,6 +649,12 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if (FTYPE_PASSWORD == f->type)
 			printf("\tchar hash%zu[64];\n", pos++);
+
+	/* Check our roles. */
+
+	if (CFG_HAS_ROLES & cfg->flags &&
+	    NULL != p->irolemap)
+		gen_rolemap(p->irolemap);
 
 	/* Actually generate hashes, if necessary. */
 

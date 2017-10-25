@@ -488,11 +488,11 @@ gen_func_roles(const struct config *cfg)
 		"If the role is the same as the current one, "
 		"this is a noop.\n"
 		"We can only refine roles (i.e., descend the "
-		"role tree), not ascend or traverse.\n"
-		"The only traversal allowed is when currently "
-		"in ROLE_default.\n"
-		"Attempting to traverse otherwise or ascend "
-		"will cause abort(2) to be called.");
+		"role tree), not ascend or move laterally.\n"
+		"Attempting to do so causes abort(2) to be "
+		"called.\n"
+		"The only exceptions are when leaving ROLE_default "
+		"or when entering ROLE_none.");
 	print_func_db_role(1);
 	puts("");
 }

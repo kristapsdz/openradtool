@@ -22,6 +22,18 @@
 				Add the <code>actup</code> and <code>actdel</code> modifiers on a foreign key reference.
 				For example, <code>actdel cascade</code> specifies <code>ON DELETE CASCADE</code>.
 			</p>
+			<p>
+				Properly wrap comments (at word boundaries) at 70 columns.
+			</p>
+			<p>
+				Introduce RBAC functionality: the <code>roles</code> top-level object defining the roles themselves such that
+				each structure statement (e.g., <code>insert</code>) can be wrapped in a <code>roles</code> statement limiting
+				access.
+				When the top-level <code>roles</code> is defined (even if empty), the <code>ksql</code> database handle is
+				hidden from the API, and instead an opaque <code>kwbp</code> is used.
+				This allows for full role-based access to the database.
+				Read the <a href="kwebapp.5.html">kwebapp(5)</a> for more information.
+			</p>
 		</aside>
 	</article>
 	<article data-sblg-article="1" data-sblg-tags="version">

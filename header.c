@@ -493,35 +493,40 @@ gen_func_close(const struct config *cfg)
 /*
  * Recursively list all of our roles as ROLE_xxx, where "xxx" is the
  * lowercased name of the role.
+ * Don't print out anything for the "all" role, which may never be
+ * entered per se.
  */
 static void
 gen_role(const struct role *r, int *nf)
 {
 	const struct role *rr;
 	const char *cp;
+	int	    suppress = 0;
 
-	if (*nf)
-		puts(",");
-	else
-		*nf = 1;
 
-	if (0 == strcasecmp(r->name, "none")) 
-		print_commentt(1, COMMENT_C,
-			"This role will never be allowed to do "
-			"anything, ever.");
-	else if (0 == strcasecmp(r->name, "all")) 
-		print_commentt(1, COMMENT_C,
-			"This role is allowed to do everything.");
-	else if (0 == strcasecmp(r->name, "default"))
+	if (strcasecmp(r->name, "all"))  {
+		if (*nf)
+			puts(",");
+		else
+			*nf = 1;
+	} else
+		suppress = 1;
+
+	if (0 == strcasecmp(r->name, "default"))
 		print_commentt(1, COMMENT_C,
 			"The default role.\n"
 			"This is assigned when db_open() is called.\n"
 			"It should be limited only to those "
 			"functions required to narrow the role.");
+	else if (0 == strcasecmp(r->name, "none"))
+		print_commentt(1, COMMENT_C,
+			"Role that isn't allowed to do anything.");
 
-	printf("\tROLE_");
-	for (cp = r->name; '\0' != *cp; cp++)
-		putchar(tolower((unsigned char)*cp));
+	if ( ! suppress) {
+		printf("\tROLE_");
+		for (cp = r->name; '\0' != *cp; cp++)
+			putchar(tolower((unsigned char)*cp));
+	}
 	TAILQ_FOREACH(rr, &r->subrq, entries)
 		gen_role(rr, nf);
 }

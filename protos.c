@@ -68,6 +68,15 @@ print_func_db_open(int priv, int decl)
 		decl ? "" : "\n", decl ? ";" : "");
 }
 
+void
+print_func_db_role(int decl)
+{
+
+	printf("void%sdb_role(struct kwbp *p, enum role r)%s\n",
+		decl ? " " : "\n", 
+		decl ? ";" : "");
+}
+
 /*
  * Generate the convenience "close" function.
  * If "priv" is non-zero, accept a kwbp instead of ksql.

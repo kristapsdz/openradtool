@@ -474,6 +474,7 @@ void		 print_commentv(size_t, enum cmtt, const char *, ...)
 void		 print_src(size_t, const char *, ...);
 
 void		 print_func_db_close(int, int);
+void		 print_func_db_role(int);
 void		 print_func_db_open(int, int);
 void		 print_func_db_insert(const struct strct *, int, int);
 void		 print_func_db_fill(const struct strct *, int);

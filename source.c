@@ -121,6 +121,61 @@ static	const char *const validbins[VALIDATE__MAX] = {
 };
 
 /*
+ * When accepting only given roles, print the roles rooted at "r".
+ * Don't print out the ROLE_all, but continue through it.
+ */
+static void
+gen_role(const struct role *r)
+{
+	const struct role *rr;
+	const char	*cp;
+
+	if (strcasecmp(r->name, "all")) {
+		printf("\tcase ROLE_");
+		for (cp = r->name; '\0' != *cp; cp++)
+			putchar(tolower((unsigned char)*cp));
+		puts(":");
+	}
+	TAILQ_FOREACH(rr, &r->subrq, entries)
+		gen_role(rr);
+}
+
+/*
+ * When accepting only given roles, recursively print all of those roles
+ * out now.
+ * Also print a comment stating what we're doing.
+ */
+static void
+gen_rolemap(const struct rolemap *rm)
+{
+	const struct roleset *rs;
+
+	if (NULL == rm) {
+		puts("");
+		print_commentt(1, COMMENT_C, 
+			"No roles were defined for this function "
+			"and we're in RBAC mode, so abort() if "
+			"this function is called.\n"
+			"XXX: this is probably not what you want.");
+		puts("\n"
+		     "\tabort();\n");
+		return;
+	}
+
+	puts("");
+	print_commentt(1, COMMENT_C, 
+		"Restrict to allowed roles.");
+	puts("\n"
+	     "\tswitch (ctx->role) {");
+	TAILQ_FOREACH(rs, &rm->setq, entries)
+		gen_role(rs->role);
+	puts("\t\tbreak;\n"
+	     "\tdefault:\n"
+	     "\t\tabort();\n"
+	     "\t}\n");
+}
+
+/*
  * Fill an individual field from the database.
  */
 static void
@@ -255,9 +310,13 @@ gen_strct_func_iter(const struct config *cfg,
 	       "\tstruct %s p;\n",
 	       s->parent->name);
 	if (CFG_HAS_ROLES & cfg->flags)
-		puts("\tstruct ksql *db = ctx->db;\n");
+		puts("\tstruct ksql *db = ctx->db;");
+
+	if (CFG_HAS_ROLES & cfg->flags)
+		gen_rolemap(s->rolemap);
 	else
 		puts("");
+
 	printf("\tksql_stmt_alloc(db, &stmt,\n"
 	       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
 	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
@@ -330,9 +389,13 @@ gen_strct_func_list(const struct config *cfg,
 	       "\tstruct %s *p;\n",
 	       s->parent->name, s->parent->name);
 	if (CFG_HAS_ROLES & cfg->flags)
-		puts("\tstruct ksql *db = ctx->db;\n");
+		puts("\tstruct ksql *db = ctx->db;");
+
+	if (CFG_HAS_ROLES & cfg->flags)
+		gen_rolemap(s->rolemap);
 	else
 		puts("");
+
 	printf("\tq = malloc(sizeof(struct %s_q));\n"
 	       "\tif (NULL == q) {\n"
 	       "\t\tperror(NULL);\n"
@@ -496,7 +559,10 @@ gen_strct_func_srch(const struct config *cfg,
 	       "\tstruct %s *p = NULL;\n",
 	       s->parent->name);
 	if (CFG_HAS_ROLES & cfg->flags)
-		puts("\tstruct ksql *db = ctx->db;\n");
+		puts("\tstruct ksql *db = ctx->db;");
+
+	if (CFG_HAS_ROLES & cfg->flags)
+		gen_rolemap(s->rolemap);
 	else
 		puts("");
 
@@ -582,49 +648,6 @@ gen_func_freeq(const struct strct *p)
 }
 
 /*
- * When accepting only given roles, print the roles rooted at "r".
- * Don't print out the ROLE_all, but continue through it.
- */
-static void
-gen_role(const struct role *r)
-{
-	const struct role *rr;
-	const char	*cp;
-
-	if (strcasecmp(r->name, "all")) {
-		printf("\tcase ROLE_");
-		for (cp = r->name; '\0' != *cp; cp++)
-			putchar(tolower((unsigned char)*cp));
-		puts(":");
-	}
-	TAILQ_FOREACH(rr, &r->subrq, entries)
-		gen_role(rr);
-}
-
-/*
- * When accepting only given roles, recursively print all of those roles
- * out now.
- * Also print a comment stating what we're doing.
- */
-static void
-gen_rolemap(const struct rolemap *rm)
-{
-	const struct roleset *rs;
-
-	puts("");
-	print_commentt(1, COMMENT_C, 
-		"Restrict to allowed roles.");
-	puts("\n"
-	     "\tswitch (ctx->role) {");
-	TAILQ_FOREACH(rs, &rm->setq, entries)
-		gen_role(rs->role);
-	puts("\t\tbreak;\n"
-	     "\tdefault:\n"
-	     "\t\tabort();\n"
-	     "\t}");
-}
-
-/*
  * Generate the "insert" function.
  */
 static void
@@ -639,7 +662,6 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 	     "{\n"
 	     "\tstruct ksqlstmt *stmt;\n"
 	     "\tint64_t id = -1;");
-
 	if (CFG_HAS_ROLES & cfg->flags)
 		puts("\tstruct ksql *db = ctx->db;");
 
@@ -652,13 +674,13 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 
 	/* Check our roles. */
 
-	if (CFG_HAS_ROLES & cfg->flags &&
-	    NULL != p->irolemap)
+	if (CFG_HAS_ROLES & cfg->flags)
 		gen_rolemap(p->irolemap);
+	else
+		puts("");
 
 	/* Actually generate hashes, if necessary. */
 
-	puts("");
 	pos = npos = 1;
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_PASSWORD == f->type) {
@@ -848,9 +870,7 @@ gen_func_update(const struct config *cfg,
 	     "\tstruct ksqlstmt *stmt;\n"
 	     "\tenum ksqlc c;");
 	if (CFG_HAS_ROLES & cfg->flags)
-		puts("\tstruct ksql *db = ctx->db;\n");
-	else
-		puts("");
+		puts("\tstruct ksql *db = ctx->db;");
 
 	/* Create hash buffer for modifying hashes. */
 
@@ -858,7 +878,10 @@ gen_func_update(const struct config *cfg,
 	TAILQ_FOREACH(ref, &up->mrq, entries)
 		if (FTYPE_PASSWORD == ref->field->type)
 			printf("\tchar hash%zu[64];\n", pos++);
-	if ( ! TAILQ_EMPTY(&up->mrq))
+
+	if (CFG_HAS_ROLES & cfg->flags)
+		gen_rolemap(up->rolemap);
+	else
 		puts("");
 
 	/* Create hash from password. */

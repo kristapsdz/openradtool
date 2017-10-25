@@ -574,7 +574,9 @@ gen_func_roles(const struct config *cfg)
 	     "\t\treturn;");
 	TAILQ_FOREACH(rr, &r->subrq, entries)
 		gen_func_rolecases(rr);
-	puts("\t}\n"
+	puts("\tdefault:\n"
+	     "\t\tabort();\n"
+	     "\t}\n"
 	     "}\n");
 }
 

@@ -945,7 +945,8 @@ parse_link(struct config *cfg)
 					"no roles defined for "
 					"update function");
 			}
-			if (NULL == p->irolemap) 
+			if (NULL == p->irolemap &&
+			    STRCT_HAS_INSERT & p->flags)
 				gen_warnx(&p->pos,
 					"no roles defined for "
 					"insert function");

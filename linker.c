@@ -36,6 +36,7 @@ static void gen_warnx(const struct pos *, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
 
 static	const char *const rolemapts[ROLEMAP__MAX] = {
+	"all", /* ROLEMAP_ALL */
 	"delete", /* ROLEMAP_DELETE */
 	"insert", /* ROLEMAP_INSERT */
 	"iterate", /* ROLEMAP_ITERATE */
@@ -682,6 +683,117 @@ resolve_roleset(struct rolemap *rm, struct config *cfg)
 }
 
 /*
+ * Performs the work of resolve_roleset_cover() by actually accepting a
+ * (possibly-NULL) rolemap, looking through the roleset, and seeing if
+ * we're clobbering an existing role.
+ * If we're not, then we add our role to the roleset.
+ * This might mean that we're going to create a rolemap in the process.
+ */
+static size_t
+resolve_roleset_coverset(const struct roleset *rs, 
+	struct rolemap **rm, enum rolemapt type, const char *name)
+{
+	struct roleset	*rrs;
+
+	/*
+	 * If there are no roles defined for a function at all, we need
+	 * to fake up a rolemap on the spot.
+	 * Obviously, this will lead to inserting for the "all"
+	 * statement, below.
+	 */
+
+	if (NULL == *rm) {
+		*rm = calloc(1, sizeof(struct rolemap));
+		if (NULL == *rm)
+			err(EXIT_FAILURE, NULL);
+		(*rm)->type = type;
+		if (NULL != name &&
+		    NULL == ((*rm)->name = strdup(name)))
+			err(EXIT_FAILURE, NULL);
+		TAILQ_INIT(&(*rm)->setq);
+		(*rm)->pos = rs->parent->pos;
+	}
+
+	/* See if our role overlaps. */
+
+	TAILQ_FOREACH(rrs, &(*rm)->setq, entries) {
+		if (NULL == rrs->role ||
+		    rs->role != rrs->role)
+			continue;
+		gen_errx(&(*rm)->pos, "role overlapped "
+			"by \"all\" statement");
+		return(1);
+	}
+
+	/*
+	 * Our role didn't appear in the roleset of the give rolemap.
+	 * Add it now.
+	 */
+
+	if (NULL == (rrs = malloc(sizeof(struct roleset))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (rrs->name = strdup(rs->name)))
+		err(EXIT_FAILURE, NULL);
+	rrs->role = rs->role;
+	rrs->parent = *rm;
+	TAILQ_INSERT_TAIL(&(*rm)->setq, rrs, entries);
+	return(0);
+}
+
+/*
+ * Handle the "all" role assignment, i.e., those where a roleset is
+ * defined over the function "all".
+ * This is tricky.
+ * At this level, we just go through all possible functions (queries,
+ * updates, deletes, and inserts, all named but for the latter) and look
+ * through their rolemaps.
+ */
+static size_t
+resolve_roleset_cover(struct strct *p, struct config *cfg)
+{
+	struct roleset  *rs;
+	struct update	*u;
+	struct search	*s;
+	size_t		 i = 0;
+
+	assert(NULL != p->arolemap);
+
+	TAILQ_FOREACH(rs, &p->arolemap->setq, entries) {
+		if (NULL == rs->role)
+			continue;
+		TAILQ_FOREACH(u, &p->dq, entries) 
+			if (NULL != u->name)
+				i += resolve_roleset_coverset
+					(rs, &u->rolemap,
+					 ROLEMAP_DELETE, u->name);
+		TAILQ_FOREACH(u, &p->uq, entries) 
+			if (NULL != u->name)
+				i += resolve_roleset_coverset
+					(rs, &u->rolemap,
+					 ROLEMAP_UPDATE, u->name);
+		TAILQ_FOREACH(s, &p->sq, entries)
+			if (NULL == s->name)
+				continue;
+			else if (STYPE_ITERATE == s->type)
+				i += resolve_roleset_coverset
+					(rs, &s->rolemap, 
+					 ROLEMAP_ITERATE, s->name);
+			else if (STYPE_LIST == s->type)
+				i += resolve_roleset_coverset
+					(rs, &s->rolemap, 
+					 ROLEMAP_LIST, s->name);
+			else if (STYPE_SEARCH == s->type)
+				i += resolve_roleset_coverset
+					(rs, &s->rolemap, 
+					 ROLEMAP_SEARCH, s->name);
+		i += resolve_roleset_coverset
+			(rs, &p->irolemap, ROLEMAP_INSERT, NULL);
+	}
+	
+	return(i);
+}
+
+/*
  * Given the rolemap "rm", which we know to have a unique name and type
  * in "p", assign to the correspending function type in "p".
  * Return zero on failure to lookup, non-zero on success.
@@ -703,6 +815,10 @@ resolve_rolemap(struct rolemap *rm, struct strct *p)
 				return(1);
 			}
 		break;
+	case ROLEMAP_ALL:
+		assert(NULL == p->arolemap);
+		p->arolemap = rm;
+		return(1);
 	case ROLEMAP_INSERT:
 		assert(NULL == p->irolemap);
 		p->irolemap = rm;
@@ -795,6 +911,8 @@ parse_link(struct config *cfg)
 				i += resolve_roleset(rm, cfg);
 		if (NULL != p->irolemap)
 			i += resolve_roleset(p->irolemap, cfg);
+		if (NULL != p->arolemap)
+			i += resolve_roleset_cover(p, cfg);
 	}
 	if (i > 0)
 		return(0);

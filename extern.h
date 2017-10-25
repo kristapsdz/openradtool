@@ -237,7 +237,8 @@ enum	modtype {
  * Most functions (all except for "insert") are also tagged with a name.
  */
 enum	rolemapt {
-	ROLEMAP_DELETE = 0, /* delete */
+	ROLEMAP_ALL = 0, /* all */
+	ROLEMAP_DELETE, /* delete */
 	ROLEMAP_INSERT, /* insert */
 	ROLEMAP_ITERATE, /* iterate */
 	ROLEMAP_LIST, /* list */
@@ -405,6 +406,7 @@ struct	strct {
 	struct uniqueq	   nq; /* unique constraints */
 	struct rolemapq	   rq; /* role assignments */
 	struct rolemap	  *irolemap; /* "insert" rolemap */
+	struct rolemap	  *arolemap; /* catcha-all rolemap */
 	unsigned int	   flags;
 #define	STRCT_HAS_QUEUE	   0x01 /* needs a queue interface */
 #define	STRCT_HAS_ITERATOR 0x02 /* needs iterator interface */

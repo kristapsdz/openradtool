@@ -68,6 +68,7 @@ struct	parse {
 };
 
 static	const char *const rolemapts[ROLEMAP__MAX] = {
+	"all", /* ROLEMAP_ALL */
 	"delete", /* ROLEMAP_DELETE */
 	"insert", /* ROLEMAP_INSERT */
 	"iterate", /* ROLEMAP_ITERATE */
@@ -1711,6 +1712,7 @@ parse_config_roles(struct parse *p, struct strct *s)
 			goto cleanup;
 		}
 		if (ROLEMAP_INSERT != type &&
+		    ROLEMAP_ALL != type &&
 		    TOK_IDENT != parse_next(p)) {
 			parse_errx(p, "expected role constraint name");
 			goto cleanup;
@@ -1722,6 +1724,7 @@ parse_config_roles(struct parse *p, struct strct *s)
 			if (rm->type != type)
 				continue;
 			if (ROLEMAP_INSERT != type &&
+			    ROLEMAP_ALL != type &&
 			    strcasecmp(rm->name, p->last.string))
 				continue;
 			break;
@@ -1734,7 +1737,8 @@ parse_config_roles(struct parse *p, struct strct *s)
 			TAILQ_INIT(&rm->setq);
 			rm->type = type;
 			rm->name = NULL;
-			if (ROLEMAP_INSERT != type) {
+			if (ROLEMAP_INSERT != type &&
+			    ROLEMAP_ALL != type) {
 				rm->name = strdup(p->last.string);
 				if (NULL == rm->name)
 					err(EXIT_FAILURE, NULL);
@@ -1852,7 +1856,8 @@ parse_struct_data(struct parse *p, struct strct *s)
 			parse_config_roles(p, s);
 			continue;
 		} else if (strcasecmp(p->last.string, "field")) {
-			parse_errx(p, "unknown struct data type ");
+			parse_errx(p, "unknown struct data type: %s",
+				p->last.string);
 			return;
 		}
 

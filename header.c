@@ -480,6 +480,25 @@ gen_func_open(const struct config *cfg, int splitproc)
 }
 
 static void
+gen_func_roles(const struct config *cfg)
+{
+
+	print_commentt(0, COMMENT_C,
+		"Drop into a new role.\n"
+		"If the role is the same as the current one, "
+		"this is a noop.\n"
+		"We can only refine roles (i.e., descend the "
+		"role tree), not ascend or traverse.\n"
+		"The only traversal allowed is when currently "
+		"in ROLE_default.\n"
+		"Attempting to traverse otherwise or ascend "
+		"will cause abort(2) to be called.");
+	print_func_db_role(1);
+	puts("");
+}
+
+
+static void
 gen_func_close(const struct config *cfg)
 {
 
@@ -617,6 +636,8 @@ gen_c_header(const struct config *cfg,
 
 	gen_func_open(cfg, splitproc);
 	gen_func_close(cfg);
+	if (CFG_HAS_ROLES & cfg->flags)
+		gen_func_roles(cfg);
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_funcs(cfg, p, json, valids);

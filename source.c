@@ -514,6 +514,70 @@ gen_func_open(const struct config *cfg, int splitproc)
 	     "");
 }
 
+static void
+gen_func_rolecases(const struct role *r)
+{
+	const char *cp;
+	const struct role *rp, *rr;
+	size_t has = 0;
+
+	printf("\tcase ROLE_");
+	for (cp = r->name; '\0' != *cp; cp++) 
+		putchar(tolower((unsigned char)*cp));
+	puts(":");
+	puts("\t\tswitch (ctx->role) {");
+	for (rp = r->parent; NULL != rp; rp = rp->parent) {
+		if (NULL == rp->parent) {
+			puts("\t\tcase ROLE_default:");
+			has++;
+			break;
+		}
+		printf("\t\tcase ROLE_");
+		for (cp = rp->name; '\0' != *cp; cp++) 
+			putchar(tolower((unsigned char)*cp));
+		puts(":");
+		has++;
+	}
+	if (has)
+		puts("\t\t\tctx->role = r;\n"
+		     "\t\t\treturn;");
+	puts("\t\tdefault:\n"
+	     "\t\t\tabort();\n"
+	     "\t\t}\n"
+	     "\t\tbreak;");
+
+	TAILQ_FOREACH(rr, &r->subrq, entries)
+		gen_func_rolecases(rr);
+}
+
+static void
+gen_func_roles(const struct config *cfg)
+{
+	const struct role *r, *rr;
+
+	TAILQ_FOREACH(r, &cfg->rq, entries)
+		if (0 == strcasecmp(r->name, "all"))
+			break;
+	assert(NULL != r);
+
+	print_func_db_role(0);
+	puts("{\n"
+	     "\n"
+	     "\tif (r == ctx->role)\n"
+	     "\t\treturn;\n"
+	     "\tif (ROLE_none == ctx->role)\n"
+	     "\t\tabort();\n"
+	     "\n"
+	     "\tswitch (r) {\n"
+	     "\tcase ROLE_none:\n"
+	     "\t\tctx->role = r;\n"
+	     "\t\treturn;");
+	TAILQ_FOREACH(rr, &r->subrq, entries)
+		gen_func_rolecases(rr);
+	puts("\t}\n"
+	     "}\n");
+}
+
 /*
  * Close and free the database context.
  * This is sensitive to whether we have roles.
@@ -1606,6 +1670,8 @@ gen_c_source(const struct config *cfg, int json,
 
 	gen_func_open(cfg, splitproc);
 	gen_func_close(cfg);
+	if (CFG_HAS_ROLES & cfg->flags)
+		gen_func_roles(cfg);
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_funcs(cfg, p, json, valids);

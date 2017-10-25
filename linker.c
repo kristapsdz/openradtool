@@ -798,6 +798,42 @@ parse_link(struct config *cfg)
 		return(0);
 
 	/* 
+	 * Some role warnings.
+	 * Look through all of our function classes and make sure that
+	 * we've defined role assignments for each one.
+	 * Otherwise, they're unreachable.
+	 */
+
+	if (CFG_HAS_ROLES & cfg->flags)
+		TAILQ_FOREACH(p, &cfg->sq, entries) {
+			TAILQ_FOREACH(srch, &p->sq, entries) {
+				if (srch->rolemap)
+					continue;
+				gen_warnx(&srch->pos,
+					"no roles defined for "
+					"query function");
+			}
+			TAILQ_FOREACH(u, &p->dq, entries) {
+				if (u->rolemap)
+					continue;
+				gen_warnx(&u->pos,
+					"no roles defined for "
+					"delete function");
+			}
+			TAILQ_FOREACH(u, &p->uq, entries) {
+				if (u->rolemap)
+					continue;
+				gen_warnx(&u->pos,
+					"no roles defined for "
+					"update function");
+			}
+			if (NULL == p->irolemap) 
+				gen_warnx(&p->pos,
+					"no roles defined for "
+					"insert function");
+		}
+
+	/* 
 	 * Establish linkage between nodes.
 	 * While here, check for duplicate rowids.
 	 */

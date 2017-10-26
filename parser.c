@@ -1731,12 +1731,11 @@ parse_config_roles(struct parse *p, struct strct *s)
 		}
 
 		if (NULL == rm) {
-			rm = malloc(sizeof(struct rolemap));
+			rm = calloc(1, sizeof(struct rolemap));
 			if (NULL == rm)
 				err(EXIT_FAILURE, NULL);
 			TAILQ_INIT(&rm->setq);
 			rm->type = type;
-			rm->name = NULL;
 			if (ROLEMAP_INSERT != type &&
 			    ROLEMAP_ALL != type) {
 				rm->name = strdup(p->last.string);

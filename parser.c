@@ -1610,7 +1610,7 @@ roleset_alloc(struct rolesetq *rq,
 {
 	struct roleset	*rs;
 
-	if (NULL == (rs = malloc(sizeof(struct roleset))))
+	if (NULL == (rs = calloc(1, sizeof(struct roleset))))
 		err(EXIT_FAILURE, NULL);
 	if (NULL == (rs->name = strdup(name)))
 		err(EXIT_FAILURE, NULL);

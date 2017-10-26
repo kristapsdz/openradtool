@@ -24,12 +24,14 @@ DOTAR		 = comments.c \
 		   configure \
 		   extern.h \
 		   header.c \
+		   javascript.c \
 		   kwebapp.1 \
 		   kwebapp.5 \
 		   linker.c \
 		   Makefile \
 		   main.c \
 		   parser.c \
+		   printer.c \
 		   protos.c \
 		   source.c \
 		   sql.c \

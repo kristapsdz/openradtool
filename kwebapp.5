@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: September 19 2017 $
+.Dd $Mdocdate: October 22 2017 $
 .Dt KWEBAPP 5
 .Os
 .Sh NAME
@@ -29,16 +29,21 @@ to generate C source and header files that drive a database.
 It is a free-form (white-space is not significant beyond separating
 tokens) configuration language with the following rough structure:
 .Bd -literal -offset indent
-config :== [ enum | struct ]+
+config :== [ enum | struct ]+ [ roles ]?
+roles :== "roles"
+  "{"
+    [ role roledata ";" ]+
+  "};"
 struct :== "struct" structname
   "{"
-    [ "field" fielddata ";" ]+
-    [ searchtype searchdata ";" ]*
-    [ "update" updatedata ";" ]*
-    [ "delete" deletedata ";" ]*
-    [ "insert" ";" ]*
-    [ "unique" uniquedata ";" ]*
     [ "comment" quoted_string ";" ]?
+    [ "delete" deletedata ";" ]*
+    [ "field" fielddata ";" ]+
+    [ "insert" ";" ]*
+    [ "roles" roledata ";" ]*
+    [ "unique" uniquedata ";" ]*
+    [ "update" updatedata ";" ]*
+    [ searchtype searchdata ";" ]*
   "};"
 enum :== "enum" enumname
   "{"
@@ -47,10 +52,10 @@ enum :== "enum" enumname
   "};"
 .Ed
 .Pp
-In simple language, one or more structure definitions and zero or more
-enumerations.
+In short, one or more structure definitions, zero or more enumerations,
+and zero or one role definition.
 .Pp
-Each structure containing one or more fields and auxiliary structure
+Each structure contains one or more fields and auxiliary structure
 data (search and update specifications, etc.).
 In
 .Nm ,
@@ -59,13 +64,19 @@ structures and fields are collectively called
 and constitute the data of the system.
 A structure, documented in
 .Sx Structures ,
-is a database table or C struct; whereas a field is a column or a struct
+is a database table or C struct; whereas a field
+.Pq Sx Fields
+is a column or a struct
 member.
 .Pp
 Enumerations, documented in
 .Sx Enumerations ,
 define fixed constants used in field definitions.
 They're used only for validation.
+.Pp
+Lastly, the existence of roles, documented in
+.Sx Roles ,
+stipulates the use of role-based access control on object data.
 .Pp
 In this document, an
 .Dq identifier
@@ -83,13 +94,14 @@ the curly braces.
 .Bd -literal -offset indent
 "struct" structname
   "{"
-    [ "field" fielddata ";" ]+
-    [ searchtype searchdata ";" ]*
-    [ "update" updatedata ";" ]*
-    [ "delete" deletedata ";" ]*
-    [ "insert" ";" ]*
-    [ "unique" uniquedata ";" ]*
     [ "comment" quoted_string ";" ]?
+    [ "delete" deletedata ";" ]*
+    [ "field" fielddata ";" ]+
+    [ "insert" ";" ]?
+    [ "roles" roledata ";" ]*
+    [ "unique" uniquedata ";" ]*
+    [ "update" updatedata ";" ]*
+    [ searchtype searchdata ";" ]*
   "};"
 .Ed
 .Pp
@@ -102,10 +114,11 @@ optionally a
 for describing the structure (see
 .Sx Comments ) ;
 zero or more
-.Cm update
-or
-.Cm delete
-statements that define how rows may be updated and deleted (see
+.Cm update ,
+.Cm delete ,
+statements or just one
+.Cm insert
+statement that define how rows may be updated, deleted, or created (see
 .Sx Updates ) ;
 zero or more
 .Cm unique
@@ -118,6 +131,10 @@ which defines one of several search types on fields (see
 and optionally an
 .Cm insert ,
 which stipulates that insert functions be generated.
+Lastly, the
+.Cm roles
+statement describes the functions available to roles (see
+.Sx Roles ) .
 .Ss Fields
 A field object defines a C structure member and/or a database column.
 Each field consists of the word
@@ -328,7 +345,9 @@ keywords, respectively.
 .Pp
 Searches are always by field, and may be followed by parameters:
 .Bd -literal -offset indent
-searchtype [term [,term]*]? [":" [params]* ]? ";"
+search [term [,term]*]? [":" [params]* ]? ";"
+list [term [,term]*]? [":" [params]* ]? ";"
+iterate [term [,term]*]? [":" [params]* ]? ";"
 .Ed
 .Pp
 Here,
@@ -388,13 +407,14 @@ There must be at least two fields in the statement.
 There can be only one unique statement per combination of fields (in any
 order).
 .Ss Updates
-Update statements (update and delete) define how the database will be
+Update statements (update, delete, insert) define how the database will be
 modified.
-By default, there are no update or delete functions defined.
+By default, there are no update, delete, or insert functions defined.
 The syntax is as follows:
 .Bd -literal -offset indent
 "update" mfields ":" cfields [":" [params]* ]? ";"
 "delete" cfields [":" [params]* ]? ";"
+"insert" ";"
 .Ed
 .Pp
 Both
@@ -497,6 +517,81 @@ Unary operator to check whether the field is null or not null.
 .Em Note :
 .Cm password
 fields do not accept any operator but the default check for equality.
+.Ss Roles
+Full role-based access control is available in
+.Nm
+when a top-level
+.Cm roles
+block is defined.
+.Bd -literal -offset indent
+"roles" 
+  "{"
+     [ "role" name ["{" "role" name... ";" "}"]* ";" ]*
+  "};"
+.Ed
+.Pp
+This nested structure defines the role tree.
+Roles descendent of roles are called sub-roles.
+.Pp
+By defining
+.Cm roles ,
+even if left empty, the system will switch into default-deny access
+control mode, and each function in
+.Sx Structures
+must be associated with one or more roles to be used.
+.Pp
+There are three reserved roles:
+.Cm default ,
+.Cm none ,
+and
+.Cm all .
+These need not be specified in the
+.Cm roles
+statement.
+The first may be used for the initial state of the system (before a role
+has been explicitly assigned), the second refers to the empty role that
+can do nothing, and the third contains all explicitly-defined roles.
+.Pp
+Within
+.Sx Structures ,
+roles are defined as follows:
+.Bd -literal -offset indent
+"roles" role ["," role]* "{" roletype [name]? "};"
+.Ed
+.Pp
+The
+.Cm role
+is a list of roles as defined in the top-level block, or one of the
+reserved roles but for
+.Cm none ,
+which can never be assigned.
+The role may be one of the following types:
+.Bl -tag -width Ds
+.It Cm all
+A special type referring to all function types.
+.It Cm delete
+The named delete operation.
+.It Cm insert
+The insert operation.
+.It Cm iterate
+The named iterate operation.
+.It Cm list
+The named list operation.
+.It Cm search
+The named search operation.
+.It Cm update
+The name update operation.
+.El
+.Pp
+To refer to an operation, use its
+.Cm name .
+The only way to refer to un-named operations is to use
+.Cm all ,
+which refers to all operations.
+.Pp
+If, during run-time, the current role is not a subtype (inclusive) of
+the given role for an operation, the application is immediately
+terminated.
 .Sh EXAMPLES
 A trivial example is as follows:
 .Bd -literal
@@ -507,10 +602,9 @@ struct user {
 };
 
 struct session {
-  field user struct userid:user.id;
-  field userid comment "Associated user.";
-  field altuserid:user.id;
-  field token comment "Random cookie.";
+  field user struct userid;
+  field userid:user.id comment "Associated user.";
+  field token int comment "Random cookie.";
   field ctime epoch comment "Creation time.";
   field id int rowid;
   comment "Authenticated session.";

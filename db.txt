@@ -6,6 +6,7 @@ struct company {
     "Simply a check for null values.";
   list somenum isnull;
   comment "Controlling organisation.";
+  insert;
 };
 
 enum gender {

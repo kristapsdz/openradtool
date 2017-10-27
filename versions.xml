@@ -2,9 +2,22 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.3.1</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-10-27">2017-10-27</time>
+		</header>
+		<aside>
+			<p>
+				Repair the <a href="http://usejsdoc.org">jsdoc</a> by actually checking it.
+				Also add custom callback handling for individual structure/fields.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.3.0</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2017-09-18">2017-09-18</time>
+			<time datetime="2017-10-25">2017-10-25</time>
 		</header>
 		<aside>
 			<p>

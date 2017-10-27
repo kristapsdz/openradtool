@@ -34,35 +34,35 @@ gen_jsdoc_field(const struct field *f)
 
 	if (FIELD_NULL & f->flags) {
 		print_commentv(2, COMMENT_JS_FRAG,
-			"%s-has-%s: \"hide\" class "
+			"<li>%s-has-%s: \"hide\" class "
 			"removed if %s not null, otherwise "
-			"\"hide\" class is added",
+			"\"hide\" class is added</li>",
 			f->parent->name, f->name, f->name);
 		print_commentv(2, COMMENT_JS_FRAG,
-			"%s-no-%s: \"hide\" class "
+			"<li>%s-no-%s: \"hide\" class "
 			"added if %s not null, otherwise "
-			"\"hide\" class is removed",
+			"\"hide\" class is removed</li>",
 			f->parent->name, f->name, f->name);
 	} 
 
 	if (FTYPE_STRUCT == f->type) {
 		print_commentv(2, COMMENT_JS_FRAG,
-			"%s-%s-obj: invoke %s.fillInner() method "
-			"with %s data%s",
+			"<li>%s-%s-obj: invoke [fillInner]{@link "
+			"%s#fillInner} with %s data%s</li>",
 			f->parent->name, f->name, 
 			f->ref->tstrct, f->name,
 			FIELD_NULL & f->flags ? 
 			" (if non-null)" : "");
 	} else {
 		print_commentv(2, COMMENT_JS_FRAG,
-			"%s-%s-text: replace contents "
-			"with %s data%s",
+			"<li>%s-%s-text: replace contents "
+			"with %s data%s</li>",
 			f->parent->name, f->name, f->name,
 			FIELD_NULL & f->flags ? 
 			" (if non-null)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
-			"%s-%s-value: replace \"value\" "
-			"attribute with %s data%s",
+			"<li>%s-%s-value: replace \"value\" "
+			"attribute with %s data%s</li>",
 			f->parent->name, f->name, f->name,
 			FIELD_NULL & f->flags ? 
 			" (if non-null)" : "");
@@ -79,7 +79,8 @@ gen_js_field(const struct field *f)
 
 	printf("\t\t\tif (typeof custom !== 'undefined' && \n"
 	       "\t\t\t    '%s-%s' in custom)\n"
-	       "\t\t\t\tcustom['%s-%s'](e, o.%s);\n",
+	       "\t\t\t\tcustom['%s-%s'](e, \"%s-%s\", o.%s);\n",
+	       f->parent->name, f->name, 
 	       f->parent->name, f->name, 
 	       f->parent->name, f->name, f->name);
 
@@ -243,13 +244,17 @@ gen_javascript(const struct strctq *sq)
 
 	TAILQ_FOREACH(s, sq, entries) {
 		print_commentv(1, COMMENT_JS,
-			"Represent a \"%s\" object (or array of "
-			"objects) for filling into a DOM tree.\n"
-			"@constructor\n"
+			"%s%s%s\n"
+			"This constructor accepts the \"%s\" objects "
+			"or array of objects serialises into a "
+			"DOM tree.\n"
 			"@param {(Object|Object[])} obj - The %s "
-			"object, which may also be an array of "
-			"objects.",
-			s->name, s->name);
+			"object or array of objects.\n"
+			"@class %s",
+			NULL == s->doc ? "" : "\n",
+			NULL == s->doc ? "" : s->doc,
+			NULL == s->doc ? "" : "<br />\n",
+			s->name, s->name, s->name);
 		printf("\tfunction %s(obj)\n"
 		       "\t{\n"
 		       "\t\tthis.obj = obj;\n"
@@ -261,35 +266,61 @@ gen_javascript(const struct strctq *sq)
 			"element in the DOM tree.\n"
 			"If the object was initialised with an "
 			"array, the first element is used.\n"
-			"Elements within (and including) #e having "
+			"Elements within (and including) \"e\" having "
 			"the following classes are manipulated as "
 			"follows:", s->name);
+		print_commentt(2, COMMENT_JS_FRAG, "<ul>");
 		TAILQ_FOREACH(f, &s->fq, entries)
 			gen_jsdoc_field(f);
-		print_commentt(2, COMMENT_JS_FRAG_CLOSE,
-			"@param {Object} e - The DOM element.");
+		print_commentt(2, COMMENT_JS_FRAG, "</ul>");
+		print_commentv(2, COMMENT_JS_FRAG_CLOSE,
+			"@param {Object} e - The DOM element.\n"
+			"@param {Object} custom - A dictionary "
+			"of functions keyed by structure and field "
+			"name (e.g., \"foo\" structure, \"bar\" "
+			"field would be \"foo-bar\"). "
+			"The value is a function for custom "
+			"handling that accepts the \"e\" value, "
+			"the name of the structure-field, and the "
+			"value of the structure and field.\n"
+			"@memberof %s#\n"
+			"@method fill",
+			s->name);
 		puts("\t\tthis.fill = function(e, custom) {\n"
 		     "\t\t\tthis._fill(e, this.obj, 1, custom);\n"
 		     "\t\t};\n"
 		     "");
 
 		print_commentv(2, COMMENT_JS,
-			"Like fill() but not including the root "
-			"element #e.\n"
-			"@param {Object} e - The DOM element.");
+			"Like [fill]{@link %s#fill} but not including "
+			"the root element \"e\".\n"
+			"@param {Object} e - The DOM element.\n"
+			"@param {Object} custom - The custom "
+			"handler dictionary (see [fill]{@link "
+			"%s#fill} for details).\n"
+			"@memberof %s#\n"
+			"@method fillInner",
+			s->name, s->name, s->name);
 		puts("\t\tthis.fillInner = function(e, custom) {\n"
 		     "\t\t\tthis._fill(e, this.obj, 0, custom);\n"
 		     "\t\t};\n"
 		     "");
 
 		print_commentv(2, COMMENT_JS,
-			"Implements all fill() style functions.\n"
+			"Implements all [fill]{@link %s#fill} style "
+			"functions.\n"
 			"@private\n"
-			"@param {Object} e - the DOM element.\n"
-			"@param {(Object|Object[])} o - the object "
-			"(or array) to fill\n"
-			"@param {number} inc - whether to include "
-			"the root or not when processing");
+			"@method _fill\n"
+			"@memberof %s#\n"
+			"@param {Object} e - The DOM element.\n"
+			"@param {(Object|Object[])} o - The object "
+			"(or array) to fill.\n"
+			"@param {Number} inc - Whether to include "
+			"the root or not when processing.\n"
+			"@param {Object} custom - The custom "
+			"handler dictionary (see [fill]{@link "
+			"%s#fill}).",
+			s->name, s->name, s->name);
 		puts("\t\tthis._fill = function(e, o, inc, custom) {");
 		TAILQ_FOREACH(f, &s->fq, entries)
 			if ( ! (FIELD_NOEXPORT & f->flags) &&
@@ -310,19 +341,25 @@ gen_javascript(const struct strctq *sq)
 		     "");
 
 		print_commentv(2, COMMENT_JS,
-			"Like fill() but for an array of %s.\n"
+			"Like [fill]{@link %s#fill} but for an "
+			"array of %s.\n"
 			"This will remove the first element within "
-			"#e then repeatedly clone and re-append it, "
+			"\"e\" then repeatedly clone and re-append it, "
 			"filling in the cloned subtree with the "
 			"array.\n"
-			"If #e is not an array, it is construed "
+			"If \"e\" is not an array, it is construed "
 			"as an array of one.\n"
-			"If the input array is empty, #e is hidden "
+			"If the input array is empty, \"e\" is hidden "
 			"by using the \"hide\" class.\n"
 			"Otherwise, the \"hide\" class is removed.\n"
-			"@param {Object} e - The DOM element.",
-			s->name);
-		puts("\t\tthis.fillArray = function(e) {");
+			"@param {Object} e - The DOM element.\n"
+			"@param {Object} custom - The custom "
+			"handler dictionary (see [fill]{@link "
+			"%s#fill}).\n"
+			"@memberof %s#\n"
+			"@method fillArray",
+			s->name, s->name, s->name, s->name);
+		puts("\t\tthis.fillArray = function(e, custom) {");
 		TAILQ_FOREACH(f, &s->fq, entries)
 			if ( ! (FIELD_NOEXPORT & f->flags) &&
 			    FTYPE_STRUCT == f->type) {
@@ -355,11 +392,6 @@ gen_javascript(const struct strctq *sq)
 		     "\t\t\t\tthis._fill(cln, o[j], 1);\n"
 		     "\t\t\t}\n"
 		     "\t\t};");
-
-		/*puts("\t\tthis.prepareForm(e) {");
-		TAILQ_FOREACH(f, &s->fq, entries) {
-		}*/
-
 		puts("\t}\n"
 		     "");
 	}

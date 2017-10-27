@@ -77,6 +77,12 @@ gen_js_field(const struct field *f)
 	if (FIELD_NOEXPORT & f->flags || FTYPE_BLOB == f->type)
 		return;
 
+	printf("\t\t\tif (typeof custom !== 'undefined' && \n"
+	       "\t\t\t    '%s-%s' in custom)\n"
+	       "\t\t\t\tcustom['%s-%s'](e, o.%s);\n",
+	       f->parent->name, f->name, 
+	       f->parent->name, f->name, f->name);
+
 	if (FIELD_NULL & f->flags) {
 		indent = 4;
 		printf("\t\t\tif (null === o.%s) {\n"
@@ -262,8 +268,8 @@ gen_javascript(const struct strctq *sq)
 			gen_jsdoc_field(f);
 		print_commentt(2, COMMENT_JS_FRAG_CLOSE,
 			"@param {Object} e - The DOM element.");
-		puts("\t\tthis.fill = function(e) {\n"
-		     "\t\t\tthis._fill(e, this.obj, 1);\n"
+		puts("\t\tthis.fill = function(e, custom) {\n"
+		     "\t\t\tthis._fill(e, this.obj, 1, custom);\n"
 		     "\t\t};\n"
 		     "");
 
@@ -271,8 +277,8 @@ gen_javascript(const struct strctq *sq)
 			"Like fill() but not including the root "
 			"element #e.\n"
 			"@param {Object} e - The DOM element.");
-		puts("\t\tthis.fillInner = function(e) {\n"
-		     "\t\t\tthis._fill(e, this.obj, 0);\n"
+		puts("\t\tthis.fillInner = function(e, custom) {\n"
+		     "\t\t\tthis._fill(e, this.obj, 0, custom);\n"
 		     "\t\t};\n"
 		     "");
 
@@ -284,7 +290,7 @@ gen_javascript(const struct strctq *sq)
 			"(or array) to fill\n"
 			"@param {number} inc - whether to include "
 			"the root or not when processing");
-		puts("\t\tthis._fill = function(e, o, inc) {");
+		puts("\t\tthis._fill = function(e, o, inc, custom) {");
 		TAILQ_FOREACH(f, &s->fq, entries)
 			if ( ! (FIELD_NOEXPORT & f->flags) &&
 			    FTYPE_STRUCT == f->type) {

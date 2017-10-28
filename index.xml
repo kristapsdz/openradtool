@@ -78,6 +78,23 @@
 				</p>
 			</section>
 			<blockquote>
+				<div>Latest release notes</div>
+			</blockquote>
+			<section id="versions">
+				<nav data-sblg-nav="1" data-sblg-navsort="date" data-sblg-navtag="version" data-sblg-navsz="1" data-sblg-navcontent="1">
+					<div>
+						<time datetime="${sblg-datetime}">${sblg-date}</time>:
+						version ${sblg-titletext}
+					</div>
+					<div>
+						${sblg-aside}
+					</div>
+				</nav>
+				<p>
+					For previous releases, see the <a href="archive.html">version archive</a>.
+				</p>
+			</section>
+			<blockquote>
 				<div>cat -n <a href="db.txt.html">db.txt</a></div>
 			</blockquote>
 			<section>
@@ -203,12 +220,6 @@
 				<p>
 					Below a list of features that I'd like to implement in coming versions.
 				</p>
-				<article data-sblg-permlink="0" data-sblg-article="1"></article>
-			</section>
-			<blockquote>
-				<div>Last release notes</div>
-			</blockquote>
-			<section id="versions">
 				<article data-sblg-permlink="0" data-sblg-article="1"></article>
 			</section>
 		</article>

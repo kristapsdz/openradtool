@@ -15,7 +15,8 @@ OBJS		 = comments.o \
 		   protos.o \
 		   source.o \
 		   sql.o
-HTMLS		 = index.html \
+HTMLS		 = archive.html \
+		   index.html \
 		   kwebapp.1.html \
 		   kwebapp.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
@@ -175,6 +176,10 @@ highlight.css:
 
 index.html: index.xml $(XMLS) $(IHTMLS) highlight.css
 	sblg -s cmdline -t index.xml -o- $(XMLS) | \
+	       sed "s!@VERSION@!$(VERSION)!g" > $@
+
+archive.html: archive.xml versions.xml
+	sblg -s date -t archive.xml -o- versions.xml | \
 	       sed "s!@VERSION@!$(VERSION)!g" > $@
 
 TODO.xml: TODO.md

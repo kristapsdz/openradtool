@@ -329,6 +329,7 @@ check_modtype(const struct uref *ref)
 	assert(MODTYPE__MAX != ref->mod);
 
 	if (MODTYPE_SET == ref->mod ||
+	    FTYPE_BIT == ref->field->type ||
 	    FTYPE_EPOCH == ref->field->type ||
 	    FTYPE_INT == ref->field->type ||
 	    FTYPE_REAL == ref->field->type)

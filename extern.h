@@ -39,6 +39,7 @@ TAILQ_HEAD(updateq, update);
 TAILQ_HEAD(urefq, uref);
 
 enum	ftype {
+	FTYPE_BIT, /* bit (index) */
 	FTYPE_EPOCH, /* epoch (time_t) */
 	FTYPE_INT, /* native integer */
 	FTYPE_REAL, /* native real-value */

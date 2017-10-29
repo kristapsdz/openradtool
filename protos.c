@@ -30,6 +30,7 @@
 #include "extern.h"
 
 static	const char *const ftypes[FTYPE__MAX] = {
+	"int64_t ", /* FTYPE_BIT */
 	"time_t ", /* FTYPE_EPOCH */
 	"int64_t ", /* FTYPE_INT */
 	"double ", /* FTYPE_REAL */

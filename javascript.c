@@ -389,7 +389,7 @@ gen_javascript(const struct strctq *sq)
 		     "\t\t\tfor (j = 0; j < o.length; j++) {\n"
 		     "\t\t\t\tcln = row.cloneNode(true);\n"
 		     "\t\t\t\te.appendChild(cln);\n"
-		     "\t\t\t\tthis._fill(cln, o[j], 1);\n"
+		     "\t\t\t\tthis._fill(cln, o[j], 1, custom);\n"
 		     "\t\t\t}\n"
 		     "\t\t};");
 		puts("\t}\n"

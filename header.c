@@ -181,11 +181,12 @@ gen_func_update(const struct config *cfg, const struct update *up)
 					pos++, ref->name);
 		print_commentt(0, COMMENT_C_FRAG,
 			"Constrains the updated records to:");
-	} else
+	} else {
+		pos = 1;
 		print_commentt(0, ct,
 			"Constrains the deleted records to:");
+	}
 
-	pos = 1;
 	TAILQ_FOREACH(ref, &up->crq, entries)
 		if (OPTYPE_NOTNULL == ref->op) 
 			print_commentv(0, COMMENT_C_FRAG,

@@ -350,8 +350,33 @@ static int
 resolve_update(struct update *up)
 {
 	struct uref	*ref;
+	struct field	*f;
 
-	/* Will always be empty for UPT_DELETE. */
+	/*
+	 * If this is an update clause and we didn't include any fields
+	 * to update, that means we want to update all of them.
+	 */
+
+	if (UP_MODIFY == up->type && TAILQ_EMPTY(&up->mrq)) {
+		up->flags |= UPDATE_ALL;
+		TAILQ_FOREACH(f, &up->parent->fq, entries) {
+			if (FIELD_ROWID & f->flags)
+				continue;
+			if (FTYPE_STRUCT == f->type)
+				continue;
+			ref = calloc(1, sizeof(struct uref));
+			if (NULL == ref)
+				err(EXIT_FAILURE, NULL);
+			ref->name = strdup(f->name);
+			if (NULL == ref->name)
+				err(EXIT_FAILURE, NULL);
+			ref->parent = up;
+			ref->pos = up->pos;
+			TAILQ_INSERT_TAIL(&up->mrq, ref, entries);
+		}
+	}
+
+	/* Will always be empty for UP_DELETE. */
 
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
 		if ( ! resolve_uref(ref, 0))

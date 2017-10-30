@@ -1328,7 +1328,9 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 	 */
 
 	if (UP_MODIFY == up->type) {
-		if (TOK_IDENT != parse_next(p)) {
+		if (TOK_COLON == parse_next(p))
+			goto next;
+		if (TOK_IDENT != p->lasttype) {
 			parse_errx(p, "expected field to modify");
 			return;
 		}
@@ -1366,6 +1368,7 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 		}
 	}
 
+next:
 	/*
 	 * Now the fields that will be used to constrain the update
 	 * mechanism.

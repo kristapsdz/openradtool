@@ -156,8 +156,9 @@ print_func_db_update(const struct update *u, int priv, int decl)
 			decl ? " " : "\n", u->parent->name);
 
 	if (NULL == u->name && UP_MODIFY == u->type) {
-		TAILQ_FOREACH(ur, &u->mrq, entries)
-			col += printf("_%s", ur->name);
+		if ( ! (UPDATE_ALL & u->flags))
+			TAILQ_FOREACH(ur, &u->mrq, entries)
+				col += printf("_%s", ur->name);
 		col += printf("_by");
 		TAILQ_FOREACH(ur, &u->crq, entries)
 			col += printf("_%s_%s", 

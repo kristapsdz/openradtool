@@ -414,7 +414,7 @@ modified.
 By default, there are no update, delete, or insert functions defined.
 The syntax is as follows:
 .Bd -literal -offset indent
-"update" mfields ":" cfields [":" [params]* ]? ";"
+"update" [mfields]? ":" cfields [":" [params]* ]? ";"
 "delete" cfields [":" [params]* ]? ";"
 "insert" ";"
 .Ed
@@ -423,20 +423,25 @@ Both
 .Cm mfields
 and
 .Cm cfields
-are a sequence of one or more comma-separated native-type fields in the
-current structure.
+are a sequence of comma-separated native-type fields in the current
+structure.
 The former refers to the fields that will be modified; the latter refers
 to fields that will act as constraints.
 In other words, modify fields constraint by
 .Cm cfields
 to contain the
 .Cm cfields .
-(The
-.Cm delete
-statement obviously does not accept fields to modify.)
 Usually, the latter will be the
 .Cm rowid
 and the former will be any other fields.
+.Pp
+The
+.Cm delete
+statement obviously does not accept fields to modify.
+If the
+.Cm update
+statement does not have modify fields, it's taken to mean that all
+fields will be modified using the default operator.
 .Pp
 The fields in
 .Cm mfields

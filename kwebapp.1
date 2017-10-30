@@ -361,6 +361,11 @@ constrained by
 .Dq yy
 with operation
 .Dq op .
+.It Fn db_foo_update_by_yy_op
+Like
+.Fn db_foo_update_xx_by_yy_op ,
+but for when no modify fields were specified, meaning that all fields
+(but structures and row identifiers) are to be modified.
 .El
 .Pp
 There are also several convenience functions for the database:

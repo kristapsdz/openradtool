@@ -383,6 +383,8 @@ struct	update {
 	struct pos	    pos; /* parse point */
 	struct strct	   *parent; /* up-reference */
 	struct rolemap	   *rolemap;
+	unsigned int	    flags;
+#define	UPDATE_ALL	    0x01 /* UP_MODIFY for all fields */
 	TAILQ_ENTRY(update) entries;
 };
 

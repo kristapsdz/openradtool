@@ -2,6 +2,21 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.3.2</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-10-27">ongoing</time>
+		</header>
+		<aside>
+			<p>
+				Add the <code>bit</code> type to work with <a href="https://kristaps.bsd.lv/kcgi">kcgi</a>'s new bit validator.
+				Fix the JavaScript output to propogate custom callbacks (see <a href="kwebapp.1.html">kwebapp(1)</a>) in the
+				<code>fillArray</code> function.
+				Lastly, add feature that allows an update <code>update</code> statement translate into updateing all fields.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.3.1</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-10-27">2017-10-27</time>

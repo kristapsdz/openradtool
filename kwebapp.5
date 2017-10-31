@@ -384,8 +384,7 @@ is a unique identifier used in the C API for the search function and the
 .Cm comment
 is included in the API comments for the function.
 .Pp
-.Em Note :
-if you're searching (in any way) on a
+If you're searching (in any way) on a
 .Cm password
 field, the field is omitted from the initial search, then hash-verified
 after being extracted from the database.
@@ -469,8 +468,7 @@ sets a unique name for the generated function, while
 .Cm comment
 is used for the API comments.
 .Pp
-.Em Note :
-fields of type
+Fields of type
 .Cm password
 are not allowed as
 .Cm cfields
@@ -517,13 +515,20 @@ For text, the comparison is lexical; otherwise, it is by value.
 .It Cm le , ge
 Less than/equality or greater than/equality binary operators.
 For text, the comparison is lexical; otherwise, it is by value.
+.It Cm like
+The LIKE SQL operator.
+This only applies to
+.Cm text
+and
+.Cm email
+fields.
 .It Cm isnull , notnull
 Unary operator to check whether the field is null or not null.
 .El
 .Pp
-.Em Note :
+The
 .Cm password
-fields do not accept any operator but the default check for equality.
+field does not accept any operator but the default check for equality.
 .Ss Roles
 Full role-based access control is available in
 .Nm

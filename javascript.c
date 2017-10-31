@@ -78,9 +78,20 @@ gen_js_field(const struct field *f)
 		return;
 
 	printf("\t\t\tif (typeof custom !== 'undefined' && \n"
-	       "\t\t\t    '%s-%s' in custom)\n"
-	       "\t\t\t\tcustom['%s-%s'](e, \"%s-%s\", o.%s);\n",
+	       "\t\t\t    '%s-%s' in custom) {\n"
+	       "\t\t\t\tif (custom['%s-%s'] instanceof Array) {\n"
+	       "\t\t\t\t\tfor (var ii = 0; "
+	                      "ii < custom['%s-%s'].length; ii++)\n"
+	       "\t\t\t\t\t\tcustom['%s-%s'][ii](e, \"%s-%s\", o.%s);\n"
+	       "\t\t\t\t} else {\n"
+	       "\t\t\t\t\tcustom['%s-%s'](e, \"%s-%s\", o.%s);\n"
+	       "\t\t\t\t}\n"
+	       "\t\t\t}\n",
 	       f->parent->name, f->name, 
+	       f->parent->name, f->name, 
+	       f->parent->name, f->name, 
+	       f->parent->name, f->name, 
+	       f->parent->name, f->name, f->name,
 	       f->parent->name, f->name, 
 	       f->parent->name, f->name, f->name);
 
@@ -283,6 +294,8 @@ gen_javascript(const struct strctq *sq)
 			"handling that accepts the \"e\" value, "
 			"the name of the structure-field, and the "
 			"value of the structure and field.\n"
+			"You may also specify an array of functions "
+			"instead of a singleton.\n"
 			"@memberof %s#\n"
 			"@method fill",
 			s->name);

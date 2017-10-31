@@ -217,6 +217,7 @@ enum	optype {
 	OPTYPE_LE, /* x <= ? */
 	OPTYPE_LT, /* x < ? */
 	OPTYPE_NEQUAL, /* non-equality: x != ? */
+	OPTYPE_LIKE, /* like */
 	/* Unary types... */
 	OPTYPE_ISNULL, /* nullity: x isnull */
 	OPTYPE_NOTNULL, /* non-nullity: x notnull */

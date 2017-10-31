@@ -15,8 +15,8 @@ struct user {
   comment "a system user";
 };
 struct session {
-  field user struct uid:user.id;
-  field uid int comment "user bound to session";
+  field user struct uid;
+  field uid:user.id int comment "user bound to session";
   field token int comment "unique session token";
   field id int rowid;
   comment "web session";

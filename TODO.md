@@ -9,6 +9,9 @@ usable without them, but they'll soon be required.
   functions for the same thing.  This is pretty easy to check.
 - Allow for unary operators and binary equality (eq, neq) on password
   fields.  Right now, I only allow equality.
+- The bits exported are in 64-bit values, which JavaScript does not
+  support. Provide a facility to export bit fields as an array of bit
+  mask components, e.g., 0 -> [0], 3 -> [1, 2].
 
 More longer-term:
 
@@ -16,10 +19,7 @@ More longer-term:
   into a search function.  This would occur outside of the "struct" and
   in the main area.
 - Allow for prepopulating databases with some initial fields.
-- When deletions occur, override the "ON DELETE" clause.
 - Allow for generic SQL (?) being attached to queries.
-- Allow for JavaScript options to allow custom callbacks.
-- Allow for JavaScript list/iterator support.
 - Have the configure script also build in certain functions; e.g., the
   encryption function.  (See portability notes.)
 

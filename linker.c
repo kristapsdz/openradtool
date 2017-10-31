@@ -308,12 +308,20 @@ check_updatetype(struct update *up)
 {
 	struct uref	*ref;
 
-	TAILQ_FOREACH(ref, &up->crq, entries)
+	TAILQ_FOREACH(ref, &up->crq, entries) {
 		if ((OPTYPE_NOTNULL == ref->op ||
 		     OPTYPE_ISNULL == ref->op) &&
 		    ! (FIELD_NULL & ref->field->flags))
 			gen_warnx(&ref->pos, "null operator "
 				"on field that's never null");
+		if (OPTYPE_LIKE == ref->op &&
+		    FTYPE_TEXT != ref->field->type &&
+		    FTYPE_EMAIL != ref->field->type) {
+			gen_errx(&ref->pos, "LIKE operator "
+				"on non-textual field.");
+			return(0);
+		}
+	}
 	return(1);
 }
 
@@ -534,15 +542,27 @@ check_searchtype(const struct strct *p)
 			    ! (FIELD_NULL & sr->field->flags))
 				gen_warnx(&sent->pos, "null operator "
 					"on field that's never null");
+
 			/* 
 			 * FIXME: we should (in theory) allow for the
 			 * unary types and equality binary types.
 			 * But for now, mandate equality.
 			 */
+
 			if (OPTYPE_EQUAL != sent->op &&
 			    FTYPE_PASSWORD == sr->field->type) {
 				gen_errx(&sent->pos, "password field "
 					"only processes equality");
+				return(0);
+			}
+
+			/* Require text types for LIKE operator. */
+
+			if (OPTYPE_LIKE == sent->op &&
+			    FTYPE_TEXT != sr->field->type &&
+			    FTYPE_EMAIL != sr->field->type) {
+				gen_errx(&sent->pos, "LIKE operator "
+					"on non-textual field.");
 				return(0);
 			}
 		}

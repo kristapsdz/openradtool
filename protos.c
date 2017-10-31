@@ -49,6 +49,7 @@ static	const char *const optypes[OPTYPE__MAX] = {
 	"le", /* OPTYPE_LE */
 	"lt", /* OPTYPE_LT */
 	"neq", /* OPTYE_NEQUAL */
+	"like", /* OPTYPE_LIKE */
 	/* Unary types... */
 	"isnull", /* OPTYE_ISNULL */
 	"notnull", /* OPTYE_NOTNULL */

@@ -74,8 +74,10 @@ gen_js_field(const struct field *f)
 {
 	size_t	 indent;
 
-	if (FIELD_NOEXPORT & f->flags || FTYPE_BLOB == f->type)
+	if (FIELD_NOEXPORT & f->flags)
 		return;
+
+	/* Custom callback on the object. */
 
 	printf("\t\t\tif (typeof custom !== 'undefined' && \n"
 	       "\t\t\t    '%s-%s' in custom) {\n"
@@ -110,6 +112,9 @@ gen_js_field(const struct field *f)
 		       f->parent->name, f->name);
 	} else
 		indent = 3;
+
+	if (FTYPE_BLOB == f->type)
+		return;
 
 	if (FTYPE_STRUCT != f->type) {
 		print_src(indent,
@@ -348,6 +353,21 @@ gen_javascript(const struct strctq *sq)
 		     "\t\t\t\t\treturn;\n"
 		     "\t\t\t\to = o[0];\n"
 		     "\t\t\t}");
+		
+		/* Custom callback on the object itself. */
+
+		printf("\t\t\tif (typeof custom !== 'undefined' && \n"
+		       "\t\t\t    '%s' in custom) {\n"
+		       "\t\t\t\tif (custom['%s'] instanceof Array) {\n"
+		       "\t\t\t\t\tfor (var ii = 0; "
+				      "ii < custom['%s'].length; ii++)\n"
+		       "\t\t\t\t\t\tcustom['%s'][ii](e, \"%s\", o);\n"
+		       "\t\t\t\t} else {\n"
+		       "\t\t\t\t\tcustom['%s'](e, \"%s\", o);\n"
+		       "\t\t\t\t}\n"
+		       "\t\t\t}\n",
+		       s->name, s->name, s->name, s->name, 
+		       s->name, s->name, s->name);
 		TAILQ_FOREACH(f, &s->fq, entries)
 			gen_js_field(f);
 		puts("\t\t};\n"

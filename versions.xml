@@ -11,6 +11,7 @@
 				Add the <code>like</code> operator type.
 				This allows for primitive text searching.
 				(This will become more advanced in time.)
+				Allow the custom callback for JavaScript functions to optionally accept an array of functions for field.
 			</p>
 		</aside>
 	</article>

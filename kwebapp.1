@@ -578,26 +578,28 @@ repeatedly over an array of objects by removing, then subsequently
 cloning and appending the first element of the give DOM root.
 .Pp
 All functions accept an additional, optional argument for providing
-custom per-field callbacks.
-Assuming a structure
+custom per-field or per-structure callbacks.
+Keys in the object must consist of the structure name, followed by a
+dash, followed by the field name.
+For example, assuming a structure
 .Dq client
 with a field
 .Dq dob
 consisting of a UNIX epoch:
 .Bd -literal -offset indent
 var custom = { 'client-dob': formatDate };
-new client(obj).fill(e, custom);
+new client(obj).fillInner(document, custom);
 .Ed
 .Pp
 And letting a formatting function be:
 .Bd -literal -offset indent
-function formatDate(e, name, txt)
+function formatDate(e, name, value)
 {
   var list, i;
   list = e.getElementsByClassName('client-dob-date');
-  for (i = 0; i < list.length; i++) 
-    list[i].innerHTML = 
-      moment.unix(txt).format('DD-MM-YYYY'));
+  for (i = 0; i < list.length; i++)
+    list[i].innerHTML =
+      moment.unix(value).format('DD-MM-YYYY'));
 }
 .Ed
 .Pp
@@ -605,8 +607,23 @@ This invokes the
 .Dq moment.js
 formatter to create dates.
 .Pp
-The value for the custom key may also be an array of functions just as above.
+The same can be applied to structures instead of to fields within
+structures.
+The keys for these are simply the structure name.
+.Bd -literal -offset indent
+var custom = { 'client': formatClient };
+new client(obj).fillInner(document, custom);
+.Ed
+.Pp
+The callback will then be provided the full client object.
+.Pp
+In either case, the value for the custom key may also be an array of
+functions just as above.
 Each will be invoked in the order given, in the same way.
+.Bd -literal -offset indent
+var custom = { 'client': [ format1, format2 ] };
+.Ed
+.Pp
 The callback function (or functions) will be invoked regardless of
 whether the value has been set.
 In the event of an unset field value, the function is passed

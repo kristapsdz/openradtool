@@ -65,12 +65,12 @@ installwww: www
 	install -m 0444 kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz.sha512
 
 install: kwebapp
-	mkdir -p $(BINDIR)
-	mkdir -p $(MANDIR)/man1
-	mkdir -p $(MANDIR)/man5
-	$(INSTALL_PROGRAM) kwebapp $(BINDIR)
-	$(INSTALL_MAN) kwebapp.1 $(MANDIR)/man1
-	$(INSTALL_MAN) kwebapp.5 $(MANDIR)/man5
+	mkdir -p $(DESTDIR)$(BINDIR)
+	mkdir -p $(DESTDIR)$(MANDIR)/man1
+	mkdir -p $(DESTDIR)$(MANDIR)/man5
+	$(INSTALL_PROGRAM) kwebapp $(DESTDIR)$(BINDIR)
+	$(INSTALL_MAN) kwebapp.1 $(DESTDIR)$(MANDIR)/man1
+	$(INSTALL_MAN) kwebapp.5 $(DESTDIR)$(MANDIR)/man5
 
 kwebapp.tar.gz.sha512: kwebapp.tar.gz
 	sha512 kwebapp.tar.gz >$@

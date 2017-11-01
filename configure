@@ -66,6 +66,7 @@ CFLAGS="${CFLAGS} -Wwrite-strings -Wno-unused-parameter"
 LDADD=
 CPPFLAGS=
 LDFLAGS=
+DESTDIR=
 PREFIX="/usr/local"
 BINDIR=
 SBINDIR=
@@ -97,6 +98,8 @@ do
 		LDFLAGS="$val" ;;
 	CPPFLAGS)
 		CPPFLAGS="$val" ;;
+	DESTDIR)
+		DESTDIR="$val" ;;
 	PREFIX)
 		PREFIX="$val" ;;
 	MANDIR)

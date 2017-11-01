@@ -1912,16 +1912,25 @@ parse_struct_data(struct parse *p, struct strct *s)
  * Verify and allocate an enum, then start parsing it.
  */
 static void
-parse_enum(struct parse *p, struct enmq *q)
+parse_enum(struct parse *p, struct config *cfg)
 {
 	struct enm	*e;
+	struct strct	*s;
 	char		*caps;
 
-	/* Disallow duplicate and bad names. */
+	/* 
+	 * Disallow duplicate and bad names.
+	 * Duplicates are for both structures and enumerations.
+	 */
 
-	TAILQ_FOREACH(e, q, entries)
+	TAILQ_FOREACH(e, &cfg->eq, entries)
 		if (0 == strcasecmp(e->name, p->last.string)) {
-			parse_errx(p, "duplicate name");
+			parse_errx(p, "duplicates enum name");
+			return;
+		}
+	TAILQ_FOREACH(s, &cfg->sq, entries) 
+		if (0 == strcasecmp(s->name, p->last.string)) {
+			parse_errx(p, "duplicates struct name");
 			return;
 		}
 
@@ -1938,7 +1947,7 @@ parse_enum(struct parse *p, struct enmq *q)
 		*caps = toupper((int)*caps);
 
 	parse_point(p, &e->pos);
-	TAILQ_INSERT_TAIL(q, e, entries);
+	TAILQ_INSERT_TAIL(&cfg->eq, e, entries);
 	TAILQ_INIT(&e->eq);
 	parse_enum_data(p, e);
 }
@@ -2087,16 +2096,22 @@ parse_roles(struct parse *p, struct config *cfg)
  * ancillary entries.
  */
 static void
-parse_struct(struct parse *p, struct strctq *q)
+parse_struct(struct parse *p, struct config *cfg)
 {
 	struct strct	*s;
+	struct enm	*e;
 	char		*caps;
 
 	/* Disallow duplicate and bad names. */
 
-	TAILQ_FOREACH(s, q, entries)
+	TAILQ_FOREACH(s, &cfg->sq, entries)
 		if (0 == strcasecmp(s->name, p->last.string)) {
-			parse_errx(p, "duplicate name");
+			parse_errx(p, "duplicates struct name");
+			return;
+		}
+	TAILQ_FOREACH(e, &cfg->eq, entries)
+		if (0 == strcasecmp(e->name, p->last.string)) {
+			parse_errx(p, "duplicates enum name");
 			return;
 		}
 
@@ -2113,7 +2128,7 @@ parse_struct(struct parse *p, struct strctq *q)
 		*caps = toupper((int)*caps);
 
 	parse_point(p, &s->pos);
-	TAILQ_INSERT_TAIL(q, s, entries);
+	TAILQ_INSERT_TAIL(&cfg->sq, s, entries);
 	TAILQ_INIT(&s->fq);
 	TAILQ_INIT(&s->sq);
 	TAILQ_INIT(&s->aq);
@@ -2174,12 +2189,12 @@ parse_config(FILE *f, const char *fname)
 			parse_roles(&p, cfg);
 		} else if (0 == strcasecmp(p.last.string, "struct")) {
 			if (TOK_IDENT == parse_next(&p))
-				parse_struct(&p, &cfg->sq);
+				parse_struct(&p, cfg);
 			else
 				parse_errx(&p, "expected struct name");
 		} else if (0 == strcasecmp(p.last.string, "enum")) {
 			if (TOK_IDENT == parse_next(&p))
-				parse_enum(&p, &cfg->eq);
+				parse_enum(&p, cfg);
 			else
 				parse_errx(&p, "expected enum name");
 		} else

@@ -2,6 +2,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.3.4</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-11-01">ongoing</time>
+		</header>
+		<aside>
+			<p>
+				Disallow duplicate <code>enum</code> and <code>struct</code> names.
+				(These will collide in the C namespace.)
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.3.3</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-11-01">2017-11-01</time>

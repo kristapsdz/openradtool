@@ -80,7 +80,7 @@ gen_js_field(const struct field *f)
 	/* Custom callback on the object. */
 
 	printf("\t\t\tif (typeof custom !== 'undefined' && \n"
-	       "\t\t\t    '%s-%s' in custom) {\n"
+	       "\t\t\t    null !== custom && '%s-%s' in custom) {\n"
 	       "\t\t\t\tif (custom['%s-%s'] instanceof Array) {\n"
 	       "\t\t\t\t\tfor (var ii = 0; "
 	                      "ii < custom['%s-%s'].length; ii++)\n"
@@ -129,7 +129,7 @@ gen_js_field(const struct field *f)
 			"list = _elemList(e, '%s-%s-obj');\n"
 		        "strct = new %s(o.%s);\n"
 		        "for (i = 0; i < list.length; i++) {\n"
-		        "strct.fillInner(list[i]);\n"
+		        "strct.fillInner(list[i], custom);\n"
 		        "}",
 		        f->parent->name, f->name, 
 		        f->ref->tstrct, f->name);
@@ -357,7 +357,7 @@ gen_javascript(const struct strctq *sq)
 		/* Custom callback on the object itself. */
 
 		printf("\t\t\tif (typeof custom !== 'undefined' && \n"
-		       "\t\t\t    '%s' in custom) {\n"
+		       "\t\t\t    null !== custom && '%s' in custom) {\n"
 		       "\t\t\t\tif (custom['%s'] instanceof Array) {\n"
 		       "\t\t\t\t\tfor (var ii = 0; "
 				      "ii < custom['%s'].length; ii++)\n"

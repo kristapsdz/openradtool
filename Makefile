@@ -49,7 +49,7 @@ IHTMLS		 = db.txt.html \
 		   db.old.txt.html \
 		   db.update.sql.html \
 		   db.js.html \
-		   test.c.html 
+		   test.c.html
 
 kwebapp: $(OBJS)
 	$(CC) -o $@ $(OBJS)
@@ -188,7 +188,7 @@ TODO.xml: TODO.md
 	  echo "</article>" ; ) >$@
 
 clean:
-	rm -f kwebapp $(OBJS) db.c db.h db.o db.sql db.js db.update.sql db.db test test.o 
+	rm -f kwebapp $(OBJS) db.c db.h db.o db.sql db.js db.update.sql db.db test test.o
 	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
 	rm -f index.svg index.html highlight.css kwebapp.5.html kwebapp.1.html
 	rm -f db.txt.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml

@@ -4,14 +4,15 @@
 		<header>
 			<h3>0.3.3</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2017-10-30">ongoing</time>
+			<time datetime="2017-11-01">2017-11-01</time>
 		</header>
 		<aside>
 			<p>
 				Add the <code>like</code> operator type.
 				This allows for primitive text searching.
 				(This will become more advanced in time.)
-				Allow the custom callback for JavaScript functions to optionally accept an array of functions for field.
+				Allow the custom callback for JavaScript functions to optionally accept an array of functions for
+				structure-field or structure in general.
 			</p>
 		</aside>
 	</article>

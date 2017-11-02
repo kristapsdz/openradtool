@@ -1217,9 +1217,6 @@ parse_config_search_params(struct parse *p, struct search *s)
 				break;
 			}
 			s->limit = p->last.integer;
-			if (STYPE_SEARCH == s->type)
-				parse_warnx(p, "limit not used "
-					"for singleton searching");
 			if (TOK_SEMICOLON == parse_next(p))
 				break;
 		} else {

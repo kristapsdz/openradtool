@@ -335,15 +335,15 @@ This might change.
 There are three types of
 .Cm searchtype
 searches that may be defined to produce searching functions on
-structures: search for individual rows (i.e., on a unique column),
-generate a queue of responses, or call a function for each retrieved
-result in an active query.
-These use the
-.Cm search ,
-.Cm list ,
-and
+structures:
+.Cm search
+for an individual row (i.e., on a unique column or with a
+.Cm limit
+of 1) and store the result in memory, store a
+.Cm list
+of retrieved results in memory, or
 .Cm iterate
-keywords, respectively.
+a function for each retrieved result in an active query.
 .Pp
 Searches are always by field, and may be followed by parameters:
 .Bd -literal -offset indent
@@ -389,9 +389,10 @@ String literal included in the API comments for the function.
 .It Cm limit
 A value \(gt0 that limits the number of returned results.
 By default, there is no limit.
-This is ignored for the
+This can be used in a
 .Cm search
-singleton result statement.
+singleton result statement as a way to limit non-unique results to a
+single result.
 .It Cm name
 A unique identifier used in the C API for the search function.
 .El

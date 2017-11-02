@@ -531,9 +531,10 @@ check_searchtype(const struct strct *p)
 			gen_warnx(&srch->pos, "multiple-result search "
 				"on a unique field");
 		if ( ! (SEARCH_IS_UNIQUE & srch->flags) && 
-		    STYPE_SEARCH == srch->type)
+		    STYPE_SEARCH == srch->type && 1 != srch->limit)
 			gen_warnx(&srch->pos, "single-result search "
-				"on a non-unique field");
+				"on a non-unique field without a "
+				"limit of one");
 
 		TAILQ_FOREACH(sent, &srch->sntq, entries) {
 			sr = TAILQ_LAST(&sent->srq, srefq);

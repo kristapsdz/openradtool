@@ -1175,12 +1175,11 @@ parse_config_search_params(struct parse *p, struct search *s)
 	if (TOK_SEMICOLON == parse_next(p))
 		return;
 
-	while (TOK_ERR != p->lasttype && TOK_EOF != p->lasttype) {
+	while ( ! PARSE_STOP(p)) {
 		if (TOK_IDENT != p->lasttype) {
-			parse_errx(p, "expected search specifier");
+			parse_errx(p, "expected parameter name");
 			break;
 		}
-
 		if (0 == strcasecmp("name", p->last.string)) {
 			if (TOK_IDENT != parse_next(p)) {
 				parse_errx(p, "expected search name");
@@ -1207,6 +1206,20 @@ parse_config_search_params(struct parse *p, struct search *s)
 		} else if (0 == strcasecmp("comment", p->last.string)) {
 			if ( ! parse_comment(p, &s->doc))
 				break;
+			if (TOK_SEMICOLON == parse_next(p))
+				break;
+		} else if (0 == strcasecmp("limit", p->last.string)) {
+			if (TOK_INTEGER != parse_next(p)) {
+				parse_errx(p, "expected limit value");
+				break;
+			} else if (p->last.integer <= 0) {
+				parse_errx(p, "expected limit >0");
+				break;
+			}
+			s->limit = p->last.integer;
+			if (STYPE_SEARCH == s->type)
+				parse_warnx(p, "limit not used "
+					"for singleton searching");
 			if (TOK_SEMICOLON == parse_next(p))
 				break;
 		} else {

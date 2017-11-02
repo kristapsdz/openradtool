@@ -35,7 +35,7 @@ struct user {
   field name text comment 
     "User's full name.";
   field uid int rowid;
-  iterate name: comment
+  iterate name: limit 5 comment
     "Create a function that searches for users by a given
     name; and, when found, invokes a callback function
     provided the user structure.";

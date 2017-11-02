@@ -373,16 +373,28 @@ See
 .Sx Operations
 for a list of available operators.
 .Pp
-The search parameters are a series of key-value pairs:
+The
+.Cm params
+search parameters are a series of key-value pairs:
 .Bd -literal -offset indent
-"name" searchname | "comment" string_literal
+"name" searchname | \e
+  "limit" limitval | \e
+  "comment" string_literal
 .Ed
 .Pp
-The
-.Cm name
-is a unique identifier used in the C API for the search function and the
-.Cm comment
-is included in the API comments for the function.
+The available search parameter keys are as follows:
+.Bl -tag -width Ds
+.It Cm comment
+String literal included in the API comments for the function.
+.It Cm limit
+A value \(gt0 that limits the number of returned results.
+By default, there is no limit.
+This is ignored for the
+.Cm search
+singleton result statement.
+.It Cm name
+A unique identifier used in the C API for the search function.
+.El
 .Pp
 If you're searching (in any way) on a
 .Cm password

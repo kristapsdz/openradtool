@@ -1450,6 +1450,8 @@ gen_stmt(const struct strct *p)
 					p->name : sent->alias->alias,
 					sr->name, optypes[sent->op]);
 		}
+		if (STYPE_SEARCH != s->type && s->limit > 0)
+			printf(" LIMIT %" PRId64, s->limit);
 		puts("\",");
 	}
 

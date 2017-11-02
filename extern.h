@@ -318,6 +318,7 @@ struct	search {
 	char		   *doc; /* documentation */
 	struct strct	   *parent; /* up-reference */
 	enum stype	    type; /* type of search */
+	int64_t		    limit; /* query limit or zero (unset) */
 	struct rolemap	   *rolemap; /* roles assigned to search */
 	unsigned int	    flags; 
 #define	SEARCH_IS_UNIQUE    0x01 /* has a rowid or unique somewhere */

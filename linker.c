@@ -592,9 +592,19 @@ resolve_search(struct search *srch)
 		ref = TAILQ_FIRST(&sent->srq);
 		if ( ! resolve_sref(ref, p))
 			return(0);
+
+		/*
+		 * Check if this is a unique search result that will
+		 * reduce our search to a singleton result always.
+		 * This happens if the field value itself is unique
+		 * (i.e., rowid or unique) AND the check is for
+		 * equality.
+		 */
+
 		ref = TAILQ_LAST(&sent->srq, srefq);
-		if (FIELD_ROWID & ref->field->flags ||
-		    FIELD_UNIQUE & ref->field->flags) {
+		if ((FIELD_ROWID & ref->field->flags ||
+		     FIELD_UNIQUE & ref->field->flags) &&
+		     OPTYPE_EQUAL == sent->op) {
 			sent->flags |= SENT_IS_UNIQUE;
 			srch->flags |= SEARCH_IS_UNIQUE;
 		}

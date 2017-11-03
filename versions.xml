@@ -10,6 +10,7 @@
 			<p>
 				Disallow duplicate <code>enum</code> and <code>struct</code> names.
 				(These will collide in the C namespace.)
+				Improve the documentation (function arguments) in the produced C header file.
 			</p>
 		</aside>
 	</article>

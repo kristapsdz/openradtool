@@ -29,6 +29,18 @@
 
 #include "extern.h"
 
+static	const char *const optypes[OPTYPE__MAX] = {
+	"equals", /* OPTYPE_EQUAL */
+	"greater-than equals", /* OPTYPE_GE */
+	"greater-than", /* OPTYPE_GT */
+	"less-than equals", /* OPTYPE_LE */
+	"less-than", /* OPTYPE_LT */
+	"does not equal", /* OPTYPE_NEQUAL */
+	"\"like\"", /* OPTYPE_LIKE */
+	"is null", /* OPTYPE_ISNULL */
+	"is not null" /* OPTYPE_NOTNULL */
+};
+
 /*
  * Generate the C API for a given field.
  */
@@ -190,13 +202,16 @@ gen_func_update(const struct config *cfg, const struct update *up)
 	TAILQ_FOREACH(ref, &up->crq, entries)
 		if (OPTYPE_NOTNULL == ref->op) 
 			print_commentv(0, COMMENT_C_FRAG,
-				"\t%s (not null)", ref->name);
+				"\t%s (not an argument: "
+				"checked not null)", ref->name);
 		else if (OPTYPE_ISNULL == ref->op) 
 			print_commentv(0, COMMENT_C_FRAG,
-				"\t%s (is null)", ref->name);
+				"\t%s (not an argument: "
+				"checked null)", ref->name);
 		else
 			print_commentv(0, COMMENT_C_FRAG,
-				"\tv%zu: %s", pos++, ref->name);
+				"\tv%zu: %s (%s)", pos++, 
+				ref->name, optypes[ref->op]);
 
 	print_commentt(0, COMMENT_C_FRAG_CLOSE,
 		"Returns zero on failure, non-zero on "
@@ -234,18 +249,20 @@ gen_func_search(const struct config *cfg, const struct search *s)
 		sr = TAILQ_LAST(&sent->srq, srefq);
 		if (OPTYPE_NOTNULL == sent->op)
 			print_commentv(0, COMMENT_C_FRAG,
-				"\t%s (not null)", sent->fname);
+				"\t%s (not an argument: "
+				"checked not null)", sent->fname);
 		else if (OPTYPE_ISNULL == sent->op)
 			print_commentv(0, COMMENT_C_FRAG,
-				"\t%s (is null)", sent->fname);
+				"\t%s (not an argument: "
+				"checked is null)", sent->fname);
 		else if (FTYPE_PASSWORD == sr->field->type)
 			print_commentv(0, COMMENT_C_FRAG,
 				"\tv%zu: %s (pre-hashed password)", 
 				pos++, sent->fname);
 		else
 			print_commentv(0, COMMENT_C_FRAG,
-				"\tv%zu: %s", pos++, 
-				sent->fname);
+				"\tv%zu: %s (%s)", pos++, 
+				sent->fname, optypes[sent->op]);
 	}
 
 	if (STYPE_SEARCH == s->type)

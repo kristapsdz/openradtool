@@ -22,6 +22,8 @@
  * Here they are...
  */
 TAILQ_HEAD(aliasq, alias);
+TAILQ_HEAD(bitfq, bitf);
+TAILQ_HEAD(bitidxq, bitidx);
 TAILQ_HEAD(eitemq, eitem);
 TAILQ_HEAD(enmq, enm);
 TAILQ_HEAD(fieldq, field);
@@ -139,6 +141,30 @@ struct	eref {
 	char		*ename; /* name of enumeration */
 	struct enm	*enm; /* enumeration (after linkage) */
 	struct field	*parent; /* up-reference */
+};
+
+/*
+ * A single bit index within a bitfield.
+ */
+struct	bitidx {
+	char		   *name;
+	char		   *doc; /* documentation */
+	int64_t		    value; /* bit 0--63 */
+	struct bitf	   *parent;
+	struct pos	    pos; /* parse point */
+	TAILQ_ENTRY(bitidx) entries;
+};
+
+/*
+ * A 64-bit bitfield (set of bit indices).
+ */
+struct	bitf {
+	char		 *name; /* name of bitfield */
+	char		 *cname; /* capitalised name */
+	char		 *doc; /* documentation */
+	struct pos	  pos; /* parse point */
+	struct bitidxq	  bq; /* bit indices */
+	TAILQ_ENTRY(bitf) entries;
 };
 
 /*
@@ -440,6 +466,7 @@ struct	role {
 struct	config {
 	struct strctq	sq; /* all structures */
 	struct enmq	eq; /* all enumerations */
+	struct bitfq	bq; /* all bitfields */
 	struct roleq	rq; /* all roles */
 	unsigned int	flags;
 #define	CFG_HAS_ROLES 	0x01 /* has roles */

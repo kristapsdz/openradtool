@@ -310,6 +310,33 @@ check_badidents(struct parse *p, const char *s)
 	return(1);
 }
 
+static int
+check_dupetoplevel(struct parse *p, 
+	const struct config *cfg, const char *name)
+{
+	const struct enm *e;
+	const struct bitf *b;
+	const struct strct *s;
+
+	TAILQ_FOREACH(e, &cfg->eq, entries)
+		if (0 == strcasecmp(e->name, name)) {
+			parse_errx(p, "duplicates enum name");
+			return(0);
+		}
+	TAILQ_FOREACH(b, &cfg->bq, entries)
+		if (0 == strcasecmp(b->name, name)) {
+			parse_errx(p, "duplicates bitfield name");
+			return(0);
+		}
+	TAILQ_FOREACH(s, &cfg->sq, entries) 
+		if (0 == strcasecmp(s->name, name)) {
+			parse_errx(p, "duplicates struct name");
+			return(0);
+		}
+	
+	return(1);
+}
+
 /*
  * Allocate a unique reference and add it to the parent queue in order
  * by alpha.
@@ -1521,7 +1548,7 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
  * enumeration.
  */
 static void
-parse_item(struct parse *p, struct eitem *ei)
+parse_enum_item(struct parse *p, struct eitem *ei)
 {
 	struct eitem	*eei;
 
@@ -1613,7 +1640,7 @@ parse_enum_data(struct parse *p, struct enm *e)
 		parse_point(p, &ei->pos);
 		TAILQ_INSERT_TAIL(&e->eq, ei, entries);
 		ei->parent = e;
-		parse_item(p, ei);
+		parse_enum_item(p, ei);
 	}
 
 	if (PARSE_STOP(p))
@@ -1919,13 +1946,131 @@ parse_struct_data(struct parse *p, struct strct *s)
 }
 
 /*
- * Verify and allocate an enum, then start parsing it.
+ * Parse a bitfield item with syntax:
+ *
+ *  NUMBER ["comment" quoted_string]? ";"
  */
 static void
-parse_enum(struct parse *p, struct config *cfg)
+parse_bitidx_item(struct parse *p, struct bitidx *bi)
 {
-	struct enm	*e;
-	struct strct	*s;
+	struct bitidx	*bbi;
+
+	if (TOK_INTEGER != parse_next(p)) {
+		parse_errx(p, "expected item value");
+		return;
+	}
+
+	bi->value = p->last.integer;
+	if (bi->value < 0 || bi->value >= 64) {
+		parse_errx(p, "bit index out of range");
+		return;
+	} else if (bi->value >= 32)
+		parse_warnx(p, "bit index will not work with "
+			"JavaScript applications (32-bit)");
+
+	TAILQ_FOREACH(bbi, &bi->parent->bq, entries) 
+		if (bi != bbi && bi->value == bbi->value) {
+			parse_errx(p, "duplicate item value");
+			return;
+		}
+
+	while ( ! PARSE_STOP(p) && TOK_IDENT == parse_next(p))
+		if (strcasecmp(p->last.string, "comment"))
+			parse_errx(p, "unknown item data type");
+		else
+			parse_comment(p, &bi->doc);
+
+	if ( ! PARSE_STOP(p) && TOK_SEMICOLON != p->lasttype)
+		parse_errx(p, "expected semicolon");
+}
+
+/*
+ * Parse a full bitfield index.
+ * Its syntax is:
+ *
+ *  "{" 
+ *    ["item" ident ITEM]+ 
+ *    ["comment" quoted_string]?
+ *  "};"
+ *
+ *  The "ITEM" clause is handled by parse_bididx_item.
+ */
+static void
+parse_bitidx(struct parse *p, struct bitf *b)
+{
+	struct bitidx	*bi;
+
+	if (TOK_LBRACE != parse_next(p)) {
+		parse_errx(p, "expected left brace");
+		return;
+	}
+
+	while ( ! PARSE_STOP(p)) {
+		if (TOK_RBRACE == parse_next(p))
+			break;
+		if (TOK_IDENT != p->lasttype) {
+			parse_errx(p, "expected bitfield data type");
+			return;
+		}
+
+		if (0 == strcasecmp(p->last.string, "comment")) {
+			if ( ! parse_comment(p, &b->doc))
+				return;
+			if (TOK_SEMICOLON != parse_next(p)) {
+				parse_errx(p, "expected end of comment");
+				return;
+			}
+			continue;
+		} else if (strcasecmp(p->last.string, "item")) {
+			parse_errx(p, "unknown bitfield data type");
+			return;
+		}
+
+		/* Now we have a new item: validate and parse it. */
+
+		if (TOK_IDENT != parse_next(p)) {
+			parse_errx(p, "expected item name");
+			return;
+		} else if ( ! check_badidents(p, p->last.string))
+			return;
+
+		TAILQ_FOREACH(bi, &b->bq, entries) {
+			if (strcasecmp(bi->name, p->last.string))
+				continue;
+			parse_errx(p, "duplicate item name");
+			return;
+		}
+
+		if (NULL == (bi = calloc(1, sizeof(struct bitidx))))
+			err(EXIT_FAILURE, NULL);
+		if (NULL == (bi->name = strdup(p->last.string)))
+			err(EXIT_FAILURE, NULL);
+
+		parse_point(p, &bi->pos);
+		TAILQ_INSERT_TAIL(&b->bq, bi, entries);
+		bi->parent = b;
+		parse_bitidx_item(p, bi);
+	}
+
+	if (PARSE_STOP(p))
+		return;
+
+	if (TOK_SEMICOLON != parse_next(p))
+		parse_errx(p, "expected semicolon");
+	else if (TAILQ_EMPTY(&b->bq))
+		parse_errx(p, "no items in bitfield");
+}
+
+/*
+ * Parse a "bitfield", which is a named set of bit indices.
+ * Its syntax is:
+ *
+ *  "bitfield" name "{" ... "};"
+ */
+static void
+parse_bitfield(struct parse *p, struct config *cfg)
+{
+	struct bitf	*b;
 	char		*caps;
 
 	/* 
@@ -1933,18 +2078,41 @@ parse_enum(struct parse *p, struct config *cfg)
 	 * Duplicates are for both structures and enumerations.
 	 */
 
-	TAILQ_FOREACH(e, &cfg->eq, entries)
-		if (0 == strcasecmp(e->name, p->last.string)) {
-			parse_errx(p, "duplicates enum name");
-			return;
-		}
-	TAILQ_FOREACH(s, &cfg->sq, entries) 
-		if (0 == strcasecmp(s->name, p->last.string)) {
-			parse_errx(p, "duplicates struct name");
-			return;
-		}
+	if ( ! check_dupetoplevel(p, cfg, p->last.string) ||
+	     ! check_badidents(p, p->last.string))
+		return;
 
-	if ( ! check_badidents(p, p->last.string))
+	if (NULL == (b = calloc(1, sizeof(struct bitf))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (b->name = strdup(p->last.string)))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (b->cname = strdup(b->name)))
+		err(EXIT_FAILURE, NULL);
+	for (caps = b->cname; '\0' != *caps; caps++)
+		*caps = toupper((int)*caps);
+
+	parse_point(p, &b->pos);
+	TAILQ_INSERT_TAIL(&cfg->bq, b, entries);
+	TAILQ_INIT(&b->bq);
+	parse_bitidx(p, b);
+}
+
+/*
+ * Verify and allocate an enum, then start parsing it.
+ */
+static void
+parse_enum(struct parse *p, struct config *cfg)
+{
+	struct enm	*e;
+	char		*caps;
+
+	/* 
+	 * Disallow duplicate and bad names.
+	 * Duplicates are for both structures and enumerations.
+	 */
+
+	if ( ! check_dupetoplevel(p, cfg, p->last.string) ||
+	     ! check_badidents(p, p->last.string))
 		return;
 
 	if (NULL == (e = calloc(1, sizeof(struct enm))))
@@ -2109,23 +2277,12 @@ static void
 parse_struct(struct parse *p, struct config *cfg)
 {
 	struct strct	*s;
-	struct enm	*e;
 	char		*caps;
 
 	/* Disallow duplicate and bad names. */
 
-	TAILQ_FOREACH(s, &cfg->sq, entries)
-		if (0 == strcasecmp(s->name, p->last.string)) {
-			parse_errx(p, "duplicates struct name");
-			return;
-		}
-	TAILQ_FOREACH(e, &cfg->eq, entries)
-		if (0 == strcasecmp(e->name, p->last.string)) {
-			parse_errx(p, "duplicates enum name");
-			return;
-		}
-
-	if ( ! check_badidents(p, p->last.string))
+	if ( ! check_dupetoplevel(p, cfg, p->last.string) ||
+	     ! check_badidents(p, p->last.string))
 		return;
 
 	if (NULL == (s = calloc(1, sizeof(struct strct))))
@@ -2173,6 +2330,7 @@ parse_config(FILE *f, const char *fname)
 	TAILQ_INIT(&cfg->sq);
 	TAILQ_INIT(&cfg->eq);
 	TAILQ_INIT(&cfg->rq);
+	TAILQ_INIT(&cfg->bq);
 
 	memset(&p, 0, sizeof(struct parse));
 	p.column = 0;
@@ -2197,16 +2355,25 @@ parse_config(FILE *f, const char *fname)
 
 		if (0 == strcasecmp(p.last.string, "roles")) {
 			parse_roles(&p, cfg);
+			continue;
 		} else if (0 == strcasecmp(p.last.string, "struct")) {
-			if (TOK_IDENT == parse_next(&p))
+			if (TOK_IDENT == parse_next(&p)) {
 				parse_struct(&p, cfg);
-			else
-				parse_errx(&p, "expected struct name");
+				continue;
+			}
+			parse_errx(&p, "expected struct name");
 		} else if (0 == strcasecmp(p.last.string, "enum")) {
-			if (TOK_IDENT == parse_next(&p))
+			if (TOK_IDENT == parse_next(&p)) {
 				parse_enum(&p, cfg);
-			else
-				parse_errx(&p, "expected enum name");
+				continue;
+			}
+			parse_errx(&p, "expected enum name");
+		} else if (0 == strcasecmp(p.last.string, "bitfield")) {
+			if (TOK_IDENT == parse_next(&p)) {
+				parse_bitfield(&p, cfg);
+				continue;
+			}
+			parse_errx(&p, "expected bitfield name");
 		} else
 			parse_errx(&p, "unknown top-level type");
 	}
@@ -2402,6 +2569,29 @@ parse_free_role(struct role *r)
 }
 
 /*
+ * Free a bitfield (set of bit indices).
+ * Does nothing if "bf" is NULL.
+ */
+static void
+parse_free_bitfield(struct bitf *bf)
+{
+	struct bitidx	*bi;
+
+	if (NULL == bf)
+		return;
+	while (NULL != (bi = TAILQ_FIRST(&bf->bq))) {
+		TAILQ_REMOVE(&bf->bq, bi, entries);
+		free(bi->name);
+		free(bi->doc);
+		free(bi);
+	}
+	free(bf->name);
+	free(bf->cname);
+	free(bf->doc);
+	free(bf);
+}
+
+/*
  * Free a rolemap and its rolesets.
  * Does nothing if "rm" is NULL.
  */
@@ -2437,6 +2627,7 @@ parse_free(struct config *cfg)
 	struct enm	*e;
 	struct role	*r;
 	struct rolemap	*rm;
+	struct bitf	*bf;
 
 	if (NULL == cfg)
 		return;
@@ -2449,6 +2640,11 @@ parse_free(struct config *cfg)
 	while (NULL != (r = TAILQ_FIRST(&cfg->rq))) {
 		TAILQ_REMOVE(&cfg->rq, r, entries);
 		parse_free_role(r);
+	}
+
+	while (NULL != (bf = TAILQ_FIRST(&cfg->bq))) {
+		TAILQ_REMOVE(&cfg->bq, bf, entries);
+		parse_free_bitfield(bf);
 	}
 
 	while (NULL != (p = TAILQ_FIRST(&cfg->sq))) {

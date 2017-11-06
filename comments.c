@@ -139,8 +139,9 @@ print_commentt(size_t tabs, enum cmtt type, const char *cp)
 	else
 		maxcol = MAXCOLS - (tabs * 4);
 
-	if (COMMENT_C == type && 1 == tabs &&
-	    NULL == strchr(cp, '\n') && strlen(cp) < maxcol) {
+	if (COMMENT_C == type && NULL != cp &&
+	    1 == tabs && NULL == strchr(cp, '\n') && 
+	    strlen(cp) < maxcol) {
 		printf("\t/* %s */\n", cp);
 		return;
 	}

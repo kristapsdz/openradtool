@@ -500,7 +500,7 @@ void		 gen_c_source(const struct config *,
 void		 gen_sql(const struct strctq *);
 int		 gen_diff(const struct config *,
 			const struct config *);
-void		 gen_javascript(const struct strctq *);
+void		 gen_javascript(const struct config *);
 
 void		 print_commentt(size_t, enum cmtt, const char *);
 void		 print_commentv(size_t, enum cmtt, const char *, ...)

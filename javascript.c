@@ -139,7 +139,7 @@ gen_js_field(const struct field *f)
 }
 
 void
-gen_javascript(const struct strctq *sq)
+gen_javascript(const struct config *cfg)
 {
 	const struct strct *s;
 	const struct field *f;
@@ -258,7 +258,7 @@ gen_javascript(const struct strctq *sq)
 	 * object (or array) and the element to be filled.
 	 */
 
-	TAILQ_FOREACH(s, sq, entries) {
+	TAILQ_FOREACH(s, &cfg->sq, entries) {
 		print_commentv(1, COMMENT_JS,
 			"%s%s%s\n"
 			"This constructor accepts the \"%s\" objects "
@@ -429,7 +429,7 @@ gen_javascript(const struct strctq *sq)
 		     "");
 	}
 
-	TAILQ_FOREACH(s, sq, entries)
+	TAILQ_FOREACH(s, &cfg->sq, entries)
 		printf("\troot.%s = %s;\n", s->name, s->name);
 
 	puts("})(this);");

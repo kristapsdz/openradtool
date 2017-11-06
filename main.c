@@ -172,7 +172,7 @@ main(int argc, char *argv[])
 	else if (OP_DIFF == op)
 		rc = gen_diff(cfg, dcfg);
 	else if (OP_JAVASCRIPT == op)
-		gen_javascript(&cfg->sq);
+		gen_javascript(cfg);
 
 	parse_free(cfg);
 	return(rc ? EXIT_SUCCESS : EXIT_FAILURE);

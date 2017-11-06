@@ -87,6 +87,32 @@ gen_strct_field(const struct field *p)
 	}
 }
 
+static void
+gen_bitfield(const struct bitf *b)
+{
+	const struct bitidx *bi;
+
+	print_commentt(0, COMMENT_C_FRAG_OPEN, b->doc);
+	print_commentt(0, COMMENT_C_FRAG_CLOSE,
+		"This defines the bit indices for this bit-field.\n"
+		"The BITI fields are the bit indices (0--63) and "
+		"the BITF fields are the masked integer values.");
+
+	printf("enum\t%s {\n", b->name);
+	TAILQ_FOREACH(bi, &b->bq, entries) {
+		if (NULL != bi->doc)
+			print_commentt(1, COMMENT_C, bi->doc);
+		printf("\tBITI_%s_%s = %" PRId64 ",\n",
+			b->cname, bi->name, bi->value);
+		printf("\tBITF_%s_%s = (1U << %" PRId64 ")%s\n",
+			b->cname, bi->name, bi->value, 
+			TAILQ_NEXT(bi, entries) ? "," : "");
+	}
+	puts("};\n"
+	     "");
+
+}
+
 /*
  * Generate our enumerations.
  */
@@ -97,7 +123,6 @@ gen_enum(const struct enm *e)
 
 	if (NULL != e->doc)
 		print_commentt(0, COMMENT_C, e->doc);
-
 	printf("enum\t%s {\n", e->name);
 	TAILQ_FOREACH(ei, &e->eq, entries) {
 		if (NULL != ei->doc)
@@ -582,6 +607,7 @@ gen_c_header(const struct config *cfg,
 	const struct strct *p;
 	const struct enm *e;
 	const struct role *r;
+	const struct bitf *bf;
 	int	 i = 0;
 
 	puts("#ifndef DB_H\n"
@@ -595,6 +621,8 @@ gen_c_header(const struct config *cfg,
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		gen_enum(e);
+	TAILQ_FOREACH(bf, &cfg->bq, entries)
+		gen_bitfield(bf);
 
 	if ( ! TAILQ_EMPTY(&cfg->rq)) {
 		print_commentt(0, COMMENT_C,

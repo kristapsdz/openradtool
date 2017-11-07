@@ -443,7 +443,7 @@ gen_javascript(const struct config *cfg)
 		printf("\troot.%s = {\n", bf->name);
 		TAILQ_FOREACH(bi, &bf->bq, entries) {
 			if (NULL != bi->doc)
-				print_commentt(1, COMMENT_JS, bi->doc);
+				print_commentt(2, COMMENT_JS, bi->doc);
 			printf("\t\tBITI_%s: %" PRId64 ",\n",
 				bi->name, bi->value);
 			printf("\t\tBITF_%s: %u%s\n",

@@ -146,6 +146,8 @@ gen_javascript(const struct config *cfg)
 	const struct field  *f;
 	const struct bitf   *bf;
 	const struct bitidx *bi;
+	const struct enm    *e;
+	const struct eitem  *ei;
 
 	/*
 	 * Begin with the methods we'll use throughout the js file.
@@ -449,6 +451,24 @@ gen_javascript(const struct config *cfg)
 			printf("\t\tBITF_%s: %u%s\n",
 				bi->name, 1U << bi->value,
 				NULL == TAILQ_NEXT(bi, entries) ? 
+				"" : ",");
+		}
+		puts("\t};\n"
+		     "");
+	}
+
+	TAILQ_FOREACH(e, &cfg->eq, entries) {
+		print_commentt(1, COMMENT_JS_FRAG_OPEN, e->doc);
+		print_commentv(1, COMMENT_JS_FRAG_CLOSE,
+			"This defines the %s enumeration values.",
+			e->name);
+		printf("\troot.%s = {\n", e->name);
+		TAILQ_FOREACH(ei, &e->eq, entries) {
+			if (NULL != ei->doc)
+				print_commentt(2, COMMENT_JS, ei->doc);
+			printf("\t\t%s: %" PRId64 "%s\n",
+				ei->name, ei->value,
+				NULL == TAILQ_NEXT(ei, entries) ? 
 				"" : ",");
 		}
 		puts("\t};\n"

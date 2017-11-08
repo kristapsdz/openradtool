@@ -146,6 +146,13 @@ print_commentt(size_t tabs, enum cmtt type, const char *cp)
 		return;
 	}
 
+	if (COMMENT_JS == type && NULL != cp &&
+	    2 == tabs && NULL == strchr(cp, '\n') && 
+	    strlen(cp) < maxcol) {
+		printf("\t\t/** %s */\n", cp);
+		return;
+	}
+
 	switch (type) {
 	case (COMMENT_C):
 		print_comment(cp, tabs, "/*", " * ", " */");

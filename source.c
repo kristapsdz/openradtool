@@ -429,7 +429,7 @@ gen_strct_func_list(const struct config *cfg,
 		}
 
 	printf("\twhile (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
-	       "\t\tp = malloc(sizeof(struct %s));\n"
+	       "\t\tp = calloc(1, sizeof(struct %s));\n"
 	       "\t\tif (NULL == p) {\n"
 	       "\t\t\tperror(NULL);\n"
 	       "\t\t\texit(EXIT_FAILURE);\n"
@@ -650,7 +650,7 @@ gen_strct_func_srch(const struct config *cfg,
 		}
 
 	printf("\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
-	       "\t\tp = malloc(sizeof(struct %s));\n"
+	       "\t\tp = calloc(1, sizeof(struct %s));\n"
 	       "\t\tif (NULL == p) {\n"
 	       "\t\t\tperror(NULL);\n"
 	       "\t\t\texit(EXIT_FAILURE);\n"

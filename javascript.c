@@ -436,13 +436,25 @@ gen_javascript(const struct config *cfg)
 
 	TAILQ_FOREACH(bf, &cfg->bq, entries) {
 		print_commentt(1, COMMENT_JS_FRAG_OPEN, bf->doc);
-		print_commentv(1, COMMENT_JS_FRAG_CLOSE,
+		print_commentv(1, COMMENT_JS_FRAG,
 			"This defines the bit indices for the %s "
 			"bit-field.\n"
 			"The BITI fields are the bit indices "
 			"(0--63) and the BITF fields are the "
-			"masked integer values.", bf->name);
-		printf("\troot.%s = {\n", bf->name);
+			"masked integer values.\n"
+			"@namespace\n"
+			"@readonly\n"
+			"@typedef %s", bf->name, bf->name);
+		TAILQ_FOREACH(bi, &bf->bq, entries) 
+			print_commentv(1, COMMENT_JS_FRAG,
+				"@property {number} BITI_%s %s\n"
+				"@property {number} BITF_%s %s",
+				bi->name,
+				NULL != bi->doc ? bi->doc : "",
+				bi->name,
+				NULL != bi->doc ? bi->doc : "");
+		print_commentt(1, COMMENT_JS_FRAG_CLOSE, NULL);
+		printf("\tvar %s = {\n", bf->name);
 		TAILQ_FOREACH(bi, &bf->bq, entries) {
 			if (NULL != bi->doc)
 				print_commentt(2, COMMENT_JS, bi->doc);
@@ -459,13 +471,17 @@ gen_javascript(const struct config *cfg)
 
 	TAILQ_FOREACH(e, &cfg->eq, entries) {
 		print_commentt(1, COMMENT_JS_FRAG_OPEN, e->doc);
-		print_commentv(1, COMMENT_JS_FRAG_CLOSE,
-			"This defines the %s enumeration values.",
-			e->name);
-		printf("\troot.%s = {\n", e->name);
+		print_commentv(1, COMMENT_JS_FRAG,
+			"@namespace\n"
+			"@readonly\n"
+			"@typedef %s", e->name);
+		TAILQ_FOREACH(ei, &e->eq, entries) 
+			print_commentv(1, COMMENT_JS_FRAG,
+				"@property {number} %s %s", ei->name,
+				NULL != ei->doc ? ei->doc : "");
+		print_commentt(1, COMMENT_JS_FRAG_CLOSE, NULL);
+		printf("\tvar %s = {\n", e->name);
 		TAILQ_FOREACH(ei, &e->eq, entries) {
-			if (NULL != ei->doc)
-				print_commentt(2, COMMENT_JS, ei->doc);
 			printf("\t\t%s: %" PRId64 "%s\n",
 				ei->name, ei->value,
 				NULL == TAILQ_NEXT(ei, entries) ? 
@@ -477,6 +493,10 @@ gen_javascript(const struct config *cfg)
 
 	TAILQ_FOREACH(s, &cfg->sq, entries)
 		printf("\troot.%s = %s;\n", s->name, s->name);
+	TAILQ_FOREACH(bf, &cfg->bq, entries) 
+		printf("\troot.%s = %s;\n", bf->name, bf->name);
+	TAILQ_FOREACH(e, &cfg->eq, entries)
+		printf("\troot.%s = %s;\n", e->name, e->name);
 
 	puts("})(this);");
 

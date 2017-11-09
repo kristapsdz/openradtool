@@ -198,8 +198,8 @@ with the name as given.
 See
 .Sx Enumerations
 for more documentation.
-.It Cm bit
-Native integer as a 64-bit bit mask (that is, in 0\(en64).
+.\" .It Cm bit
+.\" Native integer as a 64-bit bit mask (that is, in 0\(en64).
 .It Cm epoch
 Native type mapping into a 64-bit integer, constrained to valid
 .Vt time_t
@@ -387,7 +387,7 @@ The available search parameter keys are as follows:
 .It Cm comment
 String literal included in the API comments for the function.
 .It Cm limit
-A value \(gt0 that limits the number of returned results.
+A value >0 that limits the number of returned results.
 By default, there is no limit.
 This can be used in a
 .Cm search
@@ -517,6 +517,12 @@ These are specified as an optional term alongside a search field.
 .Pp
 What follows is a full list of operators:
 .Bl -tag -width Ds
+.It Cm and , or
+Logical AND
+.Pq \&&
+and logical OR
+.Pq \&| ,
+respectively.
 .It Cm eq , neq
 Equality or non-equality binary operator.
 The
@@ -549,7 +555,7 @@ when a top-level
 .Cm roles
 block is defined.
 .Bd -literal -offset indent
-"roles" 
+"roles"
   "{"
      [ "role" name ["{" "role" name... ";" "}"]* ";" ]*
   "};"

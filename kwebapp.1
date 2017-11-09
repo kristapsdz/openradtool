@@ -524,7 +524,8 @@ and invoke the object's
 and
 .Fn fillArray
 methods with the DOM tree node.
-Given a structure
+.Pp
+For example, given a structure
 .Dq foo
 and an AJAX response
 .Dq response ,
@@ -629,7 +630,20 @@ whether the value has been set.
 In the event of an unset field value, the function is passed
 .Dv null .
 .Pp
-The JavaScript methods and variables are fully documented in the
+Enumeration fields are also generated from the input file.
+These are appended to the global namespace as a series of objects
+consisting of variables assigned the enumeration value.
+For example, given an enumeration
+.Dq foo
+with a field
+.Dq bar
+assigned the value 12, this would generate:
+.Bd -literal -offset indent
+console.log(foo.bar);
+>>> 12
+.Ed
+.Pp
+All JavaScript methods and variables are fully documented in the
 .Xr jsdoc 1
 format.
 .\" The following requests should be uncommented and used where appropriate.

@@ -11,7 +11,11 @@
 				Disallow duplicate <code>enum</code> and <code>struct</code> names.
 				(These will collide in the C namespace.)
 				Improve the documentation (function arguments) in the produced C header file.
-			</p>
+				Output JavaScript <code>enum</code> values.
+			</p> 
+			<p> 
+				Add the <code>and</code> and <code>or</code> logical (bit-wise) operations for search constraints.
+			</p> 
 		</aside>
 	</article>
 	<article data-sblg-article="1" data-sblg-tags="version">

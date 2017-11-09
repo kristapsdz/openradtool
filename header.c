@@ -37,6 +37,8 @@ static	const char *const optypes[OPTYPE__MAX] = {
 	"less-than", /* OPTYPE_LT */
 	"does not equal", /* OPTYPE_NEQUAL */
 	"\"like\"", /* OPTYPE_LIKE */
+	"logical and", /* OPTYPE_AND */
+	"logical or", /* OPTYPE_OR */
 	"is null", /* OPTYPE_ISNULL */
 	"is not null" /* OPTYPE_NOTNULL */
 };

@@ -542,6 +542,7 @@ parse_next(struct parse *p)
 	const char	*ep = NULL;
 	char		*epp = NULL;
 
+again:
 	if (TOK_ERR == p->lasttype || 
 	    TOK_EOF == p->lasttype) 
 		return(p->lasttype);
@@ -557,6 +558,15 @@ parse_next(struct parse *p)
 
 	if (feof(p->f) || ferror(p->f))
 		return(parse_err(p));
+
+	if ('#' == c) {
+		do {
+			c = parse_nextchar(p);
+		} while (EOF != c && '\n' != c);
+		if ('\n' != c)
+			return(parse_err(p));
+		goto again;
+	}
 
 	/* 
 	 * The "-" appears before integers and doubles.

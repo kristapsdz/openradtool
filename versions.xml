@@ -4,15 +4,14 @@
 		<header>
 			<h3>0.3.4</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2017-11-01">ongoing</time>
+			<time datetime="2017-11-13">2017-11-13</time>
 		</header>
 		<aside>
 			<p>
 				Disallow duplicate <code>enum</code> and <code>struct</code> names.
-				(These will collide in the C namespace.)
+				(These will otherwise collide in the C namespace.)
 				Improve the documentation (function arguments) in the produced C header file.
-				Output JavaScript <code>enum</code> values.
-				This is described in <a href="kwebapp.1.html">kwebapp(1)</a>.
+				Output JavaScript <code>enum</code> values&#8212;this is described in <a href="kwebapp.1.html">kwebapp(1)</a>.
 			</p> 
 			<p> 
 				Add the <code>and</code> and <code>or</code> logical (bit-wise) operations for search constraints.
@@ -24,8 +23,8 @@
 			</p> 
 			<p> 
 				Lastly, and the biggest, allow for having <code>struct</code> fields on <code>null</code> foreign keys.
-				This requires the system to perform extra <code>SELECT</code> statements when the keys aren't <code>null</code>,
-				but overall it's very useful.
+				This requires the system to perform extra <code>SELECT</code> statements when the keys aren't <code>null</code>
+				(which is noted in the generated API comments on a per-function basis), but overall it's very useful.
 			</p> 
 		</aside>
 	</article>

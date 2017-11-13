@@ -184,7 +184,6 @@ static	const char *const badidents[] = {
 	"LIMIT",
 	"MATCH",
 	"NATURAL",
-	"NO",
 	"NOT",
 	"NOTNULL",
 	"NULL",

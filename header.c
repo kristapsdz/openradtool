@@ -155,7 +155,15 @@ gen_struct(const struct strct *p)
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_field(f);
 	TAILQ_FOREACH(f, &p->fq, entries) {
-		if ( ! (FIELD_NULL & f->flags))
+		if (FTYPE_STRUCT == f->type &&
+		    FIELD_NULL & f->ref->source->flags) {
+			print_commentv(1, COMMENT_C,
+				"Non-zero if \"%s\" has been set "
+				"from \"%s\".", f->name, 
+				f->ref->source->name);
+			printf("\tint has_%s;\n", f->name);
+			continue;
+		} else if ( ! (FIELD_NULL & f->flags))
 			continue;
 		print_commentv(1, COMMENT_C,
 			"Non-zero if \"%s\" field is null/unset.",
@@ -267,6 +275,13 @@ gen_func_search(const struct config *cfg, const struct search *s)
 		print_commentv(0, COMMENT_C_FRAG_OPEN,
 			"Search for a set of %s.", 
 			s->parent->name);
+
+	if (STYPE_ITERATE == s->type)
+		print_commentv(0, COMMENT_C_FRAG,
+			"This function is called during an implicit "
+			"transaction: thus, the callback should not "
+			"invoke any database modifications or risk "
+			"deadlock.");
 
 	print_commentv(0, COMMENT_C_FRAG,
 		"Uses the given fields in struct %s:",

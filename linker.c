@@ -142,9 +142,9 @@ resolve_field_source(struct field *f)
 	} else if (FTYPE_STRUCT == f->ref->source->type) {
 		gen_errx(&f->pos, "reference to non-native type");
 		return(0);
-	} else if (FIELD_NULL & f->ref->source->flags) {
+	/*} else if (FIELD_NULL & f->ref->source->flags) {
 		gen_errx(&f->pos, "source may not be null");
-		return(0);
+		return(0);*/
 	} 
 
 	assert(NULL != f->ref->source->ref->tfield);
@@ -929,6 +929,26 @@ resolve_rolemap(struct rolemap *rm, struct strct *p)
 	return(0);
 }
 
+static int
+check_reffind(const struct strct *p)
+{
+	const struct field *f;
+
+	if (STRCT_HAS_NULLREFS & p->flags)
+		return(1);
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT == f->type &&
+		    FIELD_NULL & f->ref->source->flags)
+			return(1);
+		if (FTYPE_STRUCT == f->type &&
+		    check_reffind(f->ref->target->parent))
+			return(1);
+	}
+
+	return(0);
+}
+
 int
 parse_link(struct config *cfg)
 {
@@ -1116,6 +1136,10 @@ parse_link(struct config *cfg)
 	qsort(pa, sz, sizeof(struct strct *), parse_cmp);
 	for (i = 0; i < sz; i++)
 		TAILQ_INSERT_HEAD(&cfg->sq, pa[i], entries);
+
+	TAILQ_FOREACH(p, &cfg->sq, entries)
+		if (check_reffind(p))
+			p->flags |= STRCT_HAS_NULLREFS;
 
 	free(pa);
 	return(1);

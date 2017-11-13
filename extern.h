@@ -445,6 +445,7 @@ struct	strct {
 #define	STRCT_HAS_ITERATOR 0x02 /* needs iterator interface */
 #define	STRCT_HAS_BLOB	   0x04 /* needs resolv.h */
 #define	STRCT_HAS_INSERT   0x08 /* has insertion function */
+#define STRCT_HAS_NULLREFS 0x10 /* has nested null fkeys */
 	TAILQ_ENTRY(strct) entries;
 };
 

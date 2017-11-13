@@ -124,7 +124,7 @@ kwebapp.1.html: kwebapp.1
 
 db.txt.xml: db.txt
 	( echo "<article data-sblg-article=\"1\">" ; \
-	  highlight -l --enclose-pre --src-lang=c -f db.txt ; \
+	  highlight -l --enclose-pre --src-lang=conf -f db.txt ; \
 	  echo "</article>" ; ) >$@
 
 db.h.xml: db.h

@@ -2,7 +2,7 @@
 
 include Makefile.configure
 
-VERSION		 = 0.3.3
+VERSION		 = 0.3.4
 CFLAGS		+= -DVERSION=\"$(VERSION)\"
 OBJS		 = comments.o \
 		   compats.o \

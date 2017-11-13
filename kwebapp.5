@@ -175,12 +175,6 @@ may be one of the following:
 A non-native type filled in by joining the given
 .Ar field
 with its referent structure.
-It cannot be a foreign key: instead, the
-.Cm struct
-keyword must be followed by the field name in the structure defining the
-foreign key reference, which may not have the
-.Cm null
-attribute.
 This type is
 .Dq non-native
 because it is not represented in the database schema, and is instead
@@ -188,6 +182,12 @@ filled in with the referenced row.
 In the C API, this is represented by a
 .Vt struct name
 of the referent structure.
+The
+.Ar field
+may be marked with
+.Cm null ,
+but this involves a not-inconsiderable performance hit when querying
+(directly or indirectly) on the structure.
 .It Cm real
 Native type mapping into a double-precision float.
 .It Cm blob

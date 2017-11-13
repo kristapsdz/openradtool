@@ -1241,6 +1241,58 @@ gen_func_json_obj(const struct strct *p)
 	}
 }
 
+/*
+ * Export a field in a structure.
+ * This needs to handle whether the field is a blob, might be null, is a
+ * structure, and so on.
+ */
+static void
+gen_field_json_data(const struct field *f, size_t *pos)
+{
+	if (FIELD_NOEXPORT & f->flags) {
+		print_commentv(1, COMMENT_C, "Omitting %s: "
+			"marked no export.", f->name);
+		return;
+	} else if (FTYPE_PASSWORD == f->type) {
+		print_commentv(1, COMMENT_C, "Omitting %s: "
+			"is a password hash.", f->name);
+		return;
+	}
+
+	if (FTYPE_STRUCT != f->type) {
+		if (FIELD_NULL & f->flags)
+			printf("\tif ( ! p->has_%s)\n"
+			       "\t\tkjson_putnullp(r, \"%s\");\n"
+			       "\telse\n"
+			       "\t", f->name, f->name);
+		if (FTYPE_BLOB == f->type)
+			printf("\t%s(r, \"%s\", buf%zu);\n",
+				puttypes[f->type], 
+				f->name, ++(*pos));
+		else
+			printf("\t%s(r, \"%s\", p->%s);\n", 
+				puttypes[f->type], f->name, 
+				f->name);
+		return;
+	} 
+
+	if (FIELD_NULL & f->ref->source->flags)
+		printf("\tif (p->has_%s) {\n"
+		       "\t\tkjson_objp_open(r, \"%s\");\n"
+		       "\t\tjson_%s_data(r, &p->%s);\n"
+		       "\t\tkjson_obj_close(r);\n"
+		       "\t} else\n"
+		       "\t\tkjson_putnullp(r, \"%s\");\n",
+			f->name, f->name,
+			f->ref->tstrct, 
+			f->name, f->name);
+	else
+		printf("\tkjson_objp_open(r, \"%s\");\n"
+		       "\tjson_%s_data(r, &p->%s);\n"
+		       "\tkjson_obj_close(r);\n",
+			f->name, f->ref->tstrct, f->name);
+}
+
 static void
 gen_func_json_data(const struct strct *p)
 {
@@ -1251,7 +1303,11 @@ gen_func_json_data(const struct strct *p)
 	puts("\n"
 	     "{");
 
-	/* Declare our base64 buffers. */
+	/* 
+	 * Declare our base64 buffers. 
+	 * FIXME: have the buffer only be allocated if we have the value
+	 * being serialised (right now it's allocated either way).
+	 */
 
 	pos = 0;
 	TAILQ_FOREACH(f, &p->fq, entries)
@@ -1259,8 +1315,17 @@ gen_func_json_data(const struct strct *p)
 		    ! (FIELD_NOEXPORT & f->flags)) 
 			printf("\tchar *buf%zu;\n", ++pos);
 
-	if (pos > 0)
+	if (pos > 0) {
 		puts("\tsize_t sz;\n");
+		print_commentt(1, COMMENT_C,
+			"We need to base64 encode the binary "
+			"buffers prior to serialisation.\n"
+			"Allocate space for these buffers and do "
+			"so now.\n"
+			"We\'ll free the buffers at the epilogue "
+			"of the function.");
+		puts("");
+	}
 
 	pos = 0;
 	TAILQ_FOREACH(f, &p->fq, entries) {
@@ -1285,34 +1350,8 @@ gen_func_json_data(const struct strct *p)
 		puts("");
 
 	pos = 0;
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FIELD_NOEXPORT & f->flags) {
-			print_commentv(1, COMMENT_C, "Omitting %s: "
-				"marked no export.", f->name);
-			continue;
-		} else if (FTYPE_PASSWORD == f->type) {
-			print_commentv(1, COMMENT_C, "Omitting %s: "
-				"is a password hash.", f->name);
-			continue;
-		}
-		if (FIELD_NULL & f->flags)
-			printf("\tif ( ! p->has_%s)\n"
-			       "\t\tkjson_putnullp(r, \"%s\");\n"
-			       "\telse\n"
-			       "\t",
-			       f->name, f->name);
-		if (FTYPE_BLOB == f->type)
-			printf("\t%s(r, \"%s\", buf%zu);\n",
-				puttypes[f->type], f->name, ++pos);
-		else if (FTYPE_STRUCT == f->type)
-			printf("\tkjson_objp_open(r, \"%s\");\n"
-			       "\tjson_%s_data(r, &p->%s);\n"
-			       "\tkjson_obj_close(r);\n",
-				f->name, f->ref->tstrct, f->name);
-		else
-			printf("\t%s(r, \"%s\", p->%s);\n", 
-				puttypes[f->type], f->name, f->name);
-	}
+	TAILQ_FOREACH(f, &p->fq, entries)
+		gen_field_json_data(f, &pos);
 
 	/* Free our temporary base64 buffers. */
 

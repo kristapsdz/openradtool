@@ -1488,7 +1488,8 @@ gen_stmt_schema(const struct strct *orig,
 	 */
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT != f->type)
+		if (FTYPE_STRUCT != f->type ||
+		    FIELD_NULL & f->ref->source->flags)
 			continue;
 
 		if (NULL != pname) {
@@ -1522,7 +1523,8 @@ gen_stmt_joins(const struct strct *orig,
 	char	*name;
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT != f->type)
+		if (FTYPE_STRUCT != f->type ||
+		    FIELD_NULL & f->ref->source->flags)
 			continue;
 
 		if (NULL != parent) {

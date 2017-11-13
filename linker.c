@@ -929,6 +929,13 @@ resolve_rolemap(struct rolemap *rm, struct strct *p)
 	return(0);
 }
 
+/*
+ * Recursive check to see whether a given structure "p" directly or
+ * indirectly contains any structs that have null foreign key
+ * references.
+ * FIXME: this can be made much more efficient by having the bit be set
+ * during the query itself.
+ */
 static int
 check_reffind(const struct strct *p)
 {
@@ -1136,6 +1143,8 @@ parse_link(struct config *cfg)
 	qsort(pa, sz, sizeof(struct strct *), parse_cmp);
 	for (i = 0; i < sz; i++)
 		TAILQ_INSERT_HEAD(&cfg->sq, pa[i], entries);
+
+	/* Check for null struct references. */
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		if (check_reffind(p))

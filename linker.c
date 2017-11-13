@@ -142,9 +142,6 @@ resolve_field_source(struct field *f)
 	} else if (FTYPE_STRUCT == f->ref->source->type) {
 		gen_errx(&f->pos, "reference to non-native type");
 		return(0);
-	/*} else if (FIELD_NULL & f->ref->source->flags) {
-		gen_errx(&f->pos, "source may not be null");
-		return(0);*/
 	} 
 
 	assert(NULL != f->ref->source->ref->tfield);

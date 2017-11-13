@@ -190,7 +190,17 @@ gen_strct_fill_field(const struct field *f)
 {
 	size_t	 indent;
 
-	if (FTYPE_STRUCT == f->type)
+	/*
+	 * By default, structs on possibly-null foreign keys are set as
+	 * not existing.
+	 * We'll change this in db_xxx_reffind.
+	 */
+
+	if (FTYPE_STRUCT == f->type &&
+	    FIELD_NULL & f->ref->source->flags) {
+		printf("\tp->has_%s = 0;\n", f->name);
+		return;
+	} else if (FTYPE_STRUCT == f->type)
 		return;
 
 	if (FIELD_NULL & f->flags)
@@ -341,6 +351,12 @@ gen_strct_func_iter(const struct config *cfg,
 	       "\t\tdb_%s_fill_r(&p, stmt, NULL);\n",
 	       s->parent->name);
 
+	/* No need for an explicit transaction. */
+
+	if (STRCT_HAS_NULLREFS & s->parent->flags)
+	       printf("\t\tdb_%s_reffind(&p, db);\n",
+	              s->parent->name);
+
 	/*
 	 * If we have any hashes, we're going to need to do the hash
 	 * check after the field has already been extracted from the
@@ -438,6 +454,12 @@ gen_strct_func_list(const struct config *cfg,
 	       "\t\t}\n"
 	       "\t\tdb_%s_fill_r(p, stmt, NULL);\n",
 	       s->parent->name, s->parent->name);
+
+	/* In an implicit transaction: no need to begin. */
+
+	if (STRCT_HAS_NULLREFS & s->parent->flags)
+	       printf("\t\tdb_%s_reffind(p, db);\n",
+	              s->parent->name);
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
@@ -660,6 +682,12 @@ gen_strct_func_srch(const struct config *cfg,
 	       "\t\tdb_%s_fill_r(p, stmt, NULL);\n",
 	       s->parent->name, s->parent->name);
 
+	/* In an implicit transaction: no need to begin. */
+
+	if (STRCT_HAS_NULLREFS & s->parent->flags)
+	       printf("\t\tdb_%s_reffind(p, db);\n",
+	              s->parent->name);
+
 	/*
 	 * If we have any hashes, we're going to need to do the hash
 	 * check after the field has already been extracted from the
@@ -870,10 +898,84 @@ gen_func_unfill_r(const struct strct *p)
 	       "\n"
 	       "\tdb_%s_unfill(p);\n",
 	       p->name, p->name, p->name);
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if (FTYPE_STRUCT == f->type)
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT != f->type)
+			continue;
+		if (FIELD_NULL & f->ref->source->flags)
+			printf("\tif (p->has_%s)\n"
+			       "\t\tdb_%s_unfill_r(&p->%s);\n",
+				f->ref->source->name, 
+				f->ref->tstrct, f->name);
+		else
 			printf("\tdb_%s_unfill_r(&p->%s);\n",
 				f->ref->tstrct, f->name);
+	}
+	puts("}\n"
+	     "");
+}
+
+/*
+ * If a structure has possible null foreign keys, we need to fill in the
+ * null keys after the lookup has taken place IFF they aren't null.
+ * Do that here, using the STMT_XXX_BY_UNIQUE_yyy fields we generated
+ * earlier.
+ * This is only done for structures that have (or have nested)
+ * structures with null foreign keys.
+ */
+static void
+gen_func_reffind(const struct strct *p)
+{
+	const struct field *f;
+
+	if ( ! (STRCT_HAS_NULLREFS & p->flags))
+		return;
+
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (FTYPE_STRUCT == f->type &&
+		    FIELD_NULL & f->ref->source->flags)
+			break;
+
+	printf("static void\n"
+	       "db_%s_reffind(struct %s *p, struct ksql *db)\n"
+	       "{\n", 
+	       p->name, p->name);
+	if (NULL != f)
+		puts("\tstruct ksqlstmt *stmt;\n"
+		     "\tenum ksqlc c;");
+
+	puts("");
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT != f->type)
+			continue;
+		if (FIELD_NULL & f->ref->source->flags) {
+			printf("\tif (p->has_%s) {\n",
+				f->ref->source->name);
+			printf("\t\tksql_stmt_alloc(db, &stmt,\n"
+			       "\t\t\tstmts[STMT_%s_BY_UNIQUE_%s],\n"
+			       "\t\t\tSTMT_%s_BY_UNIQUE_%s);\n"
+			       "\t\tksql_bind_int(stmt, 0, p->%s);\n",
+			       f->ref->target->parent->cname,
+			       f->ref->target->name, 
+			       f->ref->target->parent->cname,
+			       f->ref->target->name, 
+			       f->ref->source->name);
+			printf("\t\tc = ksql_stmt_step(stmt);\n"
+			       "\t\tassert(KSQL_ROW == c);\n"
+			       "\t\tdb_%s_fill_r(&p->%s, stmt, NULL);\n",
+			       f->ref->target->parent->name,
+			       f->name);
+			printf("\t\tp->has_%s = 1;\n",
+				f->name);
+			puts("\t\tksql_stmt_free(stmt);\n"
+			     "\t}");
+		} 
+		if ( ! (STRCT_HAS_NULLREFS &
+		    f->ref->target->parent->flags))
+			continue;
+		printf("\tdb_%s_reffind(&p->%s, db);\n", 
+			f->ref->target->parent->name, f->name);
+	}
+
 	puts("}\n"
 	     "");
 }
@@ -897,7 +999,8 @@ gen_func_fill_r(const struct strct *p)
 	       "\tdb_%s_fill(p, stmt, pos);\n",
 	       p->name, p->name, p->name);
 	TAILQ_FOREACH(f, &p->fq, entries)
-		if (FTYPE_STRUCT == f->type)
+		if (FTYPE_STRUCT == f->type &&
+		    ! (FIELD_NULL & f->ref->source->flags))
 			printf("\tdb_%s_fill_r(&p->%s, "
 				"stmt, pos);\n", 
 				f->ref->tstrct, f->name);
@@ -1243,6 +1346,7 @@ gen_funcs(const struct config *cfg,
 	gen_func_fill(p);
 	gen_func_unfill_r(p);
 	gen_func_unfill(p);
+	gen_func_reffind(p);
 	gen_func_free(p);
 	gen_func_freeq(p);
 
@@ -1282,7 +1386,14 @@ gen_enum(const struct strct *p)
 {
 	const struct search *s;
 	const struct update *u;
+	const struct field *f;
 	size_t	 pos;
+
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (FIELD_UNIQUE & f->flags ||
+		    FIELD_ROWID & f->flags)
+			printf("\tSTMT_%s_BY_UNIQUE_%s,\n", 
+				p->cname, f->name);
 
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
@@ -1414,6 +1525,28 @@ gen_stmt(const struct strct *p)
 	const struct uref *ur;
 	int	 first;
 	size_t	 pos;
+
+	/* 
+	 * We have a special query just for our unique fields.
+	 * These are generated in the event of null foreign key
+	 * reference lookups with the generated db_xxx_reffind()
+	 * functions.
+	 * TODO: figure out which ones we should be generating and only
+	 * do this, as otherwise we're just wasting static space.
+	 */
+
+	TAILQ_FOREACH(f, &p->fq, entries) 
+		if (FIELD_ROWID & f->flags ||
+		    FIELD_UNIQUE & f->flags) {
+			printf("\t/* STMT_%s_BY_UNIQUE_%s */\n"
+			       "\t\"SELECT ",
+				p->cname, f->name);
+			gen_stmt_schema(p, p, NULL);
+			printf("\" FROM %s", p->name);
+			gen_stmt_joins(p, p, NULL);
+			printf(" WHERE %s.%s = ?\",\n",
+				p->name, f->name);
+		}
 
 	/* 
 	 * Print custom search queries.
@@ -1588,7 +1721,9 @@ gen_c_source(const struct config *cfg, int json,
 
 	/* Start with all headers we'll need. */
 
-	puts("#include <sys/queue.h>");
+	puts("#include <sys/queue.h>\n"
+	     "\n"
+	     "#include <assert.h>");
 
 	TAILQ_FOREACH(p, &cfg->sq, entries) 
 		if (STRCT_HAS_BLOB & p->flags) {
@@ -1599,7 +1734,6 @@ gen_c_source(const struct config *cfg, int json,
 			break;
 		}
 
-	puts("");
 	if (valids) {
 		puts("#include <stdarg.h>");
 		puts("#include <stdint.h>");

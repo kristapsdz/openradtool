@@ -277,12 +277,18 @@ gen_func_search(const struct config *cfg, const struct search *s)
 			s->parent->name);
 
 	if (STYPE_ITERATE == s->type)
-		print_commentv(0, COMMENT_C_FRAG,
-			"This function is called during an implicit "
-			"transaction: thus, the callback should not "
+		print_commentt(0, COMMENT_C_FRAG,
+			"This callback function is called during an "
+			"implicit transaction: thus, it should not "
 			"invoke any database modifications or risk "
 			"deadlock.");
 
+	if (STRCT_HAS_NULLREFS & s->parent->flags) 
+		print_commentt(0, COMMENT_C_FRAG,
+			"This search involves nested null structure "
+			"linking, which involves multiple database "
+			"calls per invocation.\n"
+			"Use this sparingly!");
 	print_commentv(0, COMMENT_C_FRAG,
 		"Uses the given fields in struct %s:",
 		s->parent->name);

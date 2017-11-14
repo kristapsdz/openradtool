@@ -29,6 +29,8 @@ TAILQ_HEAD(enmq, enm);
 TAILQ_HEAD(fieldq, field);
 TAILQ_HEAD(fvalidq, fvalid);
 TAILQ_HEAD(nrefq, nref);
+TAILQ_HEAD(ordq, ord);
+TAILQ_HEAD(orefq, oref);
 TAILQ_HEAD(rolemapq, rolemap);
 TAILQ_HEAD(roleq, role);
 TAILQ_HEAD(rolesetq, roleset);
@@ -219,7 +221,7 @@ struct 	alias {
 };
 
 /*
- * A single field reference within a chain.
+ * A single search field reference within a chain.
  * For example, in a chain of "user.company.name", which presumes
  * structures "user" and "company", then a "name" in the latter, the
  * fields would be "user", "company", an "name".
@@ -231,6 +233,18 @@ struct	sref {
 	struct field	 *field; /* field (after link) */
 	struct sent	 *parent; /* up-reference */
 	TAILQ_ENTRY(sref) entries;
+};
+
+/*
+ * A single order field reference within a chain.
+ * See "struct sref".
+ */
+struct	oref {
+	char		 *name; /* field name */
+	struct pos	  pos; /* parse point */
+	struct field	 *field; /* field (after link) */
+	struct ord	 *parent; /* up-reference */
+	TAILQ_ENTRY(oref) entries;
 };
 
 /*
@@ -321,6 +335,26 @@ struct	sent {
 	TAILQ_ENTRY(sent) entries;
 };
 
+enum	ordtype {
+	ORDTYPE_ASC, /* ascending order */
+	ORDTYPE_DESC /* descending order */
+};
+
+/*
+ * An order reference.
+ * This resolves to be a native field in a structure for which update
+ * commands will be generated.
+ */
+struct	ord {
+	struct orefq	 orq; /* queue of order fields */
+	char		*fname; /* canonical dot-form name */
+	enum ordtype	 op; /* type of ordering */
+	struct field	*field; /* resolved field */
+	struct pos	 pos; /* position in parse */
+	struct search	*parent; /* up-reference */
+	TAILQ_ENTRY(ord) entries;
+};
+
 /*
  * Type of search.
  * We have many different kinds of search functions, each represented by
@@ -341,6 +375,7 @@ enum	stype {
  */
 struct	search {
 	struct sentq	    sntq; /* nested reference chain */
+	struct ordq	    ordq; /* ordering chain */
 	struct pos	    pos; /* parse point */
 	char		   *name; /* named or NULL */
 	char		   *doc; /* documentation */

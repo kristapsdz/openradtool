@@ -393,6 +393,25 @@ uref_alloc(const struct parse *p, const char *name,
  * Allocate a search reference and add it to the parent queue.
  * Always returns the created pointer.
  */
+static struct oref *
+oref_alloc(const struct parse *p, const char *name, struct ord *up)
+{
+	struct oref	*ref;
+
+	if (NULL == (ref = calloc(1, sizeof(struct oref))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (ref->name = strdup(name)))
+		err(EXIT_FAILURE, NULL);
+	ref->parent = up;
+	parse_point(p, &ref->pos);
+	TAILQ_INSERT_TAIL(&up->orq, ref, entries);
+	return(ref);
+}
+
+/*
+ * Allocate a search reference and add it to the parent queue.
+ * Always returns the created pointer.
+ */
 static struct sref *
 sref_alloc(const struct parse *p, const char *name, struct sent *up)
 {
@@ -1093,14 +1112,84 @@ parse_field(struct parse *p, struct field *fd)
 }
 
 /*
+ * Like parse_config_search_terms() but for order terms.
+ *
+ *  field[.field]* ["asc" | "desc"]?
+ */
+static void
+parse_config_order_terms(struct parse *p, struct search *srch)
+{
+	struct oref	*of;
+	size_t		 sz;
+	struct ord	*ord;
+
+	if (TOK_IDENT != p->lasttype) {
+		parse_errx(p, "expected order identifier");
+		return;
+	}
+
+	if (NULL == (ord = calloc(1, sizeof(struct ord))))
+		err(EXIT_FAILURE, NULL);
+	ord->parent = srch;
+	ord->op = ORDTYPE_ASC;
+	parse_point(p, &ord->pos);
+	TAILQ_INIT(&ord->orq);
+	TAILQ_INSERT_TAIL(&srch->ordq, ord, entries);
+
+	oref_alloc(p, p->last.string, ord);
+
+	while ( ! PARSE_STOP(p)) {
+		if (TOK_COMMA == parse_next(p) ||
+		    TOK_SEMICOLON == p->lasttype)
+			break;
+
+		if (TOK_IDENT == p->lasttype) {
+			if (0 == strcasecmp(p->last.string, "asc"))
+				ord->op = ORDTYPE_ASC;
+			if (0 == strcasecmp(p->last.string, "desc"))
+				ord->op = ORDTYPE_DESC;
+
+			if (0 == strcasecmp(p->last.string, "asc") ||
+			    0 == strcasecmp(p->last.string, "desc"))
+				parse_next(p);
+			break;
+		}
+
+		if (TOK_PERIOD != p->lasttype) {
+			parse_errx(p, "expected field separator");
+			return;
+		} else if (TOK_IDENT != parse_next(p)) {
+			parse_errx(p, "expected field identifier");
+			return;
+		}
+		oref_alloc(p, p->last.string, ord);
+	}
+
+	if (PARSE_STOP(p))
+		return;
+
+	TAILQ_FOREACH(of, &ord->orq, entries) {
+		if (NULL == ord->fname) {
+			ord->fname = strdup(of->name);
+			if (NULL == ord->fname)
+				err(EXIT_FAILURE, NULL);
+			continue;
+		}
+		sz = strlen(ord->fname) +
+		     strlen(of->name) + 2;
+		ord->fname = realloc(ord->fname, sz);
+		strlcat(ord->fname, ".", sz);
+		strlcat(ord->fname, of->name, sz);
+	}
+}
+
+/*
  * Parse the field used in a search.
  * This is the search_terms designation in parse_config_search().
  * This may consist of nested structures, which uses dot-notation to
  * signify the field within a field's reference structure.
  *
- *  field.[FIELD] | field
- *
- * FIXME: disallow name "rowid".
+ *  field.[field]*
  */
 static void
 parse_config_search_terms(struct parse *p, struct search *srch)
@@ -1117,7 +1206,7 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 	sent = sent_alloc(p, srch);
 	sref_alloc(p, p->last.string, sent);
 
-	while (TOK_ERR != p->lasttype && TOK_EOF != p->lasttype) {
+	while ( ! PARSE_STOP(p)) {
 		if (TOK_COMMA == parse_next(p) ||
 		    TOK_SEMICOLON == p->lasttype ||
 		    TOK_COLON == p->lasttype)
@@ -1200,10 +1289,9 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 /*
  * Parse the search parameters following the search fields:
  *
- *  "search" search_fields ":" [key val]* ";"
- *
- * The "key" can be "name" or "comment"; and the name, a unique function
- * name or a comment literal.
+ *   [ "name" name |
+ *     "comment" quoted_string |
+ *     "order" order_fields ]* ";"
  */
 static void
 parse_config_search_params(struct parse *p, struct search *s)
@@ -1239,13 +1327,11 @@ parse_config_search_params(struct parse *p, struct search *s)
 			s->name = strdup(p->last.string);
 			if (NULL == s->name)
 				err(EXIT_FAILURE, NULL);
-			if (TOK_SEMICOLON == parse_next(p))
-				break;
+			parse_next(p);
 		} else if (0 == strcasecmp("comment", p->last.string)) {
 			if ( ! parse_comment(p, &s->doc))
 				break;
-			if (TOK_SEMICOLON == parse_next(p))
-				break;
+			parse_next(p);
 		} else if (0 == strcasecmp("limit", p->last.string)) {
 			if (TOK_INTEGER != parse_next(p)) {
 				parse_errx(p, "expected limit value");
@@ -1255,12 +1341,20 @@ parse_config_search_params(struct parse *p, struct search *s)
 				break;
 			}
 			s->limit = p->last.integer;
-			if (TOK_SEMICOLON == parse_next(p))
-				break;
+			parse_next(p);
+		} else if (0 == strcasecmp("order", p->last.string)) {
+			parse_next(p);
+			parse_config_order_terms(p, s);
+			while (TOK_COMMA == p->lasttype) {
+				parse_next(p);
+				parse_config_order_terms(p, s);
+			}
 		} else {
 			parse_errx(p, "unknown search parameter");
 			break;
 		}
+		if (TOK_SEMICOLON == p->lasttype)
+			break;
 	}
 
 	assert(TOK_SEMICOLON == p->lasttype ||
@@ -1513,6 +1607,7 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 	srch->type = stype;
 	parse_point(p, &srch->pos);
 	TAILQ_INIT(&srch->sntq);
+	TAILQ_INIT(&srch->ordq);
 	TAILQ_INSERT_TAIL(&s->sq, srch, entries);
 
 	if (STYPE_LIST == stype)
@@ -2441,9 +2536,22 @@ parse_free_search(struct search *p)
 {
 	struct sref	*s;
 	struct sent	*sent;
+	struct ord	*ord;
+	struct oref	*oref;
 
 	if (NULL == p)
 		return;
+
+	while (NULL != (ord = TAILQ_FIRST(&p->ordq))) {
+		TAILQ_REMOVE(&p->ordq, ord, entries);
+		while (NULL != (oref = TAILQ_FIRST(&ord->orq))) {
+			TAILQ_REMOVE(&ord->orq, oref, entries);
+			free(oref->name);
+			free(oref);
+		}
+		free(ord->fname);
+		free(ord);
+	}
 
 	while (NULL != (sent = TAILQ_FIRST(&p->sntq))) {
 		TAILQ_REMOVE(&p->sntq, sent, entries);

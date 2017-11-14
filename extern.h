@@ -117,6 +117,7 @@ struct	eitem {
 	char		  *name; /* item name */
 	int64_t		   value; /* numeric value */
 	char		  *doc; /* documentation */
+	char		  *jslabel; /* label (default js output) */
 	struct pos	   pos; /* parse point */
 	struct enm	  *parent; /* parent enumeration */
 	TAILQ_ENTRY(eitem) entries;

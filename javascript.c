@@ -481,14 +481,34 @@ gen_javascript(const struct config *cfg)
 				NULL != ei->doc ? ei->doc : "");
 		print_commentt(1, COMMENT_JS_FRAG_CLOSE, NULL);
 		printf("\tvar %s = {\n", e->name);
-		TAILQ_FOREACH(ei, &e->eq, entries) {
-			printf("\t\t%s: %" PRId64 "%s\n",
-				ei->name, ei->value,
-				NULL == TAILQ_NEXT(ei, entries) ? 
-				"" : ",");
-		}
-		puts("\t};\n"
-		     "");
+		TAILQ_FOREACH(ei, &e->eq, entries)
+			printf("\t\t%s: %" PRId64 ",\n",
+				ei->name, ei->value);
+
+		printf("\t\tformat: function(e, name, val) {\n"
+		       "\t\t\tname += '-label';\n"
+		       "\t\t\tif (null === val) {\n"
+		       "\t\t\t\t_replcl(e, name, \'Not given\', 0);\n"
+		       "\t\t\t\treturn;\n"
+		       "\t\t\t}\n"
+		       "\t\t\tswitch(parseInt(val)) {\n");
+		TAILQ_FOREACH(ei, &e->eq, entries)
+			printf("\t\t\tcase %s.%s:\n"
+			       "\t\t\t\t_replcl(e, name, \'%s\', 0);\n"
+			       "\t\t\t\tbreak;\n",
+			       e->name, ei->name, 
+			       NULL == ei->jslabel ? 
+			       ei->name : ei->jslabel);
+		printf("\t\t\tdefault:\n"
+		       "\t\t\t\tconsole.log(\'%s.format: "
+		         "unknown value: ' + val);\n"
+		       "\t\t\t\t_replcl(e, name, \'Unknown\', 0);\n"
+		       "\t\t\t\tbreak;\n"
+		       "\t\t\t}\n"
+		       "\t\t}\n"
+		       "\t};\n"
+		       "\n",
+		       e->name);
 	}
 
 	TAILQ_FOREACH(s, &cfg->sq, entries)

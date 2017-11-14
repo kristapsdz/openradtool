@@ -1181,6 +1181,22 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 		strlcat(ord->fname, ".", sz);
 		strlcat(ord->fname, of->name, sz);
 	}
+
+	TAILQ_FOREACH(of, &ord->orq, entries) {
+		if (NULL == TAILQ_NEXT(of, entries))
+			break;
+		if (NULL == ord->name) {
+			ord->name = strdup(of->name);
+			if (NULL == ord->name)
+				err(EXIT_FAILURE, NULL);
+			continue;
+		}
+		sz = strlen(ord->name) +
+		     strlen(of->name) + 2;
+		ord->name = realloc(ord->name, sz);
+		strlcat(ord->name, ".", sz);
+		strlcat(ord->name, of->name, sz);
+	}
 }
 
 /*

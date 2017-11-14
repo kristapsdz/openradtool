@@ -327,7 +327,7 @@ struct	sent {
 	struct pos	  pos; /* parse point */
 	struct search	 *parent; /* up-reference */
 	enum optype	  op; /* operator */
-	char		 *name; /* sub-strutcure dot-form name or NULL */
+	char		 *name; /* sub-structure dot-form name or NULL */
 	char		 *fname; /* canonical dot-form name */
 	struct alias	 *alias; /* resolved alias */
 	unsigned int	  flags; 
@@ -347,11 +347,13 @@ enum	ordtype {
  */
 struct	ord {
 	struct orefq	 orq; /* queue of order fields */
+	char		 *name; /* sub-structure dot-form name or NULL */
 	char		*fname; /* canonical dot-form name */
 	enum ordtype	 op; /* type of ordering */
 	struct field	*field; /* resolved field */
 	struct pos	 pos; /* position in parse */
 	struct search	*parent; /* up-reference */
+	struct alias	 *alias; /* resolved alias */
 	TAILQ_ENTRY(ord) entries;
 };
 

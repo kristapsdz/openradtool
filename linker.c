@@ -397,6 +397,38 @@ resolve_update(struct update *up)
 }
 
 /*
+ * Like resolve_sref() but for order references.
+ */
+static int
+resolve_oref(struct oref *ref, struct strct *s)
+{
+	struct field	*f;
+
+	TAILQ_FOREACH(f, &s->fq, entries)
+		if (0 == strcasecmp(f->name, ref->name))
+			break;
+
+	if (NULL == (ref->field = f)) {
+		gen_errx(&ref->pos, "order term "
+			"not found: %s", ref->name);
+		return(0);
+	}
+
+	if (NULL == TAILQ_NEXT(ref, entries)) {
+		if (FTYPE_STRUCT != f->type) 
+			return(1);
+		gen_errx(&ref->pos, "terminal field is a struct");
+		return(0);
+	} else if (FTYPE_STRUCT != f->type) {
+		gen_errx(&ref->pos, "non-terminal not a struct");
+		return(0);
+	}
+
+	ref = TAILQ_NEXT(ref, entries);
+	return(resolve_oref(ref, f->ref->target->parent));
+}
+
+/*
  * Recursively follow the chain of references in a search target,
  * finding out whether it's well-formed in the process.
  * Returns zero on failure, non-zero on success.
@@ -579,15 +611,17 @@ static int
 resolve_search(struct search *srch)
 {
 	struct sent	*sent;
-	struct sref	*ref;
+	struct sref	*sref;
+	struct oref	*oref;
 	struct alias	*a;
 	struct strct	*p;
+	struct ord	*ord;
 
 	p = srch->parent;
 
 	TAILQ_FOREACH(sent, &srch->sntq, entries) {
-		ref = TAILQ_FIRST(&sent->srq);
-		if ( ! resolve_sref(ref, p))
+		sref = TAILQ_FIRST(&sent->srq);
+		if ( ! resolve_sref(sref, p))
 			return(0);
 
 		/*
@@ -598,9 +632,9 @@ resolve_search(struct search *srch)
 		 * equality.
 		 */
 
-		ref = TAILQ_LAST(&sent->srq, srefq);
-		if ((FIELD_ROWID & ref->field->flags ||
-		     FIELD_UNIQUE & ref->field->flags) &&
+		sref = TAILQ_LAST(&sent->srq, srefq);
+		if ((FIELD_ROWID & sref->field->flags ||
+		     FIELD_UNIQUE & sref->field->flags) &&
 		     OPTYPE_EQUAL == sent->op) {
 			sent->flags |= SENT_IS_UNIQUE;
 			srch->flags |= SEARCH_IS_UNIQUE;
@@ -620,6 +654,22 @@ resolve_search(struct search *srch)
 				break;
 		assert(NULL != a);
 		sent->alias = a;
+	}
+
+	/* Now the same but for order statements. */
+
+	TAILQ_FOREACH(ord, &srch->ordq, entries) {
+		oref = TAILQ_FIRST(&ord->orq);
+		if ( ! resolve_oref(oref, p))
+			return(0);
+
+		if (NULL == ord->name)
+			continue;
+		TAILQ_FOREACH(a, &p->aq, entries)
+			if (0 == strcasecmp(a->name, ord->name))
+				break;
+		assert(NULL != a);
+		ord->alias = a;
 	}
 
 	return(1);

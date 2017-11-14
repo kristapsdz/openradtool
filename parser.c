@@ -711,6 +711,30 @@ again:
 }
 
 /*
+ * Parse the quoted_string part following "jslabel".
+ * Attach it to the given "label", possibly clearing out any prior
+ * labels.
+ * If this is the case, emit a warning.
+ */
+static int
+parse_label(struct parse *p, char **label)
+{
+
+	if (TOK_LITERAL != parse_next(p)) {
+		parse_errx(p, "expected quoted string");
+		return(0);
+	} else if (NULL != *label) {
+		parse_warnx(p, "replaces prior label");
+		free(*label);
+	}
+
+	if (NULL == (*label = strdup(p->last.string)))
+		err(EXIT_FAILURE, NULL);
+
+	return(1);
+}
+
+/*
  * Parse the quoted_string part following "comment".
  * Attach it to the given "doc", possibly clearing out any prior
  * comments.
@@ -1688,10 +1712,12 @@ parse_enum_item(struct parse *p, struct eitem *ei)
 		}
 
 	while ( ! PARSE_STOP(p) && TOK_IDENT == parse_next(p))
-		if (strcasecmp(p->last.string, "comment"))
-			parse_errx(p, "unknown item data type");
-		else
+		if (0 == strcasecmp(p->last.string, "comment"))
 			parse_comment(p, &ei->doc);
+		else if (0 == strcasecmp(p->last.string, "jslabel"))
+			parse_label(p, &ei->jslabel);
+		else
+			parse_errx(p, "unknown item data type");
 
 	if ( ! PARSE_STOP(p) && TOK_SEMICOLON != p->lasttype)
 		parse_errx(p, "expected semicolon");
@@ -2566,6 +2592,7 @@ parse_free_search(struct search *p)
 			free(oref);
 		}
 		free(ord->fname);
+		free(ord->name);
 		free(ord);
 	}
 
@@ -2674,6 +2701,7 @@ parse_free_enum(struct enm *e)
 	while (NULL != (ei = TAILQ_FIRST(&e->eq))) {
 		TAILQ_REMOVE(&e->eq, ei, entries);
 		free(ei->name);
+		free(ei->jslabel);
 		free(ei->doc);
 		free(ei);
 	}

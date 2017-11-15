@@ -491,13 +491,34 @@ gen_javascript(const struct config *cfg)
 	TAILQ_FOREACH(e, &cfg->eq, entries) {
 		print_commentt(1, COMMENT_JS_FRAG_OPEN, e->doc);
 		print_commentv(1, COMMENT_JS_FRAG,
+			"This object consists of all values for "
+			"the %s enumeration.\n"
+			"It also contains a <code>format</code> "
+			"function designed to work as a custom "
+			"callback for <code>fill</code>-style "
+			"functions for objects.\n"
 			"@namespace\n"
 			"@readonly\n"
-			"@typedef %s", e->name);
+			"@typedef %s", e->name, e->name);
 		TAILQ_FOREACH(ei, &e->eq, entries) 
 			print_commentv(1, COMMENT_JS_FRAG,
 				"@property {number} %s %s", ei->name,
 				NULL != ei->doc ? ei->doc : "");
+		print_commentv(1, COMMENT_JS_FRAG,
+			"@property {} format Uses the enumeration "
+			"item's <code>jslabel</code> (or just the "
+			"name, if no <code>jslabel</code> is defined) "
+			"to format a custom label as invoked on an "
+			"object's <code>fill</code> function. "
+			"This will act on <code>xxx-yyy-label</code> "
+			"classes, where <code>xxx</code> is the "
+			"structure name and <code>yyy</code> is the "
+			"field name. "
+			"For example, <code>xxx.fill(e, { 'xxx-yyy': "
+			"%s.format });</code>, where <code>yyy</code> "
+			"is a field of type <code>enum %s</code>.",
+			e->name, e->name);
+
 		print_commentt(1, COMMENT_JS_FRAG_CLOSE, NULL);
 		printf("\tvar %s = {\n", e->name);
 		TAILQ_FOREACH(ei, &e->eq, entries)

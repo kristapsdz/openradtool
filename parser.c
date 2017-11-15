@@ -1773,6 +1773,11 @@ parse_enum_data(struct parse *p, struct enm *e)
 		} else if ( ! check_badidents(p, p->last.string))
 			return;
 
+		if (0 == strcasecmp(p->last.string, "format")) {
+			parse_errx(p, "cannot use reserved name");
+			return;
+		}
+
 		TAILQ_FOREACH(ei, &e->eq, entries) {
 			if (strcasecmp(ei->name, p->last.string))
 				continue;
@@ -2210,10 +2215,10 @@ parse_bitidx(struct parse *p, struct bitf *b)
 }
 
 /*
- * Parse a "bitfield", which is a named set of bit indices.
+ * Parse a "bitf", which is a named set of bit indices.
  * Its syntax is:
  *
- *  "bitfield" name "{" ... "};"
+ *  "bitf" name "{" ... "};"
  */
 static void
 parse_bitfield(struct parse *p, struct config *cfg)
@@ -2516,7 +2521,8 @@ parse_config(FILE *f, const char *fname)
 				continue;
 			}
 			parse_errx(&p, "expected enum name");
-		} else if (0 == strcasecmp(p.last.string, "bitfield")) {
+		} else if (0 == strcasecmp(p.last.string, "bits") ||
+		           0 == strcasecmp(p.last.string, "bitfield")) {
 			if (TOK_IDENT == parse_next(&p)) {
 				parse_bitfield(&p, cfg);
 				continue;

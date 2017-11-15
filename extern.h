@@ -152,6 +152,7 @@ struct	eref {
 struct	bitidx {
 	char		   *name;
 	char		   *doc; /* documentation */
+	char		   *jslabel; /* label (default js output) */
 	int64_t		    value; /* bit 0--63 */
 	struct bitf	   *parent;
 	struct pos	    pos; /* parse point */

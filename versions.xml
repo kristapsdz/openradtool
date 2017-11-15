@@ -2,6 +2,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.3.5</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-11-14">ongoing</time>
+		</header>
+		<aside>
+			<p>
+				Add the <code>order</code> statement for searching (inprogress).
+				Add the <code>jslabel</code> for labelling enumeration <code>format</code> functions.
+			</p> 
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.3.4</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-11-13">2017-11-13</time>

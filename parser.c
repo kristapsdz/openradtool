@@ -2128,10 +2128,12 @@ parse_bitidx_item(struct parse *p, struct bitidx *bi)
 		}
 
 	while ( ! PARSE_STOP(p) && TOK_IDENT == parse_next(p))
-		if (strcasecmp(p->last.string, "comment"))
-			parse_errx(p, "unknown item data type");
-		else
+		if (0 == strcasecmp(p->last.string, "comment"))
 			parse_comment(p, &bi->doc);
+		else if (0 == strcasecmp(p->last.string, "jslabel"))
+			parse_label(p, &bi->jslabel);
+		else
+			parse_errx(p, "unknown item data type");
 
 	if ( ! PARSE_STOP(p) && TOK_SEMICOLON != p->lasttype)
 		parse_errx(p, "expected semicolon");
@@ -2751,6 +2753,7 @@ parse_free_bitfield(struct bitf *bf)
 	while (NULL != (bi = TAILQ_FIRST(&bf->bq))) {
 		TAILQ_REMOVE(&bf->bq, bi, entries);
 		free(bi->name);
+		free(bi->jslabel);
 		free(bi->doc);
 		free(bi);
 	}

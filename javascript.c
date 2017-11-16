@@ -472,20 +472,58 @@ gen_javascript(const struct config *cfg)
 				NULL != bi->doc ? bi->doc : "",
 				bi->name,
 				NULL != bi->doc ? bi->doc : "");
-		print_commentt(1, COMMENT_JS_FRAG_CLOSE, NULL);
+		print_commentv(1, COMMENT_JS_FRAG_CLOSE,
+			"@property {} format Uses a bit field's "
+			"<code>jslabel</code> (or just the "
+			"name, if no <code>jslabel</code> is defined) "
+			"to format a custom label as invoked on an "
+			"object's <code>fill</code> function. "
+			"This will act on <code>xxx-yyy-label</code> "
+			"classes, where <code>xxx</code> is the "
+			"structure name and <code>yyy</code> is the "
+			"field name. "
+			"Multiple entries are comma-separated.\n"
+			"For example, <code>xxx.fill(e, { 'xxx-yyy': "
+			"%s.format });</code>, where <code>yyy</code> "
+			"is a field of type <code>enum %s</code>.",
+			bf->name, bf->name);
 		printf("\tvar %s = {\n", bf->name);
 		TAILQ_FOREACH(bi, &bf->bq, entries) {
 			if (NULL != bi->doc)
 				print_commentt(2, COMMENT_JS, bi->doc);
 			printf("\t\tBITI_%s: %" PRId64 ",\n",
 				bi->name, bi->value);
-			printf("\t\tBITF_%s: %u%s\n",
-				bi->name, 1U << bi->value,
-				NULL == TAILQ_NEXT(bi, entries) ? 
-				"" : ",");
+			printf("\t\tBITF_%s: %u,\n",
+				bi->name, 1U << bi->value);
 		}
-		puts("\t};\n"
-		     "");
+		printf("\t\tformat: function(e, name, val) {\n"
+		       "\t\t\tvar v, i = 0, str = '';\n"
+		       "\t\t\tname += '-label';\n"
+		       "\t\t\tif (null === val) {\n"
+		       "\t\t\t\t_replcl(e, name, \'not given\', 0);\n"
+		       "\t\t\t\t_classaddcl(e, name, \'noanswer\');\n"
+		       "\t\t\t\treturn;\n"
+		       "\t\t\t}\n"
+		       "\t\t\tv = parseInt(val);\n"
+		       "\t\t\tif (0 === v) {\n"
+		       "\t\t\t\t_replcl(e, name, \'none\', 0);\n"
+		       "\t\t\t\treturn;\n"
+		       "\t\t\t}\n");
+		TAILQ_FOREACH(bi, &bf->bq, entries)
+			printf("\t\t\tif (%s.BITF_%s & v)\n"
+		       	       "\t\t\t\tstr += "
+			        "(i++ > 0 ? ', ' : '') + '%s';\n",
+			       bf->name, bi->name,
+			       NULL != bi->jslabel ? bi->jslabel :
+			       bi->name);
+		printf("\t\t\tif (0 === str.length) {\n"
+		       "\t\t\t\t_replcl(e, name, \'unknown\', 0);\n"
+		       "\t\t\t\treturn;\n"
+		       "\t\t\t}\n"
+		       "\t\t\t_replcl(e, name, str);\n"
+		       "\t\t}\n"
+		       "\t};\n"
+		       "\n");
 	}
 
 	TAILQ_FOREACH(e, &cfg->eq, entries) {

@@ -1564,6 +1564,8 @@ gen_stmt(const struct strct *p)
 	const struct field *f;
 	const struct update *up;
 	const struct uref *ur;
+	const struct oref *or;
+	const struct ord *ord;
 	int	 first;
 	size_t	 pos;
 
@@ -1628,6 +1630,22 @@ gen_stmt(const struct strct *p)
 		}
 		if (STYPE_SEARCH != s->type && s->limit > 0)
 			printf(" LIMIT %" PRId64, s->limit);
+
+		first = 1;
+		if ( ! TAILQ_EMPTY(&s->ordq))
+			printf(" ORDER BY ");
+		TAILQ_FOREACH(ord, &s->ordq, entries) {
+			or = TAILQ_LAST(&ord->orq, orefq);
+			if ( ! first)
+				printf(", ");
+			first = 0;
+			printf("%s.%s %s",
+				NULL == ord->alias ?
+				p->name : ord->alias->alias,
+				or->name, 
+				ORDTYPE_ASC == ord->op ?
+				"ASC" : "DESC");
+		}
 		puts("\",");
 	}
 

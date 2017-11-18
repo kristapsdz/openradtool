@@ -235,10 +235,11 @@ if specified,
 may be one of the following:
 .Bl -tag -width Ds
 .It Cm bit
-Native integer constained to 64-bit bit index (that is, 0\(en63).
-This is usually used to create a bit mask: for the value 0, one would
-set
-.Li 1u << 0
+Native integer constained to 64-bit bit index (that is, 0\(en64).
+The bit indices start from 1 in order to represent a zero value (no bits
+to set).
+Each non-zero value is usually merged into a bit-field by setting
+.Li 1u << (value - 1)
 for some input or output value.
 For entire bitfields, see
 .Cm bits .

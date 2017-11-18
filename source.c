@@ -1518,14 +1518,13 @@ gen_stmt_schema(const struct strct *orig,
  * do anything.
  * See gen_stmt_schema().
  */
-static size_t
-gen_stmt_joins(const struct strct *orig, 
-	const struct strct *p, const struct alias *parent)
+static void
+gen_stmt_joins(const struct strct *orig, const struct strct *p, 
+	const struct alias *parent, size_t *count)
 {
 	const struct field *f;
 	const struct alias *a;
 	int	 c;
-	size_t	 count = 0;
 	char	*name;
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
@@ -1546,21 +1545,19 @@ gen_stmt_joins(const struct strct *orig,
 				break;
 		assert(NULL != a);
 
-		if (p == orig)
-			printf("\"");
+		if (0 == *count)
+			putchar('"');
 
-		count++;
+		(*count)++;
 		printf("\n\t\t\"INNER JOIN %s AS %s ON %s.%s=%s.%s\"",
 			f->ref->tstrct, a->alias,
 			a->alias, f->ref->tfield,
 			NULL == parent ? p->name : parent->alias,
 			f->ref->sfield);
-		count += gen_stmt_joins(orig, 
-			f->ref->target->parent, 
-			a);
+		gen_stmt_joins(orig, 
+			f->ref->target->parent, a, count);
 		free(name);
 	}
-	return(count);
 }
 
 /*
@@ -1578,7 +1575,7 @@ gen_stmt(const struct strct *p)
 	const struct oref *or;
 	const struct ord *ord;
 	int	 first;
-	size_t	 pos;
+	size_t	 pos, rc;
 
 	/* 
 	 * We have a special query just for our unique fields.
@@ -1597,7 +1594,9 @@ gen_stmt(const struct strct *p)
 				p->cname, f->name);
 			gen_stmt_schema(p, p, NULL);
 			printf("\" FROM %s", p->name);
-			if (gen_stmt_joins(p, p, NULL))
+			rc = 0;
+			gen_stmt_joins(p, p, NULL, &rc);
+			if (rc > 0)
 				printf("\n\t\t\"");
 			else
 				printf(" ");
@@ -1617,7 +1616,9 @@ gen_stmt(const struct strct *p)
 			p->cname, pos++);
 		gen_stmt_schema(p, p, NULL);
 		printf("\" FROM %s", p->name);
-		if (gen_stmt_joins(p, p, NULL)) {
+		rc = 0;
+		gen_stmt_joins(p, p, NULL, &rc);
+		if (rc > 0) {
 			if (TAILQ_EMPTY(&s->sntq)) {
 				puts(",");
 				continue;

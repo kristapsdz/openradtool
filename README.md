@@ -1,8 +1,8 @@
 # Introduction
 
 *kwebapp* translates business logic of a database application---objects
-and queries---into C and SQL ([SQLite](https://sqlite.org)) code.  The
-business logic is given as a configuration file, for example:
+and queries---into C, SQL ([SQLite](https://sqlite.org)), and JavaScript
+code.  The business logic is given as a configuration file, for example:
 
 ```
 struct user {

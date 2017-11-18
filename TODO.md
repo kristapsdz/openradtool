@@ -9,9 +9,10 @@ usable without them, but they'll soon be required.
   functions for the same thing.  This is pretty easy to check.
 - Allow for unary operators and binary equality (eq, neq) on password
   fields.  Right now, I only allow equality.
-- The bits exported are in 64-bit values, which JavaScript does not
-  support. Provide a facility to export bit fields as an array of bit
-  mask components, e.g., 0 -> [0], 3 -> [1, 2].
+- The integers exported are in 64-bit values, which JavaScript does not
+  support. 
+- Provide a facility to export bitfields as an array of bit mask
+  components, e.g., 0 -> [0], 3 -> [1, 2].
 
 More longer-term:
 

@@ -1518,13 +1518,14 @@ gen_stmt_schema(const struct strct *orig,
  * do anything.
  * See gen_stmt_schema().
  */
-static void
+static size_t
 gen_stmt_joins(const struct strct *orig, 
 	const struct strct *p, const struct alias *parent)
 {
 	const struct field *f;
 	const struct alias *a;
 	int	 c;
+	size_t	 count = 0;
 	char	*name;
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
@@ -1545,16 +1546,21 @@ gen_stmt_joins(const struct strct *orig,
 				break;
 		assert(NULL != a);
 
-		printf("\n\t\tINNER JOIN %s AS %s ON %s.%s=%s.%s",
+		if (p == orig)
+			printf("\"");
+
+		count++;
+		printf("\n\t\t\"INNER JOIN %s AS %s ON %s.%s=%s.%s\"",
 			f->ref->tstrct, a->alias,
 			a->alias, f->ref->tfield,
 			NULL == parent ? p->name : parent->alias,
 			f->ref->sfield);
-		gen_stmt_joins(orig, 
+		count += gen_stmt_joins(orig, 
 			f->ref->target->parent, 
 			a);
 		free(name);
 	}
+	return(count);
 }
 
 /*
@@ -1591,8 +1597,11 @@ gen_stmt(const struct strct *p)
 				p->cname, f->name);
 			gen_stmt_schema(p, p, NULL);
 			printf("\" FROM %s", p->name);
-			gen_stmt_joins(p, p, NULL);
-			printf(" WHERE %s.%s = ?\",\n",
+			if (gen_stmt_joins(p, p, NULL))
+				printf("\n\t\t\"");
+			else
+				printf(" ");
+			printf("WHERE %s.%s = ?\",\n",
 				p->name, f->name);
 		}
 
@@ -1608,12 +1617,20 @@ gen_stmt(const struct strct *p)
 			p->cname, pos++);
 		gen_stmt_schema(p, p, NULL);
 		printf("\" FROM %s", p->name);
-		gen_stmt_joins(p, p, NULL);
-		if (TAILQ_EMPTY(&s->sntq)) {
-			puts("\",");
-			continue;
+		if (gen_stmt_joins(p, p, NULL)) {
+			if (TAILQ_EMPTY(&s->sntq)) {
+				puts(",");
+				continue;
+			}
+			printf("\n\t\t\"");
+		} else {
+			if (TAILQ_EMPTY(&s->sntq)) {
+				puts("\",");
+				continue;
+			}
+			printf(" ");
 		}
-		printf(" WHERE");
+		printf("WHERE");
 		first = 1;
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
 			sr = TAILQ_LAST(&sent->srq, srefq);

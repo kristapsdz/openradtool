@@ -305,22 +305,27 @@ The
 .Cm typeinfo
 may consist of the following:
 .Bl -tag -width Ds
-.It Cm rowid
-The field is an SQL primary key.
-This is only available for the
-.Cm int
-type and may only appear for one field in a given structure.
-.It Cm null
-Accepts null SQL or C values, and is only available for native types.
-A
-.Cm rowid
-field may not also be
-.Cm null .
-.It Cm unique
-Has a unique SQL column value.
-.It Cm noexport
-Never exported using the JSON interface.
-This is useful for sensitive internal information.
+.It Cm actdel Ar action
+Like
+.Cm actup
+but on deletion of the field in the database.
+.It Cm actup Ar action
+SQL actions taken when the field is updated.
+May be one of
+.Ar none
+.Pq do nothing ,
+.Ar restrict ,
+.Pq disallow if having child referents ,
+.Ar nullify
+.Pq set child referents to null ,
+.Ar cascade ,
+.Pq propogate operation to referents ,
+or
+.Ar default
+.Pq set child referents to their default values .
+This is only available on foreign key references.
+.It Cm comment Ar string_literal
+Documents the field using the quoted string.
 .It Cm limit Ar limit_op limit_val
 Used when generating validation functions.
 Only available for native types.
@@ -350,27 +355,25 @@ For numeric types, it's the value itself.
 The given value must match the field type: an integer (which may be
 signed) for integers, integer or real-valued for real, or a positive
 integer for lengths.
-.It Cm comment Ar string_literal
-Documents the field using the quoted string.
-.It Cm actup Ar action
-SQL actions taken when the field is updated.
-May be one of
-.Ar none
-.Pq do nothing ,
-.Ar restrict ,
-.Pq disallow if having child referents ,
-.Ar nullify
-.Pq set child referents to null ,
-.Ar cascade ,
-.Pq propogate operation to referents ,
-or
-.Ar default
-.Pq set child referents to their default values .
-This is only available on foreign key references.
-.It Cm actdel Ar action
-Like
-.Cm actup
-but on deletion of the field in the database.
+.It Cm noexport
+Never exported using the JSON interface.
+This is useful for sensitive internal information.
+.It Cm null
+Accepts null SQL or C values, and is only available for native types.
+A
+.Cm rowid
+field may not also be
+.Cm null .
+.It Cm rowid
+The field is an SQL primary key.
+This is only available for the
+.Cm int
+type and may only appear for one field in a given structure.
+.It Cm unique
+Has a unique SQL column value.
+See
+.Sx Uniques
+for multi-field unique constraints.
 .El
 .Pp
 A field declaration may consist of any number of

@@ -53,6 +53,7 @@ enum	ftype {
 	FTYPE_EMAIL, /* email (text) */
 	FTYPE_STRUCT, /* only in C API (on reference) */
 	FTYPE_ENUM, /* enumeration (integer alias) */
+	FTYPE_BITFIELD, /* bitfield (integer alias) */
 	FTYPE__MAX
 };
 
@@ -172,6 +173,16 @@ struct	bitf {
 };
 
 /*
+ * If a field is a bitfield type, this records the name of the bitfield;
+ * then, during linkage, the bitfield itself.
+ */
+struct	bref {
+	char		*name; /* name of bitfield */
+	struct bitf	*bitf; /* bitfield (after linkage) */
+	struct field	*parent; /* up-reference */
+};
+
+/*
  * Update/delete action.
  * Defaults to UPACT_NONE (no special action).
  */
@@ -192,6 +203,7 @@ struct	field {
 	char		  *name; /* column name */
 	struct ref	  *ref; /* "foreign key" ref (or null) */
 	struct eref	  *eref;  /* enumeration ref (or null) */
+	struct bref	  *bref;  /* enumeration ref (or null) */
 	char		  *doc; /* documentation */
 	struct pos	   pos; /* parse point */
 	enum ftype	   type; /* type of column */
@@ -386,6 +398,7 @@ struct	search {
 	struct strct	   *parent; /* up-reference */
 	enum stype	    type; /* type of search */
 	int64_t		    limit; /* query limit or zero (unset) */
+	int64_t		    offset; /* query offset or zero (unset) */
 	struct rolemap	   *rolemap; /* roles assigned to search */
 	unsigned int	    flags; 
 #define	SEARCH_IS_UNIQUE    0x01 /* has a rowid or unique somewhere */

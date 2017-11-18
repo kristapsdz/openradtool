@@ -66,6 +66,7 @@ static	const char *const coltypes[FTYPE__MAX] = {
 	"ksql_stmt_str", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 	"ksql_stmt_int", /* FTYPE_ENUM */
+	"ksql_stmt_int", /* FTYPE_BITFIELD */
 };
 
 static	const char *const puttypes[FTYPE__MAX] = {
@@ -79,6 +80,7 @@ static	const char *const puttypes[FTYPE__MAX] = {
 	"kjson_putstringp", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 	"kjson_putintp", /* FTYPE_ENUM */
+	"kjson_putintp", /* FTYPE_BITFIELD */
 };
 
 /*
@@ -95,6 +97,7 @@ static	const char *const bindtypes[FTYPE__MAX] = {
 	"ksql_bind_str", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 	"ksql_bind_int", /* FTYPE_ENUM */
+	"ksql_bind_int", /* FTYPE_BITFIELD */
 };
 
 /*
@@ -111,6 +114,7 @@ static	const char *const validtypes[FTYPE__MAX] = {
 	"kvalid_email", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 	"kvalid_int", /* FTYPE_ENUM */
+	"kvalid_int", /* FTYPE_BITFIELD */
 };
 
 /*
@@ -1140,6 +1144,7 @@ gen_func_valid_types(const struct field *f, const struct fvalid *v)
 	switch (f->type) {
 	case (FTYPE_BIT):
 	case (FTYPE_ENUM):
+	case (FTYPE_BITFIELD):
 	case (FTYPE_EPOCH):
 	case (FTYPE_INT):
 		printf("\tif (p->parsed.i %s %" PRId64 ")\n"
@@ -1540,7 +1545,7 @@ gen_stmt_joins(const struct strct *orig,
 				break;
 		assert(NULL != a);
 
-		printf(" INNER JOIN %s AS %s ON %s.%s=%s.%s",
+		printf("\n\t\tINNER JOIN %s AS %s ON %s.%s=%s.%s",
 			f->ref->tstrct, a->alias,
 			a->alias, f->ref->tfield,
 			NULL == parent ? p->name : parent->alias,
@@ -1630,6 +1635,8 @@ gen_stmt(const struct strct *p)
 		}
 		if (STYPE_SEARCH != s->type && s->limit > 0)
 			printf(" LIMIT %" PRId64, s->limit);
+		if (STYPE_SEARCH != s->type && s->offset > 0)
+			printf(" OFFSET %" PRId64, s->offset);
 
 		first = 1;
 		if ( ! TAILQ_EMPTY(&s->ordq))

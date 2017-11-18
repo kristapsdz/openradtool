@@ -966,6 +966,27 @@ parse_config_field_info(struct parse *p, struct field *fd)
 }
 
 /*
+ * Parse information about bitfield type.
+ * This just includes the bitfield name.
+ */
+static void
+parse_field_bitfield(struct parse *p, struct field *fd)
+{
+
+	if (TOK_IDENT != parse_next(p)) {
+		parse_errx(p, "expected bitfield name");
+		return;
+	}
+
+	if (NULL == (fd->bref = calloc(1, sizeof(struct bref))))
+		err(EXIT_FAILURE, NULL);
+	if (NULL == (fd->bref->name = strdup(p->last.string)))
+		err(EXIT_FAILURE, NULL);
+
+	fd->bref->parent = fd;
+}
+
+/*
  * Parse information about an enumeration type.
  * This just includes the enumeration name.
  */
@@ -1100,6 +1121,13 @@ parse_field(struct parse *p, struct field *fd)
 	if (0 == strcasecmp(p->last.string, "password") ||
 	    0 == strcasecmp(p->last.string, "passwd")) {
 		fd->type = FTYPE_PASSWORD;
+		parse_config_field_info(p, fd);
+		return;
+	}
+	/* bitfield */
+	if (0 == strcasecmp(p->last.string, "bits")) {
+		fd->type = FTYPE_BITFIELD;
+		parse_field_bitfield(p, fd);
 		parse_config_field_info(p, fd);
 		return;
 	}
@@ -1382,6 +1410,17 @@ parse_config_search_params(struct parse *p, struct search *s)
 			}
 			s->limit = p->last.integer;
 			parse_next(p);
+			if (TOK_COMMA == p->lasttype) {
+				if (TOK_INTEGER != parse_next(p)) {
+					parse_errx(p, "expected offset value");
+					break;
+				} else if (p->last.integer <= 0) {
+					parse_errx(p, "expected offset >0");
+					break;
+				}
+				s->offset = p->last.integer;
+				parse_next(p);
+			}
 		} else if (0 == strcasecmp("order", p->last.string)) {
 			parse_next(p);
 			parse_config_order_terms(p, s);
@@ -2571,6 +2610,10 @@ parse_free_field(struct field *p)
 	if (NULL != p->eref) {
 		free(p->eref->ename);
 		free(p->eref);
+	}
+	if (NULL != p->bref) {
+		free(p->bref->name);
+		free(p->bref);
 	}
 	free(p->doc);
 	free(p->name);

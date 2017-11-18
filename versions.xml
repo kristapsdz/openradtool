@@ -4,12 +4,18 @@
 		<header>
 			<h3>0.3.5</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2017-11-14">ongoing</time>
+			<time datetime="2017-11-18">2017-11-18</time>
 		</header>
 		<aside>
 			<p>
-				Add the <code>order</code> statement for searching (inprogress).
-				Add the <code>jslabel</code> for labelling enumeration <code>format</code> functions.
+				Lots of new features!
+				Add the <code>order</code> statement for ordering <code>list</code> and <code>iterate</code> results.
+				It can also act as a way to define single results over non-unique fields by combining the <code>search</code>
+				statement with <code>limit</code>.
+				Allow for limit offsets by extending the <code>limit</code> syntax.
+				Lastly, introduce the <code>bit</code> bit index type and the <code>bits</code> top-level type for working with
+				bit-fields.
+				All of these are documented in <a href="kwebapp.5.html">kwebapp(5)</a>.
 			</p> 
 		</aside>
 	</article>

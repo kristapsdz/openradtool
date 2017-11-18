@@ -569,6 +569,13 @@ check_searchtype(const struct strct *p)
 	const struct sref *sr;
 
 	TAILQ_FOREACH(srch, &p->sq, entries) {
+		/*
+		 * FIXME: this should be possible if we have
+		 *   search: limit 1
+		 * This uses random ordering (which should be warned
+		 * about as well), but it's sometimes desirable like in
+		 * the case of having a single-entry table.
+		 */
 		if (STYPE_SEARCH == srch->type &&
 		    TAILQ_EMPTY(&srch->sntq)) {
 			gen_errx(&srch->pos, "unique result search "

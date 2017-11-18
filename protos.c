@@ -40,7 +40,7 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	"const char *", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 	NULL, /* FTYPE_ENUM */
-	"int64_t", /* FTYPE_BITFIELD */
+	"int64_t ", /* FTYPE_BITFIELD */
 };
 
 static	const char *const optypes[OPTYPE__MAX] = {

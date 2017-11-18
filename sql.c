@@ -39,6 +39,7 @@ static	const char *const realtypes[FTYPE__MAX] = {
 	"email", /* FTYPE_EMAIL */
 	"struct", /* FTYPE_STRUCT */
 	"enum", /* FTYPE_ENUM */
+	"bitfield", /* FTYPE_BITFIELD */
 };
 
 static	const char *const upacts[UPACT__MAX] = {
@@ -60,6 +61,7 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	"TEXT", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 	"INTEGER", /* FTYPE_ENUM */
+	"INTEGER", /* FTYPE_BITFIELD */
 };
 
 static void gen_warnx(const struct pos *, const char *, ...)
@@ -257,11 +259,13 @@ gen_diff_field(const struct field *f, const struct field *df)
 		if ((FTYPE_EPOCH == f->type ||
 		     FTYPE_INT == f->type ||
 		     FTYPE_BIT == f->type ||
-		     FTYPE_ENUM == f->type) &&
+		     FTYPE_ENUM == f->type ||
+		     FTYPE_BITFIELD == f->type) &&
 		    (FTYPE_EPOCH == df->type ||
 		     FTYPE_INT == df->type ||
 		     FTYPE_BIT == df->type ||
-		     FTYPE_ENUM == df->type)) {
+		     FTYPE_ENUM == df->type ||
+		     FTYPE_BITFIELD == df->type)) {
 			diff_warnx(&f->pos, &df->pos, 
 				"change between integer "
 				"alias types: %s to %s",

@@ -70,6 +70,7 @@ gen_strct_field(const struct field *p)
 		printf("\ttime_t\t %s;\n", p->name);
 		break;
 	case (FTYPE_BIT):
+	case (FTYPE_BITFIELD):
 	case (FTYPE_INT):
 		printf("\tint64_t\t %s;\n", p->name);
 		break;

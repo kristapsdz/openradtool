@@ -200,6 +200,26 @@ resolve_field_target(struct field *f, struct strctq *q)
 }
 
 /*
+ * Resolve a bitfield.
+ * This returns zero if the resolution fails, non-zero otherwise.
+ * In the success case, it sets the bitfield link.
+ */
+static int
+resolve_field_bitfield(struct bref *ref, struct bitfq *q)
+{
+	struct bitf	*b;
+
+	TAILQ_FOREACH(b, q, entries)
+		if (0 == strcasecmp(b->name, ref->name)) {
+			ref->bitf = b;
+			return(1);
+		}
+
+	gen_errx(&ref->parent->pos, "unknown bitfield reference");
+	return(0);
+}
+
+/*
  * Resolve an enumeration.
  * This returns zero if the resolution fails, non-zero otherwise.
  * In the success case, it sets the enumeration link.
@@ -1096,6 +1116,9 @@ parse_link(struct config *cfg)
 				return(0);
 			if (NULL != f->eref &&
 			    ! resolve_field_enum(f->eref, &cfg->eq))
+				return(0);
+			if (NULL != f->bref &&
+			    ! resolve_field_bitfield(f->bref, &cfg->bq))
 				return(0);
 		}
 		TAILQ_FOREACH(u, &p->uq, entries)

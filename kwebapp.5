@@ -32,28 +32,28 @@ Configurations have the following rough structure:
 .Bd -literal -offset indent
 config :== [ enum | bitfield | struct ]+ [ roles ]?
 roles :== "roles" "{"
-    [ "role" roledata ";" ]+
-  "};"
+  [ "role" roledata ";" ]+
+"};"
 struct :== "struct" structname "{"
-    [ "comment" string_literal ";" ]?
-    [ "delete" deletedata ";" ]*
-    [ "field" fielddata ";" ]+
-    [ "insert" ";" ]*
-    [ "iterate" searchdata ";" ]*
-    [ "list" searchdata ";" ]*
-    [ "roles" roledata ";" ]*
-    [ "search" searchdata ";" ]*
-    [ "unique" uniquedata ";" ]*
-    [ "update" updatedata ";" ]*
-  "};"
+  [ "comment" string_literal ";" ]?
+  [ "delete" deletedata ";" ]*
+  [ "field" fielddata ";" ]+
+  [ "insert" ";" ]*
+  [ "iterate" searchdata ";" ]*
+  [ "list" searchdata ";" ]*
+  [ "roles" roledata ";" ]*
+  [ "search" searchdata ";" ]*
+  [ "unique" uniquedata ";" ]*
+  [ "update" updatedata ";" ]*
+"};"
 enum :== "enum" enumname "{"
-    [ "comment" string_literal ";" ]?
-    [ "item" enumdata ";" ]+
-  "};"
+  [ "comment" string_literal ";" ]?
+  [ "item" enumdata ";" ]+
+"};"
 bitfield :== "bits" bitsname "{"
-    [ "comment" string_literal ";" ]?
-    [ "item" bitsdata ";" ]+
-  "};"
+  [ "comment" string_literal ";" ]?
+  [ "item" bitsdata ";" ]+
+"};"
 .Ed
 .Pp
 In short, one or more structure definitions, zero or more enumerations
@@ -116,7 +116,7 @@ and extend to the end of the line.
 .Bd -literal -offset indent
 # This is my structure.
 
-struct ident { 
+struct ident {
   field id int comment "\e"Literal\e"."; # End of line.
 };
 .Ed
@@ -159,17 +159,17 @@ then the unique identifier of the structure, then elements within the
 curly braces.
 .Bd -literal -offset indent
 "struct" structname "{"
-    [ "comment" string_literal ";" ]?
-    [ "delete" deletedata ";" ]*
-    [ "field" fielddata ";" ]+
-    [ "insert" ";" ]?
-    [ "iterate" searchdata ";" ]*
-    [ "list" searchdata ";" ]*
-    [ "roles" roledata ";" ]*
-    [ "search" searchdata ";" ]*
-    [ "unique" uniquedata ";" ]*
-    [ "update" updatedata ";" ]*
-  "};"
+  [ "comment" string_literal ";" ]?
+  [ "delete" deletedata ";" ]*
+  [ "field" fielddata ";" ]+
+  [ "insert" ";" ]?
+  [ "iterate" searchdata ";" ]*
+  [ "list" searchdata ";" ]*
+  [ "roles" roledata ";" ]*
+  [ "search" searchdata ";" ]*
+  [ "unique" uniquedata ";" ]*
+  [ "update" updatedata ";" ]*
+"};"
 .Ed
 .Pp
 The elements may consist of one or more
@@ -214,7 +214,7 @@ and, optionally, a
 .Cm type
 then additional information.
 .Bd -literal -offset indent
-"field" [name | name:target] [ type [typeinfo]* ]? ";"
+"field" name[":" target]? [type [typeinfo]*]? ";"
 .Ed
 .Pp
 The
@@ -234,6 +234,51 @@ The
 if specified,
 may be one of the following:
 .Bl -tag -width Ds
+.It Cm bit
+Native integer constained to 64-bit bit index (that is, 0\(en63).
+This is usually used to create a bit mask: for the value 0, one would
+set
+.Li 1u << 0
+for some input or output value.
+For entire bitfields, see
+.Cm bits .
+.It Cm bits Ar name
+Native type mapping into a 64-bit integer, constrained to valid
+bitfield
+.Ar name .
+See
+.Sx Bitfields
+for more documentation.
+.It Cm blob
+Native type mapping into a fixed-size binary buffer.
+.It Cm email
+Native type mapping into a nil-terminated character string, constrained
+to e-mail address format.
+.It Cm enum Ar name
+Native type mapping into a 64-bit integer, constrained to valid
+enumeration values of
+.Ar name .
+See
+.Sx Enumerations
+for more documentation.
+.It Cm int
+Native type mapping into a 64-bit integer,
+.Vt int64_t .
+.It Cm password
+Native type mapping into a nil-terminated character string.
+This field is special in that it converts an input password into a hash
+before insertion into the database.
+It also can properly search for password hashes by running the hash
+verification after extraction.
+Thus, there is a difference between a password field that is being
+inserted or updated (as a password, which is hashed) and extracted using
+a search (as a hash).
+.It Cm real
+Native type mapping into a double-precision float.
+.It Cm epoch
+Native type mapping into a 64-bit integer, constrained to valid
+.Vt time_t
+values and similarly represented in the C API.
 .It Cm struct Ar field
 A non-native type filled in by joining the given
 .Ar field
@@ -251,49 +296,9 @@ may be marked with
 .Cm null ,
 but this involves a not-inconsiderable performance hit when querying
 (directly or indirectly) on the structure.
-.It Cm real
-Native type mapping into a double-precision float.
-.It Cm blob
-Native type mapping into a fixed-size binary buffer.
-.It Cm int
-Native type mapping into a 64-bit integer,
-.Vt int64_t .
-.It Cm enum
-Native type mapping into a 64-bit integer, constrained to valid
-enumeration values.
-Represented in the C API as an
-.Vt enum name ,
-with the name as given.
-See
-.Sx Enumerations
-for more documentation.
-.It Cm bits
-Native type mapping into a 64-bit integer, constrained to valid
-bitfield bits.
-See
-.Sx Bitfields
-for more documentation.
-.\" .It Cm bit
-.\" Native integer as a 64-bit bit mask (that is, in 0\(en64).
-.It Cm epoch
-Native type mapping into a 64-bit integer, constrained to valid
-.Vt time_t
-values and similarly represented in the C API.
 .It Cm text
 Native type mapping into a nil-terminated character string, usually
 encoded in UTF-8.
-.It Cm email
-Native type mapping into a nil-terminated character string, constrained
-to e-mail address format.
-.It Cm password
-Native type mapping into a nil-terminated character string.
-This field is special in that it converts an input password into a hash
-before insertion into the database.
-It also can properly search for password hashes by running the hash
-verification after extraction.
-Thus, there is a difference between a password field that is being
-inserted or updated (as a password, which is hashed) and extracted using
-a search (as a hash).
 .El
 .Pp
 The
@@ -378,9 +383,9 @@ field type to a specific set of constant values.
 They are defined as follows:
 .Bd -literal -offset indent
 "enum" enumname "{"
-    [ "comment" string_literal ";" ]?
-    [ "item" name value [ comment string_literal ]? ";" ]+
-  "};"
+  [ "comment" string_literal ";" ]?
+  [ "item" name value [params]* ";" ]+
+"};"
 .Ed
 .Pp
 The enumeration
@@ -393,11 +398,22 @@ The
 .Cm value
 is the named constant's value expressed as an integer.
 It must also be unique within the enumeration object.
+Parameters may be any of the following:
+.Bd -literal -offset indent
+"comment" string_literal
+| "jslabel" string_literal
+.Ed
+.Pp
+The item's
+.Cm comment
+is used to document the field, while
+.Cm jslabel
+is used only for formatting JavaScript output.
 .Pp
 The above enumeration would be used in an example field definition as
 follows:
 .Bd -literal -offset indent
-  field foo enum enumname;
+field foo enum enumname;
 .Ed
 .Pp
 This would constrain validation routines to only recognise values
@@ -409,9 +425,9 @@ field type to a bit-wise mask of constant values.
 They are defined as follows:
 .Bd -literal -offset indent
 "bits" bitsname "{"
-    [ "comment" string_literal ";" ]?
-    [ "item" name bitidx [ comment string_literal ]? ";" ]+
-  "};"
+  [ "comment" string_literal ";" ]?
+  [ "item" name bitidx [params]* ";" ]+
+"};"
 .Ed
 .Pp
 The name must be unique among all enumerations, structures, and other
@@ -424,11 +440,22 @@ The
 is the named constant's bit index from zero, so a value of zero refers
 to the first bit, one to the second bit, and so on.
 Each must be unique within the bitfield.
+Parameters may be any of the following:
+.Bd -literal -offset indent
+"comment" string_literal
+| "jslabel" string_literal
+.Ed
+.Pp
+The item's
+.Cm comment
+is used to document the field, while
+.Cm jslabel
+is used only for formatting JavaScript output.
 .Pp
 The above bitfield would be used in an example field definition as
 follows:
 .Bd -literal -offset indent
-  field foo bits bitsname;
+field foo bits bitsname;
 .Ed
 .Ss Queries
 There are three types of searches that may be defined to produce
@@ -504,9 +531,9 @@ The
 .Cm params
 search parameters are a series of key-value pairs:
 .Bd -literal -offset indent
-"name" searchname 
-  | "limit" limitval["," offsetval]? 
-  | "comment" string_literal
+"name" searchname
+| "limit" limitval["," offsetval]?
+| "comment" string_literal
 .Ed
 .Pp
 The available search parameter keys are as follows:
@@ -634,8 +661,8 @@ when a top-level
 block is defined.
 .Bd -literal -offset indent
 "roles" "{"
-     [ "role" name ["{" "role" name... ";" "}"]* ";" ]*
-  "};"
+   [ "role" name ["{" "role" name... ";" "}"]* ";" ]*
+"};"
 .Ed
 .Pp
 This nested structure defines the role tree.

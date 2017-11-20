@@ -1546,7 +1546,7 @@ gen_stmt_joins(const struct strct *orig, const struct strct *p,
 		assert(NULL != a);
 
 		if (0 == *count)
-			putchar('"');
+			printf(" \"");
 
 		(*count)++;
 		printf("\n\t\t\"INNER JOIN %s AS %s ON %s.%s=%s.%s\"",

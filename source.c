@@ -1549,7 +1549,7 @@ gen_stmt_joins(const struct strct *orig, const struct strct *p,
 			printf(" \"");
 
 		(*count)++;
-		printf("\n\t\t\"INNER JOIN %s AS %s ON %s.%s=%s.%s\"",
+		printf("\n\t\t\"INNER JOIN %s AS %s ON %s.%s=%s.%s \"",
 			f->ref->tstrct, a->alias,
 			a->alias, f->ref->tfield,
 			NULL == parent ? p->name : parent->alias,

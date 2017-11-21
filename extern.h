@@ -167,6 +167,7 @@ struct	bitf {
 	char		 *name; /* name of bitfield */
 	char		 *cname; /* capitalised name */
 	char		 *doc; /* documentation */
+	char		 *jslabel; /* "unset" jslabel */
 	struct pos	  pos; /* parse point */
 	struct bitidxq	  bq; /* bit indices */
 	TAILQ_ENTRY(bitf) entries;

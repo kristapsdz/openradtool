@@ -2215,6 +2215,24 @@ parse_bitidx(struct parse *p, struct bitf *b)
 				return;
 			}
 			continue;
+		} else if (0 == strcasecmp(p->last.string, "unset")) {
+			if (TOK_IDENT != parse_next(p) ||
+			    strcasecmp(p->last.string, "jslabel")) {
+				parse_errx(p, "expected \"jslabel\"");
+				return;
+			} else if (TOK_LITERAL != parse_next(p)) {
+				parse_errx(p, "expected quoted string");
+				return;
+			}
+			free(b->jslabel);
+			b->jslabel = strdup(p->last.string);
+			if (NULL == b->jslabel)
+				err(EXIT_FAILURE, NULL);
+			if (TOK_SEMICOLON != parse_next(p)) {
+				parse_errx(p, "expected semicolon");
+				return;
+			}
+			continue;
 		} else if (strcasecmp(p->last.string, "item")) {
 			parse_errx(p, "unknown bitfield data type");
 			return;
@@ -2801,6 +2819,7 @@ parse_free_bitfield(struct bitf *bf)
 		free(bi);
 	}
 	free(bf->name);
+	free(bf->jslabel);
 	free(bf->cname);
 	free(bf->doc);
 	free(bf);

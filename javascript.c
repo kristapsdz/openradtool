@@ -506,9 +506,10 @@ gen_javascript(const struct config *cfg)
 		       "\t\t\t}\n"
 		       "\t\t\tv = parseInt(val);\n"
 		       "\t\t\tif (0 === v) {\n"
-		       "\t\t\t\t_replcl(e, name, \'none\', 0);\n"
+		       "\t\t\t\t_replcl(e, name, \'%s\', 0);\n"
 		       "\t\t\t\treturn;\n"
-		       "\t\t\t}\n");
+		       "\t\t\t}\n",
+		       NULL == bf->jslabel ? "none" : bf->jslabel);
 		TAILQ_FOREACH(bi, &bf->bq, entries)
 			printf("\t\t\tif (%s.BITF_%s & v)\n"
 		       	       "\t\t\t\tstr += "

@@ -19,12 +19,15 @@ digraph {
 	bin -> js;
 	bin -> sql;
 
-	{ rank=same; ksql; kcgi; }
+	{ rank=same; ksql; kcgi; sqlite1; }
 	{ rank=same; sqlite; }
 
+	sqlite1[label="sqlite(1)"];
 	kcgi[label="kcgi(3)"];
 	ksql[label="ksql(3)"];
-	sqlite[label="sqlite3(3)"];
+	sqlite[label="sqlite(3)"];
+
+	sql -> sqlite1[style="dotted"];
 
 	src -> ksql[dir="both"; style="dotted"];
 	src -> kcgi[dir="both"; style="dotted"];

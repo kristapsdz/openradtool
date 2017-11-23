@@ -2,6 +2,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.3.7</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-11-22">2017-11-22</time>
+		</header>
+		<aside>
+			<p>
+				Bug-fixes in created C code to account for line-breaking long SQL statements.
+				(This is an in-progress effort.)
+			</p> 
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.3.6</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-11-18">2017-11-18</time>

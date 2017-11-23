@@ -53,6 +53,7 @@ enum :== "enum" enumname "{"
 bitfield :== "bits" bitsname "{"
   [ "comment" string_literal ";" ]?
   [ "item" bitsdata ";" ]+
+  [ "unset" "jslabel" quoted_string ";" ]+
 "};"
 .Ed
 .Pp
@@ -391,10 +392,19 @@ They are defined as follows:
   [ "item" name value [params]* ";" ]+
 "};"
 .Ed
+For example,
+.Bd -literal -offset indent
+enum enumname { 
+  item "val1" 1 jslabel "Value one"; 
+};
+.Ed
 .Pp
 The enumeration
 .Cm enumname
 must be unique among all enumerations and structures.
+.Pp
+Items define enumeration values, their constant values, and
+documentation.
 Each item's
 .Cm name
 must be unique within an enumeration.
@@ -431,11 +441,22 @@ They are defined as follows:
 "bits" bitsname "{"
   [ "comment" string_literal ";" ]?
   [ "item" name bitidx [params]* ";" ]+
+  [ "unset" "jslabel" quoted_string ";" ]+
 "};"
+.Ed
+.Pp
+For example,
+.Bd -literal -offset indent
+bits bitsname { 
+  item "bit1" 0 jslabel "Bit one"; 
+  unset jslabel "No bits"; 
+};
 .Ed
 .Pp
 The name must be unique among all enumerations, structures, and other
 bitfields.
+.Pp
+Items define bits, their values, and documentation.
 Each item's
 .Cm name
 must be unique within a bitfield.
@@ -461,6 +482,14 @@ follows:
 .Bd -literal -offset indent
 field foo bits bitsname;
 .Ed
+.Pp
+The bitfield's
+.Cm comment
+is passed into the output media, and the
+.Cm unset
+statement serves to provide a
+.Cm jslabel
+for when no bits are set (i.e., the field evaluates to zero).
 .Ss Queries
 There are three types of searches that may be defined to produce
 searching functions on structures:

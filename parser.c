@@ -1164,6 +1164,70 @@ parse_field(struct parse *p, struct field *fd)
 }
 
 /*
+ * Like parse_config_search_terms() but for distinction terms.
+ * If just a period, the distinction is for the whole result set.
+ * Otherwise, it's for a specific field we'll look up later.
+ *
+ *  "." | field["." field]*
+ */
+static void
+parse_config_distinct_term(struct parse *p, struct search *srch)
+{
+	struct dref	*df;
+	struct dstnct	*d;
+	size_t		 sz = 0, nsz;
+
+	if (NULL == (d = calloc(1, sizeof(struct dstnct))))
+		err(EXIT_FAILURE, NULL);
+
+	srch->dst = d;
+	d->parent = srch;
+	parse_point(p, &d->pos);
+	TAILQ_INIT(&d->drefq);
+
+	if (TOK_PERIOD == p->lasttype) {
+		parse_next(p);
+		return;
+	}
+
+	while ( ! PARSE_STOP(p)) {
+		if (TOK_IDENT != p->lasttype) {
+			parse_errx(p, "expected distinct field");
+			return;
+		}
+		if (NULL == (df = calloc(1, sizeof(struct dref))))
+			err(EXIT_FAILURE, NULL);
+		if (NULL == (df->name = strdup(p->last.string)))
+			err(EXIT_FAILURE, NULL);
+		TAILQ_INSERT_TAIL(&d->drefq, df, entries);
+		parse_point(p, &df->pos);
+		df->parent = d;
+
+		/* 
+		 * New size of the canonical name: if we're nested, then
+		 * we need the full stop in there as well.
+		 */
+
+		nsz = sz + strlen(df->name) + 
+			(0 == sz ? 0 : 1) + 1;
+
+		d->cname = realloc(d->cname, nsz);
+		if (NULL == d->cname)
+			err(EXIT_FAILURE, NULL);
+		if (0 == sz) 
+			d->cname[0] = '\0';
+		else
+			strlcat(d->cname, ".", nsz);
+		strlcat(d->cname, df->name, nsz);
+		sz = nsz;
+
+		if (TOK_PERIOD != parse_next(p)) 
+			break;
+		parse_next(p);
+	}
+}
+
+/*
  * Like parse_config_search_terms() but for order terms.
  *
  *  field[.field]* ["asc" | "desc"]?
@@ -1359,6 +1423,7 @@ parse_config_search_terms(struct parse *p, struct search *srch)
  *
  *   [ "name" name |
  *     "comment" quoted_string |
+ *     "distinct" distinct_struct |
  *     "order" order_fields ]* ";"
  */
 static void
@@ -1371,12 +1436,12 @@ parse_config_search_params(struct parse *p, struct search *s)
 
 	while ( ! PARSE_STOP(p)) {
 		if (TOK_IDENT != p->lasttype) {
-			parse_errx(p, "expected parameter name");
+			parse_errx(p, "expected query parameter name");
 			break;
 		}
 		if (0 == strcasecmp("name", p->last.string)) {
 			if (TOK_IDENT != parse_next(p)) {
-				parse_errx(p, "expected search name");
+				parse_errx(p, "expected query name");
 				break;
 			}
 
@@ -1386,11 +1451,10 @@ parse_config_search_params(struct parse *p, struct search *s)
 				if (NULL == ss->name ||
 				    strcasecmp(ss->name, p->last.string))
 					continue;
-				parse_errx(p, "duplicate search name");
+				parse_errx(p, "duplicate query name");
 				break;
 			}
 
-			/* XXX: warn of prior */
 			free(s->name);
 			s->name = strdup(p->last.string);
 			if (NULL == s->name)
@@ -1428,6 +1492,13 @@ parse_config_search_params(struct parse *p, struct search *s)
 				parse_next(p);
 				parse_config_order_terms(p, s);
 			}
+		} else if (0 == strcasecmp("distinct", p->last.string)) {
+			if (NULL != s->dst) {
+				parse_errx(p, "distinct already set");
+				return;
+			}
+			parse_next(p);
+			parse_config_distinct_term(p, s);
 		} else {
 			parse_errx(p, "unknown search parameter");
 			break;
@@ -1719,6 +1790,7 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 
 	if (TOK_COLON == p->lasttype)
 		parse_config_search_params(p, srch);
+
 	assert(TOK_SEMICOLON == p->lasttype || PARSE_STOP(p));
 }
 
@@ -2649,9 +2721,20 @@ parse_free_search(struct search *p)
 	struct sent	*sent;
 	struct ord	*ord;
 	struct oref	*oref;
+	struct dref	*d;
 
 	if (NULL == p)
 		return;
+
+	if (NULL != p->dst) {
+		while (NULL != (d = TAILQ_FIRST(&p->dst->drefq))) {
+			TAILQ_REMOVE(&p->dst->drefq, d, entries);
+			free(d->name);
+			free(d);
+		}
+		free(p->dst->cname);
+		free(p->dst);
+	}
 
 	while (NULL != (ord = TAILQ_FIRST(&p->ordq))) {
 		TAILQ_REMOVE(&p->ordq, ord, entries);

@@ -1462,7 +1462,7 @@ gen_enum(const struct strct *p)
  * See gen_stmt_joins().
  */
 static void
-gen_stmt_schema(const struct strct *orig, 
+gen_stmt_schema(const struct strct *orig, int first,
 	const struct strct *p, const char *pname)
 {
 	const struct field *f;
@@ -1476,14 +1476,16 @@ gen_stmt_schema(const struct strct *orig,
 	 * Otherwise, use the table name itself.
 	 */
 
+	printf("\"%s ", 0 == first ? ",\"" : "");
+
 	if (NULL != pname) {
 		TAILQ_FOREACH(a, &orig->aq, entries)
 			if (0 == strcasecmp(a->name, pname))
 				break;
 		assert(NULL != a);
-		printf("\",\" DB_SCHEMA_%s(%s) ", p->cname, a->alias);
+		printf("DB_SCHEMA_%s(%s) ", p->cname, a->alias);
 	} else
-		printf("\" DB_SCHEMA_%s(%s) ", p->cname, p->name);
+		printf("DB_SCHEMA_%s(%s) ", p->cname, p->name);
 
 	/*
 	 * Recursive step.
@@ -1505,7 +1507,7 @@ gen_stmt_schema(const struct strct *orig,
 		} else if (NULL == (name = strdup(f->name)))
 			err(EXIT_FAILURE, NULL);
 
-		gen_stmt_schema(orig, 
+		gen_stmt_schema(orig, 0,
 			f->ref->target->parent, name);
 		free(name);
 	}
@@ -1592,7 +1594,7 @@ gen_stmt(const struct strct *p)
 			printf("\t/* STMT_%s_BY_UNIQUE_%s */\n"
 			       "\t\"SELECT ",
 				p->cname, f->name);
-			gen_stmt_schema(p, p, NULL);
+			gen_stmt_schema(p, 1, p, NULL);
 			printf("\" FROM %s", p->name);
 			rc = 0;
 			gen_stmt_joins(p, p, NULL, &rc);
@@ -1614,7 +1616,15 @@ gen_stmt(const struct strct *p)
 		printf("\t/* STMT_%s_BY_SEARCH_%zu */\n"
 		       "\t\"SELECT ",
 			p->cname, pos++);
-		gen_stmt_schema(p, p, NULL);
+
+		if (s->dst) {
+			printf("DISTINCT ");
+			gen_stmt_schema(p, 1,
+				s->dst->strct, 
+				s->dst->cname);
+		} else
+			gen_stmt_schema(p, 1, p, NULL);
+
 		printf("\" FROM %s", p->name);
 		rc = 0;
 		gen_stmt_joins(p, p, NULL, &rc);

@@ -206,16 +206,25 @@ print_func_db_search(const struct search *s, int priv, int decl)
 {
 	const struct sent *sent;
 	const struct sref *sr;
+	const struct strct *retstr;
 	size_t	 pos = 1;
 	int	 col = 0;
 
+	/* 
+	 * If we have a "distinct" clause, we use that to generate
+	 * responses, not the structure itself.
+	 */
+
+	retstr = NULL != s->dst ? 
+		s->dst->strct : s->parent;
+
 	if (STYPE_SEARCH == s->type)
 		col += printf("struct %s *%sdb_%s_get", 
-			s->parent->name, decl ? "" : "\n", 
+			retstr->name, decl ? "" : "\n", 
 			s->parent->name);
 	else if (STYPE_LIST == s->type)
 		col += printf("struct %s_q *%sdb_%s_list", 
-			s->parent->name, decl ? "" : "\n", 
+			retstr->name, decl ? "" : "\n", 
 			s->parent->name);
 	else
 		col += printf("void%sdb_%s_iterate",
@@ -238,7 +247,7 @@ print_func_db_search(const struct search *s, int priv, int decl)
 
 	if (STYPE_ITERATE == s->type)
 		col += printf(", %s_cb cb, void *arg", 
-			s->parent->name);
+			retstr->name);
 
 	/* Don't accept input for unary operation. */
 

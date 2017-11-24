@@ -10,6 +10,15 @@
 			<p>
 				Lift the restriction on alias counts (total number of inner joins) from 26 to 17576.
 				This can easily be expanded further: the limitation is purely for simplicity's sake.
+			</p>
+			<p>
+				Add the <code>distinct</code> field to queries.
+				This field, in its basic form, enforced the SQL <code>DISTINCT</code> keyword.
+				However, it can also be used for nested fields in a structure, effectively only returning distinct rows of
+				nested structures.
+				The canonical example is returning only distinct album fields that are <code>struct</code> foreign key
+				references of a track table.
+				All of this is documented in <a href="kwebapp.5.html">kwebapp(5)</a>.
 			</p> 
 		</aside>
 	</article>

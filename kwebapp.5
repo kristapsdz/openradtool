@@ -103,6 +103,16 @@ beginning with a letter.
 There are many disallowed or reserved identifiers.
 There are also unique name constraints to consider (e.g., no two
 structures can have the same name, etc.).
+.Pp
+An example identifier:
+.Bd -literal -offset indent
+enum foobar { ... };
+.Ed
+.Pp
+A non-confirming identifier may be:
+.Bd -literal -offset indent
+enum foo_bar { ... };
+.Ed
 .Ss String literals
 Another comment syntactic element is the string literal: a double-quoted
 string where internal double quotes may be escaped by a single preceding
@@ -305,6 +315,7 @@ encoded in UTF-8.
 .Pp
 The
 .Cm typeinfo
+provides further information (or operations) regarding the field, and
 may consist of the following:
 .Bl -tag -width Ds
 .It Cm actdel Ar action
@@ -392,6 +403,7 @@ They are defined as follows:
   [ "item" name value [params]* ";" ]+
 "};"
 .Ed
+.Pp
 For example,
 .Bd -literal -offset indent
 enum enumname { 
@@ -415,7 +427,7 @@ It must also be unique within the enumeration object.
 Parameters may be any of the following:
 .Bd -literal -offset indent
 "comment" string_literal
-| "jslabel" string_literal
+"jslabel" string_literal
 .Ed
 .Pp
 The item's
@@ -468,7 +480,7 @@ Each must be unique within the bitfield.
 Parameters may be any of the following:
 .Bd -literal -offset indent
 "comment" string_literal
-| "jslabel" string_literal
+"jslabel" string_literal
 .Ed
 .Pp
 The item's
@@ -564,13 +576,14 @@ The
 .Cm params
 search parameters are a series of key-value pairs:
 .Bd -literal -offset indent
+"comment" string_literal
+"distinct" ["." | [field ["." field]*]]
+"limit" limitval["," offsetval]?
 "name" searchname
-| "limit" limitval["," offsetval]?
-| "order" term [type]? ["," term [type]?]*
-| "comment" string_literal
+"order" term [type]? ["," term [type]?]*
 .Ed
 .Pp
-The available search parameter keys are as follows:
+The available parameter keys are as follows:
 .Bl -tag -width Ds
 .It Cm comment
 String literal included in the API comments for the function.
@@ -583,6 +596,18 @@ singleton result statement as a way to limit non-unique results to a
 single result.
 If followed by a comma, the next term is used to offset the query.
 This is usually used to page through results.
+.It Cm distinct
+Return only distinct rows.
+If only a period
+.Pq Dq \&.
+follows the keyword, then the distinct applies to the entire returned
+structure.
+If a nested structure follows the keyword, only distinct rows of the
+given structure are returned by the search operation.
+This does not work with
+.Cm null
+structures; and moreover, disallows searching by fields of type
+.Cm password .
 .It Cm name
 A unique identifier used in the C API for the search function.
 .It Cm order
@@ -684,7 +709,8 @@ Default behaviour of setting to a value (x = ?).
 .Pp
 The optional parameters may be one of
 .Bd -literal -offset indent
-"name" name | "comment" string_literal
+"comment" string_literal
+"name" name
 .Ed
 .Pp
 The

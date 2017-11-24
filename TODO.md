@@ -1,4 +1,8 @@
-What follows is a list of features needing imminent work.  The system is
+What follows is a list of features needing imminent work.
+
+- *No immediate needs.*
+
+What follows is a list of features needing soon-ish work.  The system is
 usable without them, but they'll soon be required.
 
 - Make "db" prefix not be hardcoded.

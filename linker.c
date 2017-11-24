@@ -418,6 +418,7 @@ resolve_update(struct update *up)
 
 /*
  * Like resolve_sref() but for distinct references.
+ * These must be always non-null struct refs.
  */
 static int
 resolve_dref(struct dref *ref, struct strct *s)
@@ -428,33 +429,34 @@ resolve_dref(struct dref *ref, struct strct *s)
 		if (0 == strcasecmp(f->name, ref->name))
 			break;
 
-	if (NULL == f) {
-		gen_errx(&ref->pos, 
-			"distinct term not found: %s", 
-			ref->name);
-		return(0);
-	}
+	/* Make sure we're a non-null struct. */
 
-	if (NULL == TAILQ_NEXT(ref, entries)) {
-		if (FTYPE_STRUCT == f->type)  {
-			assert(NULL == ref->parent->strct);
-			ref->parent->strct = 
-				f->ref->target->parent;
-			return(1);
-		}
-		gen_errx(&ref->pos, "terminal field not a struct");
+	if (NULL == f) {
+		gen_errx(&ref->pos, "distinct field "
+			"not found: %s", ref->name);
 		return(0);
 	} else if (FTYPE_STRUCT != f->type) {
-		gen_errx(&ref->pos, "non-terminal not a struct");
+		gen_errx(&ref->pos, "distinct field "
+			"not a struct: %s", f->name);
+		return(0);
+	} else if (FIELD_NULL & f->ref->source->flags) {
+		gen_errx(&ref->pos, "distinct field "
+			"is a null struct: %s", f->name);
 		return(0);
 	}
 
-	ref = TAILQ_NEXT(ref, entries);
-	return(resolve_dref(ref, f->ref->target->parent));
+	if (NULL != (ref = TAILQ_NEXT(ref, entries)))
+		return(resolve_dref(ref, f->ref->target->parent));
+
+	assert(NULL == ref->parent->strct);
+	ref->parent->strct = f->ref->target->parent;
+	return(1);
 }
 
 /*
  * Like resolve_sref() but for order references.
+ * The non-terminal fields must be non-null structs; the terminal field
+ * must be a regular field.
  */
 static int
 resolve_oref(struct oref *ref, struct strct *s)
@@ -471,17 +473,31 @@ resolve_oref(struct oref *ref, struct strct *s)
 		return(0);
 	}
 
-	if (NULL == TAILQ_NEXT(ref, entries)) {
+	/* 
+	 * Terminal field must be a non-struct.
+	 * Null is ok but it'll make for strange results...?
+	 */
+
+	if (NULL == (ref = TAILQ_NEXT(ref, entries))) {
 		if (FTYPE_STRUCT != f->type) 
 			return(1);
-		gen_errx(&ref->pos, "terminal field is a struct");
+		gen_errx(&ref->pos, "order terminal field "
+			"is a struct: %s", f->name);
 		return(0);
-	} else if (FTYPE_STRUCT != f->type) {
-		gen_errx(&ref->pos, "non-terminal not a struct");
+	} 
+
+	/* Non-terminals must be non-null structs. */
+	
+	if (FTYPE_STRUCT != f->type) {
+		gen_errx(&ref->pos, "order non-terminal "
+			"field not a struct: %s", f->name);
+		return(0);
+	} else if (FIELD_NULL & f->ref->source->flags) {
+		gen_errx(&ref->pos, "order non-terminal "
+			"field is a null struct: %s", f->name);
 		return(0);
 	}
 
-	ref = TAILQ_NEXT(ref, entries);
 	return(resolve_oref(ref, f->ref->target->parent));
 }
 
@@ -499,12 +515,9 @@ resolve_sref(struct sref *ref, struct strct *s)
 		if (0 == strcasecmp(f->name, ref->name))
 			break;
 
-	/* Did we find the field in our structure? */
-
 	if (NULL == (ref->field = f)) {
-		gen_errx(&ref->pos, 
-			"search term not found: %s", 
-			ref->name);
+		gen_errx(&ref->pos, "search term "
+			"not found: %s", ref->name);
 		return(0);
 	}
 
@@ -513,19 +526,24 @@ resolve_sref(struct sref *ref, struct strct *s)
 	 * otherwise, we must have a native type.
 	 */
 
-	if (NULL == TAILQ_NEXT(ref, entries)) {
+	if (NULL == (ref = TAILQ_NEXT(ref, entries))) {
 		if (FTYPE_STRUCT != f->type) 
 			return(1);
-		gen_errx(&ref->pos, "terminal field is a struct");
+		gen_errx(&ref->pos, "search terminal field "
+			"is a struct: %s", f->name);
 		return(0);
-	} else if (FTYPE_STRUCT != f->type) {
-		gen_errx(&ref->pos, "non-terminal not a struct");
+	} 
+	
+	if (FTYPE_STRUCT != f->type) {
+		gen_errx(&ref->pos, "search non-terminal "
+			"field not a struct: %s", f->name);
+		return(0);
+	} else if (FIELD_NULL & f->ref->source->flags) {
+		gen_errx(&ref->pos, "search non-terminal "
+			"field is a null struct: %s", f->name);
 		return(0);
 	}
 
-	/* Follow the chain of our reference. */
-
-	ref = TAILQ_NEXT(ref, entries);
 	return(resolve_sref(ref, f->ref->target->parent));
 }
 
@@ -676,14 +694,17 @@ check_searchtype(struct strct *p)
 
 		if (NULL == srch->dst)
 			continue;
+
+		/*
+		 * Resolve the "distinct" structure.
+		 * If this is unset, then our entire structure is marked
+		 * with the distinction keyword.
+		 */
+
 		if (NULL != srch->dst->cname) {
 			dr = TAILQ_FIRST(&srch->dst->drefq);
-			if ( ! resolve_dref(dr, p)) {
-				gen_errx(&srch->dst->pos,
-					"cannot resolve "
-					"distinct structure");
+			if ( ! resolve_dref(dr, p))
 				return(0);
-			}
 		} else
 			srch->dst->strct = p;
 

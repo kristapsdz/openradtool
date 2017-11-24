@@ -320,16 +320,19 @@ gen_strct_func_iter(const struct config *cfg,
 {
 	const struct sent *sent;
 	const struct sref *sr;
+	const struct strct *retstr;
 	size_t	 pos;
 
 	assert(STYPE_ITERATE == s->type);
+
+	retstr = NULL != s->dst ? 
+		s->dst->strct : s->parent;
 
 	print_func_db_search(s, CFG_HAS_ROLES & cfg->flags, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
-	       "\tstruct %s p;\n",
-	       s->parent->name);
+	       "\tstruct %s p;\n", retstr->name);
 	if (CFG_HAS_ROLES & cfg->flags)
 		puts("\tstruct ksql *db = ctx->db;");
 
@@ -353,13 +356,9 @@ gen_strct_func_iter(const struct config *cfg,
 
 	printf("\twhile (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
 	       "\t\tdb_%s_fill_r(&p, stmt, NULL);\n",
-	       s->parent->name);
-
-	/* No need for an explicit transaction. */
-
-	if (STRCT_HAS_NULLREFS & s->parent->flags)
-	       printf("\t\tdb_%s_reffind(&p, db);\n",
-	              s->parent->name);
+	       retstr->name);
+	if (STRCT_HAS_NULLREFS & retstr->flags)
+	       printf("\t\tdb_%s_reffind(&p, db);\n", retstr->name);
 
 	/*
 	 * If we have any hashes, we're going to need to do the hash
@@ -390,8 +389,7 @@ gen_strct_func_iter(const struct config *cfg,
 	       "\t}\n"
 	       "\tksql_stmt_free(stmt);\n"
 	       "}\n"
-	       "\n",
-	       s->parent->name);
+	       "\n", retstr->name);
 }
 
 /*
@@ -404,9 +402,13 @@ gen_strct_func_list(const struct config *cfg,
 {
 	const struct sent *sent;
 	const struct sref *sr;
+	const struct strct *retstr;
 	size_t	 pos;
 
 	assert(STYPE_LIST == s->type);
+
+	retstr = NULL != s->dst ? 
+		s->dst->strct : s->parent;
 
 	print_func_db_search(s, CFG_HAS_ROLES & cfg->flags, 0);
 	printf("\n"
@@ -414,7 +416,7 @@ gen_strct_func_list(const struct config *cfg,
 	       "\tstruct ksqlstmt *stmt;\n"
 	       "\tstruct %s_q *q;\n"
 	       "\tstruct %s *p;\n",
-	       s->parent->name, s->parent->name);
+	       retstr->name, retstr->name);
 	if (CFG_HAS_ROLES & cfg->flags)
 		puts("\tstruct ksql *db = ctx->db;");
 
@@ -433,7 +435,7 @@ gen_strct_func_list(const struct config *cfg,
 	       "\tksql_stmt_alloc(db, &stmt,\n"
 	       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
 	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
-	       s->parent->name, s->parent->cname, num, 
+	       retstr->name, s->parent->cname, num, 
 	       s->parent->cname, num);
 
 	/*
@@ -457,13 +459,10 @@ gen_strct_func_list(const struct config *cfg,
 	       "\t\t\texit(EXIT_FAILURE);\n"
 	       "\t\t}\n"
 	       "\t\tdb_%s_fill_r(p, stmt, NULL);\n",
-	       s->parent->name, s->parent->name);
-
-	/* In an implicit transaction: no need to begin. */
-
-	if (STRCT_HAS_NULLREFS & s->parent->flags)
+	       retstr->name, retstr->name);
+	if (STRCT_HAS_NULLREFS & retstr->flags)
 	       printf("\t\tdb_%s_reffind(p, db);\n",
-	              s->parent->name);
+	              retstr->name);
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
@@ -647,16 +646,20 @@ gen_strct_func_srch(const struct config *cfg,
 {
 	const struct sent *sent;
 	const struct sref *sr;
+	const struct strct *retstr;
 	size_t	 pos;
 
 	assert(STYPE_SEARCH == s->type);
+
+	retstr = NULL != s->dst ? 
+		s->dst->strct : s->parent;
 
 	print_func_db_search(s, CFG_HAS_ROLES & cfg->flags, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
 	       "\tstruct %s *p = NULL;\n",
-	       s->parent->name);
+	       retstr->name);
 	if (CFG_HAS_ROLES & cfg->flags)
 		puts("\tstruct ksql *db = ctx->db;");
 
@@ -684,13 +687,10 @@ gen_strct_func_srch(const struct config *cfg,
 	       "\t\t\texit(EXIT_FAILURE);\n"
 	       "\t\t}\n"
 	       "\t\tdb_%s_fill_r(p, stmt, NULL);\n",
-	       s->parent->name, s->parent->name);
-
-	/* In an implicit transaction: no need to begin. */
-
-	if (STRCT_HAS_NULLREFS & s->parent->flags)
+	       retstr->name, retstr->name);
+	if (STRCT_HAS_NULLREFS & retstr->flags)
 	       printf("\t\tdb_%s_reffind(p, db);\n",
-	              s->parent->name);
+	              retstr->name);
 
 	/*
 	 * If we have any hashes, we're going to need to do the hash

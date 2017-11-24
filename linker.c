@@ -417,6 +417,43 @@ resolve_update(struct update *up)
 }
 
 /*
+ * Like resolve_sref() but for distinct references.
+ */
+static int
+resolve_dref(struct dref *ref, struct strct *s)
+{
+	struct field	*f;
+
+	TAILQ_FOREACH(f, &s->fq, entries)
+		if (0 == strcasecmp(f->name, ref->name))
+			break;
+
+	if (NULL == f) {
+		gen_errx(&ref->pos, 
+			"distinct term not found: %s", 
+			ref->name);
+		return(0);
+	}
+
+	if (NULL == TAILQ_NEXT(ref, entries)) {
+		if (FTYPE_STRUCT == f->type)  {
+			assert(NULL == ref->parent->strct);
+			ref->parent->strct = 
+				f->ref->target->parent;
+			return(1);
+		}
+		gen_errx(&ref->pos, "terminal field not a struct");
+		return(0);
+	} else if (FTYPE_STRUCT != f->type) {
+		gen_errx(&ref->pos, "non-terminal not a struct");
+		return(0);
+	}
+
+	ref = TAILQ_NEXT(ref, entries);
+	return(resolve_dref(ref, f->ref->target->parent));
+}
+
+/*
  * Like resolve_sref() but for order references.
  */
 static int
@@ -574,11 +611,12 @@ resolve_aliases(struct strct *orig, struct strct *p,
  * Return zero on failure, non-zero on success.
  */
 static int
-check_searchtype(const struct strct *p)
+check_searchtype(struct strct *p)
 {
-	const struct search *srch;
 	const struct sent *sent;
 	const struct sref *sr;
+	struct search 	*srch;
+	struct dref	*dr;
 
 	TAILQ_FOREACH(srch, &p->sq, entries) {
 		/*
@@ -635,6 +673,20 @@ check_searchtype(const struct strct *p)
 				return(0);
 			}
 		}
+
+		if (NULL == srch->dst)
+			continue;
+		if (NULL != srch->dst->cname) {
+			dr = TAILQ_FIRST(&srch->dst->drefq);
+			if ( ! resolve_dref(dr, p)) {
+				gen_errx(&srch->dst->pos,
+					"cannot resolve "
+					"distinct structure");
+				return(0);
+			}
+		} else
+			srch->dst->strct = p;
+
 	}
 
 	return(1);

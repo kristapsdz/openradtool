@@ -705,9 +705,28 @@ check_searchtype(struct strct *p)
 			dr = TAILQ_FIRST(&srch->dst->drefq);
 			if ( ! resolve_dref(dr, p))
 				return(0);
-		} else
+		} else {
 			srch->dst->strct = p;
+			continue;
+		}
 
+		/* 
+		 * Disallow passwords.
+		 * TODO: this should allow for passwords *within* the
+		 * distinct subparts.
+		 */
+
+		TAILQ_FOREACH(sent, &srch->sntq, entries) {
+			if (OPTYPE_ISUNARY(sent->op))
+				continue;
+			sr = TAILQ_LAST(&sent->srq, srefq);
+			if (FTYPE_PASSWORD != sr->field->type) 
+				continue;
+			gen_errx(&sent->pos, "password search "
+				"types not allowed when searching "
+				"on distinct subsets");
+			return(0);
+		}
 	}
 
 	return(1);

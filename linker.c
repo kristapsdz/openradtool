@@ -445,10 +445,11 @@ resolve_dref(struct dref *ref, struct strct *s)
 		return(0);
 	}
 
-	if (NULL != (ref = TAILQ_NEXT(ref, entries)))
+	if (NULL != TAILQ_NEXT(ref, entries)) {
+		ref = TAILQ_NEXT(ref, entries);
 		return(resolve_dref(ref, f->ref->target->parent));
+	}
 
-	assert(NULL == ref->parent->strct);
 	ref->parent->strct = f->ref->target->parent;
 	return(1);
 }
@@ -478,7 +479,7 @@ resolve_oref(struct oref *ref, struct strct *s)
 	 * Null is ok but it'll make for strange results...?
 	 */
 
-	if (NULL == (ref = TAILQ_NEXT(ref, entries))) {
+	if (NULL == TAILQ_NEXT(ref, entries)) {
 		if (FTYPE_STRUCT != f->type) 
 			return(1);
 		gen_errx(&ref->pos, "order terminal field "
@@ -498,6 +499,7 @@ resolve_oref(struct oref *ref, struct strct *s)
 		return(0);
 	}
 
+	ref = TAILQ_NEXT(ref, entries);
 	return(resolve_oref(ref, f->ref->target->parent));
 }
 
@@ -526,7 +528,7 @@ resolve_sref(struct sref *ref, struct strct *s)
 	 * otherwise, we must have a native type.
 	 */
 
-	if (NULL == (ref = TAILQ_NEXT(ref, entries))) {
+	if (NULL == TAILQ_NEXT(ref, entries)) {
 		if (FTYPE_STRUCT != f->type) 
 			return(1);
 		gen_errx(&ref->pos, "search terminal field "
@@ -544,6 +546,7 @@ resolve_sref(struct sref *ref, struct strct *s)
 		return(0);
 	}
 
+	ref = TAILQ_NEXT(ref, entries);
 	return(resolve_sref(ref, f->ref->target->parent));
 }
 

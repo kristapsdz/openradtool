@@ -26,12 +26,16 @@
 		<header>
 			<h3>0.3.7</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2017-11-22">2017-11-22</time>
+			<time datetime="2017-11-23">2017-11-23</time>
 		</header>
 		<aside>
 			<p>
 				Bug-fixes in created C code to account for line-breaking long SQL statements.
 				(This is an in-progress effort.)
+				Also add the <code>unset jslabel</code> statement for bit-fields.
+				This allows the generated JavaScript <code>format()</code> function to provide a value if the field exists but
+				has not been set with any bits.
+				(This is yet to be documented for <a href="kwebapp.1.html">kwebapp(1)</a> as the feature is still experimental.)
 			</p> 
 		</aside>
 	</article>

@@ -510,7 +510,7 @@ parse_cmp(const void *a1, const void *a2)
  * going to see in this structure.
  * This consists of all "parent.child" chains of structure that descend
  * from the given "orig" original structure.
- * FIXME: artificially limited to 26 entries.
+ * FIXME: limited to 26*26*26 entries.
  */
 static void
 resolve_aliases(struct strct *orig, struct strct *p, 
@@ -540,9 +540,21 @@ resolve_aliases(struct strct *orig, struct strct *p,
 		if (NULL == a->name)
 			err(EXIT_FAILURE, NULL);
 
-		assert(*offs < 26);
-		c = asprintf(&a->alias, 
-			"_%c", (char)*offs + 97);
+		assert(*offs < 26 * 26 * 26);
+
+		if (*offs >= 26 * 26)
+			c = asprintf(&a->alias, "_%c%c%c", 
+				(char)(*offs / 26 / 26) + 97,
+				(char)(*offs / 26) + 97,
+				(char)(*offs % 26) + 97);
+		else if (*offs >= 26)
+			c = asprintf(&a->alias, "_%c%c", 
+				(char)(*offs / 26) + 97,
+				(char)(*offs % 26) + 97);
+		else
+			c = asprintf(&a->alias, 
+				"_%c", (char)*offs + 97);
+
 		if (c < 0)
 			err(EXIT_FAILURE, NULL);
 

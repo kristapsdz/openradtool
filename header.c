@@ -264,18 +264,39 @@ gen_func_search(const struct config *cfg, const struct search *s)
 {
 	const struct sent *sent;
 	const struct sref *sr;
+	const struct strct *retstr;
 	size_t	 pos = 1;
+
+	retstr = NULL != s->dst ?
+		s->dst->strct : s->parent;
 
 	if (NULL != s->doc)
 		print_commentt(0, COMMENT_C_FRAG_OPEN, s->doc);
 	else if (STYPE_SEARCH == s->type)
 		print_commentv(0, COMMENT_C_FRAG_OPEN,
 			"Search for a specific %s.", 
-			s->parent->name);
-	else
+			retstr->name);
+	else if (STYPE_LIST == s->type)
 		print_commentv(0, COMMENT_C_FRAG_OPEN,
 			"Search for a set of %s.", 
-			s->parent->name);
+			retstr->name);
+	else
+		print_commentv(0, COMMENT_C_FRAG_OPEN,
+			"Iterate over search results in %s.", 
+			retstr->name);
+
+	if (NULL != s->dst) {
+		print_commentv(0, COMMENT_C_FRAG,
+			"This %s distinct query results.",
+			STYPE_ITERATE == s->type ?
+			"iterates over" : "returns");
+		if (s->dst->strct != s->parent) 
+			print_commentv(0, COMMENT_C_FRAG,
+				"The results are limited "
+				"to the nested structure of \"%s\" "
+				"within %s.", s->dst->cname,
+				s->parent->name);
+	}
 
 	if (STYPE_ITERATE == s->type)
 		print_commentt(0, COMMENT_C_FRAG,
@@ -284,14 +305,14 @@ gen_func_search(const struct config *cfg, const struct search *s)
 			"invoke any database modifications or risk "
 			"deadlock.");
 
-	if (STRCT_HAS_NULLREFS & s->parent->flags) 
+	if (STRCT_HAS_NULLREFS & retstr->flags) 
 		print_commentt(0, COMMENT_C_FRAG,
 			"This search involves nested null structure "
 			"linking, which involves multiple database "
 			"calls per invocation.\n"
 			"Use this sparingly!");
 	print_commentv(0, COMMENT_C_FRAG,
-		"Uses the given fields in struct %s:",
+		"Queries on the following fields in struct %s:",
 		s->parent->name);
 
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
@@ -318,12 +339,12 @@ gen_func_search(const struct config *cfg, const struct search *s)
 		print_commentv(0, COMMENT_C_FRAG_CLOSE,
 			"Returns a pointer or NULL on fail.\n"
 			"Free the pointer with db_%s_free().",
-			s->parent->name);
+			retstr->name);
 	else if (STYPE_LIST == s->type)
 		print_commentv(0, COMMENT_C_FRAG_CLOSE,
 			"Always returns a queue pointer.\n"
 			"Free this with db_%s_freeq().",
-			s->parent->name);
+			retstr->name);
 	else
 		print_commentv(0, COMMENT_C_FRAG_CLOSE,
 			"Invokes the given callback with "

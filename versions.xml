@@ -2,6 +2,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.3.8</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-11-24">2017-11-24</time>
+		</header>
+		<aside>
+			<p>
+				Lift the restriction on alias counts (total number of inner joins) from 26 to 17576.
+				This can easily be expanded further: the limitation is purely for simplicity's sake.
+			</p> 
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.3.7</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-11-22">2017-11-22</time>

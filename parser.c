@@ -1583,14 +1583,14 @@ parse_config_unique(struct parse *p, struct strct *s)
  * Parse an update clause.
  * This has the following syntax:
  *
- *  "update" [ ufield [,ufield]* ]+
+ *  "update" [ ufield [,ufield]* ]?
  *     [ ":" sfield [,sfield]*
  *       [ ":" [ "name" name | "comment" quot | "action" action ]* ]? 
  *     ]? ";"
  *
  * The fields ("ufield" for update field and "sfield" for select field)
  * are within the current structure.
- * These are only for UPT_MODIFY parses.
+ * The former are only for UPT_MODIFY parses.
  * Note that "sfield" also contains an optional operator, just like in
  * the search parameters.
  */
@@ -1614,13 +1614,20 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 		TAILQ_INSERT_TAIL(&s->dq, up, entries);
 
 	/* 
-	 * For "update", start with the fields that will be updated.
-	 * At least one field will be updated.
-	 * This is followed by a colon or a semicolon.
+	 * For "update" statements, start with the fields that will be
+	 * updated (from the self-same structure).
+	 * This is followed by a colon (continue) or a semicolon (end).
 	 */
 
+	parse_next(p);
+
 	if (UP_MODIFY == up->type) {
-		if (TOK_IDENT != parse_next(p)) {
+		if (TOK_COLON == p->lasttype) {
+			parse_next(p);
+			goto crq;
+		} else if (TOK_SEMICOLON == p->lasttype)
+			return;
+		if (TOK_IDENT != p->lasttype) {
 			parse_errx(p, "expected field to modify");
 			return;
 		}
@@ -1662,6 +1669,8 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 			}
 			ur = uref_alloc(p, p->last.string, up, &up->mrq);
 		}
+		assert(TOK_COLON == p->lasttype);
+		parse_next(p);
 	}
 
 	/*
@@ -1671,9 +1680,9 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 	 * This is followed by a semicolon or colon.
 	 * If it's left empty, we either have a semicolon or colon.
 	 */
-
-	if (TOK_COLON == parse_next(p))
-		goto last;
+crq:
+	if (TOK_COLON == p->lasttype)
+		goto terms;
 	else if (TOK_SEMICOLON == p->lasttype)
 		return;
 
@@ -1715,17 +1724,20 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 		}
 		ur = uref_alloc(p, p->last.string, up, &up->crq);
 	}
+	assert(TOK_COLON == p->lasttype);
 
 	/*
 	 * Lastly, process update terms.
 	 * This now consists of "name" and "comment".
 	 */
-last:
+terms:
+	parse_next(p);
+
 	while ( ! PARSE_STOP(p)) {
-		if (TOK_SEMICOLON == parse_next(p))
+		if (TOK_SEMICOLON == p->lasttype)
 			break;
 		if (TOK_IDENT != p->lasttype) {
-			parse_errx(p, "expected update modifier");
+			parse_errx(p, "expected update modifier: %d", p->lasttype);
 			return;
 		}
 

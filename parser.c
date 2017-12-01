@@ -1719,7 +1719,7 @@ crq:
 			parse_errx(p, "expected fields separator");
 			return;
 		} else if (TOK_IDENT != parse_next(p)) {
-			parse_errx(p, "expected select field");
+			parse_errx(p, "expected constraint field");
 			return;
 		}
 		ur = uref_alloc(p, p->last.string, up, &up->crq);
@@ -1737,16 +1737,14 @@ terms:
 		if (TOK_SEMICOLON == p->lasttype)
 			break;
 		if (TOK_IDENT != p->lasttype) {
-			parse_errx(p, "expected update modifier: %d", p->lasttype);
+			parse_errx(p, "expected terms");
 			return;
 		}
-
 		if (0 == strcasecmp(p->last.string, "name")) {
 			if (TOK_IDENT != parse_next(p)) {
-				parse_errx(p, "expected update name");
+				parse_errx(p, "expected term name");
 				return;
 			}
-			/* FIXME: warn of prior */
 			free(up->name);
 			up->name = strdup(p->last.string);
 			if (NULL == up->name)
@@ -1754,7 +1752,7 @@ terms:
 		} else if (0 == strcasecmp(p->last.string, "comment")) {
 			parse_comment(p, &up->doc);
 		} else
-			parse_errx(p, "unknown update parameter");
+			parse_errx(p, "unknown term");
 	}
 }
 

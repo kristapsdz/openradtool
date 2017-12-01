@@ -40,7 +40,7 @@ struct user {
     on the \"cid\" variable.";
   # The foreign key itself.
   # We also stipulate an action on delete.
-  field cid:company.id int null actdel cascade comment 
+  field cid:company.id int actdel cascade comment 
     "A foreign key reference.";
   field sex enum sex comment
     "User's birth sex.";

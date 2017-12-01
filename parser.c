@@ -1740,6 +1740,7 @@ terms:
 			parse_errx(p, "expected terms");
 			return;
 		}
+
 		if (0 == strcasecmp(p->last.string, "name")) {
 			if (TOK_IDENT != parse_next(p)) {
 				parse_errx(p, "expected term name");
@@ -1752,7 +1753,9 @@ terms:
 		} else if (0 == strcasecmp(p->last.string, "comment")) {
 			parse_comment(p, &up->doc);
 		} else
-			parse_errx(p, "unknown term");
+			parse_errx(p, "unknown term: %s", p->last.string);
+
+		parse_next(p);
 	}
 }
 

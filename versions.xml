@@ -2,6 +2,18 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.3.9</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-12-01">2017-12-01</time>
+		</header>
+		<aside>
+			<p>
+				Allow for <code>update</code> and <code>delete</code> to operate without constraints.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.3.8</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-11-24">2017-11-24</time>

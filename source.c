@@ -1740,10 +1740,9 @@ gen_stmt(const struct strct *p)
 			else
 				printf("%s = ?", ur->name);
 		}
-		printf(" WHERE");
 		first = 1;
 		TAILQ_FOREACH(ur, &up->crq, entries) {
-			printf("%s", first ? " " : " AND ");
+			printf(" %s ", first ? "WHERE" : "AND");
 			if (OPTYPE_ISUNARY(ur->op))
 				printf("%s %s", ur->name, 
 					optypes[ur->op]);
@@ -1760,11 +1759,11 @@ gen_stmt(const struct strct *p)
 	pos = 0;
 	TAILQ_FOREACH(up, &p->dq, entries) {
 		printf("\t/* STMT_%s_DELETE_%zu */\n"
-		       "\t\"DELETE FROM %s WHERE",
+		       "\t\"DELETE FROM %s",
 		       p->cname, pos++, p->name);
 		first = 1;
 		TAILQ_FOREACH(ur, &up->crq, entries) {
-			printf("%s", first ? " " : " AND ");
+			printf(" %s ", first ? "WHERE" : "AND");
 			if (OPTYPE_ISUNARY(ur->op))
 				printf("%s %s", ur->name, 
 					optypes[ur->op]);

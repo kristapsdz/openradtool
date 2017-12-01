@@ -1583,11 +1583,10 @@ parse_config_unique(struct parse *p, struct strct *s)
  * Parse an update clause.
  * This has the following syntax:
  *
- *  "update" [ ufield [,ufield]* ]?
- *       ":" sfield [,sfield]*
- *     [ ":" [ "name" name | "comment" quoted_string |
- *     	       "action" action ]* ] ?
- *       ";"
+ *  "update" [ ufield [,ufield]* ]+
+ *     [ ":" sfield [,sfield]*
+ *       [ ":" [ "name" name | "comment" quot | "action" action ]* ]? 
+ *     ]? ";"
  *
  * The fields ("ufield" for update field and "sfield" for select field)
  * are within the current structure.
@@ -1615,20 +1614,21 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 		TAILQ_INSERT_TAIL(&s->dq, up, entries);
 
 	/* 
-	 * For modifiers, start with the fields that will be updated.
-	 * (At least one field will be updated.)
-	 * This is followed by a colon.
+	 * For "update", start with the fields that will be updated.
+	 * At least one field will be updated.
+	 * This is followed by a colon or a semicolon.
 	 */
 
 	if (UP_MODIFY == up->type) {
-		if (TOK_COLON == parse_next(p))
-			goto next;
-		if (TOK_IDENT != p->lasttype) {
+		if (TOK_IDENT != parse_next(p)) {
 			parse_errx(p, "expected field to modify");
 			return;
 		}
 		ur = uref_alloc(p, p->last.string, up, &up->mrq);
 		while (TOK_COLON != parse_next(p)) {
+			if (TOK_SEMICOLON == p->lasttype)
+				return;
+
 			/*
 			 * See if we're going to accept a modifier,
 			 * which defaults to "set".
@@ -1646,8 +1646,11 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 				if (MODTYPE__MAX == ur->mod) {
 					parse_errx(p, "bad modifier");
 					return;
-				} else if (TOK_COLON == parse_next(p))
+				} 
+				if (TOK_COLON == parse_next(p))
 					break;
+				if (TOK_SEMICOLON == parse_next(p))
+					return;
 			}
 
 			if (TOK_COMMA != p->lasttype) {
@@ -1661,18 +1664,24 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 		}
 	}
 
-next:
 	/*
 	 * Now the fields that will be used to constrain the update
 	 * mechanism.
 	 * Usually this will be a rowid.
 	 * This is followed by a semicolon or colon.
+	 * If it's left empty, we either have a semicolon or colon.
 	 */
 
-	if (TOK_IDENT != parse_next(p)) {
-		parse_errx(p, "expected select field");
+	if (TOK_COLON == parse_next(p))
+		goto last;
+	else if (TOK_SEMICOLON == p->lasttype)
+		return;
+
+	if (TOK_IDENT != p->lasttype) {
+		parse_errx(p, "expected constraint field");
 		return;
 	}
+
 	ur = uref_alloc(p, p->last.string, up, &up->crq);
 
 	while (TOK_COLON != parse_next(p)) {
@@ -1711,8 +1720,8 @@ next:
 	 * Lastly, process update terms.
 	 * This now consists of "name" and "comment".
 	 */
-
-	while (TOK_ERR != p->lasttype && TOK_EOF != p->lasttype) {
+last:
+	while ( ! PARSE_STOP(p)) {
 		if (TOK_SEMICOLON == parse_next(p))
 			break;
 		if (TOK_IDENT != p->lasttype) {

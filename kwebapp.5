@@ -653,8 +653,8 @@ modified.
 By default, there are no update, delete, or insert functions defined.
 The syntax is as follows:
 .Bd -literal -offset indent
-"update" [mfields]? ":" cfields [":" [params]* ]? ";"
-"delete" cfields [":" [params]* ]? ";"
+"update" [mfields]* [":" [cfields]* [":" [params]* ]? ]? ";"
+"delete" [cfields]* [":" [params]* ]? ";"
 "insert" ";"
 .Ed
 .Pp
@@ -676,20 +676,23 @@ and the former will be any other fields.
 .Pp
 The
 .Cm delete
-statement obviously does not accept fields to modify.
+statement obviously does not accept fields to modify
+.Pq Cm mfields .
 If the
 .Cm update
-statement does not have modify fields, it's taken to mean that all
-fields will be modified using the default operator.
+statement does not have
+.Cm mfields ,
+it's taken to mean that all fields will be modified using the default
+operator.
 .Pp
 The fields in
 .Cm mfields
-may also accept a modifier type that modifies the existing field instead
+may accept a modifier type that modifies the existing field instead
 of setting it externally.
 This is only available for numeric types.
-Each field in
+The fields in
 .Cm cfields
-may also accept an optional operator type as described for
+may accept an optional operator type as described for
 .Sx Queries .
 .Bd -literal -offset indent
 mfield [modifier]?

@@ -382,6 +382,18 @@ Also installs the default logging facilities.
 .It Fn db_close
 Closes a database opened by
 .Fn db_open .
+.It Fn db_trans_commit
+Commit a transaction opened by
+.Fn db_trans_open .
+.It Fn db_trans_open
+Opens a transaction in deferred, immediate, or exclusive modes.
+Must be followed by a call to
+.Fn db_trans_commit
+or
+.Fn db_trans_rollback .
+.It Fn db_trans_rollback
+Roll back a transaction opened by
+.Fn db_trans_open .
 .El
 .Pp
 If the

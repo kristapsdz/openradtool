@@ -4,11 +4,16 @@
 		<header>
 			<h3>0.3.9</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2017-12-01">2017-12-01</time>
+			<time datetime="2017-12-01">ongoing</time>
 		</header>
 		<aside>
 			<p>
 				Allow for <code>update</code> and <code>delete</code> to operate without constraints.
+				See <a href="kwebapp.5.html">kwebapp(5)</a> for syntax.
+				Also add transaction call-through functions to the generated C API.
+				This is necessary in role-based mode since the underlying
+				<a href="https://kristaps.bsd.lv/ksql">ksql</a> API is shielded.
+				These are documented in <a href="kwebapp.1.html">kwebapp(1)</a>.
 			</p>
 		</aside>
 	</article>

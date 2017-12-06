@@ -82,6 +82,33 @@ print_func_db_role(int decl)
 		decl ? ";" : "");
 }
 
+void
+print_func_db_trans_rollback(int priv, int decl)
+{
+
+	printf("void%sdb_trans_rollback(struct %s *p, size_t id)%s\n",
+		decl ? " " : "\n", priv ? "kwbp" : "ksql",
+		decl ? ";" : "");
+}
+
+void
+print_func_db_trans_commit(int priv, int decl)
+{
+
+	printf("void%sdb_trans_commit(struct %s *p, size_t id)%s\n",
+		decl ? " " : "\n", priv ? "kwbp" : "ksql",
+		decl ? ";" : "");
+}
+
+void
+print_func_db_trans_open(int priv, int decl)
+{
+
+	printf("void%sdb_trans_open(struct %s *p, size_t id, int mode)%s\n",
+		decl ? " " : "\n", priv ? "kwbp" : "ksql",
+		decl ? ";" : "");
+}
+
 /*
  * Generate the convenience "close" function.
  * If "priv" is non-zero, accept a kwbp instead of ksql.

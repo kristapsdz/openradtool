@@ -612,6 +612,55 @@ gen_func_roles(const struct config *cfg)
 	     "}\n");
 }
 
+static void
+gen_func_trans(const struct config *cfg)
+{
+
+	if (CFG_HAS_ROLES & cfg->flags) {
+		print_func_db_trans_open(1, 0);
+		puts("{\n"
+		     "\tif (mode < 0)\n"
+		     "\t\tksql_trans_exclopen(p->db, id);\n"
+		     "\telse if (mode > 0)\n"
+		     "\t\tksql_trans_singleopen(p->db, id);\n"
+		     "\telse\n"
+		     "\t\tksql_trans_open(p->db, id);\n"
+		     "}\n"
+		     "");
+		print_func_db_trans_rollback(1, 0);
+		puts("{\n"
+		     "\tksql_trans_rollback(p->db, id);\n"
+		     "}\n"
+		     "");
+		print_func_db_trans_commit(1, 0);
+		puts("{\n"
+		     "\tksql_trans_commit(p->db, id);\n"
+		     "}\n"
+		     "");
+	} else {
+		print_func_db_trans_open(0, 0);
+		puts("{\n"
+		     "\tif (mode < 0)\n"
+		     "\t\tksql_trans_exclopen(p, id);\n"
+		     "\telse if (mode > 0)\n"
+		     "\t\tksql_trans_singleopen(p, id);\n"
+		     "\telse\n"
+		     "\t\tksql_trans_open(p, id);\n"
+		     "}\n"
+		     "");
+		print_func_db_trans_rollback(0, 0);
+		puts("{\n"
+		     "\tksql_trans_rollback(p, id);\n"
+		     "}\n"
+		     "");
+		print_func_db_trans_commit(0, 0);
+		puts("{\n"
+		     "\tksql_trans_commit(p, id);\n"
+		     "}\n"
+		     "");
+	}
+}
+
 /*
  * Close and free the database context.
  * This is sensitive to whether we have roles.
@@ -1907,6 +1956,7 @@ gen_c_source(const struct config *cfg, int json,
 		"Finally, all of the functions we'll use.");
 	puts("");
 
+	gen_func_trans(cfg);
 	gen_func_open(cfg, splitproc);
 	gen_func_close(cfg);
 	if (CFG_HAS_ROLES & cfg->flags)

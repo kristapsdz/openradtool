@@ -527,6 +527,34 @@ gen_valid_enums(const struct strct *p)
 	}
 }
 
+static void
+gen_func_trans(const struct config *cfg)
+{
+
+	print_commentt(0, COMMENT_C,
+		"Open a transaction with identifier \"id\".\n"
+		"If \"mode\" is 0, the transaction is opened in "
+		"\"deferred\" mode, meaning that the database is "
+		"read-locked (no writes allowed) on the first read "
+		"operation, and write-locked on the first write "
+		"(only the current process can write).\n"
+		"If \"mode\" is >0, the transaction immediately "
+		"starts a write-lock.\n"
+		"If \"mode\" is <0, the transaction starts in a "
+		"write-pending, where no other locks can be held "
+		"at the same time.");
+	print_func_db_trans_open(CFG_HAS_ROLES & cfg->flags, 1);
+	puts("");
+	print_commentt(0, COMMENT_C,
+		"Roll-back an open transaction.");
+	print_func_db_trans_rollback(CFG_HAS_ROLES & cfg->flags, 1);
+	puts("");
+	print_commentt(0, COMMENT_C,
+		"Commit an open transaction.");
+	print_func_db_trans_commit(CFG_HAS_ROLES & cfg->flags, 1);
+	puts("");
+}
+
 /*
  * We need to handle several different facets here: if the
  * system is operating in RBAC mode and whether the database is
@@ -727,10 +755,10 @@ gen_c_header(const struct config *cfg,
 	     "");
 
 	gen_func_open(cfg, splitproc);
+	gen_func_trans(cfg);
 	gen_func_close(cfg);
 	if (CFG_HAS_ROLES & cfg->flags)
 		gen_func_roles(cfg);
-
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_funcs(cfg, p, json, valids);
 

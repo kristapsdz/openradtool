@@ -768,6 +768,9 @@ parse_validate(struct parse *p, struct field *fd)
 	if (FTYPE_STRUCT == fd->type) {
 		parse_errx(p, "no validation on structs");
 		return;
+	} else if (FTYPE_ENUM == fd->type) {
+		parse_errx(p, "no validation on enums");
+		return;
 	}
 
 	if (TOK_IDENT != parse_next(p)) {

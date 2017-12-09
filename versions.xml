@@ -15,6 +15,9 @@
 				<a href="https://kristaps.bsd.lv/ksql">ksql</a> API is shielded.
 				These are documented in <a href="kwebapp.1.html">kwebapp(1)</a>.
 			</p>
+			<p>
+				Fix a crash when having <code>limit</code> statements with <code>enum</code> types.
+			</p>
 		</aside>
 	</article>
 	<article data-sblg-article="1" data-sblg-tags="version">

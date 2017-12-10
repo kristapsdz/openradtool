@@ -75,6 +75,7 @@ static	const char *const rolemapts[ROLEMAP__MAX] = {
 	"list", /* ROLEMAP_LIST */
 	"search", /* ROLEMAP_SEARCH */
 	"update", /* ROLEMAP_UPDATE */
+	"noexport", /* ROLEMAP_NOEXPORT */
 };
 
 /*

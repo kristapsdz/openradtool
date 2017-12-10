@@ -43,6 +43,7 @@ static	const char *const rolemapts[ROLEMAP__MAX] = {
 	"list", /* ROLEMAP_LIST */
 	"search", /* ROLEMAP_SEARCH */
 	"update", /* ROLEMAP_UPDATE */
+	"noexport", /* ROLEMAP_NOEXPORT */
 };
 
 static void
@@ -1040,6 +1041,7 @@ resolve_rolemap(struct rolemap *rm, struct strct *p)
 {
 	struct update	*u;
 	struct search	*s;
+	struct field	*f;
 
 	switch (rm->type) {
 	case ROLEMAP_DELETE:
@@ -1089,6 +1091,14 @@ resolve_rolemap(struct rolemap *rm, struct strct *p)
 				return(1);
 			}
 		break;
+	case ROLEMAP_NOEXPORT:
+		TAILQ_FOREACH(f, &p->fq, entries) 
+			if (0 == strcasecmp(f->name, rm->name)) {
+				assert(NULL == f->rolemap);
+				f->rolemap = rm;
+				return(1);
+			}
+		break;
 	case ROLEMAP_UPDATE:
 		TAILQ_FOREACH(u, &p->uq, entries) 
 			if (NULL != u->name &&
@@ -1102,11 +1112,11 @@ resolve_rolemap(struct rolemap *rm, struct strct *p)
 		abort();
 	}
 
-	gen_errx(&rm->pos, "corresponding %s function not found%s%s",
+	gen_errx(&rm->pos, "corresponding %s %s not found%s%s",
 		rolemapts[rm->type],
+		ROLEMAP_NOEXPORT == rm->type ? "field" : "function",
 		ROLEMAP_INSERT == rm->type ? "" : ": ",
 		ROLEMAP_INSERT == rm->type ? "" : rm->name);
-
 	return(0);
 }
 

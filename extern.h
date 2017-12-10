@@ -210,6 +210,7 @@ struct	field {
 	struct pos	   pos; /* parse point */
 	enum ftype	   type; /* type of column */
 	enum upact	   actdel; /* delete action */
+	struct rolemap	  *rolemap; /* roles for not exporting */
 	enum upact	   actup; /* update action */
 	struct strct	  *parent; /* parent reference */
 	struct fvalidq	   fvq; /* validation */
@@ -304,6 +305,7 @@ enum	rolemapt {
 	ROLEMAP_LIST, /* list */
 	ROLEMAP_SEARCH, /* search */
 	ROLEMAP_UPDATE, /* update */
+	ROLEMAP_NOEXPORT, /* noexport */
 	ROLEMAP__MAX
 };
 
@@ -588,18 +590,19 @@ void		 print_commentv(size_t, enum cmtt, const char *, ...)
 
 void		 print_src(size_t, const char *, ...);
 
+void		 print_define_schema(const struct strct *);
 void		 print_func_db_close(int, int);
 void		 print_func_db_role(int);
 void		 print_func_db_open(int, int);
 void		 print_func_db_insert(const struct strct *, int, int);
-void		 print_func_db_fill(const struct strct *, int);
+void		 print_func_db_fill(const struct strct *, int, int);
 void		 print_func_db_free(const struct strct *, int);
 void		 print_func_db_freeq(const struct strct *, int);
 void		 print_func_db_search(const struct search *, int, int);
 void		 print_func_db_trans_commit(int, int);
 void		 print_func_db_trans_open(int, int);
 void		 print_func_db_trans_rollback(int, int);
-void		 print_func_db_unfill(const struct strct *, int);
+void		 print_func_db_unfill(const struct strct *, int, int);
 void		 print_func_db_update(const struct update *, int, int);
 
 void		 print_func_json_array(const struct strct *, int);

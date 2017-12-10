@@ -157,7 +157,7 @@ gen_role(const struct role *r)
  * Also print a comment stating what we're doing.
  */
 static void
-gen_rolemap(const struct rolemap *rm)
+gen_func_rolemap(const struct rolemap *rm)
 {
 	const struct roleset *rs;
 
@@ -173,13 +173,12 @@ gen_rolemap(const struct rolemap *rm)
 		return;
 	}
 
-	puts("");
-	print_commentt(1, COMMENT_C, 
-		"Restrict to allowed roles.");
 	puts("\n"
 	     "\tswitch (ctx->role) {");
 	TAILQ_FOREACH(rs, &rm->setq, entries)
 		gen_role(rs->role);
+	print_commentt(2, COMMENT_C, 
+		"Restrict to allowed roles.");
 	puts("\t\tbreak;\n"
 	     "\tdefault:\n"
 	     "\t\tabort();\n"
@@ -337,7 +336,7 @@ gen_strct_func_iter(const struct config *cfg,
 		puts("\tstruct ksql *db = ctx->db;");
 
 	if (CFG_HAS_ROLES & cfg->flags)
-		gen_rolemap(s->rolemap);
+		gen_func_rolemap(s->rolemap);
 	else
 		puts("");
 
@@ -355,10 +354,14 @@ gen_strct_func_iter(const struct config *cfg,
 		}
 
 	printf("\twhile (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
-	       "\t\tdb_%s_fill_r(&p, stmt, NULL);\n",
-	       retstr->name);
+	       "\t\tdb_%s_fill_r(%s&p, stmt, NULL);\n",
+	       retstr->name,
+	       CFG_HAS_ROLES & cfg->flags ? "ctx, " : "");
 	if (STRCT_HAS_NULLREFS & retstr->flags)
-	       printf("\t\tdb_%s_reffind(&p, db);\n", retstr->name);
+	       printf("\t\tdb_%s_reffind(%s&p, db);\n", 
+		     retstr->name,
+		     CFG_HAS_ROLES & cfg->flags ? 
+		     "ctx, " : "");
 
 	/*
 	 * If we have any hashes, we're going to need to do the hash
@@ -421,7 +424,7 @@ gen_strct_func_list(const struct config *cfg,
 		puts("\tstruct ksql *db = ctx->db;");
 
 	if (CFG_HAS_ROLES & cfg->flags)
-		gen_rolemap(s->rolemap);
+		gen_func_rolemap(s->rolemap);
 	else
 		puts("");
 
@@ -458,11 +461,14 @@ gen_strct_func_list(const struct config *cfg,
 	       "\t\t\tperror(NULL);\n"
 	       "\t\t\texit(EXIT_FAILURE);\n"
 	       "\t\t}\n"
-	       "\t\tdb_%s_fill_r(p, stmt, NULL);\n",
-	       retstr->name, retstr->name);
+	       "\t\tdb_%s_fill_r(%sp, stmt, NULL);\n",
+	       retstr->name, retstr->name,
+	       CFG_HAS_ROLES & cfg->flags ? "ctx, " : "");
 	if (STRCT_HAS_NULLREFS & retstr->flags)
-	       printf("\t\tdb_%s_reffind(p, db);\n",
-	              retstr->name);
+	       printf("\t\tdb_%s_reffind(%sp, db);\n",
+		      retstr->name,
+		      CFG_HAS_ROLES & cfg->flags ? 
+		      "ctx, " : "");
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
@@ -713,7 +719,7 @@ gen_strct_func_srch(const struct config *cfg,
 		puts("\tstruct ksql *db = ctx->db;");
 
 	if (CFG_HAS_ROLES & cfg->flags)
-		gen_rolemap(s->rolemap);
+		gen_func_rolemap(s->rolemap);
 	else
 		puts("");
 
@@ -735,11 +741,14 @@ gen_strct_func_srch(const struct config *cfg,
 	       "\t\t\tperror(NULL);\n"
 	       "\t\t\texit(EXIT_FAILURE);\n"
 	       "\t\t}\n"
-	       "\t\tdb_%s_fill_r(p, stmt, NULL);\n",
-	       retstr->name, retstr->name);
+	       "\t\tdb_%s_fill_r(%sp, stmt, NULL);\n",
+	       retstr->name, retstr->name,
+	       CFG_HAS_ROLES & cfg->flags ? "ctx, " : "");
 	if (STRCT_HAS_NULLREFS & retstr->flags)
-	       printf("\t\tdb_%s_reffind(p, db);\n",
-	              retstr->name);
+	       printf("\t\tdb_%s_reffind(%sp, db);\n",
+		      retstr->name,
+	 	      CFG_HAS_ROLES & cfg->flags ?
+		      "ctx, " : "");
 
 	/*
 	 * If we have any hashes, we're going to need to do the hash
@@ -768,7 +777,7 @@ gen_strct_func_srch(const struct config *cfg,
 
 	puts("\t}\n"
 	     "\tksql_stmt_free(stmt);\n"
-	     "\treturn(p);\n"
+	     "\treturn p;\n"
 	     "}\n"
 	     "");
 }
@@ -829,7 +838,7 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 	/* Check our roles. */
 
 	if (CFG_HAS_ROLES & cfg->flags)
-		gen_rolemap(p->irolemap);
+		gen_func_rolemap(p->irolemap);
 	else
 		puts("");
 
@@ -911,11 +920,11 @@ gen_func_free(const struct strct *p)
  * Generate the "unfill" function.
  */
 static void
-gen_func_unfill(const struct strct *p)
+gen_func_unfill(const struct config *cfg, const struct strct *p)
 {
 	const struct field *f;
 
-	print_func_db_unfill(p, 0);
+	print_func_db_unfill(p, CFG_HAS_ROLES & cfg->flags, 0);
 	puts("\n"
 	     "{\n"
 	     "\tif (NULL == p)\n"
@@ -931,6 +940,8 @@ gen_func_unfill(const struct strct *p)
 		default:
 			break;
 		}
+	if (CFG_HAS_ROLES & cfg->flags)
+		puts("\tfree(p->priv_store);");
 	puts("}\n"
 	     "");
 }
@@ -976,7 +987,7 @@ gen_func_unfill_r(const struct strct *p)
  * structures with null foreign keys.
  */
 static void
-gen_func_reffind(const struct strct *p)
+gen_func_reffind(const struct config *cfg, const struct strct *p)
 {
 	const struct field *f;
 
@@ -989,9 +1000,10 @@ gen_func_reffind(const struct strct *p)
 			break;
 
 	printf("static void\n"
-	       "db_%s_reffind(struct %s *p, struct ksql *db)\n"
-	       "{\n", 
-	       p->name, p->name);
+	       "db_%s_reffind(%sstruct %s *p, struct ksql *db)\n"
+	       "{\n", p->name, 
+	       CFG_HAS_ROLES & cfg->flags ? 
+	       "struct kwbp *ctx, " : "", p->name);
 	if (NULL != f)
 		puts("\tstruct ksqlstmt *stmt;\n"
 		     "\tenum ksqlc c;");
@@ -1014,9 +1026,10 @@ gen_func_reffind(const struct strct *p)
 			       f->ref->source->name);
 			printf("\t\tc = ksql_stmt_step(stmt);\n"
 			       "\t\tassert(KSQL_ROW == c);\n"
-			       "\t\tdb_%s_fill_r(&p->%s, stmt, NULL);\n",
+			       "\t\tdb_%s_fill_r(%s&p->%s, stmt, NULL);\n",
 			       f->ref->target->parent->name,
-			       f->name);
+			       CFG_HAS_ROLES & cfg->flags ?
+			       "ctx, " : "", f->name);
 			printf("\t\tp->has_%s = 1;\n",
 				f->name);
 			puts("\t\tksql_stmt_free(stmt);\n"
@@ -1025,8 +1038,10 @@ gen_func_reffind(const struct strct *p)
 		if ( ! (STRCT_HAS_NULLREFS &
 		    f->ref->target->parent->flags))
 			continue;
-		printf("\tdb_%s_reffind(&p->%s, db);\n", 
-			f->ref->target->parent->name, f->name);
+		printf("\tdb_%s_reffind(%s&p->%s, db);\n", 
+			f->ref->target->parent->name, 
+			CFG_HAS_ROLES & cfg->flags ? 
+			"ctx, " : "", f->name);
 	}
 
 	puts("}\n"
@@ -1037,26 +1052,33 @@ gen_func_reffind(const struct strct *p)
  * Generate the "fill" function.
  */
 static void
-gen_func_fill_r(const struct strct *p)
+gen_func_fill_r(const struct config *cfg, const struct strct *p)
 {
 	const struct field *f;
 
 	printf("static void\n"
-	       "db_%s_fill_r(struct %s *p, "
+	       "db_%s_fill_r(%sstruct %s *p, "
 	       "struct ksqlstmt *stmt, size_t *pos)\n"
 	       "{\n"
 	       "\tsize_t i = 0;\n"
 	       "\n"
 	       "\tif (NULL == pos)\n"
 	       "\t\tpos = &i;\n"
-	       "\tdb_%s_fill(p, stmt, pos);\n",
-	       p->name, p->name, p->name);
+	       "\tdb_%s_fill(%sp, stmt, pos);\n",
+	       p->name, 
+	       CFG_HAS_ROLES & cfg->flags ?
+	       "struct kwbp *ctx, " : "",
+	       p->name, p->name,
+	       CFG_HAS_ROLES & cfg->flags ?
+	       "ctx, " : "");
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if (FTYPE_STRUCT == f->type &&
 		    ! (FIELD_NULL & f->ref->source->flags))
-			printf("\tdb_%s_fill_r(&p->%s, "
+			printf("\tdb_%s_fill_r(%s&p->%s, "
 				"stmt, pos);\n", 
-				f->ref->tstrct, f->name);
+				f->ref->tstrct, 
+				CFG_HAS_ROLES & cfg->flags ?
+				"ctx, " : "", f->name);
 	puts("}\n"
 	     "");
 }
@@ -1065,11 +1087,11 @@ gen_func_fill_r(const struct strct *p)
  * Generate the "fill" function.
  */
 static void
-gen_func_fill(const struct strct *p)
+gen_func_fill(const struct config *cfg, const struct strct *p)
 {
 	const struct field *f;
 
-	print_func_db_fill(p, 0);
+	print_func_db_fill(p, CFG_HAS_ROLES & cfg->flags, 0);
 	puts("\n"
 	     "{\n"
 	     "\tsize_t i = 0;\n"
@@ -1079,6 +1101,15 @@ gen_func_fill(const struct strct *p)
 	     "\tmemset(p, 0, sizeof(*p));");
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_fill_field(f);
+	if (CFG_HAS_ROLES & cfg->flags) {
+		puts("\tp->priv_store = malloc"
+		      "(sizeof(struct kwbp_store));\n"
+		     "\tif (NULL == p->priv_store) {\n"
+		     "\t\tperror(NULL);\n"
+		     "\t\texit(EXIT_FAILURE);\n"
+		     "\t}\n"
+		     "\tp->priv_store->role = ctx->role;");
+	}
 	puts("}\n"
 	     "");
 }
@@ -1109,7 +1140,7 @@ gen_func_update(const struct config *cfg,
 			printf("\tchar hash%zu[64];\n", pos++);
 
 	if (CFG_HAS_ROLES & cfg->flags)
-		gen_rolemap(up->rolemap);
+		gen_func_rolemap(up->rolemap);
 	else
 		puts("");
 
@@ -1197,17 +1228,17 @@ gen_func_valid_types(const struct field *f, const struct fvalid *v)
 	case (FTYPE_EPOCH):
 	case (FTYPE_INT):
 		printf("\tif (p->parsed.i %s %" PRId64 ")\n"
-		       "\t\treturn(0);\n",
+		       "\t\treturn 0;\n",
 		       validbins[v->type], v->d.value.integer);
 		break;
 	case (FTYPE_REAL):
 		printf("\tif (p->parsed.d %s %g)\n"
-		       "\t\treturn(0);\n",
+		       "\t\treturn 0;\n",
 		       validbins[v->type], v->d.value.decimal);
 		break;
 	default:
 		printf("\tif (p->valsz %s %zu)\n"
-		       "\t\treturn(0);\n",
+		       "\t\treturn 0;\n",
 		       validbins[v->type], v->d.value.len);
 		break;
 	}
@@ -1233,7 +1264,7 @@ gen_func_valids(const struct strct *p)
 		puts("{");
 		if (NULL != validtypes[f->type])
 			printf("\tif ( ! %s(p))\n"
-			       "\t\treturn(0);\n",
+			       "\t\treturn 0;\n",
 			       validtypes[f->type]);
 
 		/* Enumeration: check against knowns. */
@@ -1241,17 +1272,17 @@ gen_func_valids(const struct strct *p)
 		if (FTYPE_ENUM == f->type) {
 			puts("\tswitch(p->parsed.i) {");
 			TAILQ_FOREACH(ei, &f->eref->enm->eq, entries)
-				printf("\t\tcase %" PRId64 ":\n",
+				printf("\tcase %" PRId64 ":\n",
 					ei->value);
-			puts("\t\t\tbreak;\n"
-			     "\t\tdefault:\n"
-			     "\t\t\treturn(0);\n"
+			puts("\t\tbreak;\n"
+			     "\tdefault:\n"
+			     "\t\treturn 0;\n"
 			     "\t}");
 		}
 
 		TAILQ_FOREACH(v, &f->fvq, entries) 
 			gen_func_valid_types(f, v);
-		puts("\treturn(1);");
+		puts("\treturn 1;");
 		puts("}\n"
 		     "");
 	}
@@ -1301,50 +1332,97 @@ gen_func_json_obj(const struct strct *p)
  * structure, and so on.
  */
 static void
-gen_field_json_data(const struct field *f, size_t *pos)
+gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 {
+	char		 tabs[] = "\t\t";
+	struct roleset	*rs;
+	int		 hassp = *sp;
+
+	*sp = 0;
+
 	if (FIELD_NOEXPORT & f->flags) {
+		if ( ! hassp)
+			puts("");
 		print_commentv(1, COMMENT_C, "Omitting %s: "
 			"marked no export.", f->name);
+		puts("");
+		*sp = 1;
 		return;
 	} else if (FTYPE_PASSWORD == f->type) {
+		if ( ! hassp)
+			puts("");
 		print_commentv(1, COMMENT_C, "Omitting %s: "
 			"is a password hash.", f->name);
+		puts("");
+		*sp = 1;
 		return;
 	}
 
+	if (NULL != f->rolemap) {
+		if ( ! hassp)
+			puts("");
+		puts("\tswitch (p->priv_store->role) {");
+		TAILQ_FOREACH(rs, &f->rolemap->setq, entries)
+			gen_role(rs->role);
+		print_commentt(2, COMMENT_C, 
+			"Don't export field to noted roles.");
+		puts("\t\tbreak;\n"
+		     "\tdefault:");
+		*sp = 1;
+	} else
+		tabs[1] = '\0';
+
 	if (FTYPE_STRUCT != f->type) {
-		if (FIELD_NULL & f->flags)
-			printf("\tif ( ! p->has_%s)\n"
-			       "\t\tkjson_putnullp(r, \"%s\");\n"
-			       "\telse\n"
-			       "\t", f->name, f->name);
+		if (FIELD_NULL & f->flags) {
+			if ( ! hassp && ! *sp)
+				puts("");
+			printf("%sif ( ! p->has_%s)\n"
+			       "%s\tkjson_putnullp(r, \"%s\");\n"
+			       "%selse\n"
+			       "%s\t", tabs, f->name, tabs, 
+			       f->name, tabs, tabs);
+		} else
+			printf("%s", tabs);
 		if (FTYPE_BLOB == f->type)
-			printf("\t%s(r, \"%s\", buf%zu);\n",
+			printf("%s(r, \"%s\", buf%zu);\n",
 				puttypes[f->type], 
 				f->name, ++(*pos));
 		else
-			printf("\t%s(r, \"%s\", p->%s);\n", 
-				puttypes[f->type], f->name, 
-				f->name);
-		return;
-	} 
+			printf("%s(r, \"%s\", p->%s);\n", 
+				puttypes[f->type], 
+				f->name, f->name);
+		if (FIELD_NULL & f->flags && ! *sp) {
+			puts("");
+			*sp = 1;
+		}
+	} else if (FIELD_NULL & f->ref->source->flags) {
+		if ( ! hassp && ! *sp)
+			puts("");
+		printf("%sif (p->has_%s) {\n"
+		       "%s\tkjson_objp_open(r, \"%s\");\n"
+		       "%s\tjson_%s_data(r, &p->%s);\n"
+		       "%s\tkjson_obj_close(r);\n"
+		       "%s} else\n"
+		       "%s\tkjson_putnullp(r, \"%s\");\n",
+			tabs, f->name, tabs, f->name,
+			tabs, f->ref->tstrct, f->name, 
+			tabs, tabs, tabs, f->name);
+		if ( ! *sp) {
+			puts("");
+			*sp = 1;
+		}
+	} else
+		printf("%skjson_objp_open(r, \"%s\");\n"
+		       "%sjson_%s_data(r, &p->%s);\n"
+		       "%skjson_obj_close(r);\n",
+			tabs, f->name, tabs, 
+			f->ref->tstrct, f->name, tabs);
 
-	if (FIELD_NULL & f->ref->source->flags)
-		printf("\tif (p->has_%s) {\n"
-		       "\t\tkjson_objp_open(r, \"%s\");\n"
-		       "\t\tjson_%s_data(r, &p->%s);\n"
-		       "\t\tkjson_obj_close(r);\n"
-		       "\t} else\n"
-		       "\t\tkjson_putnullp(r, \"%s\");\n",
-			f->name, f->name,
-			f->ref->tstrct, 
-			f->name, f->name);
-	else
-		printf("\tkjson_objp_open(r, \"%s\");\n"
-		       "\tjson_%s_data(r, &p->%s);\n"
-		       "\tkjson_obj_close(r);\n",
-			f->name, f->ref->tstrct, f->name);
+	if (NULL != f->rolemap) {
+		puts("\t\tbreak;\n"
+		     "\t}\n");
+		*sp = 1;
+	}
 }
 
 static void
@@ -1352,6 +1430,7 @@ gen_func_json_data(const struct strct *p)
 {
 	const struct field *f;
 	size_t	 pos;
+	int	 sp;
 
 	print_func_json_data(p, 0);
 	puts("\n"
@@ -1400,12 +1479,12 @@ gen_func_json_data(const struct strct *p)
 		       f->name, f->name, pos);
 	}
 
-	if (pos > 0)
+	if ((sp = (pos > 0)))
 		puts("");
 
 	pos = 0;
 	TAILQ_FOREACH(f, &p->fq, entries)
-		gen_field_json_data(f, &pos);
+		gen_field_json_data(f, &pos, &sp);
 
 	/* Free our temporary base64 buffers. */
 
@@ -1435,11 +1514,11 @@ gen_funcs(const struct config *cfg,
 	const struct update *u;
 	size_t	 pos;
 
-	gen_func_fill_r(p);
-	gen_func_fill(p);
+	gen_func_fill(cfg, p);
+	gen_func_fill_r(cfg, p);
+	gen_func_unfill(cfg, p);
 	gen_func_unfill_r(p);
-	gen_func_unfill(p);
-	gen_func_reffind(p);
+	gen_func_reffind(cfg, p);
 	gen_func_free(p);
 	gen_func_freeq(p);
 
@@ -1920,6 +1999,34 @@ gen_c_source(const struct config *cfg, int json,
 			"Current RBAC role.");
 		puts("\tenum kwbp_role role;\n"
 		     "};\n");
+
+		print_commentt(0, COMMENT_C,
+			"A saved role state attached to generated "
+			"objects.\n"
+			"We'll use this to make sure that we "
+			"shouldn't export data that we've kept "
+			"unexported in a given role (at the time of "
+			"acquisition).");
+		puts("struct\tkwbp_store {");
+		print_commentt(1, COMMENT_C,
+			"Role at the time of acquisition.");
+		puts("\tenum kwbp_role role;\n"
+		     "};\n");
+	}
+
+	if (CFG_HAS_ROLES & cfg->flags) {
+		print_commentt(0, COMMENT_C,
+			"Define our table columns.\n"
+			"Since we're using roles, this is all internal "
+			"to the source and not exported. "
+			"Use these when creating your own SQL statements, "
+			"combined with the db_xxxx_fill functions.\n"
+			"Each macro must be given a unique alias name.\n"
+			"This allows for doing multiple inner joins on the "
+			"same table.");
+		TAILQ_FOREACH(p, &cfg->sq, entries)
+			print_define_schema(p);
+		puts("");
 	}
 
 	/* Now the array of all statement. */

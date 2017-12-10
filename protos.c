@@ -350,12 +350,17 @@ print_func_db_free(const struct strct *p, int decl)
  * Generate the "unfill" function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
+ * If "priv" is declared, then we're running in roles mode and should
+ * only produce the prototype for the definition.
  */
 void
-print_func_db_unfill(const struct strct *p, int decl)
+print_func_db_unfill(const struct strct *p, int priv, int decl)
 {
 
-	printf("void%sdb_%s_unfill(struct %s *p)%s",
+	if (priv && decl)
+		return;
+	printf("%svoid%sdb_%s_unfill(struct %s *p)%s",
+	       priv ? "static " : "",
 	       decl ? " " : "\n", p->name, p->name,
 	       decl ? ";\n" : "");
 }
@@ -364,15 +369,22 @@ print_func_db_unfill(const struct strct *p, int decl)
  * Generate the "fill" function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
+ * If "priv" is declared, then we're running in roles mode and should
+ * only produce the prototype for the definition.
  */
 void
-print_func_db_fill(const struct strct *p, int decl)
+print_func_db_fill(const struct strct *p, int priv, int decl)
 {
 
-	printf("void%sdb_%s_fill(struct %s *p, "
+	if (priv && decl)
+		return;
+	printf("%svoid%sdb_%s_fill(%sstruct %s *p, "
 	       "struct ksqlstmt *stmt, size_t *pos)%s",
+	       priv ? "static " : "",
 	       decl ? " " : "\n",
-	       p->name, p->name,
+	       p->name, 
+	       priv ? "struct kwbp *ctx, " : "",
+	       p->name,
 	       decl ? ";\n" : "");
 }
 
@@ -447,3 +459,26 @@ print_func_json_iterate(const struct strct *p, int decl)
 		decl ? " " : "\n", p->name, 
 		p->name, decl ? ";" : "");
 }
+
+/*
+ * Generate the schema for a given table.
+ * This macro accepts a single parameter that's given to all of the
+ * members so that a later SELECT can use INNER JOIN xxx AS yyy and have
+ * multiple joins on the same table.
+ */
+void
+print_define_schema(const struct strct *p)
+{
+	const struct field *f;
+
+	printf("#define DB_SCHEMA_%s(_x) \\\n", p->cname);
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT == f->type)
+			continue;
+		printf("\t#_x \".%s\"", f->name);
+		if (TAILQ_NEXT(f, entries))
+			puts(" \",\" \\");
+	}
+	puts("");
+}
+

@@ -144,7 +144,7 @@ gen_enum(const struct enm *e)
  * listings declared on it.
  */
 static void
-gen_struct(const struct strct *p)
+gen_struct(const struct config *cfg, const struct strct *p)
 {
 	const struct field *f;
 
@@ -174,6 +174,12 @@ gen_struct(const struct strct *p)
 
 	if (STRCT_HAS_QUEUE & p->flags)
 		printf("\tTAILQ_ENTRY(%s) _entries;\n", p->name);
+
+	if (CFG_HAS_ROLES & cfg->flags) {
+		print_commentt(1, COMMENT_C,
+			"Private data used for role analysis.");
+		puts("\tstruct kwbp_store *priv_store;");
+	}
 	puts("};\n"
 	     "");
 
@@ -380,14 +386,27 @@ gen_funcs(const struct config *cfg,
 		puts("");
 	}
 
-	print_commentv(0, COMMENT_C, 
-	       "Fill in a %s from an open statement \"stmt\".\n"
-	       "This starts grabbing results from \"pos\", "
-	       "which may be NULL to start from zero.\n"
-	       "This follows DB_SCHEMA_%s's order for columns.",
-	       p->name, p->cname);
-	print_func_db_fill(p, 1);
-	puts("");
+	/*
+	 * The fill and unfill routines are part of the low-level API
+	 * that we don't expose if we have roles defined.
+	 */
+
+	if ( ! (CFG_HAS_ROLES & cfg->flags)) {
+		print_commentv(0, COMMENT_C, 
+		       "Fill in a %s from an open statement \"stmt\".\n"
+		       "This starts grabbing results from \"pos\", "
+		       "which may be NULL to start from zero.\n"
+		       "This follows DB_SCHEMA_%s's order for columns.",
+		       p->name, p->cname);
+		print_func_db_fill(p, 0, 1);
+		puts("");
+		print_commentv(0, COMMENT_C,
+		       "Free memory allocated by db_%s_fill().\n"
+		       "Has not effect if \"p\" is NULL.",
+		       p->name);
+		print_func_db_unfill(p, 0, 1);
+		puts("");
+	}
 
 	if (STRCT_HAS_INSERT & p->flags) {
 		print_commentt(0, COMMENT_C_FRAG_OPEN,
@@ -414,13 +433,6 @@ gen_funcs(const struct config *cfg,
 		print_func_db_insert(p, CFG_HAS_ROLES & cfg->flags, 1);
 		puts("");
 	}
-
-	print_commentv(0, COMMENT_C,
-	       "Free memory allocated by db_%s_fill().\n"
-	       "Has not effect if \"p\" is NULL.",
-	       p->name);
-	print_func_db_unfill(p, 1);
-	puts("");
 
 	TAILQ_FOREACH(s, &p->sq, entries)
 		gen_func_search(cfg, s);
@@ -481,28 +493,6 @@ gen_funcs(const struct config *cfg,
 			puts("");
 		}
 	}
-}
-
-/*
- * Generate the schema for a given table.
- * This macro accepts a single parameter that's given to all of the
- * members so that a later SELECT can use INNER JOIN xxx AS yyy and have
- * multiple joins on the same table.
- */
-static void
-gen_schema(const struct strct *p)
-{
-	const struct field *f;
-
-	printf("#define DB_SCHEMA_%s(_x) \\\n", p->cname);
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT == f->type)
-			continue;
-		printf("\t#_x \".%s\"", f->name);
-		if (TAILQ_NEXT(f, entries))
-			puts(" \",\" \\");
-	}
-	puts("");
 }
 
 /*
@@ -713,20 +703,22 @@ gen_c_header(const struct config *cfg,
 	}
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		gen_struct(p);
+		gen_struct(cfg, p);
 
-	print_commentt(0, COMMENT_C,
-		"Define our table columns.\n"
-		"Use these when creating your own SQL statements, "
-		"combined with the db_xxxx_fill functions.\n"
-		"Each macro must be given a unique alias name.\n"
-		"This allows for doing multiple inner joins on the "
-		"same table.");
-	TAILQ_FOREACH(p, &cfg->sq, entries)
-		gen_schema(p);
+	if ( ! (CFG_HAS_ROLES & cfg->flags)) {
+		print_commentt(0, COMMENT_C,
+			"Define our table columns.\n"
+			"Use these when creating your own SQL statements, "
+			"combined with the db_xxxx_fill functions.\n"
+			"Each macro must be given a unique alias name.\n"
+			"This allows for doing multiple inner joins on the "
+			"same table.");
+		TAILQ_FOREACH(p, &cfg->sq, entries)
+			print_define_schema(p);
+		puts("");
+	}
 
 	if (valids) {
-		puts("");
 		print_commentt(0, COMMENT_C,
 			"All of the fields we validate.\n"
 			"These are as VALID_XXX_YYY, where XXX is "

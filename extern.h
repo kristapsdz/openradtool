@@ -576,9 +576,9 @@ struct config	*parse_config(FILE *, const char *);
 void		 parse_free(struct config *);
 
 void		 gen_c_header(const struct config *, 
-			int, int, int);
-void		 gen_c_source(const struct config *, 
-			int, int, int, const char *);
+			int, int, int, int, int);
+void		 gen_c_source(const struct config *, int,
+			int, int, int, const char *, const char *);
 void		 gen_sql(const struct strctq *);
 int		 gen_diff(const struct config *,
 			const struct config *);
@@ -593,6 +593,8 @@ void		 print_src(size_t, const char *, ...);
 void		 print_define_schema(const struct strct *);
 void		 print_func_db_close(int, int);
 void		 print_func_db_role(int);
+void		 print_func_db_role_current(int);
+void		 print_func_db_role_stored(int);
 void		 print_func_db_open(int, int);
 void		 print_func_db_insert(const struct strct *, int, int);
 void		 print_func_db_fill(const struct strct *, int, int);

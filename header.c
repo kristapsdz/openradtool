@@ -602,6 +602,19 @@ gen_func_roles(const struct config *cfg)
 		"or when entering ROLE_none.");
 	print_func_db_role(1);
 	puts("");
+
+	print_commentt(0, COMMENT_C,
+		"Get the current role.");
+	print_func_db_role_current(1);
+	puts("");
+
+	print_commentt(0, COMMENT_C,
+		"Get the role stored into \"s\".\n"
+		"This role is set when the object containing the "
+		"stored role is created, such as when a \"search\" "
+		"query function is called.");
+	print_func_db_role_stored(1);
+	puts("");
 }
 
 
@@ -659,13 +672,11 @@ gen_role(const struct role *r, int *nf)
 
 /*
  * Generate the C header file.
- * If "json" is non-zero, this generates the JSON formatters.
- * If "valids" is non-zero, this generates the field validators.
  * For "splitproc", note that db_open uses ksql_alloc_child.
  */
 void
-gen_c_header(const struct config *cfg, 
-	int json, int valids, int splitproc)
+gen_c_header(const struct config *cfg, int json, 
+	int valids, int splitproc, int dbin, int dstruct)
 {
 	const struct strct *p;
 	const struct enm *e;
@@ -682,37 +693,39 @@ gen_c_header(const struct config *cfg,
 	       "DO NOT EDIT!");
 	puts("");
 
-	TAILQ_FOREACH(e, &cfg->eq, entries)
-		gen_enum(e);
-	TAILQ_FOREACH(bf, &cfg->bq, entries)
-		gen_bitfield(bf);
-
-	if ( ! TAILQ_EMPTY(&cfg->rq)) {
-		print_commentt(0, COMMENT_C,
-			"Our roles for access control.\n"
-			"When the database is first opened, "
-			"the system is set to ROLE_default.\n"
-			"Roles may then be set using the "
-			"kwbp_role() function.");
-		puts("enum\tkwbp_role {");
-		TAILQ_FOREACH(r, &cfg->rq, entries)
-			gen_role(r, &i);
-		puts("\n"
-		     "};\n"
-		     "");
+	if (dstruct) {
+		TAILQ_FOREACH(e, &cfg->eq, entries)
+			gen_enum(e);
+		TAILQ_FOREACH(bf, &cfg->bq, entries)
+			gen_bitfield(bf);
+		if ( ! TAILQ_EMPTY(&cfg->rq)) {
+			print_commentt(0, COMMENT_C,
+				"Our roles for access control.\n"
+				"When the database is first opened, "
+				"the system is set to ROLE_default.\n"
+				"Roles may then be set using the "
+				"kwbp_role() function.");
+			puts("enum\tkwbp_role {");
+			TAILQ_FOREACH(r, &cfg->rq, entries)
+				gen_role(r, &i);
+			puts("\n"
+			     "};\n"
+			     "");
+		}
+		TAILQ_FOREACH(p, &cfg->sq, entries)
+			gen_struct(cfg, p);
 	}
 
-	TAILQ_FOREACH(p, &cfg->sq, entries)
-		gen_struct(cfg, p);
-
-	if ( ! (CFG_HAS_ROLES & cfg->flags)) {
+	if (dbin && ! (CFG_HAS_ROLES & cfg->flags)) {
 		print_commentt(0, COMMENT_C,
 			"Define our table columns.\n"
-			"Use these when creating your own SQL statements, "
-			"combined with the db_xxxx_fill functions.\n"
-			"Each macro must be given a unique alias name.\n"
-			"This allows for doing multiple inner joins on the "
-			"same table.");
+			"Use these when creating your own SQL "
+			"statements, combined with the db_xxxx_fill "
+			"functions.\n"
+			"Each macro must be given a unique "
+			"alias name.\n"
+			"This allows for doing multiple inner joins "
+			"on the same table.");
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			print_define_schema(p);
 		puts("");
@@ -746,13 +759,15 @@ gen_c_header(const struct config *cfg,
 	     "__BEGIN_DECLS\n"
 	     "");
 
-	gen_func_open(cfg, splitproc);
-	gen_func_trans(cfg);
-	gen_func_close(cfg);
-	if (CFG_HAS_ROLES & cfg->flags)
-		gen_func_roles(cfg);
-	TAILQ_FOREACH(p, &cfg->sq, entries)
-		gen_funcs(cfg, p, json, valids);
+	if (dbin) {
+		gen_func_open(cfg, splitproc);
+		gen_func_trans(cfg);
+		gen_func_close(cfg);
+		if (CFG_HAS_ROLES & cfg->flags)
+			gen_func_roles(cfg);
+		TAILQ_FOREACH(p, &cfg->sq, entries)
+			gen_funcs(cfg, p, json, valids);
+	}
 
 	puts("__END_DECLS\n"
 	     "\n"

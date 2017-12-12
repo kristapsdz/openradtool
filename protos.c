@@ -83,6 +83,24 @@ print_func_db_role(int decl)
 }
 
 void
+print_func_db_role_current(int decl)
+{
+
+	printf("enum kwbp_role%sdb_role_current(struct kwbp *ctx)%s\n",
+		decl ? " " : "\n", 
+		decl ? ";" : "");
+}
+
+void
+print_func_db_role_stored(int decl)
+{
+
+	printf("enum kwbp_role%sdb_role_stored(struct kwbp_store *s)%s\n",
+		decl ? " " : "\n", 
+		decl ? ";" : "");
+}
+
+void
 print_func_db_trans_rollback(int priv, int decl)
 {
 

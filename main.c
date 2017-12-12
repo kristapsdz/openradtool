@@ -42,10 +42,10 @@ main(int argc, char *argv[])
 {
 	FILE		*conf = NULL, *dconf = NULL;
 	const char	*confile = NULL, *dconfile = NULL,
-	      		*header = NULL;
+	      		*header = NULL, *incls = NULL;
 	struct config	*cfg, *dcfg = NULL;
 	int		 c, rc = 1, json = 0, valids = 0,
-			 splitproc = 0;
+			 splitproc = 0, dbin = 1, dstruct = 1;
 	enum op		 op = OP_NOOP;
 
 #if HAVE_PLEDGE
@@ -53,50 +53,97 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "O:F:")))
-		switch (c) {
-		case ('O'):
-			if (0 == strcmp(optarg, "csource"))
-				op = OP_C_SOURCE;
-			else if (0 == strcmp(optarg, "cheader"))
-				op = OP_C_HEADER;
-			else if (0 == strcmp(optarg, "sqldiff"))
-				op = OP_DIFF;
-			else if (0 == strcmp(optarg, "sql"))
-				op = OP_SQL;
-			else if (0 == strcmp(optarg, "javascript"))
-				op = OP_JAVASCRIPT;
-			else if (0 == strcmp(optarg, "none"))
-				op = OP_NOOP;
-			else
-				goto usage;
-			break;
-		case ('F'):
-			if (0 == strcmp(optarg, "json"))
+	if (0 == strcmp(getprogname(), "kwebapp-c-header")) {
+		op = OP_C_HEADER;
+		while (-1 != (c = getopt(argc, argv, "jN:sv")))
+			switch (c) {
+			case ('j'):
 				json = 1;
-			else if (0 == strcmp(optarg, "splitproc"))
+				break;
+			case ('N'):
+				dbin = NULL == strchr(optarg, 'b');
+				dstruct = NULL == strchr(optarg, 'd');
+				break;
+			case ('s'):
 				splitproc = 1;
-			else if (0 == strcmp(optarg, "valids"))
+				break;
+			case ('v'):
 				valids = 1;
-			else
+				break;
+			default:
 				goto usage;
-			break;
-		default:
-			goto usage;
-		}
+			}
+	} else if (0 == strcmp(getprogname(), "kwebapp-javascript")) {
+		op = OP_JAVASCRIPT;
+		while (-1 != (c = getopt(argc, argv, "")))
+			switch (c) {
+			default:
+				goto usage;
+			}
+	} else if (0 == strcmp(getprogname(), "kwebapp-c-source")) {
+		op = OP_C_SOURCE;
+		while (-1 != (c = getopt(argc, argv, "h:I:jN:sv")))
+			switch (c) {
+			case ('h'):
+				header = optarg;
+				break;
+			case ('I'):
+				incls = optarg;
+				break;
+			case ('j'):
+				json = 1;
+				break;
+			case ('N'):
+				dbin = NULL == strchr(optarg, 'b');
+				break;
+			case ('s'):
+				splitproc = 1;
+				break;
+			case ('v'):
+				valids = 1;
+				break;
+			default:
+				goto usage;
+			}
+	} else
+		while (-1 != (c = getopt(argc, argv, "O:F:")))
+			switch (c) {
+			case ('O'):
+				if (0 == strcmp(optarg, "csource"))
+					op = OP_C_SOURCE;
+				else if (0 == strcmp(optarg, "cheader"))
+					op = OP_C_HEADER;
+				else if (0 == strcmp(optarg, "sqldiff"))
+					op = OP_DIFF;
+				else if (0 == strcmp(optarg, "sql"))
+					op = OP_SQL;
+				else if (0 == strcmp(optarg, "javascript"))
+					op = OP_JAVASCRIPT;
+				else if (0 == strcmp(optarg, "none"))
+					op = OP_NOOP;
+				else
+					goto usage;
+				break;
+			case ('F'):
+				if (0 == strcmp(optarg, "json"))
+					json = 1;
+				else if (0 == strcmp(optarg, "splitproc"))
+					splitproc = 1;
+				else if (0 == strcmp(optarg, "valids"))
+					valids = 1;
+				else
+					goto usage;
+				break;
+			default:
+				goto usage;
+			}
 
 	argc -= optind;
 	argv += optind;
 
 	/* C source and diff take mandatory first argument. */
 
-	if (OP_C_SOURCE == op) {
-		if (0 == argc)
-			goto usage;
-		header = argv[0];
-		argv++;
-		argc--;
-	} else if (OP_DIFF == op) {
+	if (OP_DIFF == op) {
 		if (0 == argc)
 			goto usage;
 		dconfile = argv[0];
@@ -164,9 +211,11 @@ main(int argc, char *argv[])
 	/* Finally, (optionally) generate output. */
 
 	if (OP_C_SOURCE == op)
-		gen_c_source(cfg, json, valids, splitproc, header);
+		gen_c_source(cfg, json, valids, 
+			splitproc, dbin, header, incls);
 	else if (OP_C_HEADER == op)
-		gen_c_header(cfg, json, valids, splitproc);
+		gen_c_header(cfg, json, valids, 
+			splitproc, dbin, dstruct);
 	else if (OP_SQL == op)
 		gen_sql(&cfg->sq);
 	else if (OP_DIFF == op)
@@ -178,11 +227,32 @@ main(int argc, char *argv[])
 	return(rc ? EXIT_SUCCESS : EXIT_FAILURE);
 
 usage:
-	fprintf(stderr, 
-		"usage: %s "
-		"[-F options] "
-		"[-O output] "
-		"[oldconfig|header] [config]\n",
-		getprogname());
+	if (OP_C_SOURCE == op)
+		fprintf(stderr, 
+			"usage: %s "
+			"[-jsv] "
+			"[-h header[,header...] "
+			"[-I bjv] "
+			"[-N b] "
+			"[config]\n",
+			getprogname());
+	else if (OP_C_HEADER == op)
+		fprintf(stderr, 
+			"usage: %s "
+			"[-jsv] "
+			"[-N bd] "
+			"[config]\n",
+			getprogname());
+	else if (OP_JAVASCRIPT == op)
+		fprintf(stderr, 
+			"usage: %s [config]\n",
+			getprogname());
+	else
+		fprintf(stderr, 
+			"usage: %s "
+			"[-F options] "
+			"[-O output] "
+			"[oldconfig|header] [config]\n",
+			getprogname());
 	return(EXIT_FAILURE);
 }

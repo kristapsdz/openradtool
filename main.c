@@ -80,6 +80,13 @@ main(int argc, char *argv[])
 			default:
 				goto usage;
 			}
+	} else if (0 == strcmp(getprogname(), "kwebapp-sql")) {
+		op = OP_SQL;
+		while (-1 != (c = getopt(argc, argv, "")))
+			switch (c) {
+			default:
+				goto usage;
+			}
 	} else if (0 == strcmp(getprogname(), "kwebapp-c-source")) {
 		op = OP_C_SOURCE;
 		while (-1 != (c = getopt(argc, argv, "h:I:jN:sv")))
@@ -172,13 +179,6 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	if (json && (OP_C_HEADER != op && OP_C_SOURCE != op)) 
-		warnx("-Fjson invalid with non-C output");
-	if (splitproc && (OP_C_HEADER != op && OP_C_SOURCE != op)) 
-		warnx("-Fsplitproc invalid with non-C output");
-	if (valids && (OP_C_HEADER != op && OP_C_SOURCE != op)) 
-		warnx("-Fvalids invalid with non-C output");
-
 	/*
 	 * First, parse the file.
 	 * This pulls all of the data from the configuration file.
@@ -242,6 +242,10 @@ usage:
 			"[-jsv] "
 			"[-N bd] "
 			"[config]\n",
+			getprogname());
+	else if (OP_SQL == op)
+		fprintf(stderr, 
+			"usage: %s [config]\n",
 			getprogname());
 	else if (OP_JAVASCRIPT == op)
 		fprintf(stderr, 

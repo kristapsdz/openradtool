@@ -21,6 +21,7 @@ HTMLS		 = archive.html \
 		   kwebapp-c-header.1.html \
 		   kwebapp-c-source.1.html \
 		   kwebapp-javascript.1.html \
+		   kwebapp-sql.1.html \
 		   kwebapp.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
 DOTAR		 = comments.c \
@@ -33,6 +34,7 @@ DOTAR		 = comments.c \
 		   kwebapp-c-header.1 \
 		   kwebapp-c-source.1 \
 		   kwebapp-javascript.1 \
+		   kwebapp-sql.1 \
 		   kwebapp.5 \
 		   linker.c \
 		   Makefile \
@@ -58,7 +60,8 @@ IHTMLS		 = db.txt.html \
 		   test.c.html
 LINKS		 = kwebapp-c-header \
 		   kwebapp-c-source \
-		   kwebapp-javascript
+		   kwebapp-javascript \
+		   kwebapp-sql
 
 all: kwebapp $(LINKS)
 
@@ -80,10 +83,12 @@ install: kwebapp
 	mkdir -p $(DESTDIR)$(MANDIR)/man1
 	mkdir -p $(DESTDIR)$(MANDIR)/man5
 	$(INSTALL_PROGRAM) kwebapp $(DESTDIR)$(BINDIR)
-	$(INSTALL_MAN) kwebapp.1 kwebapp-c-source.1 kwebapp-c-header.1 kwebapp-javascript.1 $(DESTDIR)$(MANDIR)/man1
+	$(INSTALL_MAN) kwebapp.1 kwebapp-c-source.1 kwebapp-c-header.1 kwebapp-javascript.1 kwebapp-sql.1 $(DESTDIR)$(MANDIR)/man1
 	$(INSTALL_MAN) kwebapp.5 $(DESTDIR)$(MANDIR)/man5
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-c-source
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-c-header
+	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-javascript
+	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-sql
 
 kwebapp.tar.gz.sha512: kwebapp.tar.gz
 	sha512 kwebapp.tar.gz >$@
@@ -115,7 +120,7 @@ db.h: kwebapp-c-header db.txt
 	./kwebapp-c-header -vsj db.txt >$@
 
 db.sql: kwebapp db.txt
-	./kwebapp -Osql db.txt >$@
+	./kwebapp-sql db.txt >$@
 
 db.js: kwebapp-javascript db.txt
 	./kwebapp-javascript db.txt >$@

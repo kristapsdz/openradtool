@@ -73,20 +73,31 @@ main(int argc, char *argv[])
 			default:
 				goto usage;
 			}
+		argc -= optind;
+		argv += optind;
 	} else if (0 == strcmp(getprogname(), "kwebapp-javascript")) {
 		op = OP_JAVASCRIPT;
-		while (-1 != (c = getopt(argc, argv, "")))
-			switch (c) {
-			default:
-				goto usage;
-			}
+		if (-1 != getopt(argc, argv, ""))
+			goto usage;
+		argc -= optind;
+		argv += optind;
 	} else if (0 == strcmp(getprogname(), "kwebapp-sql")) {
 		op = OP_SQL;
-		while (-1 != (c = getopt(argc, argv, "")))
-			switch (c) {
-			default:
-				goto usage;
-			}
+		if (-1 != getopt(argc, argv, ""))
+			goto usage;
+		argc -= optind;
+		argv += optind;
+	} else if (0 == strcmp(getprogname(), "kwebapp-sqldiff")) {
+		op = OP_DIFF;
+		if (-1 != getopt(argc, argv, ""))
+			goto usage;
+		argc -= optind;
+		argv += optind;
+		if (0 == argc)
+			goto usage;
+		dconfile = argv[0];
+		argv++;
+		argc--;
 	} else if (0 == strcmp(getprogname(), "kwebapp-c-source")) {
 		op = OP_C_SOURCE;
 		while (-1 != (c = getopt(argc, argv, "h:I:jN:sv")))
@@ -112,50 +123,13 @@ main(int argc, char *argv[])
 			default:
 				goto usage;
 			}
-	} else
-		while (-1 != (c = getopt(argc, argv, "O:F:")))
-			switch (c) {
-			case ('O'):
-				if (0 == strcmp(optarg, "csource"))
-					op = OP_C_SOURCE;
-				else if (0 == strcmp(optarg, "cheader"))
-					op = OP_C_HEADER;
-				else if (0 == strcmp(optarg, "sqldiff"))
-					op = OP_DIFF;
-				else if (0 == strcmp(optarg, "sql"))
-					op = OP_SQL;
-				else if (0 == strcmp(optarg, "javascript"))
-					op = OP_JAVASCRIPT;
-				else if (0 == strcmp(optarg, "none"))
-					op = OP_NOOP;
-				else
-					goto usage;
-				break;
-			case ('F'):
-				if (0 == strcmp(optarg, "json"))
-					json = 1;
-				else if (0 == strcmp(optarg, "splitproc"))
-					splitproc = 1;
-				else if (0 == strcmp(optarg, "valids"))
-					valids = 1;
-				else
-					goto usage;
-				break;
-			default:
-				goto usage;
-			}
-
-	argc -= optind;
-	argv += optind;
-
-	/* C source and diff take mandatory first argument. */
-
-	if (OP_DIFF == op) {
-		if (0 == argc)
+		argc -= optind;
+		argv += optind;
+	} else {
+		if (-1 != getopt(argc, argv, ""))
 			goto usage;
-		dconfile = argv[0];
-		argv++;
-		argc--;
+		argc -= optind;
+		argv += optind;
 	}
 
 	if (0 == argc) {
@@ -246,6 +220,10 @@ usage:
 	else if (OP_SQL == op)
 		fprintf(stderr, 
 			"usage: %s [config]\n",
+			getprogname());
+	else if (OP_DIFF == op)
+		fprintf(stderr, 
+			"usage: %s oldconfig [config]\n",
 			getprogname());
 	else if (OP_JAVASCRIPT == op)
 		fprintf(stderr, 

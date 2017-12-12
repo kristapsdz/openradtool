@@ -1,4 +1,4 @@
-.SUFFIXES: .dot .svg
+.SUFFIXES: .dot .svg .1 .1.html .5 .5.html
 
 include Makefile.configure
 
@@ -22,6 +22,7 @@ HTMLS		 = archive.html \
 		   kwebapp-c-source.1.html \
 		   kwebapp-javascript.1.html \
 		   kwebapp-sql.1.html \
+		   kwebapp-sqldiff.1.html \
 		   kwebapp.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
 DOTAR		 = comments.c \
@@ -35,6 +36,7 @@ DOTAR		 = comments.c \
 		   kwebapp-c-source.1 \
 		   kwebapp-javascript.1 \
 		   kwebapp-sql.1 \
+		   kwebapp-sqldiff.1 \
 		   kwebapp.5 \
 		   linker.c \
 		   Makefile \
@@ -61,7 +63,8 @@ IHTMLS		 = db.txt.html \
 LINKS		 = kwebapp-c-header \
 		   kwebapp-c-source \
 		   kwebapp-javascript \
-		   kwebapp-sql
+		   kwebapp-sql \
+		   kwebapp-sqldiff
 
 all: kwebapp $(LINKS)
 
@@ -83,12 +86,13 @@ install: kwebapp
 	mkdir -p $(DESTDIR)$(MANDIR)/man1
 	mkdir -p $(DESTDIR)$(MANDIR)/man5
 	$(INSTALL_PROGRAM) kwebapp $(DESTDIR)$(BINDIR)
-	$(INSTALL_MAN) kwebapp.1 kwebapp-c-source.1 kwebapp-c-header.1 kwebapp-javascript.1 kwebapp-sql.1 $(DESTDIR)$(MANDIR)/man1
+	$(INSTALL_MAN) kwebapp.1 kwebapp-c-source.1 kwebapp-c-header.1 kwebapp-javascript.1 kwebapp-sql.1 kwebapp-sqldiff.1 $(DESTDIR)$(MANDIR)/man1
 	$(INSTALL_MAN) kwebapp.5 $(DESTDIR)$(MANDIR)/man5
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-c-source
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-c-header
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-javascript
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-sql
+	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-sqldiff
 
 kwebapp.tar.gz.sha512: kwebapp.tar.gz
 	sha512 kwebapp.tar.gz >$@
@@ -119,14 +123,14 @@ db.c: kwebapp-c-source db.txt
 db.h: kwebapp-c-header db.txt
 	./kwebapp-c-header -vsj db.txt >$@
 
-db.sql: kwebapp db.txt
+db.sql: kwebapp-sql db.txt
 	./kwebapp-sql db.txt >$@
 
 db.js: kwebapp-javascript db.txt
 	./kwebapp-javascript db.txt >$@
 
-db.update.sql: kwebapp db.old.txt db.txt
-	./kwebapp -Osqldiff db.old.txt db.txt >$@
+db.update.sql: kwebapp-sqldiff db.old.txt db.txt
+	./kwebapp-sqldiff db.old.txt db.txt >$@
 
 db.db: db.sql
 	rm -f $@
@@ -134,11 +138,11 @@ db.db: db.sql
 
 $(OBJS): config.h extern.h
 
-kwebapp.5.html: kwebapp.5
-	mandoc -Thtml -Ostyle=mandoc.css kwebapp.5 >$@
+.5.5.html:
+	mandoc -Thtml -Ostyle=mandoc.css $< >$@
 
-kwebapp.1.html: kwebapp.1
-	mandoc -Thtml -Ostyle=mandoc.css kwebapp.1 >$@
+.1.1.html:
+	mandoc -Thtml -Ostyle=mandoc.css $< >$@
 
 .dot.svg:
 	dot -Tsvg $< | xsltproc --novalid notugly.xsl - >$@
@@ -212,7 +216,7 @@ clean:
 	rm -f kwebapp $(LINKS)
 	rm -f $(OBJS) db.c db.h db.o db.sql db.js db.update.sql db.db test test.o
 	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
-	rm -f index.svg index.html highlight.css kwebapp.5.html kwebapp.1.html
+	rm -f index.svg highlight.css $(HTMLS)
 	rm -f db.txt.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
 
 distclean: clean

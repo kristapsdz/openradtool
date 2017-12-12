@@ -1,0 +1,631 @@
+.\"	$OpenBSD$
+.\"
+.\" Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate$
+.Dt KWEBAPP-C-HEADER 1
+.Os
+.Sh NAME
+.Nm kwebapp-c-header
+.Nd define web application C API
+.Sh SYNOPSIS
+.Nm kwebapp-c-header
+.Op Fl jsv
+.Op Fl N Ar db
+.Op Ar config
+.Sh DESCRIPTION
+The
+.Nm
+utility accepts
+.Ar config
+.Pq defaulting to standard input
+and produces a C API describing the configuration.
+These declarations is usually defined by the output of
+.Xr kwebapp-c-source 1 .
+Its arguments are as follows:
+.Bl -tag -width Ds
+.It Fl j
+Output JSON output declarations as documented in
+.Sx JSON export .
+.It Fl v
+Output data validators declarations as documented in
+.Sx Data validation .
+.It Fl N Ar bd
+Disable production of output, which may be
+.Ar b
+and/or
+.Ar d .
+The
+.Ar b
+flag suppresses the foundational
+.Sx Data structures
+declarations, while
+.Ar d
+suppresses the
+.Sx Database input .
+.It Fl s
+Use split-process mode for the database.
+This only changes generated documentation.
+.El
+.Pp
+By default, the
+.Sx Database input
+and
+.Sx Data structures
+declarations are output.
+.Pp
+All C code produced by
+.Nm
+conforms with the
+.Xr style 9
+manual of
+.Ox .
+.Pp
+If you're linking to the header file, different output options require
+different pre-inclusion needs.
+.Ss Data structures
+The basis of the C API is a series of enumerations, structures, and
+preprocessor macros that describe the data.
+To include output files for data structures, you'll need:
+.Bd -literal -offset indent
+#include <sys/queue.h> /* iff you have lists */
+#include <stdint.h>
+.Ed
+.Pp
+Output begins with the definition of roles.
+The usage of roles in the input triggers several changes in output:
+these will be noted.
+.Bd -literal -offset indent
+roles {
+  role user;
+};
+.Ed
+.Pp
+Each of these are produced as an enumeration (always called
+.Vt enum kwbp_role ) ,
+with the extra
+.Va ROLE_none
+and
+.Va ROLE_default
+produced for the empty and initial roles, respectively.
+See the
+.Sx Database input
+section for details on role management.
+.Bd -literal -offset indent
+enum kwbp_role {
+  ROLE_user,
+  ROLE_none,
+  ROLE_default
+};
+.Ed
+.Pp
+Next, an enumeration is generated for each
+.Cm enum
+with the name as given.
+The enumeration is then given a series of values for each item in the
+enumeration object.
+.Bd -literal -offset indent
+enum foo {
+  item bar 0;
+  item baz 1;
+};
+.Ed
+.Pp
+Output variables are prefixed with the capitalised enumeration name,
+followed by an underscore, followed by the item name.
+.Bd -literal -offset indent
+enum foo {
+  FOO_bar = 0,
+  FOO_baz = 1
+};
+.Ed
+.Pp
+Bit-fields produce similar code, except that each bit-field value is
+represented by the bit index and mask.
+.Bd -literal -offset indent
+bits foo {
+  item baz 1;
+};
+.Ed
+.Pp
+This produces an enumeration that describes the index of the bit
+prefixed with
+.Qq BITI ,
+the underscore, followed by the uppercase name; and the mask when the
+respective bit is set prefixed with
+.Qq BITF ,
+the underscore, and the uppercase name.
+.Bd -literal -offset indent
+enum foo {
+  BITI_FOO_baz = 1,
+  BITF_FOO_baz = (1U << 1)
+};
+.Ed
+.Pp
+Structures are the foundational data strutcure of the API.
+They are named as defined in the configuration and consist of variables
+mapped to
+.Cm field
+entries along with bookkeeping fields:
+if a variable may be
+.Cm null ,
+an extra
+.Vt int
+variable prefixed with
+.Qq has_
+is defined as well; or if it is a
+.Cm blob ,
+an extra
+.Vt size_t
+variable suffixed with
+.Qq _sz
+is defined.
+.Bd -literal -offset indent
+struct company {
+  field name text;
+  field foo enum foo null;
+  field id int rowid;
+};
+.Ed
+.Pp
+Text variables are NUL-terminated
+.Vt "char *"
+strings, blobs are
+.Vt "void *" ,
+integers are
+.Vt int64_t ,
+reals are
+.Vt double ,
+epoch values are
+.Vt time_t ,
+enumerations are as named, and nested structures (foreign key
+references) are defined as structures of the given type.
+.Bd -literal -offset indent
+struct company {
+  char *name;
+  enum foo foo;
+  int has_foo;
+  int64_t id;
+};
+.Ed
+.Pp
+All structures are defined in order so that they need not be
+forward-declared.
+.Pp
+If the structure consists of a
+.Cm list
+operation, a
+.Xr TAILQ_ENTRY 3
+named
+.Va _entries
+is produced in its output.
+If roles are defined, each structure has a variable
+.Va priv_store
+of an opaque pointer type
+.Vt "struct kwbp_store" .
+This is used to keep track of the role in which the query function was
+invoked.
+.
+.Ss Database input
+Input functions define how the structures described in
+.Sx Data structures
+are pulled from the database.
+These functions invoke
+.Xr ksql 3
+for handling the database itself, so the
+.Fl l Ns Ar ksql
+library is required for linking.
+You'll need the following inclusions:
+.Bd -literal -offset indent
+#include <stdint.h> /* ksql(3) */
+#include <ksql.h>
+.Ed
+.Pp
+If you're using roles, you do not need any inclusions.
+.Pp
+There are two functions that work with opening and closing the
+database.
+When roles are not defined, these may be overridden.
+There are also several transaction functions and, if applicable, a
+function for managing roles.
+.Pp
+In the following documentation,
+.Qq TYPE
+is defined as
+.Vt "struct kwbp"
+if roles are defined or
+.Vt "struct ksql"
+otherwise.
+.Bl -tag -width Ds
+.It Li TYPE *db_open(const char *file)
+Open a database named
+.Fa file
+and return a pointer to TYPE.
+Returns
+.Dv NULL
+on failure to allocate, open, or configure the database.
+.It Li void db_close(TYPE *p)
+Closes a database opened by
+.Fn db_open .
+Passing
+.Dv NULL
+is a noop.
+.It Li void db_trans_commit(TYPE *p, size_t id)
+Commit a transaction opened by
+.Fn db_trans_open
+with unique transaction identifier
+.Fa id .
+.It Li void db_trans_open(TYPE *p, size_t id, int mode)
+Open a transaction with a unique identifier
+.Fa id .
+The identifier prevents recursive transactions and allows for
+identifying open transactions on error.
+If
+.Fa mode
+is zero, the transaction locks the database on first access with shared
+locks (no writes allowed, reads allowed) on queries and unshared locks
+(single writer, reads allowed) on modification.
+If >0, the transaction immediately enters unshared lock mode.
+If <0, the transaction locks exclusively, preventing all other
+access.
+.It Li void db_trans_rollback(TYPE *p, size_t id)
+Roll-back a transaction opened by
+.Fn db_trans_open
+with unique transaction identifier
+.Fa id .
+.It Li void db_role(struct kwbp *ctx, enum kwbp_role r)
+If roles are enabled, move from the current role to
+.Fa r .
+If the role is the same as the current role, this does nothing.
+Roles may only transition to sub-roles, not ascend the role tree or move
+laterally.
+The only exception is when leaving
+.Dv ROLE_default
+or entering
+.Dv ROLE_none .
+This does not return failure: on role violation, it invokes
+.Xr abort 2 .
+.It Li enum kwbp_role db_role_current(struct kwbp *ctx)
+Get the currently-assigned role.
+If
+.Fn db_role
+hasn't yet been called, this will be
+.Dv ROLE_default .
+.It Li enum kwbp_role db_role_stored(struct kwbp_store *ctx)
+Get the role assigned to an object at the time of its creation.
+.El
+.Pp
+Each structure has a number of operations for operating on the
+.Sx Data structures .
+These are all stipulated as
+.Cm delete ,
+.Cm insert ,
+.Cm iterate ,
+.Cm list ,
+.Cm search ,
+and
+.Cm update
+statements in the configuration.
+Let
+.Qq foo
+be the name of the exemplar structure.
+Again,
+.Qq TYPE
+is defined as
+.Vt "struct kwbp"
+if roles are defined or
+.Vt "struct ksql"
+otherwise.
+.Bl -tag -width Ds
+.It Li int db_foo_delete_xxxx(TYPE *p, ARGS)
+Run the named
+.Cm delete
+function
+.Qq xxxx .
+The ARGS passed to this function are
+the fields that constrain which rows are deleted.
+Parameters are only specified for operations for binary-operator
+constraints, i.e., those not checking for null status.
+Returns non-zero on success, zero on constraint failure.
+.It Li int db_foo_delete_by_yy_op(TYPE *p, ARGS)
+Like
+.Fn db_foo_delete_xxxx ,
+but using an un-named
+.Cm delete
+statement constrained by
+.Qq yy
+with operation
+.Qq op .
+.It Li void db_foo_free(struct foo *p)
+Frees a pointer returned by a unique search function.
+If passed
+.Dv NULL ,
+this is a noop.
+.It Li void db_foo_freeq(struct foo_q *p)
+Frees a queue (and its members) created by a listing function.
+This function is produced only if there are listing statements on a
+given structure.
+.It Li struct foo *db_foo_get_xxxx(TYPE *p, ARGS)
+The
+.Cm search
+statement named
+.Qq xxxx .
+The function accepts variables for all binary-operator fields to check
+(i.e., all except for those checking for null).
+.It Li struct foo *db_foo_get_by_xxxx_op1_yy_zz_op2
+Like
+.Fn db_foo_get_xxxx ,
+but for (possibly-nested) structures.
+In the given example,
+.Qq xxxx
+is a field in the given structure with operation
+.Qq op1
+and
+.Qq yy_zz
+means a field
+.Qq zz
+in the nested structure
+.Qq yy
+with operation
+.Qq op2 .
+.It Li int64_t db_foo_insert(TYPE *p, ARGS)
+Insert a row and return its
+.Ft int64_t
+identifier or
+.Li \&-1
+on constraint failure.
+This accepts all native fields ARGS as parameters excluding
+.Cm rowid ,
+which is automatically set by the database.
+If any fields are specified as
+.Cm null ,
+they are passed into this functions as pointers.
+The null values must then be specified as
+.Dv NULL
+pointers.
+This function is only generated if the
+.Cm insert
+statement is specified for the given structure.
+.It Li void db_foo_iterate(TYPE *p, foo_cb cb, void *arg, ARGS)
+Iterate over all rows.
+.It Li void db_foo_iterate_xxxx(TYPE *p, foo_cb cb, void *arg, ARGS)
+Like
+.Fn db_foo_get_xxxx ,
+but invoking a function callback
+.Fa cb
+passed
+.Fa arg
+within the active query for each retrieved result.
+.It Li void db_foo_iterate_by__xxxx_op1__yy_zz_op2(TYPE *p, foo_cb cb, void *arg, ARGS)
+Like
+.Fn db_foo_get_by__xxxx_op1__yy_zz_op2 ,
+but invoking a function callback for the retrieved results.
+.It Li struct foo_q *db_foo_list(TYPE *p)
+Allocate and fill a queue of all rows.
+.It Li struct foo_q *db_foo_list_xxxx(TYPE *p, ARGS)
+Like
+.Fn db_foo_get_xxxx ,
+but producing a queue of responses.
+.It Li struct foo_q *db_foo_list_by__xxxx_op1__yy_zz_op2(TYPE *p, ARGS)
+Like
+.Fn db_foo_get_by__xxxx_op1__yy_zz_op2 ,
+but producing a queue of responses.
+.It Li int db_foo_update_xxxx(TYPE *p, ARGS)
+Run the named update function
+.Qq xxxx .
+The update functions are specified with
+.Cm update
+statements.
+The parameters passed to this function are first the fields to modify,
+then the fields that constrain which rows are updated.
+If any modified fields are specified as
+.Cm null ,
+they are passed into this functions as pointers.
+Any null values must then be specified as
+.Dv NULL
+pointers.
+Update fields are only specified for operations for binary-operator
+constraints, i.e., those not checking for null status.
+Returns non-zero on success, zero on constraint failure.
+.It Li int db_foo_update_xx_by_yy_op(TYPE *p, ARGS)
+Like
+.Fn db_foo_update_xxxx ,
+but using an un-named update statement modifying
+.Qq xx
+constrained by
+.Qq yy
+with operation
+.Qq op .
+.It Li void db_foo_update_by_yy_op(TYPE *p, ARGS)
+Like
+.Fn db_foo_update_xx_by_yy_op ,
+but for when no modify fields were specified, meaning that all fields
+(but structures and row identifiers) are to be modified.
+.El
+.Pp
+If no roles are defined, several low-level functions declaration and
+macros are produced as well.
+This assists callers who provide their own database functions as enabled
+by
+.Xr ksql 3 .
+.Bl -tag -width Ds
+.It Dv DB_SCHEMA_XXX(name)
+The string version of the SQL schema of structure
+.Dq xxx .
+This macro accepts a single argument
+.Fa name
+that is prepended to each column name to facilitate aliases.
+.It Li void db_foo_fill(struct foo *p, struct ksqlstmt *stmt, size_t *pos)
+Zero and fill in a pointer
+.Fa p
+from an open database statement
+.Fa stmt
+starting with result set column
+.Fa pos ,
+which if
+.Dv NULL
+is assumed to be column zero.
+The
+.Fa pos
+is set to the column after extracting information.
+This fills all nested structures as well.
+.It Li void db_foo_unfill(struct foo *p)
+Release resources
+.Fa p
+filled from a database query
+.Fn db_foo_fill .
+This frees all nested structures as well.
+If
+.Fa p
+is
+.Dv NULL ,
+this is a noop.
+.El
+.Ss JSON export
+These functions invoke
+.Xr kcgijson 3
+to manage output formats.
+The header files for both
+.Xr kcgijson 3
+and
+.Xr kcgi 3
+must be stipulated.
+.Bd -literal -offset indent
+#include <sys/types.h> /* kcgi(3) */
+#include <stdarg.h> /* kcgi(3) */
+#include <stdint.h> /* kcgi(3) */
+#include <kcgi.h>
+#include <kcgijson.h>
+.Ed
+.Bl -tag -width Ds
+.It Li void json_foo_array(struct kjsonreq *r, const struct foo_q *q)
+Print the list
+.Fa q
+of structures as a key-value pair where the key is the
+structure name and the value is an array consisting of
+.Fn json_foo_data
+objects.
+This is only produced if the structure has
+.Cm list
+queries stipulated.
+.It Li void json_foo_data(struct kjsonreq *r, const struct foo *p)
+Enumerate only the fields of the structure
+.Fa p
+in JSON dictionary format.
+The key is the field name and the value is a string for text types,
+decimal number for reals, integer for integers, and base64-encoded
+string for blobs.
+If a field is null, it is serialised as a null value.
+Fields marked
+.Cm noexport
+are not included in the enumeration, nor are passwords.
+.It Li void json_foo_iterate(const struct agent *, void *arg)
+Print a
+.Dq blank
+object consisting only of the structure data (see
+.Fn json_foo_data )
+within JSON object braces.
+The calling convention (passing a
+.Vt "void *"
+as the
+.Vt "struct kjsonreq" )
+makes for easy integration with iterate functions.
+This is only produced if the structure has
+.Cm iterate
+queries stipulated.
+.It Li void json_foo_obj(struct kjsonreq *r, const struct agent *p)
+Print the entire structure
+.Fa p
+as a key-value pair where the key is the structure name and the value is
+an object consisting of
+.Fn json_foo_data .
+.El
+.
+.
+.Ss Data validation
+These functions invoke
+.Xr kcgi 3
+to perform basic type validation.
+The following are required for including the produced functions.
+.Bd -literal -offset indent
+#include <sys/types.h> /* kcgi(3) */
+#include <stdarg.h> /* kcgi(3) */
+#include <stdint.h> /* kcgi(3) */
+#include <kcgi.h>
+.Ed
+.Pp
+A full validation array is given for all fields, although these need not
+be used by the calling application.
+Given the same structure
+.Qq foo ,
+the following are generated:
+.Bl -tag -width Ds
+.It Li int valid_foo_xxxx(struct kpair *p)
+Validate the field
+.Qq xxxx
+in the structure.
+This should be used in place of raw validation functions such as
+.Xr kvalid_int 3 .
+The validation function will at least validate the type.
+If limitation clauses are given to a field, those will also be emitted
+within this function.
+.Em Note :
+structs are not validated.
+.It Li enum valid_keys
+An enumeration of all fields that accept validators.
+The enumeration entries are
+.Dv VALID_FOO_XXXX ,
+where
+.Qq XXXX
+is the field name.
+The last enumeration value is always
+.Dv VALID__MAX .
+.It Li const struct kvalid valid_keys[VALID__MAX]
+A validation array for
+.Xr khttp_parse 3 .
+This uses the
+.Fn valid_foo_xxxx
+functions as described above and names corresponding HTML form entries
+as
+.Qq foo-xxxx ,
+where again,
+.Qq xxxx
+is the field name.
+.El
+.\" The following requests should be uncommented and used where appropriate.
+.\" .Sh CONTEXT
+.\" For section 9 functions only.
+.\" .Sh RETURN VALUES
+.\" For sections 2, 3, and 9 function return values only.
+.\" .Sh ENVIRONMENT
+.\" For sections 1, 6, 7, and 8 only.
+.\" .Sh FILES
+.Sh EXIT STATUS
+.Ex -std
+.\" .Sh DIAGNOSTICS
+.\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
+.\" .Sh ERRORS
+.\" For sections 2, 3, 4, and 9 errno settings only.
+.Sh SEE ALSO
+.Xr kwebapp-c-source 1 ,
+.Xr kcgi 3 ,
+.Xr kcgijson 3 ,
+.Xr ksql 3 ,
+.Xr kwebapp 5
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh CAVEATS
+.\" .Sh BUGS

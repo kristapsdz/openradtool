@@ -231,10 +231,7 @@ usage:
 			getprogname());
 	else
 		fprintf(stderr, 
-			"usage: %s "
-			"[-F options] "
-			"[-O output] "
-			"[oldconfig|header] [config]\n",
+			"usage: %s [config]\n",
 			getprogname());
 	return(EXIT_FAILURE);
 }

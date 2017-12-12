@@ -40,14 +40,14 @@ The method for acquiring the JSON is not managed by
 .Nm .
 .Pp
 To use the interface, simply include the generated file as a script,
-create objects given the JSON output of
-.Fl F Ns Ar json ,
-and invoke the object's
+create objects given the exported JSON of
+.Xr kwebapp-c-source 1 ,
+and invoke the JavaScript object's
 .Fn fill ,
 .Fn fillInner ,
 and
 .Fn fillArray
-methods with the DOM tree node.
+methods with a DOM tree node.
 .Pp
 For example, given a structure
 .Dq foo

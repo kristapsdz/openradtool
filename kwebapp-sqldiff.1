@@ -15,13 +15,14 @@
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .Dd $Mdocdate$
-.Dt KWEBAPP-SQL 1
+.Dt KWEBAPP-SQLDIFF 1
 .Os
 .Sh NAME
-.Nm kwebapp-sql
-.Nd implement web application SQL schema
+.Nm kwebapp-sqldiff
+.Nd generate SQL web application schema differences
 .Sh SYNOPSIS
-.Nm kwebapp-sql
+.Nm kwebapp-sqldiff
+.Ar oldconfig
 .Op Ar config
 .Sh DESCRIPTION
 The
@@ -31,12 +32,19 @@ utility accepts a configuration file
 .Pq defaulting to standard input
 and produces an SQL schema describing the configuration.
 .Pp
-The schema consists of a series of
+It outputs a series of
 .Cm CREATE TABLE
-SQL commands representing the objects in
+and
+.Cm ALTER TABLE
+SQL commands to update the configuration
+.Ar oldconfig
+to the new configuration
 .Ar config .
-These encapsulate the foreign keys and all other required SQL
-attributes.
+.Pp
+The configuration files are considered incompatible if they contain
+destructive differences: dropped objects (structures or fields) or
+different fields (types, references, attributes).
+.Pp
 The SQL generated is designed for
 .Xr sqlite3 1 .
 .\" The following requests should be uncommented and used where appropriate.
@@ -55,7 +63,7 @@ The SQL generated is designed for
 .\" .Sh ERRORS
 .\" For sections 2, 3, 4, and 9 errno settings only.
 .Sh SEE ALSO
-.Xr kwebapp-sqldiff 1 ,
+.Xr kwebapp-sql 1 ,
 .Xr sqlite3 1 ,
 .Xr kwebapp 5
 .\" .Sh STANDARDS

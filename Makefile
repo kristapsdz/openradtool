@@ -18,6 +18,9 @@ OBJS		 = comments.o \
 HTMLS		 = archive.html \
 		   index.html \
 		   kwebapp.1.html \
+		   kwebapp-c-header.1.html \
+		   kwebapp-c-source.1.html \
+		   kwebapp-javascript.1.html \
 		   kwebapp.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
 DOTAR		 = comments.c \
@@ -27,6 +30,9 @@ DOTAR		 = comments.c \
 		   header.c \
 		   javascript.c \
 		   kwebapp.1 \
+		   kwebapp-c-header.1 \
+		   kwebapp-c-source.1 \
+		   kwebapp-javascript.1 \
 		   kwebapp.5 \
 		   linker.c \
 		   Makefile \
@@ -50,6 +56,11 @@ IHTMLS		 = db.txt.html \
 		   db.update.sql.html \
 		   db.js.html \
 		   test.c.html
+LINKS		 = kwebapp-c-header \
+		   kwebapp-c-source \
+		   kwebapp-javascript
+
+all: kwebapp $(LINKS)
 
 kwebapp: $(OBJS)
 	$(CC) -o $@ $(OBJS)
@@ -69,8 +80,10 @@ install: kwebapp
 	mkdir -p $(DESTDIR)$(MANDIR)/man1
 	mkdir -p $(DESTDIR)$(MANDIR)/man5
 	$(INSTALL_PROGRAM) kwebapp $(DESTDIR)$(BINDIR)
-	$(INSTALL_MAN) kwebapp.1 $(DESTDIR)$(MANDIR)/man1
+	$(INSTALL_MAN) kwebapp.1 kwebapp-c-source.1 kwebapp-c-header.1 kwebapp-javascript.1 $(DESTDIR)$(MANDIR)/man1
 	$(INSTALL_MAN) kwebapp.5 $(DESTDIR)$(MANDIR)/man5
+	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-c-source
+	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-c-header
 
 kwebapp.tar.gz.sha512: kwebapp.tar.gz
 	sha512 kwebapp.tar.gz >$@
@@ -80,6 +93,9 @@ kwebapp.tar.gz: $(DOTAR)
 	install -m 0444 $(DOTAR) .dist/kwebapp-$(VERSION)
 	( cd .dist/ && tar zcf ../$@ ./ )
 	rm -rf .dist/
+
+$(LINKS): kwebapp
+	ln -f kwebapp $@
 
 OBJS: extern.h
 
@@ -92,17 +108,17 @@ db.o: db.c db.h
 test.o: test.c db.h
 	$(CC) $(CFLAGS) -Wextra -I/usr/local/include -o $@ -c test.c
 
-db.c: kwebapp db.txt
-	./kwebapp -Ocsource -Fvalids -Fsplitproc -Fjson db.h db.txt >$@
+db.c: kwebapp-c-source db.txt
+	./kwebapp-c-source -vsj db.txt >$@
 
-db.h: kwebapp db.txt
-	./kwebapp -Ocheader -Fvalids -Fsplitproc -Fjson db.txt >$@
+db.h: kwebapp-c-header db.txt
+	./kwebapp-c-header -vsj db.txt >$@
 
 db.sql: kwebapp db.txt
 	./kwebapp -Osql db.txt >$@
 
-db.js: kwebapp db.txt
-	./kwebapp -Ojavascript db.txt >$@
+db.js: kwebapp-javascript db.txt
+	./kwebapp-javascript db.txt >$@
 
 db.update.sql: kwebapp db.old.txt db.txt
 	./kwebapp -Osqldiff db.old.txt db.txt >$@
@@ -188,7 +204,8 @@ TODO.xml: TODO.md
 	  echo "</article>" ; ) >$@
 
 clean:
-	rm -f kwebapp $(OBJS) db.c db.h db.o db.sql db.js db.update.sql db.db test test.o
+	rm -f kwebapp $(LINKS)
+	rm -f $(OBJS) db.c db.h db.o db.sql db.js db.update.sql db.db test test.o
 	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
 	rm -f index.svg index.html highlight.css kwebapp.5.html kwebapp.1.html
 	rm -f db.txt.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml

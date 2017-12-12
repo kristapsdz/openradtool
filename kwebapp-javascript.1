@@ -1,0 +1,197 @@
+.\"	$OpenBSD$
+.\"
+.\" Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate$
+.Dt KWEBAPP-JAVASCRIPT 1
+.Os
+.Sh NAME
+.Nm kwebapp-javascript
+.Nd implement web application JavaScript objects
+.Sh SYNOPSIS
+.Nm kwebapp-javascript
+.Op Ar config
+.Sh DESCRIPTION
+The
+.Nm
+utility accepts a configuration file
+.Ar config
+.Pq defaulting to standard input
+and creates the JavaScript objects accepting the JSON produced by
+.Xr kwebapp-c-header 1
+and
+.Xr kwebapp-c-source 1 .
+.Pp
+The output, a standards-compliant JavaScript file, formats JSON output
+into a DOM tree.
+The method for acquiring the JSON is not managed by
+.Nm .
+.Pp
+To use the interface, simply include the generated file as a script,
+create objects given the JSON output of
+.Fl F Ns Ar json ,
+and invoke the object's
+.Fn fill ,
+.Fn fillInner ,
+and
+.Fn fillArray
+methods with the DOM tree node.
+.Pp
+For example, given a structure
+.Dq foo
+and an AJAX response
+.Dq response ,
+this might look like:
+.Bd -literal -offset indent
+var obj = JSON.parse(response);
+var e = document.getElementById('foo');
+new foo(obj).fill(e);
+.Ed
+.Pp
+For each field in the structure, this method will operate on elements
+within (and including) the element with id
+.Dq foo
+having classes as follows:
+.Bl -tag -width Ds
+.It Li foo-xxxx-text
+Replaces the contents of the element with the field value.
+This is only applicable for non-blob native types.
+.It Li foo-xxxx-value
+Sets the
+.Dq value
+attribute (as in a form submission) with the field value.
+This is only applicable for non-blob native types.
+.It Li foo-has-xxxx
+Remove the
+.Dq hide
+class if the object is null, otherwise add the
+.Dq hide
+class.
+.It Li foo-no-xxxx
+Add the
+.Dq hide
+class if the object is null, otherwise remove the
+.Dq hide
+class.
+.It Li foo-xxxx-obj
+For structures, creates and invokes the
+.Fn fillInner
+method on the nested structure at the given element and its descendents.
+This is only applicable for structure types.
+.El
+.Pp
+Alternatively, the
+.Fn fillInner
+method may be used to exclude the root element.
+Lastly, the
+.Fn fillArray
+method invokes
+.Fn fill
+repeatedly over an array of objects by removing, then subsequently
+cloning and appending the first element of the give DOM root.
+.Pp
+All functions accept an additional, optional argument for providing
+custom per-field or per-structure callbacks.
+Keys in the object must consist of the structure name, followed by a
+dash, followed by the field name.
+For example, assuming a structure
+.Dq client
+with a field
+.Dq dob
+consisting of a UNIX epoch:
+.Bd -literal -offset indent
+var custom = { 'client-dob': formatDate };
+new client(obj).fillInner(document, custom);
+.Ed
+.Pp
+And letting a formatting function be:
+.Bd -literal -offset indent
+function formatDate(e, name, value)
+{
+  var list, i;
+  list = e.getElementsByClassName('client-dob-date');
+  for (i = 0; i < list.length; i++)
+    list[i].innerHTML =
+      moment.unix(value).format('DD-MM-YYYY'));
+}
+.Ed
+.Pp
+This invokes the
+.Dq moment.js
+formatter to create dates.
+.Pp
+The same can be applied to structures instead of to fields within
+structures.
+The keys for these are simply the structure name.
+.Bd -literal -offset indent
+var custom = { 'client': formatClient };
+new client(obj).fillInner(document, custom);
+.Ed
+.Pp
+The callback will then be provided the full client object.
+.Pp
+In either case, the value for the custom key may also be an array of
+functions just as above.
+Each will be invoked in the order given, in the same way.
+.Bd -literal -offset indent
+var custom = { 'client': [ format1, format2 ] };
+.Ed
+.Pp
+The callback function (or functions) will be invoked regardless of
+whether the value has been set.
+In the event of an unset field value, the function is passed
+.Dv null .
+.Pp
+Enumeration fields are also generated from the input file.
+These are appended to the global namespace as a series of objects
+consisting of variables assigned the enumeration value.
+For example, given an enumeration
+.Dq foo
+with a field
+.Dq bar
+assigned the value 12, this would generate:
+.Bd -literal -offset indent
+console.log(foo.bar);
+>>> 12
+.Ed
+.Pp
+All JavaScript methods and variables are fully documented in the
+.Xr jsdoc 1
+format.
+.\" The following requests should be uncommented and used where appropriate.
+.\" .Sh CONTEXT
+.\" For section 9 functions only.
+.\" .Sh RETURN VALUES
+.\" For sections 2, 3, and 9 function return values only.
+.\" .Sh ENVIRONMENT
+.\" For sections 1, 6, 7, and 8 only.
+.\" .Sh FILES
+.Sh EXIT STATUS
+.Ex -std
+.\" .Sh EXAMPLES
+.\" .Sh DIAGNOSTICS
+.\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
+.\" .Sh ERRORS
+.\" For sections 2, 3, 4, and 9 errno settings only.
+.Sh SEE ALSO
+.Xr jsdoc 1 ,
+.Xr kwebapp-c-header 1 ,
+.Xr kwebapp-c-source 1 ,
+.Xr kwebapp 5
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh CAVEATS
+.\" .Sh BUGS

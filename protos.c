@@ -184,25 +184,16 @@ print_var(size_t pos, size_t col,
 	return(col);
 }
 
-/*
- * Generate the "update" function for a given structure.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line.
- * If "priv" is non-zero, accept a kwbp instead of ksql.
- */
-void
-print_func_db_update(const struct update *u, int priv, int decl)
+size_t
+print_name_db_update(const struct update *u)
 {
 	const struct uref *ur;
-	size_t	 pos = 1;
 	int	 col = 0;
 
 	if (UP_MODIFY == u->type)
-		col += printf("int%sdb_%s_update",
-			decl ? " " : "\n", u->parent->name);
+		col += printf("db_%s_update", u->parent->name);
 	else
-		col += printf("int%sdb_%s_delete",
-			decl ? " " : "\n", u->parent->name);
+		col += printf("db_%s_delete", u->parent->name);
 
 	if (NULL == u->name && UP_MODIFY == u->type) {
 		if ( ! (UPDATE_ALL & u->flags))
@@ -220,6 +211,29 @@ print_func_db_update(const struct update *u, int priv, int decl)
 	} else 
 		col += printf("_%s", u->name);
 
+	return(col);
+}
+
+/*
+ * Generate the "update" function for a given structure.
+ * If this is NOT a declaration ("decl"), then print a newline after the
+ * return type; otherwise, have it on one line.
+ * If "priv" is non-zero, accept a kwbp instead of ksql.
+ */
+void
+print_func_db_update(const struct update *u, int priv, int decl)
+{
+	const struct uref *ur;
+	size_t	 pos = 1;
+	int	 col = 0;
+
+	if (UP_MODIFY == u->type)
+		col += printf("int%s", decl ? " " : "\n");
+	else
+		col += printf("int%s", decl ? " " : "\n");
+
+	col += print_name_db_update(u);
+
 	if (priv)
 		col += printf("(struct kwbp *ctx");
 	else
@@ -236,6 +250,38 @@ print_func_db_update(const struct update *u, int priv, int decl)
 			col = print_var(pos++, col, ur->field, 0);
 
 	printf(")%s", decl ? ";\n" : "");
+}
+
+size_t
+print_name_db_search(const struct search *s)
+{
+	const struct sent *sent;
+	const struct sref *sr;
+	int	 col = 0;
+
+	/* 
+	 * If we have a "distinct" clause, we use that to generate
+	 * responses, not the structure itself.
+	 */
+
+	if (STYPE_SEARCH == s->type)
+		col += printf("db_%s_get", s->parent->name);
+	else if (STYPE_LIST == s->type)
+		col += printf("db_%s_list", s->parent->name);
+	else
+		col += printf("db_%s_iterate", s->parent->name);
+
+	if (NULL == s->name && ! TAILQ_EMPTY(&s->sntq)) {
+		col += printf("_by");
+		TAILQ_FOREACH(sent, &s->sntq, entries) {
+			TAILQ_FOREACH(sr, &sent->srq, entries)
+				col += printf("_%s", sr->name);
+			col += printf("_%s", optypes[sent->op]);
+		}
+	} else if (NULL != s->name)
+		col += printf("_%s", s->name);
+
+	return(col);
 }
 
 /*
@@ -264,26 +310,15 @@ print_func_db_search(const struct search *s, int priv, int decl)
 		s->dst->strct : s->parent;
 
 	if (STYPE_SEARCH == s->type)
-		col += printf("struct %s *%sdb_%s_get", 
-			retstr->name, decl ? "" : "\n", 
-			s->parent->name);
+		col += printf("struct %s *%s", 
+			retstr->name, decl ? "" : "\n");
 	else if (STYPE_LIST == s->type)
-		col += printf("struct %s_q *%sdb_%s_list", 
-			retstr->name, decl ? "" : "\n", 
-			s->parent->name);
+		col += printf("struct %s_q *%s",
+			retstr->name, decl ? "" : "\n");
 	else
-		col += printf("void%sdb_%s_iterate",
-			decl ? " " : "\n", s->parent->name);
+		col += printf("void%s", decl ? " " : "\n");
 
-	if (NULL == s->name && ! TAILQ_EMPTY(&s->sntq)) {
-		col += printf("_by");
-		TAILQ_FOREACH(sent, &s->sntq, entries) {
-			TAILQ_FOREACH(sr, &sent->srq, entries)
-				col += printf("_%s", sr->name);
-			col += printf("_%s", optypes[sent->op]);
-		}
-	} else if (NULL != s->name)
-		col += printf("_%s", s->name);
+	col += print_name_db_search(s);
 
 	if (priv)
 		col += printf("(struct kwbp *ctx");
@@ -306,6 +341,13 @@ print_func_db_search(const struct search *s, int priv, int decl)
 	printf(")%s", decl ? ";\n" : "");
 }
 
+size_t
+print_name_db_insert(const struct strct *p)
+{
+
+	return(printf("db_%s_insert", p->name));
+}
+
 /*
  * Generate the "insert" function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the
@@ -319,13 +361,13 @@ print_func_db_insert(const struct strct *p, int priv, int decl)
 	size_t	 pos = 1;
 	int	 col = 0;
 
-	col += printf("int64_t%sdb_%s_insert(", 
-		decl ? " " : "\n", p->name);
+	col += printf("int64_t%s", decl ? " " : "\n");
+	col += print_name_db_insert(p);
 
 	if (priv)
-		col += printf("struct kwbp *ctx");
+		col += printf("(struct kwbp *ctx");
 	else
-		col += printf("struct ksql *db");
+		col += printf("(struct ksql *db");
 
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if ( ! (FTYPE_STRUCT == f->type ||

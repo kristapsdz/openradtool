@@ -575,6 +575,8 @@ int		 parse_link(struct config *);
 struct config	*parse_config(FILE *, const char *);
 void		 parse_free(struct config *);
 
+int		 gen_audit(const struct config *, 
+			int, const char *);
 void		 gen_c_header(const struct config *, 
 			int, int, int, int, int);
 void		 gen_c_source(const struct config *, int,
@@ -606,6 +608,10 @@ void		 print_func_db_trans_open(int, int);
 void		 print_func_db_trans_rollback(int, int);
 void		 print_func_db_unfill(const struct strct *, int, int);
 void		 print_func_db_update(const struct update *, int, int);
+
+size_t		 print_name_db_insert(const struct strct *);
+size_t		 print_name_db_search(const struct search *);
+size_t		 print_name_db_update(const struct update *);
 
 void		 print_func_json_array(const struct strct *, int);
 void		 print_func_json_data(const struct strct *, int);

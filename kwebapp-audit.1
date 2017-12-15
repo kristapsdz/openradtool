@@ -22,6 +22,7 @@
 .Nd audit web application role access
 .Sh SYNOPSIS
 .Nm kwebapp-audit
+.Op Fl j
 .Ar role
 .Op Ar config
 .Sh DESCRIPTION
@@ -32,6 +33,11 @@ utility accepts a configuration file
 .Pq defaulting to standard input
 and audits all access available to
 .Ar role .
+Its arguments are as follows:
+.Bl -tag -width Ds
+.It Fl j
+Output structured JSON data.
+.El
 .Pp
 It outputs the role's access to the data and operations available (if
 any) to each structure.
@@ -53,7 +59,6 @@ This tool is still experimental.
 .\" .Sh ERRORS
 .\" For sections 2, 3, 4, and 9 errno settings only.
 .Sh SEE ALSO
-.Xr sqlite3 1 ,
 .Xr kwebapp 5
 .\" .Sh STANDARDS
 .\" .Sh HISTORY

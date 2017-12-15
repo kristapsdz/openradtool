@@ -4,7 +4,8 @@ include Makefile.configure
 
 VERSION		 = 0.3.9
 CFLAGS		+= -DVERSION=\"$(VERSION)\"
-OBJS		 = comments.o \
+OBJS		 = audit.o \
+		   comments.o \
 		   compats.o \
 		   header.o \
 		   linker.o \
@@ -18,6 +19,7 @@ OBJS		 = comments.o \
 HTMLS		 = archive.html \
 		   index.html \
 		   kwebapp.1.html \
+		   kwebapp-audit.1.html \
 		   kwebapp-c-header.1.html \
 		   kwebapp-c-source.1.html \
 		   kwebapp-javascript.1.html \
@@ -25,18 +27,20 @@ HTMLS		 = archive.html \
 		   kwebapp-sqldiff.1.html \
 		   kwebapp.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
+MAN1S		 = kwebapp.1 \
+		   kwebapp-audit.1 \
+		   kwebapp-c-header.1 \
+		   kwebapp-c-source.1 \
+		   kwebapp-javascript.1 \
+		   kwebapp-sql.1 \
+		   kwebapp-sqldiff.1
 DOTAR		 = comments.c \
 		   compats.c \
 		   configure \
 		   extern.h \
 		   header.c \
 		   javascript.c \
-		   kwebapp.1 \
-		   kwebapp-c-header.1 \
-		   kwebapp-c-source.1 \
-		   kwebapp-javascript.1 \
-		   kwebapp-sql.1 \
-		   kwebapp-sqldiff.1 \
+		   $(MAN1S) \
 		   kwebapp.5 \
 		   linker.c \
 		   Makefile \
@@ -60,7 +64,8 @@ IHTMLS		 = db.txt.html \
 		   db.update.sql.html \
 		   db.js.html \
 		   test.c.html
-LINKS		 = kwebapp-c-header \
+LINKS		 = kwebapp-audit \
+		   kwebapp-c-header \
 		   kwebapp-c-source \
 		   kwebapp-javascript \
 		   kwebapp-sql \
@@ -86,8 +91,9 @@ install: kwebapp
 	mkdir -p $(DESTDIR)$(MANDIR)/man1
 	mkdir -p $(DESTDIR)$(MANDIR)/man5
 	$(INSTALL_PROGRAM) kwebapp $(DESTDIR)$(BINDIR)
-	$(INSTALL_MAN) kwebapp.1 kwebapp-c-source.1 kwebapp-c-header.1 kwebapp-javascript.1 kwebapp-sql.1 kwebapp-sqldiff.1 $(DESTDIR)$(MANDIR)/man1
+	$(INSTALL_MAN) $(MAN1S) $(DESTDIR)$(MANDIR)/man1
 	$(INSTALL_MAN) kwebapp.5 $(DESTDIR)$(MANDIR)/man5
+	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-audit
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-c-source
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-c-header
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-javascript

@@ -29,6 +29,7 @@
 #include "extern.h"
 
 enum	op {
+	OP_AUDIT,
 	OP_NOOP,
 	OP_DIFF,
 	OP_C_HEADER,
@@ -42,7 +43,7 @@ main(int argc, char *argv[])
 {
 	FILE		*conf = NULL, *dconf = NULL;
 	const char	*confile = NULL, *dconfile = NULL,
-	      		*header = NULL, *incls = NULL;
+	      		*header = NULL, *incls = NULL, *role = NULL;
 	struct config	*cfg, *dcfg = NULL;
 	int		 c, rc = 1, json = 0, valids = 0,
 			 splitproc = 0, dbin = 1, dstruct = 1;
@@ -87,6 +88,23 @@ main(int argc, char *argv[])
 			goto usage;
 		argc -= optind;
 		argv += optind;
+	} else if (0 == strcmp(getprogname(), "kwebapp-audit")) {
+		op = OP_AUDIT;
+		while (-1 != (c = getopt(argc, argv, "j")))
+			switch (c) {
+			case ('j'):
+				json = 1;
+				break;
+			default:
+				goto usage;
+			}
+		argc -= optind;
+		argv += optind;
+		if (0 == argc)
+			goto usage;
+		role = argv[0];
+		argv++;
+		argc--;
 	} else if (0 == strcmp(getprogname(), "kwebapp-sqldiff")) {
 		op = OP_DIFF;
 		if (-1 != getopt(argc, argv, ""))
@@ -196,6 +214,8 @@ main(int argc, char *argv[])
 		rc = gen_diff(cfg, dcfg);
 	else if (OP_JAVASCRIPT == op)
 		gen_javascript(cfg);
+	else if (OP_AUDIT == op)
+		rc = gen_audit(cfg, json, role);
 
 	parse_free(cfg);
 	return(rc ? EXIT_SUCCESS : EXIT_FAILURE);
@@ -224,6 +244,12 @@ usage:
 	else if (OP_DIFF == op)
 		fprintf(stderr, 
 			"usage: %s oldconfig [config]\n",
+			getprogname());
+	else if (OP_AUDIT == op)
+		fprintf(stderr, 
+			"usage: %s "
+		 	"[-j] "
+			"role [config]\n",
 			getprogname());
 	else if (OP_JAVASCRIPT == op)
 		fprintf(stderr, 

@@ -30,6 +30,32 @@ utility accepts a configuration file
 .Ar config
 .Pq defaulting to standard input
 and tests the configuration syntax.
+Warnings and errors, if any, are printed to standard error.
+.Pp
+For output, see the following:
+.Bl -tag -width Ds
+.It Xr kwebapp-c-header 1
+Output the C API (declarations) describing a configuration.
+The implementation may be produced by
+.Xr kwebapp-c-source 1 .
+.It Xr kwebapp-c-source 1
+Output the C implementation (definitions) of the API produced by
+.Xr kwebapp-c-header 1 .
+.It Xr kwebapp-javascript 1
+Output a series of classes for filling an HTML DOM tree with data
+exported via the JSON interface optionally declared by
+.Xr kwebapp-c-header 1
+and implemented by
+.Xr kwebapp-c-source 1 .
+.It Xr kwebapp-sql 1
+Output the SQL schema describing a configuration.
+.It Xr kwebapp-sqldiff 1
+Output a series of non-destructive SQL statements to change an existing
+SQL schema (usually produced by
+.Xr kwebapp-sql 1 )
+into a new one.
+This is used for updating schemas.
+.El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

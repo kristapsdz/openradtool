@@ -23,10 +23,10 @@
 .Sh DESCRIPTION
 The
 .Nm
-configuration is used by
+configuration is used by the
 .Xr kwebapp 1
-to define how an application's data types; the data itself; how the data
-is created, modified, and deleted; and how the data is queried.
+family to define how an application's data types; the data itself; how
+the data is created, modified, and deleted; and how the data is queried.
 .Pp
 Configurations have the following rough structure:
 .Bd -literal -offset indent
@@ -371,6 +371,9 @@ integer for lengths.
 .It Cm noexport
 Never exported using the JSON interface.
 This is useful for sensitive internal information.
+Fields with type
+.Cm password
+are never exported by default.
 .It Cm null
 Accepts null SQL or C values, and is only available for native types.
 A
@@ -400,7 +403,7 @@ They are defined as follows:
 .Bd -literal -offset indent
 "enum" enumname "{"
   [ "comment" string_literal ";" ]?
-  [ "item" name value [params]* ";" ]+
+  [ "item" name value [parms]* ";" ]+
 "};"
 .Ed
 .Pp
@@ -411,9 +414,8 @@ enum enumname {
 };
 .Ed
 .Pp
-The enumeration
-.Cm enumname
-must be unique among all enumerations and structures.
+The enumeration name must be unique among all enumerations, bitfields,
+and structures.
 .Pp
 Items define enumeration values, their constant values, and
 documentation.
@@ -452,7 +454,7 @@ They are defined as follows:
 .Bd -literal -offset indent
 "bits" bitsname "{"
   [ "comment" string_literal ";" ]?
-  [ "item" name bitidx [params]* ";" ]+
+  [ "item" name bitidx [parms]* ";" ]+
   [ "unset" "jslabel" quoted_string ";" ]+
 "};"
 .Ed
@@ -516,9 +518,11 @@ a function for each retrieved result in an active query.
 .Pp
 Queries are always by field, and may be followed by parameters:
 .Bd -literal -offset indent
-search [term ["," term]*]? [":" [params]* ]? ";"
-list [term ["," term]*]? [":" [params]* ]? ";"
-iterate [term ["," term]*]? [":" [params]* ]? ";"
+"struct" name "{"
+  [ "search" [term ["," term]*]? [":" [parms]* ]? ";" ]*
+  [ "list" [term ["," term]*]? [":" [parms]* ]? ";" ]*
+  [ "iterate" [term ["," term]*]? [":" [parms]* ]? ";" ]*
+"};"
 .Ed
 .Pp
 Here,
@@ -573,7 +577,7 @@ The
 field does not accept any operator but the default check for equality.
 .Pp
 The
-.Cm params
+.Cm parms
 search parameters are a series of key-value pairs:
 .Bd -literal -offset indent
 "comment" string_literal
@@ -653,23 +657,25 @@ modified.
 By default, there are no update, delete, or insert functions defined.
 The syntax is as follows:
 .Bd -literal -offset indent
-"update" [mfields]* [":" [cfields]* [":" [params]* ]? ]? ";"
-"delete" [cfields]* [":" [params]* ]? ";"
-"insert" ";"
+"struct" name "{"
+  [ "update" [mflds]* [":" [cflds]* [":" [parms]* ]? ]? ";" ]*
+  [ "delete" [cflds]* [":" [parms]* ]? ";" ]*
+  [ "insert" ";" ]?
+"};"
 .Ed
 .Pp
 Both
-.Cm mfields
+.Cm mflds
 and
-.Cm cfields
+.Cm cflds
 are a sequence of comma-separated native-type fields in the current
 structure.
 The former refers to the fields that will be modified; the latter refers
 to fields that will act as constraints.
 In other words, modify fields constraint by
-.Cm cfields
+.Cm cflds
 to contain the
-.Cm cfields .
+.Cm cflds .
 Usually, the latter will be the
 .Cm rowid
 and the former will be any other fields.
@@ -677,26 +683,26 @@ and the former will be any other fields.
 The
 .Cm delete
 statement obviously does not accept fields to modify
-.Pq Cm mfields .
+.Pq Cm mflds .
 If the
 .Cm update
 statement does not have
-.Cm mfields ,
+.Cm mflds ,
 it's taken to mean that all fields will be modified using the default
 operator.
 .Pp
 The fields in
-.Cm mfields
+.Cm mflds
 may accept a modifier type that modifies the existing field instead
 of setting it externally.
 This is only available for numeric types.
 The fields in
-.Cm cfields
+.Cm cflds
 may accept an optional operator type as described for
 .Sx Queries .
 .Bd -literal -offset indent
-mfield [modifier]?
-cfield [operator]?
+mfld [modifier]?
+cfld [operator]?
 .Ed
 .Pp
 The following augment operations are available, but only to numeric
@@ -710,7 +716,7 @@ Decrement the current field by a given value (x = x - ?).
 Default behaviour of setting to a value (x = ?).
 .El
 .Pp
-The optional parameters may be one of
+The parms search parameters are a series of key-value pairs:
 .Bd -literal -offset indent
 "comment" string_literal
 "name" name
@@ -725,7 +731,7 @@ is used for the API comments.
 Fields of type
 .Cm password
 are not allowed as
-.Cm cfields
+.Cm cflds
 since they are not stored directly as comparable strings, but hashed
 with a unique salt.
 .Ss Roles
@@ -766,7 +772,9 @@ Within
 .Sx Structures ,
 roles are defined as follows:
 .Bd -literal -offset indent
-"roles" role ["," role]* "{" roletype [name]? "};"
+"struct" name "{"
+  [ "roles" role ["," role]* "{" roletype [name]? "};" ]*
+"};"
 .Ed
 .Pp
 The
@@ -779,17 +787,19 @@ The role may be one of the following types:
 .Bl -tag -width Ds
 .It Cm all
 A special type referring to all function types.
-.It Cm delete
+.It Cm delete Ar name
 The named delete operation.
 .It Cm insert
 The insert operation.
-.It Cm iterate
+.It Cm iterate Ar name
 The named iterate operation.
-.It Cm list
+.It Cm list Ar name
 The named list operation.
-.It Cm search
+.It Cm noexport Ar name
+Do not export the named field via the JSON export routines.
+.It Cm search Ar name
 The named search operation.
-.It Cm update
+.It Cm update Ar name
 The name update operation.
 .El
 .Pp
@@ -797,7 +807,8 @@ To refer to an operation, use its
 .Cm name .
 The only way to refer to un-named operations is to use
 .Cm all ,
-which refers to all operations.
+which refers to all operations (i.e., all types but
+.Cm noexport ) .
 .Pp
 If, during run-time, the current role is not a subtype (inclusive) of
 the given role for an operation, the application is immediately

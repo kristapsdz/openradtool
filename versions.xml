@@ -2,9 +2,27 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.4.0</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-12-15">2017-12-15</time>
+		</header>
+		<aside>
+			<p>
+				Split <a href="kwebapp.1.html">kwebapp(1)</a> into
+				<a href="kwebapp-c-header.1.html">kwebapp-c-header(1)</a>,
+				<a href="kwebapp-c-source.1.html">kwebapp-c-source(1)</a>,
+				<a href="kwebapp-javascript.1.html">kwebapp-javascript(1)</a>,
+				<a href="kwebapp-sql.1.html">kwebapp-sql(1)</a>,
+				and
+				<a href="kwebapp-sqldiff.1.html">kwebapp-sqldiff(1)</a>.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.3.9</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2017-12-01">ongoing</time>
+			<time datetime="2017-12-06">2017-12-06</time>
 		</header>
 		<aside>
 			<p>

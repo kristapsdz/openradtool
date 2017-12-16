@@ -44,6 +44,7 @@
 					develop your business logic.
 					It accepts a configuration file that describes your data: tables (structures), fields (members),
 					accessors (search, list, iterate), modifiers (insert, update, delete), etc.
+					Even <a href="https://learnbchs.org/rbac.html">role-based access control</a>.
 					It generates the source files (C header, C source, SQL schema, SQL update schema, JavaScript) for your
 					application.
 				</p>
@@ -60,10 +61,9 @@
 					The system has no run-time dependencies; however, the generated C files use <a
 						href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for the underlying <a
 						href="https://sqlite.org">SQLite</a> database.
-					If optionally generating JSON formatters for exporting data (<b>-F</b><i>json</i>) or validation routines for HTML
-					form input (<b>-F</b><i>valids</i>), you will also require <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a>.
-					The generated SQL file are for use by <a href="https://sqlite.org">SQLite</a>.
-					The JavaScript files are <q><a href="http://vanilla-js.com/">vanilla</a></q> and have no framework
+					If optionally generating JSON formatters for exporting data or validation routines for HTML form input,
+					you will also require <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a>.
+					Generated JavaScript files are <q><a href="http://vanilla-js.com/">vanilla</a></q> and have no framework
 					dependencies.
 				</p>
 				<p>
@@ -76,19 +76,14 @@
 					To use <span class="nm">kwebapp</span>, just unpack, run <code>./configure</code>, <code>make</code>,
 					then <code>make install</code>.
 				</p>
-			</section>
-			<blockquote>
-				<div>
-					<div>Latest release notes</div>
-					<div class="subnav">
-						<nav data-sblg-nav="1" data-sblg-navsort="date" data-sblg-navtag="version" data-sblg-navsz="1" data-sblg-navxml="1">
-							Version ${sblg-titletext}, ${sblg-date}
-						</nav>
-					</div>
-				</div>
-			</blockquote>
-			<section id="versions">
 				<nav data-sblg-nav="1" data-sblg-navsort="date" data-sblg-navtag="version" data-sblg-navsz="1" data-sblg-navcontent="1">
+					<h3>
+						Latest release: ${sblg-titletext}
+					</h3>
+					<time>
+						<i class="fa fa-clock-o"></i> 
+						${sblg-date}
+					</time>
 					<div>
 						${sblg-aside}
 					</div>
@@ -98,40 +93,54 @@
 				</p>
 			</section>
 			<blockquote>
-				<div>cat -n <a href="db.txt.html">db.txt</a></div>
+				<h2>
+					% <a href="kwebapp.1.html">kwebapp</a> <a href="db.txt.html">db.txt</a>
+				</h2>
+				<div>
+					Parse and validate configuration.
+				</div>
 			</blockquote>
 			<section>
 				<p>
-					Consider the following <a href="kwebapp.5.html">kwebapp(5)</a> configuration file, <a
+					Consider an example <a href="kwebapp.5.html">kwebapp(5)</a> configuration file, <a
 						href="db.txt.html">db.txt</a>.
-					It defines three objects&#8212;a <code>user</code>, <code>company</code>, and
+					It defines three data objects&#8212;a <code>user</code>, <code>company</code>, and
 					<code>session</code>&#8212;with relations between the three.
-					Each <code>session</code>, in this example, has a link to a <code>user</code> keyed by the
+					Each <code>session</code>, in this example, refers to a <code>user</code> by the
 					<code>userid</code> field.
-					Then each <code>user</code> references a <code>company</code> by <code>cid</code>.
+					Then each <code>user</code> refers to a <code>company</code> by its <code>cid</code>.
 				</p>
 				<p>
 					The configuration is fairly readable: structures and fields, with field types and limits (string length
 					or numeric value) and other options (nullity, whether a row identifier, etc.).
 				</p>
+				<p>
+					The <a href="kwebapp.1.html">kwebapp(1)</a> utility parses and validates the configuration.
+				</p>
 				<article data-sblg-permlink="0" data-sblg-article="1"></article>
 				<p>
-					Beyond the objects themselves, I've also defined search functions, update functions, deletion functions,
-					and so on for illustrative purposes.
+					Beyond the data itself, each objects defines search, update, and deletion functions.
 					(A normal application would have more, but for brevity&#8230;)
-					If your application has more specific queries to perform, it exports table schemas and <q>fill</q>
-					functions to make it easy for customisation.
 				</p>
 				<p>
-					We start by passing this configuration through <a href="kwebapp.1.html">kwebapp(1)</a> and generating
-					the C source file (<a href="db.c.html">db.c</a>) and the C header file <a href="db.h.html">db.h</a>.
-					We generate JSON output functions and <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> HTML input
-					validation functions as well with <b>-F</b><i>json</i> and <b>-F</b><i>valids</i>, respectively.
+					To <em>do</em> something with this configuration, we need to have code.
+					Most applications start by creating an API from the data configuration as described in the next section.
 				</p>
 			</section>
 			<blockquote>
-				<div>kwebapp -Ocheader -Fvalids -Fjson <a href="db.txt.html">db.txt</a> &gt;<a href="db.h.html">db.h</a></div>
-				<div>kwebapp -Ocsource -Fvalids -Fjson <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.c.html">db.c</a></div>
+				<h2>
+					<div>
+						% <a href="kwebapp-c-header.1.html">kwebapp-c-header</a> -jv 
+						<a href="db.txt.html">db.txt</a> &gt;<a href="db.h.html">db.h</a>
+					</div>
+					<div>
+						% <a href="kwebapp-c-source.1.html">kwebapp-c-source</a> -jv 
+						-h <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.c.html">db.c</a>
+					</div>
+				</h2>
+				<div>
+					Output application's API and implementation.
+				</div>
 			</blockquote>
 			<section>
 				<p>
@@ -159,27 +168,45 @@
 				</p>
 			</section>
 			<blockquote>
-				<div>cc -static -o test main.c <a href="db.c.html">db.c</a> -lksql -lsqlite3 -lpthread -lkcgijson -lkcgi -lz</div>
+				<h2>
+					% cc -static -o test main.c <a href="db.c.html">db.c</a> -lksql -lsqlite3 -lm -lpthread -lkcgijson -lkcgi -lz
+				</h2>
+				<div>
+					Compile web application.
+				</div>
 			</blockquote>
 			<section>
 				<p>
 					Applications not wishing to deal with input or output (for example, a management application or
-					system daemon) should omit the <b>-F</b><i>json</i> and <b>-F</b><i>valids</i> flags.
+					system daemon) should omit the <b>-j</b> and <b>-v</b> flags.
 					These can then be compiled without static linking (omitting <b>-static</b>) and the non-SQLite related
 					libraries.
 				</p>
 				<p>
-					To create the initial database, use the following invocation as documented in <a href="kwebapp.1.html">kwebapp(1)</a>.
+					To create the initial database, use the following invocation.
 					A feature I use a lot in <span class="nm">kwebapp</span> is to track differences in the database schema
-					by using the <b>-O</b><i>sqldiff</i> flag.
+					by using <a href="kwebapp-sqldiff.1.html">kwebapp-sqldiff(1)</a>.
 					This allows me to double-check that upgrades to my database won't be incompatible.
 					It also generates the correct invocations without having me fat-finger mistakes in the upgraded database.
 				</p>
 			</section>
 			<blockquote>
-				<div>kwebapp -Osql <a href="db.txt.html">db.txt</a> &gt;<a href="db.sql.html">db.sql</a></div>
-				<div>kwebapp -Osqldiff <a href="db.old.txt.html">db.old.txt</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.update.sql.html">db.update.sql</a></div>
-				<div>sqlite3 db.db &lt; <a href="db.sql.html">db.sql</a></div>
+				<h2>
+					<div>
+						% <a href="kwebapp-sql.1.html">kwebapp-sql</a>
+						<a href="db.txt.html">db.txt</a> &gt;<a href="db.sql.html">db.sql</a>
+					</div>
+					<div>
+						% <a href="kwebapp-sqldiff.1.html">kwebapp-sqldiff</a>
+						<a href="db.old.txt.html">db.old.txt</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.update.sql.html">db.update.sql</a>
+					</div>
+					<div>
+						% sqlite3 db.db &lt; <a href="db.sql.html">db.sql</a>
+					</div>
+				</h2>
+				<div>
+					Generate SQL schema and initialise database.
+				</div>
 			</blockquote>
 			<section>
 				<p>
@@ -190,22 +217,28 @@
 					browse the SQL documentation for any non-trivial application.
 				</p>
 				<p>
-					In general, I'll use <b>-O</b><i>sql</i> when first generating the database, and <b>-O</b><i>sqldiff</i>
-					when upgrading existing databases.
+					In general, I'll use <a href="kwebapp-sql.1.html">kwebapp-sql(1)</a> when first generating the database,
+					and <a href="kwebapp-sqldiff.1.html">kwebapp-sqldiff(1)</a> when upgrading existing databases.
 					There are times when the database changes radically, at which point I'll usually dump and manually update.
 				</p>
 				<p>
-					The last part of the toolchain is to handle the output of <b>-F</b><i>json</i> in the browser itself.
-					With <b>-O</b><i>javascript</i> flag, <a href="kwebapp.1.html">kwebapp(1)</a> will also generate JavaScript files to
+					The last part of the toolchain is to handle the output of <b>-j</b> in the browser itself.
+					The <a href="kwebapp-javascript.1.html">kwebapp-javascript(1)</a> tool will also generate JavaScript files to
 					assist in filling in data for your front-end web application code.
 				</p>
 			</section>
 			<blockquote>
-				<div>kwebapp -Ojavascript <a href="db.txt.html">db.txt</a> &gt;<a href="db.js.html">db.js</a></div>
+				<h2>
+					% <a href="kwebapp-javascript.1.html">kwebapp-javascript</a>
+					<a href="db.txt.html">db.txt</a> &gt;<a href="db.js.html">db.js</a>
+				</h2>
+				<div>
+					Produce JavaScript classes to auto-fill DOM trees.
+				</div>
 			</blockquote>
 			<section>
 				<p>
-					The JavaScript is useful when fetching information from your CGI script that was produced with <b>-F</b><i>json</i>.
+					The JavaScript is useful when fetching information from your CGI script that was produced with <b>-j</b>.
 					It has an easy interface for replacing certain tags in your HTML DOM tree with data.
 					All of this is documented using <a href="https://usejsdoc.org">jsdoc</a> notation.
 					For example, consider the following:
@@ -215,15 +248,6 @@
 					A JavaScript file may invoke <code>new user(res).fill(document.getElementById('foobar'))</code>, where
 					<code>res</code> is the JSON object parsed from an AJAX call to the CGI script.
 				</p>
-			</section>
-			<blockquote>
-				<div>Status as of version <i>@VERSION@</i></div>
-			</blockquote>
-			<section>
-				<p>
-					Below a list of features that I'd like to implement in coming versions.
-				</p>
-				<article data-sblg-permlink="0" data-sblg-article="1"></article>
 			</section>
 		</article>
 		<footer>

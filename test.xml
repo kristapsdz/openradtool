@@ -1,6 +1,6 @@
 <div id="foobar">
-	User <span class="user-email-text"></span>: company 
-	<span class="user-company-obj">
-		<span class="company-name-text"></span>.
-	</span>
+  User <span class="user-email-text"></span>: company 
+  <span class="user-company-obj">
+    <span class="company-name-text"></span>.
+  </span>
 </div>

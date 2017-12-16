@@ -31,9 +31,19 @@ body > header				{ width: 100%;
 #header					{ margin-top: 64pt; 
 					  font-size: 13pt;
 					  text-shadow: 0 0 2px #666; }
+#header > div:first-child		{ margin: 1em 0; }
 h1					{ display: inline-block; 
 					  font-size: xx-large;
+					  margin: 0;
 					  font-weight: 500; }
+h2					{ font-size: larger; 
+					  text-shadow: 0 0 1px #333;
+					  margin: 0;
+					  font-weight: 400; }
+h3					{ font-weight: 500; 
+					  margin-bottom: 0; 
+					  margin-top: 4rem;
+					  font-size: inherit; }
 #breadcrumbs a				{ color: #fff; }
 #header a				{ color: #eee; 
 					  display: inline-block;
@@ -55,25 +65,23 @@ article[data-sblg-article]		{ width: 100%; }
 code, pre.hl				{ font-family: "Fira Mono", monospace; 
 					  font-size: 12pt; }
 pre.hl					{ overflow: hidden; }
-blockquote				{ font-size: larger; 
-					  background-color: #b0b0b0;
+blockquote				{ background-color: #b0b0b0;
 					  color: #fff;
-					  text-shadow: 0 0 1px #333;
 					  margin: 2.2em 0;
-					  font-weight: 400;
-					  padding: 1em 20%; }
-blockquote a				{ text-shadow: none; }
-blockquote .subnav			{ font-size: 16pt; 
-					  text-shadow: none; 
-					  color: #07889b; }
+					  padding: 6rem 20% 3rem 20%; }
+blockquote a				{ text-shadow: 0 0 1px #ccc; 
+					  text-decoration: none; }
+blockquote > div			{ text-shadow: 0 0 1px #333; }
 .hl .lin				{ color: #aaa; }
 nav[data-sblg-nav] ul			{ list-style-type: none; 
 					  padding: 0; }
+.archive				{ opacity: 0.6; }
+nav[data-sblg-nav] time			{ opacity: 0.6; 
+					  font-size: smaller; }
 nav[data-sblg-nav] li			{ color: #666; }
 nav[data-sblg-nav] li + li		{ margin-top: 2em; }
 #archive nav[data-sblg-nav] ul > li:first-child	
 					{ color: #000; }
-.archive,
 #archive nav[data-sblg-nav] li > div:first-child	
 					{ font-weight: 500; }
 
@@ -85,9 +93,8 @@ nav[data-sblg-nav] li + li		{ margin-top: 2em; }
 
 @media only screen and (max-width: 700px), only screen and (max-device-width: 700px) {
  article > section			{ width: 96%; }
- blockquote				{ padding: 1em 4%; 
- 					  font-size: inherit; }
- blockquote .subnav			{ font-size: inherit; }
+ blockquote				{ padding: 2rem 4% 1rem 4%; }
+ h2					{ font-size: inherit; }
  figure img				{ width: 100%; 
  					  max-width: 480px; }
  h1					{ font-size: x-large; }

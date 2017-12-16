@@ -1,7 +1,6 @@
 # This is a top-level structure.
 # It's output as a struct in C, a table in SQL, and an object in
 # JavaScript.
-# Comments (on all levels) are carried into the output.
 
 struct company {
   # The "limit" clause is for input validation.

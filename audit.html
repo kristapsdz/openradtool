@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+		<meta charset="utf-8" /> 
+		<title>Role audit results</title>
+		<script src="audit-out.js"></script>
+		<script src="audit.js"></script>
+		<link rel="stylesheet" href="audit.css" />
+	</head>
+	<body>
+		<section id="parsing">
+			Parsing&#8230;
+		</section>
+		<section id="parseerr" class="hide">
+			Parse error.
+		</section>
+		<section id="parsed" class="hide">
+			<header>
+				Audit for: <span id="audit-role"></span>.
+			</header>
+			<h2>
+				Audit by structure name
+			</h2>
+			<article id="audit-access-list">
+				<section>
+					<input type="checkbox" class="audit-view" />
+					<header>
+						<span class="audit-is-shown">-</span>
+						<span class="audit-not-shown">+</span>
+						<label class="audit-name"></label>
+					</header>
+					<section>
+						<h4>Data fields</h4>
+						<section class="audit-data">
+							<article class="audit-data-list">
+								<div>
+									<span class="audit-data-field-noexport">
+										<span class="audit-data-field-name"></span>
+									</span>
+									<span class="audit-data-field-export">
+										<span class="audit-data-field-name"></span>
+									</span>
+								</div>
+							</article>
+						</section>
+						<section class="audit-accessfrom">
+							<h4>Data access</h4>
+							<article class="audit-accessfrom-list">
+								<div>
+									<span class="audit-data-accessfrom-function"></span>:
+									<span class="audit-data-accessfrom-path"></span>
+									<span class="audit-data-accessfrom-nopath">(self)</span>
+								</div>
+							</article>
+						</section>
+						<article class="audit-nodata audit-noentry">
+							No data fields exported.
+						</article>
+						<h4>Delete functions</h4>
+						<article class="audit-deletes-list">
+							<div>
+								<span class="audit-delete-function"></span>
+							</div>
+						</article>
+						<article class="audit-nodeletes audit-noentry">
+							No delete functions exported.
+						</article>
+						<h4>Insert functions</h4>
+						<article class="audit-insert">
+							<span class="audit-insert-function"></span>
+						</article>
+						<article class="audit-noinsert audit-noentry">
+							No insert function exported.
+						</article>
+						<h4>Iterate functions</h4>
+						<article class="audit-iterates-list">
+							<div>
+								<span class="audit-iterate-function"></span>
+							</div>
+						</article>
+						<article class="audit-noiterates audit-noentry">
+							No iterate functions exported.
+						</article>
+						<h4>List functions</h4>
+						<article class="audit-lists-list">
+							<div>
+								<span class="audit-list-function"></span>
+							</div>
+						</article>
+						<article class="audit-nolists audit-noentry">
+							No list functions exported.
+						</article>
+						<h4>Search functions</h4>
+						<article class="audit-searches-list">
+							<div>
+								<span class="audit-search-function"></span>
+							</div>
+						</article>
+						<article class="audit-nosearches audit-noentry">
+							No search functions exported.
+						</article>
+						<h4>Update functions</h4>
+						<article class="audit-updates-list">
+							<div>
+								<span class="audit-update-function"></span>
+							</div>
+						</article>
+						<article class="audit-noupdates audit-noentry">
+							No update functions exported.
+						</article>
+					</section>
+				</section>
+			</article>
+			<h2>
+				Audit by operation
+			</h2>
+			<article id="audit-function-list">
+				<section>
+					<input type="checkbox" id="audit-function-deletes" class="audit-view" />
+					<header>
+						<span class="audit-is-shown">-</span>
+						<span class="audit-not-shown">+</span>
+						<label for="audit-function-deletes">Deletes</label>
+					</header>
+					<section>
+						<article id="audit-deletes-list">
+							<div>
+								<span class="audit-delete-function"></span>
+							</div>
+						</article>
+						<article id="audit-nodeletes" class="audit-noentry">
+							No deletes.
+						</article>
+					</section>
+				</section>
+				<section>
+					<input type="checkbox" id="audit-function-inserts" class="audit-view" />
+					<header>
+						<span class="audit-is-shown">-</span>
+						<span class="audit-not-shown">+</span>
+						<label for="audit-function-inserts">Inserts</label>
+					</header>
+					<section>
+						<article id="audit-inserts-list">
+							<div>
+								<span class="audit-insert-function"></span>
+							</div>
+						</article>
+						<article id="audit-noinserts" class="audit-noentry">
+							No insert.
+						</article>
+					</section>
+				</section>
+				<section>
+					<input type="checkbox" id="audit-function-iterates" class="audit-view" />
+					<header>
+						<span class="audit-is-shown">-</span>
+						<span class="audit-not-shown">+</span>
+						<label for="audit-function-iterates">Iterates</label>
+					</header>
+					<section>
+						<article id="audit-iterates-list">
+							<div>
+								<span class="audit-iterate-function"></span>
+							</div>
+						</article>
+						<article id="audit-noiterates" class="audit-noentry">
+							No iterates.
+						</article>
+					</section>
+				</section>
+				<section>
+					<input type="checkbox" id="audit-function-lists" class="audit-view" />
+					<header>
+						<span class="audit-is-shown">-</span>
+						<span class="audit-not-shown">+</span>
+						<label for="audit-function-lists">Lists</label>
+					</header>
+					<section>
+						<article id="audit-lists-list">
+							<div>
+								<span class="audit-list-function"></span>
+							</div>
+						</article>
+						<article id="audit-nolists" class="audit-noentry">
+							No lists.
+						</article>
+					</section>
+				</section>
+				<section>
+					<input type="checkbox" id="audit-function-searches" class="audit-view" />
+					<header>
+						<span class="audit-is-shown">-</span>
+						<span class="audit-not-shown">+</span>
+						<label for="audit-function-searches">Searches</label>
+					</header>
+					<section>
+						<article id="audit-searches-list">
+							<div>
+								<span class="audit-search-function"></span>
+							</div>
+						</article>
+						<article id="audit-nosearches" class="audit-noentry">
+							No searches.
+						</article>
+					</section>
+				</section>
+				<section>
+					<input type="checkbox" id="audit-function-updates" class="audit-view" />
+					<header>
+						<span class="audit-is-shown">-</span>
+						<span class="audit-not-shown">+</span>
+						<label for="audit-function-updates">Updates</label>
+					</header>
+					<section>
+						<article id="audit-updates-list">
+							<div>
+								<span class="audit-update-function"></span>
+							</div>
+						</article>
+						<article id="audit-noupdates" class="audit-noentry">
+							No updates.
+						</article>
+					</section>
+				</section>
+			</article>
+		</section>
+	</body>
+</html>

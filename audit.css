@@ -1,0 +1,33 @@
+html, body 			{ font-size: 12pt; 
+				  font-weight: 300; }
+.hide 				{ display: none; }
+input[type=checkbox] 		{ display: none; }
+input[type=checkbox] ~ section 	{ display: none; }
+input[type=checkbox] ~ header .audit-is-shown 
+				{ display: none; }
+input[type=checkbox] ~ header .audit-not-shown 
+				{ display: inline-block; }
+input[type=checkbox]:checked ~ header span.audit-is-shown 
+				{ display: inline-block; }
+input[type=checkbox]:checked ~ header .audit-not-shown 
+				{ display: none; }
+input[type=checkbox]:checked ~ section 
+				{ display: block; 
+				  padding-left: 1em; }
+.audit-data-field-noexport 	{ color: #888; }
+.audit-data-list > div 		{ width: 30%; display: inline-block; }
+.audit-is-shown, 
+.audit-not-shown 		{ width: 1em; text-align: center; }
+.audit-view ~ header 		{ font-size: 0; }
+.audit-view ~ header span 	{ font-size: 12pt; }
+.audit-view ~ header label 	{ font-size: 12pt; }
+.audit-noentry 			{ color: #666; font-style: italic; }
+h1				{ font-weight: 700;
+				  font-size: inherit; }
+h2				{ font-weight: 500;
+				  font-size: inherit; }
+h3				{ font-weight: 500;
+				  font-size: inherit; }
+h4				{ margin: 0; 
+				  font-weight: 400;
+				  font-size: inherit; }

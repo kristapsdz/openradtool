@@ -186,24 +186,66 @@ gen_audit_exportable(const struct strct *p,
 }
 
 static void
+print_doc(const char *cp)
+{
+	char	 c;
+
+	if (NULL == cp) {
+		printf("null");
+		return;
+	}
+
+	putchar('"');
+
+	while ('\0' != (c = *cp++))
+		switch (c) {
+		case ('"'):
+		case ('\\'):
+		case ('/'):
+			putchar('\\');
+			putchar(c);
+			break;
+		case ('\b'):
+			fputs("\\b", stdout);
+			break;
+		case ('\f'):
+			fputs("\\f", stdout);
+			break;
+		case ('\n'):
+			fputs("\\n", stdout);
+			break;
+		case ('\r'):
+			fputs("\\r", stdout);
+			break;
+		case ('\t'):
+			fputs("\\t", stdout);
+			break;
+		default:
+			putchar(c);
+			break;
+		}
+
+	putchar('"');
+}
+
+static void
 gen_audit_inserts(const struct strct *p, 
 	int json, const struct role *role)
 {
 
-	if (NULL == p->irolemap) 
-		return;
 	if (json)
-		printf("\t\t\t\"insertion\": ");
+		printf("\t\t\t\"insert\": ");
 	else
-		printf("%sinsertion:\n", SPACE);
-	if (check_rolemap(p->irolemap, role)) {
+		printf("%sinsert:\n", SPACE);
+	if (NULL != p->irolemap && 
+	    check_rolemap(p->irolemap, role)) {
 		if (json)
-			putchar('"');
+			printf(" { \"function\": \"");
 		else
 			printf("%s%s", SPACE, SPACE);
 		print_name_db_insert(p);
 		if (json)
-			puts("\",");
+			puts("\" },");
 		else
 			puts("");
 	} else if (json)
@@ -218,84 +260,106 @@ gen_audit_deletes(const struct strct *p,
 	int	 first = 1;
 
 	if (json)
-		printf("\t\t\t\"deletes\": [");
+		printf("\t\t\t\"deletes\": ");
 	else
 		printf("%sdeletes:\n", SPACE);
 
 	TAILQ_FOREACH(u, &p->dq, entries) {
-		if (check_rolemap(u->rolemap, role)) {
-			if (json && ! first)
-				printf(", ");
-			else
-				printf("%s%s", SPACE, SPACE);
-			print_name_db_update(u);
+		if ( ! check_rolemap(u->rolemap, role))
+			continue;
+		if (json && ! first)
+			printf(",\n\t\t\t\t{ \"function\": \"");
+		else if ( ! json)
+			printf("%s%s", SPACE, SPACE);
+		else
+			printf("[\n\t\t\t\t{ \"function\": \"");
+		print_name_db_update(u);
+		if (json) {
+			printf("\",\n\t\t\t\t  \"doc\": ");
+			print_doc(u->doc);
+			printf(" }");
+		} else
 			putchar('\n');
-			first = 0;
-		}
+		first = 0;
 	}
 
 	if (json)
-		puts("],");
+		printf("%s],\n", first ? "[" : " ");
 }
 
 static void
-gen_audit_updates(const struct strct *p, const struct role *role)
+gen_audit_updates(const struct strct *p, 
+	int json, const struct role *role)
 {
 	const struct update *u;
+	int	 first = 1;
 
-	printf("%supdates:\n", SPACE);
+	if (json)
+		printf("\t\t\t\"updates\": ");
+	else
+		printf("%supdates:\n", SPACE);
+
 	TAILQ_FOREACH(u, &p->uq, entries) {
-		if (check_rolemap(u->rolemap, role)) {
+		if ( ! check_rolemap(u->rolemap, role)) 
+			continue;
+		if (json && ! first)
+			printf(",\n\t\t\t\t{ \"function\": \"");
+		else if ( ! json)
 			printf("%s%s", SPACE, SPACE);
-			print_name_db_update(u);
+		else 
+			printf("[\n\t\t\t\t{ \"function\": \"");
+		print_name_db_update(u);
+		if (json) {
+			printf("\",\n\t\t\t\t  \"doc\": ");
+			print_doc(u->doc);
+			printf(" }");
+		} else
 			putchar('\n');
-		}
+		first = 0;
 	}
+
+	if (json)
+		printf("%s],\n", first ? "[" : " ");
 }
 
 static void
-gen_audit_iterates(const struct strct *p, const struct role *role)
+gen_audit_queries(const struct strct *p, int json, 
+	enum stype t, const char *tp, const struct role *role)
 {
 	const struct search *s;
+	int	 first = 1;
 
-	printf("%siterates:\n", SPACE);
-	TAILQ_FOREACH(s, &p->sq, entries)
-		if (STYPE_ITERATE == s->type)
-			if (check_rolemap(s->rolemap, role)) {
-				printf("%s%s", SPACE, SPACE);
-				print_name_db_search(s);
-				putchar('\n');
-			}
-}
+	if (json)
+		printf("\t\t\t\"%s\": ", tp);
+	else
+		printf("%s%s:\n", SPACE, tp);
 
-static void
-gen_audit_lists(const struct strct *p, const struct role *role)
-{
-	const struct search *s;
+	TAILQ_FOREACH(s, &p->sq, entries) {
+		if (t != s->type ||
+		    ! check_rolemap(s->rolemap, role))
+			continue;
+		if (json && ! first)
+			printf(",\n\t\t\t\t{ \"function\": \"");
+		else if ( ! json)
+			printf("%s%s", SPACE, SPACE);
+		else 
+			printf("[\n\t\t\t\t{ \"function\": \"");
+		print_name_db_search(s);
+		if (json) {
+			printf("\",\n\t\t\t\t  \"doc\": ");
+			print_doc(s->doc);
+			printf(" }");
+		} else
+			putchar('\n');
+		first = 0;
+	}
 
-	printf("%slists:\n", SPACE);
-	TAILQ_FOREACH(s, &p->sq, entries)
-		if (STYPE_LIST == s->type)
-			if (check_rolemap(s->rolemap, role)) {
-				printf("%s%s", SPACE, SPACE);
-				print_name_db_search(s);
-				putchar('\n');
-			}
-}
+	/* Last item: don't have a trailing comma. */
 
-static void
-gen_audit_searches(const struct strct *p, const struct role *role)
-{
-	const struct search *s;
-
-	printf("%ssearches:\n", SPACE);
-	TAILQ_FOREACH(s, &p->sq, entries)
-		if (STYPE_SEARCH == s->type)
-			if (check_rolemap(s->rolemap, role)) {
-				printf("%s%s", SPACE, SPACE);
-				print_name_db_search(s);
-				putchar('\n');
-			}
+	if (json && STYPE_SEARCH != t)
+		printf("%s],\n", first ? "[" : " ");
+	else if (json)
+		printf("%s]\n", first ? "[" : " ");
 }
 
 /*
@@ -428,13 +492,16 @@ gen_audit(const struct config *cfg, int json, const char *role)
 	 */
 
 	if (json)
-		puts("(function(root) {\n"
+		printf("(function(root) {\n"
 		     "\t'use strict';\n"
-		     "\tvar audit = [");
+		     "\tvar audit = {\n"
+		     "\t    \"role\": \"%s\",\n"
+		     "\t    \"access\": [\n", r->name);
 
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
 		if (json)
-			printf("\t\t{ \"%s\": {\n", s->name);
+			printf("\t\t{ \"name\": \"%s\",\n"
+			       "\t\t  \"access\": {\n", s->name);
 		else
 			printf("%s\n", s->name);
 		for (i = 0; i < spsz; i++)
@@ -444,19 +511,22 @@ gen_audit(const struct config *cfg, int json, const char *role)
 				break;
 			}
 		gen_audit_inserts(s, json, r);
-		gen_audit_updates(s, r);
+		gen_audit_updates(s, json, r);
 		gen_audit_deletes(s, json, r);
-		gen_audit_searches(s, r);
-		gen_audit_lists(s, r);
-		gen_audit_iterates(s, r);
+		gen_audit_queries(s, json, 
+			STYPE_ITERATE, "iterates", r);
+		gen_audit_queries(s, json, 
+			STYPE_LIST, "lists", r);
+		gen_audit_queries(s, json, 
+			STYPE_SEARCH, "searches", r);
 		if (json)
-			printf("\t\t}%s\n",
+			printf("\t\t}}%s\n",
 				NULL != TAILQ_NEXT(s, entries) ?
 				"," : "");
 	}
 
 	if (json)
-		puts("\t];\n"
+		puts("\t]};\n"
 		     "\n"
 		     "\troot.audit = audit;\n"
 		     "})(this);");

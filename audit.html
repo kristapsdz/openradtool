@@ -6,6 +6,8 @@
 		<title>Role audit results</title>
 		<script src="audit-out.js"></script>
 		<script src="audit.js"></script>
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Alegreya+Sans:300,400,500,700" />
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
 		<link rel="stylesheet" href="audit.css" />
 	</head>
 	<body>
@@ -16,215 +18,353 @@
 			Parse error.
 		</section>
 		<section id="parsed" class="hide">
+			<aside class="hide" id="aside">
+				<div>
+					<span id="aside-close"><i class="fa fa-fw fa-close"></i></span>
+					<section id="aside-function-accessfrom" class="aside-types">
+						<header>
+							Access path: <code class="audit-accessfrom-function"></code>
+						</header>
+						<h5>Documentation</h5>
+						<article class="audit-accessfrom-nodoc audit-noentry">
+							Function has no documentation.
+						</article>
+						<article class="audit-accessfrom-doc"></article>
+						<h5>Paths</h5>
+						<ul class="audit-accessfrom-paths"></ul>
+					</section>
+					<section id="aside-function-delete" class="aside-types">
+						<header>
+							Delete: <code class="audit-delete-function"></code>
+						</header>
+						<h5>Documentation</h5>
+						<article class="audit-delete-nodoc audit-noentry">
+							Function has no documentation.
+						</article>
+						<article class="audit-delete-doc"></article>
+					</section>
+					<section id="aside-function-list" class="aside-types">
+						<header>
+							List: <code class="audit-list-function"></code>
+						</header>
+						<h5>Documentation</h5>
+						<article class="audit-list-nodoc audit-noentry">
+							Function has no documentation.
+						</article>
+						<article class="audit-list-doc"></article>
+					</section>
+					<section id="aside-function-iterate" class="aside-types">
+						<header>
+							Iterate: <code class="audit-iterate-function"></code>
+						</header>
+						<h5>Documentation</h5>
+						<article class="audit-iterate-nodoc audit-noentry">
+							Function has no documentation.
+						</article>
+						<article class="audit-iterate-doc"></article>
+					</section>
+					<section id="aside-function-update" class="aside-types">
+						<header>
+							Update: <code class="audit-update-function"></code>
+						</header>
+						<h5>Documentation</h5>
+						<article class="audit-update-nodoc audit-noentry">
+							Function has no documentation.
+						</article>
+						<article class="audit-update-doc"></article>
+					</section>
+					<section id="aside-function-search" class="aside-types">
+						<header>
+							Search: <code class="audit-search-function"></code>
+						</header>
+						<h5>Documentation</h5>
+						<article class="audit-search-nodoc audit-noentry">
+							Function has no documentation.
+						</article>
+						<article class="audit-search-doc"></article>
+					</section>
+					<section id="aside-function-insert" class="aside-types">
+						<header>
+							Insert: <code class="audit-insert-function"></code>
+						</header>
+					</section>
+					<section id="aside-function-update" class="aside-types">
+						<header>
+							Update: <code class="audit-update-function"></code>
+						</header>
+						<h5>Documentation</h5>
+						<article class="audit-update-nodoc audit-noentry">
+							Function has no documentation.
+						</article>
+						<article class="audit-update-doc"></article>
+					</section>
+				</div>
+			</aside>
 			<header>
-				Audit for: <span id="audit-role"></span>.
+				<h5>
+					Role audit
+				</h5>
+				<h1 id="audit-role"></h1>
 			</header>
 			<h2>
-				Audit by structure name
+				Structures
 			</h2>
-			<article id="audit-access-list">
-				<section>
-					<input type="checkbox" class="audit-view" />
-					<header>
-						<span class="audit-is-shown">-</span>
-						<span class="audit-not-shown">+</span>
-						<label class="audit-name"></label>
-					</header>
+			<section>
+				<input type="radio" value="0" name="audit-data-select" id="audit-data-none" class="audit-toplevel-view" checked="checked" />
+				<article id="audit-access-list">
 					<section>
-						<h4>Data fields</h4>
-						<section class="audit-data">
-							<article class="audit-data-list">
+						<input type="radio" name="audit-data-select" class="audit-view" />
+						<header>
+							<label class="audit-is-shown" for="audit-data-none">
+								<span><i class="fa fa-fw fa-circle"></i></span>
+								<span class="audit-name"></span>
+							</label>
+							<label class="audit-toplevel-shown audit-label">
+								<span><i class="fa fa-fw fa-circle-o"></i></span>
+								<span class="audit-name"></span>
+							</label>
+						</header>
+						<section>
+							<h4>Data fields</h4>
+							<section class="audit-data">
+								<article class="audit-data-list">
+									<div>
+										<span class="audit-data-field-noexport">
+											<code class="audit-data-field-name"></code>
+										</span>
+										<span class="audit-data-field-export">
+											<code class="audit-data-field-name"></code>
+										</span>
+									</div>
+								</article>
+							</section>
+							<section class="audit-accessfrom">
+								<h4>Data access</h4>
+								<article class="audit-accessfrom-list">
+									<div>
+										<code class="audit-data-accessfrom-function
+											audit-accessfrom-more audit-link"></code>:
+										<span class="audit-data-accessfrom-path"></span> paths
+									</div>
+								</article>
+							</section>
+							<article class="audit-nodata audit-noentry">
+								No data fields exported.
+							</article>
+							<h4>Delete functions</h4>
+							<article class="audit-deletes-list">
 								<div>
-									<span class="audit-data-field-noexport">
-										<span class="audit-data-field-name"></span>
-									</span>
-									<span class="audit-data-field-export">
-										<span class="audit-data-field-name"></span>
-									</span>
+									<code class="audit-delete-function audit-link audit-delete-more"></code>
 								</div>
 							</article>
-						</section>
-						<section class="audit-accessfrom">
-							<h4>Data access</h4>
-							<article class="audit-accessfrom-list">
+							<article class="audit-nodeletes audit-noentry">
+								No delete functions exported.
+							</article>
+							<h4>Insert functions</h4>
+							<article class="audit-insert">
+								<code class="audit-insert-function audit-insert-more audit-link"></code>
+							</article>
+							<article class="audit-noinsert audit-noentry">
+								No insert function exported.
+							</article>
+							<h4>Iterate functions</h4>
+							<article class="audit-iterates-list">
 								<div>
-									<span class="audit-data-accessfrom-function"></span>:
-									<span class="audit-data-accessfrom-path"></span>
-									<span class="audit-data-accessfrom-nopath">(self)</span>
+									<code class="audit-iterate-function audit-iterate-more audit-link"></code>
 								</div>
 							</article>
+							<article class="audit-noiterates audit-noentry">
+								No iterate functions exported.
+							</article>
+							<h4>List functions</h4>
+							<article class="audit-lists-list">
+								<div>
+									<code class="audit-list-function audit-list-more audit-link"></code>
+								</div>
+							</article>
+							<article class="audit-nolists audit-noentry">
+								No list functions exported.
+							</article>
+							<h4>Search functions</h4>
+							<article class="audit-searches-list">
+								<div>
+									<code class="audit-search-function audit-search-more audit-link"></code>
+								</div>
+							</article>
+							<article class="audit-nosearches audit-noentry">
+								No search functions exported.
+							</article>
+							<h4>Update functions</h4>
+							<article class="audit-updates-list">
+								<div>
+									<code class="audit-update-function audit-update-more audit-link"></code>
+								</div>
+							</article>
+							<article class="audit-noupdates audit-noentry">
+								No update functions exported.
+							</article>
 						</section>
-						<article class="audit-nodata audit-noentry">
-							No data fields exported.
-						</article>
-						<h4>Delete functions</h4>
-						<article class="audit-deletes-list">
-							<div>
-								<span class="audit-delete-function"></span>
-							</div>
-						</article>
-						<article class="audit-nodeletes audit-noentry">
-							No delete functions exported.
-						</article>
-						<h4>Insert functions</h4>
-						<article class="audit-insert">
-							<span class="audit-insert-function"></span>
-						</article>
-						<article class="audit-noinsert audit-noentry">
-							No insert function exported.
-						</article>
-						<h4>Iterate functions</h4>
-						<article class="audit-iterates-list">
-							<div>
-								<span class="audit-iterate-function"></span>
-							</div>
-						</article>
-						<article class="audit-noiterates audit-noentry">
-							No iterate functions exported.
-						</article>
-						<h4>List functions</h4>
-						<article class="audit-lists-list">
-							<div>
-								<span class="audit-list-function"></span>
-							</div>
-						</article>
-						<article class="audit-nolists audit-noentry">
-							No list functions exported.
-						</article>
-						<h4>Search functions</h4>
-						<article class="audit-searches-list">
-							<div>
-								<span class="audit-search-function"></span>
-							</div>
-						</article>
-						<article class="audit-nosearches audit-noentry">
-							No search functions exported.
-						</article>
-						<h4>Update functions</h4>
-						<article class="audit-updates-list">
-							<div>
-								<span class="audit-update-function"></span>
-							</div>
-						</article>
-						<article class="audit-noupdates audit-noentry">
-							No update functions exported.
-						</article>
 					</section>
-				</section>
-			</article>
+				</article>
+			</section>
 			<h2>
-				Audit by operation
+				Functions
 			</h2>
-			<article id="audit-function-list">
-				<section>
-					<input type="checkbox" id="audit-function-deletes" class="audit-view" />
-					<header>
-						<span class="audit-is-shown">-</span>
-						<span class="audit-not-shown">+</span>
-						<label for="audit-function-deletes">Deletes</label>
-					</header>
+			<section>
+				<input type="radio" value="0" name="audit-function-select" id="audit-function-none" class="audit-toplevel-view" checked="checked" />
+				<article id="audit-function-list">
 					<section>
-						<article id="audit-deletes-list">
-							<div>
-								<span class="audit-delete-function"></span>
-							</div>
-						</article>
-						<article id="audit-nodeletes" class="audit-noentry">
-							No deletes.
-						</article>
+						<input type="radio" value="6" name="audit-function-select" id="audit-function-deletes" />
+						<header>
+							<label class="audit-is-shown" for="audit-function-none">
+								<span><i class="fa fa-fw fa-circle"></i></span>
+								<span>Deletes</span>:
+								<span class="audit-function-deletes-count"></span>
+							</label>
+							<label class="audit-toplevel-shown" for="audit-function-deletes">
+								<span><i class="fa fa-fw fa-circle-o"></i></span>
+								<span>Deletes</span>:
+								<span class="audit-function-deletes-count"></span>
+							</label>
+						</header>
+						<section>
+							<article id="audit-deletes-list">
+								<div>
+									<code class="audit-delete-function audit-delete-more audit-link"></code>
+								</div>
+							</article>
+							<article id="audit-nodeletes" class="audit-noentry">
+								No deletes.
+							</article>
+						</section>
 					</section>
-				</section>
-				<section>
-					<input type="checkbox" id="audit-function-inserts" class="audit-view" />
-					<header>
-						<span class="audit-is-shown">-</span>
-						<span class="audit-not-shown">+</span>
-						<label for="audit-function-inserts">Inserts</label>
-					</header>
 					<section>
-						<article id="audit-inserts-list">
-							<div>
-								<span class="audit-insert-function"></span>
-							</div>
-						</article>
-						<article id="audit-noinserts" class="audit-noentry">
-							No insert.
-						</article>
+						<input type="radio" value="1" name="audit-function-select" id="audit-function-inserts" />
+						<header>
+							<label class="audit-is-shown" for="audit-function-none">
+								<span><i class="fa fa-fw fa-circle"></i></span>
+								<span>Inserts</span>:
+								<span class="audit-function-inserts-count"></span>
+							</label>
+							<label class="audit-toplevel-shown" for="audit-function-inserts">
+								<span><i class="fa fa-fw fa-circle-o"></i></span>
+								<span>Inserts</span>:
+								<span class="audit-function-inserts-count"></span>
+							</label>
+						</header>
+						<section>
+							<article id="audit-inserts-list">
+								<div>
+									<code class="audit-insert-function audit-insert-more audit-link"></code>
+								</div>
+							</article>
+							<article id="audit-noinserts" class="audit-noentry">
+								No insert.
+							</article>
+						</section>
 					</section>
-				</section>
-				<section>
-					<input type="checkbox" id="audit-function-iterates" class="audit-view" />
-					<header>
-						<span class="audit-is-shown">-</span>
-						<span class="audit-not-shown">+</span>
-						<label for="audit-function-iterates">Iterates</label>
-					</header>
 					<section>
-						<article id="audit-iterates-list">
-							<div>
-								<span class="audit-iterate-function"></span>
-							</div>
-						</article>
-						<article id="audit-noiterates" class="audit-noentry">
-							No iterates.
-						</article>
+						<input type="radio" value="2" name="audit-function-select" id="audit-function-iterates" />
+						<header>
+							<label class="audit-is-shown" for="audit-function-none">
+								<span><i class="fa fa-fw fa-circle"></i></span>
+								<span>Iterates</span>:
+								<span class="audit-function-iterates-count"></span>
+							</label>
+							<label class="audit-toplevel-shown" for="audit-function-iterates">
+								<span><i class="fa fa-fw fa-circle-o"></i></span>
+								<span>Iterates</span>:
+								<span class="audit-function-iterates-count"></span>
+							</label>
+						</header>
+						<section>
+							<article id="audit-iterates-list">
+								<div>
+									<code class="audit-iterate-function audit-iterate-more audit-link"></code>
+								</div>
+							</article>
+							<article id="audit-noiterates" class="audit-noentry">
+								No iterates.
+							</article>
+						</section>
 					</section>
-				</section>
-				<section>
-					<input type="checkbox" id="audit-function-lists" class="audit-view" />
-					<header>
-						<span class="audit-is-shown">-</span>
-						<span class="audit-not-shown">+</span>
-						<label for="audit-function-lists">Lists</label>
-					</header>
 					<section>
-						<article id="audit-lists-list">
-							<div>
-								<span class="audit-list-function"></span>
-							</div>
-						</article>
-						<article id="audit-nolists" class="audit-noentry">
-							No lists.
-						</article>
+						<input type="radio" value="3" name="audit-function-select" id="audit-function-lists" />
+						<header>
+							<label class="audit-is-shown" for="audit-function-none">
+								<span><i class="fa fa-fw fa-circle"></i></span>
+								<span>Lists</span>:
+								<span class="audit-function-lists-count"></span>
+							</label>
+							<label class="audit-toplevel-shown" for="audit-function-lists">
+								<span><i class="fa fa-fw fa-circle-o"></i></span>
+								<span>Lists</span>:
+								<span class="audit-function-lists-count"></span>
+							</label>
+						</header>
+						<section>
+							<article id="audit-lists-list">
+								<div>
+									<code class="audit-list-function audit-list-more audit-link"></code>
+								</div>
+							</article>
+							<article id="audit-nolists" class="audit-noentry">
+								No lists.
+							</article>
+						</section>
 					</section>
-				</section>
-				<section>
-					<input type="checkbox" id="audit-function-searches" class="audit-view" />
-					<header>
-						<span class="audit-is-shown">-</span>
-						<span class="audit-not-shown">+</span>
-						<label for="audit-function-searches">Searches</label>
-					</header>
 					<section>
-						<article id="audit-searches-list">
-							<div>
-								<span class="audit-search-function"></span>
-							</div>
-						</article>
-						<article id="audit-nosearches" class="audit-noentry">
-							No searches.
-						</article>
+						<input type="radio" value="4" name="audit-function-select" id="audit-function-searches" />
+						<header>
+							<label class="audit-is-shown" for="audit-function-none">
+								<span><i class="fa fa-fw fa-circle"></i></span>
+								<span>Searches</span>:
+								<span class="audit-function-searches-count"></span>
+							</label>
+							<label class="audit-toplevel-shown" for="audit-function-searches">
+								<span><i class="fa fa-fw fa-circle-o"></i></span>
+								<span>Searches</span>:
+								<span class="audit-function-searches-count"></span>
+							</label>
+						</header>
+						<section>
+							<article id="audit-searches-list">
+								<div>
+									<code class="audit-search-function audit-search-more audit-link"></code>
+								</div>
+							</article>
+							<article id="audit-nosearches" class="audit-noentry">
+								No searches.
+							</article>
+						</section>
 					</section>
-				</section>
-				<section>
-					<input type="checkbox" id="audit-function-updates" class="audit-view" />
-					<header>
-						<span class="audit-is-shown">-</span>
-						<span class="audit-not-shown">+</span>
-						<label for="audit-function-updates">Updates</label>
-					</header>
 					<section>
-						<article id="audit-updates-list">
-							<div>
-								<span class="audit-update-function"></span>
-							</div>
-						</article>
-						<article id="audit-noupdates" class="audit-noentry">
-							No updates.
-						</article>
+						<input type="radio" value="5" name="audit-function-select" id="audit-function-updates" />
+						<header>
+							<label class="audit-is-shown" for="audit-function-none">
+								<span><i class="fa fa-fw fa-circle"></i></span>
+								<span>Updates</span>:
+								<span class="audit-function-updates-count"></span>
+							</label>
+							<label class="audit-toplevel-shown" for="audit-function-updates">
+								<span><i class="fa fa-fw fa-circle-o"></i></span>
+								<span>Updates</span>:
+								<span class="audit-function-updates-count"></span>
+							</label>
+						</header>
+						<section>
+							<article id="audit-updates-list">
+								<div>
+									<code class="audit-update-function audit-update-more audit-link"></code>
+								</div>
+							</article>
+							<article id="audit-noupdates" class="audit-noentry">
+								No updates.
+							</article>
+						</section>
 					</section>
-				</section>
-			</article>
+				</article>
+			</section>
 		</section>
 	</body>
 </html>

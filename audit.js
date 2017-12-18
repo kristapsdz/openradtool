@@ -94,23 +94,21 @@
 
 	function auditAccessfromFill(data, root)
 	{
-		var i, str = '';
-
-		replcl(root, 'audit-data-accessfrom-function', data.function);
-		if (0 === data.path.length) {
-			showcl(root, 'audit-data-accessfrom-nopath');
-			hidecl(root, 'audit-data-accessfrom-path');
+		var obj, list, i;
+		if (null === (obj = auditFunctionGet(data.function)))
 			return;
-		}
-
-		for (i = 0; i < data.path.length; i++)
-			str += (i > 0 ? '.' : '') + data.path[i];
-
-		hidecl(root, 'audit-data-accessfrom-nopath');
-		showcl(root, 'audit-data-accessfrom-path');
-		replcl(root, 'audit-data-accessfrom-path', str);
+		replcl(root, 'audit-data-accessfrom-function', data.function);
+		list = root.getElementsByClassName('audit-accessfrom-more');
+		for (i = 0; i < list.length; i++)
+			list[i].onclick = function(d, o) {
+				return function() {
+					var e = show('aside');
+					hidecl(e, 'aside-types');
+					fillAccessfrom(show('aside-function-accessfrom'), d, o);
+				};
+			}(data, obj);
+		replcl(root, 'audit-data-accessfrom-path', data.paths.length);
 	}
-
 
 	function auditDataFill(data, root)
 	{
@@ -124,34 +122,156 @@
 		}
 	}
 
-	function fillUpdate(root, obj)
+	function auditFunctionGet(name)
 	{
-		replcl(root, 'audit-update-function', obj);
+		var obj;
+		if ( ! (name in audit.functions) ||
+		    null === (obj = audit.functions[name])) {
+			console.log('cannot find function: ' + name);
+			return(null);
+		}
+		return(obj);
 	}
 
-	function fillInsert(root, obj)
+	function fillShowMore(root, type, name, func)
 	{
-		replcl(root, 'audit-insert-function', obj.function);
+		var list, i;
+
+		list = root.getElementsByClassName('audit-' + type + '-more');
+		for (i = 0; i < list.length; i++)
+			list[i].onclick = function(n, t, f) {
+				return function() {
+					var e = show('aside');
+					hidecl(e, 'aside-types');
+					f(show('aside-function-' + t), n);
+				};
+			}(name, type, func);
+	}
+	function fillUpdate(root, name)
+	{
+		var obj;
+		if (null === (obj = auditFunctionGet(name)))
+			return;
+		replcl(root, 'audit-update-function', name);
+		if (null !== obj.doc) {
+			replcl(root, 'audit-update-doc', obj.doc);
+			showcl(root, 'audit-update-doc');
+			hidecl(root, 'audit-update-nodoc');
+		} else {
+			hidecl(root, 'audit-update-doc');
+			showcl(root, 'audit-update-nodoc');
+		}
+		fillShowMore(root, 'update', name, fillUpdate);
 	}
 
-	function fillDelete(root, obj)
+	function fillAccessfrom(root, data, obj)
 	{
-		replcl(root, 'audit-delete-function', obj);
+		var row, col, list, i, j, k;
+
+		replcl(root, 'audit-accessfrom-function', data.function);
+		if (null !== obj.doc) {
+			replcl(root, 'audit-accessfrom-doc', obj.doc);
+			showcl(root, 'audit-accessfrom-doc');
+			hidecl(root, 'audit-accessfrom-nodoc');
+		} else {
+			hidecl(root, 'audit-accessfrom-doc');
+			showcl(root, 'audit-accessfrom-nodoc');
+		}
+		list = root.getElementsByClassName('audit-accessfrom-paths');
+		for (i = 0; i < list.length; i++) {
+			clr(list[i]);
+			for (j = 0; j < data.paths.length; j++) {
+				row = document.createElement('li');
+				list[i].appendChild(row);
+				for (k = 0; k < data.paths[j].length; k++) {
+					col = document.createElement('span');
+					row.appendChild(col);
+					repl(col, data.paths[j][k]);
+				}
+				if (0 === data.paths[j].length) {
+					col = document.createElement('span');
+					row.appendChild(col);
+					repl(col, '(self)');
+				}
+			}
+		}
 	}
 
-	function fillSearch(root, obj)
+	function fillInsert(root, name)
 	{
-		replcl(root, 'audit-search-function', obj);
+		var obj;
+		if (null === (obj = auditFunctionGet(name)))
+			return;
+		replcl(root, 'audit-insert-function', name);
+		fillShowMore(root, 'insert', name, fillInsert);
 	}
 
-	function fillList(root, obj)
+	function fillDelete(root, name)
 	{
-		replcl(root, 'audit-list-function', obj);
+		var obj;
+		if (null === (obj = auditFunctionGet(name)))
+			return;
+		replcl(root, 'audit-delete-function', name);
+		if (null !== obj.doc) {
+			replcl(root, 'audit-delete-doc', obj.doc);
+			showcl(root, 'audit-delete-doc');
+			hidecl(root, 'audit-delete-nodoc');
+		} else {
+			hidecl(root, 'audit-delete-doc');
+			showcl(root, 'audit-delete-nodoc');
+		}
+		fillShowMore(root, 'delete', name, fillDelete);
 	}
 
-	function fillIterate(root, obj)
+	function fillSearch(root, name)
 	{
-		replcl(root, 'audit-iterate-function', obj);
+		var obj;
+		if (null === (obj = auditFunctionGet(name)))
+			return;
+		replcl(root, 'audit-search-function', name);
+		if (null !== obj.doc) {
+			replcl(root, 'audit-search-doc', obj.doc);
+			showcl(root, 'audit-search-doc');
+			hidecl(root, 'audit-search-nodoc');
+		} else {
+			hidecl(root, 'audit-search-doc');
+			showcl(root, 'audit-search-nodoc');
+		}
+		fillShowMore(root, 'search', name, fillSearch);
+	}
+
+	function fillList(root, name)
+	{
+		var obj;
+		if (null === (obj = auditFunctionGet(name)))
+			return;
+		replcl(root, 'audit-list-function', name);
+		if (null !== obj.doc) {
+			replcl(root, 'audit-list-doc', obj.doc);
+			showcl(root, 'audit-list-doc');
+			hidecl(root, 'audit-list-nodoc');
+		} else {
+			hidecl(root, 'audit-list-doc');
+			showcl(root, 'audit-list-nodoc');
+		}
+		fillShowMore(root, 'list', name, fillList);
+	}
+
+	function fillIterate(root, name)
+	{
+		var obj;
+		if (null === (obj = auditFunctionGet(name)))
+			return;
+		replcl(root, 'audit-iterate-function', name);
+		if (null !== obj.doc) {
+			replcl(root, 'audit-iterate-doc', obj.doc);
+			showcl(root, 'audit-iterate-doc');
+			hidecl(root, 'audit-iterate-nodoc');
+		} else {
+			hidecl(root, 'audit-iterate-doc');
+			showcl(root, 'audit-iterate-nodoc');
+		}
+		fillShowMore(root, 'iterate', name, fillIterate);
 	}
 
 	function fill(root, vec, name, func)
@@ -184,11 +304,16 @@
 
 	function fillVec(vec, name, func)
 	{
-		var e, sub, i, clone;
+		var e, sub, i, clone, list;
 
 		vec.sort(function(a, b) {
 			return(a.localeCompare(b));
 		});
+
+		list = document.getElementsByClassName
+			('audit-function-' + name + '-count');
+		for (i = 0; i < list.length; i++)
+			repl(list[i], vec.length);
 
 		e = find('audit-' + name + '-list');
 		sub = e.children[0];
@@ -208,13 +333,15 @@
 		}
 	}
 
-	function auditFill(audit, root)
+	function auditFill(audit, root, num)
 	{
-		var e, sub, i, j, clone, list, vec;
+		var e, sub, i, j, clone, list, vec, nvec, obj;
 
 		replcl(root, 'audit-name', audit.name);
-		attrcl(root, 'audit-name', 'for', audit.name);
+		attrcl(root, 'audit-label', 'for', audit.name);
 		attrcl(root, 'audit-view', 'id', audit.name);
+		attrcl(root, 'audit-view', 'checked', false);
+		attrcl(root, 'audit-view', 'value', num);
 
 		/* If found, fill in data field and access members. */
 
@@ -244,15 +371,30 @@
 			}
 
 			vec = audit.access.accessfrom;
+			nvec = [];
+			for (i = 0; i < vec.length; ) {
+				obj = {};
+				obj.function = vec[i].function;
+				obj.paths = [];
+				obj.paths.push(vec[i].path);
+				for (j = i + 1; j < vec.length; j++) {
+					if (vec[j].function !== vec[i].function)
+						break;
+					obj.paths.push(vec[j].path);
+				}
+				nvec.push(obj);
+				i = j;
+			}
+
 			list = root.getElementsByClassName
 				('audit-accessfrom-list');
 			for (i = 0; i < list.length; i++) {
 				sub = list[i].children[0];
 				clr(list[i]);
-				for (j = 0; j < vec.length; j++) {
+				for (j = 0; j < nvec.length; j++) {
 					clone = sub.cloneNode(true);
 					list[i].appendChild(clone);
-					auditAccessfromFill(vec[j], clone);
+					auditAccessfromFill(nvec[j], clone);
 				}
 			}
 		} else {
@@ -283,7 +425,7 @@
 
 	function init() 
 	{
-		var e, sub, i, j, clone, vec;
+		var e, sub, i, j, clone, vec, list;
 
 		hide('parsing');
 
@@ -292,8 +434,16 @@
 			return;
 		}
 
+		if (null !== (e = find('aside-close')))
+			e.onclick = function() {
+				hide('aside');
+			};
+
 		show('parsed');
 		repl('audit-role', audit.role);
+		list = document.getElementsByClassName('audit-toplevel-view');
+		for (i = 0; i < list.length; i++)
+			list[i].checked = true;
 
 		audit.access.sort(function(a, b) {
 			return(a.name.localeCompare(b.name));
@@ -305,7 +455,7 @@
 		for (i = 0; i < audit.access.length; i++) {
 			clone = sub.cloneNode(true);
 			e.appendChild(clone);
-			auditFill(audit.access[i], clone);
+			auditFill(audit.access[i], clone, i + 1);
 		}
 
 		/* Fill insert functions. */

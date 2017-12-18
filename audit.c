@@ -240,12 +240,12 @@ gen_audit_inserts(const struct strct *p,
 	if (NULL != p->irolemap && 
 	    check_rolemap(p->irolemap, role)) {
 		if (json)
-			printf(" { \"function\": \"");
+			putchar('"');
 		else
 			printf("%s%s", SPACE, SPACE);
 		print_name_db_insert(p);
 		if (json)
-			puts("\" },");
+			puts("\",");
 		else
 			puts("");
 	} else if (json)
@@ -268,17 +268,15 @@ gen_audit_deletes(const struct strct *p,
 		if ( ! check_rolemap(u->rolemap, role))
 			continue;
 		if (json && ! first)
-			printf(",\n\t\t\t\t{ \"function\": \"");
+			printf(",\n\t\t\t\t\"");
 		else if ( ! json)
 			printf("%s%s", SPACE, SPACE);
 		else
-			printf("[\n\t\t\t\t{ \"function\": \"");
+			printf("[\n\t\t\t\t\"");
 		print_name_db_update(u);
-		if (json) {
-			printf("\",\n\t\t\t\t  \"doc\": ");
-			print_doc(u->doc);
-			printf(" }");
-		} else
+		if (json)
+			putchar('"');
+		else
 			putchar('\n');
 		first = 0;
 	}
@@ -303,23 +301,81 @@ gen_audit_updates(const struct strct *p,
 		if ( ! check_rolemap(u->rolemap, role)) 
 			continue;
 		if (json && ! first)
-			printf(",\n\t\t\t\t{ \"function\": \"");
+			printf(",\n\t\t\t\t\"");
 		else if ( ! json)
 			printf("%s%s", SPACE, SPACE);
 		else 
-			printf("[\n\t\t\t\t{ \"function\": \"");
+			printf("[\n\t\t\t\t\"");
 		print_name_db_update(u);
-		if (json) {
-			printf("\",\n\t\t\t\t  \"doc\": ");
-			print_doc(u->doc);
-			printf(" }");
-		} else
+		if (json)
+			putchar('"');
+		else
 			putchar('\n');
 		first = 0;
 	}
 
 	if (json)
 		printf("%s],\n", first ? "[" : " ");
+}
+
+static void
+gen_protos_insert(const struct strct *s,
+	int *first, const struct role *role)
+{
+
+	if (NULL == s->irolemap)
+		return;
+	if ( ! check_rolemap(s->irolemap, role))
+		return;
+	printf("%s\n\t\t\"", *first ? "" : ",");
+	print_name_db_insert(s);
+	fputs("\": {\n"
+ 	      "\t\t\t\"doc\": null", stdout);
+	fputs(",\n\t\t\t\"type\": \"insert\" }", stdout);
+	*first = 0;
+}
+
+static void
+gen_protos_updates(const struct updateq *uq,
+	int *first, const struct role *role)
+{
+	const struct update *u;
+
+	TAILQ_FOREACH(u, uq, entries) {
+		if ( ! check_rolemap(u->rolemap, role))
+			continue;
+		printf("%s\n\t\t\"", *first ? "" : ",");
+		print_name_db_update(u);
+		fputs("\": {\n"
+	 	      "\t\t\t\"doc\": ", stdout);
+		print_doc(u->doc);
+		printf(",\n\t\t\t\"type\": \"%s\" }",
+			UP_MODIFY == u->type ? "update" : 
+			"delete");
+		*first = 0;
+	}
+}
+
+static void
+gen_protos_queries(const struct searchq *sq,
+	int *first, const struct role *role)
+{
+	const struct search *s;
+
+	TAILQ_FOREACH(s, sq, entries) {
+		if ( ! check_rolemap(s->rolemap, role))
+			continue;
+		printf("%s\n\t\t\"", *first ? "" : ",");
+		print_name_db_search(s);
+		fputs("\": {\n"
+	 	      "\t\t\t\"doc\": ", stdout);
+		print_doc(s->doc);
+		printf(",\n\t\t\t\"type\": \"%s\" }",
+			STYPE_SEARCH == s->type ? "search" : 
+			STYPE_ITERATE == s->type ? "iterate" :
+			"list");
+		*first = 0;
+	}
 }
 
 static void
@@ -339,16 +395,14 @@ gen_audit_queries(const struct strct *p, int json,
 		    ! check_rolemap(s->rolemap, role))
 			continue;
 		if (json && ! first)
-			printf(",\n\t\t\t\t{ \"function\": \"");
+			printf(",\n\t\t\t\t\"");
 		else if ( ! json)
 			printf("%s%s", SPACE, SPACE);
 		else 
-			printf("[\n\t\t\t\t{ \"function\": \"");
+			printf("[\n\t\t\t\t\"");
 		print_name_db_search(s);
 		if (json) {
-			printf("\",\n\t\t\t\t  \"doc\": ");
-			print_doc(s->doc);
-			printf(" }");
+			putchar('"');
 		} else
 			putchar('\n');
 		first = 0;
@@ -450,8 +504,9 @@ gen_audit(const struct config *cfg, int json, const char *role)
 	const struct search *sr;
 	const struct role *r = NULL, *rr;
 	struct sraccess *sp = NULL;
-	size_t	i, j, spsz = 0;
+	size_t	 i, j, spsz = 0;
 	struct fieldstack fs;
+	int	 first;
 
 	memset(&fs, 0, sizeof(struct fieldstack));
 
@@ -525,11 +580,21 @@ gen_audit(const struct config *cfg, int json, const char *role)
 				"," : "");
 	}
 
-	if (json)
-		puts("\t]};\n"
+	if (json) {
+		fputs("\t],\n"
+		      "\t\"functions\": {", stdout);
+		first = 1;
+		TAILQ_FOREACH(s, &cfg->sq, entries) {
+			gen_protos_queries(&s->sq, &first, r);
+			gen_protos_updates(&s->uq, &first, r);
+			gen_protos_updates(&s->dq, &first, r);
+			gen_protos_insert(s, &first, r);
+		}
+		puts("\n\t}};\n"
 		     "\n"
 		     "\troot.audit = audit;\n"
 		     "})(this);");
+	}
 
 	for (i = 0; i < spsz; i++) {
 		for (j = 0; j < sp[i].origsz; j++)

@@ -107,7 +107,7 @@
 				<h1 id="audit-role"></h1>
 			</header>
 			<h2>
-				Structures
+				By structure&#8230;
 			</h2>
 			<section>
 				<input type="radio" value="0" name="audit-data-select" id="audit-data-none" class="audit-toplevel-view" checked="checked" />
@@ -116,12 +116,30 @@
 						<input type="radio" name="audit-data-select" class="audit-view" />
 						<header>
 							<label class="audit-is-shown" for="audit-data-none">
-								<span><i class="fa fa-fw fa-circle"></i></span>
-								<span class="audit-name"></span>
+								<span>
+									<span><i class="fa fa-fw fa-circle"></i></span>
+									<code class="audit-name"></code>
+								</span>
+								<span>
+									<span title="Data export" class="audit-data-count"></span>
+									<span title="Updates" class="audit-updates-count"></span>
+									<span title="Deletes" class="audit-deletes-count"></span>
+									<span title="Queries" class="audit-queries-count"></span>
+									<span title="Inserts" class="audit-inserts-count"></span>
+								</span>
 							</label>
 							<label class="audit-toplevel-shown audit-label">
-								<span><i class="fa fa-fw fa-circle-o"></i></span>
-								<span class="audit-name"></span>
+								<span>
+									<span><i class="fa fa-fw fa-circle-o"></i></span>
+									<code class="audit-name"></code>
+								</span>
+								<span>
+									<span title="Data export" class="audit-data-count"></span>
+									<span title="Updates" class="audit-updates-count"></span>
+									<span title="Deletes" class="audit-deletes-count"></span>
+									<span title="Queries" class="audit-queries-count"></span>
+									<span title="Inserts" class="audit-inserts-count"></span>
+								</span>
 							</label>
 						</header>
 						<section>
@@ -208,23 +226,31 @@
 				</article>
 			</section>
 			<h2>
-				Functions
+				By operation&#8230;
 			</h2>
 			<section>
 				<input type="radio" value="0" name="audit-function-select" id="audit-function-none" class="audit-toplevel-view" checked="checked" />
 				<article id="audit-function-list">
-					<section>
+					<section id="audit-byoperation-deletes">
 						<input type="radio" value="6" name="audit-function-select" id="audit-function-deletes" />
 						<header>
 							<label class="audit-is-shown" for="audit-function-none">
-								<span><i class="fa fa-fw fa-circle"></i></span>
-								<span>Deletes</span>:
-								<span class="audit-function-deletes-count"></span>
+								<span>
+									<span><i class="fa fa-fw fa-circle"></i></span>
+									<span>Deletes</span>
+								</span>
+								<span>
+									<span class="audit-function-deletes-count"></span>
+								</span>
 							</label>
 							<label class="audit-toplevel-shown" for="audit-function-deletes">
-								<span><i class="fa fa-fw fa-circle-o"></i></span>
-								<span>Deletes</span>:
-								<span class="audit-function-deletes-count"></span>
+								<span>
+									<span><i class="fa fa-fw fa-circle-o"></i></span>
+									<span>Deletes</span>
+								</span>
+								<span>
+									<span class="audit-function-deletes-count"></span>
+								</span>
 							</label>
 						</header>
 						<section>
@@ -238,18 +264,26 @@
 							</article>
 						</section>
 					</section>
-					<section>
+					<section id="audit-byoperation-inserts">
 						<input type="radio" value="1" name="audit-function-select" id="audit-function-inserts" />
 						<header>
 							<label class="audit-is-shown" for="audit-function-none">
-								<span><i class="fa fa-fw fa-circle"></i></span>
-								<span>Inserts</span>:
-								<span class="audit-function-inserts-count"></span>
+								<span>
+									<span><i class="fa fa-fw fa-circle"></i></span>
+									<span>Inserts</span>
+								</span>
+								<span>
+									<span class="audit-function-inserts-count"></span>
+								</span>
 							</label>
 							<label class="audit-toplevel-shown" for="audit-function-inserts">
-								<span><i class="fa fa-fw fa-circle-o"></i></span>
-								<span>Inserts</span>:
-								<span class="audit-function-inserts-count"></span>
+								<span>
+									<span><i class="fa fa-fw fa-circle-o"></i></span>
+									<span>Inserts</span>
+								</span>
+								<span>
+									<span class="audit-function-inserts-count"></span>
+								</span>
 							</label>
 						</header>
 						<section>
@@ -263,18 +297,26 @@
 							</article>
 						</section>
 					</section>
-					<section>
+					<section id="audit-byoperation-iterates">
 						<input type="radio" value="2" name="audit-function-select" id="audit-function-iterates" />
 						<header>
 							<label class="audit-is-shown" for="audit-function-none">
-								<span><i class="fa fa-fw fa-circle"></i></span>
-								<span>Iterates</span>:
-								<span class="audit-function-iterates-count"></span>
+								<span>
+									<span><i class="fa fa-fw fa-circle"></i></span>
+									<span>Iterates</span>
+								</span>
+								<span>
+									<span class="audit-function-iterates-count"></span>
+								</span>
 							</label>
 							<label class="audit-toplevel-shown" for="audit-function-iterates">
-								<span><i class="fa fa-fw fa-circle-o"></i></span>
-								<span>Iterates</span>:
-								<span class="audit-function-iterates-count"></span>
+								<span>
+									<span><i class="fa fa-fw fa-circle-o"></i></span>
+									<span>Iterates</span>
+								</span>
+								<span>
+									<span class="audit-function-iterates-count"></span>
+								</span>
 							</label>
 						</header>
 						<section>
@@ -288,18 +330,26 @@
 							</article>
 						</section>
 					</section>
-					<section>
+					<section id="audit-byoperation-lists">
 						<input type="radio" value="3" name="audit-function-select" id="audit-function-lists" />
 						<header>
 							<label class="audit-is-shown" for="audit-function-none">
-								<span><i class="fa fa-fw fa-circle"></i></span>
-								<span>Lists</span>:
-								<span class="audit-function-lists-count"></span>
+								<span>
+									<span><i class="fa fa-fw fa-circle"></i></span>
+									<span>Lists</span>
+								</span>
+								<span>
+									<span class="audit-function-lists-count"></span>
+								</span>
 							</label>
 							<label class="audit-toplevel-shown" for="audit-function-lists">
-								<span><i class="fa fa-fw fa-circle-o"></i></span>
-								<span>Lists</span>:
-								<span class="audit-function-lists-count"></span>
+								<span>
+									<span><i class="fa fa-fw fa-circle-o"></i></span>
+									<span>Lists</span>
+								</span>
+								<span>
+									<span class="audit-function-lists-count"></span>
+								</span>
 							</label>
 						</header>
 						<section>
@@ -313,18 +363,26 @@
 							</article>
 						</section>
 					</section>
-					<section>
+					<section id="audit-byoperation-searches">
 						<input type="radio" value="4" name="audit-function-select" id="audit-function-searches" />
 						<header>
 							<label class="audit-is-shown" for="audit-function-none">
-								<span><i class="fa fa-fw fa-circle"></i></span>
-								<span>Searches</span>:
-								<span class="audit-function-searches-count"></span>
+								<span>
+									<span><i class="fa fa-fw fa-circle"></i></span>
+									<span>Searches</span>
+								</span>
+								<span>
+									<span class="audit-function-searches-count"></span>
+								</span>
 							</label>
 							<label class="audit-toplevel-shown" for="audit-function-searches">
-								<span><i class="fa fa-fw fa-circle-o"></i></span>
-								<span>Searches</span>:
-								<span class="audit-function-searches-count"></span>
+								<span>
+									<span><i class="fa fa-fw fa-circle-o"></i></span>
+									<span>Searches</span>
+								</span>
+								<span>
+									<span class="audit-function-searches-count"></span>
+								</span>
 							</label>
 						</header>
 						<section>
@@ -338,18 +396,26 @@
 							</article>
 						</section>
 					</section>
-					<section>
+					<section id="audit-byoperation-updates">
 						<input type="radio" value="5" name="audit-function-select" id="audit-function-updates" />
 						<header>
 							<label class="audit-is-shown" for="audit-function-none">
-								<span><i class="fa fa-fw fa-circle"></i></span>
-								<span>Updates</span>:
-								<span class="audit-function-updates-count"></span>
+								<span>
+									<span><i class="fa fa-fw fa-circle"></i></span>
+									<span>Updates</span>
+								</span>
+								<span>
+									<span class="audit-function-updates-count"></span>
+								</span>
 							</label>
 							<label class="audit-toplevel-shown" for="audit-function-updates">
-								<span><i class="fa fa-fw fa-circle-o"></i></span>
-								<span>Updates</span>:
-								<span class="audit-function-updates-count"></span>
+								<span>
+									<span><i class="fa fa-fw fa-circle-o"></i></span>
+									<span>Updates</span>
+								</span>
+								<span>
+									<span class="audit-function-updates-count"></span>
+								</span>
 							</label>
 						</header>
 						<section>

@@ -324,10 +324,17 @@
 			func(clone, vec[i]);
 		}
 
+		e = find('audit-byoperation-' + name);
+
 		if (0 === vec.length) {
+			if (null !== e &&
+			    ! e.classList.contains('noop'))
+				e.classList.add('noop');
 			hide('audit-' + name + '-list');
 			show('audit-no' + name);
 		} else {
+			if (null !== e)
+				e.classList.remove('noop');
 			show('audit-' + name + '-list');
 			hide('audit-no' + name);
 		}
@@ -335,13 +342,16 @@
 
 	function auditFill(audit, root, num)
 	{
-		var e, sub, i, j, clone, list, vec, nvec, obj;
+		var e, sub, i, j, clone, list, vec, 
+			nvec, obj, noexport, pct, ins;
 
 		replcl(root, 'audit-name', audit.name);
 		attrcl(root, 'audit-label', 'for', audit.name);
 		attrcl(root, 'audit-view', 'id', audit.name);
 		attrcl(root, 'audit-view', 'checked', false);
 		attrcl(root, 'audit-view', 'value', num);
+
+		pct = ins = 0;
 
 		/* If found, fill in data field and access members. */
 
@@ -360,6 +370,10 @@
 			vec = audit.access.data;
 			list = root.getElementsByClassName
 				('audit-data-list');
+
+			for (noexport = j = 0; j < vec.length; j++) 
+				noexport += vec[j].export ? 0 : 1;
+
 			for (i = 0; i < list.length; i++) {
 				sub = list[i].children[0];
 				clr(list[i]);
@@ -370,6 +384,8 @@
 				}
 			}
 
+			pct = Math.round((1.0 - 
+				(noexport / vec.length)) * 100);
 			vec = audit.access.accessfrom;
 			nvec = [];
 			for (i = 0; i < vec.length; ) {
@@ -409,10 +425,33 @@
 			showcl(root, 'audit-insert');
 			hidecl(root, 'audit-noinsert');
 			fillInsert(root, audit.access.insert);
+			ins = 1;
 		} else {
 			hidecl(root, 'audit-insert');
 			showcl(root, 'audit-noinsert');
 		}
+		
+		replcl(root, 'audit-data-count', pct + '%');
+		replcl(root, 'audit-queries-count', 
+			audit.access.searches.length +
+			audit.access.lists.length +
+			audit.access.iterates.length);
+		replcl(root, 'audit-updates-count', 
+			audit.access.updates.length);
+		replcl(root, 'audit-deletes-count', 
+			audit.access.deletes.length);
+		replcl(root, 'audit-inserts-count', ins);
+
+		if (0 === pct + ins + 
+		    audit.access.deletes.length +
+		    audit.access.updates.length +
+		    audit.access.searches.length +
+		    audit.access.lists.length +
+		    audit.access.iterates.length) {
+			if ( ! root.classList.contains('noop'))
+				root.classList.add('noop');
+		} else
+			root.classList.remove('noop');
 
 		/* Fill other functions. */
 
@@ -425,82 +464,77 @@
 
 	function init() 
 	{
-		var e, sub, i, j, clone, vec, list;
-
-		hide('parsing');
+		var e, sub, i, j, clone, vec, list, ac;
 
 		if (null === audit) {
 			show('parseerr');
 			return;
 		}
 
+		ac = audit.access;
+		
+		/* Initialise page view for consistency. */
+
 		if (null !== (e = find('aside-close')))
 			e.onclick = function() {
 				hide('aside');
 			};
 
-		show('parsed');
 		repl('audit-role', audit.role);
-		list = document.getElementsByClassName('audit-toplevel-view');
+		list = document.getElementsByClassName
+			('audit-toplevel-view');
 		for (i = 0; i < list.length; i++)
 			list[i].checked = true;
 
-		audit.access.sort(function(a, b) {
+		/* Start with per-structure audit. */
+
+		ac.sort(function(a, b) {
 			return(a.name.localeCompare(b.name));
 		});
 
 		e = find('audit-access-list');
 		sub = e.children[0];
 		clr(e);
-		for (i = 0; i < audit.access.length; i++) {
+		for (i = 0; i < ac.length; i++) {
 			clone = sub.cloneNode(true);
 			e.appendChild(clone);
-			auditFill(audit.access[i], clone, i + 1);
+			auditFill(ac[i], clone, i + 1);
 		}
 
-		/* Fill insert functions. */
+		/* Now fill for collected operations. */
 
-		vec = [];
-		for (i = 0; i < audit.access.length; i++)
-			if (null !== audit.access[i].access.insert)
-				vec.push(audit.access[i].access.insert);
-
+		for (vec = [], i = 0; i < ac.length; i++)
+			if (null !== ac[i].access.insert)
+				vec.push(ac[i].access.insert);
 		fillVec(vec, 'inserts', fillInsert);
 
-		vec = [];
-		for (i = 0; i < audit.access.length; i++)
-			for (j = 0; j < audit.access[i].access.deletes.length; j++)
-				vec.push(audit.access[i].access.deletes[j]);
-
+		for (vec = [], i = 0; i < ac.length; i++)
+			for (j = 0; j < ac[i].access.deletes.length; j++)
+				vec.push(ac[i].access.deletes[j]);
 		fillVec(vec, 'deletes', fillDelete);
 
-		vec = [];
-		for (i = 0; i < audit.access.length; i++)
-			for (j = 0; j < audit.access[i].access.updates.length; j++)
-				vec.push(audit.access[i].access.updates[j]);
-
+		for (vec = [], i = 0; i < ac.length; i++)
+			for (j = 0; j < ac[i].access.updates.length; j++)
+				vec.push(ac[i].access.updates[j]);
 		fillVec(vec, 'updates', fillUpdate);
 
-		vec = [];
-		for (i = 0; i < audit.access.length; i++)
-			for (j = 0; j < audit.access[i].access.searches.length; j++)
-				vec.push(audit.access[i].access.searches[j]);
-
+		for (vec = [], i = 0; i < ac.length; i++)
+			for (j = 0; j < ac[i].access.searches.length; j++)
+				vec.push(ac[i].access.searches[j]);
 		fillVec(vec, 'searches', fillSearch);
 
-		vec = [];
-		for (i = 0; i < audit.access.length; i++)
-			for (j = 0; j < audit.access[i].access.iterates.length; j++)
-				vec.push(audit.access[i].access.iterates[j]);
-
+		for (vec = [], i = 0; i < ac.length; i++)
+			for (j = 0; j < ac[i].access.iterates.length; j++)
+				vec.push(ac[i].access.iterates[j]);
 		fillVec(vec, 'iterates', fillIterate);
 
-		vec = [];
-		for (i = 0; i < audit.access.length; i++)
-			for (j = 0; j < audit.access[i].access.lists.length; j++)
-				vec.push(audit.access[i].access.lists[j]);
-
+		for (vec = [], i = 0; i < ac.length; i++)
+			for (j = 0; j < ac[i].access.lists.length; j++)
+				vec.push(ac[i].access.lists[j]);
 		fillVec(vec, 'lists', fillList);
+
+		show('parsed');
+		hide('parsing');
 	}
 
 	root.init = init;

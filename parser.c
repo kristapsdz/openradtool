@@ -2479,11 +2479,11 @@ role_alloc(struct parse *p, const char *name, struct role *parent)
 
 /*
  * Parse an individual role, which may be a subset of another role
- * designation.
+ * designation, and possibly its documentation.
  * It may not be a reserved role.
  * Its syntax is:
  *
- *  "role" name ["{" [ ROLE ]* "}"]? ";"
+ *  "role" name ["comment" quoted_string]? ["{" [ ROLE ]* "}"]? ";"
  */
 static void
 parse_role(struct parse *p, struct config *cfg, struct role *parent)
@@ -2512,7 +2512,18 @@ parse_role(struct parse *p, struct config *cfg, struct role *parent)
 
 	r = role_alloc(p, p->last.string, parent);
 
-	if (TOK_LBRACE == parse_next(p)) {
+	if (TOK_IDENT == parse_next(p)) {
+		if (strcasecmp(p->last.string, "comment")) {
+			parse_errx(p, "expected comment");
+			return;
+		}
+		parse_comment(p, &r->doc);
+		if (PARSE_STOP(p))
+			return;
+		parse_next(p);
+	}
+
+	if (TOK_LBRACE == p->lasttype) {
 		while ( ! PARSE_STOP(p)) {
 			if (TOK_RBRACE == parse_next(p))
 				break;
@@ -2905,6 +2916,7 @@ parse_free_role(struct role *r)
 		TAILQ_REMOVE(&r->subrq, rr, entries);
 		parse_free_role(rr);
 	}
+	free(r->doc);
 	free(r->name);
 	free(r);
 }

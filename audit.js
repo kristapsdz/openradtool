@@ -466,7 +466,8 @@
 	{
 		var e, sub, i, j, clone, vec, list, ac;
 
-		if (null === audit) {
+		if (typeof audit !== 'object' || null === audit) {
+			hide('parsing');
 			show('parseerr');
 			return;
 		}
@@ -485,6 +486,15 @@
 			('audit-toplevel-view');
 		for (i = 0; i < list.length; i++)
 			list[i].checked = true;
+
+		if (null !== audit.doc) {
+			show('audit-role-doc');
+			hide('audit-role-nodoc');
+			repl('audit-role-doc', audit.doc);
+		} else {
+			hide('audit-role-doc');
+			show('audit-role-nodoc');
+		}
 
 		/* Start with per-structure audit. */
 
@@ -535,6 +545,7 @@
 
 		show('parsed');
 		hide('parsing');
+		hide('parseerr');
 	}
 
 	root.init = init;

@@ -22,7 +22,8 @@ input ~ header label > span:first-child
 				{ flex: 1; }
 input ~ header label > span:last-child > span
 				{ display: inline-block;
-				  width: 4ex; }
+				  text-align: right;
+				  width: 4.5ex; }
 input:checked ~ header .audit-is-shown 
 				{ display: flex; 
 				  border: 2px solid rgba(0, 0, 255, 0.4); 
@@ -43,8 +44,10 @@ input:checked ~ section 	{ display: block;
 				  border-bottom: 1px dotted rgba(0, 0, 255, 0.4); }
 h1				{ font-weight: 700;
 				  margin-top: 0;
+				  margin-bottom: 1rem;
 				  font-size: 24pt; }
 h2				{ font-weight: 500;
+				  margin-top: 1rem;
 				  font-size: inherit; }
 h3				{ font-weight: 500;
 				  font-size: inherit; }

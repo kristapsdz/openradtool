@@ -4,17 +4,31 @@
 		<header>
 			<h3>0.4.0</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2017-12-15">2017-12-15</time>
+			<time datetime="2017-12-19">2017-12-19</time>
 		</header>
 		<aside>
 			<p>
-				Split <a href="kwebapp.1.html">kwebapp(1)</a> into
-				<a href="kwebapp-c-header.1.html">kwebapp-c-header(1)</a>,
-				<a href="kwebapp-c-source.1.html">kwebapp-c-source(1)</a>,
-				<a href="kwebapp-javascript.1.html">kwebapp-javascript(1)</a>,
-				<a href="kwebapp-sql.1.html">kwebapp-sql(1)</a>,
-				and
-				<a href="kwebapp-sqldiff.1.html">kwebapp-sqldiff(1)</a>.
+				Split <a href="kwebapp.1.html">kwebapp(1)</a> into <a
+					href="kwebapp-c-header.1.html">kwebapp-c-header(1)</a>, <a
+					href="kwebapp-c-source.1.html">kwebapp-c-source(1)</a>, <a
+					href="kwebapp-javascript.1.html">kwebapp-javascript(1)</a>,
+				<a href="kwebapp-sql.1.html">kwebapp-sql(1)</a>, and <a
+					href="kwebapp-sqldiff.1.html">kwebapp-sqldiff(1)</a>.
+				The historical calling conventions of using <a
+					href="kwebapp.1.html">kwebapp(1)</a> with output flags is no
+				longer accepted.
+			</p>
+			<p>
+				Add <a href="kwebapp-audit.1.html">kwebapp-audit(1)</a>.
+				This tool allows configurations to be audited for role permissions.
+				It effectively takes a configuration and determines all possible
+				access (data access, modify, etc.) available to a given role and
+				produces a report.
+				Reports can be on the command-line or JSON.
+				A sample implementation of the JSON file is installed.
+			</p>
+			<p>
+				Allow for <code>comment</code> strings to be associated with roles.
 			</p>
 		</aside>
 	</article>
@@ -26,7 +40,8 @@
 		</header>
 		<aside>
 			<p>
-				Allow for <code>update</code> and <code>delete</code> to operate without constraints.
+				Allow for <code>update</code> and <code>delete</code> to operate
+				without constraints.
 				See <a href="kwebapp.5.html">kwebapp(5)</a> for syntax.
 				Also add transaction call-through functions to the generated C API.
 				This is necessary in role-based mode since the underlying
@@ -34,7 +49,8 @@
 				These are documented in <a href="kwebapp.1.html">kwebapp(1)</a>.
 			</p>
 			<p>
-				Fix a crash when having <code>limit</code> statements with <code>enum</code> types.
+				Fix a crash when having <code>limit</code> statements with
+				<code>enum</code> types.
 			</p>
 		</aside>
 	</article>
@@ -46,17 +62,21 @@
 		</header>
 		<aside>
 			<p>
-				Lift the restriction on alias counts (total number of inner joins) from 26 to 17576.
-				This can easily be expanded further: the limitation is purely for simplicity's sake.
+				Lift the restriction on alias counts (total number of inner joins)
+				from 26 to 17576.
+				This can easily be expanded further: the limitation is purely for
+				simplicity's sake.
 			</p>
 			<p>
 				Add the <code>distinct</code> field to queries.
-				This field, in its basic form, enforced the SQL <code>DISTINCT</code> keyword.
-				However, it can also be used for nested fields in a structure, effectively only returning distinct rows of
-				nested structures.
-				The canonical example is returning only distinct album fields that are <code>struct</code> foreign key
-				references of a track table.
-				All of this is documented in <a href="kwebapp.5.html">kwebapp(5)</a>.
+				This field, in its basic form, enforced the SQL
+				<code>DISTINCT</code> keyword.
+				However, it can also be used for nested fields in a structure,
+				effectively only returning distinct rows of nested structures.
+				The canonical example is returning only distinct album fields that
+				are <code>struct</code> foreign key references of a track table.
+				All of this is documented in <a
+					href="kwebapp.5.html">kwebapp(5)</a>.
 			</p> 
 		</aside>
 	</article>
@@ -68,12 +88,16 @@
 		</header>
 		<aside>
 			<p>
-				Bug-fixes in created C code to account for line-breaking long SQL statements.
+				Bug-fixes in created C code to account for line-breaking long SQL
+				statements.
 				(This is an in-progress effort.)
 				Also add the <code>unset jslabel</code> statement for bit-fields.
-				This allows the generated JavaScript <code>format()</code> function to provide a value if the field exists but
-				has not been set with any bits.
-				(This is yet to be documented for <a href="kwebapp.1.html">kwebapp(1)</a> as the feature is still experimental.)
+				This allows the generated JavaScript <code>format()</code> function
+				to provide a value if the field exists but has not been set with any
+				bits.
+				(This is yet to be documented for <a
+					href="kwebapp.1.html">kwebapp(1)</a> as the feature is still
+				experimental.)
 			</p> 
 		</aside>
 	</article>
@@ -86,12 +110,14 @@
 		<aside>
 			<p>
 				Lots of new features!
-				Add the <code>order</code> statement for ordering <code>list</code> and <code>iterate</code> results.
-				It can also act as a way to define single results over non-unique fields by combining the <code>search</code>
-				statement with <code>limit</code>.
+				Add the <code>order</code> statement for ordering <code>list</code>
+				and <code>iterate</code> results.
+				It can also act as a way to define single results over non-unique
+				fields by combining the <code>search</code> statement with
+				<code>limit</code>.
 				Allow for limit offsets by extending the <code>limit</code> syntax.
-				Lastly, introduce the <code>bit</code> bit index type and the <code>bits</code> top-level type for working with
-				bit-fields.
+				Lastly, introduce the <code>bit</code> bit index type and the
+				<code>bits</code> top-level type for working with bit-fields.
 				All of these are documented in <a href="kwebapp.5.html">kwebapp(5)</a>.
 			</p> 
 		</aside>
@@ -106,21 +132,28 @@
 			<p>
 				Disallow duplicate <code>enum</code> and <code>struct</code> names.
 				(These will otherwise collide in the C namespace.)
-				Improve the documentation (function arguments) in the produced C header file.
-				Output JavaScript <code>enum</code> values&#8212;this is described in <a href="kwebapp.1.html">kwebapp(1)</a>.
+				Improve the documentation (function arguments) in the produced C
+				header file.
+				Output JavaScript <code>enum</code> values&#8212;this is described
+				in <a href="kwebapp.1.html">kwebapp(1)</a>.
 			</p> 
 			<p> 
-				Add the <code>and</code> and <code>or</code> logical (bit-wise) operations for search constraints.
+				Add the <code>and</code> and <code>or</code> logical (bit-wise)
+				operations for search constraints.
 			</p> 
 			<p> 
 				Finally allow comments!
-				These begin at any time with the hash mark and continue to the end of line.
+				These begin at any time with the hash mark and continue to the end
+				of line.
 				(My motivation was modelines for vim.)
 			</p> 
 			<p> 
-				Lastly, and the biggest, allow for having <code>struct</code> fields on <code>null</code> foreign keys.
-				This requires the system to perform extra <code>SELECT</code> statements when the keys aren't <code>null</code>
-				(which is noted in the generated API comments on a per-function basis), but overall it's very useful.
+				Lastly, and the biggest, allow for having <code>struct</code> fields
+				on <code>null</code> foreign keys.
+				This requires the system to perform extra <code>SELECT</code>
+				statements when the keys aren't <code>null</code> (which is noted in
+				the generated API comments on a per-function basis), but overall
+				it's very useful.
 			</p> 
 		</aside>
 	</article>
@@ -135,8 +168,9 @@
 				Add the <code>like</code> operator type.
 				This allows for primitive text searching.
 				(This will become more advanced in time.)
-				Allow the custom callback for JavaScript functions to optionally accept an array of functions for
-				structure-field or structure in general.
+				Allow the custom callback for JavaScript functions to optionally
+				accept an array of functions for structure-field or structure in
+				general.
 			</p>
 		</aside>
 	</article>
@@ -148,10 +182,14 @@
 		</header>
 		<aside>
 			<p>
-				Add the <code>bit</code> type to work with <a href="https://kristaps.bsd.lv/kcgi">kcgi</a>'s new bit validator.
-				Fix the JavaScript output to propogate custom callbacks (see <a href="kwebapp.1.html">kwebapp(1)</a>) in the
+				Add the <code>bit</code> type to work with <a
+					href="https://kristaps.bsd.lv/kcgi">kcgi</a>'s new bit
+				validator.
+				Fix the JavaScript output to propogate custom callbacks (see <a
+					href="kwebapp.1.html">kwebapp(1)</a>) in the
 				<code>fillArray</code> function.
-				Lastly, add feature that allows an update <code>update</code> statement translate into updateing all fields.
+				Lastly, add feature that allows an update <code>update</code>
+				statement translate into updating all fields.
 			</p>
 		</aside>
 	</article>
@@ -163,7 +201,8 @@
 		</header>
 		<aside>
 			<p>
-				Repair the <a href="http://usejsdoc.org">jsdoc</a> by actually checking it.
+				Repair the <a href="http://usejsdoc.org">jsdoc</a> by actually
+				checking it.
 				Also add custom callback handling for individual structure/fields.
 			</p>
 		</aside>
@@ -176,31 +215,41 @@
 		</header>
 		<aside>
 			<p>
-				Require the <code>insert</code> statement within a structure to generate insertion functions.
+				Require the <code>insert</code> statement within a structure to
+				generate insertion functions.
 			</p>
 			<p>
-				Disambiguate the configuration grammar with respect to structure linking.
-				Earlier, <code>struct</code> types could specify the linkage from another field to a foreign key.
+				Disambiguate the configuration grammar with respect to structure
+				linking.
+				Earlier, <code>struct</code> types could specify the linkage from
+				another field to a foreign key.
 				Now, the linkage must be specified within the other field itself.
-				This clears up the situation where a structure and the referring field had different types.
-				It also allows all foreign key information (e.g., <code>on delete</code> modifiers) to exist unambiguously on
-				the referring field itself.
+				This clears up the situation where a structure and the referring
+				field had different types.
+				It also allows all foreign key information (e.g., <code>on
+					delete</code> modifiers) to exist unambiguously on the
+				referring field itself.
 			</p>
 			<p>
-				Add the <code>actup</code> and <code>actdel</code> modifiers on a foreign key reference.
-				For example, <code>actdel cascade</code> specifies <code>ON DELETE CASCADE</code>.
+				Add the <code>actup</code> and <code>actdel</code> modifiers on a
+				foreign key reference.
+				For example, <code>actdel cascade</code> specifies <code>ON DELETE
+					CASCADE</code>.
 			</p>
 			<p>
 				Properly wrap comments (at word boundaries) at 70 columns.
 			</p>
 			<p>
-				Introduce RBAC functionality: the <code>roles</code> top-level object defining the roles themselves such that
-				each structure statement (e.g., <code>insert</code>) can be wrapped in a <code>roles</code> statement limiting
-				access.
-				When the top-level <code>roles</code> is defined (even if empty), the <code>ksql</code> database handle is
-				hidden from the API, and instead an opaque <code>kwbp</code> is used.
+				Introduce RBAC functionality: the <code>roles</code> top-level
+				object defining the roles themselves such that each structure
+				statement (e.g., <code>insert</code>) can be wrapped in a
+				<code>roles</code> statement limiting access.
+				When the top-level <code>roles</code> is defined (even if empty),
+				the <code>ksql</code> database handle is hidden from the API, and
+				instead an opaque <code>kwbp</code> is used.
 				This allows for full role-based access to the database.
-				Read the <a href="kwebapp.5.html">kwebapp(5)</a> for more information.
+				Read the <a href="kwebapp.5.html">kwebapp(5)</a> for more
+				information.
 			</p>
 		</aside>
 	</article>

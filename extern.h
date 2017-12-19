@@ -536,6 +536,7 @@ struct	strct {
  */
 struct	role {
 	char		  *name; /* unique name of role */
+	char		  *doc; /* documentation */
 	struct role	  *parent; /* parent (or NULL) */
 	struct roleq	   subrq; /* sub-roles */
 	struct pos	   pos; /* parse point */

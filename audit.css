@@ -14,9 +14,17 @@ input ~ header label		{ padding: 0.2rem 0.5rem;
 				  margin: 0.5rem auto;
 				  border: 2px solid #ccc;
 				  cursor: pointer;
-				  border-radius: 0.5rem; }
+				  border-radius: 0.5rem; 
+				  display: flex; }
+input ~ header label		{ color: #000; }
+.noop > input ~ header label	{ color: #888; }
+input ~ header label > span:first-child
+				{ flex: 1; }
+input ~ header label > span:last-child > span
+				{ display: inline-block;
+				  width: 4ex; }
 input:checked ~ header .audit-is-shown 
-				{ display: block; 
+				{ display: flex; 
 				  border: 2px solid rgba(0, 0, 255, 0.4); 
 				  background-color: rgba(0, 0, 255, 0.05); }
 input ~ header .audit-toplevel-shown:hover
@@ -25,10 +33,12 @@ input ~ header .audit-toplevel-shown:hover
 input:checked ~ section 	{ display: block; 
 				  padding: 0 1rem; }
 .audit-toplevel-view:checked ~ article header .audit-toplevel-shown
-				{ display: block; }
-.audit-data-field-noexport 	{ color: #888; }
-.audit-data-list > div 		{ width: 30%; display: inline-block; }
-.audit-noentry 			{ color: #666; font-style: italic; }
+				{ display: flex; }
+.audit-data-field-noexport 	{ color: #aaa; }
+.audit-data-list > div 		{ width: 100%; 
+				  display: inline-block; }
+.audit-noentry 			{ color: #666; 
+				  font-style: italic; }
 .audit-link			{ cursor: pointer; 
 				  border-bottom: 1px dotted rgba(0, 0, 255, 0.4); }
 h1				{ font-weight: 700;
@@ -73,3 +83,19 @@ code				{ font-family: monospace;
 				{ content: '\2192'; }
 .audit-accessfrom-paths 	{ margin: 0; 
 				  padding-left: 1em; }
+
+@media (min-width: 75ex) {
+.audit-data-list > div 		{ width: 48%; }
+}
+
+@media (min-width: 125ex) {
+.audit-data-list > div 		{ width: 30%; }
+}
+
+@media (min-width: 175ex) {
+.audit-data-list > div 		{ width: 23%; }
+}
+
+@media (min-width: 225ex) {
+.audit-data-list > div 		{ width: 18%; }
+}

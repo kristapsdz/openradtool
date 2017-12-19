@@ -546,12 +546,15 @@ gen_audit(const struct config *cfg, int json, const char *role)
 	 * Only print exports if the structure is reachable.
 	 */
 
-	if (json)
+	if (json) {
 		printf("(function(root) {\n"
-		     "\t'use strict';\n"
-		     "\tvar audit = {\n"
-		     "\t    \"role\": \"%s\",\n"
-		     "\t    \"access\": [\n", r->name);
+		       "\t'use strict';\n"
+		       "\tvar audit = {\n"
+		       "\t    \"role\": \"%s\",\n"
+		       "\t    \"doc\": ", r->name);
+		print_doc(r->doc);
+		puts(",\n\t    \"access\": [");
+	}
 
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
 		if (json)

@@ -50,7 +50,19 @@ This tool is still experimental.
 .\" For sections 2, 3, and 9 function return values only.
 .\" .Sh ENVIRONMENT
 .\" For sections 1, 6, 7, and 8 only.
-.\" .Sh FILES
+.Sh FILES
+The
+.Pa audit.css ,
+.Pa audit.html ,
+and
+.Pa audit.js
+files, all installed into the share directory, provide an example
+implementation of a web-based front-end.
+By putting these into a single directory along with
+.Pa audit-out.js ,
+consisting of the output of
+.Nm ,
+a browser may be used to audit a role's access.
 .Sh EXIT STATUS
 .Ex -std
 .\" .Sh EXAMPLES

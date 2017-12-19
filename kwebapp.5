@@ -742,7 +742,7 @@ when a top-level
 block is defined.
 .Bd -literal -offset indent
 "roles" "{"
-   [ "role" name ["{" "role" name... ";" "}"]* ";" ]*
+   [ "role" name [parms] ["{" "role" name... ";" "}"]* ";" ]*
 "};"
 .Ed
 .Pp
@@ -767,6 +767,15 @@ statement.
 The first may be used for the initial state of the system (before a role
 has been explicitly assigned), the second refers to the empty role that
 can do nothing, and the third contains all explicitly-defined roles.
+.Pp
+Each role may be associated with parameters limited to:
+.Bd -literal -offset indent
+"role" name ["comment" quoted_string]?
+.Ed
+.Pp
+The
+.Cm comment
+field is only produced for role documentation.
 .Pp
 Within
 .Sx Structures ,

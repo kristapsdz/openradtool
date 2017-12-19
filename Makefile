@@ -90,9 +90,11 @@ install: kwebapp
 	mkdir -p $(DESTDIR)$(BINDIR)
 	mkdir -p $(DESTDIR)$(MANDIR)/man1
 	mkdir -p $(DESTDIR)$(MANDIR)/man5
+	mkdir -p $(DESTDIR)$(SHAREDIR)/kwebapp
 	$(INSTALL_PROGRAM) kwebapp $(DESTDIR)$(BINDIR)
 	$(INSTALL_MAN) $(MAN1S) $(DESTDIR)$(MANDIR)/man1
 	$(INSTALL_MAN) kwebapp.5 $(DESTDIR)$(MANDIR)/man5
+	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/kwebapp
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-audit
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-c-source
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-c-header

@@ -56,7 +56,9 @@ XMLS		 = db.txt.xml \
 		   test.xml.xml \
 		   TODO.xml \
 		   versions.xml
-IHTMLS		 = db.txt.html \
+IHTMLS		 = audit-example.txt.html \
+		   audit-out.js \
+		   db.txt.html \
 		   db.h.html \
 		   db.c.html \
 		   db.sql.html \
@@ -81,10 +83,10 @@ www: index.svg $(HTMLS) kwebapp.tar.gz kwebapp.tar.gz.sha512
 installwww: www
 	mkdir -p $(WWWDIR)
 	mkdir -p $(WWWDIR)/snapshots
-	install -m 0444 *.html *.css index.svg $(WWWDIR)
-	install -m 0444 kwebapp.tar.gz kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots
-	install -m 0444 kwebapp.tar.gz $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz
-	install -m 0444 kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz.sha512
+	$(INSTALL_DATA) *.html *.css *.js index.svg $(WWWDIR)
+	$(INSTALL_DATA) kwebapp.tar.gz kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots
+	$(INSTALL_DATA) kwebapp.tar.gz $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz
+	$(INSTALL_DATA) kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz.sha512
 
 install: kwebapp
 	mkdir -p $(DESTDIR)$(BINDIR)
@@ -118,6 +120,9 @@ OBJS: extern.h
 
 test: test.o db.o db.db
 	$(CC) -Wextra -L/usr/local/lib -o $@ test.o db.o -lksql -lsqlite3 -lkcgijson -lkcgi -lz
+
+audit-out.js: kwebapp-audit audit-example.txt
+	./kwebapp-audit -j user audit-example.txt >$@
 
 db.o: db.c db.h
 	$(CC) $(CFLAGS) -Wextra -I/usr/local/include -o $@ -c db.c
@@ -188,6 +193,9 @@ db.c.html: db.c
 
 db.txt.html: db.txt
 	highlight -s whitengrey -I -l --src-lang=c db.txt >$@
+
+audit-example.txt.html: audit-example.txt
+	highlight -s whitengrey -I -l --src-lang=c audit-example.txt >$@
 
 db.old.txt.html: db.old.txt
 	highlight -s whitengrey -I -l --src-lang=c db.old.txt >$@

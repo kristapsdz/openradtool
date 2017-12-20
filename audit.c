@@ -135,9 +135,7 @@ gen_audit_exportable(const struct strct *p,
 		    check_rolemap(f->rolemap, role))
 			export = 0;
 		if (json)
-			printf("\t\t\t\t{ \"field\": \"%s\", "
-			       "\"export\": %s }%s\n", f->name, 
-			       export ? "true" : "false",
+			printf("\t\t\t\t\"%s\"%s\n", f->name, 
 			       NULL != TAILQ_NEXT(f, entries) ?
 			       "," : "");
 		else
@@ -379,6 +377,31 @@ gen_protos_queries(const struct searchq *sq,
 }
 
 static void
+gen_protos_fields(const struct strct *s,
+	int *first, const struct role *role)
+{
+	const struct field *f;
+	int	 export;
+
+	TAILQ_FOREACH(f, &s->fq, entries) {
+		export = 1;
+		if (NULL != f->rolemap &&
+		    check_rolemap(f->rolemap, role))
+			export = 0;
+		printf("%s\n\t\t\"%s.%s\": {\n"
+		       "\t\t\t\"export\": %s,\n"
+		       "\t\t\t\"doc\": ",
+			*first ? "" : ",",
+			f->parent->name,
+			f->name,
+			export ? "true" : "false");
+		print_doc(f->doc);
+		printf(" }");
+		*first = 0;
+	}
+}
+
+static void
 gen_audit_queries(const struct strct *p, int json, 
 	enum stype t, const char *tp, const struct role *role)
 {
@@ -593,6 +616,11 @@ gen_audit(const struct config *cfg, int json, const char *role)
 			gen_protos_updates(&s->dq, &first, r);
 			gen_protos_insert(s, &first, r);
 		}
+		puts("\n\t},\n"
+		     "\t\"fields\": {");
+		first = 1;
+		for (i = 0; i < spsz; i++)
+			gen_protos_fields(sp[i].p, &first, r);
 		puts("\n\t}};\n"
 		     "\n"
 		     "\troot.audit = audit;\n"

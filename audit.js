@@ -110,26 +110,54 @@
 		replcl(root, 'audit-data-accessfrom-path', data.paths.length);
 	}
 
-	function auditDataFill(data, root)
+	function fillDataField(root, strct, field)
 	{
-		replcl(root, 'audit-data-field-name', data.field);
-		if (data.export) {
+		var list, i, obj;
+		if (null === (obj = auditFieldGet(strct, field)))
+			return;
+		replcl(root, 'audit-data-field-fullname', strct + '.' + field);
+		replcl(root, 'audit-data-field-name', field);
+		if (null !== obj.doc) {
+			replcl(root, 'audit-data-field-doc', obj.doc);
+			showcl(root, 'audit-data-field-doc');
+			hidecl(root, 'audit-data-field-nodoc');
+		} else {
+			hidecl(root, 'audit-data-field-doc');
+			showcl(root, 'audit-data-field-nodoc');
+		}
+		if (obj.export) {
 			hidecl(root, 'audit-data-field-noexport');
 			showcl(root, 'audit-data-field-export');
 		} else {
 			showcl(root, 'audit-data-field-noexport');
 			hidecl(root, 'audit-data-field-export');
 		}
+		list = root.getElementsByClassName('audit-data-field-more');
+		for (i = 0; i < list.length; i++)
+			list[i].onclick = function(s, f) {
+				return function() {
+					var e = show('aside');
+					hidecl(e, 'aside-types');
+					fillDataField(show('aside-data-field-data'), s, f);
+				};
+			}(strct, field);
 	}
 
 	function auditFunctionGet(name)
 	{
-		var obj;
+		var obj = null;
 		if ( ! (name in audit.functions) ||
-		    null === (obj = audit.functions[name])) {
+		    null === (obj = audit.functions[name]))
 			console.log('cannot find function: ' + name);
-			return(null);
-		}
+		return(obj);
+	}
+	
+	function auditFieldGet(strct, field)
+	{
+		var obj = null, fullname = strct + '.' + field;
+		if ( ! (fullname in audit.fields) ||
+		    null === (obj = audit.fields[fullname])) 
+			console.log('cannot find data field: ' + fullname);
 		return(obj);
 	}
 
@@ -361,7 +389,7 @@
 			showcl(root, 'audit-accessfrom');
 
 			audit.access.data.sort(function(a, b) {
-				return(a.field.localeCompare(b.field));
+				return(a.localeCompare(b));
 			});
 			audit.access.accessfrom.sort(function(a, b) {
 				return(a.function.localeCompare(b.function));
@@ -371,8 +399,11 @@
 			list = root.getElementsByClassName
 				('audit-data-list');
 
-			for (noexport = j = 0; j < vec.length; j++) 
-				noexport += vec[j].export ? 0 : 1;
+			for (noexport = j = 0; j < vec.length; j++) {
+				obj = auditFieldGet(audit.name, vec[j]);
+				if (null !== obj)
+					noexport += obj.export ? 0 : 1;
+			}
 
 			for (i = 0; i < list.length; i++) {
 				sub = list[i].children[0];
@@ -380,7 +411,7 @@
 				for (j = 0; j < vec.length; j++) {
 					clone = sub.cloneNode(true);
 					list[i].appendChild(clone);
-					auditDataFill(vec[j], clone);
+					fillDataField(clone, audit.name, vec[j]);
 				}
 			}
 

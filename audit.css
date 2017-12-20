@@ -14,28 +14,40 @@ input ~ header label		{ padding: 0.2rem 0.5rem;
 				  margin: 0.5rem auto;
 				  border: 2px solid #ccc;
 				  cursor: pointer;
+				  color: #000;
 				  border-radius: 0.5rem; 
+				  transition: border 2s linear, background-color 0.2s linear, color 0.2s linear;
+				  display: -webkit-box;
+				  display: -ms-flexbox;
 				  display: flex; }
-input ~ header label		{ color: #000; }
 .noop > input ~ header label	{ color: #888; }
 input ~ header label > span:first-child
-				{ flex: 1; }
+				{ -webkit-box-flex: 1;
+				  -ms-flex: 1; 
+				  flex: 1; }
 input ~ header label > span:last-child > span
 				{ display: inline-block;
 				  text-align: right;
 				  width: 4.5ex; }
 input:checked ~ header .audit-is-shown 
-				{ display: flex; 
-				  border: 2px solid rgba(0, 0, 255, 0.4); 
-				  background-color: rgba(0, 0, 255, 0.05); }
+				{ display: -webkit-box;
+				  display: -ms-flexbox;
+				  display: flex; 
+				  color: #fff;
+				  background-color: #888;
+				  border: 2px solid #666; }
 input ~ header .audit-toplevel-shown:hover
-				{ border: 2px solid rgba(0, 0, 255, 0.3); 
-				  background-color: rgba(0, 0, 255, 0.02); }
+				{ border: 2px solid #aaa;
+				  background-color: rgba(255, 255, 0, 0.1); }
 input:checked ~ section 	{ display: block; 
 				  padding: 0 1rem; }
 .audit-toplevel-view:checked ~ article header .audit-toplevel-shown
-				{ display: flex; }
+				{ display: -webkit-box; 
+				  display: -ms-flexbox; 
+				  display: flex;  }
 .audit-data-field-noexport 	{ color: #aaa; }
+#aside .audit-data-field-noexport
+				{ color: red; }
 .audit-data-list > div 		{ width: 100%; 
 				  display: inline-block; }
 .audit-noentry 			{ color: #666; 
@@ -65,6 +77,8 @@ h5				{ font-size: smaller;
 #parsed > aside			{ position: fixed;
 				  width: 50%;
 				  top: 0;
+				  -webkit-transition: left 0.2s linear;
+				  -o-transition: left 0.2s linear;
 				  transition: left 0.2s linear;
 				  box-shadow: 2px 2px 2px #666;
 				  background-color: #ccc;

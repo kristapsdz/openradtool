@@ -4,7 +4,7 @@
 		<header>
 			<h3>0.4.0</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2017-12-19">2017-12-19</time>
+			<time datetime="2017-12-20">2017-12-20</time>
 		</header>
 		<aside>
 			<p>
@@ -29,6 +29,11 @@
 			</p>
 			<p>
 				Allow for <code>comment</code> strings to be associated with roles.
+			</p>
+			<p>
+				The audit functionality is part of a project generously funded by
+				CAPEM Solutions, Inc.
+				Thank you!
 			</p>
 		</aside>
 	</article>

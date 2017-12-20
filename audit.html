@@ -21,6 +21,22 @@
 			<aside class="hide" id="aside">
 				<div>
 					<span id="aside-close"><i class="fa fa-fw fa-close"></i></span>
+					<section id="aside-data-field-data" class="aside-types">
+						<header>
+							Field: <code class="audit-data-field-fullname"></code>
+							<span class="audit-data-field-export">
+								(exported)
+							</span>
+							<span class="audit-data-field-noexport">
+								(not exported)
+							</span>
+						</header>
+						<h5>Documentation</h5>
+						<article class="audit-data-field-nodoc audit-noentry">
+							Field has no documentation.
+						</article>
+						<article class="audit-data-field-doc"></article>
+					</section>
 					<section id="aside-function-accessfrom" class="aside-types">
 						<header>
 							Access path: <code class="audit-accessfrom-function"></code>
@@ -155,10 +171,10 @@
 								<article class="audit-data-list">
 									<div>
 										<span class="audit-data-field-noexport">
-											<code class="audit-data-field-name"></code>
+											<code class="audit-data-field-name audit-data-field-more audit-link"></code>
 										</span>
 										<span class="audit-data-field-export">
-											<code class="audit-data-field-name"></code>
+											<code class="audit-data-field-name audit-data-field-more audit-link"></code>
 										</span>
 									</div>
 								</article>

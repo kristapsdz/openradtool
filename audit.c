@@ -166,6 +166,8 @@ gen_audit_exportable(const struct strct *p,
 				putchar('.');
 			if (json)
 				putchar('"');
+			printf("%s", ac->origs[i].fs[j]->parent->name);
+			putchar('.');
 			printf("%s", ac->origs[i].fs[j]->name);
 			if (json)
 				putchar('"');

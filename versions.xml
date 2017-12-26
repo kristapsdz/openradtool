@@ -2,6 +2,18 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.4.1</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2017-12-26">2017-12-26</time>
+		</header>
+		<aside>
+			<p>
+				Fix: <code>LIMIT</code> set goes after <code>ORDER BY</code>.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.4.0</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-12-20">2017-12-20</time>

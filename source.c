@@ -1800,10 +1800,6 @@ gen_stmt(const struct strct *p)
 					p->name : sent->alias->alias,
 					sr->name, optypes[sent->op]);
 		}
-		if (STYPE_SEARCH != s->type && s->limit > 0)
-			printf(" LIMIT %" PRId64, s->limit);
-		if (STYPE_SEARCH != s->type && s->offset > 0)
-			printf(" OFFSET %" PRId64, s->offset);
 
 		first = 1;
 		if ( ! TAILQ_EMPTY(&s->ordq))
@@ -1820,6 +1816,12 @@ gen_stmt(const struct strct *p)
 				ORDTYPE_ASC == ord->op ?
 				"ASC" : "DESC");
 		}
+
+		if (STYPE_SEARCH != s->type && s->limit > 0)
+			printf(" LIMIT %" PRId64, s->limit);
+		if (STYPE_SEARCH != s->type && s->offset > 0)
+			printf(" OFFSET %" PRId64, s->offset);
+
 		puts("\",");
 	}
 

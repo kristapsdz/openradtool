@@ -1821,40 +1821,47 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 }
 
 /*
- * Parse an enumeration item.
- * Its syntax is:
+ * Parse an enumeration item whose value may be defined or automatically
+ * assigned at link time.  Its syntax is:
  *
- *  "item" ident value [comment quoted_string]? ";"
+ *  "item" ident [value]? ["comment" quoted_string]? ";"
  *
  * The identifier has already been parsed: this starts at the value.
- * Both the identifier and the value must be unique within the parent
- * enumeration.
+ * Both the identifier and the value (if provided) must be unique within
+ * the parent enumeration.
  */
 static void
 parse_enum_item(struct parse *p, struct eitem *ei)
 {
 	struct eitem	*eei;
+	const char	*next;
 
-	if (TOK_INTEGER != parse_next(p)) {
-		parse_errx(p, "expected item value");
-		return;
-	}
-
-	ei->value = p->last.integer;
-
-	TAILQ_FOREACH(eei, &ei->parent->eq, entries) 
-		if (ei != eei && ei->value == eei->value) {
-			parse_errx(p, "duplicate item value");
+	if (TOK_INTEGER == parse_next(p)) {
+		ei->value = p->last.integer;
+		TAILQ_FOREACH(eei, &ei->parent->eq, entries) {
+			if (ei == eei || (EITEM_AUTO & eei->flags) ||
+			    ei->value != eei->value) 
+				continue;
+			parse_errx(p, "duplicate enum item value");
 			return;
 		}
+		parse_next(p);
+	} else {
+		ei->flags |= EITEM_AUTO;
+		ei->parent->flags |= ENM_AUTO;
+	}
 
-	while ( ! PARSE_STOP(p) && TOK_IDENT == parse_next(p))
-		if (0 == strcasecmp(p->last.string, "comment"))
+	while ( ! PARSE_STOP(p) && TOK_IDENT == p->lasttype) {
+		next = p->last.string;
+		if (0 == strcasecmp(next, "comment")) {
 			parse_comment(p, &ei->doc);
-		else if (0 == strcasecmp(p->last.string, "jslabel"))
+			parse_next(p);
+		} else if (0 == strcasecmp(next, "jslabel")) {
 			parse_label(p, &ei->jslabel);
-		else
-			parse_errx(p, "unknown item data type");
+			parse_next(p);
+		} else
+			parse_errx(p, "unknown enum item attribute");
+	}
 
 	if ( ! PARSE_STOP(p) && TOK_SEMICOLON != p->lasttype)
 		parse_errx(p, "expected semicolon");
@@ -1885,7 +1892,7 @@ parse_enum_data(struct parse *p, struct enm *e)
 		if (TOK_RBRACE == parse_next(p))
 			break;
 		if (TOK_IDENT != p->lasttype) {
-			parse_errx(p, "expected enum data type");
+			parse_errx(p, "expected enum attribute");
 			return;
 		}
 
@@ -1893,19 +1900,19 @@ parse_enum_data(struct parse *p, struct enm *e)
 			if ( ! parse_comment(p, &e->doc))
 				return;
 			if (TOK_SEMICOLON != parse_next(p)) {
-				parse_errx(p, "expected end of comment");
+				parse_errx(p, "expected semicolon");
 				return;
 			}
 			continue;
 		} else if (strcasecmp(p->last.string, "item")) {
-			parse_errx(p, "unknown enum data type ");
+			parse_errx(p, "unknown enum attribute");
 			return;
 		}
 
 		/* Now we have a new item: validate and parse it. */
 
 		if (TOK_IDENT != parse_next(p)) {
-			parse_errx(p, "expected item name");
+			parse_errx(p, "expected enum item name");
 			return;
 		} else if ( ! check_badidents(p, p->last.string))
 			return;
@@ -1918,7 +1925,7 @@ parse_enum_data(struct parse *p, struct enm *e)
 		TAILQ_FOREACH(ei, &e->eq, entries) {
 			if (strcasecmp(ei->name, p->last.string))
 				continue;
-			parse_errx(p, "duplicate item name");
+			parse_errx(p, "duplicate enum item name");
 			return;
 		}
 
@@ -1939,7 +1946,7 @@ parse_enum_data(struct parse *p, struct enm *e)
 	if (TOK_SEMICOLON != parse_next(p))
 		parse_errx(p, "expected semicolon");
 	else if (TAILQ_EMPTY(&e->eq))
-		parse_errx(p, "no items in enumeration");
+		parse_errx(p, "no items in enum");
 }
 
 static struct roleset *

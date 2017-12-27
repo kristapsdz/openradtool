@@ -1147,6 +1147,24 @@ check_reffind(const struct strct *p)
 	return(0);
 }
 
+static void
+resolve_enum_auto(struct enm *en)
+{
+	struct eitem	*ei;
+	int64_t		 v = INT64_MIN;
+
+	TAILQ_FOREACH(ei, &en->eq, entries)
+		if ( ! (EITEM_AUTO & ei->flags))
+			if (ei->value > v)
+				v = ei->value;
+
+	v = v < 0 ? 0 : v + 1;
+
+	TAILQ_FOREACH(ei, &en->eq, entries)
+		if (EITEM_AUTO & ei->flags)
+			ei->value = v++;
+}
+
 int
 parse_link(struct config *cfg)
 {
@@ -1157,7 +1175,12 @@ parse_link(struct config *cfg)
 	struct unique	 *n;
 	struct rolemap	 *rm;
 	struct search	 *srch;
+	struct enm	 *en;
 	size_t		  colour = 1, sz = 0, i, hasrowid = 0;
+
+	TAILQ_FOREACH(en, &cfg->eq, entries)
+		if (ENM_AUTO & en->flags)
+			resolve_enum_auto(en);
 
 	/* Check for row identifier validity. */
 

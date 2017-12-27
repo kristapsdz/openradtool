@@ -356,6 +356,7 @@ check_modtype(const struct uref *ref)
 
 	if (MODTYPE_SET == ref->mod ||
 	    FTYPE_BIT == ref->field->type ||
+	    FTYPE_DATE == ref->field->type ||
 	    FTYPE_EPOCH == ref->field->type ||
 	    FTYPE_INT == ref->field->type ||
 	    FTYPE_REAL == ref->field->type)

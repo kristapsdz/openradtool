@@ -57,6 +57,7 @@ static	const char *const optypes[OPTYPE__MAX] = {
  */
 static	const char *const coltypes[FTYPE__MAX] = {
 	"ksql_stmt_int", /* FTYPE_BIT */
+	"ksql_stmt_int", /* FTYPE_DATE */
 	"ksql_stmt_int", /* FTYPE_EPOCH */
 	"ksql_stmt_int", /* FTYPE_INT */
 	"ksql_stmt_double", /* FTYPE_REAL */
@@ -71,6 +72,7 @@ static	const char *const coltypes[FTYPE__MAX] = {
 
 static	const char *const puttypes[FTYPE__MAX] = {
 	"kjson_putintp", /* FTYPE_BIT */
+	"kjson_putintp", /* FTYPE_DATE */
 	"kjson_putintp", /* FTYPE_EPOCH */
 	"kjson_putintp", /* FTYPE_INT */
 	"kjson_putdoublep", /* FTYPE_REAL */
@@ -88,6 +90,7 @@ static	const char *const puttypes[FTYPE__MAX] = {
  */
 static	const char *const bindtypes[FTYPE__MAX] = {
 	"ksql_bind_int", /* FTYPE_BIT */
+	"ksql_bind_int", /* FTYPE_DATE */
 	"ksql_bind_int", /* FTYPE_EPOCH */
 	"ksql_bind_int", /* FTYPE_INT */
 	"ksql_bind_double", /* FTYPE_REAL */
@@ -105,6 +108,7 @@ static	const char *const bindtypes[FTYPE__MAX] = {
  */
 static	const char *const validtypes[FTYPE__MAX] = {
 	"kvalid_bit", /* FTYPE_BIT */
+	"kvalid_date", /* FTYPE_DATE */
 	"kvalid_int", /* FTYPE_EPOCH */
 	"kvalid_int", /* FTYPE_INT */
 	"kvalid_double", /* FTYPE_REAL */
@@ -1232,6 +1236,7 @@ gen_func_valid_types(const struct field *f, const struct fvalid *v)
 	case (FTYPE_BIT):
 	case (FTYPE_ENUM):
 	case (FTYPE_BITFIELD):
+	case (FTYPE_DATE):
 	case (FTYPE_EPOCH):
 	case (FTYPE_INT):
 		printf("\tif (p->parsed.i %s %" PRId64 ")\n"

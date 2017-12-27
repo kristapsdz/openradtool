@@ -800,6 +800,7 @@ parse_validate(struct parse *p, struct field *fd)
 
 	switch (fd->type) {
 	case (FTYPE_BIT):
+	case (FTYPE_DATE):
 	case (FTYPE_EPOCH):
 	case (FTYPE_INT):
 		if (TOK_INTEGER != parse_next(p)) {
@@ -1085,6 +1086,12 @@ parse_field(struct parse *p, struct field *fd)
 	/* bit */
 	if (0 == strcasecmp(p->last.string, "bit")) {
 		fd->type = FTYPE_BIT;
+		parse_config_field_info(p, fd);
+		return;
+	}
+	/* date */
+	if (0 == strcasecmp(p->last.string, "date")) {
+		fd->type = FTYPE_DATE;
 		parse_config_field_info(p, fd);
 		return;
 	}

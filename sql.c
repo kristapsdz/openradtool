@@ -30,6 +30,7 @@
 
 static	const char *const realtypes[FTYPE__MAX] = {
 	"int", /* FTYPE_BIT */
+	"date", /* FTYPE_DATE */
 	"epoch", /* FTYPE_EPOCH */
 	"int", /* FTYPE_INT */
 	"real", /* FTYPE_REAL */
@@ -52,6 +53,7 @@ static	const char *const upacts[UPACT__MAX] = {
 
 static	const char *const ftypes[FTYPE__MAX] = {
 	"INTEGER", /* FTYPE_BIT */
+	"INTEGER", /* FTYPE_DATE */
 	"INTEGER", /* FTYPE_EPOCH */
 	"INTEGER", /* FTYPE_INT */
 	"REAL", /* FTYPE_REAL */
@@ -187,7 +189,7 @@ gen_field(const struct field *f, int *first, int comments)
 	printf("%s\n", *first ? "" : ",");
 	if (comments)
 		print_commentt(1, COMMENT_SQL, f->doc);
-	if (FTYPE_EPOCH == f->type)
+	if (FTYPE_EPOCH == f->type || FTYPE_DATE == f->type)
 		print_commentt(1, COMMENT_SQL, 
 			"(Stored as a UNIX epoch value.)");
 	printf("\t%s %s", f->name, ftypes[f->type]);
@@ -256,12 +258,14 @@ gen_diff_field(const struct field *f, const struct field *df)
 	 */
 
 	if (f->type != df->type) {
-		if ((FTYPE_EPOCH == f->type ||
+		if ((FTYPE_DATE == f->type ||
+		     FTYPE_EPOCH == f->type ||
 		     FTYPE_INT == f->type ||
 		     FTYPE_BIT == f->type ||
 		     FTYPE_ENUM == f->type ||
 		     FTYPE_BITFIELD == f->type) &&
-		    (FTYPE_EPOCH == df->type ||
+		    (FTYPE_DATE == df->type ||
+		     FTYPE_EPOCH == df->type ||
 		     FTYPE_INT == df->type ||
 		     FTYPE_BIT == df->type ||
 		     FTYPE_ENUM == df->type ||

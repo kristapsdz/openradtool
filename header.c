@@ -66,6 +66,7 @@ gen_strct_field(const struct field *p)
 		       "\tsize_t\t %s_sz;\n",
 		       p->name, p->name);
 		break;
+	case (FTYPE_DATE):
 	case (FTYPE_EPOCH):
 		printf("\ttime_t\t %s;\n", p->name);
 		break;

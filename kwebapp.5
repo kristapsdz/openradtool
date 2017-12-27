@@ -291,6 +291,10 @@ Native type mapping into a double-precision float.
 Native type mapping into a 64-bit integer, constrained to valid
 .Vt time_t
 values and similarly represented in the C API.
+The
+.Cm date
+alias is also available, which is the same but using a date (ISO 8601)
+sequence input validator.
 .It Cm struct Ar field
 A non-native type filled in by joining the given
 .Ar field
@@ -403,7 +407,7 @@ They are defined as follows:
 .Bd -literal -offset indent
 "enum" enumname "{"
   [ "comment" string_literal ";" ]?
-  [ "item" name value [parms]* ";" ]+
+  [ "item" name [value]? [parms]* ";" ]+
 "};"
 .Ed
 .Pp
@@ -417,7 +421,7 @@ enum enumname {
 The enumeration name must be unique among all enumerations, bitfields,
 and structures.
 .Pp
-Items define enumeration values, their constant values, and
+Items define enumeration item names, their constant values (if set), and
 documentation.
 Each item's
 .Cm name
@@ -426,6 +430,10 @@ The
 .Cm value
 is the named constant's value expressed as an integer.
 It must also be unique within the enumeration object.
+If not specified, it is assigned as one more than the maximum of the
+assigned values or zero, whichever is larger.
+Automatic assignment is linear and in the order specified in the
+configuration.
 Parameters may be any of the following:
 .Bd -literal -offset indent
 "comment" string_literal

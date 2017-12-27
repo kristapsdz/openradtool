@@ -114,6 +114,8 @@ struct	fvalid {
 
 /*
  * A single item within an enumeration.
+ * This may be statically assigned a value in "value" or it may be
+ * automatically done during linking.
  */
 struct	eitem {
 	char		  *name; /* item name */
@@ -122,11 +124,13 @@ struct	eitem {
 	char		  *jslabel; /* label (default js output) */
 	struct pos	   pos; /* parse point */
 	struct enm	  *parent; /* parent enumeration */
+	unsigned int	   flags;
+#define	EITEM_AUTO	   0x01 /* auto-numbering */
 	TAILQ_ENTRY(eitem) entries;
 };
 
 /*
- * An enumeration of possible values.
+ * An enumeration of a field's possible values.
  * These are used as field types.
  */
 struct	enm {
@@ -135,6 +139,8 @@ struct	enm {
 	char		*doc; /* documentation */
 	struct pos	 pos; /* parse point */
 	struct eitemq	 eq; /* items in enumeration */
+	unsigned int	 flags;
+#define	ENM_AUTO	 0x01 /* has auto-numbering */
 	TAILQ_ENTRY(enm) entries;
 };
 

@@ -1720,7 +1720,7 @@ gen_stmt(const struct strct *p)
 	const struct uref *ur;
 	const struct oref *or;
 	const struct ord *ord;
-	int	 first;
+	int	 first, hastrail;
 	size_t	 pos, rc;
 
 	/* 
@@ -1769,23 +1769,29 @@ gen_stmt(const struct strct *p)
 		} else
 			gen_stmt_schema(p, 1, p, NULL);
 
+		hastrail = 
+			(! TAILQ_EMPTY(&s->sntq)) ||
+			(! TAILQ_EMPTY(&s->ordq)) ||
+			(STYPE_SEARCH != s->type && s->limit > 0) ||
+			(STYPE_SEARCH != s->type && s->offset > 0);
+
 		printf("\" FROM %s", p->name);
 		rc = 0;
 		gen_stmt_joins(p, p, NULL, &rc);
+		if ( ! hastrail) {
+			puts(",");
+			continue;
+		}
+
 		if (rc > 0) {
-			if (TAILQ_EMPTY(&s->sntq)) {
-				puts(",");
-				continue;
-			}
 			printf("\n\t\t\"");
 		} else {
-			if (TAILQ_EMPTY(&s->sntq)) {
-				puts("\",");
-				continue;
-			}
-			printf(" ");
+			printf(" \"\n\t\t\"");
 		}
-		printf("WHERE");
+
+		if ( ! TAILQ_EMPTY(&s->sntq))
+			printf("WHERE");
+
 		first = 1;
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
 			sr = TAILQ_LAST(&sent->srq, srefq);

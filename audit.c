@@ -265,7 +265,8 @@ gen_audit_deletes(const struct strct *p,
 		printf("%sdeletes:\n", SPACE);
 
 	TAILQ_FOREACH(u, &p->dq, entries) {
-		if ( ! check_rolemap(u->rolemap, role))
+		if (NULL == u->rolemap ||
+		    ! check_rolemap(u->rolemap, role))
 			continue;
 		if (json && ! first)
 			printf(",\n\t\t\t\t\"");
@@ -298,7 +299,8 @@ gen_audit_updates(const struct strct *p,
 		printf("%supdates:\n", SPACE);
 
 	TAILQ_FOREACH(u, &p->uq, entries) {
-		if ( ! check_rolemap(u->rolemap, role)) 
+		if (NULL == u->rolemap ||
+	 	    ! check_rolemap(u->rolemap, role)) 
 			continue;
 		if (json && ! first)
 			printf(",\n\t\t\t\t\"");
@@ -342,7 +344,8 @@ gen_protos_updates(const struct updateq *uq,
 	const struct update *u;
 
 	TAILQ_FOREACH(u, uq, entries) {
-		if ( ! check_rolemap(u->rolemap, role))
+		if (NULL == u->rolemap ||
+		    ! check_rolemap(u->rolemap, role))
 			continue;
 		printf("%s\n\t\t\"", *first ? "" : ",");
 		print_name_db_update(u);
@@ -363,7 +366,8 @@ gen_protos_queries(const struct searchq *sq,
 	const struct search *s;
 
 	TAILQ_FOREACH(s, sq, entries) {
-		if ( ! check_rolemap(s->rolemap, role))
+		if (NULL == s->rolemap ||
+		    ! check_rolemap(s->rolemap, role))
 			continue;
 		printf("%s\n\t\t\"", *first ? "" : ",");
 		print_name_db_search(s);
@@ -417,6 +421,7 @@ gen_audit_queries(const struct strct *p, int json,
 
 	TAILQ_FOREACH(s, &p->sq, entries) {
 		if (t != s->type ||
+		    NULL == s->rolemap ||
 		    ! check_rolemap(s->rolemap, role))
 			continue;
 		if (json && ! first)

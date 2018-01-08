@@ -2,7 +2,7 @@
 
 include Makefile.configure
 
-VERSION		 = 0.4.1
+VERSION		 = 0.4.2
 CFLAGS		+= -DVERSION=\"$(VERSION)\"
 OBJS		 = audit.o \
 		   comments.o \
@@ -78,12 +78,12 @@ all: kwebapp $(LINKS)
 kwebapp: $(OBJS)
 	$(CC) -o $@ $(OBJS)
 
-www: index.svg $(HTMLS) kwebapp.tar.gz kwebapp.tar.gz.sha512
+www: index.svg $(HTMLS) kwebapp.tar.gz kwebapp.tar.gz.sha512 atom.xml
 
 installwww: www
 	mkdir -p $(WWWDIR)
 	mkdir -p $(WWWDIR)/snapshots
-	$(INSTALL_DATA) *.html *.css *.js index.svg $(WWWDIR)
+	$(INSTALL_DATA) *.html *.css *.js index.svg atom.xml $(WWWDIR)
 	$(INSTALL_DATA) kwebapp.tar.gz kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots
 	$(INSTALL_DATA) kwebapp.tar.gz $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz
 	$(INSTALL_DATA) kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz.sha512
@@ -228,11 +228,14 @@ TODO.xml: TODO.md
 	  lowdown -Thtml TODO.md ; \
 	  echo "</article>" ; ) >$@
 
+atom.xml: versions.xml
+	sblg -a versions.xml >$@
+
 clean:
 	rm -f kwebapp $(LINKS)
 	rm -f $(OBJS) db.c db.h db.o db.sql db.js db.update.sql db.db test test.o
 	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
-	rm -f index.svg highlight.css $(HTMLS)
+	rm -f index.svg highlight.css $(HTMLS) atom.xml
 	rm -f db.txt.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
 
 distclean: clean

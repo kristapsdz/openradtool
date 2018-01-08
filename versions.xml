@@ -3,6 +3,25 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.4.3</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-01-08">2018-01-08</time>
+		</header>
+		<aside>
+			<p>
+				Fix <a
+					href="https://github.com/kristapsdz/kwebapp/issues/2">issues/2</a>,
+				allowing limits, offsets, and orderings to come after an empty
+				<q>WHERE</q> statement.
+			</p>
+			<p>
+				Allow <code>noexport</code> in a structure's roles to accept an
+				empty name, which indicates that no fields should be exported.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.4.2</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2017-12-27">2017-12-27</time>

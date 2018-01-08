@@ -4,6 +4,7 @@
 		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 		<meta charset="utf-8" /> 
 		<title>kwebapp | web application source generator</title>
+		<link rel="alternate" href="atom.xml" type="application/atom+xml" title="kwebapp version feed" />
 		<link rel="stylesheet" href="highlight.css" />
 		<link rel="stylesheet" href="index.css" />
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
@@ -33,6 +34,7 @@
 					<a href="kwebapp.5.html">kwebapp(5)</a>
 					<a href="snapshots/kwebapp.tar.gz">source</a>
 					<a href="snapshots">archive</a>
+					<a href="atom.xml"><i class="fa fa-rss"></i></a>
 				</nav>
 			</section>
 		</header>

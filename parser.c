@@ -2050,7 +2050,7 @@ roleset_assign(struct parse *p, struct strct *s,
  *   "insert"
  *   "iterate" NAME
  *   "list" NAME
- *   "noexport" NAME
+ *   "noexport" [NAME]
  *   "search" NAME
  *   "update" NAME
  */
@@ -2129,7 +2129,7 @@ parse_config_roles(struct parse *p, struct strct *s)
 
 		parse_next(p);
 
-		/* Some constraints are named; some arent. */
+		/* Some constraints are named; some aren't. */
 
 		if (TOK_IDENT == p->lasttype) {
 			if (ROLEMAP_INSERT == type ||
@@ -2142,6 +2142,7 @@ parse_config_roles(struct parse *p, struct strct *s)
 			parse_next(p);
 		} else if (TOK_SEMICOLON == p->lasttype) {
 			if (ROLEMAP_INSERT != type &&
+			    ROLEMAP_NOEXPORT != type &&
 			    ROLEMAP_ALL != type) {
 				parse_errx(p, "expected "
 					"role constraint name");

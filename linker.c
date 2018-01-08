@@ -1093,6 +1093,18 @@ resolve_rolemap(struct rolemap *rm, struct strct *p)
 			}
 		break;
 	case ROLEMAP_NOEXPORT:
+		if (NULL == rm->name) {
+			TAILQ_FOREACH(f, &p->fq, entries) {
+				if (NULL == f->rolemap) {
+					f->rolemap = rm;
+					continue;
+				}
+				gen_errx(&rm->pos, "role already "
+					"assigned to field");
+				return(0);
+			}
+			return(1);
+		}
 		TAILQ_FOREACH(f, &p->fq, entries) 
 			if (0 == strcasecmp(f->name, rm->name)) {
 				assert(NULL == f->rolemap);

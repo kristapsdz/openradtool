@@ -1971,6 +1971,69 @@ roleset_alloc(struct rolesetq *rq,
 	return(rs);
 }
 
+static void
+roleset_assign(struct parse *p, struct strct *s, 
+	struct rolesetq *rq, enum rolemapt type, const char *name)
+{
+	struct roleset	*rs, *rrs;
+	struct rolemap	*rm;
+
+	/*
+	 * Look up a rolemap of the given type with the give name, e.g.,
+	 * "noexport foo", where "noexport" is the type and "foo" is
+	 * the name.
+	 * Each structure has a single rolemap that's distributed for
+	 * all roles that have access to that role.
+	 * For example, "noexport foo" might be assigned to roles 1, 2,
+	 * and 3.
+	 */
+
+	TAILQ_FOREACH(rm, &s->rq, entries) {
+		if (rm->type != type)
+			continue;
+		if ((NULL == name && NULL != rm->name) ||
+		    (NULL != name && NULL == rm->name))
+			continue;
+		if (NULL != name && strcasecmp(rm->name, name))
+			continue;
+		break;
+	}
+
+	if (NULL == rm) {
+		rm = calloc(1, sizeof(struct rolemap));
+		if (NULL == rm)
+			err(EXIT_FAILURE, NULL);
+		TAILQ_INIT(&rm->setq);
+		rm->type = type;
+		if (NULL != name) {
+			rm->name = strdup(name);
+			if (NULL == rm->name)
+				err(EXIT_FAILURE, NULL);
+		} 
+		parse_point(p, &rm->pos);
+		TAILQ_INSERT_TAIL(&s->rq, rm, entries);
+	}
+
+	/*
+	 * Now go through the rolemap's set and append the new
+	 * set entries if not already specified.
+	 * We deep-copy the roleset.
+	 */
+
+	TAILQ_FOREACH(rs, rq, entries) {
+		TAILQ_FOREACH(rrs, &rm->setq, entries) {
+			if (strcasecmp(rrs->name, rs->name))
+				continue;
+			parse_warnx(p, "duplicate role "
+				"assigned to constraint");
+			break;
+		}
+		if (NULL != rrs)
+			continue;
+		roleset_alloc(&rm->setq, rs->name, rm);
+	}
+}
+
 /*
  * For a given structure "s", allow access to functions (insert, delete,
  * etc.) based on a set of roles.
@@ -1981,20 +2044,20 @@ roleset_alloc(struct rolesetq *rq,
  *
  * The roles ("ROLE") can be as follows, where "NAME" is the name of the
  * item as described in the structure.
- * Naturally, only named items can be dealt with.
  *
- *   "insert"
+ *   "all"
  *   "delete" NAME
+ *   "insert"
+ *   "iterate" NAME
+ *   "list" NAME
+ *   "noexport" NAME
  *   "search" NAME
  *   "update" NAME
- *   "list" NAME
- *   "iterate" NAME
  */
 static void
 parse_config_roles(struct parse *p, struct strct *s)
 {
-	struct roleset	*rs, *rrs;
-	struct rolemap	*rm;
+	struct roleset	*rs;
 	struct rolesetq	 rq;
 	enum rolemapt	 type;
 
@@ -2002,7 +2065,7 @@ parse_config_roles(struct parse *p, struct strct *s)
 
 	/*
 	 * First, gather up all of the roles that we're going to
-	 * associate with whatever comes next.
+	 * associate with whatever comes next and put them in "rq".
 	 * If anything happens during any of these routines, we enter
 	 * the "cleanup" label, which cleans up the "rq" queue.
 	 */
@@ -2014,7 +2077,7 @@ parse_config_roles(struct parse *p, struct strct *s)
 		parse_errx(p, "cannot assign \"none\" role");
 		return;
 	}
-	rs = roleset_alloc(&rq, p->last.string, NULL);
+	roleset_alloc(&rq, p->last.string, NULL);
 
 	while ( ! PARSE_STOP(p) && TOK_LBRACE != parse_next(p)) {
 		if (TOK_COMMA != p->lasttype) {
@@ -2033,7 +2096,7 @@ parse_config_roles(struct parse *p, struct strct *s)
 			parse_errx(p, "duplicate role name");
 			goto cleanup;
 		}
-		rs = roleset_alloc(&rq, p->last.string, NULL);
+		roleset_alloc(&rq, p->last.string, NULL);
 	}
 
 	/* If something bad has happened, clean up. */
@@ -2063,61 +2126,35 @@ parse_config_roles(struct parse *p, struct strct *s)
 			parse_errx(p, "unknown role constraint type");
 			goto cleanup;
 		}
-		if (ROLEMAP_INSERT != type &&
-		    ROLEMAP_ALL != type &&
-		    TOK_IDENT != parse_next(p)) {
-			parse_errx(p, "expected role constraint name");
-			goto cleanup;
-		}
 
-		/* Lookup rolemap: if not found, allocate anew. */
+		parse_next(p);
 
-		TAILQ_FOREACH(rm, &s->rq, entries) {
-			if (rm->type != type)
-				continue;
-			if (ROLEMAP_INSERT != type &&
-			    ROLEMAP_ALL != type &&
-			    strcasecmp(rm->name, p->last.string))
-				continue;
-			break;
-		}
+		/* Some constraints are named; some arent. */
 
-		if (NULL == rm) {
-			rm = calloc(1, sizeof(struct rolemap));
-			if (NULL == rm)
-				err(EXIT_FAILURE, NULL);
-			TAILQ_INIT(&rm->setq);
-			rm->type = type;
+		if (TOK_IDENT == p->lasttype) {
+			if (ROLEMAP_INSERT == type ||
+			    ROLEMAP_ALL == type) {
+				parse_errx(p, "unexpected "
+					"role constraint name");
+				goto cleanup;
+			}
+			roleset_assign(p, s, &rq, type, p->last.string);
+			parse_next(p);
+		} else if (TOK_SEMICOLON == p->lasttype) {
 			if (ROLEMAP_INSERT != type &&
 			    ROLEMAP_ALL != type) {
-				rm->name = strdup(p->last.string);
-				if (NULL == rm->name)
-					err(EXIT_FAILURE, NULL);
-			} 
-			parse_point(p, &rm->pos);
-			TAILQ_INSERT_TAIL(&s->rq, rm, entries);
+				parse_errx(p, "expected "
+					"role constraint name");
+				goto cleanup;
+			}
+			roleset_assign(p, s, &rq, type, NULL);
+		} else {
+			parse_errx(p, "expected role constraint "
+				"name or semicolon");
+			goto cleanup;
 		} 
 
-		/*
-		 * Now go through the rolemap's set and append the new
-		 * set entries if not already specified.
-		 * We deep-copy the roleset.
-		 */
-
-		TAILQ_FOREACH(rs, &rq, entries) {
-			TAILQ_FOREACH(rrs, &rm->setq, entries) {
-				if (strcasecmp(rrs->name, rs->name))
-					continue;
-				parse_warnx(p, "duplicate role "
-					"assigned to constraint");
-				break;
-			}
-			if (NULL != rrs)
-				continue;
-			rrs = roleset_alloc(&rm->setq, rs->name, rm);
-		}
-
-		if (TOK_SEMICOLON != parse_next(p)) {
+		if (TOK_SEMICOLON != p->lasttype) {
 			parse_errx(p, "expected semicolon");
 			goto cleanup;
 		}

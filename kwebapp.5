@@ -812,8 +812,11 @@ The insert operation.
 The named iterate operation.
 .It Cm list Ar name
 The named list operation.
-.It Cm noexport Ar name
-Do not export the named field via the JSON export routines.
+.It Cm noexport Op Ar name
+Do not export the field
+.Ar name
+via the JSON export routines.
+If no name is given, don't export any fields.
 .It Cm search Ar name
 The named search operation.
 .It Cm update Ar name

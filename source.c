@@ -1779,6 +1779,8 @@ gen_stmt(const struct strct *p)
 		rc = 0;
 		gen_stmt_joins(p, p, NULL, &rc);
 		if ( ! hastrail) {
+			if (0 == rc)
+				putchar('"');
 			puts(",");
 			continue;
 		}

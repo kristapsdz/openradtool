@@ -18,6 +18,9 @@
 
 #include <sys/queue.h>
 
+#if HAVE_ERR
+# include <err.h>
+#endif
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -73,55 +76,25 @@ gen_jsdoc_field(const struct field *f)
 static void
 gen_js_field(const struct field *f)
 {
-	size_t	 indent;
+	char	*buf = NULL;
+	int	 rc;
 
 	if (FIELD_NOEXPORT & f->flags)
 		return;
+	if (FTYPE_STRUCT == f->type) {
+		rc = asprintf(&buf, "new %s(o.%s)", 
+			f->ref->tstrct, f->name);
+		if (rc < 0)
+			err(EXIT_FAILURE, NULL);
+	}
 
-	/* Custom callback on the object. */
-
-	printf("\t\t\t_objcustom(e, '%s', '%s', custom, o.%s);\n",
-		f->parent->name, f->name, f->name);
-
-	if (FIELD_NULL & f->flags) {
-		indent = 4;
-		printf("\t\t\tif (null === o.%s) {\n"
-		       "\t\t\t\t_hidecl(e, '%s-has-%s', inc);\n"
-		       "\t\t\t\t_showcl(e, '%s-no-%s', inc);\n"
-		       "\t\t\t} else {\n"
-		       "\t\t\t\t_showcl(e, '%s-has-%s', inc);\n"
-		       "\t\t\t\t_hidecl(e, '%s-no-%s', inc);\n",
-		       f->name, 
-		       f->parent->name, f->name,
-		       f->parent->name, f->name,
-		       f->parent->name, f->name,
-		       f->parent->name, f->name);
-	} else
-		indent = 3;
-
-	if (FTYPE_BLOB == f->type)
-		return;
-
-	if (FTYPE_STRUCT != f->type) {
-		print_src(indent,
-			"_replcl(e, '%s-%s-text', o.%s, inc);",
-			f->parent->name, f->name, f->name);
-		print_src(indent,
-			"_attrcl(e, 'value', "
-			"'%s-%s-value', o.%s, inc);",
-			f->parent->name, f->name, f->name);
-	} else
-		print_src(indent,
-			"list = _elemList(e, '%s-%s-obj');\n"
-		        "strct = new %s(o.%s);\n"
-		        "for (i = 0; i < list.length; i++) {\n"
-		        "strct.fillInner(list[i], custom);\n"
-		        "}",
-		        f->parent->name, f->name, 
-		        f->ref->tstrct, f->name);
-
-	if (FIELD_NULL & f->flags)
-		puts("\t\t\t}");
+	printf("\t\t\t_fillfield(e, '%s', '%s', custom, o.%s, "
+		"inc, %s, %s, %s);\n",
+		f->parent->name, f->name, f->name,
+		FIELD_NULL & f->flags ? "true" : "false",
+		FTYPE_BLOB == f->type ? "true" : "false",
+		NULL == buf ? "null" : buf);
+	free(buf);
 }
 
 void
@@ -190,10 +163,10 @@ gen_javascript(const struct config *cfg)
 	     "\t\te.appendChild(document.createTextNode(text));\n"
 	     "\t}\n"
 	     "\n"
-	     "\tfunction _objcustom(e, strct, name, funcs, obj)\n"
+	     "\tfunction _fillfield(e, strct, name, funcs, obj, inc, cannull, isblob, sub)\n"
 	     "\t{\n"
-	     "\t\tvar fname = strct + '-' + name;\n"
-	     "\t\tvar i;\n"
+	     "\t\tvar i, fname = strct + '-' + name;\n"
+	     "\t\t/* First handle the custom callback. */\n"
 	     "\t\tif (typeof funcs !== 'undefined' && \n"
 	     "\t\t    null !== funcs && fname in funcs) {\n"
 	     "\t\t\tif (funcs[fname] instanceof Array) {\n"
@@ -202,6 +175,32 @@ gen_javascript(const struct config *cfg)
 	     "\t\t\t} else {\n"
 	     "\t\t\t\tfuncs[fname](e, fname, obj);\n"
 	     "\t\t\t}\n"
+	     "\t\t}\n"
+	     "\t\t/* Now handle our has/no null situation. */\n"
+	     "\t\tif (cannull) {\n"
+	     "\t\t\tif (null === obj) {\n"
+	     "\t\t\t\t_hidecl(e, strct + '-has-' + name, inc);\n"
+	     "\t\t\t\t_showcl(e, strct + '-no-' + name, inc);\n"
+	     "\t\t\t} else {\n"
+	     "\t\t\t\t_showcl(e, strct + '-has-' + name, inc);\n"
+	     "\t\t\t\t_hidecl(e, strct + '-no-' + name, inc);\n"
+	     "\t\t\t}\n"
+	     "\t\t}\n"
+	     "\t\t/* Don't account for blobs any more. */\n"
+	     "\t\tif (isblob)\n"
+	     "\t\t\treturn;\n"
+	     "\t\t/* Don't process null values that can be null. */\n"
+	     "\t\tif (cannull && null === obj)\n"
+	     "\t\t\treturn;\n"
+	     "\t\t/* Non-null non-structs. */\n"
+	     "\t\tif (null !== sub) {\n"
+	     "\t\t\tvar list = _elemList(e, fname + '-obj');\n"
+	     "\t\t\tfor (i = 0; i < list.length; i++) {\n"
+	     "\t\t\t\tsub.fillInner(list[i], funcs);\n"
+	     "\t\t\t}\n"
+	     "\t\t} else {\n"
+	     "\t\t\t_replcl(e, fname + '-text', obj, inc);\n"
+	     "\t\t\t_attrcl(e, 'value', fname + '-value', obj, inc);\n"
 	     "\t\t}\n"
 	     "\t}\n"
 	     "\n"
@@ -363,14 +362,8 @@ gen_javascript(const struct config *cfg)
 			"handler dictionary (see [fill]{@link "
 			"%s#fill}).",
 			s->name, s->name, s->name);
-		puts("\t\tthis._fill = function(e, o, inc, custom) {");
-		TAILQ_FOREACH(f, &s->fq, entries)
-			if ( ! (FIELD_NOEXPORT & f->flags) &&
-			    FTYPE_STRUCT == f->type) {
-				puts("\t\t\tvar list, strct;");
-				break;
-			}
-		puts("\t\t\tvar i;");
+		puts("\t\tthis._fill = function(e, o, inc, custom) {\n"
+		     "\t\t\tvar i;");
 #if 0
 		puts("\t\t\tvar fields = [");
 		TAILQ_FOREACH(f, &s->fq, entries)
@@ -392,9 +385,9 @@ gen_javascript(const struct config *cfg)
 		printf("\t\t\tif (typeof custom !== 'undefined' && \n"
 		       "\t\t\t    null !== custom && '%s' in custom) {\n"
 		       "\t\t\t\tif (custom['%s'] instanceof Array) {\n"
-		       "\t\t\t\t\tfor (var ii = 0; "
-				      "ii < custom['%s'].length; ii++)\n"
-		       "\t\t\t\t\t\tcustom['%s'][ii](e, \"%s\", o);\n"
+		       "\t\t\t\t\tfor (i = 0; "
+				      "i < custom['%s'].length; i++)\n"
+		       "\t\t\t\t\t\tcustom['%s'][i](e, \"%s\", o);\n"
 		       "\t\t\t\t} else {\n"
 		       "\t\t\t\t\tcustom['%s'](e, \"%s\", o);\n"
 		       "\t\t\t\t}\n"

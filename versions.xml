@@ -5,7 +5,7 @@
 		<header>
 			<h3>0.4.3</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2018-01-08">2018-01-08</time>
+			<time datetime="2018-01-17">2018-01-17</time>
 		</header>
 		<aside>
 			<p>
@@ -17,6 +17,13 @@
 			<p>
 				Allow <code>noexport</code> in a structure's roles to accept an
 				empty name, which indicates that no fields should be exported.
+			</p>
+			<p>
+				Significantly chop the size of the output JavaScript file from
+				<a href="kwebapp-javascript.1.html">kwebapp-javascript(1)</a>.
+				Reduction of nearly 40% from the file size of the last version!
+				This is a savings in code size along&#8212;the bulk of the files
+				are often comments.
 			</p>
 		</aside>
 	</article>

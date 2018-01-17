@@ -80,23 +80,8 @@ gen_js_field(const struct field *f)
 
 	/* Custom callback on the object. */
 
-	printf("\t\t\tif (typeof custom !== 'undefined' && \n"
-	       "\t\t\t    null !== custom && '%s-%s' in custom) {\n"
-	       "\t\t\t\tif (custom['%s-%s'] instanceof Array) {\n"
-	       "\t\t\t\t\tfor (var ii = 0; "
-	                      "ii < custom['%s-%s'].length; ii++)\n"
-	       "\t\t\t\t\t\tcustom['%s-%s'][ii](e, \"%s-%s\", o.%s);\n"
-	       "\t\t\t\t} else {\n"
-	       "\t\t\t\t\tcustom['%s-%s'](e, \"%s-%s\", o.%s);\n"
-	       "\t\t\t\t}\n"
-	       "\t\t\t}\n",
-	       f->parent->name, f->name, 
-	       f->parent->name, f->name, 
-	       f->parent->name, f->name, 
-	       f->parent->name, f->name, 
-	       f->parent->name, f->name, f->name,
-	       f->parent->name, f->name, 
-	       f->parent->name, f->name, f->name);
+	printf("\t\t\t_objcustom(e, '%s', '%s', custom, o.%s);\n",
+		f->parent->name, f->name, f->name);
 
 	if (FIELD_NULL & f->flags) {
 		indent = 4;
@@ -203,6 +188,21 @@ gen_javascript(const struct config *cfg)
 	     "\t\twhile (e.firstChild)\n"
 	     "\t\t\te.removeChild(e.firstChild);\n"
 	     "\t\te.appendChild(document.createTextNode(text));\n"
+	     "\t}\n"
+	     "\n"
+	     "\tfunction _objcustom(e, strct, name, funcs, obj)\n"
+	     "\t{\n"
+	     "\t\tvar fname = strct + '-' + name;\n"
+	     "\t\tvar i;\n"
+	     "\t\tif (typeof funcs !== 'undefined' && \n"
+	     "\t\t    null !== funcs && fname in funcs) {\n"
+	     "\t\t\tif (funcs[fname] instanceof Array) {\n"
+	     "\t\t\t\tfor (i = 0; i < funcs[fname].length; i++)\n"
+	     "\t\t\t\t\tfuncs[fname][i](e, fname, obj);\n"
+	     "\t\t\t} else {\n"
+	     "\t\t\t\tfuncs[fname](e, fname, obj);\n"
+	     "\t\t\t}\n"
+	     "\t\t}\n"
 	     "\t}\n"
 	     "\n"
 	     "\tfunction _replcl(e, name, text, inc)\n"
@@ -367,9 +367,18 @@ gen_javascript(const struct config *cfg)
 		TAILQ_FOREACH(f, &s->fq, entries)
 			if ( ! (FIELD_NOEXPORT & f->flags) &&
 			    FTYPE_STRUCT == f->type) {
-				puts("\t\t\tvar list, strct, i;");
+				puts("\t\t\tvar list, strct;");
 				break;
 			}
+		puts("\t\t\tvar i;");
+#if 0
+		puts("\t\t\tvar fields = [");
+		TAILQ_FOREACH(f, &s->fq, entries)
+			printf("\t\t\t\t\"%s\"%s\n",
+				f->name, 
+				NULL == TAILQ_NEXT(f, entries) ? "" : ",");
+		puts("\t\t\t];");
+#endif
 		puts("\t\t\tif (null === o || null === e)\n"
 		     "\t\t\t\treturn;\n"
 		     "\t\t\tif (o instanceof Array) {\n"
@@ -392,6 +401,7 @@ gen_javascript(const struct config *cfg)
 		       "\t\t\t}\n",
 		       s->name, s->name, s->name, s->name, 
 		       s->name, s->name, s->name);
+
 		TAILQ_FOREACH(f, &s->fq, entries)
 			gen_js_field(f);
 		puts("\t\t};\n"

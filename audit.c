@@ -130,7 +130,7 @@ gen_audit_exportable(const struct strct *p,
 		printf("%sdata:\n", SPACE);
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
-		export = 1;
+		export = ! (FIELD_NOEXPORT & f->flags);
 		if (NULL != f->rolemap &&
 		    check_rolemap(f->rolemap, role))
 			export = 0;
@@ -390,7 +390,7 @@ gen_protos_fields(const struct strct *s,
 	int	 export;
 
 	TAILQ_FOREACH(f, &s->fq, entries) {
-		export = 1;
+		export = ! (FIELD_NOEXPORT & f->flags);
 		if (NULL != f->rolemap &&
 		    check_rolemap(f->rolemap, role))
 			export = 0;

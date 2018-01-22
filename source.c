@@ -344,10 +344,8 @@ gen_strct_func_iter(const struct config *cfg,
 	else
 		puts("");
 
-	printf("\tksql_stmt_alloc(db, &stmt,\n"
-	       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
-	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
-	       s->parent->cname, num, 
+	printf("\tksql_stmt_alloc(db, &stmt, NULL, "
+	       "STMT_%s_BY_SEARCH_%zu);\n",
 	       s->parent->cname, num);
 
 	pos = 1;
@@ -439,11 +437,9 @@ gen_strct_func_list(const struct config *cfg,
 	       "\t}\n"
 	       "\tTAILQ_INIT(q);\n"
 	       "\n"
-	       "\tksql_stmt_alloc(db, &stmt,\n"
-	       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
-	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
-	       retstr->name, s->parent->cname, num, 
-	       s->parent->cname, num);
+	       "\tksql_stmt_alloc(db, &stmt, NULL, "
+	       "STMT_%s_BY_SEARCH_%zu);\n",
+	       retstr->name, s->parent->cname, num);
 
 	/*
 	 * If we have any hashes, we're going to need to do the hash
@@ -523,11 +519,9 @@ gen_func_open(const struct config *cfg, int splitproc)
 		     "\t\treturn(NULL);");
 
 	puts("\n"
-	     "\tmemset(&cfg, 0, sizeof(struct ksqlcfg));\n"
-	     "\tcfg.flags = KSQL_EXIT_ON_ERR |\n"
-	     "\t\tKSQL_FOREIGN_KEYS | KSQL_SAFE_EXIT;\n"
-	     "\tcfg.err = ksqlitemsg;\n"
-	     "\tcfg.dberr = ksqlitedbmsg;\n"
+	     "\tksql_cfg_defaults(&cfg);\n"
+	     "\tcfg.stmts.stmts = stmts;\n"
+	     "\tcfg.stmts.stmtsz = STMT__MAX;\n"
 	     "");
 	if (splitproc)
 		puts("\tdb = ksql_alloc_child(&cfg, NULL, NULL);");
@@ -734,10 +728,9 @@ gen_strct_func_srch(const struct config *cfg,
 	else
 		puts("");
 
-	printf("\tksql_stmt_alloc(db, &stmt,\n"
-	       "\t\tstmts[STMT_%s_BY_SEARCH_%zu],\n"
-	       "\t\tSTMT_%s_BY_SEARCH_%zu);\n",
-	       s->parent->cname, num, s->parent->cname, num);
+	printf("\tksql_stmt_alloc(db, &stmt, NULL, "
+	       "STMT_%s_BY_SEARCH_%zu);\n",
+	       s->parent->cname, num);
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
@@ -876,10 +869,8 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 	if (pos > 1)
 		puts("");
 
-	printf("\tksql_stmt_alloc(db, &stmt,\n"
-	       "\t\tstmts[STMT_%s_INSERT],\n"
-	       "\t\tSTMT_%s_INSERT);\n",
-	       p->cname, p->cname);
+	printf("\tksql_stmt_alloc(db, &stmt, NULL, "
+	       "STMT_%s_INSERT);\n", p->cname);
 
 	pos = npos = 1;
 	TAILQ_FOREACH(f, &p->fq, entries) {
@@ -1026,12 +1017,9 @@ gen_func_reffind(const struct config *cfg, const struct strct *p)
 		if (FIELD_NULL & f->ref->source->flags) {
 			printf("\tif (p->has_%s) {\n",
 				f->ref->source->name);
-			printf("\t\tksql_stmt_alloc(db, &stmt,\n"
-			       "\t\t\tstmts[STMT_%s_BY_UNIQUE_%s],\n"
-			       "\t\t\tSTMT_%s_BY_UNIQUE_%s);\n"
+			printf("\t\tksql_stmt_alloc(db, &stmt, NULL, "
+			       "STMT_%s_BY_UNIQUE_%s);\n"
 			       "\t\tksql_bind_int(stmt, 0, p->%s);\n",
-			       f->ref->target->parent->cname,
-			       f->ref->target->name, 
 			       f->ref->target->parent->cname,
 			       f->ref->target->name, 
 			       f->ref->source->name);
@@ -1176,16 +1164,12 @@ gen_func_update(const struct config *cfg,
 		puts("");
 
 	if (UP_MODIFY == up->type)
-		printf("\tksql_stmt_alloc(db, &stmt,\n"
-		       "\t\tstmts[STMT_%s_UPDATE_%zu],\n"
-		       "\t\tSTMT_%s_UPDATE_%zu);\n",
-		       up->parent->cname, num, 
+		printf("\tksql_stmt_alloc(db, &stmt, NULL, "
+		       "STMT_%s_UPDATE_%zu);\n",
 		       up->parent->cname, num);
 	else
-		printf("\tksql_stmt_alloc(db, &stmt,\n"
-		       "\t\tstmts[STMT_%s_DELETE_%zu],\n"
-		       "\t\tSTMT_%s_DELETE_%zu);\n",
-		       up->parent->cname, num, 
+		printf("\tksql_stmt_alloc(db, &stmt, NULL, "
+		       "STMT_%s_DELETE_%zu);\n",
 		       up->parent->cname, num);
 
 	npos = pos = 1;

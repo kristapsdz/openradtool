@@ -542,7 +542,7 @@ struct	strct {
  * maps back into roles permitted for the function.
  */
 struct	role {
-	char		  *name; /* unique name of role */
+	char		  *name; /* unique lowercase name of role */
 	char		  *doc; /* documentation */
 	struct role	  *parent; /* parent (or NULL) */
 	struct roleq	   subrq; /* sub-roles */

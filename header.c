@@ -640,11 +640,9 @@ static void
 gen_role(const struct role *r, int *nf)
 {
 	const struct role *rr;
-	const char *cp;
 	int	    suppress = 0;
 
-
-	if (strcasecmp(r->name, "all"))  {
+	if (strcmp(r->name, "all"))  {
 		if (*nf)
 			puts(",");
 		else
@@ -652,21 +650,18 @@ gen_role(const struct role *r, int *nf)
 	} else
 		suppress = 1;
 
-	if (0 == strcasecmp(r->name, "default"))
+	if (0 == strcmp(r->name, "default"))
 		print_commentt(1, COMMENT_C,
 			"The default role.\n"
 			"This is assigned when db_open() is called.\n"
 			"It should be limited only to those "
 			"functions required to narrow the role.");
-	else if (0 == strcasecmp(r->name, "none"))
+	else if (0 == strcmp(r->name, "none"))
 		print_commentt(1, COMMENT_C,
 			"Role that isn't allowed to do anything.");
 
-	if ( ! suppress) {
-		printf("\tROLE_");
-		for (cp = r->name; '\0' != *cp; cp++)
-			putchar(tolower((unsigned char)*cp));
-	}
+	if ( ! suppress)
+		printf("\tROLE_%s", r->name);
 	TAILQ_FOREACH(rr, &r->subrq, entries)
 		gen_role(rr, nf);
 }

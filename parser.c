@@ -2502,7 +2502,7 @@ check_rolename(const struct roleq *rq, const char *name)
 	const struct role *r;
 
 	TAILQ_FOREACH(r, rq, entries) {
-		if (0 == strcasecmp(r->name, name))
+		if (0 == strcmp(r->name, name))
 			return(0);
 		if ( ! check_rolename(&r->subrq, name))
 			return(0);
@@ -2515,12 +2515,17 @@ static struct role *
 role_alloc(struct parse *p, const char *name, struct role *parent)
 {
 	struct role	*r;
+	char		*cp;
 
 	if (NULL == (r = calloc(1, sizeof(struct role))))
 		err(EXIT_FAILURE, NULL);
 	if (NULL == (r->name = strdup(name)))
 		err(EXIT_FAILURE, NULL);
 
+	/* Add a lowercase version. */
+
+	for (cp = r->name; '\0' != *cp; cp++)
+		*cp = tolower((unsigned char)*cp);
 	r->parent = parent;
 	parse_point(p, &r->pos);
 	TAILQ_INIT(&r->subrq);

@@ -888,6 +888,8 @@ resolve_roleset(struct rolemap *rm, struct config *cfg)
 	size_t		 i = 0;
 
 	TAILQ_FOREACH(rs, &rm->setq, entries) {
+		if (NULL != rs->role)
+			continue;
 		if (resolve_roles(rs, &cfg->rq))
 			continue;
 		gen_errx(&rs->parent->pos, "unknown role: %s", rs->name);
@@ -1032,17 +1034,52 @@ resolve_roleset_cover(struct strct *p, struct config *cfg)
 }
 
 /*
+ * Merge a rolemap "src" into a possibly-existing rolemap "dst".
+ * This applies to the case of:
+ *   roles foo { noexport; noexport foo; };
+ * Which would otherwise crash because the rolemap assignment isn't
+ * unique, which is otherwise guaranteed with named fields.
+ */
+static void
+rolemap_merge(struct rolemap *src, struct rolemap **dst)
+{
+	struct roleset	*rdst, *rsrc;
+
+	if (NULL == *dst) {
+		*dst = src;
+		return;
+	}
+
+	assert(src->type == (*dst)->type);
+
+	TAILQ_FOREACH(rsrc, &src->setq, entries) {
+		TAILQ_FOREACH(rdst, &(*dst)->setq, entries)
+			if (0 == strcasecmp(rdst->name, rsrc->name))
+				break;
+		if (NULL != rdst)
+			continue;
+
+		/* Source doesn't exist in destination. */
+		rdst = calloc(1, sizeof(struct roleset));
+		rdst->name = strdup(rsrc->name);
+		rdst->parent = *dst;
+		TAILQ_INSERT_TAIL(&(*dst)->setq, rdst, entries);
+	}
+}
+
+/*
  * Given the rolemap "rm", which we know to have a unique name and type
  * in "p", assign to the correspending function type in "p".
  * Return zero on failure to lookup, non-zero on success.
  * On success, the rolemap is assigned into the structure.
  */
-static int
-resolve_rolemap(struct rolemap *rm, struct strct *p)
+static size_t
+resolve_rolemap(struct rolemap *rm, struct config *cfg, struct strct *p)
 {
 	struct update	*u;
 	struct search	*s;
 	struct field	*f;
+	size_t		 i = 0;
 
 	switch (rm->type) {
 	case ROLEMAP_DELETE:
@@ -1051,17 +1088,17 @@ resolve_rolemap(struct rolemap *rm, struct strct *p)
 			    0 == strcasecmp(u->name, rm->name)) {
 				assert(NULL == u->rolemap);
 				u->rolemap = rm;
-				return(1);
+				return(resolve_roleset(rm, cfg));
 			}
 		break;
 	case ROLEMAP_ALL:
 		assert(NULL == p->arolemap);
 		p->arolemap = rm;
-		return(1);
+		return(resolve_roleset(rm, cfg));
 	case ROLEMAP_INSERT:
 		assert(NULL == p->irolemap);
 		p->irolemap = rm;
-		return(1);
+		return(resolve_roleset(rm, cfg));
 	case ROLEMAP_ITERATE:
 		TAILQ_FOREACH(s, &p->sq, entries) 
 			if (STYPE_ITERATE == s->type &&
@@ -1069,7 +1106,7 @@ resolve_rolemap(struct rolemap *rm, struct strct *p)
 			    0 == strcasecmp(s->name, rm->name)) {
 				assert(NULL == s->rolemap);
 				s->rolemap = rm;
-				return(1);
+				return(resolve_roleset(rm, cfg));
 			}
 		break;
 	case ROLEMAP_LIST:
@@ -1079,7 +1116,7 @@ resolve_rolemap(struct rolemap *rm, struct strct *p)
 			    0 == strcasecmp(s->name, rm->name)) {
 				assert(NULL == s->rolemap);
 				s->rolemap = rm;
-				return(1);
+				return(resolve_roleset(rm, cfg));
 			}
 		break;
 	case ROLEMAP_SEARCH:
@@ -1089,27 +1126,27 @@ resolve_rolemap(struct rolemap *rm, struct strct *p)
 			    0 == strcasecmp(s->name, rm->name)) {
 				assert(NULL == s->rolemap);
 				s->rolemap = rm;
-				return(1);
+				return(resolve_roleset(rm, cfg));
 			}
 		break;
 	case ROLEMAP_NOEXPORT:
+		/*
+		 * Start with the "null" noexport, which is applied to
+		 * all of the fields in the structure.
+		 * Since these fields may already be no-exported, we
+		 * need to merge them into existing rolemaps.
+		 */
 		if (NULL == rm->name) {
 			TAILQ_FOREACH(f, &p->fq, entries) {
-				if (NULL == f->rolemap) {
-					f->rolemap = rm;
-					continue;
-				}
-				gen_errx(&rm->pos, "role already "
-					"assigned to field");
-				return(0);
+				rolemap_merge(rm, &f->rolemap);
+				i += resolve_roleset(f->rolemap, cfg);
 			}
-			return(1);
+			return(i);
 		}
 		TAILQ_FOREACH(f, &p->fq, entries) 
 			if (0 == strcasecmp(f->name, rm->name)) {
-				assert(NULL == f->rolemap);
-				f->rolemap = rm;
-				return(1);
+				rolemap_merge(rm, &f->rolemap);
+				return(resolve_roleset(f->rolemap, cfg));
 			}
 		break;
 	case ROLEMAP_UPDATE:
@@ -1118,7 +1155,7 @@ resolve_rolemap(struct rolemap *rm, struct strct *p)
 			    0 == strcasecmp(u->name, rm->name)) {
 				assert(NULL == u->rolemap);
 				u->rolemap = rm;
-				return(1);
+				return(resolve_roleset(rm, cfg));
 			}
 		break;
 	default:
@@ -1130,7 +1167,7 @@ resolve_rolemap(struct rolemap *rm, struct strct *p)
 		ROLEMAP_NOEXPORT == rm->type ? "field" : "function",
 		ROLEMAP_INSERT == rm->type ? "" : ": ",
 		ROLEMAP_INSERT == rm->type ? "" : rm->name);
-	return(0);
+	return(1);
 }
 
 /*
@@ -1214,10 +1251,7 @@ parse_link(struct config *cfg)
 	i = 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries) {
 		TAILQ_FOREACH(rm, &p->rq, entries)
-			if ( ! resolve_rolemap(rm, p))
-				i++;
-			else
-				i += resolve_roleset(rm, cfg);
+			i += resolve_rolemap(rm, cfg, p);
 		if (NULL != p->irolemap)
 			i += resolve_roleset(p->irolemap, cfg);
 		if (NULL != p->arolemap)

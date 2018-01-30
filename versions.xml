@@ -3,6 +3,24 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.4.4</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-01-30">2018-01-30</time>
+		</header>
+		<aside>
+			<p>
+				Fix the <code>noexport</code> empty statement, which was causing
+				assertions when invoked in certain situations.
+				Also start using <a
+					href="https://kristaps.bsd.lv/ksql">ksql(3)</a>'s stored
+				statement functionality, which improves security.
+				Add partial support for roles within ksql(3) as well, but leave them
+				unimplemented for the time being.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.4.3</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-01-17">2018-01-17</time>

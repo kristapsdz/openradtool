@@ -143,14 +143,9 @@ static void
 gen_role(const struct role *r)
 {
 	const struct role *rr;
-	const char	*cp;
 
-	if (strcasecmp(r->name, "all")) {
-		printf("\tcase ROLE_");
-		for (cp = r->name; '\0' != *cp; cp++)
-			putchar(tolower((unsigned char)*cp));
-		puts(":");
-	}
+	if (strcmp(r->name, "all"))
+		printf("\tcase ROLE_%s:\n", r->name);
 	TAILQ_FOREACH(rr, &r->subrq, entries)
 		gen_role(rr);
 }
@@ -495,6 +490,76 @@ gen_strct_func_list(const struct config *cfg,
 	     "");
 }
 
+#if 0
+/*
+ * Count all roles beneath a given role excluding "all".
+ * Returns the number, which is never zero.
+ */
+static size_t
+gen_func_role_count(const struct role *role)
+{
+	size_t	 i = 0;
+	const struct role *r;
+
+	if (strcmp(role->name, "all"))
+		i++;
+	TAILQ_FOREACH(r, &role->subrq, entries)
+		i += gen_func_role_count(r);
+	assert(i > 0);
+	return(i);
+}
+
+static void
+gen_func_role_matrices(const struct role *role, size_t rolesz)
+{
+	const struct role *r;
+
+	if (strcmp(role->name, "all"))
+		printf("\tconst int role_perms_%s[%zu];\n"
+		       "\tconst int role_stmts_%s[STMT__MAX];\n", 
+		       role->name, rolesz, role->name);
+	TAILQ_FOREACH(r, &role->subrq, entries)
+		gen_func_role_matrices(r, rolesz);
+}
+
+static void
+gen_func_role_assign(const struct role *role)
+{
+	const struct role *r;
+
+	if (strcmp(role->name, "all") &&
+	    strcmp(role->name, "default"))
+		for (r = role; NULL != r; r = r->parent)
+			printf("\troles[ROLE_%s].roles[ROLE_%s] = 1;\n",
+				role->name, r->name);
+	TAILQ_FOREACH(r, &role->subrq, entries)
+		gen_func_role_assign(r);
+}
+
+static void
+gen_func_role_zero(const struct role *role, size_t rolesz)
+{
+	const struct role *r;
+	int	 perm;
+
+	perm = 0 == strcmp(role->name, "default");
+
+	if (strcmp(role->name, "all"))
+		printf("\troles[ROLE_%s].roles = role_perms_%s;\n"
+		       "\troles[ROLE_%s].stmts = role_stmts_%s;\n"
+		       "\tmemset(roles[ROLE_%s].roles, %d, "
+		        "sizeof(int) * %zu);\n"
+		       "\tmemset(roles[ROLE_%s].stmts, 0, "
+		        "sizeof(int) * STMT__MAX);\n",
+		       role->name, role->name,
+		       role->name, role->name,
+		       role->name, perm, rolesz, 
+		       role->name);
+	TAILQ_FOREACH(r, &role->subrq, entries)
+		gen_func_role_zero(r, rolesz);
+}
+#endif
+
 /*
  * Generate database opening.
  * We don't use the generic invocation, as we want foreign keys.
@@ -504,6 +569,10 @@ gen_strct_func_list(const struct config *cfg,
 static void
 gen_func_open(const struct config *cfg, int splitproc)
 {
+#if 0
+	const struct role *r;
+#endif
+	size_t	i;
 
 	print_func_db_open(CFG_HAS_ROLES & cfg->flags, 0);
 
@@ -511,12 +580,35 @@ gen_func_open(const struct config *cfg, int splitproc)
 	     "\tstruct ksqlcfg cfg;\n"
 	     "\tstruct ksql *db;");
 
-	if (CFG_HAS_ROLES & cfg->flags)
-		puts("\tstruct kwbp *ctx;\n"
-		     "\n"
-		     "\tctx = malloc(sizeof(struct kwbp));\n"
-		     "\tif (NULL == ctx)\n"
-		     "\t\treturn(NULL);");
+	if (CFG_HAS_ROLES & cfg->flags) {
+		/*
+		 * We need an complete count of all roles except the
+		 * "all" role, which cannot be entered or processed.
+		 * So do this recursively.
+		 */
+		i = 0;
+#if 0
+		TAILQ_FOREACH(r, &cfg->rq, entries)
+			i += gen_func_role_count(r);
+		assert(i > 0);
+		TAILQ_FOREACH(r, &cfg->rq, entries)
+			gen_func_role_matrices(r, i);
+		printf("\tstruct ksqlrole roles[%zu];\n"
+#endif
+		printf("\tstruct kwbp *ctx;\n"
+		       "\n"
+		       "\tctx = malloc(sizeof(struct kwbp));\n"
+		       "\tif (NULL == ctx)\n"
+		       "\t\treturn(NULL);\n"
+		       "\n");
+#if 0
+		TAILQ_FOREACH(r, &cfg->rq, entries)
+			gen_func_role_zero(r, i);
+		puts("");
+		TAILQ_FOREACH(r, &cfg->rq, entries)
+			gen_func_role_assign(r);
+#endif
+	}
 
 	puts("\n"
 	     "\tksql_cfg_defaults(&cfg);\n"
@@ -553,14 +645,10 @@ gen_func_open(const struct config *cfg, int splitproc)
 static void
 gen_func_rolecases(const struct role *r)
 {
-	const char *cp;
 	const struct role *rp, *rr;
 	size_t has = 0;
 
-	printf("\tcase ROLE_");
-	for (cp = r->name; '\0' != *cp; cp++) 
-		putchar(tolower((unsigned char)*cp));
-	puts(":");
+	printf("\tcase ROLE_%s:\n", r->name);
 	puts("\t\tswitch (ctx->role) {");
 	for (rp = r->parent; NULL != rp; rp = rp->parent) {
 		if (NULL == rp->parent) {
@@ -568,10 +656,7 @@ gen_func_rolecases(const struct role *r)
 			has++;
 			break;
 		}
-		printf("\t\tcase ROLE_");
-		for (cp = rp->name; '\0' != *cp; cp++) 
-			putchar(tolower((unsigned char)*cp));
-		puts(":");
+		printf("\t\tcase ROLE_%s:\n", rp->name);
 		has++;
 	}
 	if (has)
@@ -592,7 +677,7 @@ gen_func_roles(const struct config *cfg)
 	const struct role *r, *rr;
 
 	TAILQ_FOREACH(r, &cfg->rq, entries)
-		if (0 == strcasecmp(r->name, "all"))
+		if (0 == strcmp(r->name, "all"))
 			break;
 	assert(NULL != r);
 

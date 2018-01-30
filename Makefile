@@ -2,7 +2,7 @@
 
 include Makefile.configure
 
-VERSION		 = 0.4.3
+VERSION		 = 0.4.4
 CFLAGS		+= -DVERSION=\"$(VERSION)\"
 OBJS		 = audit.o \
 		   comments.o \
@@ -229,7 +229,7 @@ TODO.xml: TODO.md
 	  echo "</article>" ; ) >$@
 
 atom.xml: versions.xml
-	sblg -a versions.xml >$@
+	sblg -s date -a versions.xml >$@
 
 clean:
 	rm -f kwebapp $(LINKS)

@@ -498,10 +498,16 @@ struct	update {
 	enum upt	    type; /* type of update */
 	struct pos	    pos; /* parse point */
 	struct strct	   *parent; /* up-reference */
-	struct rolemap	   *rolemap;
+	struct rolemap	   *rolemap; /* roles assigned to function */
 	unsigned int	    flags;
 #define	UPDATE_ALL	    0x01 /* UP_MODIFY for all fields */
 	TAILQ_ENTRY(update) entries;
+};
+
+struct	insert {
+	struct rolemap	*rolemap; /* roles assigned to function */
+	struct strct	*parent; /* up-reference */
+	struct pos	 pos; /* parse point */
 };
 
 /*
@@ -524,15 +530,15 @@ struct	strct {
 	struct updateq	   dq; /* delete constraints */
 	struct uniqueq	   nq; /* unique constraints */
 	struct rolemapq	   rq; /* role assignments */
-	struct rolemap	  *irolemap; /* "insert" rolemap */
+	struct insert	  *ins; /* insert function */
 	struct rolemap	  *arolemap; /* catcha-all rolemap */
 	unsigned int	   flags;
 #define	STRCT_HAS_QUEUE	   0x01 /* needs a queue interface */
 #define	STRCT_HAS_ITERATOR 0x02 /* needs iterator interface */
 #define	STRCT_HAS_BLOB	   0x04 /* needs resolv.h */
-#define	STRCT_HAS_INSERT   0x08 /* has insertion function */
 #define STRCT_HAS_NULLREFS 0x10 /* has nested null fkeys */
 	TAILQ_ENTRY(strct) entries;
+	struct config	  *cfg; /* up-reference */
 };
 
 /*

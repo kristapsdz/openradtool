@@ -409,7 +409,7 @@ gen_funcs(const struct config *cfg,
 		puts("");
 	}
 
-	if (STRCT_HAS_INSERT & p->flags) {
+	if (NULL != p->ins) {
 		print_commentt(0, COMMENT_C_FRAG_OPEN,
 			"Insert a new row into the database.\n"
 			"Only native (and non-rowid) fields may "

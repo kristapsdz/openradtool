@@ -1026,8 +1026,10 @@ resolve_roleset_cover(struct strct *p, struct config *cfg)
 				i += resolve_roleset_coverset
 					(rs, &s->rolemap, 
 					 ROLEMAP_SEARCH, s->name, p);
-		i += resolve_roleset_coverset
-			(rs, &p->irolemap, ROLEMAP_INSERT, NULL, p);
+		if (NULL != p->ins)
+			i += resolve_roleset_coverset
+				(rs, &p->ins->rolemap, 
+				 ROLEMAP_INSERT, NULL, p);
 	}
 	
 	return(i);
@@ -1096,8 +1098,10 @@ resolve_rolemap(struct rolemap *rm, struct config *cfg, struct strct *p)
 		p->arolemap = rm;
 		return(resolve_roleset(rm, cfg));
 	case ROLEMAP_INSERT:
-		assert(NULL == p->irolemap);
-		p->irolemap = rm;
+		if (NULL == p->ins) 
+			break;
+		assert(NULL == p->ins->rolemap);
+		p->ins->rolemap = rm;
 		return(resolve_roleset(rm, cfg));
 	case ROLEMAP_ITERATE:
 		TAILQ_FOREACH(s, &p->sq, entries) 
@@ -1252,8 +1256,8 @@ parse_link(struct config *cfg)
 	TAILQ_FOREACH(p, &cfg->sq, entries) {
 		TAILQ_FOREACH(rm, &p->rq, entries)
 			i += resolve_rolemap(rm, cfg, p);
-		if (NULL != p->irolemap)
-			i += resolve_roleset(p->irolemap, cfg);
+		if (NULL != p->ins && NULL != p->ins->rolemap)
+			i += resolve_roleset(p->ins->rolemap, cfg);
 		if (NULL != p->arolemap)
 			i += resolve_roleset_cover(p, cfg);
 	}
@@ -1290,11 +1294,9 @@ parse_link(struct config *cfg)
 					"no roles defined for "
 					"update function");
 			}
-			if (NULL == p->irolemap &&
-			    STRCT_HAS_INSERT & p->flags)
-				gen_warnx(&p->pos,
-					"no roles defined for "
-					"insert function");
+			if (NULL != p->ins && NULL == p->ins->rolemap)
+				gen_warnx(&p->ins->pos, "no roles "
+					"defined for insert function");
 		}
 
 	/* 

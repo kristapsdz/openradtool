@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017--2018 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -2232,9 +2232,17 @@ parse_struct_data(struct parse *p, struct strct *s)
 			parse_config_update(p, s, UP_DELETE);
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "insert")) {
-			s->flags |= STRCT_HAS_INSERT;
+			if (NULL != s->ins) {
+				parse_errx(p, "insert already defined");
+				return;
+			}
+			s->ins = calloc(1, sizeof(struct insert));
+			if (NULL == s->ins)
+				err(EXIT_FAILURE, NULL);
+			s->ins->parent = s;
+			parse_point(p, &s->ins->pos);
 			if (TOK_SEMICOLON != parse_next(p)) {
-				parse_errx(p, "expected end of comment");
+				parse_errx(p, "expected semicolon");
 				return;
 			}
 			continue;
@@ -2672,6 +2680,7 @@ parse_struct(struct parse *p, struct config *cfg)
 	for (caps = s->cname; '\0' != *caps; caps++)
 		*caps = toupper((int)*caps);
 
+	s->cfg = cfg;
 	parse_point(p, &s->pos);
 	TAILQ_INSERT_TAIL(&cfg->sq, s, entries);
 	TAILQ_INIT(&s->fq);
@@ -3094,6 +3103,7 @@ parse_free(struct config *cfg)
 		free(p->doc);
 		free(p->name);
 		free(p->cname);
+		free(p->ins);
 		free(p);
 	}
 

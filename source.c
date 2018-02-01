@@ -490,7 +490,6 @@ gen_strct_func_list(const struct config *cfg,
 	     "");
 }
 
-#if 0
 /*
  * Count all roles beneath a given role excluding "all".
  * Returns the number, which is never zero.
@@ -558,7 +557,67 @@ gen_func_role_zero(const struct role *role, size_t rolesz)
 	TAILQ_FOREACH(r, &role->subrq, entries)
 		gen_func_role_zero(r, rolesz);
 }
-#endif
+
+static int
+check_rolemap(const struct role *role, const struct rolemap *rm)
+{
+	const struct roleset *rs;
+	const struct role *r;
+
+	if (NULL == rm)
+		return(0);
+
+	TAILQ_FOREACH(rs, &rm->setq, entries) {
+		assert(NULL != rs->role);
+		for (r = rs->role; NULL != r; r = r->parent)
+			if (role == r)
+				return(1);
+	}
+
+	return(0);
+}
+
+static void
+gen_func_role_stmts(const struct role *role, const struct strct *p)
+{
+	const struct search *s;
+	const struct update *u;
+	const struct field *f;
+	const struct role *r;
+	size_t	 pos;
+
+	if (strcmp(role->name, "none") && strcmp(role->name, "all")) {
+		TAILQ_FOREACH(f, &p->fq, entries)
+			if (FIELD_UNIQUE & f->flags ||
+			    FIELD_ROWID & f->flags)
+				printf("\troles[ROLE_%s].stmts[STMT_%s_BY_UNIQUE_%s] = 1;\n", 
+					role->name, p->cname, f->name);
+
+		pos = 0;
+		TAILQ_FOREACH(s, &p->sq, entries)
+			if (check_rolemap(role, s->rolemap)) {
+				printf("\troles[ROLE_%s].stmts[STMT_%s_BY_SEARCH_%zu] = 1;\n", 
+					role->name, p->cname, pos++);
+			}
+
+		if (NULL != p->ins && check_rolemap(role, p->ins->rolemap))
+			printf("\troles[ROLE_%s].stmts[STMT_%s_INSERT] = 1;\n", 
+				role->name, p->cname);
+		pos = 0;
+		TAILQ_FOREACH(u, &p->uq, entries)
+			if (check_rolemap(role, u->rolemap))
+				printf("\troles[ROLE_%s].stmts[STMT_%s_UPDATE_%zu] = 1;\n", 
+					role->name, p->cname, pos++);
+		pos = 0;
+		TAILQ_FOREACH(u, &p->dq, entries)
+			if (check_rolemap(role, u->rolemap))
+				printf("\troles[ROLE_%s].stmts[STMT_%s_DELETE_%zu] = 1;\n", 
+					role->name, p->cname, pos++);
+	}
+
+	TAILQ_FOREACH(r, &role->subrq, entries)
+		gen_func_role_stmts(r, p);
+}
 
 /*
  * Generate database opening.
@@ -569,9 +628,8 @@ gen_func_role_zero(const struct role *role, size_t rolesz)
 static void
 gen_func_open(const struct config *cfg, int splitproc)
 {
-#if 0
 	const struct role *r;
-#endif
+	const struct strct *p;
 	size_t	i;
 
 	print_func_db_open(CFG_HAS_ROLES & cfg->flags, 0);
@@ -587,34 +645,40 @@ gen_func_open(const struct config *cfg, int splitproc)
 		 * So do this recursively.
 		 */
 		i = 0;
-#if 0
 		TAILQ_FOREACH(r, &cfg->rq, entries)
 			i += gen_func_role_count(r);
 		assert(i > 0);
 		TAILQ_FOREACH(r, &cfg->rq, entries)
 			gen_func_role_matrices(r, i);
 		printf("\tstruct ksqlrole roles[%zu];\n"
-#endif
-		printf("\tstruct kwbp *ctx;\n"
+		       "\tstruct kwbp *ctx;\n"
 		       "\n"
 		       "\tctx = malloc(sizeof(struct kwbp));\n"
 		       "\tif (NULL == ctx)\n"
 		       "\t\treturn(NULL);\n"
-		       "\n");
-#if 0
+		       "\n", i);
 		TAILQ_FOREACH(r, &cfg->rq, entries)
 			gen_func_role_zero(r, i);
 		puts("");
 		TAILQ_FOREACH(r, &cfg->rq, entries)
 			gen_func_role_assign(r);
-#endif
-	}
+		puts("");
+		TAILQ_FOREACH(r, &cfg->rq, entries) {
+			TAILQ_FOREACH(p, &cfg->sq, entries)
+				gen_func_role_stmts(r, p);
+		}
+		printf("\n"
+		       "\tksql_cfg_defaults(&cfg);\n"
+		       "\tcfg.stmts.stmts = stmts;\n"
+		       "\tcfg.stmts.stmtsz = STMT__MAX;\n"
+		       "\tcfg.roles.roles = roles;\n"
+		       "\tcfg.roles.rolesz = %zu;\n"
+		       "\tcfg.roles.defrole = ROLE_default;\n"
+		       "\n", i);
+	} else 
+		puts("\n"
+		     "\tksql_cfg_defaults(&cfg);\n");
 
-	puts("\n"
-	     "\tksql_cfg_defaults(&cfg);\n"
-	     "\tcfg.stmts.stmts = stmts;\n"
-	     "\tcfg.stmts.stmtsz = STMT__MAX;\n"
-	     "");
 	if (splitproc)
 		puts("\tdb = ksql_alloc_child(&cfg, NULL, NULL);");
 	else
@@ -646,23 +710,35 @@ static void
 gen_func_rolecases(const struct role *r)
 {
 	const struct role *rp, *rr;
-	size_t has = 0;
+
+	assert(NULL != r->parent);
 
 	printf("\tcase ROLE_%s:\n", r->name);
-	puts("\t\tswitch (ctx->role) {");
-	for (rp = r->parent; NULL != rp; rp = rp->parent) {
-		if (NULL == rp->parent) {
-			puts("\t\tcase ROLE_default:");
-			has++;
-			break;
-		}
-		printf("\t\tcase ROLE_%s:\n", rp->name);
-		has++;
+
+	/*
+	 * If our parent is "all", then there's nowhere we can
+	 * transition into, as we can only transition "up" the tree of
+	 * roles (i.e., into roles with less specific privileges).
+	 * Thus, every attempt to transition should fail.
+	 */
+
+	if (0 == strcmp(r->parent->name, "all")) {
+		puts("\t\tabort();\n"
+		     "\t\t/* NOTREACHED */");
+		TAILQ_FOREACH(rr, &r->subrq, entries)
+			gen_func_rolecases(rr);
+		return;
 	}
-	if (has)
-		puts("\t\t\tctx->role = r;\n"
-		     "\t\t\treturn;");
-	puts("\t\tdefault:\n"
+
+	/* Here, we can transition into lesser privileges. */
+
+	puts("\t\tswitch (r) {");
+	for (rp = r->parent; strcmp(rp->name, "all"); rp = rp->parent)
+		printf("\t\tcase ROLE_%s:\n", rp->name);
+
+	puts("\t\t\tctx->role = r;\n"
+	     "\t\t\treturn;\n"
+	     "\t\tdefault:\n"
 	     "\t\t\tabort();\n"
 	     "\t\t}\n"
 	     "\t\tbreak;");
@@ -683,13 +759,14 @@ gen_func_roles(const struct config *cfg)
 
 	print_func_db_role(0);
 	puts("{\n"
+	     "\tksql_role(ctx->db, r);\n"
 	     "\tif (r == ctx->role)\n"
 	     "\t\treturn;\n"
 	     "\tif (ROLE_none == ctx->role)\n"
 	     "\t\tabort();\n"
 	     "\n"
-	     "\tswitch (r) {\n"
-	     "\tcase ROLE_none:\n"
+	     "\tswitch (ctx->role) {\n"
+	     "\tcase ROLE_default:\n"
 	     "\t\tctx->role = r;\n"
 	     "\t\treturn;");
 	TAILQ_FOREACH(rr, &r->subrq, entries)
@@ -908,6 +985,9 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 	const struct field *f;
 	size_t	 pos, npos;
 
+	if (NULL == p->ins)
+		return;
+
 	print_func_db_insert(p, CFG_HAS_ROLES & cfg->flags, 0);
 
 	puts("\n"
@@ -926,9 +1006,9 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 
 	/* Check our roles. */
 
-	if (CFG_HAS_ROLES & cfg->flags)
-		gen_func_rolemap(p->irolemap);
-	else
+	if (CFG_HAS_ROLES & cfg->flags && NULL != p->ins)
+		gen_func_rolemap(p->ins->rolemap);
+	else if ( ! (CFG_HAS_ROLES & cfg->flags))
 		puts("");
 
 	/* Actually generate hashes, if necessary. */
@@ -1603,8 +1683,7 @@ gen_funcs(const struct config *cfg, const struct strct *p,
 		gen_func_reffind(cfg, p);
 		gen_func_free(p);
 		gen_func_freeq(p);
-		if (STRCT_HAS_INSERT & p->flags)
-			gen_func_insert(cfg, p);
+		gen_func_insert(cfg, p);
 	}
 
 	if (json) {

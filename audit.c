@@ -36,9 +36,10 @@
  * required to get to the structure.
  */
 struct	srsaccess {
-	const struct search *orig;
-	const struct field **fs;
-	size_t		 fsz;
+	const struct search *orig; /* original query */
+	const struct field **fs; /* array of fields til here */
+	size_t		 fsz; /* fields in "fs" */
+	int		 exported; /* whether exportable (inherit) */
 };
 
 /*
@@ -122,25 +123,61 @@ gen_audit_exportable(const struct strct *p,
 {
 	const struct field *f;
 	size_t	 i, j;
-	int	 export;
-	
+	int	 export, exportable = 0;
+
+	/*
+	 * If this structure is exportable, that means that at least one
+	 * route to the structure (i.e., search path) has allowed for
+	 * export functionality.
+	 * This is the default---the "noexport" overrides it.
+	 */
+
+	for (i = 0; 0 == exportable && i < ac->origsz; i++) 
+		if (ac->origs[i].exported)
+			exportable = 1;
+
 	if (json) 
-		puts("\t\t\t\"data\": [");
+		printf("\t\t\t\"exportable\": %s,\n"
+		       "\t\t\t\"data\": [\n", 
+		       exportable ? "true" : "false");
 	else
 		printf("%sdata:\n", SPACE);
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
+		/* 
+		 * By default, we're exporting.
+		 * Inhibit that if we're marked as no-export on the
+		 * field itself.
+		 */
+
 		export = ! (FIELD_NOEXPORT & f->flags);
+
+		/*
+		 * If the structure isn't reachable (i.e., no paths to
+		 * this structure that are in the exporting role), then
+		 * override its exportability.
+		 */
+
+		if ( ! exportable)
+			export = 0;
+
+		/*
+		 * If the local structure inhibits our exportability,
+		 * then mark it as such.
+		 */
+
 		if (NULL != f->rolemap &&
 		    check_rolemap(f->rolemap, role))
 			export = 0;
+
 		if (json)
 			printf("\t\t\t\t\"%s\"%s\n", f->name, 
 			       NULL != TAILQ_NEXT(f, entries) ?
 			       "," : "");
 		else
-			printf("%s%s%s%s\n", SPACE, SPACE, f->name,
-				export ? "" : ": NOT EXPORTED");
+			printf("%s%s%s%s%s\n", SPACE, SPACE, f->name,
+				export ? "" : ": NOT EXPORTED",
+				exportable ? "" : " (BY INHERITENCE)");
 	}
 
 	if (json)
@@ -156,7 +193,10 @@ gen_audit_exportable(const struct strct *p,
 			printf("%s%s", SPACE, SPACE);
 		print_name_db_search(ac->origs[i].orig);
 		if (json) 
-			printf("\",\n\t\t\t\t  \"path\": [");
+			printf("\",\n"
+			       "\t\t\t\t  \"exporting\": %s,\n"
+			       "\t\t\t\t  \"path\": [",
+			       ac->origs[i].exported ? "true" : "false");
 		else
 			printf(": ");
 		for (j = 0; j < ac->origs[i].fsz; j++) {
@@ -172,13 +212,18 @@ gen_audit_exportable(const struct strct *p,
 			if (json)
 				putchar('"');
 		}
-		if (json)
+		if ( ! json) {
+			if (j > 0)
+				printf(": ");
+			if (ac->origs[i].exported)
+				printf("exporting, ");
+			if (0 == j)
+				puts("self-reference");
+			else
+				puts("foreign-reference");
+		} else
 			printf("] }%s\n", 
 				i < ac->origsz - 1 ? "," : "");
-		else if (0 == j)
-			puts("self-reference");
-		else
-			puts("");
 	}
 
 	if (json) 
@@ -237,8 +282,9 @@ gen_audit_inserts(const struct strct *p,
 		printf("\t\t\t\"insert\": ");
 	else
 		printf("%sinsert:\n", SPACE);
-	if (NULL != p->irolemap && 
-	    check_rolemap(p->irolemap, role)) {
+	if (NULL != p->ins &&
+	    NULL != p->ins->rolemap && 
+	    check_rolemap(p->ins->rolemap, role)) {
 		if (json)
 			putchar('"');
 		else
@@ -325,9 +371,9 @@ gen_protos_insert(const struct strct *s,
 	int *first, const struct role *role)
 {
 
-	if (NULL == s->irolemap)
+	if (NULL == s->ins || NULL == s->ins->rolemap)
 		return;
-	if ( ! check_rolemap(s->irolemap, role))
+	if ( ! check_rolemap(s->ins->rolemap, role))
 		return;
 	printf("%s\n\t\t\"", *first ? "" : ",");
 	print_name_db_insert(s);
@@ -420,9 +466,7 @@ gen_audit_queries(const struct strct *p, int json,
 		printf("%s%s:\n", SPACE, tp);
 
 	TAILQ_FOREACH(s, &p->sq, entries) {
-		if (t != s->type ||
-		    NULL == s->rolemap ||
-		    ! check_rolemap(s->rolemap, role))
+		if (t != s->type)
 			continue;
 		if (json && ! first)
 			printf(",\n\t\t\t\t\"");
@@ -458,11 +502,13 @@ static void
 mark_structs(const struct search *orig, 
 	const struct strct *p, 
 	struct sraccess **sp, size_t *spsz,
-	const struct role *role, struct fieldstack *fs)
+	const struct role *role, struct fieldstack *fs,
+	int export)
 {
 	size_t	 i;
 	const struct field *f;
 	struct srsaccess *ac;
+	int	 exp;
 
 	/* Look up our structure in the list of knowns. */
 
@@ -494,6 +540,7 @@ mark_structs(const struct search *orig,
 
 	/* Append our current search origin and path. */
 
+	ac->exported = export;
 	ac->orig = orig;
 	ac->fs = calloc(fs->cur, sizeof(struct field *));
 	if (NULL == ac->fs)
@@ -507,9 +554,10 @@ mark_structs(const struct search *orig,
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_STRUCT != f->type)
 			continue;
+		exp = export;
 		if (NULL != f->rolemap &&
 		    check_rolemap(f->rolemap, role))
-			continue;
+			exp = 0;
 
 		if (fs->cur + 1 > fs->max) {
 			fs->f = reallocarray(fs->f,
@@ -522,7 +570,7 @@ mark_structs(const struct search *orig,
 		fs->f[fs->cur++] = f;
 		mark_structs(orig, 
 			f->ref->target->parent, 
-			sp, spsz, role, fs);
+			sp, spsz, role, fs, exp);
 		fs->cur--;
 	}
 }
@@ -568,7 +616,7 @@ gen_audit(const struct config *cfg, int json, const char *role)
 		TAILQ_FOREACH(sr, &s->sq, entries)
 			if (NULL != sr->rolemap &&
 			    check_rolemap(sr->rolemap, r))
-				mark_structs(sr, s, &sp, &spsz, r, &fs);
+				mark_structs(sr, s, &sp, &spsz, r, &fs, 1);
 
 	/*
 	 * Now walk through all structures and print the ways we have of

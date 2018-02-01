@@ -289,8 +289,8 @@ with unique transaction identifier
 If roles are enabled, move from the current role to
 .Fa r .
 If the role is the same as the current role, this does nothing.
-Roles may only transition to sub-roles, not ascend the role tree or move
-laterally.
+Roles may only transition to ancestor roles, not descendant roles or
+siblings, or any other non-ancestor roles.
 The only exception is when leaving
 .Dv ROLE_default
 or entering

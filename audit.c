@@ -150,7 +150,8 @@ gen_audit_exportable(const struct strct *p,
 		 * field itself.
 		 */
 
-		export = ! (FIELD_NOEXPORT & f->flags);
+		export = FTYPE_PASSWORD != f->type &&
+			! (FIELD_NOEXPORT & f->flags);
 
 		/*
 		 * If the structure isn't reachable (i.e., no paths to
@@ -436,7 +437,8 @@ gen_protos_fields(const struct strct *s,
 	int	 export;
 
 	TAILQ_FOREACH(f, &s->fq, entries) {
-		export = ! (FIELD_NOEXPORT & f->flags);
+		export = FTYPE_PASSWORD != f->type &&
+			! (FIELD_NOEXPORT & f->flags);
 		if (NULL != f->rolemap &&
 		    check_rolemap(f->rolemap, role))
 			export = 0;
@@ -466,7 +468,9 @@ gen_audit_queries(const struct strct *p, int json,
 		printf("%s%s:\n", SPACE, tp);
 
 	TAILQ_FOREACH(s, &p->sq, entries) {
-		if (t != s->type)
+		if (t != s->type ||
+		    NULL == s->rolemap ||
+		    ! check_rolemap(s->rolemap, role))
 			continue;
 		if (json && ! first)
 			printf(",\n\t\t\t\t\"");

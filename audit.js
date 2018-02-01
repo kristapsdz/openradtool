@@ -108,9 +108,13 @@
 				};
 			}(data, obj);
 		replcl(root, 'audit-data-accessfrom-path', data.paths.length);
+		if (data.exporting) 
+			showcl(root, 'audit-data-accessfrom-exporting');
+		else
+			hidecl(root, 'audit-data-accessfrom-exporting');
 	}
 
-	function fillDataField(root, strct, field)
+	function fillDataField(root, strct, field, exportable)
 	{
 		var list, i, obj;
 		if (null === (obj = auditFieldGet(strct, field)))
@@ -125,7 +129,7 @@
 			hidecl(root, 'audit-data-field-doc');
 			showcl(root, 'audit-data-field-nodoc');
 		}
-		if (obj.export) {
+		if (obj.export && exportable) {
 			hidecl(root, 'audit-data-field-noexport');
 			showcl(root, 'audit-data-field-export');
 		} else {
@@ -138,7 +142,8 @@
 				return function() {
 					var e = show('aside');
 					hidecl(e, 'aside-types');
-					fillDataField(show('aside-data-field-data'), s, f);
+					fillDataField(show('aside-data-field-data'), 
+						s, f, exportable);
 				};
 			}(strct, field);
 	}
@@ -211,16 +216,21 @@
 			for (j = 0; j < data.paths.length; j++) {
 				row = document.createElement('li');
 				list[i].appendChild(row);
-				for (k = 0; k < data.paths[j].length; k++) {
+				for (k = 0; k < data.paths[j].path.length; k++) {
 					col = document.createElement('span');
+					col.className = 'path';
 					row.appendChild(col);
-					repl(col, data.paths[j][k]);
+					repl(col, data.paths[j].path[k]);
 				}
-				if (0 === data.paths[j].length) {
+				if (0 === data.paths[j].path.length) {
 					col = document.createElement('span');
 					row.appendChild(col);
 					repl(col, '(self)');
-				}
+				} else if (data.paths[j].exporting) {
+					col = document.createElement('span');
+					row.appendChild(col);
+					repl(col, ' (exporting)'); 
+				} 
 			}
 		}
 	}
@@ -370,8 +380,8 @@
 
 	function auditFill(audit, root, num)
 	{
-		var e, sub, i, j, clone, list, vec, 
-			nvec, obj, noexport, pct, ins;
+		var e, sub, i, j, clone, list, vec, exp,
+			nvec, obj, noexport, pct, ins, paths;
 
 		replcl(root, 'audit-name', audit.name);
 		attrcl(root, 'audit-label', 'for', audit.name);
@@ -381,12 +391,21 @@
 
 		pct = ins = 0;
 
-		/* If found, fill in data field and access members. */
+		/* 
+		 * If found, fill in data field and access members.
+		 * This is defined IFF the structure is reachable from
+		 * any other structure for queries.
+		 * If 'data' isn't defined, 'accessfrom' will also be
+		 * empty (by definition).
+		 */
 
 		if ('data' in audit.access) {
+			ins = 1;
 			hidecl(root, 'audit-nodata');
 			showcl(root, 'audit-data');
 			showcl(root, 'audit-accessfrom');
+			
+			/* Pre-sort by alpha. */
 
 			audit.access.data.sort(function(a, b) {
 				return(a.localeCompare(b));
@@ -399,11 +418,25 @@
 			list = root.getElementsByClassName
 				('audit-data-list');
 
+			/*
+			 * Individual fields may have noexport marked on
+			 * them, so accumulate the number now.
+			 * We'll override this with whether the whole
+			 * structure is marked as not exported, however.
+			 */
+
 			for (noexport = j = 0; j < vec.length; j++) {
 				obj = auditFieldGet(audit.name, vec[j]);
 				if (null !== obj)
 					noexport += obj.export ? 0 : 1;
 			}
+
+			/*
+			 * List all of the fields we have accessable
+			 * and/or exportable.
+			 * Allow our structure's exportability to
+			 * influence how we document the field.
+			 */
 
 			for (i = 0; i < list.length; i++) {
 				sub = list[i].children[0];
@@ -411,27 +444,51 @@
 				for (j = 0; j < vec.length; j++) {
 					clone = sub.cloneNode(true);
 					list[i].appendChild(clone);
-					fillDataField(clone, audit.name, vec[j]);
+					fillDataField(clone, 
+						audit.name, vec[j], 
+						audit.access.exportable);
 				}
 			}
 
-			pct = Math.round((1.0 - 
-				(noexport / vec.length)) * 100);
+			/* 
+			 * Compute our exportability.
+			 * This only matters if the structure is
+			 * exportable as well.
+			 */
+
+			if (audit.access.exportable)
+				pct = Math.round((1.0 - 
+					(noexport / vec.length)) * 100);
+
+			/*
+			 * These are all of the functions that lead to
+			 * the current structure.
+			 * A function may have multiple ways of getting
+			 * to the same place, so begin by collecting
+			 * them all here, then we'll print them.
+			 * Keep track of exportability.
+			 */
+
 			vec = audit.access.accessfrom;
 			nvec = [];
 			for (i = 0; i < vec.length; ) {
 				obj = {};
 				obj.function = vec[i].function;
 				obj.paths = [];
-				obj.paths.push(vec[i].path);
+				obj.paths.push(vec[i]);
+				exp = vec[i].exporting ? 1 : 0;
 				for (j = i + 1; j < vec.length; j++) {
 					if (vec[j].function !== vec[i].function)
 						break;
-					obj.paths.push(vec[j].path);
+					obj.paths.push(vec[j]);
+					exp += vec[j].exporting ? 1 : 0;
 				}
+				obj.exporting = (exp > 0);
 				nvec.push(obj);
 				i = j;
 			}
+
+			/* Now print our accessed-from functions. */
 
 			list = root.getElementsByClassName
 				('audit-accessfrom-list');
@@ -456,11 +513,13 @@
 			showcl(root, 'audit-insert');
 			hidecl(root, 'audit-noinsert');
 			fillInsert(root, audit.access.insert);
-			ins = 1;
+			ins++;
 		} else {
 			hidecl(root, 'audit-insert');
 			showcl(root, 'audit-noinsert');
 		}
+
+		/* Now count up our totals. */
 		
 		replcl(root, 'audit-data-count', pct + '%');
 		replcl(root, 'audit-queries-count', 
@@ -471,7 +530,6 @@
 			audit.access.updates.length);
 		replcl(root, 'audit-deletes-count', 
 			audit.access.deletes.length);
-		replcl(root, 'audit-inserts-count', ins);
 
 		if (0 === pct + ins + 
 		    audit.access.deletes.length +

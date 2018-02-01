@@ -148,7 +148,10 @@
 									<span title="Updates" class="audit-updates-count"></span>
 									<span title="Deletes" class="audit-deletes-count"></span>
 									<span title="Queries" class="audit-queries-count"></span>
-									<span title="Inserts" class="audit-inserts-count"></span>
+									<span>
+										<span title="Inserts" class="audit-noinsert">0</span>
+										<span title="Inserts" class="audit-insert">1</span>
+									</span>
 								</span>
 							</label>
 							<label class="audit-toplevel-shown audit-label">
@@ -161,7 +164,10 @@
 									<span title="Updates" class="audit-updates-count"></span>
 									<span title="Deletes" class="audit-deletes-count"></span>
 									<span title="Queries" class="audit-queries-count"></span>
-									<span title="Inserts" class="audit-inserts-count"></span>
+									
+										<span title="Inserts" class="audit-noinsert">0</span>
+										<span title="Inserts" class="audit-insert">1</span>
+									</span>
 								</span>
 							</label>
 						</header>
@@ -186,11 +192,16 @@
 										<code class="audit-data-accessfrom-function
 											audit-accessfrom-more audit-link"></code>:
 										<span class="audit-data-accessfrom-path"></span> paths
+										<span class="audit-data-accessfrom-exporting">
+											<span title="Has an exportable path">
+												<i class="fa fa-fw fa-mail-forward"></i>
+											</span>
+										</span>
 									</div>
 								</article>
 							</section>
 							<article class="audit-nodata audit-noentry">
-								No data fields exported.
+								No data fields accessible or exported.
 							</article>
 							<h4>Delete functions</h4>
 							<article class="audit-deletes-list">

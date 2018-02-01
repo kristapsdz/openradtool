@@ -95,7 +95,7 @@ h5				{ font-size: smaller;
 #aside-close:hover		{ color: #000; }
 code				{ font-family: monospace;
 				  font-size: smaller; }
-.audit-accessfrom-paths > li > span + span:before
+.audit-accessfrom-paths > li > span.path + span.path:before
 				{ content: ' \2192 '; }
 .audit-accessfrom-paths 	{ margin: 0; 
 				  padding-left: 1em; }

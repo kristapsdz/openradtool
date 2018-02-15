@@ -24,6 +24,7 @@
 # include <err.h>
 #endif
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -134,6 +135,38 @@ static	const char *const validbins[VALIDATE__MAX] = {
 	">=", /* VALIDATE_LT */
 	"!=", /* VALIDATE_EQ */
 };
+
+/*
+ * Use this function to print ksql_stmt_alloc() invocations.
+ * This is because we use a different calling style depending upon
+ * whether we have roles or not.
+ */
+static void
+gen_print_stmt_alloc(const struct config *cfg, 
+	int tabsz, const char *fmt, ...)
+{
+	va_list	 	 ap;
+	char		*buf;
+	const char	*tabs = "\t\t\t\t\t";
+
+	assert(tabsz > 0 && tabsz < 4);
+
+	va_start(ap, fmt);
+	if (vasprintf(&buf, fmt, ap) < 0)
+		err(EXIT_FAILURE, NULL);
+	va_end(ap);
+
+	if (CFG_HAS_ROLES & cfg->flags)
+		printf("%.*sksql_stmt_alloc(db, &stmt, "
+			"NULL, %s);\n", tabsz, tabs, buf);
+	else
+		printf("%.*sksql_stmt_alloc(db, &stmt,\n%.*s"
+			"stmts[%s],\n%.*s"
+			"%s);\n", tabsz, tabs, tabsz + 1, tabs, 
+			buf, tabsz + 1, tabs, buf);
+
+	free(buf);
+}
 
 /*
  * When accepting only given roles, print the roles rooted at "r".
@@ -339,9 +372,9 @@ gen_strct_func_iter(const struct config *cfg,
 	else
 		puts("");
 
-	printf("\tksql_stmt_alloc(db, &stmt, NULL, "
-	       "STMT_%s_BY_SEARCH_%zu);\n",
-	       s->parent->cname, num);
+	gen_print_stmt_alloc(cfg, 1,
+		"STMT_%s_BY_SEARCH_%zu", 
+		s->parent->cname, num);
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries)
@@ -431,10 +464,10 @@ gen_strct_func_list(const struct config *cfg,
 	       "\t\texit(EXIT_FAILURE);\n"
 	       "\t}\n"
 	       "\tTAILQ_INIT(q);\n"
-	       "\n"
-	       "\tksql_stmt_alloc(db, &stmt, NULL, "
-	       "STMT_%s_BY_SEARCH_%zu);\n",
-	       retstr->name, s->parent->cname, num);
+	       "\n", retstr->name);
+	gen_print_stmt_alloc(cfg, 1,
+		"STMT_%s_BY_SEARCH_%zu", 
+		s->parent->cname, num);
 
 	/*
 	 * If we have any hashes, we're going to need to do the hash
@@ -514,8 +547,8 @@ gen_func_role_matrices(const struct role *role, size_t rolesz)
 	const struct role *r;
 
 	if (strcmp(role->name, "all"))
-		printf("\tconst int role_perms_%s[%zu];\n"
-		       "\tconst int role_stmts_%s[STMT__MAX];\n", 
+		printf("\tint role_perms_%s[%zu];\n"
+		       "\tint role_stmts_%s[STMT__MAX];\n", 
 		       role->name, rolesz, role->name);
 	TAILQ_FOREACH(r, &role->subrq, entries)
 		gen_func_role_matrices(r, rolesz);
@@ -645,11 +678,13 @@ gen_func_open(const struct config *cfg, int splitproc)
 		 * So do this recursively.
 		 */
 		i = 0;
+#if 0
 		TAILQ_FOREACH(r, &cfg->rq, entries)
 			i += gen_func_role_count(r);
 		assert(i > 0);
 		TAILQ_FOREACH(r, &cfg->rq, entries)
 			gen_func_role_matrices(r, i);
+#endif
 		printf("\tstruct ksqlrole roles[%zu];\n"
 		       "\tstruct kwbp *ctx;\n"
 		       "\n"
@@ -657,6 +692,7 @@ gen_func_open(const struct config *cfg, int splitproc)
 		       "\tif (NULL == ctx)\n"
 		       "\t\treturn(NULL);\n"
 		       "\n", i);
+#if 0
 		TAILQ_FOREACH(r, &cfg->rq, entries)
 			gen_func_role_zero(r, i);
 		puts("");
@@ -675,6 +711,12 @@ gen_func_open(const struct config *cfg, int splitproc)
 		       "\tcfg.roles.rolesz = %zu;\n"
 		       "\tcfg.roles.defrole = ROLE_default;\n"
 		       "\n", i);
+#endif
+		printf("\n"
+		       "\tksql_cfg_defaults(&cfg);\n"
+		       "\tcfg.stmts.stmts = stmts;\n"
+		       "\tcfg.stmts.stmtsz = STMT__MAX;\n"
+		       "\n");
 	} else 
 		puts("\n"
 		     "\tksql_cfg_defaults(&cfg);\n");
@@ -759,7 +801,7 @@ gen_func_roles(const struct config *cfg)
 
 	print_func_db_role(0);
 	puts("{\n"
-	     "\tksql_role(ctx->db, r);\n"
+	     "\t/*ksql_role(ctx->db, r);*/\n"
 	     "\tif (r == ctx->role)\n"
 	     "\t\treturn;\n"
 	     "\tif (ROLE_none == ctx->role)\n"
@@ -890,9 +932,9 @@ gen_strct_func_srch(const struct config *cfg,
 	else
 		puts("");
 
-	printf("\tksql_stmt_alloc(db, &stmt, NULL, "
-	       "STMT_%s_BY_SEARCH_%zu);\n",
-	       s->parent->cname, num);
+	gen_print_stmt_alloc(cfg, 1,
+		"STMT_%s_BY_SEARCH_%zu", 
+		s->parent->cname, num);
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
@@ -1034,8 +1076,7 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 	if (pos > 1)
 		puts("");
 
-	printf("\tksql_stmt_alloc(db, &stmt, NULL, "
-	       "STMT_%s_INSERT);\n", p->cname);
+	gen_print_stmt_alloc(cfg, 1, "STMT_%s_INSERT", p->cname);
 
 	pos = npos = 1;
 	TAILQ_FOREACH(f, &p->fq, entries) {
@@ -1182,11 +1223,11 @@ gen_func_reffind(const struct config *cfg, const struct strct *p)
 		if (FIELD_NULL & f->ref->source->flags) {
 			printf("\tif (p->has_%s) {\n",
 				f->ref->source->name);
-			printf("\t\tksql_stmt_alloc(db, &stmt, NULL, "
-			       "STMT_%s_BY_UNIQUE_%s);\n"
-			       "\t\tksql_bind_int(stmt, 0, p->%s);\n",
-			       f->ref->target->parent->cname,
-			       f->ref->target->name, 
+			gen_print_stmt_alloc(cfg, 2,
+				"STMT_%s_BY_UNIQUE_%s", 
+				f->ref->target->parent->cname,
+				f->ref->target->name);
+			printf("\t\tksql_bind_int(stmt, 0, p->%s);\n",
 			       f->ref->source->name);
 			printf("\t\tc = ksql_stmt_step(stmt);\n"
 			       "\t\tassert(KSQL_ROW == c);\n"
@@ -1329,13 +1370,13 @@ gen_func_update(const struct config *cfg,
 		puts("");
 
 	if (UP_MODIFY == up->type)
-		printf("\tksql_stmt_alloc(db, &stmt, NULL, "
-		       "STMT_%s_UPDATE_%zu);\n",
-		       up->parent->cname, num);
+		gen_print_stmt_alloc(cfg, 1,
+			"STMT_%s_UPDATE_%zu", 
+			up->parent->cname, num);
 	else
-		printf("\tksql_stmt_alloc(db, &stmt, NULL, "
-		       "STMT_%s_DELETE_%zu);\n",
-		       up->parent->cname, num);
+		gen_print_stmt_alloc(cfg, 1,
+			"STMT_%s_DELETE_%zu", 
+			up->parent->cname, num);
 
 	npos = pos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries) {

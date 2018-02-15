@@ -3,6 +3,26 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.4.5</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-02-15">2018-02-15</time>
+		</header>
+		<aside>
+			<p>
+				Significantly expand the auditing capability to show both the export
+				and access to data.
+				Before, the concepts were too closely linked.
+				Now, both the JSON and non-JSON output are careful to note which
+				data is simply accessable, and which may be exported as well (and
+				via which paths through the code).
+			</p>
+			<p>
+				Also fix code output by non-role-based systems.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.4.4</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-01-30">2018-01-30</time>

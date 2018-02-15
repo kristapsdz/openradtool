@@ -523,6 +523,7 @@ gen_strct_func_list(const struct config *cfg,
 	     "");
 }
 
+#if 0
 /*
  * Count all roles beneath a given role excluding "all".
  * Returns the number, which is never zero.
@@ -651,6 +652,7 @@ gen_func_role_stmts(const struct role *role, const struct strct *p)
 	TAILQ_FOREACH(r, &role->subrq, entries)
 		gen_func_role_stmts(r, p);
 }
+#endif
 
 /*
  * Generate database opening.
@@ -661,8 +663,10 @@ gen_func_role_stmts(const struct role *role, const struct strct *p)
 static void
 gen_func_open(const struct config *cfg, int splitproc)
 {
+#if 0
 	const struct role *r;
 	const struct strct *p;
+#endif
 	size_t	i;
 
 	print_func_db_open(CFG_HAS_ROLES & cfg->flags, 0);

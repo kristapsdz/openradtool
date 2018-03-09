@@ -102,9 +102,9 @@
 		for (i = 0; i < list.length; i++)
 			list[i].onclick = function(d, o) {
 				return function() {
-					var e = show('aside');
+					var e = show('kwbp-aside');
 					hidecl(e, 'aside-types');
-					fillAccessfrom(show('aside-function-accessfrom'), d, o);
+					fillAccessfrom(show('kwbp-aside-function-accessfrom'), d, o);
 				};
 			}(data, obj);
 		replcl(root, 'audit-data-accessfrom-path', data.paths.length);
@@ -140,9 +140,9 @@
 		for (i = 0; i < list.length; i++)
 			list[i].onclick = function(s, f) {
 				return function() {
-					var e = show('aside');
+					var e = show('kwbp-aside');
 					hidecl(e, 'aside-types');
-					fillDataField(show('aside-data-field-data'), 
+					fillDataField(show('kwbp-aside-data-field-data'), 
 						s, f, exportable);
 				};
 			}(strct, field);
@@ -174,9 +174,9 @@
 		for (i = 0; i < list.length; i++)
 			list[i].onclick = function(n, t, f) {
 				return function() {
-					var e = show('aside');
+					var e = show('kwbp-aside');
 					hidecl(e, 'aside-types');
-					f(show('aside-function-' + t), n);
+					f(show('kwbp-aside-function-' + t), n);
 				};
 			}(name, type, func);
 	}
@@ -353,7 +353,7 @@
 		for (i = 0; i < list.length; i++)
 			repl(list[i], vec.length);
 
-		e = find('audit-' + name + '-list');
+		e = find('kwbp-audit-' + name + '-list');
 		sub = e.children[0];
 		clr(e);
 		for (i = 0; i < vec.length; i++) {
@@ -362,19 +362,19 @@
 			func(clone, vec[i]);
 		}
 
-		e = find('audit-byoperation-' + name);
+		e = find('kwbp-audit-byoperation-' + name);
 
 		if (0 === vec.length) {
 			if (null !== e &&
 			    ! e.classList.contains('noop'))
 				e.classList.add('noop');
-			hide('audit-' + name + '-list');
-			show('audit-no' + name);
+			hide('kwbp-audit-' + name + '-list');
+			show('kwbp-audit-no' + name);
 		} else {
 			if (null !== e)
 				e.classList.remove('noop');
-			show('audit-' + name + '-list');
-			hide('audit-no' + name);
+			show('kwbp-audit-' + name + '-list');
+			hide('kwbp-audit-no' + name);
 		}
 	}
 
@@ -556,8 +556,8 @@
 		var e, sub, i, j, clone, vec, list, ac;
 
 		if (typeof audit !== 'object' || null === audit) {
-			hide('parsing');
-			show('parseerr');
+			hide('kwbp-parsing');
+			show('kwbp-parseerr');
 			return;
 		}
 
@@ -565,24 +565,24 @@
 		
 		/* Initialise page view for consistency. */
 
-		if (null !== (e = find('aside-close')))
+		if (null !== (e = find('kwbp-aside-close')))
 			e.onclick = function() {
-				hide('aside');
+				hide('kwbp-aside');
 			};
 
-		repl('audit-role', audit.role);
+		repl('kwbp-audit-role', audit.role);
 		list = document.getElementsByClassName
 			('audit-toplevel-view');
 		for (i = 0; i < list.length; i++)
 			list[i].checked = true;
 
 		if (null !== audit.doc) {
-			show('audit-role-doc');
-			hide('audit-role-nodoc');
-			repl('audit-role-doc', audit.doc);
+			show('kwbp-audit-role-doc');
+			hide('kwbp-audit-role-nodoc');
+			repl('kwbp-audit-role-doc', audit.doc);
 		} else {
-			hide('audit-role-doc');
-			show('audit-role-nodoc');
+			hide('kwbp-audit-role-doc');
+			show('kwbp-audit-role-nodoc');
 		}
 
 		/* Start with per-structure audit. */
@@ -591,7 +591,7 @@
 			return(a.name.localeCompare(b.name));
 		});
 
-		e = find('audit-access-list');
+		e = find('kwbp-audit-access-list');
 		sub = e.children[0];
 		clr(e);
 		for (i = 0; i < ac.length; i++) {
@@ -632,9 +632,9 @@
 				vec.push(ac[i].access.lists[j]);
 		fillVec(vec, 'lists', fillList);
 
-		show('parsed');
-		hide('parsing');
-		hide('parseerr');
+		show('kwbp-parsed');
+		hide('kwbp-parsing');
+		hide('kwbp-parseerr');
 	}
 
 	root.init = init;

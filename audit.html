@@ -10,18 +10,18 @@
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
 		<link rel="stylesheet" href="audit.css" />
 	</head>
-	<body>
-		<section id="parsing">
+	<body class="kwbp">
+		<section id="kwbp-parsing">
 			Parsing&#8230;
 		</section>
-		<section id="parseerr" class="hide">
+		<section id="kwbp-parseerr" class="hide">
 			Parse error.
 		</section>
-		<section id="parsed" class="hide">
-			<aside class="hide" id="aside">
+		<section id="kwbp-parsed" class="hide">
+			<aside class="hide" id="kwbp-aside">
 				<div>
-					<span id="aside-close"><i class="fa fa-fw fa-close"></i></span>
-					<section id="aside-data-field-data" class="aside-types">
+					<span id="kwbp-aside-close"><i class="fa fa-fw fa-close"></i></span>
+					<section id="kwbp-aside-data-field-data" class="aside-types">
 						<header>
 							Field: <code class="audit-data-field-fullname"></code>
 							<span class="audit-data-field-export">
@@ -37,7 +37,7 @@
 						</article>
 						<article class="audit-data-field-doc"></article>
 					</section>
-					<section id="aside-function-accessfrom" class="aside-types">
+					<section id="kwbp-aside-function-accessfrom" class="aside-types">
 						<header>
 							Access path: <code class="audit-accessfrom-function"></code>
 						</header>
@@ -49,7 +49,7 @@
 						<h5>Paths</h5>
 						<ul class="audit-accessfrom-paths"></ul>
 					</section>
-					<section id="aside-function-delete" class="aside-types">
+					<section id="kwbp-aside-function-delete" class="aside-types">
 						<header>
 							Delete: <code class="audit-delete-function"></code>
 						</header>
@@ -59,7 +59,7 @@
 						</article>
 						<article class="audit-delete-doc"></article>
 					</section>
-					<section id="aside-function-list" class="aside-types">
+					<section id="kwbp-aside-function-list" class="aside-types">
 						<header>
 							List: <code class="audit-list-function"></code>
 						</header>
@@ -69,7 +69,7 @@
 						</article>
 						<article class="audit-list-doc"></article>
 					</section>
-					<section id="aside-function-iterate" class="aside-types">
+					<section id="kwbp-aside-function-iterate" class="aside-types">
 						<header>
 							Iterate: <code class="audit-iterate-function"></code>
 						</header>
@@ -79,7 +79,7 @@
 						</article>
 						<article class="audit-iterate-doc"></article>
 					</section>
-					<section id="aside-function-update" class="aside-types">
+					<section id="kwbp-aside-function-update" class="aside-types">
 						<header>
 							Update: <code class="audit-update-function"></code>
 						</header>
@@ -89,7 +89,7 @@
 						</article>
 						<article class="audit-update-doc"></article>
 					</section>
-					<section id="aside-function-search" class="aside-types">
+					<section id="kwbp-aside-function-search" class="aside-types">
 						<header>
 							Search: <code class="audit-search-function"></code>
 						</header>
@@ -99,12 +99,12 @@
 						</article>
 						<article class="audit-search-doc"></article>
 					</section>
-					<section id="aside-function-insert" class="aside-types">
+					<section id="kwbp-aside-function-insert" class="aside-types">
 						<header>
 							Insert: <code class="audit-insert-function"></code>
 						</header>
 					</section>
-					<section id="aside-function-update" class="aside-types">
+					<section id="kwbp-aside-function-update" class="aside-types">
 						<header>
 							Update: <code class="audit-update-function"></code>
 						</header>
@@ -120,21 +120,21 @@
 				<h5>
 					Role name
 				</h5>
-				<h1 id="audit-role"></h1>
+				<h1 id="kwbp-audit-role"></h1>
 				<h5>
 					Role documentation
 				</h5>
-				<div id="audit-role-nodoc" class="audit-noentry">
+				<div id="kwbp-audit-role-nodoc" class="audit-noentry">
 					Role has no documentation.
 				</div>
-				<div id="audit-role-doc"></div>
+				<div id="kwbp-audit-role-doc"></div>
 			</header>
 			<h2>
 				By structure&#8230;
 			</h2>
 			<section>
-				<input type="radio" value="0" name="audit-data-select" id="audit-data-none" class="audit-toplevel-view" checked="checked" />
-				<article id="audit-access-list">
+				<input type="radio" value="0" name="audit-data-select" id="kwbp-audit-data-none" class="audit-toplevel-view" checked="checked" />
+				<article id="kwbp-audit-access-list">
 					<section>
 						<input type="radio" name="audit-data-select" class="audit-view" />
 						<header>
@@ -263,10 +263,10 @@
 				By operation&#8230;
 			</h2>
 			<section>
-				<input type="radio" value="0" name="audit-function-select" id="audit-function-none" class="audit-toplevel-view" checked="checked" />
-				<article id="audit-function-list">
-					<section id="audit-byoperation-deletes">
-						<input type="radio" value="6" name="audit-function-select" id="audit-function-deletes" />
+				<input type="radio" value="0" name="audit-function-select" id="kwbp-audit-function-none" class="audit-toplevel-view" checked="checked" />
+				<article id="kwbp-audit-function-list">
+					<section id="kwbp-audit-byoperation-deletes">
+						<input type="radio" value="6" name="audit-function-select" id="kwbp-audit-function-deletes" />
 						<header>
 							<label class="audit-is-shown" for="audit-function-none">
 								<span>
@@ -288,18 +288,18 @@
 							</label>
 						</header>
 						<section>
-							<article id="audit-deletes-list">
+							<article id="kwbp-audit-deletes-list">
 								<div>
 									<code class="audit-delete-function audit-delete-more audit-link"></code>
 								</div>
 							</article>
-							<article id="audit-nodeletes" class="audit-noentry">
+							<article id="kwbp-audit-nodeletes" class="audit-noentry">
 								No deletes.
 							</article>
 						</section>
 					</section>
-					<section id="audit-byoperation-inserts">
-						<input type="radio" value="1" name="audit-function-select" id="audit-function-inserts" />
+					<section id="kwbp-audit-byoperation-inserts">
+						<input type="radio" value="1" name="audit-function-select" id="kwbp-audit-function-inserts" />
 						<header>
 							<label class="audit-is-shown" for="audit-function-none">
 								<span>
@@ -321,18 +321,18 @@
 							</label>
 						</header>
 						<section>
-							<article id="audit-inserts-list">
+							<article id="kwbp-audit-inserts-list">
 								<div>
 									<code class="audit-insert-function audit-insert-more audit-link"></code>
 								</div>
 							</article>
-							<article id="audit-noinserts" class="audit-noentry">
+							<article id="kwbp-audit-noinserts" class="audit-noentry">
 								No insert.
 							</article>
 						</section>
 					</section>
-					<section id="audit-byoperation-iterates">
-						<input type="radio" value="2" name="audit-function-select" id="audit-function-iterates" />
+					<section id="kwbp-audit-byoperation-iterates">
+						<input type="radio" value="2" name="audit-function-select" id="kwbp-audit-function-iterates" />
 						<header>
 							<label class="audit-is-shown" for="audit-function-none">
 								<span>
@@ -354,18 +354,18 @@
 							</label>
 						</header>
 						<section>
-							<article id="audit-iterates-list">
+							<article id="kwbp-audit-iterates-list">
 								<div>
 									<code class="audit-iterate-function audit-iterate-more audit-link"></code>
 								</div>
 							</article>
-							<article id="audit-noiterates" class="audit-noentry">
+							<article id="kwbp-audit-noiterates" class="audit-noentry">
 								No iterates.
 							</article>
 						</section>
 					</section>
-					<section id="audit-byoperation-lists">
-						<input type="radio" value="3" name="audit-function-select" id="audit-function-lists" />
+					<section id="kwbp-audit-byoperation-lists">
+						<input type="radio" value="3" name="audit-function-select" id="kwbp-audit-function-lists" />
 						<header>
 							<label class="audit-is-shown" for="audit-function-none">
 								<span>
@@ -387,18 +387,18 @@
 							</label>
 						</header>
 						<section>
-							<article id="audit-lists-list">
+							<article id="kwbp-audit-lists-list">
 								<div>
 									<code class="audit-list-function audit-list-more audit-link"></code>
 								</div>
 							</article>
-							<article id="audit-nolists" class="audit-noentry">
+							<article id="kwbp-audit-nolists" class="audit-noentry">
 								No lists.
 							</article>
 						</section>
 					</section>
-					<section id="audit-byoperation-searches">
-						<input type="radio" value="4" name="audit-function-select" id="audit-function-searches" />
+					<section id="kwbp-audit-byoperation-searches">
+						<input type="radio" value="4" name="audit-function-select" id="kwbp-audit-function-searches" />
 						<header>
 							<label class="audit-is-shown" for="audit-function-none">
 								<span>
@@ -420,18 +420,18 @@
 							</label>
 						</header>
 						<section>
-							<article id="audit-searches-list">
+							<article id="kwbp-audit-searches-list">
 								<div>
 									<code class="audit-search-function audit-search-more audit-link"></code>
 								</div>
 							</article>
-							<article id="audit-nosearches" class="audit-noentry">
+							<article id="kwbp-audit-nosearches" class="audit-noentry">
 								No searches.
 							</article>
 						</section>
 					</section>
-					<section id="audit-byoperation-updates">
-						<input type="radio" value="5" name="audit-function-select" id="audit-function-updates" />
+					<section id="kwbp-audit-byoperation-updates">
+						<input type="radio" value="5" name="audit-function-select" id="kwbp-audit-function-updates" />
 						<header>
 							<label class="audit-is-shown" for="audit-function-none">
 								<span>
@@ -453,12 +453,12 @@
 							</label>
 						</header>
 						<section>
-							<article id="audit-updates-list">
+							<article id="kwbp-audit-updates-list">
 								<div>
 									<code class="audit-update-function audit-update-more audit-link"></code>
 								</div>
 							</article>
-							<article id="audit-noupdates" class="audit-noentry">
+							<article id="kwbp-audit-noupdates" class="audit-noentry">
 								No updates.
 							</article>
 						</section>

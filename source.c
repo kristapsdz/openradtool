@@ -184,40 +184,6 @@ gen_role(const struct role *r)
 }
 
 /*
- * When accepting only given roles, recursively print all of those roles
- * out now.
- * Also print a comment stating what we're doing.
- */
-static void
-gen_func_rolemap(const struct rolemap *rm)
-{
-	const struct roleset *rs;
-
-	if (NULL == rm) {
-		puts("");
-		print_commentt(1, COMMENT_C, 
-			"No roles were defined for this function "
-			"and we're in RBAC mode, so abort() if "
-			"this function is called.\n"
-			"XXX: this is probably not what you want.");
-		puts("\n"
-		     "\tabort();\n");
-		return;
-	}
-
-	puts("\n"
-	     "\tswitch (ctx->role) {");
-	TAILQ_FOREACH(rs, &rm->setq, entries)
-		gen_role(rs->role);
-	print_commentt(2, COMMENT_C, 
-		"Restrict to allowed roles.");
-	puts("\t\tbreak;\n"
-	     "\tdefault:\n"
-	     "\t\tabort();\n"
-	     "\t}\n");
-}
-
-/*
  * Fill an individual field from the database.
  */
 static void
@@ -367,10 +333,7 @@ gen_strct_func_iter(const struct config *cfg,
 	if (CFG_HAS_ROLES & cfg->flags)
 		puts("\tstruct ksql *db = ctx->db;");
 
-	if (CFG_HAS_ROLES & cfg->flags)
-		gen_func_rolemap(s->rolemap);
-	else
-		puts("");
+	puts("");
 
 	gen_print_stmt_alloc(cfg, 1,
 		"STMT_%s_BY_SEARCH_%zu", 
@@ -453,10 +416,7 @@ gen_strct_func_list(const struct config *cfg,
 	if (CFG_HAS_ROLES & cfg->flags)
 		puts("\tstruct ksql *db = ctx->db;");
 
-	if (CFG_HAS_ROLES & cfg->flags)
-		gen_func_rolemap(s->rolemap);
-	else
-		puts("");
+	puts("");
 
 	printf("\tq = malloc(sizeof(struct %s_q));\n"
 	       "\tif (NULL == q) {\n"
@@ -523,7 +483,6 @@ gen_strct_func_list(const struct config *cfg,
 	     "");
 }
 
-#if 0
 /*
  * Count all roles beneath a given role excluding "all".
  * Returns the number, which is never zero.
@@ -538,7 +497,6 @@ gen_func_role_count(const struct role *role)
 		i++;
 	TAILQ_FOREACH(r, &role->subrq, entries)
 		i += gen_func_role_count(r);
-	assert(i > 0);
 	return(i);
 }
 
@@ -555,104 +513,206 @@ gen_func_role_matrices(const struct role *role, size_t rolesz)
 		gen_func_role_matrices(r, rolesz);
 }
 
+/*
+ * Assign the transition and statement declaration for the given role to
+ * the configuration and initialise the arrays' values.
+ */
+static void
+gen_func_role_zero(const struct role *role, size_t rolesz)
+{
+	const struct role *r;
+
+	/* 
+	 * Don't set role transition for default.
+	 * This is because we do this for each role.
+	 * For no other reason than to get the role name when we do the
+	 * assignment instead of having a loop.
+	 */
+
+	if (0 == strcmp(role->name, "default")) 
+		puts("\troles[ROLE_default].roles = "
+				"role_perms_default;\n"
+		     "\troles[ROLE_default].stmts = "
+		     		"role_stmts_default;\n"
+		     "\tmemset(role_stmts_default, 0, "
+		      "sizeof(int) * STMT__MAX);");
+	else if (strcmp(role->name, "all"))
+		printf("\troles[ROLE_%s].roles = role_perms_%s;\n"
+		       "\troles[ROLE_%s].stmts = role_stmts_%s;\n"
+		       "\tmemset(role_perms_%s, 0, "
+		        "sizeof(int) * %zu);\n"
+		       "\tmemset(role_stmts_%s, 0, "
+		        "sizeof(int) * STMT__MAX);\n",
+		       role->name, role->name,
+		       role->name, role->name,
+		       role->name, rolesz, role->name);
+
+	if (strcmp(role->name, "all"))
+		printf("\trole_perms_default"
+		       "[ROLE_%s] = 1;\n\n", role->name);
+
+	TAILQ_FOREACH(r, &role->subrq, entries)
+		gen_func_role_zero(r, rolesz);
+}
+
+/*
+ * Recursively generate possible assignments.
+ * This is tree-based: for each node, we can ascend to the root of the
+ * role tree.
+ * This describes that a child role can ascend to the parent, but a
+ * parent cannot descend (gain more privileges).
+ */
 static void
 gen_func_role_assign(const struct role *role)
 {
 	const struct role *r;
 
+	/* "All" isn't a role and "default" can switch to anybody. */
+
 	if (strcmp(role->name, "all") &&
 	    strcmp(role->name, "default"))
-		for (r = role; NULL != r; r = r->parent)
-			printf("\troles[ROLE_%s].roles[ROLE_%s] = 1;\n",
+		for (r = role; NULL != r; r = r->parent) {
+			if (0 == strcmp(r->name, "all"))
+				continue;
+			printf("\trole_perms_%s[ROLE_%s] = 1;\n",
 				role->name, r->name);
+		}
+
+	if (strcmp(role->name, "all") &&
+	    strcmp(role->name, "default") &&
+	    strcmp(role->name, "none"))
+		printf("\trole_perms_%s[ROLE_none] = 1;\n", 
+			role->name);
+
 	TAILQ_FOREACH(r, &role->subrq, entries)
 		gen_func_role_assign(r);
 }
 
-static void
-gen_func_role_zero(const struct role *role, size_t rolesz)
+/*
+ * Recursive descent checking whether "role" matches.
+ * See check_rolemap().
+ */
+static int
+check_rolemap_r(const struct role *role, const struct role *checkrole)
 {
 	const struct role *r;
-	int	 perm;
 
-	perm = 0 == strcmp(role->name, "default");
+	TAILQ_FOREACH(r, &checkrole->subrq, entries)
+		if (role == r || check_rolemap_r(role, r))
+			return(1);
 
-	if (strcmp(role->name, "all"))
-		printf("\troles[ROLE_%s].roles = role_perms_%s;\n"
-		       "\troles[ROLE_%s].stmts = role_stmts_%s;\n"
-		       "\tmemset(roles[ROLE_%s].roles, %d, "
-		        "sizeof(int) * %zu);\n"
-		       "\tmemset(roles[ROLE_%s].stmts, 0, "
-		        "sizeof(int) * STMT__MAX);\n",
-		       role->name, role->name,
-		       role->name, role->name,
-		       role->name, perm, rolesz, 
-		       role->name);
-	TAILQ_FOREACH(r, &role->subrq, entries)
-		gen_func_role_zero(r, rolesz);
+	return(0);
 }
 
+/*
+ * The rolemap defines all roles (in "setq") that are allowed to run
+ * whatever we're looking at.
+ * Since all children of a role inherit the parent's allowances, we need
+ * to descend into all children of a role too.
+ * The "role" is what we're checking can run whatever we're looking at.
+ * Return zero if disallowed, non-zero if allowed.
+ */
 static int
 check_rolemap(const struct role *role, const struct rolemap *rm)
 {
 	const struct roleset *rs;
-	const struct role *r;
 
 	if (NULL == rm)
 		return(0);
 
 	TAILQ_FOREACH(rs, &rm->setq, entries) {
 		assert(NULL != rs->role);
-		for (r = rs->role; NULL != r; r = r->parent)
-			if (role == r)
-				return(1);
+		if (rs->role == role ||
+		    check_rolemap_r(role, rs->role))
+			return(1);
 	}
 
 	return(0);
 }
 
-static void
+static size_t
 gen_func_role_stmts(const struct role *role, const struct strct *p)
 {
 	const struct search *s;
 	const struct update *u;
 	const struct field *f;
 	const struct role *r;
-	size_t	 pos;
+	size_t	 pos, shown = 0;
 
-	if (strcmp(role->name, "none") && strcmp(role->name, "all")) {
-		TAILQ_FOREACH(f, &p->fq, entries)
-			if (FIELD_UNIQUE & f->flags ||
-			    FIELD_ROWID & f->flags)
-				printf("\troles[ROLE_%s].stmts[STMT_%s_BY_UNIQUE_%s] = 1;\n", 
-					role->name, p->cname, f->name);
+	/* Ignore "all" and "none" virtual roles for assignment. */
 
-		pos = 0;
-		TAILQ_FOREACH(s, &p->sq, entries)
-			if (check_rolemap(role, s->rolemap)) {
-				printf("\troles[ROLE_%s].stmts[STMT_%s_BY_SEARCH_%zu] = 1;\n", 
-					role->name, p->cname, pos++);
-			}
-
-		if (NULL != p->ins && check_rolemap(role, p->ins->rolemap))
-			printf("\troles[ROLE_%s].stmts[STMT_%s_INSERT] = 1;\n", 
-				role->name, p->cname);
-		pos = 0;
-		TAILQ_FOREACH(u, &p->uq, entries)
-			if (check_rolemap(role, u->rolemap))
-				printf("\troles[ROLE_%s].stmts[STMT_%s_UPDATE_%zu] = 1;\n", 
-					role->name, p->cname, pos++);
-		pos = 0;
-		TAILQ_FOREACH(u, &p->dq, entries)
-			if (check_rolemap(role, u->rolemap))
-				printf("\troles[ROLE_%s].stmts[STMT_%s_DELETE_%zu] = 1;\n", 
-					role->name, p->cname, pos++);
+	if (0 == strcmp(role->name, "none") ||
+	    0 == strcmp(role->name, "all")) {
+		TAILQ_FOREACH(r, &role->subrq, entries)
+			shown += gen_func_role_stmts(r, p);
+		return(shown);
 	}
 
+	/*
+	 * FIXME: this is not acceptable.
+	 * If our structure has any unique fields, allow each role to
+	 * access this statement.
+	 */
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FIELD_UNIQUE & f->flags ||
+		    FIELD_ROWID & f->flags)
+			printf("\trole_stmts_%s"
+			       "[STMT_%s_BY_UNIQUE_%s] = 1;\n", 
+				role->name, p->cname, f->name);
+		shown++;
+	}
+
+	/*
+	 * For all the operations on this structure, see if the given
+	 * role allows it to run the corresponding statement.
+	 * We use the "check_rolemap" function for this, which checks if
+	 * a role is assigned to the structure.
+	 * If it is, we allow it for the current role and all subroles.
+	 */
+
+	pos = 0;
+	TAILQ_FOREACH(s, &p->sq, entries) {
+		if (check_rolemap(role, s->rolemap))
+			printf("\trole_stmts_%s"
+			       "[STMT_%s_BY_SEARCH_%zu] = 1;\n", 
+				role->name, p->cname, pos);
+		pos++;
+	}
+	shown += pos;
+
+	if (NULL != p->ins && 
+	    check_rolemap(role, p->ins->rolemap)) {
+		printf("\trole_stmts_%s[STMT_%s_INSERT] = 1;\n", 
+			role->name, p->cname);
+		shown++;
+	}
+
+	pos = 0;
+	TAILQ_FOREACH(u, &p->uq, entries) {
+		if (check_rolemap(role, u->rolemap))
+			printf("\trole_stmts_%s"
+		  	       "[STMT_%s_UPDATE_%zu] = 1;\n", 
+				role->name, p->cname, pos);
+		pos++;
+	}
+	shown += pos;
+
+	pos = 0;
+	TAILQ_FOREACH(u, &p->dq, entries) {
+		if (check_rolemap(role, u->rolemap))
+			printf("\trole_stmts_%s"
+			       "[STMT_%s_DELETE_%zu] = 1;\n", 
+				role->name, p->cname, pos);
+		pos++;
+	}
+	shown += pos;
+
 	TAILQ_FOREACH(r, &role->subrq, entries)
-		gen_func_role_stmts(r, p);
+		shown += gen_func_role_stmts(r, p);
+
+	return(shown);
 }
-#endif
 
 /*
  * Generate database opening.
@@ -663,11 +723,9 @@ gen_func_role_stmts(const struct role *role, const struct strct *p)
 static void
 gen_func_open(const struct config *cfg, int splitproc)
 {
-#if 0
 	const struct role *r;
 	const struct strct *p;
-#endif
-	size_t	i;
+	size_t	i, shown;
 
 	print_func_db_open(CFG_HAS_ROLES & cfg->flags, 0);
 
@@ -682,13 +740,11 @@ gen_func_open(const struct config *cfg, int splitproc)
 		 * So do this recursively.
 		 */
 		i = 0;
-#if 0
 		TAILQ_FOREACH(r, &cfg->rq, entries)
 			i += gen_func_role_count(r);
 		assert(i > 0);
 		TAILQ_FOREACH(r, &cfg->rq, entries)
 			gen_func_role_matrices(r, i);
-#endif
 		printf("\tstruct ksqlrole roles[%zu];\n"
 		       "\tstruct kwbp *ctx;\n"
 		       "\n"
@@ -696,31 +752,44 @@ gen_func_open(const struct config *cfg, int splitproc)
 		       "\tif (NULL == ctx)\n"
 		       "\t\treturn(NULL);\n"
 		       "\n", i);
-#if 0
+		print_commentt(1, COMMENT_C,
+			"Initialise our roles and statements: "
+			"disallow all statements and role "
+			"transitions except for ROLE_default, "
+			"which can transition to anybody.");
+		puts("");
 		TAILQ_FOREACH(r, &cfg->rq, entries)
 			gen_func_role_zero(r, i);
+		print_commentt(1, COMMENT_C,
+			"Assign roles.\n"
+			"Everybody can transition to themselves "
+			"(this is always allowed in ksql(3), so make "
+			"it explicit for us).\n"
+			"Furthermore, everybody is allowed to "
+			"transition into ROLE_none.");
 		puts("");
 		TAILQ_FOREACH(r, &cfg->rq, entries)
 			gen_func_role_assign(r);
 		puts("");
-		TAILQ_FOREACH(r, &cfg->rq, entries) {
-			TAILQ_FOREACH(p, &cfg->sq, entries)
-				gen_func_role_stmts(r, p);
+		TAILQ_FOREACH(p, &cfg->sq, entries) {
+			print_commentv(1, COMMENT_C, 
+				"White-listing fields and "
+				"operations for structure \"%s\".",
+				p->name);
+			puts("");
+			shown = 0;
+			TAILQ_FOREACH(r, &cfg->rq, entries)
+				shown += gen_func_role_stmts(r, p);
+			if (shown)
+				puts("");
 		}
-		printf("\n"
-		       "\tksql_cfg_defaults(&cfg);\n"
+		printf("\tksql_cfg_defaults(&cfg);\n"
 		       "\tcfg.stmts.stmts = stmts;\n"
 		       "\tcfg.stmts.stmtsz = STMT__MAX;\n"
 		       "\tcfg.roles.roles = roles;\n"
 		       "\tcfg.roles.rolesz = %zu;\n"
 		       "\tcfg.roles.defrole = ROLE_default;\n"
 		       "\n", i);
-#endif
-		printf("\n"
-		       "\tksql_cfg_defaults(&cfg);\n"
-		       "\tcfg.stmts.stmts = stmts;\n"
-		       "\tcfg.stmts.stmtsz = STMT__MAX;\n"
-		       "\n");
 	} else 
 		puts("\n"
 		     "\tksql_cfg_defaults(&cfg);\n");
@@ -805,7 +874,7 @@ gen_func_roles(const struct config *cfg)
 
 	print_func_db_role(0);
 	puts("{\n"
-	     "\t/*ksql_role(ctx->db, r);*/\n"
+	     "\tksql_role(ctx->db, r);\n"
 	     "\tif (r == ctx->role)\n"
 	     "\t\treturn;\n"
 	     "\tif (ROLE_none == ctx->role)\n"
@@ -931,10 +1000,7 @@ gen_strct_func_srch(const struct config *cfg,
 	if (CFG_HAS_ROLES & cfg->flags)
 		puts("\tstruct ksql *db = ctx->db;");
 
-	if (CFG_HAS_ROLES & cfg->flags)
-		gen_func_rolemap(s->rolemap);
-	else
-		puts("");
+	puts("");
 
 	gen_print_stmt_alloc(cfg, 1,
 		"STMT_%s_BY_SEARCH_%zu", 
@@ -1050,12 +1116,7 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 		if (FTYPE_PASSWORD == f->type)
 			printf("\tchar hash%zu[64];\n", pos++);
 
-	/* Check our roles. */
-
-	if (CFG_HAS_ROLES & cfg->flags && NULL != p->ins)
-		gen_func_rolemap(p->ins->rolemap);
-	else if ( ! (CFG_HAS_ROLES & cfg->flags))
-		puts("");
+	puts("");
 
 	/* Actually generate hashes, if necessary. */
 
@@ -1348,10 +1409,7 @@ gen_func_update(const struct config *cfg,
 		if (FTYPE_PASSWORD == ref->field->type)
 			printf("\tchar hash%zu[64];\n", pos++);
 
-	if (CFG_HAS_ROLES & cfg->flags)
-		gen_func_rolemap(up->rolemap);
-	else
-		puts("");
+	puts("");
 
 	/* Create hash from password. */
 

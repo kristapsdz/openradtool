@@ -2,8 +2,14 @@
 
 include Makefile.configure
 
-VERSION		 = 0.4.5
-CFLAGS		+= -DVERSION=\"$(VERSION)\"
+VERSION_BUILD	 = 6
+VERSION_MINOR	 = 4
+VERSION_MAJOR	 = 0
+VERSION_STAMP	:= `bc -e "(($(VERSION_BUILD) + 1) + \
+			($(VERSION_MINOR) + 1) * 100 + \
+			($(VERSION_MAJOR) + 1) * 10000)" </dev/null`
+VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
+CFLAGS		+= -DVERSION=\"$(VERSION)\" -DVSTAMP=$(VERSION_STAMP)
 OBJS		 = audit.o \
 		   comments.o \
 		   compats.o \

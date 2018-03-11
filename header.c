@@ -689,6 +689,10 @@ gen_c_header(const struct config *cfg, int json,
 	       "DO NOT EDIT!");
 	puts("");
 
+	printf("#define KWBP_VERSION \"%s\"\n"
+	       "#define KWBP_VSTAMP %lld\n"
+	       "\n", VERSION, (long long)VSTAMP);
+
 	if (dstruct) {
 		TAILQ_FOREACH(e, &cfg->eq, entries)
 			gen_enum(e);

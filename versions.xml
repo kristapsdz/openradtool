@@ -3,6 +3,22 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.4.6</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-03-10">2018-03-10</time>
+		</header>
+		<aside>
+			<p>
+				Fully switch over to <a
+					href="https://kristaps.bsd.lv/ksql">ksql(3)</a>'s roles for
+				database management.
+				Also add <code>KWBP_VERSION</code> and <code>KWBP_VSTAMP</code> to
+				the header file.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.4.5</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-02-15">2018-02-15</time>

@@ -40,9 +40,9 @@ MAN1S		 = kwebapp.1 \
 		   kwebapp-javascript.1 \
 		   kwebapp-sql.1 \
 		   kwebapp-sqldiff.1
+DOTAREXEC	 = configure
 DOTAR		 = comments.c \
 		   compats.c \
-		   configure \
 		   extern.h \
 		   header.c \
 		   javascript.c \
@@ -113,9 +113,10 @@ install: kwebapp
 kwebapp.tar.gz.sha512: kwebapp.tar.gz
 	sha512 kwebapp.tar.gz >$@
 
-kwebapp.tar.gz: $(DOTAR)
+kwebapp.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/kwebapp-$(VERSION)/
 	install -m 0444 $(DOTAR) .dist/kwebapp-$(VERSION)
+	install -m 0555 $(DOTAREXEC) .dist/kwebapp-$(VERSION)
 	( cd .dist/ && tar zcf ../$@ ./ )
 	rm -rf .dist/
 

@@ -91,6 +91,19 @@ LINKS		 = kwebapp-audit \
 
 all: kwebapp $(LINKS)
 
+afl::
+	$(MAKE) clean
+	$(MAKE) all CC=afl-gcc
+	cp kwebapp afl
+	ln -f afl/kwebapp afl/kwebapp-audit
+	ln -f afl/kwebapp afl/kwebapp-audit-gv
+	ln -f afl/kwebapp afl/kwebapp-audit-json
+	ln -f afl/kwebapp afl/kwebapp-c-source
+	ln -f afl/kwebapp afl/kwebapp-c-header
+	ln -f afl/kwebapp afl/kwebapp-javascript
+	ln -f afl/kwebapp afl/kwebapp-sql
+	ln -f afl/kwebapp afl/kwebapp-sqldiff
+
 kwebapp: $(OBJS)
 	$(CC) -o $@ $(OBJS)
 

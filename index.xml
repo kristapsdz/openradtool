@@ -263,7 +263,9 @@
 			<section>
 				<p>
 					We can audit <a href="https://learnbchs.org/rbac.html">role-based access control</a> access with <a
-						href="kwebapp-audit.1.html">kwebapp-audit(1)</a>.
+						href="kwebapp-audit.1.html">kwebapp-audit(1)</a>, <a
+						href="kwebapp-audit-json.1.html">kwebapp-audit-json(1)</a>, and <a
+						href="kwebapp-audit-gv.1.html">kwebapp-audit-gv(1)</a>.
 					By passing a role defined in the configuration to <a href="kwebapp-audit.1.html">kwebapp-audit(1)</a>,
 					we're able to see the full availability of data and operations available to the role.
 				</p>
@@ -271,14 +273,14 @@
 					In the example role-backed <a href="audit-example.txt.html">audit-example.txt</a> with roles
 					<code>user</code> and <code>admin</code>, for example, we can fully audit for the <code>user</code> role
 					as seen in the exemplar <a href="audit.html">audit.html</a>.
-					We create this by passing the <b>-j</b> flag.
+					We create with <a href="kwebapp-audit-json.1.html">kwebapp-audit-json(1)</a>.
 					This visualisation breaks down access by structures (the foundational objects of <a
 						href="kwebapp.5.html">kwebapp(5)</a>) and then grouped by operation.
 				</p>
 			</section>
 		</article>
 		<footer>
-			Copyright &#xa9; 2017, <a href="https://github.com/kristapsdz">Kristaps Dzonsons</a>
+			Copyright &#xa9; 2017&#8211;2018, <a href="https://github.com/kristapsdz">Kristaps Dzonsons</a>
 		</footer>
 	</body>
 </html>

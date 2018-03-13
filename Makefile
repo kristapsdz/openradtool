@@ -5,9 +5,9 @@ include Makefile.configure
 VERSION_BUILD	 = 6
 VERSION_MINOR	 = 4
 VERSION_MAJOR	 = 0
-VERSION_STAMP	:= `bc -e "(($(VERSION_BUILD) + 1) + \
+VERSION_STAMP	:= `echo "(($(VERSION_BUILD) + 1) + \
 			($(VERSION_MINOR) + 1) * 100 + \
-			($(VERSION_MAJOR) + 1) * 10000)" </dev/null`
+			($(VERSION_MAJOR) + 1) * 10000)" | bc`
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 CFLAGS		+= -DVERSION=\"$(VERSION)\" -DVSTAMP=$(VERSION_STAMP)
 OBJS		 = audit.o \

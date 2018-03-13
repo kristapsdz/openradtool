@@ -34,6 +34,8 @@ The generated files are currently
 (optionally)
 [kcgi(3)](https://kristaps.bsd.lv/kcgi) for JSON or validation output.
 
+**You will need the newest library version to use *kwebapp*.**  All of these tools are built in tandem.
+
 Why is *kwebapp* handy?  It removes a lot of "boilerplate" code querying
 the database and allocating objects.  Some more features:
 

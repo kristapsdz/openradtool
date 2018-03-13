@@ -589,8 +589,9 @@ int		 parse_link(struct config *);
 struct config	*parse_config(FILE *, const char *);
 void		 parse_free(struct config *);
 
-int		 gen_audit(const struct config *, 
-			int, const char *);
+int		 gen_audit(const struct config *, const char *);
+int		 gen_audit_gv(const struct config *, const char *);
+int		 gen_audit_json(const struct config *, const char *);
 void		 gen_c_header(const struct config *, 
 			int, int, int, int, int);
 void		 gen_c_source(const struct config *, int,

@@ -1,6 +1,6 @@
 .\"	$OpenBSD$
 .\"
-.\" Copyright (c) 2017--2018 Kristaps Dzonsons <kristaps@bsd.lv>
+.\" Copyright (c) 2018 Kristaps Dzonsons <kristaps@bsd.lv>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -15,13 +15,13 @@
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .Dd $Mdocdate$
-.Dt KWEBAPP-AUDIT 1
+.Dt KWEBAPP-AUDIT-GV 1
 .Os
 .Sh NAME
-.Nm kwebapp-audit
-.Nd audit web application role access
+.Nm kwebapp-audit-gv
+.Nd audit web application role access as GraphViz
 .Sh SYNOPSIS
-.Nm kwebapp-audit
+.Nm kwebapp-audit-gv
 .Ar role
 .Op Ar config
 .Sh DESCRIPTION
@@ -32,9 +32,7 @@ utility accepts a configuration file
 .Pq defaulting to standard input
 and audits all access available to
 .Ar role .
-.Pp
-It outputs the role's access to the data and operations available (if
-any) to each structure.
+The output is rendered in the GraphViz format.
 .Pp
 This tool is still experimental.
 .\" The following requests should be uncommented and used where appropriate.

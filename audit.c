@@ -781,32 +781,64 @@ gen_audit_exportable_gv(const struct strct *p,
 {
 	const struct field *f;
 	const struct search *s;
-	size_t	 i, j, k, l;
-	int	 export, exportable = 0;
+	size_t	  i, j, k, cols = 2 /* FIXME: settable */, col;
+	int	  rc, export, exportable = 0;
+	char	**edges = NULL;
+	char	 *buf;
+	size_t	  edgesz = 0;
 
 	for (i = 0; 0 == exportable && i < ac->origsz; i++) 
 		if (ac->origs[i].exported)
 			exportable = 1;
 
+	/* Start with our HTML record. */
+
 	printf("\tstruct_%s[shape=none, fillcolor=\"%s\", "
 	        "style=\"filled\", label=<\n"
-	       "\t\t<table>\n"
-	       "\t\t\t<tr><td port=\"_top\"><b>%s</b></td></tr>\n",
-	       p->name, exportable ? "#ffffff" : "#cccccc", p->name);
+	       "\t\t<table cellspacing=\"0\" "
+	        "border=\"0\" cellborder=\"1\">\n"
+	       "\t\t\t<tr>\n"
+	       "\t\t\t\t<td colspan=\"%zu\" port=\"_top\">\n"
+	       "\t\t\t\t\t<b>%s</b>\n"
+	       "\t\t\t\t</td>\n"
+	       "\t\t\t</tr>\n",
+	       p->name, exportable ? "#ffffff" : "#cccccc", 
+	       cols, p->name);
 
+	/* Columnar fields. */
+
+	col = 0;
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		export = check_field_exported(f, role, exportable);
-		printf("\t\t\t<tr><td bgcolor=\"%s\" "
-		       "port=\"%s\">%s</td></tr>\n", 
+		if (col && 0 == (col % cols))
+			puts("\t\t\t</tr>");
+		if (0 == (col % cols))
+			puts("\t\t\t<tr>");
+		printf("\t\t\t\t<td bgcolor=\"%s\" "
+		       "port=\"%s\">%s</td>\n", 
 		       export ? "#ffffff" : "#aaaaaa",
 		       f->name, f->name);
+		col++;
 	}
+
+	/* Finish fields remaining in row. */
+
+	if (0 != (col % cols)) {
+		while (0 != (col % cols)) {
+			puts("\t\t\t\t<td></td>");
+			col++;
+		}
+		printf("\t\t\t</tr>\n");
+	}
+
+	/* Show query routines, each on their own row. */
 
 	TAILQ_FOREACH(s, &p->sq, entries) {
 		if (NULL == s->rolemap ||
 		    ! check_rolemap(s->rolemap, role))
 			continue;
-		printf("\t\t\t<tr><td>");
+		printf("\t\t\t<tr><td bgcolor=\"#eeeeee\" "
+		       "colspan=\"%zu\">", cols);
 		print_name_db_search(s);
 		puts("</td></tr>");
 	}
@@ -814,48 +846,58 @@ gen_audit_exportable_gv(const struct strct *p,
 	printf("\t\t</table>>];\n");
 
 	for (i = 0; i < ac->origsz; i++) {
-		if (1 == ac->origs[i].fsz) {
-			/* First, de-duplicate edges. */
-			for (k = 0; k < i; k++) {
-				if (1 != ac->origs[k].fsz) 
-					continue;
-				if (ac->origs[k].fs[0] == ac->origs[i].fs[0])
-					break;
-			}
-			if (k < i)
-				continue;
-			printf("\tstruct_%s:%s -> struct_%s:_top;\n",
-				ac->origs[i].fs[0]->parent->name,
-				ac->origs[i].fs[0]->name,
-				p->name);
-			continue;
-		} else if (0 == ac->origs[i].fsz)
+		if (0 == ac->origs[i].fsz) 
 			continue;
 
 		for (j = 0; j < ac->origs[i].fsz - 1; j++) {
-			/* First, de-duplicate edges. */
-			for (k = 0; k < i; k++) {
-				if (ac->origs[k].fsz <= 1)
-					continue;
-				for (l = 0; l < ac->origs[k].fsz - 1; l++) {
-					if (ac->origs[k].fs[l] == 
-					    ac->origs[i].fs[j] &&
-					    ac->origs[k].fs[l + 1] == 
-					    ac->origs[i].fs[j + 1])
-						break;
-				}
-				if (l < ac->origs[k].fsz - 1)
-					break;
-			}
-			if (k < i)
-				continue;
-			printf("\tstruct_%s:%s -> struct_%s:%s;\n",
+			rc = asprintf(&buf, "struct_%s:%s->struct_%s:%s",
 				ac->origs[i].fs[j]->parent->name,
 				ac->origs[i].fs[j]->name,
 				ac->origs[i].fs[j + 1]->parent->name,
 				ac->origs[i].fs[j + 1]->name);
+			if (rc < 0)
+				err(EXIT_FAILURE, NULL);
+			for (k = 0; k < edgesz; k++)
+				if (0 == strcmp(edges[k], buf))
+					break;
+			if (k < edgesz) {
+				free(buf);
+				continue;
+			}
+			edges = reallocarray(edges,
+				edgesz + 1, sizeof(char *));
+			if (NULL == edges)
+				err(EXIT_FAILURE, NULL);
+			edges[edgesz++] = buf;
 		}
+
+		rc = asprintf(&buf, "struct_%s:%s->struct_%s:_top",
+			ac->origs[i].fs[j]->parent->name,
+			ac->origs[i].fs[j]->name, p->name);
+		if (rc < 0)
+			err(EXIT_FAILURE, NULL);
+		for (k = 0; k < edgesz; k++)
+			if (0 == strcmp(edges[k], buf))
+				break;
+		if (k < edgesz) {
+			free(buf);
+			continue;
+		}
+		edges = reallocarray(edges,
+			edgesz + 1, sizeof(char *));
+		if (NULL == edges)
+			err(EXIT_FAILURE, NULL);
+		edges[edgesz++] = buf;
 	}
+
+	for (i = 0; i < edgesz; i++) {
+		if (NULL != strstr(edges[i], ":_top"))
+			printf("\t%s;\n", edges[i]);
+		else
+			printf("\t%s[style=\"dotted\"];\n", edges[i]);
+		free(edges[i]);
+	}
+	free(edges);
 }
 
 /*

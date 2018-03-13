@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017--2018 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,6 +18,7 @@
 
 #include <sys/queue.h>
 
+#include <assert.h>
 #if HAVE_ERR
 # include <err.h>
 #endif
@@ -98,11 +99,51 @@ check_rolemap(const struct rolemap *r, const struct role *role)
 }
 
 /*
+ * Return zero if the given field isn't exported for the given role
+ * where the structure is marked "exportable".
+ * Otherwise, it is.
+ */
+static int
+check_field_exported(const struct field *f, 
+	const struct role *role, int exportable)
+{
+	int	 export;
+
+	/* 
+	 * By default, we're exporting.
+	 * Inhibit that if we're marked as no-export on the
+	 * field itself.
+	 */
+
+	export = FTYPE_PASSWORD != f->type &&
+		! (FIELD_NOEXPORT & f->flags);
+
+	/*
+	 * If the structure isn't reachable (i.e., no paths to this
+	 * structure that are in the exporting role), then override its
+	 * exportability.
+	 */
+
+	if ( ! exportable)
+		export = 0;
+
+	/*
+	 * If the local structure inhibits our exportability, then mark
+	 * it as such.
+	 */
+
+	if (NULL != f->rolemap && check_rolemap(f->rolemap, role))
+		export = 0;
+
+	return(export);
+}
+
+/*
  * See if any role at or descending from "r" matches the named "role".
  * Returns the pointer to the matching role or NULL otherwise.
  */
 static const struct role *
-get_roleassign(const struct role *r, const char *role)
+check_role_exists_r(const struct role *r, const char *role)
 {
 	const struct role *rq, *ret;
 
@@ -110,15 +151,41 @@ get_roleassign(const struct role *r, const char *role)
 		return(r);
 
 	TAILQ_FOREACH(rq, &r->subrq, entries)
-		if (NULL != (ret = get_roleassign(rq, role)))
+		if (NULL != (ret = check_role_exists_r(rq, role)))
 			return(ret);
 
 	return(NULL);
 }
 
+/*
+ * See if the given role "role" exists in "rq".
+ * Return NULL if it does not, the pointer otherwise.
+ */
+static const struct role *
+check_role_exists(const struct roleq *rq, const char *role)
+{
+	const struct role *r, *rr;
+
+	/*
+	 * Begin by checking to see if the role exists at all.
+	 * For this, we need to walk through all roles as they're
+	 * arranged in the role tree.
+	 */
+
+	TAILQ_FOREACH(rr, rq, entries)
+		if (NULL != (r = check_role_exists_r(rr, role)))
+			return(r);
+
+	return(NULL);
+}
+
+
+/*
+ * Invoked for all structures that are reachable by the role.
+ */
 static void
 gen_audit_exportable(const struct strct *p, 
-	const struct sraccess *ac, int json,
+	const struct sraccess *ac, int json, 
 	const struct role *role)
 {
 	const struct field *f;
@@ -140,42 +207,17 @@ gen_audit_exportable(const struct strct *p,
 		printf("\t\t\t\"exportable\": %s,\n"
 		       "\t\t\t\"data\": [\n", 
 		       exportable ? "true" : "false");
-	else
+	else 
 		printf("%sdata:\n", SPACE);
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
-		/* 
-		 * By default, we're exporting.
-		 * Inhibit that if we're marked as no-export on the
-		 * field itself.
-		 */
-
-		export = FTYPE_PASSWORD != f->type &&
-			! (FIELD_NOEXPORT & f->flags);
-
-		/*
-		 * If the structure isn't reachable (i.e., no paths to
-		 * this structure that are in the exporting role), then
-		 * override its exportability.
-		 */
-
-		if ( ! exportable)
-			export = 0;
-
-		/*
-		 * If the local structure inhibits our exportability,
-		 * then mark it as such.
-		 */
-
-		if (NULL != f->rolemap &&
-		    check_rolemap(f->rolemap, role))
-			export = 0;
+		export = check_field_exported(f, role, exportable);
 
 		if (json)
 			printf("\t\t\t\t\"%s\"%s\n", f->name, 
 			       NULL != TAILQ_NEXT(f, entries) ?
 			       "," : "");
-		else
+		else 
 			printf("%s%s%s%s%s\n", SPACE, SPACE, f->name,
 				export ? "" : ": NOT EXPORTED",
 				exportable ? "" : " (BY INHERITENCE)");
@@ -184,22 +226,25 @@ gen_audit_exportable(const struct strct *p,
 	if (json)
 		puts("\t\t\t],\n"
 		     "\t\t\t\"accessfrom\": [");
-	else
+	else 
 		printf("%saccessed from:\n", SPACE);
 
 	for (i = 0; i < ac->origsz; i++) {
 		if (json) 
 			printf("\t\t\t\t{ \"function\": \"");
-		else
+		else 
 			printf("%s%s", SPACE, SPACE);
+
 		print_name_db_search(ac->origs[i].orig);
+
 		if (json) 
 			printf("\",\n"
 			       "\t\t\t\t  \"exporting\": %s,\n"
 			       "\t\t\t\t  \"path\": [",
 			       ac->origs[i].exported ? "true" : "false");
-		else
+		else 
 			printf(": ");
+
 		for (j = 0; j < ac->origs[i].fsz; j++) {
 			if (j > 0 && json)
 				printf(", ");
@@ -213,6 +258,7 @@ gen_audit_exportable(const struct strct *p,
 			if (json)
 				putchar('"');
 		}
+
 		if ( ! json) {
 			if (j > 0)
 				printf(": ");
@@ -222,7 +268,7 @@ gen_audit_exportable(const struct strct *p,
 				puts("self-reference");
 			else
 				puts("foreign-reference");
-		} else
+		} else 
 			printf("] }%s\n", 
 				i < ac->origsz - 1 ? "," : "");
 	}
@@ -579,119 +625,266 @@ mark_structs(const struct search *orig,
 	}
 }
 
-int
-gen_audit(const struct config *cfg, int json, const char *role)
+/*
+ * Mark all of the structures that can be "seen" by the role by first
+ * computing whether they have searches used by our role, then climbing
+ * the dependency tree.
+ * We deliberately do this if we've already seen the structure (we could
+ * otherwise "break" after marking the structure) to record access
+ * paths.
+ */
+static void
+sraccess_alloc(const struct strctq *sq, 
+	const struct role *r, struct sraccess **sp, size_t *spsz)
 {
 	const struct strct *s;
 	const struct search *sr;
-	const struct role *r = NULL, *rr;
-	struct sraccess *sp = NULL;
-	size_t	 i, j, spsz = 0;
 	struct fieldstack fs;
-	int	 first;
 
 	memset(&fs, 0, sizeof(struct fieldstack));
 
-	/*
-	 * Begin by checking to see if the role exists at all.
-	 * For this, we need to walk through all roles as they're
-	 * arranged in the role tree.
-	 */
-
-	TAILQ_FOREACH(rr, &cfg->rq, entries)
-		if (NULL != (r = get_roleassign(rr, role)))
-			break;
-
-	if (NULL == r) {
-		warnx("%s: role not found", role);
-		return(0);
-	}
-
-	/*
-	 * Now mark all of the structures that can be "seen" by the role
-	 * by first computing whether they have searches used by our
-	 * role, then climbing the dependency tree.
-	 * We deliberately do this if we've already seen the structure
-	 * (we could otherwise "break" after marking the structure) to
-	 * record access paths.
-	 */
-
-	TAILQ_FOREACH(s, &cfg->sq, entries)
+	TAILQ_FOREACH(s, sq, entries)
 		TAILQ_FOREACH(sr, &s->sq, entries)
 			if (NULL != sr->rolemap &&
 			    check_rolemap(sr->rolemap, r))
-				mark_structs(sr, s, &sp, &spsz, r, &fs, 1);
+				mark_structs(sr, s, sp, spsz, r, &fs, 1);
 
-	/*
-	 * Now walk through all structures and print the ways we have of
-	 * accessing the structure, if any.
-	 * Only print exports if the structure is reachable.
-	 */
+	free(fs.f);
+}
 
-	if (json) {
-		printf("(function(root) {\n"
-		       "\t'use strict';\n"
-		       "\tvar audit = {\n"
-		       "\t    \"role\": \"%s\",\n"
-		       "\t    \"doc\": ", r->name);
-		print_doc(r->doc);
-		puts(",\n\t    \"access\": [");
-	}
-
-	TAILQ_FOREACH(s, &cfg->sq, entries) {
-		if (json)
-			printf("\t\t{ \"name\": \"%s\",\n"
-			       "\t\t  \"access\": {\n", s->name);
-		else
-			printf("%s\n", s->name);
-		for (i = 0; i < spsz; i++)
-			if (s == sp[i].p) {
-				gen_audit_exportable
-					(s, &sp[i], json, r);
-				break;
-			}
-		gen_audit_inserts(s, json, r);
-		gen_audit_updates(s, json, r);
-		gen_audit_deletes(s, json, r);
-		gen_audit_queries(s, json, 
-			STYPE_ITERATE, "iterates", r);
-		gen_audit_queries(s, json, 
-			STYPE_LIST, "lists", r);
-		gen_audit_queries(s, json, 
-			STYPE_SEARCH, "searches", r);
-		if (json)
-			printf("\t\t}}%s\n",
-				NULL != TAILQ_NEXT(s, entries) ?
-				"," : "");
-	}
-
-	if (json) {
-		fputs("\t],\n"
-		      "\t\"functions\": {", stdout);
-		first = 1;
-		TAILQ_FOREACH(s, &cfg->sq, entries) {
-			gen_protos_queries(&s->sq, &first, r);
-			gen_protos_updates(&s->uq, &first, r);
-			gen_protos_updates(&s->dq, &first, r);
-			gen_protos_insert(s, &first, r);
-		}
-		puts("\n\t},\n"
-		     "\t\"fields\": {");
-		first = 1;
-		for (i = 0; i < spsz; i++)
-			gen_protos_fields(sp[i].p, &first, r);
-		puts("\n\t}};\n"
-		     "\n"
-		     "\troot.audit = audit;\n"
-		     "})(this);");
-	}
+static void
+sraccess_free(struct sraccess *sp, size_t spsz)
+{
+	size_t	 i, j;
 
 	for (i = 0; i < spsz; i++) {
 		for (j = 0; j < sp[i].origsz; j++)
 			free(sp[i].origs[j].fs);
 		free(sp[i].origs);
 	}
-	free(fs.f);
+	
 	free(sp);
+}
+
+int
+gen_audit_json(const struct config *cfg, const char *role)
+{
+	const struct strct *s;
+	const struct role *r;
+	struct sraccess *sp = NULL;
+	size_t	 i, spsz = 0;
+	int	 first;
+
+	if (NULL == (r = check_role_exists(&cfg->rq, role))) {
+		warnx("%s: role not found", role);
+		return(0);
+	}
+
+	sraccess_alloc(&cfg->sq, r, &sp, &spsz);
+
+	printf("(function(root) {\n"
+	       "\t'use strict';\n"
+	       "\tvar audit = {\n"
+	       "\t    \"role\": \"%s\",\n"
+	       "\t    \"doc\": ", r->name);
+	print_doc(r->doc);
+	puts(",\n\t    \"access\": [");
+
+	TAILQ_FOREACH(s, &cfg->sq, entries) {
+		printf("\t\t{ \"name\": \"%s\",\n"
+		       "\t\t  \"access\": {\n", s->name);
+
+		for (i = 0; i < spsz; i++) {
+			if (s != sp[i].p) 
+				continue;
+			gen_audit_exportable(s, &sp[i], 1, r);
+			break;
+		}
+
+		gen_audit_inserts(s, 1, r);
+		gen_audit_updates(s, 1, r);
+		gen_audit_deletes(s, 1, r);
+		gen_audit_queries(s, 1, STYPE_ITERATE, "iterates", r);
+		gen_audit_queries(s, 1, STYPE_LIST, "lists", r);
+		gen_audit_queries(s, 1, STYPE_SEARCH, "searches", r);
+
+		printf("\t\t}}%s\n",
+			NULL != TAILQ_NEXT(s, entries) ? "," : "");
+	}
+
+	fputs("\t],\n"
+	      "\t\"functions\": {", stdout);
+
+	first = 1;
+	TAILQ_FOREACH(s, &cfg->sq, entries) {
+		gen_protos_queries(&s->sq, &first, r);
+		gen_protos_updates(&s->uq, &first, r);
+		gen_protos_updates(&s->dq, &first, r);
+		gen_protos_insert(s, &first, r);
+	}
+
+	puts("\n\t},\n"
+	     "\t\"fields\": {");
+
+	for (first = 1, i = 0; i < spsz; i++)
+		gen_protos_fields(sp[i].p, &first, r);
+
+	puts("\n\t}};\n"
+	     "\n"
+	     "\troot.audit = audit;\n"
+	     "})(this);");
+
+	sraccess_free(sp, spsz);
+	return(1);
+}
+
+int
+gen_audit(const struct config *cfg, const char *role)
+{
+	const struct strct *s;
+	const struct role *r;
+	struct sraccess *sp = NULL;
+	size_t	 i, spsz = 0;
+
+	if (NULL == (r = check_role_exists(&cfg->rq, role))) {
+		warnx("%s: role not found", role);
+		return(0);
+	}
+
+	sraccess_alloc(&cfg->sq, r, &sp, &spsz);
+
+	TAILQ_FOREACH(s, &cfg->sq, entries) {
+		printf("%s\n", s->name);
+
+		for (i = 0; i < spsz; i++) {
+			if (s != sp[i].p) 
+				continue;
+			gen_audit_exportable(s, &sp[i], 0, r);
+			break;
+		}
+
+		gen_audit_inserts(s, 0, r);
+		gen_audit_updates(s, 0, r);
+		gen_audit_deletes(s, 0, r);
+		gen_audit_queries(s, 0, STYPE_ITERATE, "iterates", r);
+		gen_audit_queries(s, 0, STYPE_LIST, "lists", r);
+		gen_audit_queries(s, 0, STYPE_SEARCH, "searches", r);
+	}
+
+	sraccess_free(sp, spsz);
+	return(1);
+}
+
+static void
+gen_audit_exportable_gv(const struct strct *p, 
+	const struct sraccess *ac, const struct role *role)
+{
+	const struct field *f;
+	const struct search *s;
+	size_t	 i, j, k, l;
+	int	 export, exportable = 0;
+
+	for (i = 0; 0 == exportable && i < ac->origsz; i++) 
+		if (ac->origs[i].exported)
+			exportable = 1;
+
+	printf("\tstruct_%s[shape=none, fillcolor=\"%s\", "
+	        "style=\"filled\", label=<\n"
+	       "\t\t<table>\n"
+	       "\t\t\t<tr><td port=\"_top\"><b>%s</b></td></tr>\n",
+	       p->name, exportable ? "#ffffff" : "#cccccc", p->name);
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		export = check_field_exported(f, role, exportable);
+		printf("\t\t\t<tr><td bgcolor=\"%s\" "
+		       "port=\"%s\">%s</td></tr>\n", 
+		       export ? "#ffffff" : "#aaaaaa",
+		       f->name, f->name);
+	}
+
+	TAILQ_FOREACH(s, &p->sq, entries) {
+		if (NULL == s->rolemap ||
+		    ! check_rolemap(s->rolemap, role))
+			continue;
+		printf("\t\t\t<tr><td>");
+		print_name_db_search(s);
+		puts("</td></tr>");
+	}
+
+	printf("\t\t</table>>];\n");
+
+	for (i = 0; i < ac->origsz; i++) {
+		if (1 == ac->origs[i].fsz) {
+			/* First, de-duplicate edges. */
+			for (k = 0; k < i; k++) {
+				if (1 != ac->origs[k].fsz) 
+					continue;
+				if (ac->origs[k].fs[0] == ac->origs[i].fs[0])
+					break;
+			}
+			if (k < i)
+				continue;
+			printf("\tstruct_%s:%s -> struct_%s:_top;\n",
+				ac->origs[i].fs[0]->parent->name,
+				ac->origs[i].fs[0]->name,
+				p->name);
+			continue;
+		} else if (0 == ac->origs[i].fsz)
+			continue;
+
+		for (j = 0; j < ac->origs[i].fsz - 1; j++) {
+			/* First, de-duplicate edges. */
+			for (k = 0; k < i; k++) {
+				if (ac->origs[k].fsz <= 1)
+					continue;
+				for (l = 0; l < ac->origs[k].fsz - 1; l++) {
+					if (ac->origs[k].fs[l] == 
+					    ac->origs[i].fs[j] &&
+					    ac->origs[k].fs[l + 1] == 
+					    ac->origs[i].fs[j + 1])
+						break;
+				}
+				if (l < ac->origs[k].fsz - 1)
+					break;
+			}
+			if (k < i)
+				continue;
+			printf("\tstruct_%s:%s -> struct_%s:%s;\n",
+				ac->origs[i].fs[j]->parent->name,
+				ac->origs[i].fs[j]->name,
+				ac->origs[i].fs[j + 1]->parent->name,
+				ac->origs[i].fs[j + 1]->name);
+		}
+	}
+}
+
+/*
+ * Audit for a GraphViz digraph.
+ */
+int
+gen_audit_gv(const struct config *cfg, const char *role)
+{
+	const struct strct 	*s;
+	const struct role 	*r;
+	struct sraccess 	*sp = NULL;
+	size_t	 		 i, spsz = 0;
+
+	if (NULL == (r = check_role_exists(&cfg->rq, role))) {
+		warnx("%s: role not found", role);
+		return(0);
+	}
+
+	printf("digraph %s {\n", r->name);
+	sraccess_alloc(&cfg->sq, r, &sp, &spsz);
+
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		for (i = 0; i < spsz; i++)
+			if (s == sp[i].p) {
+				gen_audit_exportable_gv(s, &sp[i], r);
+				break;
+			}
+
+	puts("}");
+	sraccess_free(sp, spsz);
 	return(1);
 }

@@ -30,6 +30,8 @@
 
 enum	op {
 	OP_AUDIT,
+	OP_AUDIT_GV,
+	OP_AUDIT_JSON,
 	OP_NOOP,
 	OP_DIFF,
 	OP_C_HEADER,
@@ -88,16 +90,32 @@ main(int argc, char *argv[])
 			goto usage;
 		argc -= optind;
 		argv += optind;
+	} else if (0 == strcmp(getprogname(), "kwebapp-audit-gv")) {
+		op = OP_AUDIT_GV;
+		if (-1 != getopt(argc, argv, ""))
+			goto usage;
+		argc -= optind;
+		argv += optind;
+		if (0 == argc)
+			goto usage;
+		role = argv[0];
+		argv++;
+		argc--;
+	} else if (0 == strcmp(getprogname(), "kwebapp-audit-json")) {
+		op = OP_AUDIT_JSON;
+		if (-1 != getopt(argc, argv, ""))
+			goto usage;
+		argc -= optind;
+		argv += optind;
+		if (0 == argc)
+			goto usage;
+		role = argv[0];
+		argv++;
+		argc--;
 	} else if (0 == strcmp(getprogname(), "kwebapp-audit")) {
 		op = OP_AUDIT;
-		while (-1 != (c = getopt(argc, argv, "j")))
-			switch (c) {
-			case ('j'):
-				json = 1;
-				break;
-			default:
-				goto usage;
-			}
+		if (-1 != getopt(argc, argv, ""))
+			goto usage;
 		argc -= optind;
 		argv += optind;
 		if (0 == argc)
@@ -215,7 +233,11 @@ main(int argc, char *argv[])
 	else if (OP_JAVASCRIPT == op)
 		gen_javascript(cfg);
 	else if (OP_AUDIT == op)
-		rc = gen_audit(cfg, json, role);
+		rc = gen_audit(cfg, role);
+	else if (OP_AUDIT_JSON == op)
+		rc = gen_audit_json(cfg, role);
+	else if (OP_AUDIT_GV == op)
+		rc = gen_audit_gv(cfg, role);
 
 	parse_free(cfg);
 	return(rc ? EXIT_SUCCESS : EXIT_FAILURE);
@@ -245,10 +267,19 @@ usage:
 		fprintf(stderr, 
 			"usage: %s oldconfig [config]\n",
 			getprogname());
+	else if (OP_AUDIT_GV == op)
+		fprintf(stderr, 
+			"usage: %s "
+			"role [config]\n",
+			getprogname());
+	else if (OP_AUDIT_JSON == op)
+		fprintf(stderr, 
+			"usage: %s "
+			"role [config]\n",
+			getprogname());
 	else if (OP_AUDIT == op)
 		fprintf(stderr, 
 			"usage: %s "
-		 	"[-j] "
 			"role [config]\n",
 			getprogname());
 	else if (OP_JAVASCRIPT == op)

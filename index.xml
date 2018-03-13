@@ -69,6 +69,11 @@
 					dependencies.
 				</p>
 				<p>
+					<strong>You will need the newest version of this libraries.</strong>
+					Sources output by <span class="nm">kwebapp</span> use features from the newest releases:
+					all of these tools are being built in tandem.
+				</p>
+				<p>
 					<span class="nm">kwebapp</span> is a <a href="https://www.bsd.lv">BSD.lv</a> project.
 					For the time being, the C source output currently hardcodes OpenBSD-specific functions in its output
 					(e.g., <a href="http://man.openbsd.org/crypt_newhash.3">crypt_newhash(3)</a> and so on).

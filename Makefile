@@ -26,6 +26,8 @@ HTMLS		 = archive.html \
 		   index.html \
 		   kwebapp.1.html \
 		   kwebapp-audit.1.html \
+		   kwebapp-audit-gv.1.html \
+		   kwebapp-audit-json.1.html \
 		   kwebapp-c-header.1.html \
 		   kwebapp-c-source.1.html \
 		   kwebapp-javascript.1.html \
@@ -35,13 +37,19 @@ HTMLS		 = archive.html \
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
 MAN1S		 = kwebapp.1 \
 		   kwebapp-audit.1 \
+		   kwebapp-audit-gv.1 \
+		   kwebapp-audit-json.1 \
 		   kwebapp-c-header.1 \
 		   kwebapp-c-source.1 \
 		   kwebapp-javascript.1 \
 		   kwebapp-sql.1 \
 		   kwebapp-sqldiff.1
 DOTAREXEC	 = configure
-DOTAR		 = comments.c \
+DOTAR		 = audit.c \
+		   audit.css \
+		   audit.html \
+		   audit.js \
+		   comments.c \
 		   compats.c \
 		   extern.h \
 		   header.c \
@@ -73,6 +81,8 @@ IHTMLS		 = audit-example.txt.html \
 		   db.js.html \
 		   test.c.html
 LINKS		 = kwebapp-audit \
+		   kwebapp-audit-gv \
+		   kwebapp-audit-json \
 		   kwebapp-c-header \
 		   kwebapp-c-source \
 		   kwebapp-javascript \
@@ -104,6 +114,8 @@ install: kwebapp
 	$(INSTALL_MAN) kwebapp.5 $(DESTDIR)$(MANDIR)/man5
 	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/kwebapp
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-audit
+	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-audit-gv
+	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-audit-json
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-c-source
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-c-header
 	ln -f $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-javascript
@@ -128,8 +140,8 @@ OBJS: extern.h
 test: test.o db.o db.db
 	$(CC) -Wextra -L/usr/local/lib -o $@ test.o db.o -lksql -lsqlite3 -lkcgijson -lkcgi -lz
 
-audit-out.js: kwebapp-audit audit-example.txt
-	./kwebapp-audit -j user audit-example.txt >$@
+audit-out.js: kwebapp-audit-json audit-example.txt
+	./kwebapp-audit-json user audit-example.txt >$@
 
 db.o: db.c db.h
 	$(CC) $(CFLAGS) -Wextra -I/usr/local/include -o $@ -c db.c

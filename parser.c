@@ -820,6 +820,7 @@ parse_validate(struct parse *p, struct field *fd)
 			p->last.integer;
 		break;
 	case (FTYPE_BLOB):
+	case (FTYPE_EMAIL):
 	case (FTYPE_TEXT):
 	case (FTYPE_PASSWORD):
 		if (TOK_INTEGER != parse_next(p)) {

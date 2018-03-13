@@ -3,6 +3,27 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.4.7</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-03-13">2018-03-13</time>
+		</header>
+		<aside>
+			<p>
+				Set the configuration script's modes properly and fix the auditing
+				HTML sample and fix the installation archive to include all files.
+				Make the audit markup (and CSS) be easily embedded into other files.
+			</p>
+			<p>
+				Split <a href="kwebapp-audit.1.html">kwebapp-audit(1)</a> into <a
+					href="kwebapp-audit-json.1.html">kwebapp-audit-json(1)</a>
+				and add the new <a
+					href="kwebapp-audit-gv.1.html">kwebapp-audit-gv(1)</a> for
+				brief <a href="https://www.graphviz.org/">GraphViz</a> output.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.4.6</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-03-10">2018-03-10</time>

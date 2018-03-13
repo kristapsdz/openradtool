@@ -782,7 +782,7 @@ gen_audit_exportable_gv(const struct strct *p,
 	const struct field *f;
 	const struct search *s;
 	size_t	  i, j, k, cols = 2 /* FIXME: settable */, col;
-	int	  rc, export, exportable = 0;
+	int	  rc, export, closed, exportable = 0;
 	char	**edges = NULL;
 	char	 *buf;
 	size_t	  edgesz = 0;
@@ -808,6 +808,7 @@ gen_audit_exportable_gv(const struct strct *p,
 	/* Columnar fields. */
 
 	col = 0;
+	closed = 0;
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		export = check_field_exported(f, role, exportable);
 		if (col && 0 == (col % cols))
@@ -819,6 +820,7 @@ gen_audit_exportable_gv(const struct strct *p,
 		       export ? "#ffffff" : "#aaaaaa",
 		       f->name, f->name);
 		col++;
+		closed = 0;
 	}
 
 	/* Finish fields remaining in row. */
@@ -829,7 +831,11 @@ gen_audit_exportable_gv(const struct strct *p,
 			col++;
 		}
 		printf("\t\t\t</tr>\n");
+		closed = 1;
 	}
+
+	if (col && 0 == closed)
+		puts("\t\t\t</tr>");
 
 	/* Show query routines, each on their own row. */
 

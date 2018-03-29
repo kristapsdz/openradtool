@@ -2210,6 +2210,9 @@ gen_c_source(const struct config *cfg, int json,
 	const struct strct *p;
 	const char	*start;
 	size_t		 sz;
+	int		 need_kcgi = 0, 
+			 need_kcgijson = 0, 
+			 need_ksql = 0;
 
 	if (NULL == incls)
 		incls = "";
@@ -2246,10 +2249,17 @@ gen_c_source(const struct config *cfg, int json,
 	     "");
 
 	if (dbin || strchr(incls, 'b'))
-		puts("#include <ksql.h>");
+		need_ksql = 1;
 	if (valids || strchr(incls, 'v'))
-		puts("#include <kcgi.h>");
+		need_kcgi = 1;
 	if (json || strchr(incls, 'j'))
+		need_kcgi = need_kcgijson = 1;
+
+	if (need_ksql)
+		puts("#include <ksql.h>");
+	if (need_kcgi)
+		puts("#include <kcgi.h>");
+	if (need_kcgijson)
 		puts("#include <kcgijson.h>");
 
 	if (NULL == header)

@@ -3,6 +3,20 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.4.8</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-03-29">ONGOING</time>
+		</header>
+		<aside>
+			<p>
+				Repair header inclusion (<span class="file">kcgijson.h</span>
+				requires <span class="file">kcgi.h</span>) for <a
+					href="kwebapp-c-source.1.html">kwebapp-c-source(1)</a>.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.4.7</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-03-13">2018-03-13</time>

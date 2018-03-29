@@ -57,7 +57,7 @@ footer					{ text-align: center;
 					  padding: 48pt 0;
 					  font-size: smaller; }
 footer a				{ color: #66b98f; }
-.nm					{ font-style: italic; }
+.file, .nm				{ font-style: italic; }
 article > section			{ width: 60%;
 					  margin-left: auto;
 					  margin-right: auto; }

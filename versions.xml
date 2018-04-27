@@ -5,13 +5,16 @@
 		<header>
 			<h3>0.4.8</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2018-03-29">ONGOING</time>
+			<time datetime="2018-04-27">2018-04-27</time>
 		</header>
 		<aside>
 			<p>
 				Repair header inclusion (<span class="file">kcgijson.h</span>
 				requires <span class="file">kcgi.h</span>) for <a
 					href="kwebapp-c-source.1.html">kwebapp-c-source(1)</a>.
+				Bring up to date with newest <a
+					href="https://kristaps.bsd.lv/ksql">ksql</a>, which requires
+				the default role have permission to open the database.
 			</p>
 		</aside>
 	</article>

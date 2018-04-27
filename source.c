@@ -761,6 +761,7 @@ gen_func_open(const struct config *cfg, int splitproc)
 		printf("\tstruct ksqlrole roles[%zu];\n"
 		       "\tstruct kwbp *ctx;\n"
 		       "\n"
+		       "\tmemset(roles, 0, sizeof(roles));\n"
 		       "\tctx = malloc(sizeof(struct kwbp));\n"
 		       "\tif (NULL == ctx)\n"
 		       "\t\treturn(NULL);\n"

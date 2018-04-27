@@ -500,6 +500,12 @@ gen_func_role_count(const struct role *role)
 	return(i);
 }
 
+/*
+ * For any given role "role", statically allocate the permission and
+ * statements list that we'll later assign to the role structures.
+ * This is a recursive function that will invoke on all subroles.
+ * It's passed "rolesz", which is the total number of roles.
+ */
 static void
 gen_func_role_matrices(const struct role *role, size_t rolesz)
 {
@@ -534,6 +540,8 @@ gen_func_role_zero(const struct role *role, size_t rolesz)
 				"role_perms_default;\n"
 		     "\troles[ROLE_default].stmts = "
 		     		"role_stmts_default;\n"
+		     "\troles[ROLE_default].flags = "
+		     		"KSQLROLE_OPEN;\n"
 		     "\tmemset(role_stmts_default, 0, "
 		      "sizeof(int) * STMT__MAX);");
 	else if (strcmp(role->name, "all"))
@@ -630,6 +638,11 @@ check_rolemap(const struct role *role, const struct rolemap *rm)
 	return(0);
 }
 
+/*
+ * For any given structure "p" (fixed), recursively descend into all
+ * roles and mark which statements are allowed for "p".
+ * Return the number of statements we've printed.
+ */
 static size_t
 gen_func_role_stmts(const struct role *role, const struct strct *p)
 {

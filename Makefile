@@ -9,7 +9,7 @@ VERSION_STAMP	:= `echo "(($(VERSION_BUILD) + 1) + \
 			($(VERSION_MINOR) + 1) * 100 + \
 			($(VERSION_MAJOR) + 1) * 10000)" | bc`
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
-CFLAGS		+= -DVERSION=\"$(VERSION)\" -DVSTAMP=$(VERSION_STAMP)
+CPPFLAGS	+= -DVERSION=\"$(VERSION)\" -DVSTAMP=$(VERSION_STAMP)
 OBJS		 = audit.o \
 		   comments.o \
 		   compats.o \
@@ -151,16 +151,16 @@ $(LINKS): kwebapp
 OBJS: extern.h
 
 test: test.o db.o db.db
-	$(CC) -Wextra -L/usr/local/lib -o $@ test.o db.o -lksql -lsqlite3 -lkcgijson -lkcgi -lz
+	$(CC) $(LDFLAGS) -o $@ test.o db.o -lksql -lsqlite3 -lkcgijson -lkcgi -lz
 
 audit-out.js: kwebapp-audit-json audit-example.txt
 	./kwebapp-audit-json user audit-example.txt >$@
 
 db.o: db.c db.h
-	$(CC) $(CFLAGS) -Wextra -I/usr/local/include -o $@ -c db.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c db.c
 
 test.o: test.c db.h
-	$(CC) $(CFLAGS) -Wextra -I/usr/local/include -o $@ -c test.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c test.c
 
 db.c: kwebapp-c-source db.txt
 	./kwebapp-c-source -vsj db.txt >$@

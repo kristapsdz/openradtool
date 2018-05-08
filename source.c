@@ -57,18 +57,18 @@ static	const char *const optypes[OPTYPE__MAX] = {
  * Note that FTYPE_TEXT and FTYPE_PASSWORD need a surrounding strdup.
  */
 static	const char *const coltypes[FTYPE__MAX] = {
-	"ksql_stmt_int", /* FTYPE_BIT */
-	"ksql_stmt_int", /* FTYPE_DATE */
-	"ksql_stmt_int", /* FTYPE_EPOCH */
-	"ksql_stmt_int", /* FTYPE_INT */
-	"ksql_stmt_double", /* FTYPE_REAL */
-	"ksql_stmt_blob", /* FTYPE_BLOB (XXX: is special) */
-	"ksql_stmt_str", /* FTYPE_TEXT */
-	"ksql_stmt_str", /* FTYPE_PASSWORD */
-	"ksql_stmt_str", /* FTYPE_EMAIL */
+	"ksql_result_int", /* FTYPE_BIT */
+	"ksql_result_int", /* FTYPE_DATE */
+	"ksql_result_int", /* FTYPE_EPOCH */
+	"ksql_result_int", /* FTYPE_INT */
+	"ksql_result_double", /* FTYPE_REAL */
+	"ksql_result_blob_alloc", /* FTYPE_BLOB (XXX: is special) */
+	"ksql_result_str_alloc", /* FTYPE_TEXT */
+	"ksql_result_str_alloc", /* FTYPE_PASSWORD */
+	"ksql_result_str_alloc", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
-	"ksql_stmt_int", /* FTYPE_ENUM */
-	"ksql_stmt_int", /* FTYPE_BITFIELD */
+	"ksql_result_int", /* FTYPE_ENUM */
+	"ksql_result_int", /* FTYPE_BITFIELD */
 };
 
 static	const char *const puttypes[FTYPE__MAX] = {
@@ -216,76 +216,36 @@ gen_strct_fill_field(const struct field *f)
 	 * it into its own conditional block for clarity.
 	 */
 
-	if (FTYPE_BLOB == f->type) {
-		/* 
-		 * First, prepare for the data.
-		 * We get the data size, then allocate space enough to
-		 * fill with that blob.
-		 * Error-check the allocation, of course.
-		 */
+	if (FIELD_NULL & f->flags) {
+		printf("\tif (p->has_%s) {\n", f->name);
+		indent = 2;
+	} else
+		indent = 1;
 
-		if (FIELD_NULL & f->flags) {
-			printf("\tif (p->has_%s) {\n", f->name);
-			indent = 2;
-		} else
-			indent = 1;
-
+	if (FTYPE_BLOB == f->type)
 		print_src(indent,
-			"p->%s_sz = ksql_stmt_bytes(stmt, *pos);\n"
-		        "p->%s = malloc(p->%s_sz);\n"
-		        "if (NULL == p->%s) {\n"
-		        "perror(NULL);\n"
-		        "exit(EXIT_FAILURE);\n"
-		        "}\n"
-			"memcpy(p->%s, %s(stmt, (*pos)++), p->%s_sz);",
-			f->name, f->name, f->name, f->name,
-			f->name, coltypes[f->type], f->name);
+			"c = %s(stmt, "
+			 "&p->%s, &p->%s_sz, (*pos)++);\n"
+			"if (KSQL_OK != c)\n"
+		        "\texit(EXIT_FAILURE);",
+			coltypes[f->type], f->name, f->name);
+	else if (FTYPE_ENUM == f->type)
+		print_src(indent,
+			"c = %s(stmt, &tmpint, (*pos)++);\n"
+			"if (KSQL_OK != c)\n"
+		        "\texit(EXIT_FAILURE);\n"
+			"p->%s = tmpint;",
+			coltypes[f->type], f->name);
+	else
+		print_src(indent,
+			"c = %s(stmt, &p->%s, (*pos)++);\n"
+			"if (KSQL_OK != c)\n"
+		        "\texit(EXIT_FAILURE);",
+			coltypes[f->type], f->name);
 
-		if (FIELD_NULL & f->flags) 
-			puts("\t} else\n"
-			     "\t\t(*pos)++;");
-	} else {
-		/*
-		 * Assign from the database.
-		 * Text fields use a strdup for the allocation.
-		 */
-
-		if (FIELD_NULL & f->flags)
-			printf("\tif (p->has_%s)\n"
-			       "\t\tp->%s = ", f->name, f->name);
-		else 
-			printf("\tp->%s = ", f->name);
-
-		if (FTYPE_TEXT == f->type || 
-		    FTYPE_PASSWORD == f->type ||
-		    FTYPE_EMAIL == f->type)
-			printf("strdup(%s(stmt, (*pos)++));\n", 
-				coltypes[f->type]);
-		else
-			printf("%s(stmt, (*pos)++);\n", 
-				coltypes[f->type]);
-
-		/* NULL check for allocation. */
-
-		if (FIELD_NULL & f->flags) {
-			puts("\telse\n"
-			     "\t\t(*pos)++;");
-			if (FTYPE_TEXT == f->type || 
-			    FTYPE_PASSWORD == f->type ||
-			    FTYPE_EMAIL == f->type)
-				printf("\tif (p->has_%s && "
-					"NULL == p->%s) {\n"
-				       "\t\tperror(NULL);\n"
-				       "\t\texit(EXIT_FAILURE);\n"
-				       "\t}\n", f->name, f->name);
-		} else if (FTYPE_TEXT == f->type || 
-			   FTYPE_PASSWORD == f->type ||
-			   FTYPE_EMAIL == f->type) 
-			printf("\tif (NULL == p->%s) {\n"
-			       "\t\tperror(NULL);\n"
-			       "\t\texit(EXIT_FAILURE);\n"
-			       "\t}\n", f->name);
-	}
+	if (FIELD_NULL & f->flags) 
+		puts("\t} else\n"
+		     "\t\t(*pos)++;");
 }
 
 /*
@@ -1374,12 +1334,20 @@ static void
 gen_func_fill(const struct config *cfg, const struct strct *p)
 {
 	const struct field *f;
+	int	 needint = 0;
+
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (FTYPE_ENUM == f->type)
+			needint = 1;
 
 	print_func_db_fill(p, CFG_HAS_ROLES & cfg->flags, 0);
 	puts("\n"
 	     "{\n"
 	     "\tsize_t i = 0;\n"
-	     "\n"
+	     "\tenum ksqlc c;");
+	if (needint)
+		puts("\tint64_t tmpint;");
+	puts("\n"
 	     "\tif (NULL == pos)\n"
 	     "\t\tpos = &i;\n"
 	     "\tmemset(p, 0, sizeof(*p));");

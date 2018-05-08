@@ -3,6 +3,21 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.4.9</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-05-08">2018-05-08</time>
+		</header>
+		<aside>
+			<p>
+				Bring up to date with <a
+					href="https://github.com/kristapsdz/oconfigure">oconfigure</a>
+				and also use newest safety mechanisms (the <q>result</q> interface)
+				from <a href="https://kristaps.bsd.lv/ksql">ksql</a>.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.4.8</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-04-27">2018-04-27</time>

@@ -98,7 +98,7 @@ gen_js_field(const struct field *f)
 }
 
 void
-gen_javascript(const struct config *cfg)
+gen_javascript(const struct config *cfg, int tsc)
 {
 	const struct strct  *s;
 	const struct field  *f;
@@ -123,16 +123,28 @@ gen_javascript(const struct config *cfg)
 
 	puts("(function(root) {\n"
 	     "\t'use strict';\n"
-	     "\n"
-	     "\tfunction _attr(e, attr, text)\n"
-	     "\t{\n"
+	     "");
+
+	if (tsc) 
+		puts("\tfunction _attr(e: Element, attr: string, "
+			"text: string)");
+	else
+		puts("\tfunction _attr(e, attr, text)");
+
+	puts("\t{\n"
 	     "\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
 	     "\t\te.setAttribute(attr, text);\n"
 	     "\t}\n"
-	     "\n"
-	     "\tfunction _attrcl(e, attr, name, text, inc)\n"
-	     "\t{\n"
+	     "");
+
+	if (tsc)
+		puts("\tfunction _attrcl(e: Element, attr: string, "
+			"name: string, text: string, inc: number)");
+	else
+		puts("\tfunction _attrcl(e, attr, name, text, inc)");
+
+	puts("\t{\n"
 	     "\t\tvar list, i;\n"
 	     "\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
@@ -140,9 +152,15 @@ gen_javascript(const struct config *cfg)
 	     "\t\tfor (i = 0; i < list.length; i++)\n"
 	     "\t\t\t_attr(list[i], attr, text);\n"
 	     "\t}\n"
-	     "\n"
-	     "\tfunction _elemList(e, cls, inc)\n"
-	     "\t{\n"
+	     "");
+	
+	if (tsc)
+		puts("\tfunction _elemList(e: Element, cls: string, "
+			"inc: number)");
+	else
+		puts("\tfunction _elemList(e, cls, inc)");
+
+	puts("\t{\n"
 	     "\t\tvar a = [], list, i;\n"
 	     "\t\tif (null === e)\n"
 	     "\t\t\treturn(a);\n"
@@ -153,18 +171,32 @@ gen_javascript(const struct config *cfg)
 	     "\t\t\ta.push(e);\n"
 	     "\t\treturn(a);\n"
 	     "\t}\n"
-	     "\n"
-	     "\tfunction _repl(e, text)\n"
-	     "\t{\n"
+	     "");
+
+	if (tsc)
+		puts("\tfunction _repl(e: Element, text: string)");
+	else
+		puts("\tfunction _repl(e, text)");
+
+	puts("\t{\n"
 	     "\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
 	     "\t\twhile (e.firstChild)\n"
 	     "\t\t\te.removeChild(e.firstChild);\n"
 	     "\t\te.appendChild(document.createTextNode(text));\n"
 	     "\t}\n"
-	     "\n"
-	     "\tfunction _fillfield(e, strct, name, funcs, obj, inc, cannull, isblob, sub)\n"
-	     "\t{\n"
+	     "");
+
+	if (tsc)
+		puts("\tfunction _fillfield(e: Element, "
+			"strct: string, name: string, funcs, obj, "
+			"inc: number, cannull: number, isblob: number, "
+			"sub)");
+	else
+		puts("\tfunction _fillfield(e, strct, name, funcs, "
+			"obj, inc, cannull, isblob, sub)");
+
+	puts("\t{\n"
 	     "\t\tvar i, fname = strct + '-' + name;\n"
 	     "\t\t/* First handle the custom callback. */\n"
 	     "\t\tif (typeof funcs !== 'undefined' && \n"
@@ -203,9 +235,15 @@ gen_javascript(const struct config *cfg)
 	     "\t\t\t_attrcl(e, 'value', fname + '-value', obj, inc);\n"
 	     "\t\t}\n"
 	     "\t}\n"
-	     "\n"
-	     "\tfunction _replcl(e, name, text, inc)\n"
-	     "\t{\n"
+	     "");
+
+	if (tsc)
+		puts("\tfunction _replcl(e: Element, name: string, "
+			"text: string, inc: number)\n");
+	else
+		puts("\tfunction _replcl(e, name, text, inc)\n");
+
+	puts("\t{\n"
 	     "\t\tvar list, i;\n"
 	     "\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
@@ -213,18 +251,30 @@ gen_javascript(const struct config *cfg)
 	     "\t\tfor (i = 0; i < list.length; i++)\n"
 	     "\t\t\t_repl(list[i], text);\n"
 	     "\t}\n"
-	     "\n"
-	     "\tfunction _classadd(e, name)\n"
-	     "\t{\n"
+	     "");
+
+	if (tsc)
+		puts("\tfunction _classadd(e: Element, "
+			"name: string)\n");
+	else
+		puts("\tfunction _classadd(e, name)");
+
+	puts("\t{\n"
 	     "\t\tif (null === e)\n"
 	     "\t\t\treturn(null);\n"
 	     "\t\tif ( ! e.classList.contains(name))\n"
 	     "\t\t\te.classList.add(name);\n"
 	     "\t\treturn(e);\n"
 	     "\t}\n"
-	     "\t\n"
-	     "\tfunction _classaddcl(e, name, cls, inc)\n"
-	     "\t{\n"
+	     "");
+
+	if (tsc)
+		puts("\tfunction _classaddcl(e: Element, "
+			"name: string, cls: string, inc: number)");
+	else
+		puts("\tfunction _classaddcl(e, name, cls, inc)");
+
+	puts("\t{\n"
 	     "\t\tvar list, i;\n"
 	     "\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
@@ -232,18 +282,29 @@ gen_javascript(const struct config *cfg)
 	     "\t\tfor (i = 0; i < list.length; i++)\n"
 	     "\t\t\t_classadd(list[i], cls);\n"
 	     "\t}\n"
-	     "\n"
-	     "\tfunction _hide(e)\n"
-	     "\t{\n"
+	     "");
+
+	if (tsc)
+		puts("\tfunction _hide(e: element)");
+	else
+		puts("\tfunction _hide(e)");
+
+	puts("\t{\n"
 	     "\t\tif (null === e)\n"
 	     "\t\t\treturn(null);\n"
 	     "\t\tif ( ! e.classList.contains('hide'))\n"
 	     "\t\t\te.classList.add('hide');\n"
 	     "\t\treturn(e);\n"
 	     "\t}\n"
-	     "\t\n"
-	     "\tfunction _hidecl(e, name, inc)\n"
-	     "\t{\n"
+	     "");
+
+	if (tsc)
+		puts("\tfunction _hidecl(e: element, "
+			"name: string, inc: number)");
+	else
+		puts("\tfunction _hidecl(e, name, inc)");
+
+	puts("\t{\n"
 	     "\t\tvar list, i;\n"
 	     "\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
@@ -251,18 +312,29 @@ gen_javascript(const struct config *cfg)
 	     "\t\tfor (i = 0; i < list.length; i++)\n"
 	     "\t\t\t_hide(list[i]);\n"
 	     "\t}\n"
-	     "\n"
-	     "\tfunction _show(e)\n"
-	     "\t{\n"
+	     "");
+
+	if (tsc)
+		puts("\tfunction _show(e: element)");
+	else
+		puts("\tfunction _show(e)");
+
+	puts("\t{\n"
 	     "\t\tif (null === e)\n"
 	     "\t\t\treturn(null);\n"
 	     "\t\tif (e.classList.contains('hide'))\n"
 	     "\t\t\te.classList.remove('hide');\n"
 	     "\t\treturn(e);\n"
 	     "\t}\n"
-	     "\t\n"
-	     "\tfunction _showcl(e, name, inc)\n"
-	     "\t{\n"
+	     "");
+
+	if (tsc)
+		puts("\tfunction _showcl(e: element, "
+			"name: string, inc: number)");
+	else
+		puts("\tfunction _showcl(e, name, inc)");
+
+	puts("\t{\n"
 	     "\t\tvar list, i;\n"
 	     "\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"

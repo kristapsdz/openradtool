@@ -48,7 +48,8 @@ main(int argc, char *argv[])
 	      		*header = NULL, *incls = NULL, *role = NULL;
 	struct config	*cfg, *dcfg = NULL;
 	int		 c, rc = 1, json = 0, valids = 0,
-			 splitproc = 0, dbin = 1, dstruct = 1;
+			 splitproc = 0, dbin = 1, dstruct = 1,
+			 typescript = 0;
 	enum op		 op = OP_NOOP;
 
 #if HAVE_PLEDGE
@@ -80,8 +81,14 @@ main(int argc, char *argv[])
 		argv += optind;
 	} else if (0 == strcmp(getprogname(), "kwebapp-javascript")) {
 		op = OP_JAVASCRIPT;
-		if (-1 != getopt(argc, argv, ""))
-			goto usage;
+		while (-1 != (c = getopt(argc, argv, "t")))
+			switch (c) {
+			case ('t'):
+				typescript = 1;
+				break;
+			default:
+				goto usage;
+			}
 		argc -= optind;
 		argv += optind;
 	} else if (0 == strcmp(getprogname(), "kwebapp-sql")) {
@@ -231,7 +238,7 @@ main(int argc, char *argv[])
 	else if (OP_DIFF == op)
 		rc = gen_diff(cfg, dcfg);
 	else if (OP_JAVASCRIPT == op)
-		gen_javascript(cfg);
+		gen_javascript(cfg, typescript);
 	else if (OP_AUDIT == op)
 		rc = gen_audit(cfg, role);
 	else if (OP_AUDIT_JSON == op)

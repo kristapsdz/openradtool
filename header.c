@@ -365,8 +365,7 @@ gen_func_search(const struct config *cfg, const struct search *s)
  * Generate the function declarations for a given structure.
  */
 static void
-gen_funcs(const struct config *cfg,
-	const struct strct *p, int json, int valids)
+gen_funcs_dbin(const struct config *cfg, const struct strct *p)
 {
 	const struct search *s;
 	const struct field *f;
@@ -441,58 +440,65 @@ gen_funcs(const struct config *cfg,
 		gen_func_update(cfg, u);
 	TAILQ_FOREACH(u, &p->dq, entries)
 		gen_func_update(cfg, u);
+}
 
-	if (json) {
-		print_commentv(0, COMMENT_C,
-			"Print out the fields of a %s in JSON "
-			"including nested structures.\n"
-			"Omits any password entries or those "
-			"marked \"noexport\".\n"
-			"See json_%s_obj() for the full object.",
-			p->name, p->name);
-		print_func_json_data(p, 1);
-		puts("");
+static void
+gen_funcs_json(const struct config *cfg, const struct strct *p)
+{
+
+	print_commentv(0, COMMENT_C,
+		"Print out the fields of a %s in JSON "
+		"including nested structures.\n"
+		"Omits any password entries or those "
+		"marked \"noexport\".\n"
+		"See json_%s_obj() for the full object.",
+		p->name, p->name);
+	print_func_json_data(p, 1);
+	puts("");
+	print_commentv(0, COMMENT_C,
+		"Emit the JSON key-value pair for the "
+		"object:\n"
+		"\t\"%s\" : { [data]+ }\n"
+		"See json_%s_data() for the data.",
+		p->name, p->name);
+	print_func_json_obj(p, 1);
+	puts("");
+	if (STRCT_HAS_QUEUE & p->flags) {
 		print_commentv(0, COMMENT_C,
 			"Emit the JSON key-value pair for the "
-			"object:\n"
-			"\t\"%s\" : { [data]+ }\n"
+			"array:\n"
+			"\t\"%s_q\" : [ [{data}]+ ]\n"
 			"See json_%s_data() for the data.",
 			p->name, p->name);
-		print_func_json_obj(p, 1);
+		print_func_json_array(p, 1);
 		puts("");
-		if (STRCT_HAS_QUEUE & p->flags) {
-			print_commentv(0, COMMENT_C,
-				"Emit the JSON key-value pair for the "
-				"array:\n"
-				"\t\"%s_q\" : [ [{data}]+ ]\n"
-				"See json_%s_data() for the data.",
-				p->name, p->name);
-			print_func_json_array(p, 1);
-			puts("");
-		}
-		if (STRCT_HAS_ITERATOR & p->flags) {
-			print_commentv(0, COMMENT_C,
-				"Emit the object as a standalone "
-				"part of (presumably) an array:\n"
-				"\t\"{ data }\n"
-				"See json_%s_data() for the data.\n"
-				"The \"void\" argument is taken "
-				"to be a kjsonreq as if were invoked "
-				"from an iterator.", p->name);
-			print_func_json_iterate(p, 1);
-			puts("");
-		}
 	}
+	if (STRCT_HAS_ITERATOR & p->flags) {
+		print_commentv(0, COMMENT_C,
+			"Emit the object as a standalone "
+			"part of (presumably) an array:\n"
+			"\t\"{ data }\n"
+			"See json_%s_data() for the data.\n"
+			"The \"void\" argument is taken "
+			"to be a kjsonreq as if were invoked "
+			"from an iterator.", p->name);
+		print_func_json_iterate(p, 1);
+		puts("");
+	}
+}
 
-	if (valids) {
-		TAILQ_FOREACH(f, &p->fq, entries) {
-			print_commentv(0, COMMENT_C,
-				"Validation routines for the %s "
-				"field in struct %s.", 
-				f->name, p->name);
-			print_func_valid(f, 1);
-			puts("");
-		}
+static void
+gen_funcs_valids(const struct config *cfg, const struct strct *p)
+{
+	const struct field *f;
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		print_commentv(0, COMMENT_C,
+			"Validation routines for the %s "
+			"field in struct %s.", 
+			f->name, p->name);
+		print_func_valid(f, 1);
+		puts("");
 	}
 }
 
@@ -766,8 +772,15 @@ gen_c_header(const struct config *cfg, int json,
 		if (CFG_HAS_ROLES & cfg->flags)
 			gen_func_roles(cfg);
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_funcs(cfg, p, json, valids);
+			gen_funcs_dbin(cfg, p);
 	}
+
+	if (json)
+		TAILQ_FOREACH(p, &cfg->sq, entries)
+			gen_funcs_json(cfg, p);
+	if (valids)
+		TAILQ_FOREACH(p, &cfg->sq, entries)
+			gen_funcs_valids(cfg, p);
 
 	puts("__END_DECLS\n"
 	     "\n"

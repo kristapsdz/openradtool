@@ -45,7 +45,8 @@ main(int argc, char *argv[])
 {
 	FILE		*conf = NULL, *dconf = NULL;
 	const char	*confile = NULL, *dconfile = NULL,
-	      		*header = NULL, *incls = NULL, *role = NULL;
+	      		*header = NULL, *incls = NULL, *role = NULL,
+			*guard = "DB_H";
 	struct config	*cfg, *dcfg = NULL;
 	int		 c, rc = 1, json = 0, valids = 0,
 			 splitproc = 0, dbin = 1, dstruct = 1,
@@ -59,8 +60,11 @@ main(int argc, char *argv[])
 
 	if (0 == strcmp(getprogname(), "kwebapp-c-header")) {
 		op = OP_C_HEADER;
-		while (-1 != (c = getopt(argc, argv, "jN:sv")))
+		while (-1 != (c = getopt(argc, argv, "g:jN:sv")))
 			switch (c) {
+			case ('g'):
+				guard = optarg;
+				break;
 			case ('j'):
 				json = 1;
 				break;
@@ -231,7 +235,7 @@ main(int argc, char *argv[])
 		gen_c_source(cfg, json, valids, 
 			splitproc, dbin, header, incls);
 	else if (OP_C_HEADER == op)
-		gen_c_header(cfg, json, valids, 
+		gen_c_header(cfg, guard, json, valids, 
 			splitproc, dbin, dstruct);
 	else if (OP_SQL == op)
 		gen_sql(&cfg->sq);

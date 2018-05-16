@@ -2219,7 +2219,14 @@ gen_c_source(const struct config *cfg, int json,
 			break;
 		}
 
-	if (valids || strchr(incls, 'v')) {
+	if (dbin || strchr(incls, 'b'))
+		need_ksql = 1;
+	if (valids || strchr(incls, 'v'))
+		need_kcgi = 1;
+	if (json || strchr(incls, 'j'))
+		need_kcgi = need_kcgijson = 1;
+
+	if (need_kcgi) {
 		puts("#include <stdarg.h>");
 		puts("#include <stdint.h>");
 	}
@@ -2229,13 +2236,6 @@ gen_c_source(const struct config *cfg, int json,
 	     "#include <string.h>\n"
 	     "#include <unistd.h>\n"
 	     "");
-
-	if (dbin || strchr(incls, 'b'))
-		need_ksql = 1;
-	if (valids || strchr(incls, 'v'))
-		need_kcgi = 1;
-	if (json || strchr(incls, 'j'))
-		need_kcgi = need_kcgijson = 1;
 
 	if (need_ksql)
 		puts("#include <ksql.h>");

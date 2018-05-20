@@ -2219,7 +2219,7 @@ gen_c_source(const struct config *cfg, int json,
 			break;
 		}
 
-	if (dbin || strchr(incls, 'b'))
+	if (dbin || strchr(incls, 'd'))
 		need_ksql = 1;
 	if (valids || strchr(incls, 'v'))
 		need_kcgi = 1;

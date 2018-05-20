@@ -69,8 +69,10 @@ main(int argc, char *argv[])
 				json = 1;
 				break;
 			case ('N'):
-				dbin = NULL == strchr(optarg, 'b');
-				dstruct = NULL == strchr(optarg, 'd');
+				if (NULL != strchr(optarg, 'b'))
+					dstruct = 0;
+				if (NULL != strchr(optarg, 'd'))
+					dbin = 0;
 				break;
 			case ('s'):
 				splitproc = 1;
@@ -159,7 +161,8 @@ main(int argc, char *argv[])
 				json = 1;
 				break;
 			case ('N'):
-				dbin = NULL == strchr(optarg, 'b');
+				if (NULL != strchr(optarg, 'd'))
+					dbin = 0;
 				break;
 			case ('s'):
 				splitproc = 1;

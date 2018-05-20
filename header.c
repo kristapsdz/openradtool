@@ -698,26 +698,27 @@ gen_c_header(const struct config *cfg, const char *guard,
 	printf("#define KWBP_VERSION \"%s\"\n"
 	       "#define KWBP_VSTAMP %lld\n"
 	       "\n", VERSION, (long long)VSTAMP);
+	
+	if (dbin && ! TAILQ_EMPTY(&cfg->rq)) {
+		print_commentt(0, COMMENT_C,
+			"Our roles for access control.\n"
+			"When the database is first opened, "
+			"the system is set to ROLE_default.\n"
+			"Roles may then be set using the "
+			"kwbp_role() function.");
+		puts("enum\tkwbp_role {");
+		TAILQ_FOREACH(r, &cfg->rq, entries)
+			gen_role(r, &i);
+			puts("\n"
+		     "};\n"
+		     "");
+	}
 
 	if (dstruct) {
 		TAILQ_FOREACH(e, &cfg->eq, entries)
 			gen_enum(e);
 		TAILQ_FOREACH(bf, &cfg->bq, entries)
 			gen_bitfield(bf);
-		if ( ! TAILQ_EMPTY(&cfg->rq)) {
-			print_commentt(0, COMMENT_C,
-				"Our roles for access control.\n"
-				"When the database is first opened, "
-				"the system is set to ROLE_default.\n"
-				"Roles may then be set using the "
-				"kwbp_role() function.");
-			puts("enum\tkwbp_role {");
-			TAILQ_FOREACH(r, &cfg->rq, entries)
-				gen_role(r, &i);
-			puts("\n"
-			     "};\n"
-			     "");
-		}
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			gen_struct(cfg, p);
 	}

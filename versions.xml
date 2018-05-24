@@ -5,14 +5,15 @@
 		<header>
 			<h3>0.4.10</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2018-05-12">ongoing</time>
+			<time datetime="2018-05-24">2018-05-24</time>
 		</header>
 		<aside>
 			<p>
-				Integrate <a href="https://www.typescriptlang.org">Typescript</a>
-				support into <a
-					href="kwebapp-javascript.1.html">kwebapp-javascript(1)</a>
-				output.
+				Several fixes to having split-apart header files.
+				Fix (and harmonise) the behaviour of <b>-N</b> in both
+				<a href="kwebapp-c-header.1.html">kwebapp-c-header(1)</a> and
+				<a href="kwebapp-c-source.1.html">kwebapp-c-source(1)</a>, and
+				<b>-I</b> in the latter.
 			</p>
 		</aside>
 	</article>

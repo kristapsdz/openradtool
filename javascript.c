@@ -232,10 +232,11 @@ gen_javascript(const struct config *cfg, int tsc)
 		puts("\tfunction _fillfield(e, strct, name, funcs, "
 			"obj, inc, cannull, isblob, sub)\n"
 		     "\t{\n"
-	      	     "\t\tvar i, fname = strct + '-' + name;\n"
+	      	     "\t\tvar i, fname;\n"
 		     "");
 
-	puts("\t\t/* First handle the custom callback. */\n"
+	puts("\t\tfname = strct + '-' + name;\n"
+	     "\t\t/* First handle the custom callback. */\n"
 	     "\t\tif (typeof funcs !== 'undefined' && \n"
 	     "\t\t    null !== funcs && fname in funcs) {\n"
 	     "\t\t\tif (funcs[fname] instanceof Array) {\n"
@@ -406,7 +407,7 @@ gen_javascript(const struct config *cfg, int tsc)
 
 	if (tsc)
 		TAILQ_FOREACH(s, &cfg->sq, entries) {
-			printf("\tinterface %sData\n"
+			printf("\texport interface %sData\n"
 			       "\t{\n", s->name);
 			TAILQ_FOREACH(f, &s->fq, entries)
 				if (FTYPE_STRUCT == f->type)
@@ -443,7 +444,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			NULL == s->doc ? "" : "<br />\n",
 			s->name, s->name, s->name);
 		if (tsc)
-			printf("\tclass %s {\n"
+			printf("\texport class %s {\n"
 			       "\t\tobj: %sData|%sData[];\n"
 			       "\t\tconstructor(o: %sData|%sData[]) {\n"
 			       "\t\t\tthis.obj = o;\n"
@@ -760,7 +761,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		print_commentt(1, COMMENT_JS_FRAG_CLOSE, NULL);
 
 		if (tsc) {
-			printf("\tclass %s\n"
+			printf("\texport class %s\n"
 			       "\t{\n", e->name);
 			TAILQ_FOREACH(ei, &e->eq, entries)
 				printf("\t\tstatic readonly %s: number = %" 

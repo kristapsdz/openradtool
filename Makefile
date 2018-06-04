@@ -4,7 +4,7 @@ include Makefile.configure
 
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 4
-VERSION_BUILD	 = 10
+VERSION_BUILD	 = 11
 VERSION_STAMP	:= `echo "(($(VERSION_BUILD) + 1) + \
 			($(VERSION_MINOR) + 1) * 100 + \
 			($(VERSION_MAJOR) + 1) * 10000)" | bc`

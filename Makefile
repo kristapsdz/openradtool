@@ -4,7 +4,7 @@ include Makefile.configure
 
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 4
-VERSION_BUILD	 = 11
+VERSION_BUILD	 = 12
 VERSION_STAMP	:= `echo "(($(VERSION_BUILD) + 1) + \
 			($(VERSION_MINOR) + 1) * 100 + \
 			($(VERSION_MAJOR) + 1) * 10000)" | bc`
@@ -248,12 +248,10 @@ highlight.css:
 	highlight --print-style -s whitengrey
 
 index.html: index.xml $(XMLS) $(IHTMLS) highlight.css
-	sblg -s cmdline -t index.xml -o- $(XMLS) | \
-	       sed "s!@VERSION@!$(VERSION)!g" > $@
+	sblg -s cmdline -t index.xml -o- $(XMLS) >$@
 
 archive.html: archive.xml versions.xml
-	sblg -s date -t archive.xml -o- versions.xml | \
-	       sed "s!@VERSION@!$(VERSION)!g" > $@
+	sblg -s date -t archive.xml -o- versions.xml >$@
 
 TODO.xml: TODO.md
 	( echo "<article data-sblg-article=\"1\">" ; \

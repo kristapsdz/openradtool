@@ -25,7 +25,13 @@
 			</section>
 			<section id="header">
 				<div>
-					<h1><a href="index.html">kwebapp</a></h1> <span>&#8212; <span>web application source generator</span> @VERSION@</span>
+					<h1><a href="index.html">kwebapp</a></h1> 
+					<span>&#8212; 
+						<span>web application source generator</span>
+						<nav data-sblg-nav="1" data-sblg-navsort="date" data-sblg-navtag="version" data-sblg-navsz="1" data-sblg-navxml="1">
+							${sblg-titletext}
+						</nav>
+					</span>
 				</div>
 				<nav>
 					<a href="https://github.com/kristapsdz/kwebapp">github</a>

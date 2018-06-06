@@ -1,6 +1,6 @@
 .\"	$OpenBSD$
 .\"
-.\" Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+.\" Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -19,7 +19,7 @@
 .Os
 .Sh NAME
 .Nm kwebapp-javascript
-.Nd implement web application JavaScript objects
+.Nd implement web application JavaScript classes
 .Sh SYNOPSIS
 .Nm kwebapp-javascript
 .\" .Op Fl t
@@ -30,7 +30,7 @@ The
 utility accepts a configuration file
 .Ar config
 .Pq defaulting to standard input
-and creates the JavaScript objects accepting the JSON produced by
+and creates the JavaScript classes accepting the JSON produced by
 .Xr kwebapp-c-header 1
 and
 .Xr kwebapp-c-source 1 .
@@ -42,11 +42,14 @@ The output, a standards-compliant JavaScript file, formats
 JSON output into a DOM tree.
 The method for acquiring the JSON is not managed by
 .Nm .
+The JavaScript consists of a set of classes within the
+.Qq kwebapp
+namespace.
 .Pp
 To use the interface, simply include the generated file as a script,
 create objects given the exported JSON of
 .Xr kwebapp-c-source 1 ,
-and invoke the JavaScript object's
+and invoke the corresponding JavaScript object's
 .Fn fill ,
 .Fn fillInner ,
 and
@@ -61,7 +64,7 @@ this might look like:
 .Bd -literal -offset indent
 var obj = JSON.parse(response);
 var e = document.getElementById('foo');
-new foo(obj).fill(e);
+new kwebapp.foo(obj).fill(e);
 .Ed
 .Pp
 For each field in the structure, this method will operate on elements
@@ -72,6 +75,12 @@ having classes as follows:
 .It Li foo-xxxx-text
 Replaces the contents of the element with the field value.
 This is only applicable for non-blob native types.
+.It Li foo-xxxx-enum-select
+All
+.Li <option>
+descendents of the element are marked as
+.Qq selected
+or not depending upon whether their value matches the field value.
 .It Li foo-xxxx-value
 Sets the
 .Dq value
@@ -117,7 +126,7 @@ with a field
 consisting of a UNIX epoch:
 .Bd -literal -offset indent
 var custom = { 'client-dob': formatDate };
-new client(obj).fillInner(document, custom);
+new kwebapp.client(obj).fillInner(document, custom);
 .Ed
 .Pp
 And letting a formatting function be:
@@ -141,7 +150,7 @@ structures.
 The keys for these are simply the structure name.
 .Bd -literal -offset indent
 var custom = { 'client': formatClient };
-new client(obj).fillInner(document, custom);
+new kwebapp.client(obj).fillInner(document, custom);
 .Ed
 .Pp
 The callback will then be provided the full client object.

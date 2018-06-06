@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -74,6 +74,13 @@ gen_jsdoc_field(const struct field *f)
 			" (if non-null)" : "");
 	} else {
 		print_commentv(2, COMMENT_JS_FRAG,
+			"<li>%s-%s-enum-select: sets the \"select\" "
+			"option for option values matching %s "
+			"under the element%s</li>",
+			f->parent->name, f->name, f->name,
+			FIELD_NULL & f->flags ? 
+			" (if non-null)" : "");
+		print_commentv(2, COMMENT_JS_FRAG,
 			"<li>%s-%s-text: replace contents "
 			"with %s data%s</li>",
 			f->parent->name, f->name, f->name,
@@ -104,11 +111,12 @@ gen_js_field(const struct field *f)
 	}
 
 	printf("\t\t\t_fillfield(e, '%s', '%s', custom, o.%s, "
-		"inc, %s, %s, %s);\n",
+		"inc, %s, %s, %s, %s);\n",
 		f->parent->name, f->name, f->name,
 		FIELD_NULL & f->flags ? "true" : "false",
 		FTYPE_BLOB == f->type ? "true" : "false",
-		NULL == buf ? "null" : buf);
+		NULL == buf ? "null" : buf,
+		FTYPE_ENUM == f->type ? "true" : "false");
 	free(buf);
 }
 
@@ -140,9 +148,10 @@ gen_javascript(const struct config *cfg, int tsc)
 	if (tsc)
 		printf("namespace %s {\n", ns);
 	else
-		printf("var %s = (function(root) {\n"
+		printf("var %s;\n"
+		       "(function(%s) {\n"
 		       "\t'use strict';\n"
-		       "\n", ns);
+		       "\n", ns, ns);
 
 	if (tsc) 
 		puts("\tfunction _attr(e: HTMLElement|null, "
@@ -155,6 +164,48 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t\t\te.setAttribute(attr, text);\n"
 	     "\t}\n"
 	     "");
+
+	if (tsc) 
+		puts("\tfunction _rattr(e: HTMLElement|null, "
+			"attr: string): void");
+	else
+		puts("\tfunction _rattr(e, attr)");
+
+	puts("\t{\n"
+	     "\t\tif (null !== e)\n"
+	     "\t\t\te.removeAttribute(attr);\n"
+	     "\t}\n"
+	     "");
+
+	if (tsc)
+		puts("\tfunction _fillEnumSelect"
+			"(e: HTMLElement, val: number|string): void\n"
+		     "\t{\n"
+		     "\t\tlet list: NodeListOf<Element>;\n"
+		     "\t\tlet i: number;\n"
+		     "\t\tlet v: string|number;\n"
+		     "");
+	else
+		puts("\tfunction _fillEnumSelect(e, val)\n"
+		     "\t{\n"
+		     "\t\tvar list, i, v;\n"
+		     "");
+	printf("\t\tlist = e.getElementsByTagName('option');\n"
+	       "\t\tfor (i = 0; i < list.length; i++) {\n"
+	       "\t\t\tv = 'number' === typeof val ? \n"
+	       "\t\t\t     parseInt((%slist[i]).value) :\n"
+	       "\t\t\t     (%slist[i]).value;\n"
+	       "\t\t\tif (val === v)\n"
+	       "\t\t\t\t_attr(%slist[i], 'selected', 'true');\n"
+	       "\t\t\telse\n"
+	       "\t\t\t\t_rattr(%slist[i], 'selected');\n"
+	       "\t\t}\n"
+	       "\t}\n"
+	       "\n",
+	       tsc ? "<HTMLOptionElement>" : "",
+	       tsc ? "<HTMLOptionElement>" : "",
+	       tsc ? "<HTMLOptionElement>" : "",
+	       tsc ? "<HTMLOptionElement>" : "");
 
 	if (tsc)
 		puts("\tfunction _attrcl(e: HTMLElement|null, "
@@ -223,14 +274,14 @@ gen_javascript(const struct config *cfg, int tsc)
 		puts("\tfunction _fillfield(e: HTMLElement, "
 			"strct: string, name: string,\n"
 		     "\t\tfuncs, obj, inc: boolean, cannull: boolean,\n"
-		     "\t\tisblob: boolean, sub): void\n"
+		     "\t\tisblob: boolean, sub, isenum: boolean): void\n"
 		     "\t{\n"
 		     "\t\tlet i: number;\n"
 		     "\t\tlet fname: string;\n"
 		     "");
 	else
 		puts("\tfunction _fillfield(e, strct, name, funcs, "
-			"obj, inc, cannull, isblob, sub)\n"
+			"obj, inc, cannull, isblob, sub, isenum)\n"
 		     "\t{\n"
 	      	     "\t\tvar i, fname;\n"
 		     "");
@@ -270,6 +321,11 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t\t\t}\n"
 	     "\t\t} else {\n"
 	     "\t\t\t_replcl(e, fname + '-text', obj, inc);\n"
+	     "\t\t\tvar list = _elemList"
+	     	"(e, fname + '-enum-select', inc);\n"
+	     "\t\t\tfor (i = 0; i < list.length; i++) {\n"
+	     "\t\t\t\t_fillEnumSelect(list[i], obj);\n"
+	     "\t\t\t}\n"
 	     "\t\t\t_attrcl(e, 'value', fname + '-value', obj, inc);\n"
 	     "\t\t}\n"
 	     "\t}\n"
@@ -809,12 +865,12 @@ gen_javascript(const struct config *cfg, int tsc)
 
 	if ( ! tsc) {
 		TAILQ_FOREACH(s, &cfg->sq, entries)
-			printf("\troot.%s = %s;\n", s->name, s->name);
+			printf("\t%s.%s = %s;\n", ns, s->name, s->name);
 		TAILQ_FOREACH(bf, &cfg->bq, entries) 
-			printf("\troot.%s = %s;\n", bf->name, bf->name);
+			printf("\t%s.%s = %s;\n", ns, bf->name, bf->name);
 		TAILQ_FOREACH(e, &cfg->eq, entries)
-			printf("\troot.%s = %s;\n", e->name, e->name);
-		puts("})(this);");
+			printf("\t%s.%s = %s;\n", ns, e->name, e->name);
+		printf("})(%s || (%s = {}));\n", ns, ns);
 	} else
 		puts("}");
 }

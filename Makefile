@@ -174,6 +174,9 @@ db.sql: kwebapp-sql db.txt
 db.js: kwebapp-javascript db.txt
 	./kwebapp-javascript db.txt >$@
 
+db.ts: kwebapp-javascript db.txt
+	./kwebapp-javascript -t db.txt >$@
+
 db.update.sql: kwebapp-sqldiff db.old.txt db.txt
 	./kwebapp-sqldiff db.old.txt db.txt >$@
 
@@ -263,7 +266,7 @@ atom.xml: versions.xml
 
 clean:
 	rm -f kwebapp $(LINKS)
-	rm -f $(OBJS) db.c db.h db.o db.sql db.js db.update.sql db.db test test.o
+	rm -f $(OBJS) db.c db.h db.o db.sql db.js db.ts db.update.sql db.db test test.o
 	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
 	rm -f index.svg highlight.css $(HTMLS) atom.xml
 	rm -f db.txt.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml

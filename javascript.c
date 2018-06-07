@@ -18,6 +18,7 @@
 
 #include <sys/queue.h>
 
+#include <assert.h>
 #if HAVE_ERR
 # include <err.h>
 #endif
@@ -120,6 +121,64 @@ gen_js_field(const struct field *f)
 	free(buf);
 }
 
+/*
+ * Generate variable declarations using JavaScript or TypeScript,
+ * depending upon "tsc".
+ * Accepts a variable number of name-type pairs terminating in a single
+ * NULL.
+ */
+static void
+gen_vars(int tsc, ...)
+{
+	va_list	 	 ap;
+	const char	*name, *type;
+
+	va_start(ap, tsc);
+	while (NULL != (name = va_arg(ap, char *))) {
+		type = va_arg(ap, char *);
+		assert(NULL != type);
+		if (tsc) 
+			printf("\t\tlet %s: %s;\n", name, type);
+		else
+			printf("\t\tvar %s;\n", name);
+	}
+	va_end(ap);
+}
+
+/*
+ * Generate a function prototype using JavaScript or TypeScript,
+ * depending upon "tsc".
+ * Uses return type "ret", function name "func", and a variable number
+ * of name-type pairs terminating in a single NULL.
+ */
+static void
+gen_proto(int tsc, const char *ret, const char *func, ...)
+{
+	va_list	 	 ap;
+	int		 first = 1;
+	const char	*name, *type;
+
+	printf("\tfunction %s(", func);
+	va_start(ap, func);
+	while (NULL != (name = va_arg(ap, char *))) {
+		if (0 == first)
+			printf(", ");
+		type = va_arg(ap, char *);
+		assert(NULL != type);
+		printf("%s", name);
+		if (tsc)
+			printf(": %s", type);
+		if (first)
+			first = 0;
+	}
+	va_end(ap);
+	putchar(')');
+	if (tsc)
+		printf(": %s", ret);
+	puts("\n"
+	     "\t{");
+}
+
 void
 gen_javascript(const struct config *cfg, int tsc)
 {
@@ -153,44 +212,33 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t'use strict';\n"
 		       "\n", ns, ns);
 
-	if (tsc) 
-		puts("\tfunction _attr(e: HTMLElement|null, "
-			"attr: string, text: string): void");
-	else
-		puts("\tfunction _attr(e, attr, text)");
-
-	puts("\t{\n"
-	     "\t\tif (null !== e)\n"
+	gen_proto(tsc, "void", "_attr", 
+		"e", "HTMLElement|null",
+		"attr", "string",
+		"text", "string", NULL);
+	puts("\t\tif (null !== e)\n"
 	     "\t\t\te.setAttribute(attr, text);\n"
 	     "\t}\n"
 	     "");
 
-	if (tsc) 
-		puts("\tfunction _rattr(e: HTMLElement|null, "
-			"attr: string): void");
-	else
-		puts("\tfunction _rattr(e, attr)");
-
-	puts("\t{\n"
-	     "\t\tif (null !== e)\n"
+	gen_proto(tsc, "void", "_rattr", 
+		"e", "HTMLElement|null",
+		"attr", "string", NULL);
+	puts("\t\tif (null !== e)\n"
 	     "\t\t\te.removeAttribute(attr);\n"
 	     "\t}\n"
 	     "");
 
-	if (tsc)
-		puts("\tfunction _fillEnumSelect"
-			"(e: HTMLElement, val: number|string): void\n"
-		     "\t{\n"
-		     "\t\tlet list: NodeListOf<Element>;\n"
-		     "\t\tlet i: number;\n"
-		     "\t\tlet v: string|number;\n"
-		     "");
-	else
-		puts("\tfunction _fillEnumSelect(e, val)\n"
-		     "\t{\n"
-		     "\t\tvar list, i, v;\n"
-		     "");
-	printf("\t\tlist = e.getElementsByTagName('option');\n"
+	gen_proto(tsc, "void", "_fillEnumSelect",
+		"e", "HTMLElement|null",
+		"val", "number|string", NULL);
+	gen_vars(tsc, 
+	     "list", "NodeListOf<Element>", 
+	     "i", "number", 
+	     "v", "string|number", NULL);
+	printf("\t\tif (null === e)\n"
+	       "\t\t\treturn;\n"
+	       "\t\tlist = e.getElementsByTagName('option');\n"
 	       "\t\tfor (i = 0; i < list.length; i++) {\n"
 	       "\t\t\tv = 'number' === typeof val ? \n"
 	       "\t\t\t     parseInt((%slist[i]).value) :\n"
@@ -206,21 +254,14 @@ gen_javascript(const struct config *cfg, int tsc)
 	       tsc ? "<HTMLOptionElement>" : "",
 	       tsc ? "<HTMLOptionElement>" : "",
 	       tsc ? "<HTMLOptionElement>" : "");
-
-	if (tsc)
-		puts("\tfunction _attrcl(e: HTMLElement|null, "
-			"attr: string, name: string, "
-			"text: string, inc: boolean): void\n"
-	  	     "\t{\n"
-		     "\t\tlet list: HTMLElement[];\n"
-		     "\t\tlet i: number;\n"
-		     "");
-	else
-		puts("\tfunction _attrcl(e, attr, name, text, inc)\n"
-		     "\t{\n"
-		     "\t\tvar list, i;\n"
-		     "");
-
+	
+	gen_proto(tsc, "void", "_attrcl",
+		"e", "HTMLElement|null",
+		"attr", "string",
+		"name", "string",
+		"text", "string",
+		"inc", "boolean", NULL);
+	gen_vars(tsc, "list", "HTMLElement[]", "i", "number", NULL);
 	puts("\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
 	     "\t\tlist = _elemList(e, name, inc);\n"
@@ -228,41 +269,30 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t\t\t_attr(list[i], attr, text);\n"
 	     "\t}\n"
 	     "");
-	
-	if (tsc)
-		puts("\tfunction _elemList(e: HTMLElement, "
-			"cls: string, inc: boolean): "
-			"HTMLElement[]\n"
-		     "\t{\n"
-		     "\t\tlet a: HTMLElement[] = [];\n"
-		     "\t\tlet list: NodeListOf<Element>;\n"
-		     "\t\tlet i: number;\n"
-		     "");
-	else
-		puts("\tfunction _elemList(e, cls, inc)\n"
-		     "\t{\n"
-	             "\t\tvar a = [], list, i;\n"
-		     "");
 
-	printf("\t\tif (null === e)\n"
-	       "\t\t\treturn(a);\n"
+	gen_proto(tsc, "HTMLElement[]", "_elemList", 
+		"e", "HTMLElement|null",
+		"cls", "string",
+		"inc", "boolean", NULL);
+	gen_vars(tsc, "a", "HTMLElement[]",
+		"list", "NodeListOf<Element>",
+		"i", "number", NULL);
+	printf("\t\ta = [];\n"
+	       "\t\tif (null === e)\n"
+	       "\t\t\treturn a;\n"
 	       "\t\tlist = e.getElementsByClassName(cls);\n"
 	       "\t\tfor (i = 0; i < list.length; i++)\n"
 	       "\t\t\ta.push(%slist[i]);\n"
 	       "\t\tif (inc && e.classList.contains(cls))\n"
 	       "\t\t\ta.push(e);\n"
-	       "\t\treturn(a);\n"
+	       "\t\treturn a;\n"
 	       "\t}\n"
 	       "\n", tsc ? "<HTMLElement>" : "");
 
-	if (tsc)
-		puts("\tfunction _repl(e: HTMLElement, "
-			"text: string): void");
-	else
-		puts("\tfunction _repl(e, text)");
-
-	puts("\t{\n"
-	     "\t\tif (null === e)\n"
+	gen_proto(tsc, "void", "_repl",
+		"e", "HTMLElement|null",
+		"text", "string", NULL);
+	puts("\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
 	     "\t\twhile (e.firstChild)\n"
 	     "\t\t\te.removeChild(e.firstChild);\n"
@@ -270,22 +300,18 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t}\n"
 	     "");
 
-	if (tsc)
-		puts("\tfunction _fillfield(e: HTMLElement, "
-			"strct: string, name: string,\n"
-		     "\t\tfuncs, obj, inc: boolean, cannull: boolean,\n"
-		     "\t\tisblob: boolean, sub, isenum: boolean): void\n"
-		     "\t{\n"
-		     "\t\tlet i: number;\n"
-		     "\t\tlet fname: string;\n"
-		     "");
-	else
-		puts("\tfunction _fillfield(e, strct, name, funcs, "
-			"obj, inc, cannull, isblob, sub, isenum)\n"
-		     "\t{\n"
-	      	     "\t\tvar i, fname;\n"
-		     "");
-
+	gen_proto(tsc, "void", "_fillfield",
+		"e", "HTMLElement|null",
+		"strct", "string",
+		"name", "string",
+		"funcs", "any",
+		"obj", "any",
+		"inc", "boolean",
+		"cannull", "boolean",
+		"isblob", "boolean",
+		"sub", "any",
+		"isenum", "boolean", NULL);
+	gen_vars(tsc, "i", "number", "fname", "string", NULL);
 	puts("\t\tfname = strct + '-' + name;\n"
 	     "\t\t/* First handle the custom callback. */\n"
 	     "\t\tif (typeof funcs !== 'undefined' && \n"
@@ -331,19 +357,12 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t}\n"
 	     "");
 
-	if (tsc)
-		puts("\tfunction _replcl(e: HTMLElement, name: string, "
-			"text: string, inc: boolean): void\n"
-		     "\t{\n"
-		     "\t\tlet list: HTMLElement[];\n"
-		     "\t\tlet i: number;\n"
-		     "");
-	else
-		puts("\tfunction _replcl(e, name, text, inc)\n"
-		     "\t{\n"
-	     	     "\t\tvar list, i;\n"
-		     "");
-
+	gen_proto(tsc, "void", "_replcl",
+		"e", "HTMLElement|null",
+		"name", "string",
+		"text", "string",
+		"inc", "boolean", NULL);
+	gen_vars(tsc, "list", "HTMLElement[]", "i", "number", NULL);
 	puts("\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
 	     "\t\tlist = _elemList(e, name, inc);\n"
@@ -352,14 +371,10 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t}\n"
 	     "");
 
-	if (tsc)
-		puts("\tfunction _classadd(e: HTMLElement|null, "
-			"name: string): HTMLElement|null\n");
-	else
-		puts("\tfunction _classadd(e, name)");
-
-	puts("\t{\n"
-	     "\t\tif (null === e)\n"
+	gen_proto(tsc, "HTMLElement|null", "_classadd",
+		"e", "HTMLElement|null",
+		"name", "string", NULL);
+	puts("\t\tif (null === e)\n"
 	     "\t\t\treturn(null);\n"
 	     "\t\tif ( ! e.classList.contains(name))\n"
 	     "\t\t\te.classList.add(name);\n"
@@ -367,20 +382,12 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t}\n"
 	     "");
 
-	if (tsc)
-		puts("\tfunction _classaddcl(e: HTMLElement, "
-			"name: string, cls: string, inc: boolean): "
-			"void\n"
-		     "\t{\n"
-		     "\t\tlet list: HTMLElement[];\n"
-		     "\t\tlet i: number;\n"
-		     "");
-	else
-		puts("\tfunction _classaddcl(e, name, cls, inc)\n"
-		     "\t{\n"
-	     	     "\t\tvar list, i;\n"
-		     "");
-
+	gen_proto(tsc, "void", "_classaddcl",
+		"e", "HTMLElement|null",
+		"name", "string",
+		"cls", "string",
+		"inc", "boolean", NULL);
+	gen_vars(tsc, "list", "HTMLElement[]", "i", "number", NULL);
 	puts("\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
 	     "\t\tlist = _elemList(e, name, inc);\n"
@@ -389,34 +396,21 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t}\n"
 	     "");
 
-	if (tsc)
-		puts("\tfunction _hide(e: HTMLElement): "
-			"HTMLElement|null");
-	else
-		puts("\tfunction _hide(e)");
-
-	puts("\t{\n"
-	     "\t\tif (null === e)\n"
-	     "\t\t\treturn(null);\n"
+	gen_proto(tsc, "HTMLElement|null", "_hide",
+		"e", "HTMLElement|null", NULL);
+	puts("\t\tif (null === e)\n"
+	     "\t\t\treturn null;\n"
 	     "\t\tif ( ! e.classList.contains('hide'))\n"
 	     "\t\t\te.classList.add('hide');\n"
-	     "\t\treturn(e);\n"
+	     "\t\treturn e;\n"
 	     "\t}\n"
 	     "");
 
-	if (tsc)
-		puts("\tfunction _hidecl(e: HTMLElement, "
-			"name: string, inc: boolean): void\n"
-		     "\t{\n"
-		     "\t\tlet list: HTMLElement[];\n"
-		     "\t\tlet i: number;\n"
-		     "");
-	else
-		puts("\tfunction _hidecl(e, name, inc)\n"
-		     "\t{\n"
-	     	     "\t\tvar list, i;\n"
-		     "");
-
+	gen_proto(tsc, "void", "_hidecl",
+		"e", "HTMLElement|null",
+		"name", "string",
+		"inc", "boolean", NULL);
+	gen_vars(tsc, "list", "HTMLElement[]", "i", "number", NULL);
 	puts("\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
 	     "\t\tlist = _elemList(e, name, inc);\n"
@@ -425,34 +419,21 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t}\n"
 	     "");
 
-	if (tsc)
-		puts("\tfunction _show(e: HTMLElement): "
-			"HTMLElement|null");
-	else
-		puts("\tfunction _show(e)");
-
-	puts("\t{\n"
-	     "\t\tif (null === e)\n"
-	     "\t\t\treturn(null);\n"
+	gen_proto(tsc, "HTMLElement|null", "_show",
+		"e", "HTMLElement|null", NULL);
+	puts("\t\tif (null === e)\n"
+	     "\t\t\treturn null;\n"
 	     "\t\tif (e.classList.contains('hide'))\n"
 	     "\t\t\te.classList.remove('hide');\n"
-	     "\t\treturn(e);\n"
+	     "\t\treturn e;\n"
 	     "\t}\n"
 	     "");
 
-	if (tsc)
-		puts("\tfunction _showcl(e: HTMLElement, "
-			"name: string, inc: boolean): void\n"
-		     "\t{\n"
-		     "\t\tlet list: HTMLElement[];\n"
-		     "\t\tlet i: number;\n"
-		     "");
-	else
-		puts("\tfunction _showcl(e, name, inc)\n"
-		     "\t{\n"
-	     	     "\t\tvar list, i;\n"
-		     "");
-
+	gen_proto(tsc, "void", "_showcl",
+		"e", "HTMLElement|null",
+		"name", "string",
+		"inc", "boolean", NULL);
+	gen_vars(tsc, "list", "HTMLElement[]", "i", "number", NULL);
 	puts("\t\tif (null === e)\n"
 	     "\t\t\treturn;\n"
 	     "\t\tlist = _elemList(e, name, inc);\n"
@@ -508,11 +489,13 @@ gen_javascript(const struct config *cfg, int tsc)
 			       "\n", s->name, s->name, 
 			       s->name, s->name, s->name);
 		else
-			printf("\tfunction %s(obj)\n"
+			printf("\tvar %s = (function()\n"
 			       "\t{\n"
-			       "\t\tthis.obj = obj;\n"
-			       "\n",
-			       s->name);
+			       "\t\tfunction %s(o)\n"
+			       "\t\t{\n"
+			       "\t\t\tthis.obj = o;\n"
+			       "\t\t}\n",
+			       s->name, s->name);
 
 		print_commentv(2, COMMENT_JS_FRAG_OPEN,
 			"Fill in a \"%s\" object at the given "
@@ -546,8 +529,8 @@ gen_javascript(const struct config *cfg, int tsc)
 			puts("\t\tfill(e: HTMLElement, custom): void\n"
 			     "\t\t{");
 		else
-			puts("\t\tthis.fill = function(e, custom)\n"
-			     "\t\t{");
+			printf("\t\t%s.prototype.fill = function(e, custom)\n"
+			       "\t\t{\n", s->name);
 
 		printf("\t\t\tthis._fill(e, this.obj, true, custom);\n"
 		       "\t\t}%s\n"
@@ -569,9 +552,8 @@ gen_javascript(const struct config *cfg, int tsc)
 				"void\n"
 			     "\t\t{");
 		else
-			puts("\t\tthis.fillInner = "
-				"function(e, custom)\n"
-			     "\t\t{");
+			printf("\t\t%s.prototype.fillInner = function(e, custom)\n"
+			     "\t\t{\n", s->name);
 
 		printf("\t\t\tthis._fill(e, this.obj, false, custom);\n"
 		       "\t\t}%s\n"
@@ -705,8 +687,11 @@ gen_javascript(const struct config *cfg, int tsc)
 			tsc ? "<HTMLElement>" : "",
 			tsc ? "<HTMLElement>" : "",
 			tsc ? "" : ";");
-		puts("\t}\n"
-		     "");
+		puts("\t}");
+		if ( ! tsc)
+			printf("\t%s.%s = %s;\n",
+				ns, s->name, s->name);
+		puts("");
 	}
 
 	TAILQ_FOREACH(bf, &cfg->bq, entries) {

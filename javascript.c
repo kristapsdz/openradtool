@@ -46,7 +46,7 @@ static	const char *types[FTYPE__MAX] = {
 };
 
 static void
-gen_jsdoc_field(const struct field *f)
+gen_jsdoc_field(const char *ns, const struct field *f)
 {
 
 	if (FIELD_NOEXPORT & f->flags || FTYPE_BLOB == f->type)
@@ -67,10 +67,10 @@ gen_jsdoc_field(const struct field *f)
 
 	if (FTYPE_STRUCT == f->type) {
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-%s-obj: invoke [fillInner]{@link "
-			"%s#fillInner} with %s data%s</li>",
+			"<li>%s-%s-obj: invoke {@link "
+			"%s.%s#fillInner} with %s data%s</li>",
 			f->parent->name, f->name, 
-			f->ref->tstrct, f->name,
+			ns, f->ref->tstrct, f->name,
 			FIELD_NULL & f->flags ? 
 			" (if non-null)" : "");
 	} else {
@@ -185,6 +185,19 @@ gen_class_proto(int tsc, int priv, const char *cls,
 	     "\t\t{");
 }
 
+static void
+gen_namespace(int tsc, const char *ns)
+{
+
+	if (tsc) 
+		printf("namespace %s {\n", ns);
+	else
+		printf("var %s;\n"
+		       "(function(%s) {\n"
+		       "\t'use strict';\n"
+		       "\n", ns, ns);
+}
+
 /*
  * Generate a function prototype using JavaScript or TypeScript,
  * depending upon "tsc".
@@ -232,26 +245,16 @@ gen_javascript(const struct config *cfg, int tsc)
 	char		    *obj;
 
 	/*
-	 * Begin with the methods we'll use throughout the js file.
-	 * This includes _attr, which sets an attribute of an element; 
-	 * _attrcl, which sets the attribute of all elements of a given
-	 * className under a root; _repl, which is like _attr except
-	 * in setting the element's child as a text node (after clearing
-	 * it); _replcl, which is like _attrcl but for _repl; _hide,
-	 * which adds the "hide" class to an element; and _show, which
-	 * removes the "hide" class.
-	 * These use _elemList, which is like getElementsByClassName
-	 * except that it also considers the root and returns an array,
-	 * not an HTMLCollection.
+	 * Begin with the methods we'll use throughout the file.
+	 * All of these are scoped locally to the namespace, but not
+	 * exposed outside of it.
+	 * They're not documented in the file.
 	 */
 
-	if (tsc)
-		printf("namespace %s {\n", ns);
-	else
-		printf("var %s;\n"
-		       "(function(%s) {\n"
-		       "\t'use strict';\n"
-		       "\n", ns, ns);
+	print_commentv(0, COMMENT_JS,
+		"Top-level namespace of these objects.\n"
+		"@namespace");
+	gen_namespace(tsc, ns);
 
 	gen_proto(tsc, "void", "_attr", 
 		"e", "HTMLElement|null",
@@ -483,26 +486,38 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t}\n"
 	     "");
 
-	if (tsc)
-		TAILQ_FOREACH(s, &cfg->sq, entries) {
-			printf("\texport interface %sData\n"
-			       "\t{\n", s->name);
-			TAILQ_FOREACH(f, &s->fq, entries)
-				if (FTYPE_STRUCT == f->type)
-					printf("\t\t%s: %sData;\n",
-						f->name, 
-						f->ref->tstrct);
-				else if (NULL != types[f->type])
-					printf("\t\t%s: %s;\n",
-						f->name,
-						types[f->type]);
-			puts("\t}\n");
-		}
+	/*
+	 * If we have a TypeScript file, then define each of the JSON
+	 * objects as interfaces.
+	 */
+
+	TAILQ_FOREACH(s, &cfg->sq, entries) {
+		print_commentv(1, COMMENT_JS,
+			"%s%s%s\n"
+			"@interface %s.%sData",
+			NULL == s->doc ? "" : "\n",
+			NULL == s->doc ? "" : s->doc,
+			NULL == s->doc ? "" : "<br />\n",
+			ns, s->name);
+		if ( ! tsc)
+			continue;
+		printf("\texport interface %sData\n"
+		       "\t{\n", s->name);
+		TAILQ_FOREACH(f, &s->fq, entries)
+			if (FTYPE_STRUCT == f->type)
+				printf("\t\t%s: %sData;\n",
+					f->name, 
+					f->ref->tstrct);
+			else if (NULL != types[f->type])
+				printf("\t\t%s: %s;\n",
+					f->name,
+					types[f->type]);
+		puts("\t}\n");
+	}
 
 	/*
-	 * This is pretty straightforward.
-	 * Each structure is an object initialised by either an object
-	 * from the server or an array of objects.
+	 * Each structure is a clas initialised by either an object from
+	 * the server (interface) or an array of objects.
 	 * Each object has the "fill" and "fillArray" methods.
 	 * These use the internal _fill method, which accepts both the
 	 * object (or array) and the element to be filled.
@@ -510,20 +525,17 @@ gen_javascript(const struct config *cfg, int tsc)
 
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
 		if (asprintf(&obj, 
-		    "%sData|%sData[]|null", s->name, s->name) < 0)
+		    "%s.%sData|%s.%sData[]|null", 
+		    ns, s->name, ns, s->name) < 0)
 			err(EXIT_FAILURE, NULL);
 		print_commentv(1, COMMENT_JS,
-			"%s%s%s\n"
-			"This constructor accepts the \"%s\" objects "
-			"or array of objects serialises into a "
-			"DOM tree.\n"
-			"@param {(Object|Object[])} obj - The %s "
-			"object or array of objects.\n"
-			"@class %s",
-			NULL == s->doc ? "" : "\n",
-			NULL == s->doc ? "" : s->doc,
-			NULL == s->doc ? "" : "<br />\n",
-			s->name, s->name, s->name);
+			"Accepts %sData for writing into a DOM tree.\n"
+			"@param {(%s.%sData|%s.%sData[])} obj - The "
+			"object(s) to write.\n"
+			"@memberof %s\n"
+			"@constructor\n"
+			"@class",
+			s->name, ns, s->name, ns, s->name, ns);
 		if (tsc)
 			printf("\texport class %s {\n"
 			       "\t\tobj: %sData|%sData[];\n"
@@ -542,19 +554,19 @@ gen_javascript(const struct config *cfg, int tsc)
 			       s->name, s->name);
 
 		print_commentv(2, COMMENT_JS_FRAG_OPEN,
-			"Fill in a \"%s\" object at the given "
-			"element in the DOM tree.\n"
-			"If the object was initialised with an "
-			"array, the first element is used.\n"
+			"Write the {@link %s.%sData} into the given "
+			"HTMLElement in the DOM tree.\n"
+			"If constructed with an array, the first "
+			"element is used.\n"
 			"Elements within (and including) \"e\" having "
 			"the following classes are manipulated as "
-			"follows:", s->name);
+			"follows:", ns, s->name);
 		print_commentt(2, COMMENT_JS_FRAG, "<ul>");
 		TAILQ_FOREACH(f, &s->fq, entries)
-			gen_jsdoc_field(f);
+			gen_jsdoc_field(ns, f);
 		print_commentt(2, COMMENT_JS_FRAG, "</ul>");
 		print_commentv(2, COMMENT_JS_FRAG_CLOSE,
-			"@param {Object} e - The DOM element.\n"
+			"@param {HTMLElement} e - The DOM element.\n"
 			"@param {Object} custom - A dictionary "
 			"of functions keyed by structure and field "
 			"name (e.g., \"foo\" structure, \"bar\" "
@@ -565,9 +577,9 @@ gen_javascript(const struct config *cfg, int tsc)
 			"value of the structure and field.\n"
 			"You may also specify an array of functions "
 			"instead of a singleton.\n"
-			"@memberof %s#\n"
-			"@method fill",
-			s->name);
+			"@function fill\n"
+			"@memberof %s.%s#",
+			ns, s->name);
 		gen_class_proto(tsc, 0, s->name, "void", "fill",
 			"e", "HTMLElement|null",
 			"custom", "any", NULL);
@@ -576,15 +588,15 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\n", tsc ? "" : ";");
 
 		print_commentv(2, COMMENT_JS,
-			"Like [fill]{@link %s#fill} but not including "
-			"the root element \"e\".\n"
-			"@param {Object} e - The DOM element.\n"
+			"Like {@link %s.%s#fill} but not "
+			"including the root element \"e\".\n"
+			"@param {HTMLElement} e - The DOM element.\n"
 			"@param {Object} custom - The custom "
-			"handler dictionary (see [fill]{@link "
-			"%s#fill} for details).\n"
-			"@memberof %s#\n"
-			"@method fillInner",
-			s->name, s->name, s->name);
+			"handler dictionary (see {@link "
+			"%s.%s#fill} for details).\n"
+			"@function fillInner\n"
+			"@memberof %s.%s#",
+			ns, s->name, ns, s->name, ns, s->name);
 		gen_class_proto(tsc, 0, s->name, "void", "fillInner",
 			"e", "HTMLElement|null",
 			"custom", "any", NULL);
@@ -593,21 +605,20 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\n", tsc ? "" : ";");
 
 		print_commentv(2, COMMENT_JS,
-			"Implements all [fill]{@link %s#fill} style "
+			"Implements all {@link %s.%s#fill} "
 			"functions.\n"
-			"@private\n"
-			"@method _fill\n"
-			"@memberof %s#\n"
-			"@param {Object} e - The DOM element.\n"
-			"@param {(Object|Object[])} o - The object "
+			"@param {HTMLElement} e - The DOM element.\n"
+			"@param {%s} o - The object "
 			"(or array) to fill.\n"
 			"@param {Number} inc - Whether to include "
 			"the root or not when processing.\n"
 			"@param {Object} custom - The custom "
-			"handler dictionary (see [fill]{@link "
-			"%s#fill}).",
-			s->name, s->name, s->name);
-
+			"handler dictionary (see {@link "
+			"%s.%s#fill}).\n"
+			"@private\n"
+			"@function _fill\n"
+			"@memberof %s.%s#\n",
+			ns, s->name, obj, ns, s->name, ns, s->name);
 		gen_class_proto(tsc, 1, s->name, "void", "_fill",
 			"e", "HTMLElement|null",
 			"o", obj,
@@ -639,36 +650,33 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\n", tsc ? "" : ";");
 
 		print_commentv(2, COMMENT_JS,
-			"Like [fill]{@link %s#fill} but for an "
-			"array of %s.\n"
-			"This will remove the first element within "
-			"\"e\" then repeatedly clone and re-append it, "
-			"filling in the cloned subtree with the "
-			"array.\n"
+			"Like {@link %s.%s#fill} but for an "
+			"array of {@link %s.%sData}.\n"
+			"This will save the first element within "
+			"\"e\", remove all children of \"e\", "
+			"then repeatedly clone the saved element "
+			"and re-append it, filling in the cloned "
+			"subtree with the array.\n"
 			"If \"e\" is not an array, it is construed "
 			"as an array of one.\n"
 			"If the input array is empty, \"e\" is hidden "
 			"by using the \"hide\" class.\n"
 			"Otherwise, the \"hide\" class is removed.\n"
-			"@param {Object} e - The DOM element.\n"
+			"@param {HTMLElement} e - The DOM element.\n"
 			"@param {Object} custom - The custom "
-			"handler dictionary (see [fill]{@link "
-			"%s#fill}).\n"
-			"@memberof %s#\n"
-			"@method fillArray",
-			s->name, s->name, s->name, s->name);
+			"handler dictionary (see {@link "
+			"%s.%s#fill}).\n"
+			"@memberof %s.%s#\n"
+			"@function fillArray",
+			ns, s->name, ns, s->name, ns, s->name, ns, s->name);
 		gen_class_proto(tsc, 1, s->name, "void", "fillArray",
 			"e", "HTMLElement|null",
 			"inc", "boolean",
 			"custom", "any", NULL);
-		if (tsc)
-			printf("\t\t\tlet o: %sData|%sData[];\n"
-			       "\t\t\tlet j: number;\n"
-			       "\t\t\tlet cln, row: HTMLElement;\n",
-			       s->name, s->name);
-		else
-			puts("\t\t\tvar o, j, row, cln;");
-
+		gen_vars(tsc, 3, "j", "number", 
+			"o", obj,
+			"cln", "any",
+			"row", "HTMLElement", NULL);
 		puts("\t\t\to = this.obj;");
 		TAILQ_FOREACH(f, &s->fq, entries)
 			if ( ! (FIELD_NOEXPORT & f->flags) &&
@@ -722,7 +730,6 @@ gen_javascript(const struct config *cfg, int tsc)
 			"The BITI fields are the bit indices "
 			"(0--63) and the BITF fields are the "
 			"masked integer values.\n"
-			"@namespace\n"
 			"@readonly\n"
 			"@typedef %s", bf->name, bf->name);
 		TAILQ_FOREACH(bi, &bf->bq, entries) 
@@ -797,7 +804,6 @@ gen_javascript(const struct config *cfg, int tsc)
 			"function designed to work as a custom "
 			"callback for <code>fill</code>-style "
 			"functions for objects.\n"
-			"@namespace\n"
 			"@readonly\n"
 			"@typedef %s", e->name, e->name);
 		TAILQ_FOREACH(ei, &e->eq, entries) 

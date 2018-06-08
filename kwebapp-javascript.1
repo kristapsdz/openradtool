@@ -19,58 +19,47 @@
 .Os
 .Sh NAME
 .Nm kwebapp-javascript
-.Nd implement web application JavaScript classes
+.Nd implement web application JavaScript and TypeScript classes
 .Sh SYNOPSIS
 .Nm kwebapp-javascript
-.\" .Op Fl t
+.Op Fl t
 .Op Ar config
 .Sh DESCRIPTION
 The
 .Nm
-utility accepts a configuration file
-.Ar config
-.Pq defaulting to standard input
-and creates the JavaScript classes accepting the JSON produced by
+utility creates the JavaScript or TypeScript classes that format the
+JSON produced by
 .Xr kwebapp-c-header 1
 and
 .Xr kwebapp-c-source 1 .
-.\" If
-.\" .Fl t
-.\" is specified, it emits Typescript attributes as well.
+Its arguments are as follows:
+.Bl -tag -width Ds
+.It Fl t
+Emits Typescript instead of JavaScript.
+.It Ar config
+Configuration file in
+.Xr kwebapp 5
+syntax.
+.El
 .Pp
-The output, a standards-compliant JavaScript file, formats
-JSON output into a DOM tree.
+Both output formats consist of a set of classes within the
+.Qq kwebapp
+namespace describing structures, enumerations, and bitfields.
 The method for acquiring the JSON is not managed by
 .Nm .
-The JavaScript consists of a set of classes within the
-.Qq kwebapp
-namespace.
 .Pp
 To use the interface, simply include the generated file as a script,
-create objects given the exported JSON of
+create objects from the JSON exported by
 .Xr kwebapp-c-source 1 ,
-and invoke the corresponding JavaScript object's
+and invoke the applicable object's
 .Fn fill ,
 .Fn fillInner ,
 and
 .Fn fillArray
 methods with a DOM tree node.
 .Pp
-For example, given a structure
-.Dq foo
-and an AJAX response
-.Dq response ,
-this might look like:
-.Bd -literal -offset indent
-var obj = JSON.parse(response);
-var e = document.getElementById('foo');
-new kwebapp.foo(obj).fill(e);
-.Ed
-.Pp
-For each field in the structure, this method will operate on elements
-within (and including) the element with id
-.Dq foo
-having classes as follows:
+These methods operate on elements with certain classes beneath a given
+element root as follows:
 .Bl -tag -width Ds
 .It Li foo-xxxx-text
 Replaces the contents of the element with the field value.
@@ -105,18 +94,29 @@ method on the nested structure at the given element and its descendents.
 This is only applicable for structure types.
 .El
 .Pp
-Alternatively, the
+The
 .Fn fillInner
-method may be used to exclude the root element.
-Lastly, the
+method may be used to exclude the passed-in element, while
+.Fn fill
+includes this element.
+.Pp
+The
 .Fn fillArray
 method invokes
 .Fn fill
 repeatedly over an array of objects by removing, then subsequently
-cloning and appending the first element of the give DOM root.
+cloning and appending, the first element of the give DOM root.
 .Pp
-All functions accept an additional, optional argument for providing
-custom per-field or per-structure callbacks.
+Enumeration and bitfield classes are also generated from the input file.
+These are appended to the namespace as a series of classes
+consisting of static variables assigned the enumeration value.
+.Pp
+All output objects are fully documented in the
+.Xr jsdoc 1
+format.
+.Ss Customisation
+All functions accept an optional argument for providing custom per-field
+or per-structure callbacks.
 Keys in the object must consist of the structure name, followed by a
 dash, followed by the field name.
 For example, assuming a structure
@@ -167,22 +167,14 @@ whether the value has been set.
 In the event of an unset field value, the function is passed
 .Dv null .
 .Pp
-Enumeration fields are also generated from the input file.
-These are appended to the global namespace as a series of objects
-consisting of variables assigned the enumeration value.
-For example, given an enumeration
-.Dq foo
-with a field
-.Dq bar
-assigned the value 12, this would generate:
-.Bd -literal -offset indent
-console.log(foo.bar);
->>> 12
+Enumerations and bitfields all specify a static
+.Fn format
+function that may be passed as a custom handler for corresponding
+fields.
+These fill in the
+.Xr kwebapp 5
+labels of the corresponding values.
 .Ed
-.Pp
-All JavaScript methods and variables are fully documented in the
-.Xr jsdoc 1
-format.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.
@@ -193,7 +185,31 @@ format.
 .\" .Sh FILES
 .Sh EXIT STATUS
 .Ex -std
-.\" .Sh EXAMPLES
+.Sh EXAMPLES
+Given a
+.Xr kwebapp 5
+structure
+.Dq foo
+with a single field
+.Dq bar
+and an AJAX response
+.Dq response ,
+an example invocation may be as follows:
+.Bd -literal -offset indent
+var obj = JSON.parse(response);
+var e = document.getElementById('foo');
+new kwebapp.foo(obj).fill(e);
+.Ed
+.Pp
+This will fill in all classes under
+.Li e
+named
+.Li foo-bar-value ,
+.Li foo-bar-text ,
+.Li foo-has-bar ,
+.Li foo-no-bar ,
+and
+.Li foo-enum-select .
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
 .\" .Sh ERRORS

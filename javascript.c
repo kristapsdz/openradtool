@@ -617,7 +617,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			"%s.%s#fill}).\n"
 			"@private\n"
 			"@function _fill\n"
-			"@memberof %s.%s#\n",
+			"@memberof %s.%s#",
 			ns, s->name, obj, ns, s->name, ns, s->name);
 		gen_class_proto(tsc, 1, s->name, "void", "_fill",
 			"e", "HTMLElement|null",
@@ -656,7 +656,8 @@ gen_javascript(const struct config *cfg, int tsc)
 			"\"e\", remove all children of \"e\", "
 			"then repeatedly clone the saved element "
 			"and re-append it, filling in the cloned "
-			"subtree with the array.\n"
+			"subtree with the array (inclusive of the "
+			"subtree root).\n"
 			"If \"e\" is not an array, it is construed "
 			"as an array of one.\n"
 			"If the input array is empty, \"e\" is hidden "
@@ -671,20 +672,13 @@ gen_javascript(const struct config *cfg, int tsc)
 			ns, s->name, ns, s->name, ns, s->name, ns, s->name);
 		gen_class_proto(tsc, 1, s->name, "void", "fillArray",
 			"e", "HTMLElement|null",
-			"inc", "boolean",
 			"custom", "any", NULL);
 		gen_vars(tsc, 3, "j", "number", 
 			"o", obj,
 			"cln", "any",
 			"row", "HTMLElement", NULL);
-		puts("\t\t\to = this.obj;");
-		TAILQ_FOREACH(f, &s->fq, entries)
-			if ( ! (FIELD_NOEXPORT & f->flags) &&
-			    FTYPE_STRUCT == f->type) {
-				puts("\t\t\tvar list, strct, i;");
-				break;
-			}
-		printf("\t\t\tif (null === o || null === e)\n"
+		printf("\t\t\to = this.obj;\n"
+		       "\t\t\tif (null === o || null === e)\n"
 		       "\t\t\t\treturn;\n"
 		       "\t\t\tif ( ! (o instanceof Array)) {\n"
 		       "\t\t\t\tvar ar = [];\n"

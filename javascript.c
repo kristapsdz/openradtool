@@ -850,7 +850,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		print_commentv(1, COMMENT_JS,
 			"%s%s"
 			"This object consists of all values for "
-			"the %s enumeration.\n"
+			"the <i>%s</i> enumeration.\n"
 			"It also contains a formatting function "
 			"designed to work as a custom callback for "
 			"<code>fill</code> functions.\n"

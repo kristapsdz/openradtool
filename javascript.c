@@ -54,14 +54,14 @@ gen_jsdoc_field(const char *ns, const struct field *f)
 
 	if (FIELD_NULL & f->flags) {
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-has-%s: \"hide\" class "
-			"removed if %s not null, otherwise "
-			"\"hide\" class is added</li>",
+			"<li>%s-has-%s: <code>hide</code> class "
+			"removed if <i>%s</i> not null, otherwise "
+			"<code>hide</code> class is added</li>",
 			f->parent->name, f->name, f->name);
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-no-%s: \"hide\" class "
-			"added if %s not null, otherwise "
-			"\"hide\" class is removed</li>",
+			"<li>%s-no-%s: <code>hide</code> class "
+			"added if <i>%s</i> not null, otherwise "
+			"<code>hide</code> class is removed</li>",
 			f->parent->name, f->name, f->name);
 	} 
 
@@ -75,21 +75,22 @@ gen_jsdoc_field(const char *ns, const struct field *f)
 			" (if non-null)" : "");
 	} else {
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-%s-enum-select: sets the \"select\" "
-			"option for option values matching %s "
-			"under the element%s</li>",
+			"<li>%s-%s-enum-select: sets the "
+			"<code>select</code> attribute for "
+			"<code>&lt;option&gt;</code> values "
+			"matching <i>%s</i> under the element%s</li>",
 			f->parent->name, f->name, f->name,
 			FIELD_NULL & f->flags ? 
 			" (if non-null)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
 			"<li>%s-%s-text: replace contents "
-			"with %s data%s</li>",
+			"with <i>%s</i> data%s</li>",
 			f->parent->name, f->name, f->name,
 			FIELD_NULL & f->flags ? 
 			" (if non-null)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-%s-value: replace \"value\" "
-			"attribute with %s data%s</li>",
+			"<li>%s-%s-value: replace <code>value</code> "
+			"attribute with <i>%s</i> data%s</li>",
 			f->parent->name, f->name, f->name,
 			FIELD_NULL & f->flags ? 
 			" (if non-null)" : "");
@@ -183,6 +184,33 @@ gen_class_proto(int tsc, int priv, const char *cls,
 		printf(": %s", ret);
 	puts("\n"
 	     "\t\t{");
+}
+
+static void
+gen_func_static(int tsc, const char *cls, const char *name)
+{
+
+	if (tsc)
+		printf("\t\tstatic %s(e: HTMLElement, "
+			"name: string, "
+			"val: string|null): void\n"
+		      "\t\t{\n", name);
+	else
+		printf("\t\t%s.%s = function(e, name, val)\n"
+		       "\t\t{\n", cls, name);
+}
+
+static void
+gen_class_static(int tsc, const char *cls)
+{
+
+	if (tsc) 
+		printf("\texport class %s {\n", cls);
+	else
+		printf("\tvar %s = (function()\n"
+		       "\t{\n"
+		       "\t\tfunction %s() { }\n",
+		       cls, cls);
 }
 
 static void
@@ -529,13 +557,14 @@ gen_javascript(const struct config *cfg, int tsc)
 		    ns, s->name, ns, s->name) < 0)
 			err(EXIT_FAILURE, NULL);
 		print_commentv(1, COMMENT_JS,
-			"Accepts %sData for writing into a DOM tree.\n"
+			"Accepts {@link %s.%sData} for writing into "
+			"a DOM tree.\n"
 			"@param {(%s.%sData|%s.%sData[])} obj - The "
 			"object(s) to write.\n"
 			"@memberof %s\n"
 			"@constructor\n"
 			"@class",
-			s->name, ns, s->name, ns, s->name, ns);
+			ns, s->name, ns, s->name, ns, s->name, ns);
 		if (tsc)
 			printf("\texport class %s {\n"
 			       "\t\tobj: %sData|%sData[];\n"
@@ -569,8 +598,8 @@ gen_javascript(const struct config *cfg, int tsc)
 			"@param {HTMLElement} e - The DOM element.\n"
 			"@param {Object} custom - A dictionary "
 			"of functions keyed by structure and field "
-			"name (e.g., \"foo\" structure, \"bar\" "
-			"field would be \"foo-bar\"). "
+			"name (e.g., <i>foo</i> structure, <i>bar</i> "
+			"field would be <code>foo-bar</code>). "
 			"The value is a function for custom "
 			"handling that accepts the \"e\" value, "
 			"the name of the structure-field, and the "
@@ -661,8 +690,9 @@ gen_javascript(const struct config *cfg, int tsc)
 			"If \"e\" is not an array, it is construed "
 			"as an array of one.\n"
 			"If the input array is empty, \"e\" is hidden "
-			"by using the \"hide\" class.\n"
-			"Otherwise, the \"hide\" class is removed.\n"
+			"by using the <code>hide</code> class.\n"
+			"Otherwise, the <code>hide</code> class is "
+			"removed.\n"
 			"@param {HTMLElement} e - The DOM element.\n"
 			"@param {Object} custom - The custom "
 			"handler dictionary (see {@link "
@@ -717,49 +747,72 @@ gen_javascript(const struct config *cfg, int tsc)
 	}
 
 	TAILQ_FOREACH(bf, &cfg->bq, entries) {
-		print_commentt(1, COMMENT_JS_FRAG_OPEN, bf->doc);
-		print_commentv(1, COMMENT_JS_FRAG,
+		print_commentv(1, COMMENT_JS,
+			"%s%s"
 			"This defines the bit indices for the %s "
 			"bit-field.\n"
-			"The BITI fields are the bit indices "
-			"(0--63) and the BITF fields are the "
+			"The <code>BITI</code> fields are the bit indices "
+			"(0&#8211;63) and the <code>BITF</code> fields are the "
 			"masked integer values.\n"
-			"@readonly\n"
-			"@typedef %s", bf->name, bf->name);
-		TAILQ_FOREACH(bi, &bf->bq, entries) 
-			print_commentv(1, COMMENT_JS_FRAG,
-				"@property {number} BITI_%s %s\n"
-				"@property {number} BITF_%s %s",
-				bi->name,
-				NULL != bi->doc ? bi->doc : "",
-				bi->name,
-				NULL != bi->doc ? bi->doc : "");
-		print_commentv(1, COMMENT_JS_FRAG_CLOSE,
-			"@property {} format Uses a bit field's "
-			"<code>jslabel</code> (or just the "
-			"name, if no <code>jslabel</code> is defined) "
+			"All of these values are static: <strong>do "
+			"not use the constructor</strong>.\n"
+			"@class\n"
+			"@memberof %s", 
+			NULL == bf->doc ? "" : bf->doc,
+			NULL == bf->doc ? "" : "<br />\n",
+			bf->name, ns);
+		gen_class_static(tsc, bf->name);
+		TAILQ_FOREACH(bi, &bf->bq, entries) {
+			print_commentv(2, COMMENT_JS,
+				"%s%s"
+				"This is the bit index from zero.\n"
+				"@memberof %s.%s#\n"
+				"@readonly\n"
+				"@const {number} BITI_%s",
+				NULL == bi->doc ? "" : bi->doc,
+				NULL == bi->doc ? "" : "<br />\n",
+				ns, bf->name, bi->name);
+			print_commentv(2, COMMENT_JS,
+				"%s%s"
+				"This is the bit mask.\n"
+				"@memberof %s.%s#\n"
+				"@readonly\n"
+				"@const {number} BITF_%s",
+				NULL == bi->doc ? "" : bi->doc,
+				NULL == bi->doc ? "" : "<br />\n",
+				ns, bf->name, bi->name);
+			if (tsc)
+				printf("\t\tstatic readonly "
+					 "BITF_%s: number;\n"
+					"\t\tstatic readonly "
+				      	 "BITI_%s: number;\n",
+					bi->name, bi->name);
+			else
+				printf("\t\t%s.BITI_%s = %" PRId64 ";\n"
+				       "\t\t%s.BITF_%s = %u;\n",
+					bf->name, bi->name, bi->value,
+					bf->name, bi->name, 1U << bi->value);
+		}
+		print_commentv(2, COMMENT_JS,
+			"Uses a bit field's <i>jslabel</i> (or just "
+			"the name, if no <i>jslabel</i> is defined) "
 			"to format a custom label as invoked on an "
-			"object's <code>fill</code> function. "
+			"object's <code>fill</code> functions. "
 			"This will act on <code>xxx-yyy-label</code> "
 			"classes, where <code>xxx</code> is the "
 			"structure name and <code>yyy</code> is the "
 			"field name. "
 			"Multiple entries are comma-separated.\n"
 			"For example, <code>xxx.fill(e, { 'xxx-yyy': "
-			"%s.format });</code>, where <code>yyy</code> "
-			"is a field of type <code>enum %s</code>.",
-			bf->name, bf->name);
-		printf("\tvar %s = {\n", bf->name);
-		TAILQ_FOREACH(bi, &bf->bq, entries) {
-			if (NULL != bi->doc)
-				print_commentt(2, COMMENT_JS, bi->doc);
-			printf("\t\tBITI_%s: %" PRId64 ",\n",
-				bi->name, bi->value);
-			printf("\t\tBITF_%s: %u,\n",
-				bi->name, 1U << bi->value);
-		}
-		printf("\t\tformat: function(e, name, val) {\n"
-		       "\t\t\tvar v, i = 0, str = '';\n"
+			"%s.%s.format });</code>, where "
+			"<code>yyy</code> is a field of type "
+			"<i>enum %s</i>.\n"
+			"@static\n"
+			"@function format\n"
+			"@memberof %s.%s#",
+			ns, bf->name, bf->name, ns, bf->name);
+		gen_func_static(tsc, bf->name, "format");
+		printf("\t\t\tvar v, i = 0, str = '';\n"
 		       "\t\t\tname += '-label';\n"
 		       "\t\t\tif (null === val) {\n"
 		       "\t\t\t\t_replcl(e, name, \'not given\', false);\n"
@@ -784,9 +837,13 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t\t\t\treturn;\n"
 		       "\t\t\t}\n"
 		       "\t\t\t_replcl(e, name, str, false);\n"
-		       "\t\t}\n"
-		       "\t};\n"
-		       "\n");
+		       "\t\t}%s\n",
+		       tsc ? "" : ";");
+		if ( ! tsc) 
+			printf("\t\treturn %s;\n", bf->name);
+		printf("\t}%s\n"
+		       "\n",
+		       tsc ? "" : "());");
 	}
 
 	TAILQ_FOREACH(e, &cfg->eq, entries) {
@@ -795,22 +852,16 @@ gen_javascript(const struct config *cfg, int tsc)
 			"This object consists of all values for "
 			"the %s enumeration.\n"
 			"It also contains a formatting function "
-			"designed to work as a custom allback for "
-			"\"fill\"-style functions.\n"
+			"designed to work as a custom callback for "
+			"<code>fill</code> functions.\n"
+			"All of these values are static: <strong>do "
+			"not use the constructor</strong>.\n"
 			"@memberof %s\n"
-			"@hideconstructor\n"
 			"@class", 
 			NULL == e->doc ? "" : e->doc,
 			NULL == e->doc ? "" : "<br />\n",
 			e->name, ns);
-
-		if (tsc) 
-			printf("\texport class %s {\n", e->name);
-		else
-			printf("\tvar %s = (function()\n"
-			       "\t{\n"
-			       "\t\tfunction %s() { }\n",
-			       e->name, e->name);
+		gen_class_static(tsc, e->name);
 
 		TAILQ_FOREACH(ei, &e->eq, entries) {
 			print_commentv(2, COMMENT_JS,
@@ -829,33 +880,27 @@ gen_javascript(const struct config *cfg, int tsc)
 				printf("\t\t%s.%s = %" PRId64 ";\n",
 					e->name, ei->name, ei->value);
 		}
-		/*print_commentv(1, COMMENT_JS_FRAG,
-			"@property {} format Uses the enumeration "
-			"item's <code>jslabel</code> (or just the "
-			"name, if no <code>jslabel</code> is defined) "
-			"to format a custom label as invoked on an "
-			"object's <code>fill</code> function. "
+
+		print_commentv(2, COMMENT_JS,
+			"Uses the enumeration item's <i>jslabel</i> "
+			"(or just the name, if no <i>jslabel</i> is "
+			"defined) to format a custom label as "
+			"invoked on an object's <code>fill</code> "
+			"function. "
 			"This will act on <code>xxx-yyy-label</code> "
 			"classes, where <code>xxx</code> is the "
 			"structure name and <code>yyy</code> is the "
 			"field name. "
 			"For example, <code>xxx.fill(e, { 'xxx-yyy': "
-			"%s.format });</code>, where <code>yyy</code> "
-			"is a field of type <code>enum %s</code>.",
-			e->name, e->name);*/
-
-
-		if (tsc) {
-			puts("\t\tstatic format(e: HTMLElement, "
-					"name: string, "
-					"val: string|null): void\n"
-			     "\t\t{");
-		} else {
-			printf("\t\t%s.format = function(e, name, val)\n"
-			       "\t\t{\n", e->name);
-		}
-
-		printf( "\t\t\tname += '-label';\n"
+			"%s.%s.format });</code>, where "
+			"<code>yyy</code> is a field of type "
+			"<i>enum %s</i>.\n"
+			"@static\n"
+			"@function format\n"
+			"@memberof %s.%s#",
+			ns, e->name, e->name, ns, e->name);
+		gen_func_static(tsc, e->name, "format");
+		printf("\t\t\tname += '-label';\n"
 		       "\t\t\tif (null === val) {\n"
 		       "\t\t\t\t_replcl(e, name, \'not given\', false);\n"
 		       "\t\t\t\t_classaddcl(e, name, \'noanswer\', false);\n"

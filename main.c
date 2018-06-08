@@ -298,7 +298,7 @@ usage:
 			getprogname());
 	else if (OP_JAVASCRIPT == op)
 		fprintf(stderr, 
-			"usage: %s [config]\n",
+			"usage: %s [-t] [config]\n",
 			getprogname());
 	else
 		fprintf(stderr, 

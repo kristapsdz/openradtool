@@ -796,21 +796,46 @@ gen_javascript(const struct config *cfg, int tsc)
 	}
 
 	TAILQ_FOREACH(e, &cfg->eq, entries) {
-		print_commentt(1, COMMENT_JS_FRAG_OPEN, e->doc);
-		print_commentv(1, COMMENT_JS_FRAG,
+		print_commentv(1, COMMENT_JS,
+			"%s%s"
 			"This object consists of all values for "
 			"the %s enumeration.\n"
-			"It also contains a <code>format</code> "
-			"function designed to work as a custom "
-			"callback for <code>fill</code>-style "
-			"functions for objects.\n"
-			"@readonly\n"
-			"@typedef %s", e->name, e->name);
-		TAILQ_FOREACH(ei, &e->eq, entries) 
-			print_commentv(1, COMMENT_JS_FRAG,
-				"@property {number} %s %s", ei->name,
-				NULL != ei->doc ? ei->doc : "");
-		print_commentv(1, COMMENT_JS_FRAG,
+			"It also contains a formatting function "
+			"designed to work as a custom allback for "
+			"\"fill\"-style functions.\n"
+			"@memberof %s\n"
+			"@hideconstructor\n"
+			"@class", 
+			NULL == e->doc ? "" : e->doc,
+			NULL == e->doc ? "" : "<br />\n",
+			e->name, ns);
+
+		if (tsc) 
+			printf("\texport class %s {\n", e->name);
+		else
+			printf("\tvar %s = (function()\n"
+			       "\t{\n"
+			       "\t\tfunction %s() { }\n",
+			       e->name, e->name);
+
+		TAILQ_FOREACH(ei, &e->eq, entries) {
+			print_commentv(2, COMMENT_JS,
+				"%s%s"
+				"@memberof %s.%s#\n"
+				"@readonly\n"
+				"@const {number} %s", 
+				NULL == ei->doc ? "" : ei->doc,
+				NULL == ei->doc ? "" : "<br />\n",
+				ns, e->name, ei->name);
+			if (tsc) 
+				printf("\t\tstatic readonly %s: number = %" 
+					PRId64 ";\n", ei->name, 
+					ei->value);
+			else
+				printf("\t\t%s.%s = %" PRId64 ";\n",
+					e->name, ei->name, ei->value);
+		}
+		/*print_commentv(1, COMMENT_JS_FRAG,
 			"@property {} format Uses the enumeration "
 			"item's <code>jslabel</code> (or just the "
 			"name, if no <code>jslabel</code> is defined) "
@@ -823,29 +848,17 @@ gen_javascript(const struct config *cfg, int tsc)
 			"For example, <code>xxx.fill(e, { 'xxx-yyy': "
 			"%s.format });</code>, where <code>yyy</code> "
 			"is a field of type <code>enum %s</code>.",
-			e->name, e->name);
+			e->name, e->name);*/
 
-		print_commentt(1, COMMENT_JS_FRAG_CLOSE, NULL);
 
 		if (tsc) {
-			printf("\texport class %s\n"
-			       "\t{\n", e->name);
-			TAILQ_FOREACH(ei, &e->eq, entries)
-				printf("\t\tstatic readonly %s: number = %" 
-					PRId64 ";\n", ei->name, 
-					ei->value);
 			puts("\t\tstatic format(e: HTMLElement, "
 					"name: string, "
 					"val: string|null): void\n"
 			     "\t\t{");
 		} else {
-			printf("\tvar %s =\n"
-			       "\t{\n", e->name);
-			TAILQ_FOREACH(ei, &e->eq, entries)
-				printf("\t\t%s: %" PRId64 ",\n",
-					ei->name, ei->value);
-			puts("\t\tformat: function(e, name, val)\n"
-			     "\t\t{");
+			printf("\t\t%s.format = function(e, name, val)\n"
+			       "\t\t{\n", e->name);
 		}
 
 		printf( "\t\t\tname += '-label';\n"
@@ -868,10 +881,13 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t\t\t\t_replcl(e, name, \'Unknown\', false);\n"
 		       "\t\t\t\tbreak;\n"
 		       "\t\t\t}\n"
-		       "\t\t}\n"
-		       "\t}%s\n"
-		       "\n",
+		       "\t\t}%s\n",
 		       e->name, tsc ? "" : ";");
+		if ( ! tsc) 
+			printf("\t\treturn %s;\n", e->name);
+		printf("\t}%s\n"
+		       "\n",
+		       tsc ? "" : "());");
 	}
 
 	if ( ! tsc) {

@@ -151,7 +151,7 @@ $(LINKS): kwebapp
 OBJS: extern.h
 
 test: test.o db.o db.db
-	$(CC) $(LDFLAGS) -o $@ test.o db.o -lksql -lsqlite3 -lkcgijson -lkcgi -lz $(LDADD)
+	$(CC) $(LDFLAGS) -o $@ test.o db.o -lksql -lsqlite3 -lpthread -lkcgijson -lkcgi -lz $(LDADD)
 
 audit-out.js: kwebapp-audit-json audit-example.txt
 	./kwebapp-audit-json user audit-example.txt >$@

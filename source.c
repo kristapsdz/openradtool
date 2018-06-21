@@ -136,6 +136,34 @@ static	const char *const validbins[VALIDATE__MAX] = {
 	"!=", /* VALIDATE_EQ */
 };
 
+static void
+gen_print_checkpass(int ptr, size_t pos, const char *name)
+{
+	const char	*s = ptr ? "->" : ".";
+
+#ifdef __OpenBSD__
+	printf("(crypt_checkpass(v%zu, p%s%s) < 0)", pos, s, name);
+#else
+	printf("(strcmp(crypt(v%zu, p%s%s), p%s%s))", 
+		pos, s, name, s, name);
+#endif
+}
+
+static void
+gen_print_newpass(int ptr, size_t pos, size_t npos)
+{
+
+#ifdef __OpenBSD__
+	printf("\tcrypt_newhash(%sv%zu, \"blowfish,a\", "
+		"hash%zu, sizeof(hash%zu));\n",
+		ptr ? "*" : "", npos, pos, pos);
+#else
+	printf("\tstrlcpy(hash%zu, crypt(%sv%zu, gensalt()), "
+		"sizeof(hash%zu));\n",
+		pos, ptr ? "*" : "", npos, pos);
+#endif
+}
+
 /*
  * Use this function to print ksql_stmt_alloc() invocations.
  * This is because we use a different calling style depending upon
@@ -332,11 +360,13 @@ gen_strct_func_iter(const struct config *cfg,
 			pos++;
 			continue;
 		}
-		printf("\t\tif (crypt_checkpass(v%zu, p.%s) < 0) {\n"
+		printf("\t\tif ");
+		gen_print_checkpass(0, pos, sent->fname);
+		printf(" {\n"
 		       "\t\t\tdb_%s_unfill_r(&p);\n"
 		       "\t\t\tcontinue;\n"
 		       "\t\t}\n",
-		       pos, sent->fname, s->parent->name);
+		       s->parent->name);
 		pos++;
 	}
 
@@ -427,11 +457,14 @@ gen_strct_func_list(const struct config *cfg,
 			pos++;
 			continue;
 		}
-		printf("\t\tif (crypt_checkpass(v%zu, p->%s) < 0) {\n"
+		printf("\t\tif ");
+		gen_print_checkpass(1, pos, sent->fname);
+		printf(" {\n"
 		       "\t\t\tdb_%s_free(p);\n"
+		       "\t\t\tp = NULL;\n"
 		       "\t\t\tcontinue;\n"
 		       "\t\t}\n",
-		       pos, sent->fname, s->parent->name);
+		       s->parent->name);
 		pos++;
 	}
 
@@ -1018,12 +1051,13 @@ gen_strct_func_srch(const struct config *cfg,
 			pos++;
 			continue;
 		}
-		printf("\t\tif (NULL != p && "
-			"crypt_checkpass(v%zu, p->%s) < 0) {\n"
+		printf("\t\tif (NULL != p && ");
+		gen_print_checkpass(1, pos, sent->fname);
+		printf(" {\n"
 		       "\t\t\tdb_%s_free(p);\n"
 		       "\t\t\tp = NULL;\n"
-		       "\t\t}\n",
-		       pos, sent->fname, s->parent->name);
+		       "\t\t}\n", 
+		       s->parent->name);
 		pos++;
 	}
 
@@ -1100,11 +1134,8 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 			if (FIELD_NULL & f->flags)
 				printf("\tif (NULL != v%zu)\n"
 				       "\t", npos);
-			printf("\tcrypt_newhash(%sv%zu, "
-				"\"blowfish,a\", hash%zu, "
-				"sizeof(hash%zu));\n",
-				FIELD_NULL & f->flags ? "*" : "",
-				npos, pos, pos);
+			gen_print_newpass(FIELD_NULL & f->flags,
+				pos, npos);
 			pos++;
 		} 
 		if (FTYPE_STRUCT == f->type ||
@@ -1401,10 +1432,8 @@ gen_func_update(const struct config *cfg,
 			if (FIELD_NULL & ref->field->flags)
 				printf("if (NULL != v%zu)\n"
 				       "\t", npos);
-			printf("\tcrypt_newhash(v%zu, "
-				"\"blowfish,a\", hash%zu, "
-				"sizeof(hash%zu));\n",
-				npos, pos, pos);
+			gen_print_newpass(FIELD_NULL & 
+				ref->field->flags, pos, npos);
 			pos++;
 		} 
 		npos++;
@@ -2264,6 +2293,21 @@ gen_c_source(const struct config *cfg, int json,
 			header++;
 	}
 	puts("");
+
+#ifndef __OpenBSD__
+	puts("static const char *\n"
+	     "gensalt(void)\n"
+	     "{\n"
+	     "\tsize_t i;\n"
+	     "\tstatic char salt = \"$1$........\";\n"
+	     "\tconst char *const seedchars =\n"
+	     "\t\t\"./0123456789ABCDEFGHIJKLMNOPQRST\"\n"
+	     "\t\t\"UVWXYZabcdefghijklmnopqrstuvwxyz\";\n"
+	     "for (i = 0; i < 8; i++)\n"
+	     "\tsalt[i + 3] = seedchars[random() % 64];\n"
+	     "\treturn salt;\n"
+	     "}\n");
+#endif
 
 	if (dbin) {
 		print_commentt(0, COMMENT_C,

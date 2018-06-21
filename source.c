@@ -2233,6 +2233,11 @@ gen_c_source(const struct config *cfg, int json,
 		"kwebapp " VERSION ".\n"
 		"DO NOT EDIT!");
 
+#ifndef __OpenBSD__
+	puts("#define _BSD_SOURCE\n"
+	     "#define _XOPEN_SOURCE\n"
+	     "");
+#endif
 
 	/* Start with all headers we'll need. */
 
@@ -2265,11 +2270,9 @@ gen_c_source(const struct config *cfg, int json,
 
 	puts("#include <stdio.h>\n"
 	     "#include <stdlib.h>\n"
-	     "#include <string.h>");
-#ifndef __OpenBSD__
-	puts("#define _XOPEN_SOURCE");
-#endif
-	puts("#include <unistd.h>\n"
+	     "#include <string.h>\n"
+	     "#include <time.h>\n" /* Linux with _XOPEN_SOURCE */
+	     "#include <unistd.h>\n"
 	     "");
 
 	if (need_ksql)
@@ -2315,7 +2318,7 @@ gen_c_source(const struct config *cfg, int json,
 	     "}\n");
 #endif
 #if ! HAVE_B64_NTOP
-	puts("int\n"
+	puts("static int\n"
 	     "b64_ntop(unsigned char *src, size_t srclength,\n"
 	     "\tchar *target, size_t targsize)\n"
 	     "{\n"
@@ -2324,9 +2327,9 @@ gen_c_source(const struct config *cfg, int json,
 	     "\t\t\"abcdefghijklmnopqrstuvwxyz0123456789+/\";\n"
 	     "\tstatic const char Pad64 = \'=\';\n"
 	     "\tsize_t datalength = 0;\n"
-	     "\tu_char input[3];\n"
-	     "\tu_char output[4];\n"
-	     "\tint i;\n"
+	     "\tunsigned char input[3];\n"
+	     "\tunsigned char output[4];\n"
+	     "\tsize_t i;\n"
 	     "\n"
 	     "\twhile (2 < srclength) {\n"
 	     "\t\tinput[0] = *src++;\n"

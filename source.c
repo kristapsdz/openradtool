@@ -2240,6 +2240,7 @@ gen_c_source(const struct config *cfg, int json,
 	     "\n"
 	     "#include <assert.h>");
 
+#if HAVE_B64_NTOP
 	TAILQ_FOREACH(p, &cfg->sq, entries) 
 		if (STRCT_HAS_BLOB & p->flags) {
 			print_commentt(0, COMMENT_C,
@@ -2248,6 +2249,7 @@ gen_c_source(const struct config *cfg, int json,
 			     "#include <resolv.h>");
 			break;
 		}
+#endif
 
 	if (dbin || strchr(incls, 'd'))
 		need_ksql = 1;
@@ -2310,6 +2312,64 @@ gen_c_source(const struct config *cfg, int json,
 	     "\tfor (i = 0; i < 8; i++)\n"
 	     "\t\tsalt[i + 3] = seedchars[random() % 64];\n"
 	     "\treturn salt;\n"
+	     "}\n");
+#endif
+#if ! HAVE_B64_NTOP
+	puts("int\n"
+	     "b64_ntop(unsigned char *src, size_t srclength,\n"
+	     "\tchar *target, size_t targsize)\n"
+	     "{\n"
+	     "\tstatic const char Base64[] =\n"
+	     "\t\t\"ABCDEFGHIJKLMNOPQRSTUVWXYZ\"\n"
+	     "\t\t\"abcdefghijklmnopqrstuvwxyz0123456789+/\";\n"
+	     "\tstatic const char Pad64 = \'=\';\n"
+	     "\tsize_t datalength = 0;\n"
+	     "\tu_char input[3];\n"
+	     "\tu_char output[4];\n"
+	     "\tint i;\n"
+	     "\n"
+	     "\twhile (2 < srclength) {\n"
+	     "\t\tinput[0] = *src++;\n"
+	     "\t\tinput[1] = *src++;\n"
+	     "\t\tinput[2] = *src++;\n"
+	     "\t\tsrclength -= 3;\n"
+	     "\n"
+	     "\t\toutput[0] = input[0] >> 2;\n"
+	     "\t\toutput[1] = ((input[0] & 0x03) << 4) + (input[1] >> 4);\n"
+	     "\t\toutput[2] = ((input[1] & 0x0f) << 2) + (input[2] >> 6);\n"
+	     "\t\toutput[3] = input[2] & 0x3f;\n"
+	     "\n"
+	     "\t\tif (datalength + 4 > targsize)\n"
+	     "\t\t\treturn (-1);\n"
+	     "\t\ttarget[datalength++] = Base64[output[0]];\n"
+	     "\t\ttarget[datalength++] = Base64[output[1]];\n"
+	     "\t\ttarget[datalength++] = Base64[output[2]];\n"
+	     "\t\ttarget[datalength++] = Base64[output[3]];\n"
+	     "\t}\n"
+	     "\n"
+	     "\tif (0 != srclength) {\n"
+	     "\t\tinput[0] = input[1] = input[2] = \'\\0\';\n"
+	     "\t\tfor (i = 0; i < srclength; i++)\n"
+	     "\t\t\tinput[i] = *src++;\n"
+	     "\n"
+	     "\t\toutput[0] = input[0] >> 2;\n"
+	     "\t\toutput[1] = ((input[0] & 0x03) << 4) + (input[1] >> 4);\n"
+	     "\t\toutput[2] = ((input[1] & 0x0f) << 2) + (input[2] >> 6);\n"
+	     "\n"
+	     "\t\tif (datalength + 4 > targsize)\n"
+	     "\t\t\treturn (-1);\n"
+	     "\t\ttarget[datalength++] = Base64[output[0]];\n"
+	     "\t\ttarget[datalength++] = Base64[output[1]];\n"
+	     "\t\tif (srclength == 1)\n"
+	     "\t\t\ttarget[datalength++] = Pad64;\n"
+	     "\t\telse\n"
+	     "\t\t\ttarget[datalength++] = Base64[output[2]];\n"
+	     "\t\ttarget[datalength++] = Pad64;\n"
+	     "\t}\n"
+	     "\tif (datalength >= targsize)\n"
+	     "\t\treturn (-1);\n"
+	     "\ttarget[datalength] = \'\\0\';\n"
+	     "\treturn (datalength);\n"
 	     "}\n");
 #endif
 

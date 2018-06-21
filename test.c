@@ -129,5 +129,5 @@ main(void)
 	/* That's it!  Close up shop. */
 
 	db_close(sql);
-	return(EXIT_FAILURE);
+	return EXIT_SUCCESS;
 }

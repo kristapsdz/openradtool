@@ -4,15 +4,14 @@
 		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 		<meta charset="utf-8" /> 
 		<title>kwebapp | web application source generator</title>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Alegreya+Sans:400,400italic,500" />
 		<link rel="stylesheet" href="highlight.css" />
 		<link rel="stylesheet" href="index.css" />
-		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
-		<link rel="stylesheet" href="https://code.cdn.mozilla.net/fonts/fira.css" />
 	</head>
 	<body lang="en" id="archive">
 		<header>
 			<section id="breadcrumbs">
-				<div><div>&#160;</div></div>
 				<div>
 					<div>
 						BSD.lv tools for BCHS: 
@@ -21,11 +20,10 @@
 						<a href="https://kristaps.bsd.lv/kwebapp">kwebapp</a>
 					</div>
 				</div>
-				<div><div>&#160;</div></div>
 			</section>
 			<section id="header">
 				<div>
-					<h1><a href="index.html">kwebapp</a></h1> 
+					<h1>kwebapp</h1> 
 					<span>&#8212; 
 						<span>web application source generator</span>
 						<nav data-sblg-nav="1" data-sblg-navsort="date" data-sblg-navtag="version" data-sblg-navsz="1" data-sblg-navxml="1">
@@ -35,8 +33,6 @@
 				</div>
 				<nav>
 					<a href="https://github.com/kristapsdz/kwebapp">github</a>
-					<a href="kwebapp.1.html">kwebapp(1)</a>
-					<a href="kwebapp.5.html">kwebapp(5)</a>
 					<a href="snapshots/kwebapp.tar.gz">source</a>
 					<a href="snapshots">archive</a>
 				</nav>

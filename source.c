@@ -158,7 +158,7 @@ gen_print_newpass(int ptr, size_t pos, size_t npos)
 		"hash%zu, sizeof(hash%zu));\n",
 		ptr ? "*" : "", npos, pos, pos);
 #else
-	printf("\tstrlcpy(hash%zu, crypt(%sv%zu, gensalt()), "
+	printf("\tstrncpy(hash%zu, crypt(%sv%zu, gensalt()), "
 		"sizeof(hash%zu));\n",
 		pos, ptr ? "*" : "", npos, pos);
 #endif
@@ -1053,7 +1053,7 @@ gen_strct_func_srch(const struct config *cfg,
 		}
 		printf("\t\tif (NULL != p && ");
 		gen_print_checkpass(1, pos, sent->fname);
-		printf(" {\n"
+		printf(") {\n"
 		       "\t\t\tdb_%s_free(p);\n"
 		       "\t\t\tp = NULL;\n"
 		       "\t\t}\n", 
@@ -2233,6 +2233,7 @@ gen_c_source(const struct config *cfg, int json,
 		"kwebapp " VERSION ".\n"
 		"DO NOT EDIT!");
 
+
 	/* Start with all headers we'll need. */
 
 	puts("#include <sys/queue.h>\n"
@@ -2262,8 +2263,11 @@ gen_c_source(const struct config *cfg, int json,
 
 	puts("#include <stdio.h>\n"
 	     "#include <stdlib.h>\n"
-	     "#include <string.h>\n"
-	     "#include <unistd.h>\n"
+	     "#include <string.h>");
+#ifndef __OpenBSD__
+	puts("#define _XOPEN_SOURCE");
+#endif
+	puts("#include <unistd.h>\n"
 	     "");
 
 	if (need_ksql)
@@ -2299,12 +2303,12 @@ gen_c_source(const struct config *cfg, int json,
 	     "gensalt(void)\n"
 	     "{\n"
 	     "\tsize_t i;\n"
-	     "\tstatic char salt = \"$1$........\";\n"
+	     "\tstatic char salt[] = \"$1$........\";\n"
 	     "\tconst char *const seedchars =\n"
 	     "\t\t\"./0123456789ABCDEFGHIJKLMNOPQRST\"\n"
 	     "\t\t\"UVWXYZabcdefghijklmnopqrstuvwxyz\";\n"
-	     "for (i = 0; i < 8; i++)\n"
-	     "\tsalt[i + 3] = seedchars[random() % 64];\n"
+	     "\tfor (i = 0; i < 8; i++)\n"
+	     "\t\tsalt[i + 3] = seedchars[random() % 64];\n"
 	     "\treturn salt;\n"
 	     "}\n");
 #endif

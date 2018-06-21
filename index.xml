@@ -5,15 +5,14 @@
 		<meta charset="utf-8" /> 
 		<title>kwebapp | web application source generator</title>
 		<link rel="alternate" href="atom.xml" type="application/atom+xml" title="kwebapp version feed" />
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Alegreya+Sans:400,400italic,500" />
 		<link rel="stylesheet" href="highlight.css" />
 		<link rel="stylesheet" href="index.css" />
-		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
-		<link rel="stylesheet" href="https://code.cdn.mozilla.net/fonts/fira.css" />
 	</head>
 	<body lang="en" itemscope="itemscope" itemtype="http://schema.org/SoftwareApplication">
 		<header>
 			<section id="breadcrumbs">
-				<div><div>&#160;</div></div>
 				<div>
 					<div>
 						BSD.lv tools for BCHS: 
@@ -22,7 +21,6 @@
 						<a href="https://kristaps.bsd.lv/kwebapp">kwebapp</a>
 					</div>
 				</div>
-				<div><div>&#160;</div></div>
 			</section>
 			<section id="header">
 				<div>
@@ -36,8 +34,6 @@
 				</div>
 				<nav>
 					<a href="https://github.com/kristapsdz/kwebapp">github</a>
-					<a href="kwebapp.1.html">kwebapp(1)</a>
-					<a href="kwebapp.5.html">kwebapp(5)</a>
 					<a href="snapshots/kwebapp.tar.gz">source</a>
 					<a href="snapshots">archive</a>
 					<a href="atom.xml"><i class="fa fa-rss"></i></a>
@@ -48,13 +44,12 @@
 			<section>
 				<p>
 					<span class="nm">kwebapp</span> is an <a href="https://opensource.org/licenses/ISC">open source</a> UNIX
-					system generating front-end (JavaScript) and back-end (SQL, C) for your web application, leaving you to
-					develop your business logic.
+					system generating front-end (JavaScript, TypeScript) and back-end (SQL, C) for your web application,
+					leaving you to develop your business logic.
 					It accepts a configuration file that describes your data: tables (structures), fields (members),
-					accessors (search, list, iterate), modifiers (insert, update, delete), etc.
-					Even <a href="https://learnbchs.org/rbac.html">role-based access control</a>.
-					It generates the source files (C header, C source, SQL schema, SQL update schema, JavaScript) for your
-					application.
+					accessors (search, list, iterate), modifiers (insert, update, delete), etc.&#8212; even <a
+						href="https://learnbchs.org/rbac.html">role-based access control</a>&#8212; and generates the source
+						files for your application to use.
 				</p>
 				<p>
 					Yes, C&#8212;as in <a href="https://learnbchs.org">BCHS</a>.
@@ -68,14 +63,13 @@
 				<p>
 					The system has no run-time dependencies; however, the generated C files use <a
 						href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for the underlying <a
-						href="https://sqlite.org">SQLite</a> database.
-					If optionally generating JSON formatters for exporting data or validation routines for HTML form input,
-					you will also require <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a>.
-					Generated JavaScript files are <q><a href="http://vanilla-js.com/">vanilla</a></q> and have no framework
-					dependencies.
+						href="https://sqlite.org">SQLite</a> database, and often require
+					<a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> when generating validators and output formatters.
+					Generated JavaScript and TypeScript files are <q><a href="http://vanilla-js.com/">vanilla</a></q> and
+					have no framework dependencies.
 				</p>
 				<p>
-					<strong>You will need the newest version of this libraries.</strong>
+					<strong>You will need the newest version of the dependency libraries.</strong>
 					Sources output by <span class="nm">kwebapp</span> use features from the newest releases:
 					all of these tools are being built in tandem.
 				</p>

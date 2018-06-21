@@ -11,7 +11,7 @@ digraph {
 	subgraph cluster0 {
 		{ rank=same; src; js; sql; }
 		src[label="C"];
-		js[label="JavaScript"];
+		js[label="Java/TypeScript"];
 		sql[label="SQL"];
 	}
 	cfg -> bin;

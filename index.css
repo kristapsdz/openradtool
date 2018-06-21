@@ -1,7 +1,8 @@
-body					{ font-family: "Fira Sans", sans-serif; 
+body					{ font-family: "Alegreya Sans", sans-serif; 
 					  color: #444;
 					  margin: 0;
-				 	  font-size: 13pt; }
+					  font-weight: 400;
+				 	  font-size: 14pt; }
 a					{ color: #07889b; }
 body > header				{ width: 100%; 
 					  padding-bottom: 64pt;
@@ -10,26 +11,21 @@ body > header				{ width: 100%;
 					  font-size: 0;
 					  margin-bottom: 2.2em;
 					  text-align: center; }
+b, strong				{ font-weight: 500; }
 #archive > header			{ padding-bottom: 24pt; }
 #breadcrumbs > *			{ display: inline-block; 
-					  background-color: #07889b;
 					  vertical-align: top;
 					  font-size: 13pt;
 					  color: #ccc; }
-#breadcrumbs > div:nth-child(2) 	{ background-color: #a0a0a0; }
-#breadcrumbs > div:nth-child(2) > div	{ border-bottom-right-radius: 8pt; 
+#breadcrumbs > div > div		{ border-bottom-right-radius: 8pt; 
 					  background-color: #07889b;
+					  box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+					  border: thin solid rgba(0, 0, 0, 0.2);
 					  padding: 8pt 24pt;
 					  border-bottom-left-radius: 8pt; }
-#breadcrumbs > div:first-child > div	{ width: 8pt;
-					  background-color: #a0a0a0;
-					  border-top-right-radius: 4pt; }
-#breadcrumbs > div:last-child > div	{ width: 8pt;
-					  background-color: #a0a0a0;
-					  border-top-left-radius: 4pt; }
 #archive #header			{ margin-top: 24pt; }
 #header					{ margin-top: 64pt; 
-					  font-size: 13pt;
+					  font-size: 16pt;
 					  text-shadow: 0 0 2px #666; }
 #header > div:first-child		{ margin: 1em 0; }
 h1					{ display: inline-block; 
@@ -45,9 +41,12 @@ h3					{ font-weight: 500;
 					  margin-top: 4rem;
 					  font-size: inherit; }
 #breadcrumbs a				{ color: #fff; }
-#header a				{ color: #eee; 
+#header nav a				{ color: #eee; 
 					  display: inline-block;
+					  font-variant: small-caps;
 					  padding: 0 4pt; }
+#header nav a:hover			{ color: #fff; }
+#header i				{ font-size: smaller; }
 figure					{ text-align: center; 
 					  margin: 2em 0; }
 figcaption				{ color: #888; 
@@ -58,17 +57,17 @@ footer					{ text-align: center;
 					  font-size: smaller; }
 footer a				{ color: #66b98f; }
 .file, .nm				{ font-style: italic; }
-article > section			{ width: 60%;
+article > section			{ width: 50%;
 					  margin-left: auto;
 					  margin-right: auto; }
 article[data-sblg-article]		{ width: 100%; }
-code, pre.hl				{ font-family: "Fira Mono", monospace; 
-					  font-size: 12pt; }
+code, pre.hl				{ font-family: monospace; 
+					  font-size: smaller; }
 pre.hl					{ overflow: hidden; }
 blockquote				{ background-color: #b0b0b0;
 					  color: #fff;
 					  margin: 2.2em 0;
-					  padding: 6rem 20% 3rem 20%; }
+					  padding: 6rem 25% 3rem 25%; }
 blockquote a				{ text-shadow: 0 0 1px #ccc; 
 					  text-decoration: none; }
 blockquote > div			{ text-shadow: 0 0 1px #333; }

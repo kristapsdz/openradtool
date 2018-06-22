@@ -6,7 +6,7 @@ body					{ font-family: "Alegreya Sans", sans-serif;
 a					{ color: #07889b; }
 body > header				{ width: 100%; 
 					  padding-bottom: 64pt;
-					  background-color: #a0a0a0;
+					  background-color: #07aabb;
 					  color: #fff;
 					  font-size: 0;
 					  margin-bottom: 2.2em;
@@ -16,37 +16,49 @@ b, strong				{ font-weight: 500; }
 #breadcrumbs > *			{ display: inline-block; 
 					  vertical-align: top;
 					  font-size: 13pt;
-					  color: #ccc; }
+					  color: #eee; }
 #breadcrumbs > div > div		{ border-bottom-right-radius: 8pt; 
 					  background-color: #07889b;
-					  box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
-					  border: thin solid rgba(0, 0, 0, 0.2);
-					  padding: 8pt 24pt;
+					  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+					  border: thin solid rgba(255, 255, 255, 0.8);
+					  border-top: none;
+					  padding: 10pt 32pt;
 					  border-bottom-left-radius: 8pt; }
 #archive #header			{ margin-top: 24pt; }
 #header					{ margin-top: 64pt; 
-					  font-size: 16pt;
-					  text-shadow: 0 0 2px #666; }
+					  font-size: 16pt; }
 #header > div:first-child		{ margin: 1em 0; }
-h1					{ display: inline-block; 
-					  font-size: xx-large;
-					  margin: 0;
-					  font-weight: 500; }
-h2					{ font-size: larger; 
-					  text-shadow: 0 0 1px #333;
-					  margin: 0;
-					  font-weight: 400; }
-h3					{ font-weight: 500; 
-					  margin-bottom: 0; 
-					  margin-top: 4rem;
-					  font-size: inherit; }
-#breadcrumbs a				{ color: #fff; }
 #header nav a				{ color: #eee; 
 					  display: inline-block;
 					  font-variant: small-caps;
 					  padding: 0 4pt; }
 #header nav a:hover			{ color: #fff; }
 #header i				{ font-size: smaller; }
+#breadcrumbs a				{ color: #fff; }
+h1					{ display: inline-block; 
+					  font-size: x-large;
+					  margin: 0;
+					  font-weight: 500; }
+h2					{ font-size: larger; 
+					  font-variant: small-caps;
+					  text-align: center;
+					  margin: 4em 0 0 0;
+					  font-weight: 400; }
+h3					{ font-weight: 500; 
+					  margin-bottom: 0; 
+					  margin-top: 4rem;
+					  padding-bottom: 4pt;
+					  border-bottom: thin solid rgba(7, 170, 187, 0.3);
+					  font-size: inherit; }
+h2 + code				{ display: block; 
+					  margin: 1em 25% 2em 25%;
+					  background-color: #fdfdff;
+					  color: #000;
+					  padding: 1em;
+					  padding-left: 2em;
+					  text-indent: -2.2ex;
+					  border-radius: 0.5em;
+					  box-shadow: 0 0 8px rgba(7, 170, 187, 1.0); }
 figure					{ text-align: center; 
 					  margin: 2em 0; }
 figcaption				{ color: #888; 
@@ -60,23 +72,23 @@ footer a				{ color: #66b98f; }
 article > section			{ width: 50%;
 					  margin-left: auto;
 					  margin-right: auto; }
+section.special 			{ display: flex; }
+section.special > :last-child		{ flex: 1; }
+section.special > :first-child 		{ padding-right: 2em; }
 article[data-sblg-article]		{ width: 100%; }
 code, pre.hl				{ font-family: monospace; 
 					  font-size: smaller; }
 pre.hl					{ overflow: hidden; }
-blockquote				{ background-color: #b0b0b0;
-					  color: #fff;
-					  margin: 2.2em 0;
-					  padding: 6rem 25% 3rem 25%; }
-blockquote a				{ text-shadow: 0 0 1px #ccc; 
-					  text-decoration: none; }
-blockquote > div			{ text-shadow: 0 0 1px #333; }
 .hl .lin				{ color: #aaa; }
 nav[data-sblg-nav] ul			{ list-style-type: none; 
 					  padding: 0; }
-.archive				{ opacity: 0.6; }
-nav[data-sblg-nav] time			{ opacity: 0.6; 
-					  font-size: smaller; }
+.archive				{ opacity: 0.6;
+					  margin-top: 2em; }
+nav[data-sblg-nav] time			{ opacity: 0.5; 
+					  padding-top: 6pt;
+					  display: block; }
+nav[data-sblg-nav] time i		{ font-size: smaller; }
+
 nav[data-sblg-nav] li			{ color: #666; }
 nav[data-sblg-nav] li + li		{ margin-top: 2em; }
 #archive nav[data-sblg-nav] ul > li:first-child	
@@ -88,15 +100,18 @@ nav[data-sblg-nav] li + li		{ margin-top: 2em; }
  article > section			{ width: 80%; }
  blockquote				{ padding: 1em 10%; }
  code, pre.hl				{ font-size: 10pt; }
+ h2 + code				{ margin: 1em 10% 2em 10%; }
 }
 
 @media only screen and (max-width: 700px), only screen and (max-device-width: 700px) {
  article > section			{ width: 96%; }
- blockquote				{ padding: 2rem 4% 1rem 4%; }
  h2					{ font-size: inherit; }
  figure img				{ width: 100%; 
  					  max-width: 480px; }
- h1					{ font-size: x-large; }
  #breadcrumbs > div:nth-child(2) > div	{ padding: 8pt 4pt; 
 	 				  font-size: 12pt; }
+ h2 + code				{ margin: 1em 2% 2em 2%; }
+ section.special 			{ display: block; }
+ section.special img			{ max-width: 200px; }
+ section.special > :first-child 	{ padding-right: 0; }
 }

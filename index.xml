@@ -15,7 +15,7 @@
 			<section id="breadcrumbs">
 				<div>
 					<div>
-						BSD.lv tools for BCHS: 
+						BSD.lv tools for <a href="https://learnbchs.org">BCHS</a>: 
 						<a href="https://kristaps.bsd.lv/kcgi">kcgi</a>, 
 						<a href="https://kristaps.bsd.lv/ksql">ksql</a>, 
 						<a href="https://kristaps.bsd.lv/kwebapp">kwebapp</a>
@@ -46,12 +46,6 @@
 					<span class="nm">kwebapp</span> is an <a href="https://opensource.org/licenses/ISC">open source</a> UNIX
 					system generating front-end (JavaScript, TypeScript) and back-end (SQL, C) for your web application,
 					leaving you to develop your business logic.
-					It accepts a configuration file that describes your data: tables (structures), fields (members),
-					accessors (search, list, iterate), modifiers (insert, update, delete), etc.&#8212; even <a
-						href="https://learnbchs.org/rbac.html">role-based access control</a>&#8212; and generates the source
-						files for your application to use.
-				</p>
-				<p>
 					Yes, C&#8212;as in <a href="https://learnbchs.org">BCHS</a>.
 				</p>
 				<figure>
@@ -61,27 +55,29 @@
 					</figcaption>
 				</figure>
 				<p>
-					The system has no run-time dependencies; however, the generated C files use <a
+					The system consists of a set of source generators, each accepting a configuration file that describes
+					your data: tables (structures), fields (members), accessors (search, list, iterate), modifiers (insert,
+					update, delete), etc.&#8212; even <a href="https://learnbchs.org/rbac.html">role-based access
+						control</a>&#8212; and generates the source files for your application to use.
+					Each produces a different kind of output.
+				</p>
+				<p>
+					These programs have no run-time dependencies; however, the generated C files use <a
 						href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for the underlying <a
 						href="https://sqlite.org">SQLite</a> database, and often require
 					<a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> when generating validators and output formatters.
+					<strong>You will need the newest version of the dependency libraries.</strong>
+					Sources output by <span class="nm">kwebapp</span> use features from the newest releases:
+					all of these tools are being built in tandem.
 					Generated JavaScript and TypeScript files are <q><a href="http://vanilla-js.com/">vanilla</a></q> and
 					have no framework dependencies.
 				</p>
 				<p>
-					<strong>You will need the newest version of the dependency libraries.</strong>
-					Sources output by <span class="nm">kwebapp</span> use features from the newest releases:
-					all of these tools are being built in tandem.
-				</p>
-				<p>
-					<span class="nm">kwebapp</span> is a <a href="https://www.bsd.lv">BSD.lv</a> project.
-					For the time being, the C source output currently hardcodes OpenBSD-specific functions in its output
-					(e.g., <a href="http://man.openbsd.org/crypt_newhash.3">crypt_newhash(3)</a> and so on).
-					If you plan on using the system, please be aware of that!
 					See the <a href="https://github.com/kristapsdz/kwebapp">GitHub repository</a> for issue tracking and
 					versioning.
 					To use <span class="nm">kwebapp</span>, just unpack, run <code>./configure</code>, <code>make</code>,
 					then <code>make install</code>.
+					<span class="nm">kwebapp</span> is a <a href="https://www.bsd.lv">BSD.lv</a> project.
 				</p>
 				<nav data-sblg-nav="1" data-sblg-navsort="date" data-sblg-navtag="version" data-sblg-navsz="1" data-sblg-navcontent="1">
 					<h3>
@@ -99,69 +95,88 @@
 					For previous releases, see the <a href="archive.html">version archive</a>.
 				</p>
 			</section>
-			<blockquote>
-				<h2>
-					% <a href="kwebapp.1.html">kwebapp</a> <a href="db.txt.html">db.txt</a>
-				</h2>
+			<h2>
+				parse and validate configuration
+			</h2>
+			<code>
+				% <a href="kwebapp.1.html">kwebapp</a> <a href="db.txt.html">db.txt</a>
+			</code>
+			<section class="special">
+				<figure>
+					<img src="index-fig1.svg" />
+				</figure>
 				<div>
-					Parse and validate configuration.
+					<p>
+						Consider an example <a href="kwebapp.5.html">kwebapp(5)</a> configuration <a
+							href="db.txt.html">db.txt</a>.
+						It defines three data objects&#8212;a <code>user</code>, <code>company</code>, and
+						<code>session</code>&#8212;with relations between the three.
+						Each <code>session</code> refers to a <code>user</code> by the <code>userid</code> field.
+						Then each <code>user</code> refers to a <code>company</code> by its <code>cid</code>.
+					</p>
+					<p>
+						The configuration is fairly readable: structures and fields, with field types and limits (string length
+						or numeric value) and other options (nullity, whether a row identifier, etc.).
+						Beyond the data itself, each objects defines search, update, and deletion functions.
+						(A normal application would have more, but for brevity&#8230;)
+					</p>
+					<p>
+						The <a href="kwebapp.1.html">kwebapp(1)</a> utility parses and validates the configuration.
+						To <em>do</em> something with this configuration, we need to have code.
+						Most applications start by creating an API from the data configuration as described in the next section.
+						<em>Note</em>: this validation is superfluous, as all other compilation processes will do the same.
+					</p>
 				</div>
-			</blockquote>
-			<section>
-				<p>
-					Consider an example <a href="kwebapp.5.html">kwebapp(5)</a> configuration file, <a
-						href="db.txt.html">db.txt</a>.
-					It defines three data objects&#8212;a <code>user</code>, <code>company</code>, and
-					<code>session</code>&#8212;with relations between the three.
-					Each <code>session</code>, in this example, refers to a <code>user</code> by the
-					<code>userid</code> field.
-					Then each <code>user</code> refers to a <code>company</code> by its <code>cid</code>.
-				</p>
-				<p>
-					The configuration is fairly readable: structures and fields, with field types and limits (string length
-					or numeric value) and other options (nullity, whether a row identifier, etc.).
-				</p>
-				<p>
-					The <a href="kwebapp.1.html">kwebapp(1)</a> utility parses and validates the configuration.
-				</p>
-				<article data-sblg-permlink="0" data-sblg-article="1"></article>
-				<p>
-					Beyond the data itself, each objects defines search, update, and deletion functions.
-					(A normal application would have more, but for brevity&#8230;)
-				</p>
-				<p>
-					To <em>do</em> something with this configuration, we need to have code.
-					Most applications start by creating an API from the data configuration as described in the next section.
-				</p>
 			</section>
-			<blockquote>
-				<h2>
-					<div>
-						% <a href="kwebapp-c-header.1.html">kwebapp-c-header</a> -jv 
-						<a href="db.txt.html">db.txt</a> &gt;<a href="db.h.html">db.h</a>
-					</div>
-					<div>
-						% <a href="kwebapp-c-source.1.html">kwebapp-c-source</a> -jv 
-						-h <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.c.html">db.c</a>
-					</div>
-				</h2>
+			<h2>
+				generate back-end code
+			</h2>
+			<code>
 				<div>
-					Output application's API and implementation.
+					% <a href="kwebapp-c-header.1.html">kwebapp-c-header</a> -jv 
+					<a href="db.txt.html">db.txt</a> &gt; <a href="db.h.html">db.h</a>
 				</div>
-			</blockquote>
+				<div>
+					% <a href="kwebapp-c-source.1.html">kwebapp-c-source</a> -jv 
+					-h <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt; <a href="db.c.html">db.c</a>
+				</div>
+			</code>
+			<section class="special">
+				<figure>
+					<img src="index-fig2.svg" />
+				</figure>
+				<div>
+					<p>
+						This generates source and header files to be linked to sources (usually) driving a <a
+							href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> CGI script.
+						Each function and structure in the header file is documented thoroughly.
+						The source files are also documented (more sparsely) to guide developers in reading through the
+						implementation.
+					</p>
+					<p>
+						The C source file is generated for the target architecture, so it's not guaranteed to be
+						portable between operating systems.
+					</p>
+					<p>
+						You can break apart C headers and sources into the database routines, JSON export, validation,
+						and so on.
+						For smaller applications, it's generally easiest to have them in one.
+						I break apart the routines when I have several applications, e.g., a CGI script and a <a
+							href="https://man.openbsd.org/cron">cron(8)</a> job for period e-mails.
+						This allows the non-CGI applications not to link to CGI bits.
+					</p>
+				</div>
+			</section>
+			<h2>
+				compile back-end code
+			</h2>
+			<code>
+				% cc -static -o test main.c <a href="db.c.html">db.c</a> -lksql -lsqlite3 -lpthread -lkcgijson -lkcgi -lz
+			</code>
 			<section>
 				<p>
-					This invocation will generate source files built to be part of a web application chain.  On a modern <a
-						href="https://www.openbsd.org">OpenBSD</a> system, this may be linked to sources driving a <a
-						href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> CGI script.
-					Each function and structure in the header file is documented thoroughly.
-					The source files are also documented (more sparsely) to guide developers in reading through the
-					implementation.
-				</p>
-				<p>
-					Note the <b>-static</b> in the following invocation, which is required for running CGI binaries within
-					the default
-					file-system jail on OpenBSD web servers (see <a href="http://man.openbsd.org/httpd.8">httpd(8)</a>,
+					The <b>-static</b> is for simplicity when running CGI scripts in a file-system jail.
+				       	This is the default operation on OpenBSD web servers (see <a href="http://man.openbsd.org/httpd.8">httpd(8)</a>,
 					which I use as a reference web server).
 				</p>
 				<p>
@@ -173,98 +188,117 @@
 					Obviously, I assume these are in the standard library path, though the third-party libraries will
 					probably be in <b>-L</b><i>/usr/local/lib</i>, with headers in <b>-I</b><i>/usr/local/include</i>.
 				</p>
+				<p>
+					On some machines, you may additionally need <b>-l</b><i>crypt</i> (for password hashing) and
+					<b>-l</b><i>m</i> (for <b>-l</b><i>kcgijson</i>).
+				</p>
 			</section>
-			<blockquote>
-				<h2>
-					% cc -static -o test main.c <a href="db.c.html">db.c</a> -lksql -lsqlite3 -lm -lpthread -lkcgijson -lkcgi -lz
-				</h2>
+			<h2>
+				generate and initialise database
+			</h2>
+			<code>
 				<div>
-					Compile web application.
+					% <a href="kwebapp-sql.1.html">kwebapp-sql</a>
+					<a href="db.txt.html">db.txt</a> &gt; <a href="db.sql.html">db.sql</a>
 				</div>
-			</blockquote>
-			<section>
-				<p>
-					Applications not wishing to deal with input or output (for example, a management application or
-					system daemon) should omit the <b>-j</b> and <b>-v</b> flags.
-					These can then be compiled without static linking (omitting <b>-static</b>) and the non-SQLite related
-					libraries.
-				</p>
-				<p>
-					To create the initial database, use the following invocation.
-					A feature I use a lot in <span class="nm">kwebapp</span> is to track differences in the database schema
-					by using <a href="kwebapp-sqldiff.1.html">kwebapp-sqldiff(1)</a>.
-					This allows me to double-check that upgrades to my database won't be incompatible.
-					It also generates the correct invocations without having me fat-finger mistakes in the upgraded database.
-				</p>
-			</section>
-			<blockquote>
-				<h2>
-					<div>
-						% <a href="kwebapp-sql.1.html">kwebapp-sql</a>
-						<a href="db.txt.html">db.txt</a> &gt;<a href="db.sql.html">db.sql</a>
-					</div>
-					<div>
-						% <a href="kwebapp-sqldiff.1.html">kwebapp-sqldiff</a>
-						<a href="db.old.txt.html">db.old.txt</a> <a href="db.txt.html">db.txt</a> &gt;<a href="db.update.sql.html">db.update.sql</a>
-					</div>
-					<div>
-						% sqlite3 db.db &lt; <a href="db.sql.html">db.sql</a>
-					</div>
-				</h2>
 				<div>
-					Generate SQL schema and initialise database.
+					% sqlite3 db.db &lt; <a href="db.sql.html">db.sql</a>
 				</div>
-			</blockquote>
-			<section>
-				<p>
-					Notice that some object fields, like the <code>user</code> structure inside of the section, are not part of the SQL.
-					Rather, they are generated within <a href="db.c.html">db.c</a> using the foreign keys.
-					Also note that the SQL schema file is thoroughly documented.
-					I suggest using <a href="https://kristaps.bsd.lv/sqliteconvert/">sqliteconvert</a> if you'd like to
-					browse the SQL documentation for any non-trivial application.
-				</p>
-				<p>
-					In general, I'll use <a href="kwebapp-sql.1.html">kwebapp-sql(1)</a> when first generating the database,
-					and <a href="kwebapp-sqldiff.1.html">kwebapp-sqldiff(1)</a> when upgrading existing databases.
-					There are times when the database changes radically, at which point I'll usually dump and manually update.
-				</p>
-				<p>
-					The last part of the toolchain is to handle the output of <b>-j</b> in the browser itself.
-					The <a href="kwebapp-javascript.1.html">kwebapp-javascript(1)</a> tool will also generate JavaScript files to
-					assist in filling in data for your front-end web application code.
-				</p>
+			</code>
+			<section class="special">
+				<figure>
+					<img src="index-fig3.svg" />
+				</figure>
+				<div>
+					<p>
+						That some object fields, like the <code>user</code> structure inside of the section, are not
+						part of the SQL.
+						Rather, they are generated within <a href="db.c.html">db.c</a> using the foreign keys.
+						But for the most part, all structure items map into database columns.
+					</p>
+					<p>
+						The SQL schema file is thoroughly documented.
+						I suggest using <a href="https://kristaps.bsd.lv/sqliteconvert/">sqliteconvert</a> if you'd like to
+						browse the SQL documentation for any non-trivial application.
+					</p>
+				</div>
 			</section>
-			<blockquote>
-				<h2>
+			<h2>
+				update database
+			</h2>
+			<code>
+				<div>
+					% <a href="kwebapp-sqldiff.1.html">kwebapp-sqldiff</a>
+					<a href="db.old.txt.html">db.old.txt</a> <a href="db.txt.html">db.txt</a> &gt; <a href="db.update.sql.html">db.update.sql</a>
+				</div>
+				<div>
+					% sqlite3 db.db &lt; <a href="db.sql.html">db.update.sql</a>
+				</div>
+			</code>
+			<section class="special">
+				<figure>
+					<img src="index-fig3.svg" />
+				</figure>
+				<div>
+					<p>
+						A feature I use a lot in <span class="nm">kwebapp</span> is to track differences in the database schema
+						by using <a href="kwebapp-sqldiff.1.html">kwebapp-sqldiff(1)</a>.
+						This allows me to double-check that upgrades to my database won't be incompatible.
+						It also generates the correct invocations without having me fat-finger mistakes in the upgraded database.
+					</p>
+					<p>
+						Update scripts should always be perused for correctness.
+						They currently don't handle default values, so columns not accepting <code>null</code> will not
+						pass through the database application.
+					</p>
+				</div>
+			</section>
+			<h2>
+				generate javascript front-end
+			</h2>
+			<code>
+				<div>
 					% <a href="kwebapp-javascript.1.html">kwebapp-javascript</a>
-					<a href="db.txt.html">db.txt</a> &gt;<a href="db.js.html">db.js</a>
-				</h2>
-				<div>
-					Produce JavaScript classes to auto-fill DOM trees.
+					<a href="db.txt.html">db.txt</a> &gt; <a href="db.js.html">db.js</a>
 				</div>
-			</blockquote>
-			<section>
-				<p>
-					The JavaScript is useful when fetching information from your CGI script that was produced with <b>-j</b>.
-					It has an easy interface for replacing certain tags in your HTML DOM tree with data.
-					All of this is documented using <a href="https://usejsdoc.org">jsdoc</a> notation.
-					For example, consider the following:
-				</p>
-				<article data-sblg-permlink="0" data-sblg-article="1"></article>
-				<p>
-					A JavaScript file may invoke <code>new user(res).fill(document.getElementById('foobar'))</code>, where
-					<code>res</code> is the JSON object parsed from an AJAX call to the CGI script.
-				</p>
+				<div>
+					% <a href="kwebapp-javascript.1.html">kwebapp-javascript</a> -t
+					<a href="db.txt.html">db.txt</a> &gt; <a href="db.ts.html">db.ts</a>
+				</div>
+			</code>
+			<section class="special">
+				<figure>
+					<img src="index-fig5.svg" />
+				</figure>
+				<div>
+					<p>
+						The last part of the toolchain is to handle the JSON-export output in the browser itself.
+						The <a href="kwebapp-javascript.1.html">kwebapp-javascript(1)</a> tool will also generate
+						JavaScript or TypeScript files to assist in filling in data for your front-end web application
+						code.
+					</p>
+					<p>
+						Both are the same, and provide an easy interface for replacing elements (noted by class names)
+						in your HTML DOM tree with data.
+						All of this is documented using <a href="https://usejsdoc.org">jsdoc</a> notation.
+						For example, consider the following:
+					</p>
+					<article data-sblg-permlink="0" data-sblg-article="1"></article>
+					<p>
+						A JavaScript file may invoke <code>new kwebapp.user(res).fill(document.getElementById('foobar'))</code>, where
+						<code>res</code> is the JSON object parsed from an AJAX call to the CGI script.
+						This will recursively replace text (classes ending with <code>-text</code>), fill in input
+						values, and allow for extensive customisation.
+					</p>
+				</div>
 			</section>
-			<blockquote>
-				<h2>
-					% <a href="kwebapp-audit.1.html">kwebapp-audit</a>
-					<a href="audit-example.txt.html">audit-example.txt</a> user
-				</h2>
-				<div>
-					Audit role-based authentication access.
-				</div>
-			</blockquote>
+			<h2>
+				audit role-based access
+			</h2>
+			<code>
+				% <a href="kwebapp-audit.1.html">kwebapp-audit</a>
+				<a href="audit-example.txt.html">audit-example.txt</a> user
+			</code>
 			<section>
 				<p>
 					We can audit <a href="https://learnbchs.org/rbac.html">role-based access control</a> access with <a

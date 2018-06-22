@@ -86,6 +86,39 @@ conforms with the
 .Xr style 9
 manual of
 .Ox .
+.Ss Hashing
+The password hashing facility defined in
+.Xr kwebapp 5
+is implemented differently on different systems.
+On
+.Ox ,
+it uses the
+.Xr crypt_newhash 3
+and
+.Xr crypt_checkpass 3
+functionality.
+On all other systems, it uses the traditional
+.Xr crypt 3
+with an MD5
+.Pq Qq $1
+setting.
+The seed is generated using
+.Xr random 3 ,
+so the calling application should invoke
+.Xr srandom 3 .
+.Ss Portability
+The code output by
+.Nm
+is currently not portable between systems.
+This is due to code being generated that is available on the system where
+.Nm
+is executed, for example, whether
+.Fn crypt_newhash
+or
+.Fn b64_ntop
+are usable.
+Future version of the system may have flags for generating portable code that
+bundles in all non-portable functions.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

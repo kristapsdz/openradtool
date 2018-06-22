@@ -1,0 +1,13 @@
+digraph {
+	edge [arrowsize="0.5";];
+	bgcolor="transparent";
+
+	cfg[label="kwebapp(5)"];
+	bin[label="kwebapp(1)"];
+	sql[label="SQL"];
+	sqlite1[label="sqlite(1)"];
+
+	cfg -> bin;
+	bin -> sql;
+	sql -> sqlite1[style="dotted"];
+}

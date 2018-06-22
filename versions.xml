@@ -3,6 +3,29 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.5.0</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-06-21">2018-06-21</time>
+		</header>
+		<aside>
+			<p>
+				Hello, Linux!
+				The system now supports compiling on Linux and other non-OpenBSD systems.
+				This has been enabled by bringing up to date with <a
+					href="https://github.com/kristapsdz/oconfigure">oconfigure</a>
+				and adding portability shims for password hashing and other tools.
+			</p>
+			<p>
+				I'm also pleased to announce <a
+					href="https://www.typescriptlang.org/">TypeScript</a>
+				integration in <a href="kwebapp-javascript.1.html">kwebapp-javascript(1)</a>.
+				This is still under development, but now exports proper TypeScript
+				classes, interfaces, and so on.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.4.10</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-05-24">2018-05-24</time>

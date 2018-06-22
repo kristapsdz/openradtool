@@ -1,0 +1,16 @@
+
+digraph {
+	edge [arrowsize="0.5";];
+	bgcolor="transparent";
+
+	cfg[label="kwebapp(5)"];
+	bin[label="kwebapp(1)"];
+	js[label="JavaScript"];
+	ts[label="TypeScript"];
+
+	cfg -> bin;
+	bin -> js;
+	bin -> ts;
+
+	{ rank=same; js; ts; }
+}

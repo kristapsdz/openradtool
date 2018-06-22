@@ -66,9 +66,7 @@ DOTAR		 = audit.c \
 		   sql.c \
 		   tests.c \
 		   test.c
-XMLS		 = db.txt.xml \
-		   test.xml.xml \
-		   TODO.xml \
+XMLS		 = test.xml.xml \
 		   versions.xml
 IHTMLS		 = audit-example.txt.html \
 		   audit-out.js \
@@ -79,6 +77,7 @@ IHTMLS		 = audit-example.txt.html \
 		   db.old.txt.html \
 		   db.update.sql.html \
 		   db.js.html \
+		   db.ts.html \
 		   test.c.html
 LINKS		 = kwebapp-audit \
 		   kwebapp-audit-gv \
@@ -88,6 +87,11 @@ LINKS		 = kwebapp-audit \
 		   kwebapp-javascript \
 		   kwebapp-sql \
 		   kwebapp-sqldiff
+IMAGES		 = index.svg \
+		   index-fig1.svg \
+		   index-fig2.svg \
+		   index-fig3.svg \
+		   index-fig5.svg
 
 all: kwebapp $(LINKS)
 
@@ -107,12 +111,12 @@ afl::
 kwebapp: $(OBJS)
 	$(CC) -o $@ $(OBJS)
 
-www: index.svg $(HTMLS) kwebapp.tar.gz kwebapp.tar.gz.sha512 atom.xml
+www: $(IMAGES) $(HTMLS) kwebapp.tar.gz kwebapp.tar.gz.sha512 atom.xml
 
 installwww: www
 	mkdir -p $(WWWDIR)
 	mkdir -p $(WWWDIR)/snapshots
-	$(INSTALL_DATA) *.html *.css *.js index.svg atom.xml $(WWWDIR)
+	$(INSTALL_DATA) *.html *.css *.js $(IMAGES) atom.xml $(WWWDIR)
 	$(INSTALL_DATA) kwebapp.tar.gz kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots
 	$(INSTALL_DATA) kwebapp.tar.gz $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz
 	$(INSTALL_DATA) kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz.sha512
@@ -173,6 +177,9 @@ db.sql: kwebapp-sql db.txt
 
 db.js: kwebapp-javascript db.txt
 	./kwebapp-javascript db.txt >$@
+
+db.ts: kwebapp-javascript db.txt
+	./kwebapp-javascript -t db.txt >$@
 
 db.ts: kwebapp-javascript db.txt
 	./kwebapp-javascript -t db.txt >$@
@@ -244,6 +251,9 @@ db.sql.html: db.sql
 db.js.html: db.js
 	highlight -s whitengrey -I -l --src-lang=js db.js >$@
 
+db.ts.html: db.ts
+	highlight -s whitengrey -I -l --src-lang=js db.ts >$@
+
 db.update.sql.html: db.update.sql
 	highlight -s whitengrey -I -l --src-lang=sql db.update.sql >$@
 
@@ -266,9 +276,9 @@ atom.xml: versions.xml
 
 clean:
 	rm -f kwebapp $(LINKS)
-	rm -f $(OBJS) db.c db.h db.o db.sql db.js db.ts db.update.sql db.db test test.o
+	rm -f $(OBJS) db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db test test.o
 	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
-	rm -f index.svg highlight.css $(HTMLS) atom.xml
+	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml
 	rm -f db.txt.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
 
 distclean: clean

@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "version.h"
 #include "extern.h"
 
 /*

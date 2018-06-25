@@ -5,7 +5,6 @@ include Makefile.configure
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 4
 VERSION_BUILD	 = 12
-VERSION_STAMP	:= `echo $$((($(VERSION_BUILD)+1)+($(VERSION_MINOR)+1)*100+($(VERSION_MAJOR)+1)*10000))`
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 OBJS		 = audit.o \
 		   comments.o \
@@ -120,7 +119,7 @@ installwww: www
 
 version.h: Makefile
 	( echo "#define VERSION \"$(VERSION)\"" ; \
-	  echo "#define VSTAMP $(VERSION_STAMP)" ; ) >$@
+	  echo "#define VSTAMP `echo $$((($(VERSION_BUILD)+1)+($(VERSION_MINOR)+1)*100+($(VERSION_MAJOR)+1)*10000))`" ; ) >$@
 
 header.o source.o: version.h
 

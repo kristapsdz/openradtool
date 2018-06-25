@@ -560,12 +560,14 @@ struct	role {
  * Hold entire parse sequence results.
  */
 struct	config {
-	struct strctq	sq; /* all structures */
-	struct enmq	eq; /* all enumerations */
-	struct bitfq	bq; /* all bitfields */
-	struct roleq	rq; /* all roles */
-	unsigned int	flags;
-#define	CFG_HAS_ROLES 	0x01 /* has roles */
+	struct strctq	  sq; /* all structures */
+	struct enmq	  eq; /* all enumerations */
+	struct bitfq	  bq; /* all bitfields */
+	struct roleq	  rq; /* all roles */
+	unsigned int	  flags;
+#define	CFG_HAS_ROLES 	  0x01 /* has roles */
+	char		**langs; /* known jslabel langs */
+	size_t		  langsz; /* number of langs */
 };
 
 /*

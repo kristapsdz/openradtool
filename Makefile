@@ -5,11 +5,8 @@ include Makefile.configure
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 4
 VERSION_BUILD	 = 12
-VERSION_STAMP	:= `echo "(($(VERSION_BUILD) + 1) + \
-			($(VERSION_MINOR) + 1) * 100 + \
-			($(VERSION_MAJOR) + 1) * 10000)" | bc`
+VERSION_STAMP	:= `echo $$((($(VERSION_BUILD)+1)+($(VERSION_MINOR)+1)*100+($(VERSION_MAJOR)+1)*10000))`
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
-CPPFLAGS	+= -DVERSION=\"$(VERSION)\" -DVSTAMP=$(VERSION_STAMP)
 OBJS		 = audit.o \
 		   comments.o \
 		   compats.o \
@@ -121,6 +118,12 @@ installwww: www
 	$(INSTALL_DATA) kwebapp.tar.gz $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz
 	$(INSTALL_DATA) kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz.sha512
 
+version.h: Makefile
+	( echo "#define VERSION \"$(VERSION)\"" ; \
+	  echo "#define VSTAMP $(VERSION_STAMP)" ; ) >$@
+
+header.o source.o: version.h
+
 install: kwebapp
 	mkdir -p $(DESTDIR)$(BINDIR)
 	mkdir -p $(DESTDIR)$(MANDIR)/man1
@@ -177,9 +180,6 @@ db.sql: kwebapp-sql db.txt
 
 db.js: kwebapp-javascript db.txt
 	./kwebapp-javascript db.txt >$@
-
-db.ts: kwebapp-javascript db.txt
-	./kwebapp-javascript -t db.txt >$@
 
 db.ts: kwebapp-javascript db.txt
 	./kwebapp-javascript -t db.txt >$@
@@ -275,7 +275,7 @@ atom.xml: versions.xml
 	sblg -s date -a versions.xml >$@
 
 clean:
-	rm -f kwebapp $(LINKS)
+	rm -f kwebapp $(LINKS) version.h
 	rm -f $(OBJS) db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db test test.o
 	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml

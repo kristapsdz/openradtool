@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "version.h"
 #include "extern.h"
 
 static	const char *const optypes[OPTYPE__MAX] = {

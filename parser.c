@@ -65,6 +65,7 @@ struct	parse {
 	size_t		 column; /* current column (from 1) */
 	const char	*fname; /* current filename */
 	FILE		*f; /* current parser */
+	struct config	*cfg; /* current configuration */
 };
 
 static	const char *const rolemapts[ROLEMAP__MAX] = {
@@ -313,24 +314,23 @@ check_badidents(struct parse *p, const char *s)
 }
 
 static int
-check_dupetoplevel(struct parse *p, 
-	const struct config *cfg, const char *name)
+check_dupetoplevel(struct parse *p, const char *name)
 {
 	const struct enm *e;
 	const struct bitf *b;
 	const struct strct *s;
 
-	TAILQ_FOREACH(e, &cfg->eq, entries)
+	TAILQ_FOREACH(e, &p->cfg->eq, entries)
 		if (0 == strcasecmp(e->name, name)) {
 			parse_errx(p, "duplicates enum name");
 			return(0);
 		}
-	TAILQ_FOREACH(b, &cfg->bq, entries)
+	TAILQ_FOREACH(b, &p->cfg->bq, entries)
 		if (0 == strcasecmp(b->name, name)) {
 			parse_errx(p, "duplicates bitfield name");
 			return(0);
 		}
-	TAILQ_FOREACH(s, &cfg->sq, entries) 
+	TAILQ_FOREACH(s, &p->cfg->sq, entries) 
 		if (0 == strcasecmp(s->name, name)) {
 			parse_errx(p, "duplicates struct name");
 			return(0);
@@ -2439,7 +2439,7 @@ parse_bitidx(struct parse *p, struct bitf *b)
  *  "bitf" name "{" ... "};"
  */
 static void
-parse_bitfield(struct parse *p, struct config *cfg)
+parse_bitfield(struct parse *p)
 {
 	struct bitf	*b;
 	char		*caps;
@@ -2449,7 +2449,7 @@ parse_bitfield(struct parse *p, struct config *cfg)
 	 * Duplicates are for both structures and enumerations.
 	 */
 
-	if ( ! check_dupetoplevel(p, cfg, p->last.string) ||
+	if ( ! check_dupetoplevel(p, p->last.string) ||
 	     ! check_badidents(p, p->last.string))
 		return;
 
@@ -2463,7 +2463,7 @@ parse_bitfield(struct parse *p, struct config *cfg)
 		*caps = toupper((int)*caps);
 
 	parse_point(p, &b->pos);
-	TAILQ_INSERT_TAIL(&cfg->bq, b, entries);
+	TAILQ_INSERT_TAIL(&p->cfg->bq, b, entries);
 	TAILQ_INIT(&b->bq);
 	parse_bitidx(p, b);
 }
@@ -2472,7 +2472,7 @@ parse_bitfield(struct parse *p, struct config *cfg)
  * Verify and allocate an enum, then start parsing it.
  */
 static void
-parse_enum(struct parse *p, struct config *cfg)
+parse_enum(struct parse *p)
 {
 	struct enm	*e;
 	char		*caps;
@@ -2482,7 +2482,7 @@ parse_enum(struct parse *p, struct config *cfg)
 	 * Duplicates are for both structures and enumerations.
 	 */
 
-	if ( ! check_dupetoplevel(p, cfg, p->last.string) ||
+	if ( ! check_dupetoplevel(p, p->last.string) ||
 	     ! check_badidents(p, p->last.string))
 		return;
 
@@ -2496,7 +2496,7 @@ parse_enum(struct parse *p, struct config *cfg)
 		*caps = toupper((int)*caps);
 
 	parse_point(p, &e->pos);
-	TAILQ_INSERT_TAIL(&cfg->eq, e, entries);
+	TAILQ_INSERT_TAIL(&p->cfg->eq, e, entries);
 	TAILQ_INIT(&e->eq);
 	parse_enum_data(p, e);
 }
@@ -2552,7 +2552,7 @@ role_alloc(struct parse *p, const char *name, struct role *parent)
  *  "role" name ["comment" quoted_string]? ["{" [ ROLE ]* "}"]? ";"
  */
 static void
-parse_role(struct parse *p, struct config *cfg, struct role *parent)
+parse_role(struct parse *p, struct role *parent)
 {
 	struct role	*r;
 
@@ -2570,7 +2570,7 @@ parse_role(struct parse *p, struct config *cfg, struct role *parent)
 	    0 == strcasecmp(p->last.string, "all")) {
 		parse_errx(p, "reserved role name");
 		return;
-	} else if ( ! check_rolename(&cfg->rq, p->last.string)) {
+	} else if ( ! check_rolename(&p->cfg->rq, p->last.string)) {
 		parse_errx(p, "duplicate role name");
 		return;
 	} else if ( ! check_badidents(p, p->last.string))
@@ -2593,7 +2593,7 @@ parse_role(struct parse *p, struct config *cfg, struct role *parent)
 		while ( ! PARSE_STOP(p)) {
 			if (TOK_RBRACE == parse_next(p))
 				break;
-			parse_role(p, cfg, r);
+			parse_role(p, r);
 		}
 		parse_next(p);
 	}
@@ -2613,15 +2613,15 @@ parse_role(struct parse *p, struct config *cfg, struct role *parent)
  *  "roles" "{" [ ROLE ]* "}" ";"
  */
 static void
-parse_roles(struct parse *p, struct config *cfg)
+parse_roles(struct parse *p)
 {
 	struct role	*r;
 
-	if (CFG_HAS_ROLES & cfg->flags) {
+	if (CFG_HAS_ROLES & p->cfg->flags) {
 		parse_errx(p, "roles already specified");
 		return;
 	} 
-	cfg->flags |= CFG_HAS_ROLES;
+	p->cfg->flags |= CFG_HAS_ROLES;
 
 	/*
 	 * Start by allocating the reserved roles.
@@ -2630,13 +2630,13 @@ parse_roles(struct parse *p, struct config *cfg)
 	 */
 
 	r = role_alloc(p, "none", NULL);
-	TAILQ_INSERT_TAIL(&cfg->rq, r, entries);
+	TAILQ_INSERT_TAIL(&p->cfg->rq, r, entries);
 
 	r = role_alloc(p, "default", NULL);
-	TAILQ_INSERT_TAIL(&cfg->rq, r, entries);
+	TAILQ_INSERT_TAIL(&p->cfg->rq, r, entries);
 
 	r = role_alloc(p, "all", NULL);
-	TAILQ_INSERT_TAIL(&cfg->rq, r, entries);
+	TAILQ_INSERT_TAIL(&p->cfg->rq, r, entries);
 
 	if (TOK_LBRACE != parse_next(p)) {
 		parse_errx(p, "expected left brace");
@@ -2647,7 +2647,7 @@ parse_roles(struct parse *p, struct config *cfg)
 		if (TOK_RBRACE == parse_next(p))
 			break;
 		/* Pass in "all" role as top-level. */
-		parse_role(p, cfg, r);
+		parse_role(p, r);
 	}
 
 	if (PARSE_STOP(p))
@@ -2661,14 +2661,14 @@ parse_roles(struct parse *p, struct config *cfg)
  * ancillary entries.
  */
 static void
-parse_struct(struct parse *p, struct config *cfg)
+parse_struct(struct parse *p)
 {
 	struct strct	*s;
 	char		*caps;
 
 	/* Disallow duplicate and bad names. */
 
-	if ( ! check_dupetoplevel(p, cfg, p->last.string) ||
+	if ( ! check_dupetoplevel(p, p->last.string) ||
 	     ! check_badidents(p, p->last.string))
 		return;
 
@@ -2681,9 +2681,9 @@ parse_struct(struct parse *p, struct config *cfg)
 	for (caps = s->cname; '\0' != *caps; caps++)
 		*caps = toupper((int)*caps);
 
-	s->cfg = cfg;
+	s->cfg = p->cfg;
 	parse_point(p, &s->pos);
-	TAILQ_INSERT_TAIL(&cfg->sq, s, entries);
+	TAILQ_INSERT_TAIL(&p->cfg->sq, s, entries);
 	TAILQ_INIT(&s->fq);
 	TAILQ_INIT(&s->sq);
 	TAILQ_INIT(&s->aq);
@@ -2725,6 +2725,7 @@ parse_config(FILE *f, const char *fname)
 	p.line = 1;
 	p.fname = fname;
 	p.f = f;
+	p.cfg = cfg;
 
 	for (;;) {
 		if (TOK_ERR == parse_next(&p))
@@ -2742,24 +2743,24 @@ parse_config(FILE *f, const char *fname)
 		/* Parse whether we're struct, enum, or roles. */
 
 		if (0 == strcasecmp(p.last.string, "roles")) {
-			parse_roles(&p, cfg);
+			parse_roles(&p);
 			continue;
 		} else if (0 == strcasecmp(p.last.string, "struct")) {
 			if (TOK_IDENT == parse_next(&p)) {
-				parse_struct(&p, cfg);
+				parse_struct(&p);
 				continue;
 			}
 			parse_errx(&p, "expected struct name");
 		} else if (0 == strcasecmp(p.last.string, "enum")) {
 			if (TOK_IDENT == parse_next(&p)) {
-				parse_enum(&p, cfg);
+				parse_enum(&p);
 				continue;
 			}
 			parse_errx(&p, "expected enum name");
 		} else if (0 == strcasecmp(p.last.string, "bits") ||
 		           0 == strcasecmp(p.last.string, "bitfield")) {
 			if (TOK_IDENT == parse_next(&p)) {
-				parse_bitfield(&p, cfg);
+				parse_bitfield(&p);
 				continue;
 			}
 			parse_errx(&p, "expected bitfield name");

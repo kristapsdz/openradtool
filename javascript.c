@@ -812,6 +812,11 @@ gen_javascript(const struct config *cfg, int tsc)
 			"@memberof %s.%s#",
 			ns, bf->name, bf->name, ns, bf->name);
 		gen_func_static(tsc, bf->name, "format");
+		if (NULL == bf->jslabel)
+			fprintf(stderr, "%s:%zu: bits %s "
+				"missing unset jslabel\n", 
+				bf->pos.fname, bf->pos.line,
+				bf->name);
 		printf("\t\t\tvar v, i = 0, str = '';\n"
 		       "\t\t\tname += '-label';\n"
 		       "\t\t\tif (null === val) {\n"
@@ -825,13 +830,19 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t\t\t\treturn;\n"
 		       "\t\t\t}\n",
 		       NULL == bf->jslabel ? "none" : bf->jslabel);
-		TAILQ_FOREACH(bi, &bf->bq, entries)
+		TAILQ_FOREACH(bi, &bf->bq, entries) {
+			if (NULL == bf->jslabel)
+				fprintf(stderr, "%s:%zu: bits %s.%s "
+					"missing jslabel\n", 
+					bi->pos.fname, bi->pos.line,
+					bf->name, bi->name);
 			printf("\t\t\tif (%s.BITF_%s & v)\n"
 		       	       "\t\t\t\tstr += "
 			        "(i++ > 0 ? ', ' : '') + '%s';\n",
 			       bf->name, bi->name,
 			       NULL != bi->jslabel ? bi->jslabel :
 			       bi->name);
+		}
 		printf("\t\t\tif (0 === str.length) {\n"
 		       "\t\t\t\t_replcl(e, name, \'unknown\', false);\n"
 		       "\t\t\t\treturn;\n"
@@ -907,13 +918,19 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t\t\t\treturn;\n"
 		       "\t\t\t}\n"
 		       "\t\t\tswitch(parseInt(val)) {\n");
-		TAILQ_FOREACH(ei, &e->eq, entries)
+		TAILQ_FOREACH(ei, &e->eq, entries) {
+			if (NULL == ei->jslabel)
+				fprintf(stderr, "%s:%zu: enum %s.%s "
+					"missing jslabel\n", 
+					ei->pos.fname, ei->pos.line,
+					e->name, ei->name);
 			printf("\t\t\tcase %s.%s:\n"
 			       "\t\t\t\t_replcl(e, name, \'%s\', false);\n"
 			       "\t\t\t\tbreak;\n",
 			       e->name, ei->name, 
 			       NULL == ei->jslabel ? 
 			       ei->name : ei->jslabel);
+		}
 		printf("\t\t\tdefault:\n"
 		       "\t\t\t\tconsole.log(\'%s.format: "
 		         "unknown value: ' + val);\n"

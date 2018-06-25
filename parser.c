@@ -720,10 +720,44 @@ again:
 static int
 parse_label(struct parse *p, char **label)
 {
+	size_t	 i;
 
-	if (TOK_LITERAL != parse_next(p)) {
-		parse_errx(p, "expected quoted string");
-		return(0);
+	/* 
+	 * If we have a period (like jslabel.en), then interpret the
+	 * word after the period as a language code for which we'll use
+	 * the label.
+	 */
+
+	if (TOK_PERIOD == parse_next(p)) {
+		if (TOK_IDENT != parse_next(p)) {
+			parse_errx(p, "expected language");
+			return 0;
+		}
+		assert('\0' != p->last.string[0]);
+		for (i = 0; i < p->cfg->langsz; i++) 
+			if (0 == strcmp
+			    (p->cfg->langs[i], p->last.string))
+				break;
+		if (i == p->cfg->langsz) {
+			p->cfg->langs = reallocarray
+				(p->cfg->langs,
+				 p->cfg->langsz + 1,
+				 sizeof(char *));
+			if (NULL == p->cfg->langs)
+				err(EXIT_FAILURE, NULL);
+			p->cfg->langs[p->cfg->langsz] =
+				strdup(p->last.string);
+			if (NULL == p->cfg->langs[p->cfg->langsz])
+				err(EXIT_FAILURE, NULL);
+			p->cfg->langsz++;
+			warnx("new language: %s", p->cfg->langs[i]);
+		}
+		parse_next(p);
+	}
+
+	if (TOK_LITERAL != p->lasttype) {
+		parse_errx(p, "expected period or quoted string");
+		return 0;
 	} else if (NULL != *label) {
 		parse_warnx(p, "replaces prior label");
 		free(*label);
@@ -732,7 +766,7 @@ parse_label(struct parse *p, char **label)
 	if (NULL == (*label = strdup(p->last.string)))
 		err(EXIT_FAILURE, NULL);
 
-	return(1);
+	return 1;
 }
 
 /*
@@ -2726,6 +2760,19 @@ parse_config(FILE *f, const char *fname)
 	p.fname = fname;
 	p.f = f;
 	p.cfg = cfg;
+	
+	/* 
+	 * Start with the default language.
+	 * This must always exist.
+	 */
+
+	cfg->langs = calloc(1, sizeof(char *));
+	if (NULL == cfg->langs)
+		err(EXIT_FAILURE, NULL);
+	cfg->langs[0] = strdup("");
+	if (NULL == cfg->langs[0])
+		err(EXIT_FAILURE, NULL);
+	cfg->langsz = 1;
 
 	for (;;) {
 		if (TOK_ERR == parse_next(&p))
@@ -3051,6 +3098,7 @@ parse_free(struct config *cfg)
 	struct role	*r;
 	struct rolemap	*rm;
 	struct bitf	*bf;
+	size_t		 i;
 
 	if (NULL == cfg)
 		return;
@@ -3108,6 +3156,10 @@ parse_free(struct config *cfg)
 		free(p->ins);
 		free(p);
 	}
+
+	for (i = 0; i < cfg->langsz; i++)
+		free(cfg->langs[i]);
+	free(cfg->langs);
 
 	free(cfg);
 }

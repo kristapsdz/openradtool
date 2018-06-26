@@ -45,6 +45,110 @@ static	const char *types[FTYPE__MAX] = {
 	"number", /* FTYPE_BITFIELD */
 };
 
+/*
+ * Escape JavaScript string literal.
+ * This escapes backslashes and single apostrophes.
+ */
+static void
+gen_label_text(const char *cp)
+{
+	unsigned char	 c;
+
+	while ('\0' != (c = *cp++))
+		switch (c) {
+		case '\\':
+			printf("\\\\");
+			break;
+		case '\'':
+			printf("\\\'");
+			break;
+		default:
+			putchar(c);
+			break;
+		}
+}
+
+/*
+ * Print out a characteristic array of language labels.
+ * This looks like {_default: 'xxx', en: 'yyy'} and so on.
+ * Each language is represented; if not found, an empty string is used.
+ * The default language is called "_default".
+ */
+static void
+gen_labels(const struct config *cfg, const struct labelq *q)
+{
+	const struct label *l;
+	size_t		 i;
+	const char	*def = NULL;
+
+	TAILQ_FOREACH(l, q, entries)
+		if (l->lang == 0) {
+			def = l->label;
+			break;
+		}
+
+	putchar('{');
+	for (i = 0; i < cfg->langsz; i++) {
+		TAILQ_FOREACH(l, q, entries) 
+			if (l->lang == i)
+				break;
+		if (NULL != l) {
+			printf("%s: \'", i == 0 ? 
+				"_default" : cfg->langs[i]);
+			gen_label_text(l->label);
+			putchar('\'');
+		} else if (i > 0 && NULL != def) {
+			printf("%s: \'", i == 0 ? 
+				"_default" : cfg->langs[i]);
+			gen_label_text(def);
+			putchar('\'');
+		} else
+			printf("%s: \'\'", i == 0 ?
+				"_default" : cfg->langs[i]);
+
+		if (i < cfg->langsz - 1)
+			printf(", ");
+	}
+	putchar('}');
+}
+
+static void
+warn_label(const struct config *cfg, const struct labelq *q, 
+	const struct pos *p, const char *name, const char *sub, 
+	const char *type)
+{
+	size_t	 	 i;
+	int		 hasdef;
+	const struct label *l;
+
+	TAILQ_FOREACH(l, q, entries)
+		if (l->lang == 0)
+			break;
+
+	if ( ! (hasdef = NULL != l)) 
+		fprintf(stderr, "%s:%zu: %s%s%s: "
+			"%s jslabel not defined\n",
+			p->fname, p->line, name,
+			NULL != sub ? "." : "", 
+			NULL != sub ? sub : "", type);
+
+	for (i = 1; i < cfg->langsz; i++) {
+		TAILQ_FOREACH(l, q, entries)
+			if (l->lang == i)
+				break;
+		if (NULL != l)
+			continue;
+		fprintf(stderr, "%s:%zu: %s%s%s: %s "
+			"jslabel.%s not defined: %s\n",
+			p->fname, p->line, name,
+			NULL != sub ? "." : "", 
+			NULL != sub ? sub : "",
+			type, cfg->langs[i],
+			hasdef ? "using default" :
+			"using empty string");
+	}
+}
+
 static void
 gen_jsdoc_field(const char *ns, const struct field *f)
 {
@@ -283,6 +387,31 @@ gen_javascript(const struct config *cfg, int tsc)
 		"Top-level namespace of these objects.\n"
 		"@namespace");
 	gen_namespace(tsc, ns);
+
+	if (tsc)
+		puts("\tinterface langmap { [lang: string]: string };\n"
+		     "");
+
+	gen_proto(tsc, "string", "_strlang",
+		"vals", "langmap", NULL);
+	gen_vars(tsc, 2, "lang", "string|null", NULL);
+	puts("\t\tlang = document.documentElement.lang;\n"
+	     "\t\tif (null === lang)\n"
+	     "\t\t\treturn vals['_default'];\n"
+	     "\t\telse if (lang in vals)\n"
+	     "\t\t\treturn vals[lang];\n"
+	     "\t\telse\n"
+	     "\t\t\treturn '';\n"
+	     "\t}\n"
+	     "");
+
+	gen_proto(tsc, "void", "_replcllang",
+		"e", "HTMLElement|null",
+		"name", "string",
+		"vals", "langmap", NULL);
+	puts("\t\t_replcl(e, name, _strlang(vals), false);\n"
+	     "\t}\n"
+	     "");
 
 	gen_proto(tsc, "void", "_attr", 
 		"e", "HTMLElement|null",
@@ -793,9 +922,11 @@ gen_javascript(const struct config *cfg, int tsc)
 					bf->name, bi->name, bi->value,
 					bf->name, bi->name, 1U << bi->value);
 		}
+
+		warn_label(cfg, &bf->labels, &bf->pos,
+			bf->name, NULL, "bits unset");
 		print_commentv(2, COMMENT_JS,
-			"Uses a bit field's <i>jslabel</i> (or just "
-			"the name, if no <i>jslabel</i> is defined) "
+			"Uses a bit field's <i>jslabel</i> "
 			"to format a custom label as invoked on an "
 			"object's <code>fill</code> functions. "
 			"This will act on <code>xxx-yyy-label</code> "
@@ -812,11 +943,6 @@ gen_javascript(const struct config *cfg, int tsc)
 			"@memberof %s.%s#",
 			ns, bf->name, bf->name, ns, bf->name);
 		gen_func_static(tsc, bf->name, "format");
-		if (NULL == bf->jslabel)
-			fprintf(stderr, "%s:%zu: bits %s "
-				"missing unset jslabel\n", 
-				bf->pos.fname, bf->pos.line,
-				bf->name);
 		printf("\t\t\tvar v, i = 0, str = '';\n"
 		       "\t\t\tname += '-label';\n"
 		       "\t\t\tif (null === val) {\n"
@@ -826,22 +952,20 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t\t\t}\n"
 		       "\t\t\tv = parseInt(val);\n"
 		       "\t\t\tif (0 === v) {\n"
-		       "\t\t\t\t_replcl(e, name, \'%s\', false);\n"
-		       "\t\t\t\treturn;\n"
-		       "\t\t\t}\n",
-		       NULL == bf->jslabel ? "none" : bf->jslabel);
+		       "\t\t\t\t_replcllang(e, name, ");
+		gen_labels(cfg, &bf->labels);
+		puts(");\n"
+		     "\t\t\t\treturn;\n"
+		     "\t\t\t}");
 		TAILQ_FOREACH(bi, &bf->bq, entries) {
-			if (NULL == bf->jslabel)
-				fprintf(stderr, "%s:%zu: bits %s.%s "
-					"missing jslabel\n", 
-					bi->pos.fname, bi->pos.line,
-					bf->name, bi->name);
+			warn_label(cfg, &bi->labels, &bi->pos,
+				bf->name, bi->name, "item");
 			printf("\t\t\tif (%s.BITF_%s & v)\n"
 		       	       "\t\t\t\tstr += "
-			        "(i++ > 0 ? ', ' : '') + '%s';\n",
-			       bf->name, bi->name,
-			       NULL != bi->jslabel ? bi->jslabel :
-			       bi->name);
+			        "(i++ > 0 ? ', ' : '') + _strlang(",
+			       bf->name, bi->name);
+			gen_labels(cfg, &bi->labels);
+			puts(");");
 		}
 		printf("\t\t\tif (0 === str.length) {\n"
 		       "\t\t\t\t_replcl(e, name, \'unknown\', false);\n"
@@ -919,22 +1043,19 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t\t\t}\n"
 		       "\t\t\tswitch(parseInt(val)) {\n");
 		TAILQ_FOREACH(ei, &e->eq, entries) {
-			if (NULL == ei->jslabel)
-				fprintf(stderr, "%s:%zu: enum %s.%s "
-					"missing jslabel\n", 
-					ei->pos.fname, ei->pos.line,
-					e->name, ei->name);
+			warn_label(cfg, &ei->labels, &ei->pos,
+				e->name, ei->name, "item");
 			printf("\t\t\tcase %s.%s:\n"
-			       "\t\t\t\t_replcl(e, name, \'%s\', false);\n"
-			       "\t\t\t\tbreak;\n",
-			       e->name, ei->name, 
-			       NULL == ei->jslabel ? 
-			       ei->name : ei->jslabel);
+			       "\t\t\t\t_replcllang(e, name, ",
+			       e->name, ei->name);
+			gen_labels(cfg, &ei->labels);
+			puts(");\n"
+			     "\t\t\t\tbreak;");
 		}
 		printf("\t\t\tdefault:\n"
 		       "\t\t\t\tconsole.log(\'%s.format: "
 		         "unknown value: ' + val);\n"
-		       "\t\t\t\t_replcl(e, name, \'Unknown\', false);\n"
+		       "\t\t\t\t_replcl(e, name, \'\', false);\n"
 		       "\t\t\t\tbreak;\n"
 		       "\t\t\t}\n"
 		       "\t\t}%s\n",

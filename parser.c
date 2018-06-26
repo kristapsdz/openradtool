@@ -713,14 +713,19 @@ again:
 
 /*
  * Parse the quoted_string part following "jslabel".
- * Attach it to the given "label", possibly clearing out any prior
- * labels.
+ * Its syntax is:
+ *
+ *   jslabel ["." language] string_literal
+ *
+ * Attach it to the given queue of labels, possibly clearing out any
+ * prior labels of the same language.
  * If this is the case, emit a warning.
  */
 static int
-parse_label(struct parse *p, char **label)
+parse_label(struct parse *p, struct labelq *q)
 {
-	size_t	 i;
+	size_t	 	 lang = 0;
+	struct label	*l;
 
 	/* 
 	 * If we have a period (like jslabel.en), then interpret the
@@ -734,11 +739,11 @@ parse_label(struct parse *p, char **label)
 			return 0;
 		}
 		assert('\0' != p->last.string[0]);
-		for (i = 0; i < p->cfg->langsz; i++) 
+		for ( ; lang < p->cfg->langsz; lang++) 
 			if (0 == strcmp
-			    (p->cfg->langs[i], p->last.string))
+			    (p->cfg->langs[lang], p->last.string))
 				break;
-		if (i == p->cfg->langsz) {
+		if (lang == p->cfg->langsz) {
 			p->cfg->langs = reallocarray
 				(p->cfg->langs,
 				 p->cfg->langsz + 1,
@@ -750,22 +755,39 @@ parse_label(struct parse *p, char **label)
 			if (NULL == p->cfg->langs[p->cfg->langsz])
 				err(EXIT_FAILURE, NULL);
 			p->cfg->langsz++;
-			warnx("new language: %s", p->cfg->langs[i]);
 		}
 		parse_next(p);
-	}
-
-	if (TOK_LITERAL != p->lasttype) {
+	} else if (TOK_LITERAL != p->lasttype) {
 		parse_errx(p, "expected period or quoted string");
 		return 0;
-	} else if (NULL != *label) {
-		parse_warnx(p, "replaces prior label");
-		free(*label);
 	}
 
-	if (NULL == (*label = strdup(p->last.string)))
+	/* Now for the label itself. */
+
+	if (TOK_LITERAL != p->lasttype) {
+		parse_errx(p, "expected quoted string");
+		return 0;
+	}
+
+	TAILQ_FOREACH(l, q, entries)
+		if (lang == l->lang) {
+			parse_warnx(p, "replacing prior label");
+			free(l->label);
+			l->label = strdup(p->last.string);
+			if (NULL == l->label)
+				err(EXIT_FAILURE, NULL);
+			return 1;
+		}
+
+	l = calloc(1, sizeof(struct label));
+	if (NULL == l)
+		err(EXIT_FAILURE, NULL);
+	l->lang = lang;
+	l->label = strdup(p->last.string);
+	if (NULL == l->label)
 		err(EXIT_FAILURE, NULL);
 
+	TAILQ_INSERT_TAIL(q, l, entries);
 	return 1;
 }
 
@@ -1899,7 +1921,7 @@ parse_enum_item(struct parse *p, struct eitem *ei)
 			parse_comment(p, &ei->doc);
 			parse_next(p);
 		} else if (0 == strcasecmp(next, "jslabel")) {
-			parse_label(p, &ei->jslabel);
+			parse_label(p, &ei->labels);
 			parse_next(p);
 		} else
 			parse_errx(p, "unknown enum item attribute");
@@ -1976,6 +1998,7 @@ parse_enum_data(struct parse *p, struct enm *e)
 		if (NULL == (ei->name = strdup(p->last.string)))
 			err(EXIT_FAILURE, NULL);
 
+		TAILQ_INIT(&ei->labels);
 		parse_point(p, &ei->pos);
 		TAILQ_INSERT_TAIL(&e->eq, ei, entries);
 		ei->parent = e;
@@ -2363,7 +2386,7 @@ parse_bitidx_item(struct parse *p, struct bitidx *bi)
 		if (0 == strcasecmp(p->last.string, "comment"))
 			parse_comment(p, &bi->doc);
 		else if (0 == strcasecmp(p->last.string, "jslabel"))
-			parse_label(p, &bi->jslabel);
+			parse_label(p, &bi->labels);
 		else
 			parse_errx(p, "unknown item data type");
 
@@ -2413,14 +2436,8 @@ parse_bitidx(struct parse *p, struct bitf *b)
 			    strcasecmp(p->last.string, "jslabel")) {
 				parse_errx(p, "expected \"jslabel\"");
 				return;
-			} else if (TOK_LITERAL != parse_next(p)) {
-				parse_errx(p, "expected quoted string");
+			} else if ( ! parse_label(p, &b->labels))
 				return;
-			}
-			free(b->jslabel);
-			b->jslabel = strdup(p->last.string);
-			if (NULL == b->jslabel)
-				err(EXIT_FAILURE, NULL);
 			if (TOK_SEMICOLON != parse_next(p)) {
 				parse_errx(p, "expected semicolon");
 				return;
@@ -2451,6 +2468,7 @@ parse_bitidx(struct parse *p, struct bitf *b)
 		if (NULL == (bi->name = strdup(p->last.string)))
 			err(EXIT_FAILURE, NULL);
 
+		TAILQ_INIT(&bi->labels);
 		parse_point(p, &bi->pos);
 		TAILQ_INSERT_TAIL(&b->bq, bi, entries);
 		bi->parent = b;
@@ -2496,6 +2514,7 @@ parse_bitfield(struct parse *p)
 	for (caps = b->cname; '\0' != *caps; caps++)
 		*caps = toupper((int)*caps);
 
+	TAILQ_INIT(&b->labels);
 	parse_point(p, &b->pos);
 	TAILQ_INSERT_TAIL(&p->cfg->bq, b, entries);
 	TAILQ_INIT(&b->bq);
@@ -2990,6 +3009,18 @@ parse_free_update(struct update *p)
 	free(p);
 }
 
+static void
+parse_free_label(struct labelq *q)
+{
+	struct label	*l;
+
+	while (NULL != (l = TAILQ_FIRST(q))) {
+		TAILQ_REMOVE(q, l, entries);
+		free(l->label);
+		free(l);
+	}
+}
+
 /*
  * Free an enumeration.
  * Does nothing if "p" is NULL.
@@ -3004,8 +3035,8 @@ parse_free_enum(struct enm *e)
 
 	while (NULL != (ei = TAILQ_FIRST(&e->eq))) {
 		TAILQ_REMOVE(&e->eq, ei, entries);
+		parse_free_label(&ei->labels);
 		free(ei->name);
-		free(ei->jslabel);
 		free(ei->doc);
 		free(ei);
 	}
@@ -3049,13 +3080,13 @@ parse_free_bitfield(struct bitf *bf)
 		return;
 	while (NULL != (bi = TAILQ_FIRST(&bf->bq))) {
 		TAILQ_REMOVE(&bf->bq, bi, entries);
+		parse_free_label(&bi->labels);
 		free(bi->name);
-		free(bi->jslabel);
 		free(bi->doc);
 		free(bi);
 	}
+	parse_free_label(&bf->labels);
 	free(bf->name);
-	free(bf->jslabel);
 	free(bf->cname);
 	free(bf->doc);
 	free(bf);

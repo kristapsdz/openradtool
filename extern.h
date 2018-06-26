@@ -29,6 +29,7 @@ TAILQ_HEAD(eitemq, eitem);
 TAILQ_HEAD(enmq, enm);
 TAILQ_HEAD(fieldq, field);
 TAILQ_HEAD(fvalidq, fvalid);
+TAILQ_HEAD(labelq, label);
 TAILQ_HEAD(nrefq, nref);
 TAILQ_HEAD(ordq, ord);
 TAILQ_HEAD(orefq, oref);
@@ -114,6 +115,17 @@ struct	fvalid {
 };
 
 /*
+ * A language-specific label.
+ * The default language is always index 0.
+ * See the "langs" array in struct config.
+ */
+struct	label {
+	char		  *label; /* the label itself */
+	size_t		   lang; /* the language */
+	TAILQ_ENTRY(label) entries;
+};
+
+/*
  * A single item within an enumeration.
  * This may be statically assigned a value in "value" or it may be
  * automatically done during linking.
@@ -122,7 +134,7 @@ struct	eitem {
 	char		  *name; /* item name */
 	int64_t		   value; /* numeric value */
 	char		  *doc; /* documentation */
-	char		  *jslabel; /* label (default js output) */
+	struct labelq	   labels; /* javascript labels */
 	struct pos	   pos; /* parse point */
 	struct enm	  *parent; /* parent enumeration */
 	unsigned int	   flags;
@@ -161,7 +173,7 @@ struct	eref {
 struct	bitidx {
 	char		   *name;
 	char		   *doc; /* documentation */
-	char		   *jslabel; /* label (default js output) */
+	struct labelq	    labels; /* javascript labels */
 	int64_t		    value; /* bit 0--63 */
 	struct bitf	   *parent;
 	struct pos	    pos; /* parse point */
@@ -175,7 +187,7 @@ struct	bitf {
 	char		 *name; /* name of bitfield */
 	char		 *cname; /* capitalised name */
 	char		 *doc; /* documentation */
-	char		 *jslabel; /* "unset" jslabel */
+	struct labelq	  labels; /* "unset" javascript labels */
 	struct pos	  pos; /* parse point */
 	struct bitidxq	  bq; /* bit indices */
 	TAILQ_ENTRY(bitf) entries;
@@ -566,7 +578,7 @@ struct	config {
 	struct roleq	  rq; /* all roles */
 	unsigned int	  flags;
 #define	CFG_HAS_ROLES 	  0x01 /* has roles */
-	char		**langs; /* known jslabel langs */
+	char		**langs; /* known label langs */
 	size_t		  langsz; /* number of langs */
 };
 

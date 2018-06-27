@@ -187,7 +187,8 @@ struct	bitf {
 	char		 *name; /* name of bitfield */
 	char		 *cname; /* capitalised name */
 	char		 *doc; /* documentation */
-	struct labelq	  labels_unset; /* "unset" javascript labels */
+	struct labelq	  labels_unset; /* "isunset" js labels */
+	struct labelq	  labels_null; /* "isnull" js labels */
 	struct pos	  pos; /* parse point */
 	struct bitidxq	  bq; /* bit indices */
 	TAILQ_ENTRY(bitf) entries;

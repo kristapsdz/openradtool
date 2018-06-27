@@ -2431,12 +2431,28 @@ parse_bitidx(struct parse *p, struct bitf *b)
 				return;
 			}
 			continue;
-		} else if (0 == strcasecmp(p->last.string, "isunset")) {
+		} else if (0 == strcasecmp(p->last.string, "isunset") ||
+		  	   0 == strcasecmp(p->last.string, "unset")) {
+			if (0 == strcasecmp(p->last.string, "unset"))
+				parse_warnx(p, "\"unset\" is "
+					"deprecated: use \"isunset\"");
 			if (TOK_IDENT != parse_next(p) ||
 			    strcasecmp(p->last.string, "jslabel")) {
 				parse_errx(p, "expected \"jslabel\"");
 				return;
 			} else if ( ! parse_label(p, &b->labels_unset))
+				return;
+			if (TOK_SEMICOLON != parse_next(p)) {
+				parse_errx(p, "expected semicolon");
+				return;
+			}
+			continue;
+		} else if (0 == strcasecmp(p->last.string, "isnull")) {
+			if (TOK_IDENT != parse_next(p) ||
+			    strcasecmp(p->last.string, "jslabel")) {
+				parse_errx(p, "expected \"jslabel\"");
+				return;
+			} else if ( ! parse_label(p, &b->labels_null))
 				return;
 			if (TOK_SEMICOLON != parse_next(p)) {
 				parse_errx(p, "expected semicolon");
@@ -2515,6 +2531,7 @@ parse_bitfield(struct parse *p)
 		*caps = toupper((int)*caps);
 
 	TAILQ_INIT(&b->labels_unset);
+	TAILQ_INIT(&b->labels_null);
 	parse_point(p, &b->pos);
 	TAILQ_INSERT_TAIL(&p->cfg->bq, b, entries);
 	TAILQ_INIT(&b->bq);
@@ -3086,6 +3103,7 @@ parse_free_bitfield(struct bitf *bf)
 		free(bi);
 	}
 	parse_free_label(&bf->labels_unset);
+	parse_free_label(&bf->labels_null);
 	free(bf->name);
 	free(bf->cname);
 	free(bf->doc);

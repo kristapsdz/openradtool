@@ -207,7 +207,7 @@ gen_js_field(const struct field *f)
 	char	*buf = NULL;
 	int	 rc;
 
-	if (FIELD_NOEXPORT & f->flags)
+	if (FIELD_NOEXPORT & f->flags || FTYPE_BLOB == f->type)
 		return;
 	if (FTYPE_STRUCT == f->type) {
 		rc = asprintf(&buf, "new %s(o.%s)", 
@@ -512,7 +512,8 @@ gen_javascript(const struct config *cfg, int tsc)
 		"isblob", "boolean",
 		"sub", "any",
 		"isenum", "boolean", NULL);
-	gen_vars(tsc, 2, "i", "number", "fname", "string", NULL);
+	gen_vars(tsc, 2, "i", "number", "fname", "string", 
+		"list", "HTMLElement[]", NULL);
 	puts("\t\tfname = strct + '-' + name;\n"
 	     "\t\t/* First handle the custom callback. */\n"
 	     "\t\tif (typeof funcs !== 'undefined' && \n"
@@ -542,13 +543,13 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t\t\treturn;\n"
 	     "\t\t/* Non-null non-structs. */\n"
 	     "\t\tif (null !== sub) {\n"
-	     "\t\t\tvar list = _elemList(e, fname + '-obj', inc);\n"
+	     "\t\t\tlist = _elemList(e, fname + '-obj', inc);\n"
 	     "\t\t\tfor (i = 0; i < list.length; i++) {\n"
 	     "\t\t\t\tsub.fillInner(list[i], funcs);\n"
 	     "\t\t\t}\n"
 	     "\t\t} else {\n"
 	     "\t\t\t_replcl(e, fname + '-text', obj, inc);\n"
-	     "\t\t\tvar list = _elemList"
+	     "\t\t\tlist = _elemList"
 	     	"(e, fname + '-enum-select', inc);\n"
 	     "\t\t\tfor (i = 0; i < list.length; i++) {\n"
 	     "\t\t\t\t_fillEnumSelect(list[i], obj);\n"
@@ -923,7 +924,7 @@ gen_javascript(const struct config *cfg, int tsc)
 					bf->name, bi->name, 1U << bi->value);
 		}
 
-		warn_label(cfg, &bf->labels, &bf->pos,
+		warn_label(cfg, &bf->labels_unset, &bf->pos,
 			bf->name, NULL, "bits unset");
 		print_commentv(2, COMMENT_JS,
 			"Uses a bit field's <i>jslabel</i> "
@@ -943,7 +944,11 @@ gen_javascript(const struct config *cfg, int tsc)
 			"@memberof %s.%s#",
 			ns, bf->name, bf->name, ns, bf->name);
 		gen_func_static(tsc, bf->name, "format");
-		printf("\t\t\tvar v, i = 0, str = '';\n"
+		gen_vars(tsc, 3, 
+			"v", "number",
+			"i", "number",
+			"str", "string", NULL);
+		printf("\t\t\tstr = '';\n"
 		       "\t\t\tname += '-label';\n"
 		       "\t\t\tif (null === val) {\n"
 		       "\t\t\t\t_replcl(e, name, \'not given\', false);\n"
@@ -953,7 +958,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t\t\tv = parseInt(val);\n"
 		       "\t\t\tif (0 === v) {\n"
 		       "\t\t\t\t_replcllang(e, name, ");
-		gen_labels(cfg, &bf->labels);
+		gen_labels(cfg, &bf->labels_unset);
 		puts(");\n"
 		     "\t\t\t\treturn;\n"
 		     "\t\t\t}");

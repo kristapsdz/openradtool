@@ -46,7 +46,11 @@ Both output formats consist of a set of classes within the
 .Qq kwebapp
 namespace describing structures, enumerations, and bitfields.
 The method for acquiring the JSON is not managed by
-.Nm .
+.Nm ,
+but is usually provided by a CGI interfacing with
+.Xr kwebapp-c-header 1
+and
+.Xr kwebapp-c-source 1 .
 .Pp
 To use the interface, simply include the generated file as a script,
 create objects from the JSON exported by
@@ -166,14 +170,47 @@ The callback function (or functions) will be invoked regardless of
 whether the value has been set.
 In the event of an unset field value, the function is passed
 .Dv null .
-.Pp
-Enumerations and bitfields all specify a static
+.Ss Enumeration and Bitfield Labels
+Enumerations and bitfields in
+.Xr kwebapp 5
+are translated into classes with a static
 .Fn format
 function that may be passed as a custom handler for corresponding
 fields.
 These fill in the
 .Xr kwebapp 5
-labels of the corresponding values.
+.Cm jslabel
+of the corresponding values.
+If a language is specified in the root of the HTML or XML document, it
+is first matched to the language of the label.
+If there is no language, or none for that label, the default label is
+used.
+If there is no default label, an empty string is used instead.
+.Pp
+In the event of unset bitfields, the corresponding
+.Xr kwebapp 5
+.Cm isunset
+value is used, and the
+.Li kwbp-unset
+class set on the element.
+For null values,
+.Cm isnull
+is used and
+.Li kwbp-null
+set on the element.
+.Pp
+For example, to fill in the label of an enumeration
+.Li enum someenum
+on a field named
+.Li val ,
+provide a custom callback.
+.Bd -literal -offset indent
+var obj = JSON.parse(response);
+var e = document.getElementById('foo');
+var custom = {
+  'foo-val': kwebapp.someenum.format
+};
+new kwebapp.foo(obj).fill(e, custom);
 .Ed
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT

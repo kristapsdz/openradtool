@@ -199,7 +199,9 @@ $(OBJS): config.h extern.h
 	mandoc -Thtml -Ostyle=mandoc.css $< >$@
 
 .dot.svg:
-	dot -Tsvg $< | xsltproc --novalid notugly.xsl - >$@
+	dot -Tsvg $< > tmp-$@
+	xsltproc --novalid notugly.xsl tmp-$@ >$@
+	rm tmp-$@
 
 db.txt.xml: db.txt
 	( echo "<article data-sblg-article=\"1\">" ; \

@@ -830,7 +830,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			"@memberof %s.%s#\n"
 			"@function fillArray",
 			ns, s->name, ns, s->name, ns, s->name, ns, s->name);
-		gen_class_proto(tsc, 1, s->name, "void", "fillArray",
+		gen_class_proto(tsc, 0, s->name, "void", "fillArray",
 			"e", "HTMLElement|null",
 			"custom", "any", NULL);
 		gen_vars(tsc, 3, "j", "number", 
@@ -925,7 +925,10 @@ gen_javascript(const struct config *cfg, int tsc)
 		}
 
 		warn_label(cfg, &bf->labels_unset, &bf->pos,
-			bf->name, NULL, "bits unset");
+			bf->name, NULL, "bits isunset");
+		warn_label(cfg, &bf->labels_null, &bf->pos,
+			bf->name, NULL, "bits isnull");
+
 		print_commentv(2, COMMENT_JS,
 			"Uses a bit field's <i>jslabel</i> "
 			"to format a custom label as invoked on an "
@@ -949,10 +952,12 @@ gen_javascript(const struct config *cfg, int tsc)
 			"i", "number",
 			"str", "string", NULL);
 		printf("\t\t\tstr = '';\n"
+		       "\t\t\ti = 0;\n"
 		       "\t\t\tname += '-label';\n"
 		       "\t\t\tif (null === val) {\n"
-		       "\t\t\t\t_replcl(e, name, \'not given\', false);\n"
-		       "\t\t\t\t_classaddcl(e, name, \'noanswer\', false);\n"
+		       "\t\t\t\t_replcllang(e, name, ");
+		gen_labels(cfg, &bf->labels_null);
+		printf(");\n"
 		       "\t\t\t\treturn;\n"
 		       "\t\t\t}\n"
 		       "\t\t\tv = parseInt(val);\n"

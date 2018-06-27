@@ -726,7 +726,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		print_commentt(2, COMMENT_JS_FRAG, "</ul>");
 		print_commentv(2, COMMENT_JS_FRAG_CLOSE,
 			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {Object} custom - A dictionary "
+			"@param {Object} custom - An optional dictionary "
 			"of functions keyed by structure and field "
 			"name (e.g., <i>foo</i> structure, <i>bar</i> "
 			"field would be <code>foo-bar</code>). "
@@ -741,7 +741,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			ns, s->name);
 		gen_class_proto(tsc, 0, s->name, "void", "fill",
 			"e", "HTMLElement|null",
-			"custom", "any", NULL);
+			"custom?", "any", NULL);
 		printf("\t\t\tthis._fill(e, this.obj, true, custom);\n"
 		       "\t\t}%s\n"
 		       "\n", tsc ? "" : ";");
@@ -750,7 +750,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			"Like {@link %s.%s#fill} but not "
 			"including the root element \"e\".\n"
 			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {Object} custom - The custom "
+			"@param {Object} custom - The optional custom "
 			"handler dictionary (see {@link "
 			"%s.%s#fill} for details).\n"
 			"@function fillInner\n"
@@ -758,7 +758,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			ns, s->name, ns, s->name, ns, s->name);
 		gen_class_proto(tsc, 0, s->name, "void", "fillInner",
 			"e", "HTMLElement|null",
-			"custom", "any", NULL);
+			"custom?", "any", NULL);
 		printf("\t\t\tthis._fill(e, this.obj, false, custom);\n"
 		       "\t\t}%s\n"
 		       "\n", tsc ? "" : ";");
@@ -771,7 +771,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			"(or array) to fill.\n"
 			"@param {Number} inc - Whether to include "
 			"the root or not when processing.\n"
-			"@param {Object} custom - The custom "
+			"@param {Object} custom - The optional custom "
 			"handler dictionary (see {@link "
 			"%s.%s#fill}).\n"
 			"@private\n"
@@ -782,7 +782,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			"e", "HTMLElement|null",
 			"o", obj,
 			"inc", "boolean",
-			"custom", "any", NULL);
+			"custom?", "any", NULL);
 		gen_vars(tsc, 3, "i", "number", NULL);
 		printf("\t\t\tif (null === o || null === e)\n"
 		       "\t\t\t\treturn;\n"
@@ -824,7 +824,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			"Otherwise, the <code>hide</code> class is "
 			"removed.\n"
 			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {Object} custom - The custom "
+			"@param {Object} custom - The optional custom "
 			"handler dictionary (see {@link "
 			"%s.%s#fill}).\n"
 			"@memberof %s.%s#\n"
@@ -832,7 +832,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			ns, s->name, ns, s->name, ns, s->name, ns, s->name);
 		gen_class_proto(tsc, 0, s->name, "void", "fillArray",
 			"e", "HTMLElement|null",
-			"custom", "any", NULL);
+			"custom?", "any", NULL);
 		gen_vars(tsc, 3, "j", "number", 
 			"o", obj,
 			"cln", "any",

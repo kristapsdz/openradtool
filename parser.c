@@ -455,7 +455,7 @@ parse_err(struct parse *p)
 {
 
 	if (ferror(p->f)) {
-		warn("%s", p->fname);
+		parse_errx(p, "system error");
 		p->lasttype = TOK_ERR;
 	} else 
 		p->lasttype = TOK_EOF;
@@ -478,10 +478,10 @@ parse_warnx(struct parse *p, const char *fmt, ...)
 		va_start(ap, fmt);
 		vsnprintf(buf, sizeof(buf), fmt, ap);
 		va_end(ap);
-		warnx("%s:%zu:%zu: %s", 
+		fprintf(stderr, "%s:%zu:%zu: %s\n", 
 			p->fname, p->line, p->column, buf);
 	} else
-		warnx("%s:%zu:%zu: syntax warning", 
+		fprintf(stderr, "%s:%zu:%zu: syntax warning\n", 
 			p->fname, p->line, p->column);
 }
 
@@ -500,10 +500,10 @@ parse_errx(struct parse *p, const char *fmt, ...)
 		va_start(ap, fmt);
 		vsnprintf(buf, sizeof(buf), fmt, ap);
 		va_end(ap);
-		warnx("%s:%zu:%zu: %s", 
+		fprintf(stderr, "%s:%zu:%zu: %s\n", 
 			p->fname, p->line, p->column, buf);
 	} else
-		warnx("%s:%zu:%zu: syntax error", 
+		fprintf(stderr, "%s:%zu:%zu: syntax error\n", 
 			p->fname, p->line, p->column);
 
 	p->lasttype = TOK_ERR;
@@ -2852,7 +2852,7 @@ parse_config(FILE *f, const char *fname)
 	}
 
 	if (TAILQ_EMPTY(&cfg->sq)) {
-		warnx("%s: no structures", fname);
+		parse_errx(&p, "no structures");
 		goto error;
 	}
 

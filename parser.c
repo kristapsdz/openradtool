@@ -2431,12 +2431,12 @@ parse_bitidx(struct parse *p, struct bitf *b)
 				return;
 			}
 			continue;
-		} else if (0 == strcasecmp(p->last.string, "unset")) {
+		} else if (0 == strcasecmp(p->last.string, "isunset")) {
 			if (TOK_IDENT != parse_next(p) ||
 			    strcasecmp(p->last.string, "jslabel")) {
 				parse_errx(p, "expected \"jslabel\"");
 				return;
-			} else if ( ! parse_label(p, &b->labels))
+			} else if ( ! parse_label(p, &b->labels_unset))
 				return;
 			if (TOK_SEMICOLON != parse_next(p)) {
 				parse_errx(p, "expected semicolon");
@@ -2514,7 +2514,7 @@ parse_bitfield(struct parse *p)
 	for (caps = b->cname; '\0' != *caps; caps++)
 		*caps = toupper((int)*caps);
 
-	TAILQ_INIT(&b->labels);
+	TAILQ_INIT(&b->labels_unset);
 	parse_point(p, &b->pos);
 	TAILQ_INSERT_TAIL(&p->cfg->bq, b, entries);
 	TAILQ_INIT(&b->bq);
@@ -3085,7 +3085,7 @@ parse_free_bitfield(struct bitf *bf)
 		free(bi->doc);
 		free(bi);
 	}
-	parse_free_label(&bf->labels);
+	parse_free_label(&bf->labels_unset);
 	free(bf->name);
 	free(bf->cname);
 	free(bf->doc);

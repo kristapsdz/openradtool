@@ -3,6 +3,35 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.5.1</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-06-26">2018-06-26</time>
+		</header>
+		<aside>
+			<p>
+				Clean up <code>make</code> output by putting version information
+				into its own header file.
+			</p>
+			<p>
+				Continue adding in TypeScript type information.
+			</p>
+			<p>
+				Multi-language support: re-tool the <code>jslabel</code> feature to
+				allow for multiple languages that detect the HTML (or XML)
+				document's root language and only produce output for that language.
+				This uses the <code>jslabel.lang</code> syntax.
+				Also warn more about missing labels and be clearer on what to do
+				when label information isn't found.
+				Furthermore, the <code>unset</code> keyword has been changed to
+				<code>isunset</code> and the <code>isnull</code> keyword has also been added.
+				There is no longer a hard-coded <q>not given</q> value, and the
+				class set on null values is now <code>kwbp-null</code> instead of
+				<code>notgiven</code>.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.5.0</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-06-21">2018-06-21</time>

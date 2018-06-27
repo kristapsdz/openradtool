@@ -16,7 +16,8 @@ syn keyword kwbpInnerCmd name
 syn keyword kwbpInnerCmd role
 syn keyword kwbpInnerCmd comment
 syn keyword kwbpInnerCmd jslabel
-syn keyword kwbpInnerCmd unset
+syn keyword kwbpInnerCmd isunset
+syn keyword kwbpInnerCmd isnull
 
 syn region kwbpLiteral start=/\v"/ skip=/\v\\./ end=/\v"/
 syn match kwbpComment '#.*$'

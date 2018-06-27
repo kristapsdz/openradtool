@@ -265,6 +265,7 @@ gen_class_proto(int tsc, int priv, const char *cls,
 	va_list	 	 ap;
 	int		 first = 1;
 	const char	*name, *type;
+	size_t		 sz;
 
 	if (tsc)
 		printf("\t\t%s%s(", priv ? "private " : "", func);
@@ -272,11 +273,14 @@ gen_class_proto(int tsc, int priv, const char *cls,
 		printf("\t\t%s.prototype.%s = function(", cls, func);
 	va_start(ap, func);
 	while (NULL != (name = va_arg(ap, char *))) {
+		sz = strlen(name);
+		if ( ! tsc && sz && '?' == name[sz - 1])
+			sz--;
 		if (0 == first)
 			printf(", ");
 		type = va_arg(ap, char *);
 		assert(NULL != type);
-		printf("%s", name);
+		printf("%.*s", (int)sz, name);
 		if (tsc)
 			printf(": %s", type);
 		if (first)
@@ -396,7 +400,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		"vals", "langmap", NULL);
 	gen_vars(tsc, 2, "lang", "string|null", NULL);
 	puts("\t\tlang = document.documentElement.lang;\n"
-	     "\t\tif (null === lang)\n"
+	     "\t\tif (null === lang || '' === lang)\n"
 	     "\t\t\treturn vals['_default'];\n"
 	     "\t\telse if (lang in vals)\n"
 	     "\t\t\treturn vals[lang];\n"

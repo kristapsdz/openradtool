@@ -53,7 +53,8 @@ enum :== "enum" enumname "{"
 bitfield :== "bits" bitsname "{"
   [ "comment" string_literal ";" ]?
   [ "item" bitsdata ";" ]+
-  [ "unset" "jslabel" quoted_string ";" ]+
+  [ "isunset" label ";" ]+
+  [ "isnull" label ";" ]+
 "};"
 .Ed
 .Pp
@@ -120,7 +121,7 @@ backslash.
 .Bd -literal -offset indent
 struct ident { field id int comment "\e"Literal\e"."; };
 .Ed
-.Ss Comments
+.Ss Document comments
 Document comments are begun by the hash mark
 .Pq Dq #
 and extend to the end of the line.
@@ -134,9 +135,9 @@ struct ident {
 .Pp
 They are always discarded and not considered part of the parsed
 configuration file.
-These syntactic comments shouldn't be confused with the
-.Cm comment
-statements possible for individual statements.
+They shouldn't be confused with
+.Sx Comments
+possible for individual statements.
 .Ss Numbers
 Both decimal and integral numbers are recognised.
 Integral numbers are signed and limited to 64 bits and formatted as
@@ -148,9 +149,16 @@ The difference between the two is the existence of the decimal.
 Every
 .Nm
 document consists of a set of top-level objects.
-These objects describe data types (enumerations and bit-fields), data
-and operations (structures and their fields), and access control
-(roles).
+These objects describe data types 
+.Sx ( Enumeration
+and
+.Sx Bitfields ) ,
+data and operations
+.Sx ( Structures
+and their
+.Sx fields ) ,
+and access control
+.Pq Sx Roles .
 .Pp
 There are no ordering constraints on objects: all linkage between
 components (e.g., referenced fields, roles, types, etc.) occurs after
@@ -189,7 +197,7 @@ describing data fields (see
 .Sx Fields ) ;
 optionally a
 .Cm comment
-for describing the structure;
+for describing the structure (see
 .Sx Comments ) ;
 zero or more
 .Cm update ,
@@ -437,14 +445,14 @@ configuration.
 Parameters may be any of the following:
 .Bd -literal -offset indent
 "comment" string_literal
-"jslabel" string_literal
+label
 .Ed
 .Pp
 The item's
 .Cm comment
-is used to document the field, while
-.Cm jslabel
-is used only for formatting JavaScript output.
+is used to document the field, while its label
+.Pq see Sx Labels
+is used only for formatting output.
 .Pp
 The above enumeration would be used in an example field definition as
 follows:
@@ -463,7 +471,7 @@ They are defined as follows:
 "bits" bitsname "{"
   [ "comment" string_literal ";" ]?
   [ "item" name bitidx [parms]* ";" ]+
-  [ "unset" "jslabel" quoted_string ";" ]+
+  [ "unset" label ";" ]+
 "};"
 .Ed
 .Pp
@@ -471,7 +479,7 @@ For example,
 .Bd -literal -offset indent
 bits bitsname { 
   item "bit1" 0 jslabel "Bit one"; 
-  unset jslabel "No bits"; 
+  isunset jslabel "No bits"; 
 };
 .Ed
 .Pp
@@ -490,14 +498,14 @@ Each must be unique within the bitfield.
 Parameters may be any of the following:
 .Bd -literal -offset indent
 "comment" string_literal
-"jslabel" string_literal
+label
 .Ed
 .Pp
 The item's
 .Cm comment
-is used to document the field, while
-.Cm jslabel
-is used only for formatting JavaScript output.
+is used to document the field, while its label
+.Pq see Sx Labels
+is used only for formatting output.
 .Pp
 The above bitfield would be used in an example field definition as
 follows:
@@ -508,9 +516,9 @@ field foo bits bitsname;
 The bitfield's
 .Cm comment
 is passed into the output media, and the
-.Cm unset
-statement serves to provide a
-.Cm jslabel
+.Cm isunset
+statement serves to provide a label
+.Pq see Sx Labels
 for when no bits are set (i.e., the field evaluates to zero).
 .Ss Queries
 There are three types of searches that may be defined to produce
@@ -839,6 +847,36 @@ serve no other purpose.
 For the time being, there is no syntax attached to comments: they should
 be considered opaque text for the time being, and copied as-is into the
 output documentation.
+.Ss Labels
+Labels specify how
+.Cm bits
+and
+.Cm enum
+types and their items may be described by a front-end formatter.
+That is, while the string value of a
+.Cm struct
+item describes itself, an
+.Cm enum
+maps to a numeric value that needs to be translated into a meaningful
+format.
+Labels export string representations of the internal numeric value to
+the front-end formatters.
+.Pp
+The syntax is as follows:
+.Bd -literal -offset indent
+"jslabel" ["." lang]? quoted_string
+.Ed
+.Pp
+The
+.Cm lang
+token is usually an ISO 639-1 code, but may be any identifier.
+If the
+.Cm lang
+is not specified, the label is considered to be the default label.
+.Pp
+If a label is not specified for a given language, it inherits the
+default label.
+If the default label is not provided, it is an empty string.
 .Sh EXAMPLES
 A trivial example is as follows:
 .Bd -literal

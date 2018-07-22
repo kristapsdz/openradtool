@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "version.h"
 #include "extern.h"
@@ -2214,7 +2215,7 @@ gen_valid_struct(const struct strct *p)
 /*
  * Generate the C source file from "cfg"s structure objects.
  */
-void
+static void
 gen_c_source(const struct config *cfg, int json, 
 	int valids, int splitproc, int dbin, 
 	const char *header, const char *incls)
@@ -2469,4 +2470,91 @@ gen_c_source(const struct config *cfg, int json,
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_funcs(cfg, p, json, valids, dbin);
+}
+
+int
+main(int argc, char *argv[])
+{
+	FILE		*conf = NULL;
+	const char	*confile = NULL, *header = NULL, 
+	      		*incls = NULL;
+	struct config	*cfg;
+	int		 c, json = 0, valids = 0,
+			 splitproc = 0, dbin = 1;
+
+#if HAVE_PLEDGE
+	if (-1 == pledge("stdio rpath", NULL))
+		err(EXIT_FAILURE, "pledge");
+#endif
+
+	while (-1 != (c = getopt(argc, argv, "h:I:jN:sv")))
+		switch (c) {
+		case ('h'):
+			header = optarg;
+			break;
+		case ('I'):
+			incls = optarg;
+			break;
+		case ('j'):
+			json = 1;
+			break;
+		case ('N'):
+			if (NULL != strchr(optarg, 'd'))
+				dbin = 0;
+			break;
+		case ('s'):
+			splitproc = 1;
+			break;
+		case ('v'):
+			valids = 1;
+			break;
+		default:
+			goto usage;
+		}
+
+	argc -= optind;
+	argv += optind;
+
+	if (0 == argc) {
+		confile = "<stdin>";
+		conf = stdin;
+	} else
+		confile = argv[0];
+
+	if (argc > 1)
+		goto usage;
+
+	if (NULL == conf &&
+	    NULL == (conf = fopen(confile, "r")))
+		err(EXIT_FAILURE, "%s", confile);
+
+#if HAVE_PLEDGE
+	if (-1 == pledge("stdio", NULL))
+		err(EXIT_FAILURE, "pledge");
+#endif
+
+	cfg = parse_config(conf, confile);
+	fclose(conf);
+
+	if (NULL == cfg || ! parse_link(cfg)) {
+		parse_free(cfg);
+		return EXIT_FAILURE;
+	}
+
+	gen_c_source(cfg, json, valids, 
+		splitproc, dbin, header, incls);
+
+	parse_free(cfg);
+	return EXIT_SUCCESS;
+usage:
+	fprintf(stderr, 
+		"usage: %s "
+		"[-jsv] "
+		"[-h header[,header...] "
+		"[-I bjv] "
+		"[-N b] "
+		"[config]\n",
+		getprogname());
+
+	return EXIT_FAILURE;
 }

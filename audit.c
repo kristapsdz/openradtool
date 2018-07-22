@@ -26,10 +26,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "extern.h"
 
 #define	SPACE	"\t" /* Space for output indentation. */
+
+enum	op {
+	OP_AUDIT,
+	OP_AUDIT_GV,
+	OP_AUDIT_JSON
+};
 
 /*
  * Search single access.
@@ -666,7 +673,7 @@ sraccess_free(struct sraccess *sp, size_t spsz)
 	free(sp);
 }
 
-int
+static int
 gen_audit_json(const struct config *cfg, const char *role)
 {
 	const struct strct *s;
@@ -738,7 +745,7 @@ gen_audit_json(const struct config *cfg, const char *role)
 	return(1);
 }
 
-int
+static int
 gen_audit(const struct config *cfg, const char *role)
 {
 	const struct strct *s;
@@ -909,7 +916,7 @@ gen_audit_exportable_gv(const struct strct *p,
 /*
  * Audit for a GraphViz digraph.
  */
-int
+static int
 gen_audit_gv(const struct config *cfg, const char *role)
 {
 	const struct strct 	*s;
@@ -935,4 +942,106 @@ gen_audit_gv(const struct config *cfg, const char *role)
 	puts("}");
 	sraccess_free(sp, spsz);
 	return(1);
+}
+
+int
+main(int argc, char *argv[])
+{
+	FILE		*conf = NULL;
+	const char	*confile = NULL, *role = NULL;
+	struct config	*cfg;
+	int		 rc = 1;
+	enum op		 op = OP_AUDIT;
+
+#if HAVE_PLEDGE
+	if (-1 == pledge("stdio rpath", NULL))
+		err(EXIT_FAILURE, "pledge");
+#endif
+
+	if (0 == strcmp(getprogname(), "kwebapp-audit-gv")) {
+		op = OP_AUDIT_GV;
+		if (-1 != getopt(argc, argv, ""))
+			goto usage;
+		argc -= optind;
+		argv += optind;
+		if (0 == argc)
+			goto usage;
+		role = argv[0];
+		argv++;
+		argc--;
+	} else if (0 == strcmp(getprogname(), "kwebapp-audit-json")) {
+		op = OP_AUDIT_JSON;
+		if (-1 != getopt(argc, argv, ""))
+			goto usage;
+		argc -= optind;
+		argv += optind;
+		if (0 == argc)
+			goto usage;
+		role = argv[0];
+		argv++;
+		argc--;
+	} else {
+		if (-1 != getopt(argc, argv, ""))
+			goto usage;
+		argc -= optind;
+		argv += optind;
+		if (0 == argc)
+			goto usage;
+		role = argv[0];
+		argv++;
+		argc--;
+	} 
+
+	if (0 == argc) {
+		confile = "<stdin>";
+		conf = stdin;
+	} else
+		confile = argv[0];
+
+	if (argc > 1)
+		goto usage;
+
+	if (NULL == conf &&
+	    NULL == (conf = fopen(confile, "r")))
+		err(EXIT_FAILURE, "%s", confile);
+
+#if HAVE_PLEDGE
+	if (-1 == pledge("stdio", NULL))
+		err(EXIT_FAILURE, "pledge");
+#endif
+
+	cfg = parse_config(conf, confile);
+	fclose(conf);
+
+	if (NULL == cfg || ! parse_link(cfg)) {
+		parse_free(cfg);
+		return EXIT_FAILURE;
+	}
+
+	if (OP_AUDIT == op)
+		rc = gen_audit(cfg, role);
+	else if (OP_AUDIT_JSON == op)
+		rc = gen_audit_json(cfg, role);
+	else 
+		rc = gen_audit_gv(cfg, role);
+
+	parse_free(cfg);
+	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
+usage:
+	if (OP_AUDIT_GV == op)
+		fprintf(stderr, 
+			"usage: %s "
+			"role [config]\n",
+			getprogname());
+	else if (OP_AUDIT_JSON == op)
+		fprintf(stderr, 
+			"usage: %s "
+			"role [config]\n",
+			getprogname());
+	else 
+		fprintf(stderr, 
+			"usage: %s "
+			"role [config]\n",
+			getprogname());
+	return EXIT_FAILURE;
 }

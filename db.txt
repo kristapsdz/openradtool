@@ -69,7 +69,7 @@ struct user {
     password.
     This is a quick way to verify that a user has entered
     the correct password for logging in.";
-  search uid: comment "Lookup by unique identifier.";
+  search uid: comment "Lookup by unique identifier." order company.name;
   update hash: uid;
   update email: uid;
   insert;

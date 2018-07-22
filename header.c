@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "version.h"
 #include "extern.h"
@@ -677,7 +678,7 @@ gen_role(const struct role *r, int *nf)
  * Generate the C header file.
  * For "splitproc", note that db_open uses ksql_alloc_child.
  */
-void
+static void
 gen_c_header(const struct config *cfg, const char *guard,
 	int json, int valids, int splitproc, int dbin, int dstruct)
 {
@@ -787,4 +788,86 @@ gen_c_header(const struct config *cfg, const char *guard,
 	puts("__END_DECLS\n"
 	     "\n"
 	     "#endif");
+}
+
+int
+main(int argc, char *argv[])
+{
+	FILE		*conf = NULL;
+	const char	*confile = NULL, *guard = "DB_H";
+	struct config	*cfg;
+	int		 c, json = 0, valids = 0,
+			 splitproc = 0, dbin = 1, dstruct = 1;
+
+#if HAVE_PLEDGE
+	if (-1 == pledge("stdio rpath", NULL))
+		err(EXIT_FAILURE, "pledge");
+#endif
+
+	while (-1 != (c = getopt(argc, argv, "g:jN:sv")))
+		switch (c) {
+		case ('g'):
+			guard = optarg;
+			break;
+		case ('j'):
+			json = 1;
+			break;
+		case ('N'):
+			if (NULL != strchr(optarg, 'b'))
+				dstruct = 0;
+			if (NULL != strchr(optarg, 'd'))
+				dbin = 0;
+			break;
+		case ('s'):
+			splitproc = 1;
+			break;
+		case ('v'):
+			valids = 1;
+			break;
+		default:
+			goto usage;
+		}
+	argc -= optind;
+	argv += optind;
+
+	if (0 == argc) {
+		confile = "<stdin>";
+		conf = stdin;
+	} else
+		confile = argv[0];
+
+	if (argc > 1)
+		goto usage;
+
+	if (NULL == conf &&
+	    NULL == (conf = fopen(confile, "r")))
+		err(EXIT_FAILURE, "%s", confile);
+
+#if HAVE_PLEDGE
+	if (-1 == pledge("stdio", NULL))
+		err(EXIT_FAILURE, "pledge");
+#endif
+
+	cfg = parse_config(conf, confile);
+	fclose(conf);
+
+	if (NULL == cfg || ! parse_link(cfg)) {
+		parse_free(cfg);
+		return EXIT_FAILURE;
+	}
+
+	gen_c_header(cfg, guard, json, valids, 
+		splitproc, dbin, dstruct);
+
+	parse_free(cfg);
+	return EXIT_SUCCESS;
+
+usage:
+	fprintf(stderr, 
+		"usage: %s "
+		"[-jsv] "
+		"[-N bd] "
+		"[config]\n",
+		getprogname());
+	return EXIT_FAILURE;
 }

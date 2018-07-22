@@ -603,18 +603,7 @@ __BEGIN_DECLS
 int		 parse_link(struct config *);
 struct config	*parse_config(FILE *, const char *);
 void		 parse_free(struct config *);
-
-int		 gen_audit(const struct config *, const char *);
-int		 gen_audit_gv(const struct config *, const char *);
-int		 gen_audit_json(const struct config *, const char *);
-void		 gen_c_header(const struct config *, const char *,
-			int, int, int, int, int);
-void		 gen_c_source(const struct config *, int, 
-			int, int, int, const char *, const char *);
-void		 gen_sql(const struct strctq *);
-int		 gen_diff(const struct config *,
-			const struct config *);
-void		 gen_javascript(const struct config *, int);
+void		 parse_write(FILE *, const struct config *);
 
 void		 print_commentt(size_t, enum cmtt, const char *);
 void		 print_commentv(size_t, enum cmtt, const char *, ...)

@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "extern.h"
 
@@ -368,7 +369,7 @@ gen_proto(int tsc, const char *ret, const char *func, ...)
 	     "\t{");
 }
 
-void
+static void
 gen_javascript(const struct config *cfg, int tsc)
 {
 	const struct strct  *s;
@@ -1095,4 +1096,64 @@ gen_javascript(const struct config *cfg, int tsc)
 		printf("})(%s || (%s = {}));\n", ns, ns);
 	} else
 		puts("}");
+}
+
+int
+main(int argc, char *argv[])
+{
+	FILE		*conf = NULL;
+	const char	*confile = NULL;
+	struct config	*cfg;
+	int		 c, typescript = 0;
+
+#if HAVE_PLEDGE
+	if (-1 == pledge("stdio rpath", NULL))
+		err(EXIT_FAILURE, "pledge");
+#endif
+
+	while (-1 != (c = getopt(argc, argv, "t")))
+		switch (c) {
+		case ('t'):
+			typescript = 1;
+			break;
+		default:
+			goto usage;
+		}
+	argc -= optind;
+	argv += optind;
+
+	if (0 == argc) {
+		confile = "<stdin>";
+		conf = stdin;
+	} else
+		confile = argv[0];
+
+	if (argc > 1)
+		goto usage;
+
+	if (NULL == conf &&
+	    NULL == (conf = fopen(confile, "r")))
+		err(EXIT_FAILURE, "%s", confile);
+
+#if HAVE_PLEDGE
+	if (-1 == pledge("stdio", NULL))
+		err(EXIT_FAILURE, "pledge");
+#endif
+
+	cfg = parse_config(conf, confile);
+	fclose(conf);
+
+	if (NULL == cfg || ! parse_link(cfg)) {
+		parse_free(cfg);
+		return EXIT_FAILURE;
+	}
+
+	gen_javascript(cfg, typescript);
+	parse_free(cfg);
+	return EXIT_SUCCESS;
+usage:
+	fprintf(stderr, 
+		"usage: %s [-t] [config]\n",
+		getprogname());
+	return EXIT_FAILURE;
 }

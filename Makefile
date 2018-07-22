@@ -6,18 +6,13 @@ VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 5
 VERSION_BUILD	 = 1
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
-OBJS		 = audit.o \
-		   comments.o \
+LIBOBJS		 = comments.o \
 		   compats.o \
-		   header.o \
 		   linker.o \
-		   javascript.o \
-		   main.o \
 		   parser.o \
 		   printer.o \
 		   protos.o \
-		   source.o \
-		   sql.o
+		   writer.o
 HTMLS		 = archive.html \
 		   index.html \
 		   kwebapp.1.html \
@@ -61,7 +56,9 @@ DOTAR		 = audit.c \
 		   source.c \
 		   sql.c \
 		   tests.c \
-		   test.c
+		   test.c \
+		   writer.c \
+		   xliff.c
 XMLS		 = test.xml.xml \
 		   versions.xml
 IHTMLS		 = audit-example.txt.html \
@@ -75,37 +72,58 @@ IHTMLS		 = audit-example.txt.html \
 		   db.js.html \
 		   db.ts.html \
 		   test.c.html
-LINKS		 = kwebapp-audit \
+BINS		 = kwebapp \
+		   kwebapp-audit \
 		   kwebapp-audit-gv \
 		   kwebapp-audit-json \
 		   kwebapp-c-header \
 		   kwebapp-c-source \
 		   kwebapp-javascript \
 		   kwebapp-sql \
-		   kwebapp-sqldiff
+		   kwebapp-sqldiff \
+		   kwebapp-xliff
 IMAGES		 = index.svg \
 		   index-fig1.svg \
 		   index-fig2.svg \
 		   index-fig3.svg \
 		   index-fig5.svg
 
-all: kwebapp $(LINKS)
+all: kwebapp $(BINS)
 
 afl::
 	$(MAKE) clean
 	$(MAKE) all CC=afl-gcc
-	cp kwebapp afl
-	ln -f afl/kwebapp afl/kwebapp-audit
-	ln -f afl/kwebapp afl/kwebapp-audit-gv
-	ln -f afl/kwebapp afl/kwebapp-audit-json
-	ln -f afl/kwebapp afl/kwebapp-c-source
-	ln -f afl/kwebapp afl/kwebapp-c-header
-	ln -f afl/kwebapp afl/kwebapp-javascript
-	ln -f afl/kwebapp afl/kwebapp-sql
-	ln -f afl/kwebapp afl/kwebapp-sqldiff
+	cp $(BINS) afl
 
-kwebapp: $(OBJS)
-	$(CC) -o $@ $(OBJS)
+kwebapp: main.o $(LIBOBJS)
+	$(CC) -o $@ main.o $(LIBOBJS)
+
+kwebapp-c-source: source.o $(LIBOBJS)
+	$(CC) -o $@ source.o $(LIBOBJS)
+
+kwebapp-c-header: header.o $(LIBOBJS)
+	$(CC) -o $@ header.o $(LIBOBJS)
+
+kwebapp-javascript: javascript.o $(LIBOBJS)
+	$(CC) -o $@ javascript.o $(LIBOBJS)
+
+kwebapp-sql: sql.o $(LIBOBJS)
+	$(CC) -o $@ sql.o $(LIBOBJS)
+
+kwebapp-sqldiff: sql.o $(LIBOBJS)
+	$(CC) -o $@ sql.o $(LIBOBJS)
+
+kwebapp-audit: audit.o $(LIBOBJS)
+	$(CC) -o $@ audit.o $(LIBOBJS)
+
+kwebapp-audit-gv: audit.o $(LIBOBJS)
+	$(CC) -o $@ audit.o $(LIBOBJS)
+
+kwebapp-audit-json: audit.o $(LIBOBJS)
+	$(CC) -o $@ audit.o $(LIBOBJS)
+
+kwebapp-xliff: xliff.o $(LIBOBJS)
+	$(CC) -o $@ xliff.o $(LIBOBJS) -lexpat
 
 www: $(IMAGES) $(HTMLS) kwebapp.tar.gz kwebapp.tar.gz.sha512 atom.xml
 
@@ -131,15 +149,7 @@ install: kwebapp
 	$(INSTALL_MAN) $(MAN1S) $(DESTDIR)$(MANDIR)/man1
 	$(INSTALL_MAN) kwebapp.5 $(DESTDIR)$(MANDIR)/man5
 	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/kwebapp
-	$(INSTALL_PROGRAM) kwebapp $(DESTDIR)$(BINDIR)
-	$(INSTALL_PROGRAM) $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-audit
-	$(INSTALL_PROGRAM) $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-audit-gv
-	$(INSTALL_PROGRAM) $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-audit-json
-	$(INSTALL_PROGRAM) $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-c-source
-	$(INSTALL_PROGRAM) $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-c-header
-	$(INSTALL_PROGRAM) $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-javascript
-	$(INSTALL_PROGRAM) $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-sql
-	$(INSTALL_PROGRAM) $(DESTDIR)$(BINDIR)/kwebapp $(DESTDIR)$(BINDIR)/kwebapp-sqldiff
+	$(INSTALL_PROGRAM) $(BINS) $(DESTDIR)$(BINDIR)
 
 kwebapp.tar.gz.sha512: kwebapp.tar.gz
 	sha512 kwebapp.tar.gz >$@
@@ -150,11 +160,6 @@ kwebapp.tar.gz: $(DOTAR) $(DOTAREXEC)
 	install -m 0555 $(DOTAREXEC) .dist/kwebapp-$(VERSION)
 	( cd .dist/ && tar zcf ../$@ ./ )
 	rm -rf .dist/
-
-$(LINKS): kwebapp
-	ln -f kwebapp $@
-
-OBJS: extern.h
 
 test: test.o db.o db.db
 	$(CC) $(LDFLAGS) -o $@ test.o db.o -lksql -lsqlite3 -lpthread -lkcgijson -lkcgi -lz $(LDADD)
@@ -190,7 +195,7 @@ db.db: db.sql
 	rm -f $@
 	sqlite3 $@ < db.sql
 
-$(OBJS): config.h extern.h
+ $(LIBOBJS): config.h extern.h
 
 .5.5.html:
 	mandoc -Thtml -Ostyle=mandoc.css $< >$@
@@ -276,11 +281,12 @@ atom.xml: versions.xml
 	sblg -s date -a versions.xml >$@
 
 clean:
-	rm -f kwebapp $(LINKS) version.h
-	rm -f $(OBJS) db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db test test.o
+	rm -f $(BINS) version.h
+	rm -f $(LIBOBJS) db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db test test.o
 	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml
 	rm -f db.txt.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
+	rm -f source.o header.o javascript.o sql.o audit.o main.o xliff.o
 
 distclean: clean
 	rm -f config.h config.log Makefile.configure

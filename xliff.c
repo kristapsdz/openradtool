@@ -403,10 +403,11 @@ xliff_read(const struct config *cfg, const char *fn, XML_Parser p)
 }
 
 static void
-xliff_print_unit(const struct labelq *lq, 
-	const struct pos *pos, size_t *id)
+xliff_extract_unit(const struct labelq *lq, 
+	const struct pos *pos, const char ***s, size_t *ssz)
 {
 	const struct label *l;
+	size_t		    i;
 
 	TAILQ_FOREACH(l, lq, entries)
 		if (0 == l->lang)
@@ -419,11 +420,23 @@ xliff_print_unit(const struct labelq *lq,
 		return;
 	}
 
-	printf("\t\t\t<trans-unit id=\"%zu\">\n"
-	       "\t\t\t\t<source>%s</source>\n"
-	       "\t\t\t\t<target>TODO</target>\n"
-	       "\t\t\t</trans-unit>\n",
-	       ++(*id), l->label);
+	for (i = 0; i < *ssz; i++)
+		if (0 == strcmp((*s)[i], l->label))
+			return;
+
+	*s = reallocarray
+		(*s, *ssz + 1, sizeof(char **));
+	if (NULL == *s)
+		err(EXIT_FAILURE, NULL);
+	(*s)[*ssz] = l->label;
+	(*ssz)++;
+}
+
+static int
+xliff_sort(const void *p1, const void *p2)
+{
+
+	return(strcmp(*(const char **)p1, *(const char **)p2));
 }
 
 static int
@@ -431,16 +444,27 @@ xliff_extract(const struct config *cfg)
 {
 	const struct enm *e;
 	const struct eitem *ei;
-	size_t		 i = 0;
+	size_t		  i, ssz = 0;
+	const char	**s = NULL;
+
+	TAILQ_FOREACH(e, &cfg->eq, entries)
+		TAILQ_FOREACH(ei, &e->eq, entries)
+			xliff_extract_unit(&ei->labels, 
+				&ei->pos, &s, &ssz);
+
+	qsort(s, ssz, sizeof(char *), xliff_sort);
 
 	printf("<xliff version=\"1.2\">\n"
 	       "\t<file target-language=\"TODO\" "
 	          "tool=\"kwebapp-xliff\">\n"
 	       "\t\t<body>\n");
 
-	TAILQ_FOREACH(e, &cfg->eq, entries)
-		TAILQ_FOREACH(ei, &e->eq, entries)
-			xliff_print_unit(&ei->labels, &ei->pos, &i);
+	for (i = 0; i < ssz; i++)
+		printf("\t\t\t<trans-unit id=\"%zu\">\n"
+		       "\t\t\t\t<source>%s</source>\n"
+		       "\t\t\t\t<target>TODO</target>\n"
+		       "\t\t\t</trans-unit>\n",
+		       i + 1, s[i]);
 
 	puts("\t\t</body>\n"
 	     "\t</file>\n"

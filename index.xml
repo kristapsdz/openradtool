@@ -59,8 +59,27 @@
 					your data: tables (structures), fields (members), accessors (search, list, iterate), modifiers (insert,
 					update, delete), etc.&#8212; even <a href="https://learnbchs.org/rbac.html">role-based access
 						control</a>&#8212; and generates the source files for your application to use.
-					Each produces a different kind of output.
+					Each produces a different kind of output:
 				</p>
+				<ul>
+					<li>
+						<a href="#gen-sql">SQL schema</a> (and <a href="#gen-sqldiff">schema upgrade</a> commands) for
+						the SQLite database.
+					</li>
+					<li>
+						Back-end <a href="#gen-c">C source code</a> for manipulating (and exporting from) the database.
+					</li>
+					<li>
+						Front-end <a href="#gen-js">JavaScript source code</a> populating HTML5 trees with exported
+						data.
+					</li>
+					<li>
+						<a href="#gen-audit">Role audits</a> for studying the data accessable by user roles.
+					</li>
+					<!-- li>
+						Translation files for JavaScript labels.
+					</li -->
+				</ul>
 				<p>
 					These programs have no run-time dependencies; however, the generated C files use <a
 						href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for the underlying <a
@@ -128,7 +147,7 @@
 					</p>
 				</div>
 			</section>
-			<h2>
+			<h2 id="gen-c">
 				generate back-end code
 			</h2>
 			<code>
@@ -193,7 +212,7 @@
 					<b>-l</b><i>m</i> (for <b>-l</b><i>kcgijson</i>).
 				</p>
 			</section>
-			<h2>
+			<h2 id="gen-sql">
 				generate and initialise database
 			</h2>
 			<code>
@@ -223,7 +242,7 @@
 					</p>
 				</div>
 			</section>
-			<h2>
+			<h2 id="gen-sqldiff">
 				update database
 			</h2>
 			<code>
@@ -253,7 +272,7 @@
 					</p>
 				</div>
 			</section>
-			<h2>
+			<h2 id="gen-js">
 				generate javascript front-end
 			</h2>
 			<code>
@@ -292,7 +311,7 @@
 					</p>
 				</div>
 			</section>
-			<h2>
+			<h2 id="gen-audit">
 				audit role-based access
 			</h2>
 			<code>

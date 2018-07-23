@@ -66,6 +66,7 @@ XMLS		 = test.xml.xml \
 IHTMLS		 = audit-example.txt.html \
 		   audit-out.js \
 		   db.txt.html \
+		   db.fr.xml.html \
 		   db.h.html \
 		   db.c.html \
 		   db.sql.html \
@@ -73,6 +74,7 @@ IHTMLS		 = audit-example.txt.html \
 		   db.update.sql.html \
 		   db.js.html \
 		   db.ts.html \
+		   db.trans.txt.html \
 		   test.c.html
 BINS		 = kwebapp \
 		   kwebapp-audit \
@@ -88,7 +90,8 @@ IMAGES		 = index.svg \
 		   index-fig1.svg \
 		   index-fig2.svg \
 		   index-fig3.svg \
-		   index-fig5.svg
+		   index-fig5.svg \
+		   index-fig6.svg
 
 all: kwebapp $(BINS)
 
@@ -193,6 +196,9 @@ db.ts: kwebapp-javascript db.txt
 db.update.sql: kwebapp-sqldiff db.old.txt db.txt
 	./kwebapp-sqldiff db.old.txt db.txt >$@
 
+db.trans.txt: kwebapp-xliff db.txt db.fr.xml
+	./kwebapp-xliff -j db.txt db.fr.xml >$@
+
 db.db: db.sql
 	rm -f $@
 	sqlite3 $@ < db.sql
@@ -214,6 +220,9 @@ db.txt.xml: db.txt
 	( echo "<article data-sblg-article=\"1\">" ; \
 	  highlight -l --enclose-pre --src-lang=conf -f db.txt ; \
 	  echo "</article>" ; ) >$@
+
+db.fr.xml.html: db.fr.xml
+	highlight -s whitengrey -I -l --src-lang=xml db.fr.xml | sed 's!ISO-8859-1!UTF-8!g' >$@
 
 db.h.xml: db.h
 	( echo "<article data-sblg-article=\"1\">" ; \
@@ -265,6 +274,9 @@ db.ts.html: db.ts
 db.update.sql.html: db.update.sql
 	highlight -s whitengrey -I -l --src-lang=sql db.update.sql >$@
 
+db.trans.txt.html: db.trans.txt
+	highlight -s whitengrey -I -l --src-lang=c db.trans.txt | sed 's!ISO-8859-1!UTF-8!g' >$@
+
 highlight.css:
 	highlight --print-style -s whitengrey
 
@@ -283,8 +295,8 @@ atom.xml: versions.xml
 	sblg -s date -a versions.xml >$@
 
 clean:
-	rm -f $(BINS) version.h
-	rm -f $(LIBOBJS) db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db test test.o
+	rm -f $(BINS) version.h $(LIBOBJS) test test.o
+	rm -f db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db db.trans.txt
 	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml
 	rm -f db.txt.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml

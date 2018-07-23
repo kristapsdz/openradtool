@@ -1,6 +1,7 @@
 digraph {
 	edge [arrowsize="0.5";];
 	bgcolor="transparent";
+	splines=false;
 
 	cfg[label="kwebapp(5)"];
 	bin[label="kwebapp(1)"];
@@ -13,11 +14,13 @@ digraph {
 		src[label="C"];
 		js[label="Java/TypeScript"];
 		sql[label="SQL"];
+		xliff[label="XLIFF"];
 	}
 	cfg -> bin;
 	bin -> src;
 	bin -> js;
 	bin -> sql;
+	bin -> xliff;
 
 	{ rank=same; ksql; kcgi; sqlite1; }
 	{ rank=same; sqlite; }

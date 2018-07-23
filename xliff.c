@@ -348,7 +348,8 @@ map_open(const char *fn, size_t *mapsz, char **map)
 	}
 
 	*mapsz = st.st_size;
-	*map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	*map = mmap(NULL, st.st_size, 
+		PROT_READ, MAP_SHARED, fd, 0);
 
 	if (MAP_FAILED == *map) {
 		warn("%s", fn);
@@ -403,7 +404,7 @@ xliff_read(const struct config *cfg, const char *fn, XML_Parser p)
 }
 
 static void
-xliff_extract_unit(const struct labelq *lq, 
+xliff_extract_unit(const struct labelq *lq, const char *type,
 	const struct pos *pos, const char ***s, size_t *ssz)
 {
 	const struct label *l;
@@ -413,10 +414,15 @@ xliff_extract_unit(const struct labelq *lq,
 		if (0 == l->lang)
 			break;
 
-	if (NULL == l) {
+	if (NULL == l && NULL == type) {
 		fprintf(stderr, "%s:%zu:%zu: missing "
 			"jslabel for translation\n",
 			pos->fname, pos->line, pos->column);
+		return;
+	} else if (NULL == l) {
+		fprintf(stderr, "%s:%zu:%zu: missing "
+			"\"%s\" jslabel for translation\n",
+			pos->fname, pos->line, pos->column, type);
 		return;
 	}
 
@@ -444,13 +450,25 @@ xliff_extract(const struct config *cfg)
 {
 	const struct enm *e;
 	const struct eitem *ei;
+	const struct bitf *b;
+	const struct bitidx *bi;
 	size_t		  i, ssz = 0;
 	const char	**s = NULL;
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		TAILQ_FOREACH(ei, &e->eq, entries)
 			xliff_extract_unit(&ei->labels, 
-				&ei->pos, &s, &ssz);
+				NULL, &ei->pos, &s, &ssz);
+
+	TAILQ_FOREACH(b, &cfg->bq, entries) {
+		TAILQ_FOREACH(bi, &b->bq, entries)
+			xliff_extract_unit(&bi->labels, 
+				NULL, &bi->pos, &s, &ssz);
+		xliff_extract_unit(&b->labels_unset, 
+			"unset", &b->pos, &s, &ssz);
+		xliff_extract_unit(&b->labels_null, 
+			"isnull", &b->pos, &s, &ssz);
+	}
 
 	qsort(s, ssz, sizeof(char *), xliff_sort);
 
@@ -474,61 +492,91 @@ xliff_extract(const struct config *cfg)
 }
 
 static void
+xliff_join_unit(struct labelq *q, const char *type,
+	size_t lang, const struct xliffset *x, const struct pos *pos)
+{
+	struct label	*l;
+	size_t		 i;
+
+	TAILQ_FOREACH(l, q, entries)
+		if (l->lang == 0)
+			break;
+
+	if (NULL == l && NULL == type) {
+		fprintf(stderr, "%s:%zu:%zu: no "
+			"default translation\n",
+			pos->fname, pos->line, pos->column);
+		return;
+	} else if (NULL == l) {
+		fprintf(stderr, "%s:%zu:%zu: no "
+			"default translation for \"%s\" clause\n",
+			pos->fname, pos->line, pos->column, type);
+		return;
+	}
+
+	for (i = 0; i < x->usz; i++)
+		if (0 == strcmp(x->u[i].source, l->label))
+			break;
+
+	if (i == x->usz && NULL == type) {
+		fprintf(stderr, "%s:%zu:%zu: missing "
+			"translation\n",
+			pos->fname, pos->line, pos->column);
+		return;
+	} else if (i == x->usz) {
+		fprintf(stderr, "%s:%zu:%zu: missing "
+			"translation for \"%s\" clause\n",
+			pos->fname, pos->line, pos->column, type);
+		return;
+	}
+
+	TAILQ_FOREACH(l, q, entries)
+		if (l->lang == lang)
+			break;
+
+	if (NULL != l && NULL == type) {
+		fprintf(stderr, "%s:%zu:%zu: not "
+			"overriding existing translation\n",
+			pos->fname, pos->line, pos->column);
+		return;
+	} else if (NULL != l) {
+		fprintf(stderr, "%s:%zu:%zu: not "
+			"overriding existing translation "
+			"for \"%s\" clause\n",
+			pos->fname, pos->line, pos->column, type);
+		return;
+	}
+
+	l = calloc(1, sizeof(struct label));
+	l->lang = lang;
+	l->label = strdup(x->u[i].target);
+	if (NULL == l->label)
+		err(EXIT_FAILURE, NULL);
+	TAILQ_INSERT_TAIL(q, l, entries);
+}
+
+static void
 xliff_join_xliff(struct config *cfg, 
 	size_t lang, const struct xliffset *x)
 {
 	struct enm 	*e;
 	struct eitem 	*ei;
-	size_t		 i;
-	struct label	*l;
+	struct bitf	*b;
+	struct bitidx	*bi;
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
-		TAILQ_FOREACH(ei, &e->eq, entries) {
-			TAILQ_FOREACH(l, &ei->labels, entries)
-				if (l->lang == 0)
-					break;
-			if (NULL == l) {
-				fprintf(stderr, "%s:%zu:%zu: no "
-					"default translation\n",
-					ei->pos.fname, 
-					ei->pos.line, 
-					ei->pos.column);
-				continue;
-			}
-
-			for (i = 0; i < x->usz; i++)
-				if (0 == strcmp(x->u[i].source, l->label))
-					break;
-
-			if (i == x->usz) {
-				fprintf(stderr, "%s:%zu:%zu: missing "
-					"translation\n",
-					ei->pos.fname, 
-					ei->pos.line, 
-					ei->pos.column);
-				continue;
-			}
-
-			TAILQ_FOREACH(l, &ei->labels, entries)
-				if (l->lang == lang)
-					break;
-
-			if (NULL != l) {
-				fprintf(stderr, "%s:%zu:%zu: not "
-					"overriding existing\n",
-					ei->pos.fname, 
-					ei->pos.line, 
-					ei->pos.column);
-				continue;
-			}
-
-			l = calloc(1, sizeof(struct label));
-			l->lang = lang;
-			l->label = strdup(x->u[i].target);
-			if (NULL == l->label)
-				err(EXIT_FAILURE, NULL);
-			TAILQ_INSERT_TAIL(&ei->labels, l, entries);
-		}
+		TAILQ_FOREACH(ei, &e->eq, entries)
+			xliff_join_unit(&ei->labels, 
+				NULL, lang, x, &ei->pos);
+	TAILQ_FOREACH(b, &cfg->bq, entries) {
+		TAILQ_FOREACH(bi, &b->bq, entries)
+			xliff_join_unit(&bi->labels, 
+				NULL, lang, x, &bi->pos);
+		xliff_join_unit(&b->labels_unset, 
+			"isunset", lang, x, &b->pos);
+		xliff_join_unit(&b->labels_null, 
+			"isnull", lang, x, &b->pos);
+	}
 }
 
 static int

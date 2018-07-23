@@ -87,6 +87,7 @@ nav[data-sblg-nav] ul			{ list-style-type: none;
 nav[data-sblg-nav] time			{ opacity: 0.5; 
 					  padding-top: 6pt;
 					  display: block; }
+#archive nav[data-sblg-nav] time	{ display: inline; }
 nav[data-sblg-nav] time i		{ font-size: smaller; }
 
 nav[data-sblg-nav] li			{ color: #666; }

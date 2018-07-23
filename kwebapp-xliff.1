@@ -1,0 +1,154 @@
+.\"	$OpenBSD$
+.\"
+.\" Copyright (c) 2018 Kristaps Dzonsons <kristaps@bsd.lv>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate$
+.Dt KWEBAPP-XLIFF 1
+.Os
+.Sh NAME
+.Nm kwebapp-xliff
+.Nd extract and merge translatable strings from kwebapp configurations
+.Sh SYNOPSIS
+.Nm kwebapp-xliff
+.Fl j Ar config
+.Op Ar xliff...
+.Nm kwebapp-xliff
+.Op Ar config
+.Sh DESCRIPTION
+The
+.Nm
+utility extracts and merges translatable strings from and into
+.Xr kwebapp 5
+configurations.
+These strings are used only by
+.Xr kwebapp-javascript 1 .
+By default,
+.Nm
+extracts all translatable labels.
+The arguments are as follows:
+.Bl -tag -width Ds
+.It Fl j Ar config
+Merges one or more
+.Ar xliff
+files with an untranslated
+.Xr kwebapp 5
+configuration file, producing another configuration on standard output
+containing the translated strings.
+.It Ar xliff
+An XLIFF 1.2 file containing translated strings.
+.It Ar config
+A
+.Xr kwebapp 5
+configuration file.
+.El
+.Pp
+Translatable content in
+.Xr kwebapp 5
+is limited to
+.Cm jslabel
+phrases for enumerations and bitfields.
+.Pp
+The usual usage sequence is as follows:
+.Bl -enum
+.It
+Extract translatable content from a
+.Xr kwebapp 5
+configuration into an XLIFF file.
+.It
+Give the XLIFF file a target language and translate the strings.
+.It
+Merge the XLIFF file back into the original
+.Xr kwebapp 5
+with
+.Fl j ,
+then use the produced configuration for further use in
+.Xr kwebapp-javascript 1 .
+.El
+.\" The following requests should be uncommented and used where appropriate.
+.\" .Sh CONTEXT
+.\" For section 9 functions only.
+.\" .Sh RETURN VALUES
+.\" For sections 2, 3, and 9 function return values only.
+.\" .Sh ENVIRONMENT
+.\" For sections 1, 6, 7, and 8 only.
+.\" .Sh FILES
+.Sh EXIT STATUS
+.Ex -std
+.Sh EXAMPLES
+Take a dummy configuration containing the following:
+.Bd -literal
+enum foo {
+  item bar 0 jslabel "bar";
+  item foo 1 jslabel "foo";
+};
+.Ed
+.Pp
+When run through
+.Nm ,
+this configuration produces the following translatable strings:
+.Bd -literal
+<xliff version="1.2">
+  <file target-language="TODO" tool="kwebapp-xliff">
+    <body>
+      <trans-unit id="1">
+        <source>bar</source>
+        <target>TODO</target>
+      </trans-unit>
+      <trans-unit id="2">
+        <source>foo</source>
+        <target>TODO</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>
+.Ed
+.Pp
+Change the language into something useful, such as
+.Qq fr ,
+and translate the strings into
+.Qq le bar
+and
+.Qq le foo ,
+respectively.
+Run through
+.Nm
+.Fl j ,
+this produces:
+.Bd -literal
+enum foo {
+  item bar 0
+    jslabel "bar"
+    jslabel.fr "le bar";
+  item foo 1
+    jslabel "foo"
+    jslabel.fr "le foo";
+};
+.Ed
+.Pp
+This output file can then be used with
+.Xr kwebapp-javascript 1
+to have per-language label filling.
+.\" .Sh DIAGNOSTICS
+.\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
+.\" .Sh ERRORS
+.\" For sections 2, 3, 4, and 9 errno settings only.
+.Sh SEE ALSO
+.Xr kwebapp-javascript 1 ,
+.Xr kwebapp 5
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh CAVEATS
+.\" .Sh BUGS

@@ -24,6 +24,7 @@ HTMLS		 = archive.html \
 		   kwebapp-javascript.1.html \
 		   kwebapp-sql.1.html \
 		   kwebapp-sqldiff.1.html \
+		   kwebapp-xliff.1.html \
 		   kwebapp.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
 MAN1S		 = kwebapp.1 \
@@ -34,7 +35,8 @@ MAN1S		 = kwebapp.1 \
 		   kwebapp-c-source.1 \
 		   kwebapp-javascript.1 \
 		   kwebapp-sql.1 \
-		   kwebapp-sqldiff.1
+		   kwebapp-sqldiff.1 \
+		   kwebapp-xliff.1
 DOTAREXEC	 = configure
 DOTAR		 = audit.c \
 		   audit.css \

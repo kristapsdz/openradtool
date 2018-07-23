@@ -24,9 +24,9 @@ struct company {
 # They're also export to JavaScript.
 
 enum sex {
-  item male comment "Male";
-  item female comment "Femmale";
-  item other comment "Other";
+  item male comment "Male" jslabel "male";
+  item female comment "Female" jslabel "female";
+  item other comment "Other" jslabel "other";
   comment "Birthsex of individual";
 };
 

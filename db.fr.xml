@@ -1,0 +1,18 @@
+<xliff version="1.2">
+	<file target-language="fr" tool="kwebapp-xliff">
+		<body>
+			<trans-unit id="1">
+				<source>female</source>
+				<target>la femelle</target>
+			</trans-unit>
+			<trans-unit id="2">
+				<source>male</source>
+				<target>le mâle</target>
+			</trans-unit>
+			<trans-unit id="3">
+				<source>other</source>
+				<target>l'autre</target>
+			</trans-unit>
+		</body>
+	</file>
+</xliff>

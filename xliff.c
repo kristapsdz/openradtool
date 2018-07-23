@@ -583,7 +583,7 @@ static int
 xliff_join(struct config *cfg, size_t argc, const char **argv)
 {
 	struct xliffset	*x;
-	size_t		 i;
+	size_t		 i, j;
 	XML_Parser	 p;
 
 	if (NULL == (p = XML_ParserCreate(NULL))) {
@@ -597,11 +597,11 @@ xliff_join(struct config *cfg, size_t argc, const char **argv)
 			return 0;
 
 		assert(NULL != x->trglang);
-		for (i = 0; i < cfg->langsz; i++)
-			if (0 == strcmp(cfg->langs[i], x->trglang))
+		for (j = 0; j < cfg->langsz; j++)
+			if (0 == strcmp(cfg->langs[j], x->trglang))
 				break;
 
-		if (i == cfg->langsz) {
+		if (j == cfg->langsz) {
 			cfg->langs = reallocarray
 				(cfg->langs,
 				 cfg->langsz + 1,
@@ -618,7 +618,7 @@ xliff_join(struct config *cfg, size_t argc, const char **argv)
 				"is already noted\n",
 				argv[i], x->trglang);
 
-		xliff_join_xliff(cfg, i, x);
+		xliff_join_xliff(cfg, j, x);
 		xparse_xliff_free(x);
 	}
 

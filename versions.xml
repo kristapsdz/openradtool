@@ -3,6 +3,27 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.5.2</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-07-23">2018-07-23</time>
+		</header>
+		<aside>
+			<p>
+				Full translation capabilities!
+				Now all <code>jslabel</code> strings may be translated out-of-band
+				into the appropriate <code>jslabel.xxx</code> labels using the
+				industry-standard XLIFF 1.2 format.
+				Just use <a href="kwebapp-xliff.1.html">kwebapp-xliff(1)</a> to
+				extract translatable strings, edit the content, then merge with the
+				original configuration.
+				The output can then be piped into <a
+					href="kwebapp-javascript.1.html">kwebapp-javascript(1)</a>
+				for dynamic per-language formatting!
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.5.1</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-06-26">2018-06-26</time>

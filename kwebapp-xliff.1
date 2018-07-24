@@ -72,10 +72,20 @@ Give the XLIFF file a target language and translate the strings.
 Merge the XLIFF file back into the original
 .Xr kwebapp 5
 with
-.Fl j ,
-then use the produced configuration for further use in
+.Fl j .
+Already-translated labels for the given language are not overriden by
+default.
+.It
+Use the produced configuration for further use in
 .Xr kwebapp-javascript 1 .
 .El
+.Pp
+With these steps, integral enumeration values produced by the JSON
+output of 
+.Xr kwebapp-c-source 1
+and
+.Xr kwebapp-c-header 1
+may be translated into human-readable, language-specific labels.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

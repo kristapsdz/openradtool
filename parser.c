@@ -2408,6 +2408,27 @@ parse_bitidx_item(struct parse *p, struct bitidx *bi)
 }
 
 /*
+ * Parse semicolon-terminated labels of special phrase.
+ * Return zero on failure, non-zero on success.
+ */
+static int
+parse_bitidx_label(struct parse *p, struct labelq *q)
+{
+
+	for (;;) {
+		if (TOK_SEMICOLON == parse_next(p))
+			return 1;
+		if (TOK_IDENT != p->lasttype ||
+		    strcasecmp(p->last.string, "jslabel")) {
+			parse_errx(p, "expected \"jslabel\"");
+			return 0;
+		} 
+		if ( ! parse_label(p, q))
+			return 0;
+	}
+}
+
+/*
  * Parse a full bitfield index.
  * Its syntax is:
  *
@@ -2449,28 +2470,12 @@ parse_bitidx(struct parse *p, struct bitf *b)
 			if (0 == strcasecmp(p->last.string, "unset"))
 				parse_warnx(p, "\"unset\" is "
 					"deprecated: use \"isunset\"");
-			if (TOK_IDENT != parse_next(p) ||
-			    strcasecmp(p->last.string, "jslabel")) {
-				parse_errx(p, "expected \"jslabel\"");
+			if ( ! parse_bitidx_label(p, &b->labels_unset))
 				return;
-			} else if ( ! parse_label(p, &b->labels_unset))
-				return;
-			if (TOK_SEMICOLON != parse_next(p)) {
-				parse_errx(p, "expected semicolon");
-				return;
-			}
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "isnull")) {
-			if (TOK_IDENT != parse_next(p) ||
-			    strcasecmp(p->last.string, "jslabel")) {
-				parse_errx(p, "expected \"jslabel\"");
+			if ( ! parse_bitidx_label(p, &b->labels_null))
 				return;
-			} else if ( ! parse_label(p, &b->labels_null))
-				return;
-			if (TOK_SEMICOLON != parse_next(p)) {
-				parse_errx(p, "expected semicolon");
-				return;
-			}
 			continue;
 		} else if (strcasecmp(p->last.string, "item")) {
 			parse_errx(p, "unknown bitfield data type");

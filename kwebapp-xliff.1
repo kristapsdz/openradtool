@@ -25,6 +25,7 @@
 .Fl j Ar config
 .Op Ar xliff...
 .Nm kwebapp-xliff
+.Op Fl c
 .Op Ar config
 .Sh DESCRIPTION
 The
@@ -39,13 +40,20 @@ By default,
 extracts all translatable labels.
 The arguments are as follows:
 .Bl -tag -width Ds
+.It Fl c
+Instead of creating an empty target when extracting strings, fill in the
+target with the source.
+Ignored with
+.Fl j .
 .It Fl j Ar config
 Merges one or more
 .Ar xliff
 files with an untranslated
 .Xr kwebapp 5
-configuration file, producing another configuration on standard output
-containing the translated strings.
+configuration file
+.Ar config ,
+producing another configuration on standard output containing the
+translated strings.
 .It Ar xliff
 An XLIFF 1.2 file containing translated strings.
 .It Ar config
@@ -114,11 +122,9 @@ this configuration produces the following translatable strings:
     <body>
       <trans-unit id="1">
         <source>bar</source>
-        <target>TODO</target>
       </trans-unit>
       <trans-unit id="2">
         <source>foo</source>
-        <target>TODO</target>
       </trans-unit>
     </body>
   </file>

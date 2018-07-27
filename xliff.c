@@ -446,7 +446,7 @@ xliff_sort(const void *p1, const void *p2)
 }
 
 static int
-xliff_extract(const struct config *cfg)
+xliff_extract(const struct config *cfg, int copy)
 {
 	const struct enm *e;
 	const struct eitem *ei;
@@ -478,11 +478,17 @@ xliff_extract(const struct config *cfg)
 	       "\t\t<body>\n");
 
 	for (i = 0; i < ssz; i++)
-		printf("\t\t\t<trans-unit id=\"%zu\">\n"
-		       "\t\t\t\t<source>%s</source>\n"
-		       "\t\t\t\t<target>TODO</target>\n"
-		       "\t\t\t</trans-unit>\n",
-		       i + 1, s[i]);
+		if (copy) 
+			printf("\t\t\t<trans-unit id=\"%zu\">\n"
+			       "\t\t\t\t<source>%s</source>\n"
+			       "\t\t\t\t<target>%s</target>\n"
+			       "\t\t\t</trans-unit>\n",
+			       i + 1, s[i], s[i]);
+		else
+			printf("\t\t\t<trans-unit id=\"%zu\">\n"
+			       "\t\t\t\t<source>%s</source>\n"
+			       "\t\t\t</trans-unit>\n",
+			       i + 1, s[i]);
 
 	puts("\t\t</body>\n"
 	     "\t</file>\n"
@@ -633,15 +639,18 @@ main(int argc, char *argv[])
 	FILE		*conf = NULL;
 	const char	*confile = NULL;
 	struct config	*cfg;
-	int		 c, op = 0;
+	int		 c, op = 0, copy = 0;
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio rpath", NULL))
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "j:")))
+	while (-1 != (c = getopt(argc, argv, "cj:")))
 		switch (c) {
+		case 'c':
+			copy = 1;
+			break;
 		case 'j':
 			op = 1;
 			confile = optarg;
@@ -674,7 +683,7 @@ main(int argc, char *argv[])
 	}
 
 	c = 0 == op ? 
-		xliff_extract(cfg) :
+		xliff_extract(cfg, copy) :
 		xliff_join(cfg, argc, (const char **)argv);
 
 	parse_free(cfg);
@@ -682,7 +691,7 @@ main(int argc, char *argv[])
 usage:
 	fprintf(stderr, 
 		"usage: %s -j config xliffs...\n"
-		"       %s [config]\n",
+		"       %s [-c] [config]\n",
 		getprogname(), getprogname());
 	return EXIT_FAILURE;
 }

@@ -726,6 +726,7 @@ parse_label(struct parse *p, struct labelq *q)
 {
 	size_t	 	 lang = 0;
 	struct label	*l;
+	const char	*cp;
 
 	/* 
 	 * If we have a period (like jslabel.en), then interpret the
@@ -768,6 +769,18 @@ parse_label(struct parse *p, struct labelq *q)
 		parse_errx(p, "expected quoted string");
 		return 0;
 	}
+
+	/* 
+	 * Sanity: don't allow HTML '<' in output because it may not be
+	 * safely serialised into the resulting page.
+	 * Should escape as \u003c.
+	 */
+
+	for (cp = p->last.string; '\0' != *cp; cp++) 
+		if ('<' == *cp) {
+			parse_errx(p, "illegal html character");
+			return 0;
+		}
 
 	TAILQ_FOREACH(l, q, entries)
 		if (lang == l->lang) {

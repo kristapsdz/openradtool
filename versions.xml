@@ -3,6 +3,21 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.5.3</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-07-27">2018-07-27</time>
+		</header>
+		<aside>
+			<p>
+				Allow a copy mode <b>-c</b> in <a
+					href="kwebapp-xliff.1.html">kwebapp-xliff(1)</a>.
+				Also don't allow tags (the &lt; character) in <code>jslabel</code> phrases.
+				Fix specifying language <code>jslabel</code> for special phrases in <code>bits</code>.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.5.2</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-07-23">2018-07-23</time>

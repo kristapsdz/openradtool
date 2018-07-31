@@ -379,7 +379,7 @@ gen_javascript(const struct config *cfg, int tsc)
 	const struct enm    *e;
 	const struct eitem  *ei;
 	const char	    *ns = "kwebapp";
-	char		    *obj;
+	char		    *obj, *objarray;
 
 	/*
 	 * Begin with the methods we'll use throughout the file.
@@ -691,6 +691,8 @@ gen_javascript(const struct config *cfg, int tsc)
 		    "%s.%sData|%s.%sData[]|null", 
 		    ns, s->name, ns, s->name) < 0)
 			err(EXIT_FAILURE, NULL);
+		if (asprintf(&objarray, "%s.%sData[]", ns, s->name) < 0)
+			err(EXIT_FAILURE, NULL);
 		print_commentv(1, COMMENT_JS,
 			"Accepts {@link %s.%sData} for writing into "
 			"a DOM tree.\n"
@@ -841,12 +843,13 @@ gen_javascript(const struct config *cfg, int tsc)
 		gen_vars(tsc, 3, "j", "number", 
 			"o", obj,
 			"cln", "any",
+			"ar", objarray,
 			"row", "HTMLElement", NULL);
 		printf("\t\t\to = this.obj;\n"
 		       "\t\t\tif (null === o || null === e)\n"
 		       "\t\t\t\treturn;\n"
 		       "\t\t\tif ( ! (o instanceof Array)) {\n"
-		       "\t\t\t\tvar ar = [];\n"
+		       "\t\t\t\tar = [];\n"
 		       "\t\t\t\tar.push(o);\n"
 		       "\t\t\t\to = ar;\n"
 		       "\t\t\t}\n"
@@ -879,6 +882,7 @@ gen_javascript(const struct config *cfg, int tsc)
 				ns, s->name, s->name);
 		puts("");
 		free(obj);
+		free(objarray);
 	}
 
 	TAILQ_FOREACH(bf, &cfg->bq, entries) {

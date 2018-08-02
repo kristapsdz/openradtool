@@ -497,44 +497,77 @@ xliff_extract(const struct config *cfg, int copy)
 	return 1;
 }
 
-static void
-xliff_join_unit(struct labelq *q, const char *type,
+static int
+xliff_join_unit(struct labelq *q, int copy, const char *type,
 	size_t lang, const struct xliffset *x, const struct pos *pos)
 {
 	struct label	*l;
 	size_t		 i;
+	const char	*targ = NULL;
 
 	TAILQ_FOREACH(l, q, entries)
 		if (l->lang == 0)
 			break;
 
+	/* 
+	 * See if we have a default translation (lang == 0). 
+	 * This is going to be the material we want to translate.
+	 */
+
 	if (NULL == l && NULL == type) {
 		fprintf(stderr, "%s:%zu:%zu: no "
 			"default translation\n",
 			pos->fname, pos->line, pos->column);
-		return;
+		return 0;
 	} else if (NULL == l) {
 		fprintf(stderr, "%s:%zu:%zu: no "
 			"default translation for \"%s\" clause\n",
 			pos->fname, pos->line, pos->column, type);
-		return;
+		return 0;
 	}
+
+	/* Look up what we want to translate in the database. */
 
 	for (i = 0; i < x->usz; i++)
 		if (0 == strcmp(x->u[i].source, l->label))
 			break;
 
 	if (i == x->usz && NULL == type) {
-		fprintf(stderr, "%s:%zu:%zu: missing "
-			"translation\n",
-			pos->fname, pos->line, pos->column);
-		return;
+		if (copy) {
+			fprintf(stderr, "%s:%zu:%zu: using "
+				"source for translation\n", 
+				pos->fname, pos->line, 
+				pos->column);
+			targ = l->label;
+		} else {
+			fprintf(stderr, "%s:%zu:%zu: missing "
+				"translation\n", pos->fname, 
+				pos->line, pos->column);
+			return 0;
+		}
 	} else if (i == x->usz) {
-		fprintf(stderr, "%s:%zu:%zu: missing "
-			"translation for \"%s\" clause\n",
-			pos->fname, pos->line, pos->column, type);
-		return;
-	}
+		if (copy) {
+			fprintf(stderr, "%s:%zu:%zu: using "
+				"source for translating "
+				"\"%s\" clause\n", pos->fname, 
+				pos->line, pos->column, type);
+			targ = l->label;
+		} else {
+			fprintf(stderr, "%s:%zu:%zu: missing "
+				"translation for \"%s\" clause\n",
+				pos->fname, pos->line, 
+				pos->column, type);
+			return 0;
+		}
+	} else
+		targ = x->u[i].target;
+
+	assert(NULL != targ);
+
+	/* 
+	 * We have what we want to translate, now make sure that we're
+	 * not overriding an existing translation.
+	 */
 
 	TAILQ_FOREACH(l, q, entries)
 		if (l->lang == lang)
@@ -544,25 +577,29 @@ xliff_join_unit(struct labelq *q, const char *type,
 		fprintf(stderr, "%s:%zu:%zu: not "
 			"overriding existing translation\n",
 			pos->fname, pos->line, pos->column);
-		return;
+		return 1;
 	} else if (NULL != l) {
 		fprintf(stderr, "%s:%zu:%zu: not "
 			"overriding existing translation "
 			"for \"%s\" clause\n",
 			pos->fname, pos->line, pos->column, type);
-		return;
+		return 1;
 	}
+
+	/* Add the translation. */
 
 	l = calloc(1, sizeof(struct label));
 	l->lang = lang;
-	l->label = strdup(x->u[i].target);
+	l->label = strdup(targ);
 	if (NULL == l->label)
 		err(EXIT_FAILURE, NULL);
 	TAILQ_INSERT_TAIL(q, l, entries);
+
+	return 1;
 }
 
-static void
-xliff_join_xliff(struct config *cfg, 
+static int
+xliff_join_xliff(struct config *cfg, int copy,
 	size_t lang, const struct xliffset *x)
 {
 	struct enm 	*e;
@@ -572,21 +609,33 @@ xliff_join_xliff(struct config *cfg,
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		TAILQ_FOREACH(ei, &e->eq, entries)
-			xliff_join_unit(&ei->labels, 
-				NULL, lang, x, &ei->pos);
+			if ( ! xliff_join_unit
+			    (&ei->labels, copy, NULL, 
+			     lang, x, &ei->pos))
+				return 0;
+
 	TAILQ_FOREACH(b, &cfg->bq, entries) {
 		TAILQ_FOREACH(bi, &b->bq, entries)
-			xliff_join_unit(&bi->labels, 
-				NULL, lang, x, &bi->pos);
-		xliff_join_unit(&b->labels_unset, 
-			"isunset", lang, x, &b->pos);
-		xliff_join_unit(&b->labels_null, 
-			"isnull", lang, x, &b->pos);
+			if ( ! xliff_join_unit
+			    (&bi->labels, copy, NULL, 
+			     lang, x, &bi->pos))
+				return 0;
+		if ( ! xliff_join_unit
+		    (&b->labels_unset, copy, 
+		     "isunset", lang, x, &b->pos))
+			return 0;
+		if ( ! xliff_join_unit
+		    (&b->labels_null, copy, 
+		     "isnull", lang, x, &b->pos))
+			return 0;
 	}
+
+	return 1;
 }
 
 static int
-xliff_join(struct config *cfg, size_t argc, const char **argv)
+xliff_join(struct config *cfg, int copy,
+	size_t argc, const char **argv)
 {
 	struct xliffset	*x;
 	size_t		 i, j;
@@ -624,13 +673,18 @@ xliff_join(struct config *cfg, size_t argc, const char **argv)
 				"is already noted\n",
 				argv[i], x->trglang);
 
-		xliff_join_xliff(cfg, j, x);
+		if ( ! xliff_join_xliff(cfg, copy, j, x)) {
+			xparse_xliff_free(x);
+			break;
+		}
 		xparse_xliff_free(x);
 	}
 
 	XML_ParserFree(p);
-	parse_write(stdout, cfg);
-	return 1;
+
+	if (i == argc)
+		parse_write(stdout, cfg);
+	return i == argc;
 }
 
 int
@@ -646,13 +700,17 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "cj:")))
+	while (-1 != (c = getopt(argc, argv, "cj:u:")))
 		switch (c) {
 		case 'c':
 			copy = 1;
 			break;
 		case 'j':
 			op = 1;
+			confile = optarg;
+			break;
+		case 'u':
+			op = -1;
 			confile = optarg;
 			break;
 		default:
@@ -684,14 +742,15 @@ main(int argc, char *argv[])
 
 	c = 0 == op ? 
 		xliff_extract(cfg, copy) :
-		xliff_join(cfg, argc, (const char **)argv);
+		xliff_join(cfg, copy, argc, (const char **)argv);
 
 	parse_free(cfg);
 	return c ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 
-		"usage: %s -j config xliffs...\n"
+		"usage: %s [-c] -j config xliffs...\n"
+		"       %s -u config [xliff]\n"
 		"       %s [-c] [config]\n",
-		getprogname(), getprogname());
+		getprogname(), getprogname(), getprogname());
 	return EXIT_FAILURE;
 }

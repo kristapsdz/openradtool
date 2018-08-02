@@ -38,7 +38,6 @@ struct	xliffunit {
 	char		*name;
 	char		*source;
 	char		*target;
-	size_t		 xsz;
 };
 
 struct	xliffset {
@@ -105,6 +104,9 @@ xparse_xliff_free(struct xliffset *p)
 {
 	size_t	 i;
 
+	if (NULL == p)
+		return;
+
 	for (i = 0; i < p->usz; i++) {
 		free(p->u[i].source);
 		free(p->u[i].target);
@@ -120,9 +122,8 @@ static void
 xparse_free(struct xparse *p)
 {
 
-	if (NULL != p->set) 
-		xparse_xliff_free(p->set);
-
+	assert(NULL != p);
+	xparse_xliff_free(p->set);
 	free(p);
 }
 
@@ -439,6 +440,15 @@ xliff_extract_unit(const struct labelq *lq, const char *type,
 }
 
 static int
+xliffunit_sort(const void *a1, const void *a2)
+{
+	struct xliffunit *p1 = (struct xliffunit *)a1,
+		 	 *p2 = (struct xliffunit *)a2;
+
+	return(strcmp(p1->source, p2->source));
+}
+
+static int
 xliff_sort(const void *p1, const void *p2)
 {
 
@@ -599,6 +609,64 @@ xliff_join_unit(struct labelq *q, int copy, const char *type,
 }
 
 static int
+xliff_update_unit(struct labelq *q, const char *type,
+	struct xliffset *x, const struct pos *pos)
+{
+	struct label	 *l;
+	size_t		  i;
+	struct xliffunit *u;
+	char		  nbuf[32];
+
+	TAILQ_FOREACH(l, q, entries)
+		if (l->lang == 0)
+			break;
+
+	/* 
+	 * See if we have a default translation (lang == 0). 
+	 * This is going to be the material we want to translate.
+	 */
+
+	if (NULL == l && NULL == type) {
+		fprintf(stderr, "%s:%zu:%zu: no "
+			"default translation\n",
+			pos->fname, pos->line, pos->column);
+		return 0;
+	} else if (NULL == l) {
+		fprintf(stderr, "%s:%zu:%zu: no "
+			"default translation for \"%s\" clause\n",
+			pos->fname, pos->line, pos->column, type);
+		return 0;
+	}
+
+	/* Look up what we want to translate in the database. */
+
+	for (i = 0; i < x->usz; i++)
+		if (0 == strcmp(x->u[i].source, l->label))
+			break;
+
+	if (i == x->usz) {
+		x->u = reallocarray
+			(x->u, x->usz + 1,
+			 sizeof(struct xliffunit));
+		if (NULL == x->u)
+			err(EXIT_FAILURE, NULL);
+		u = &x->u[x->usz++];
+		snprintf(nbuf, sizeof(nbuf), "%zu", x->usz);
+		memset(u, 0, sizeof(struct xliffunit));
+		u->name = strdup(nbuf);
+		if (NULL == u->name)
+			err(EXIT_FAILURE, NULL);
+		u->source = strdup(l->label);
+		if (NULL == u->source)
+			err(EXIT_FAILURE, NULL);
+		fprintf(stderr, "%s:%zu:%zu: new translation\n",
+			l->pos.fname, l->pos.line, l->pos.column);
+	}
+
+	return 1;
+}
+
+static int
 xliff_join_xliff(struct config *cfg, int copy,
 	size_t lang, const struct xliffset *x)
 {
@@ -631,6 +699,87 @@ xliff_join_xliff(struct config *cfg, int copy,
 	}
 
 	return 1;
+}
+
+static int
+xliff_update(struct config *cfg, int copy, const char *fn)
+{
+	struct xliffset	*x;
+	int		 rc = 0;
+	size_t		 i;
+	XML_Parser	 p;
+	struct enm 	*e;
+	struct eitem 	*ei;
+	struct bitf	*b;
+	struct bitidx	*bi;
+
+	if (NULL == (p = XML_ParserCreate(NULL))) {
+		warn("XML_ParserCreate");
+		return 0;
+	}
+
+	if (NULL == (x = xliff_read(cfg, fn, p)))
+		goto out;
+
+	TAILQ_FOREACH(e, &cfg->eq, entries)
+		TAILQ_FOREACH(ei, &e->eq, entries)
+			if ( ! xliff_update_unit
+			    (&ei->labels, NULL, x, &ei->pos))
+				goto out;
+
+	TAILQ_FOREACH(b, &cfg->bq, entries) {
+		TAILQ_FOREACH(bi, &b->bq, entries)
+			if ( ! xliff_update_unit
+			    (&bi->labels, NULL, x, &bi->pos))
+				goto out;
+		if ( ! xliff_update_unit
+		    (&b->labels_unset, "isunset", x, &b->pos))
+			goto out;
+		if ( ! xliff_update_unit
+		    (&b->labels_null, "isnull", x, &b->pos))
+			goto out;
+	}
+
+	qsort(x->u, x->usz, sizeof(struct xliffunit), xliffunit_sort);
+
+	printf("<xliff version=\"1.2\">\n"
+	       "\t<file target-language=\"%s\" "
+	          "tool=\"kwebapp-xliff\">\n"
+	       "\t\t<body>\n",
+	       x->trglang);
+
+	for (i = 0; i < x->usz; i++)
+		if (NULL == x->u[i].target && copy)
+			printf("\t\t\t<trans-unit id=\"%s\">\n"
+			       "\t\t\t\t<source>%s</source>\n"
+			       "\t\t\t\t<target>%s</target>\n"
+			       "\t\t\t</trans-unit>\n",
+			       x->u[i].name, x->u[i].source,
+			       x->u[i].source);
+		else if (NULL == x->u[i].target)
+			printf("\t\t\t<trans-unit id=\"%s\">\n"
+			       "\t\t\t\t<source>%s</source>\n"
+			       "\t\t\t</trans-unit>\n",
+			       x->u[i].name, x->u[i].source);
+		else
+			printf("\t\t\t<trans-unit id=\"%s\">\n"
+			       "\t\t\t\t<source>%s</source>\n"
+			       "\t\t\t\t<target>%s</target>\n"
+			       "\t\t\t</trans-unit>\n",
+			       x->u[i].name, x->u[i].source,
+			       x->u[i].target);
+
+	puts("\t\t</body>\n"
+	     "\t</file>\n"
+	     "</xliff>");
+
+	return 1;
+
+	rc = 1;
+out:
+	xparse_xliff_free(x);
+	XML_ParserFree(p);
+	return rc;
 }
 
 static int
@@ -726,7 +875,8 @@ main(int argc, char *argv[])
 			conf = stdin;
 		} else
 			confile = argv[0];
-	}
+	} else if (op < 0 && 1 != argc)
+		goto usage;
 
 	if (NULL == conf &&
 	    NULL == (conf = fopen(confile, "r")))
@@ -742,14 +892,16 @@ main(int argc, char *argv[])
 
 	c = 0 == op ? 
 		xliff_extract(cfg, copy) :
-		xliff_join(cfg, copy, argc, (const char **)argv);
+	    op > 0 ?
+		xliff_join(cfg, copy, argc, (const char **)argv) :
+		xliff_update(cfg, copy, argv[0]);
 
 	parse_free(cfg);
 	return c ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 
 		"usage: %s [-c] -j config xliffs...\n"
-		"       %s -u config [xliff]\n"
+		"       %s [-c] -u config xliff\n"
 		"       %s [-c] [config]\n",
 		getprogname(), getprogname(), getprogname());
 	return EXIT_FAILURE;

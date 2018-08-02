@@ -28,8 +28,7 @@ implementation) and an SQL schema or update sequence.  The API consists
 of "getters", "setters", updaters, and deleters; and is implemented in
 straight-forward C code you link directly into your application.
 
-The generated files are currently
-[OpenBSD](https://www.openbsd.org)-only and use
+The generated files currently use
 [ksql(3)](https://kristaps.bsd.lv/ksql) to wrap around SQLite and
 (optionally)
 [kcgi(3)](https://kristaps.bsd.lv/kcgi) for JSON or validation output.

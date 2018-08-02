@@ -25,11 +25,7 @@ More longer-term:
   in the main area.
 - Allow for prepopulating databases with some initial fields.
 - Allow for generic SQL (?) being attached to queries.
-- Have the configure script also build in certain functions; e.g., the
-  encryption function.  (See portability notes.)
 
-Portability notes (for now all OpenBSD-only):
+Portability notes:
 
 - Validation for FTYPE\_EPOCH will need 32-bit check.
-- b64\_ntop() portability.
-- crypt\_checkpass() and family portability.

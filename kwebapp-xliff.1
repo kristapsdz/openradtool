@@ -22,16 +22,20 @@
 .Nd extract and merge translatable strings from kwebapp configurations
 .Sh SYNOPSIS
 .Nm kwebapp-xliff
-.Fl c
+.Op Fl c
 .Fl j Ar config
 .Op Ar xliff...
+.Nm kwebapp-xliff
+.Op Fl c
+.Fl u Ar config
+.Ar xliff
 .Nm kwebapp-xliff
 .Op Fl c
 .Op Ar config
 .Sh DESCRIPTION
 The
 .Nm
-utility extracts and merges translatable strings from and into
+utility extracts, merges, and updates translatable strings from and into
 .Xr kwebapp 5
 configurations.
 These strings are used only by
@@ -42,8 +46,9 @@ extracts all translatable labels.
 The arguments are as follows:
 .Bl -tag -width Ds
 .It Fl c
-Instead of creating an empty target when extracting strings or joining
-translation, fill in the target with the source.
+Instead of creating an empty target when extracting strings, joining
+translation, or updating with new translations, fill in the target with
+the source.
 .It Fl j Ar config
 Merges one or more
 .Ar xliff
@@ -53,6 +58,12 @@ configuration file
 .Ar config ,
 producing another configuration on standard output containing the
 translated strings.
+.It Fl u Ar config
+Update the
+.Ar xliff
+file with new translation labels found in
+.Ar config .
+The updated translations are emitted on standard output.
 .It Ar xliff
 An XLIFF 1.2 file containing translated strings.
 .It Ar config

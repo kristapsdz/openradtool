@@ -122,6 +122,7 @@ struct	fvalid {
 struct	label {
 	char		  *label; /* the label itself */
 	size_t		   lang; /* the language */
+	struct pos	   pos; /* parse point */
 	TAILQ_ENTRY(label) entries;
 };
 

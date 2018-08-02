@@ -795,6 +795,7 @@ parse_label(struct parse *p, struct labelq *q)
 	l = calloc(1, sizeof(struct label));
 	if (NULL == l)
 		err(EXIT_FAILURE, NULL);
+	parse_point(p, &l->pos);
 	l->lang = lang;
 	l->label = strdup(p->last.string);
 	if (NULL == l->label)

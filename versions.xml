@@ -3,6 +3,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.5.4</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-08-02">2018-08-02</time>
+		</header>
+		<aside>
+			<p>
+				Allow for updating translation files with <b>-u</b>.
+				See <a href="kwebapp-xliff.1.html">kwebapp-xliff(1)</a> for details.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.5.3</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-07-27">2018-07-27</time>

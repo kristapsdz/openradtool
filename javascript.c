@@ -46,6 +46,21 @@ static	const char *types[FTYPE__MAX] = {
 	"number", /* FTYPE_BITFIELD */
 };
 
+static	const char *tstypes[FTYPE__MAX] = {
+	"number", /* FTYPE_BIT */
+	"number", /* FTYPE_DATE */
+	"number", /* FTYPE_EPOCH */
+	"number", /* FTYPE_INT */
+	"number", /* FTYPE_REAL */
+	NULL, /* FTYPE_BLOB */
+	"string", /* FTYPE_TEXT */
+	"string", /* FTYPE_PASSWORD */
+	"string", /* FTYPE_EMAIL */
+	NULL, /* FTYPE_STRUCT */
+	"number", /* FTYPE_ENUM */
+	"number", /* FTYPE_BITFIELD */
+};
+
 /*
  * Escape JavaScript string literal.
  * This escapes backslashes and single apostrophes.
@@ -379,7 +394,7 @@ gen_javascript(const struct config *cfg, int tsc)
 	const struct enm    *e;
 	const struct eitem  *ei;
 	const char	    *ns = "kwebapp";
-	char		    *obj, *objarray;
+	char		    *obj, *objarray, *type;
 
 	/*
 	 * Begin with the methods we'll use throughout the file.
@@ -648,6 +663,52 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t\t\t_show(list[i]);\n"
 	     "\t}\n"
 	     "");
+	
+	if (tsc) {
+		puts("\texport type DCbstring = (e: HTMLElement, name: "
+			"string, val: string) => void;\n"
+		     "\texport type DCbstringNull = (e: HTMLElement, name: "
+			"string, val: string|null) => void;\n"
+		     "\texport type DCbnumber = (e: HTMLElement, name: "
+			"string, val: number) => void;\n"
+		     "\texport type DCbnumberNull = (e: HTMLElement, name: "
+			"string, val: number|null) => void;");
+		TAILQ_FOREACH(s, &cfg->sq, entries) 
+			printf("\texport type DCbStruct%s = "
+				"(e: HTMLElement, name: string, "
+				 "val: kwebapp.%sData|null) => void;\n", 
+				 s->name, s->name);
+		puts("\n"
+		     "\texport interface DataCallbacks\n"
+		     "\t{");
+		TAILQ_FOREACH(s, &cfg->sq, entries) {
+			printf("\t\t'%s': DCbStruct%s|DCbStruct%s[];\n",
+				s->name, s->name, s->name);
+			TAILQ_FOREACH(f, &s->fq, entries) {
+				if (FTYPE_STRUCT == f->type) {
+					printf("\t\t\'%s-%s\'?: "
+						"DCbStruct%s|"
+						"DCbStruct%s[];\n", 
+						s->name, f->name, 
+						f->ref->tstrct, 
+						f->ref->tstrct);
+					continue;
+				} else if (NULL == types[f->type])
+					continue;
+
+				printf("\t\t'%s-%s': DCb%s%s|"
+					"DCb%s%s[];\n", s->name, 
+					f->name, tstypes[f->type], 
+					FIELD_NULL & f->flags ? 
+					"Null" : "", 
+					tstypes[f->type],
+					FIELD_NULL & f->flags ? 
+					"Null" : "");
+			}
+		}
+
+		puts("\t}\n");
+	}
 
 	/*
 	 * If we have a TypeScript file, then define each of the JSON
@@ -692,6 +753,8 @@ gen_javascript(const struct config *cfg, int tsc)
 		    ns, s->name, ns, s->name) < 0)
 			err(EXIT_FAILURE, NULL);
 		if (asprintf(&objarray, "%s.%sData[]", ns, s->name) < 0)
+			err(EXIT_FAILURE, NULL);
+		if (asprintf(&type, "<%s.DCbStruct%s>", ns, s->name) < 0)
 			err(EXIT_FAILURE, NULL);
 		print_commentv(1, COMMENT_JS,
 			"Accepts {@link %s.%sData} for writing into "
@@ -748,7 +811,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			ns, s->name);
 		gen_class_proto(tsc, 0, s->name, "void", "fill",
 			"e", "HTMLElement|null",
-			"custom?", "any", NULL);
+			"custom?", "DataCallbacks|null", NULL);
 		printf("\t\t\tthis._fill(e, this.obj, true, custom);\n"
 		       "\t\t}%s\n"
 		       "\n", tsc ? "" : ";");
@@ -765,7 +828,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			ns, s->name, ns, s->name, ns, s->name);
 		gen_class_proto(tsc, 0, s->name, "void", "fillInner",
 			"e", "HTMLElement|null",
-			"custom?", "any", NULL);
+			"custom?", "DataCallbacks|null", NULL);
 		printf("\t\t\tthis._fill(e, this.obj, false, custom);\n"
 		       "\t\t}%s\n"
 		       "\n", tsc ? "" : ";");
@@ -789,7 +852,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			"e", "HTMLElement|null",
 			"o", obj,
 			"inc", "boolean",
-			"custom?", "any", NULL);
+			"custom?", "DataCallbacks|null", NULL);
 		gen_vars(tsc, 3, "i", "number", NULL);
 		printf("\t\t\tif (null === o || null === e)\n"
 		       "\t\t\t\treturn;\n"
@@ -803,13 +866,13 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t\t\t\tif (custom['%s'] instanceof Array) {\n"
 		       "\t\t\t\t\tfor (i = 0; "
 				      "i < custom['%s'].length; i++)\n"
-		       "\t\t\t\t\t\tcustom['%s'][i](e, \"%s\", o);\n"
+		       "\t\t\t\t\t\tcustom['%s'][i](e, '%s', o);\n"
 		       "\t\t\t\t} else {\n"
-		       "\t\t\t\t\tcustom['%s'](e, \"%s\", o);\n"
+		       "\t\t\t\t\t(%scustom['%s'])(e, '%s', o);\n"
 		       "\t\t\t\t}\n"
 		       "\t\t\t}\n",
 		       s->name, s->name, s->name, s->name, 
-		       s->name, s->name, s->name);
+		       s->name, tsc ? type : "", s->name, s->name);
 		TAILQ_FOREACH(f, &s->fq, entries)
 			gen_js_field(f);
 		printf("\t\t}%s\n"
@@ -839,7 +902,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			ns, s->name, ns, s->name, ns, s->name, ns, s->name);
 		gen_class_proto(tsc, 0, s->name, "void", "fillArray",
 			"e", "HTMLElement|null",
-			"custom?", "any", NULL);
+			"custom?", "DataCallbacks", NULL);
 		gen_vars(tsc, 3, "j", "number", 
 			"o", obj,
 			"cln", "any",
@@ -883,6 +946,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		puts("");
 		free(obj);
 		free(objarray);
+		free(type);
 	}
 
 	TAILQ_FOREACH(bf, &cfg->bq, entries) {

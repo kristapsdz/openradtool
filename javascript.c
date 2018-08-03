@@ -394,7 +394,7 @@ gen_javascript(const struct config *cfg, int tsc)
 	const struct enm    *e;
 	const struct eitem  *ei;
 	const char	    *ns = "kwebapp";
-	char		    *obj, *objarray, *type;
+	char		    *obj, *objarray, *type, *typearray;
 
 	/*
 	 * Begin with the methods we'll use throughout the file.
@@ -693,7 +693,7 @@ gen_javascript(const struct config *cfg, int tsc)
 						f->ref->tstrct, 
 						f->ref->tstrct);
 					continue;
-				} else if (NULL == types[f->type])
+				} else if (NULL == tstypes[f->type])
 					continue;
 
 				printf("\t\t'%s-%s': DCb%s%s|"
@@ -756,6 +756,8 @@ gen_javascript(const struct config *cfg, int tsc)
 			err(EXIT_FAILURE, NULL);
 		if (asprintf(&type, "<%s.DCbStruct%s>", ns, s->name) < 0)
 			err(EXIT_FAILURE, NULL);
+		if (asprintf(&typearray, "<%s.DCbStruct%s[]>", ns, s->name) < 0)
+			err(EXIT_FAILURE, NULL);
 		print_commentv(1, COMMENT_JS,
 			"Accepts {@link %s.%sData} for writing into "
 			"a DOM tree.\n"
@@ -796,9 +798,10 @@ gen_javascript(const struct config *cfg, int tsc)
 		print_commentt(2, COMMENT_JS_FRAG, "</ul>");
 		print_commentv(2, COMMENT_JS_FRAG_CLOSE,
 			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {Object} custom - An optional dictionary "
-			"of functions keyed by structure and field "
-			"name (e.g., <i>foo</i> structure, <i>bar</i> "
+			"@param {DataCallbacks} custom - The "
+			"optional dictionary of functions keyed "
+			"by structure and field name (e.g., "
+			"<i>foo</i> structure, <i>bar</i> "
 			"field would be <code>foo-bar</code>). "
 			"The value is a function for custom "
 			"handling that accepts the \"e\" value, "
@@ -820,8 +823,8 @@ gen_javascript(const struct config *cfg, int tsc)
 			"Like {@link %s.%s#fill} but not "
 			"including the root element \"e\".\n"
 			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {Object} custom - The optional custom "
-			"handler dictionary (see {@link "
+			"@param {DataCallbacks} custom - The optional "
+			"custom handler dictionary (see {@link "
 			"%s.%s#fill} for details).\n"
 			"@function fillInner\n"
 			"@memberof %s.%s#",
@@ -841,8 +844,8 @@ gen_javascript(const struct config *cfg, int tsc)
 			"(or array) to fill.\n"
 			"@param {Number} inc - Whether to include "
 			"the root or not when processing.\n"
-			"@param {Object} custom - The optional custom "
-			"handler dictionary (see {@link "
+			"@param {DataCallbacks} custom - The optional "
+			"custom handler dictionary (see {@link "
 			"%s.%s#fill}).\n"
 			"@private\n"
 			"@function _fill\n"
@@ -866,13 +869,14 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t\t\t\tif (custom['%s'] instanceof Array) {\n"
 		       "\t\t\t\t\tfor (i = 0; "
 				      "i < custom['%s'].length; i++)\n"
-		       "\t\t\t\t\t\tcustom['%s'][i](e, '%s', o);\n"
+		       "\t\t\t\t\t\t(%scustom['%s'])[i](e, '%s', o);\n"
 		       "\t\t\t\t} else {\n"
 		       "\t\t\t\t\t(%scustom['%s'])(e, '%s', o);\n"
 		       "\t\t\t\t}\n"
 		       "\t\t\t}\n",
-		       s->name, s->name, s->name, s->name, 
-		       s->name, tsc ? type : "", s->name, s->name);
+		       s->name, s->name, s->name, 
+		       tsc ? typearray : "", s->name, s->name,
+		       tsc ? type : "", s->name, s->name);
 		TAILQ_FOREACH(f, &s->fq, entries)
 			gen_js_field(f);
 		printf("\t\t}%s\n"
@@ -894,9 +898,9 @@ gen_javascript(const struct config *cfg, int tsc)
 			"Otherwise, the <code>hide</code> class is "
 			"removed.\n"
 			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {Object} custom - The optional custom "
-			"handler dictionary (see {@link "
-			"%s.%s#fill}).\n"
+			"@param {DataCallbacks} custom - The "
+			"optional custom handler dictionary (see "
+			"{@link %s.%s#fill}).\n"
 			"@memberof %s.%s#\n"
 			"@function fillArray",
 			ns, s->name, ns, s->name, ns, s->name, ns, s->name);
@@ -947,6 +951,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		free(obj);
 		free(objarray);
 		free(type);
+		free(typearray);
 	}
 
 	TAILQ_FOREACH(bf, &cfg->bq, entries) {

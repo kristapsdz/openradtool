@@ -317,7 +317,7 @@ gen_func_static(int tsc, const char *cls, const char *name)
 	if (tsc)
 		printf("\t\tstatic %s(e: HTMLElement, "
 			"name: string, "
-			"val: string|null): void\n"
+			"val: number|null): void\n"
 		      "\t\t{\n", name);
 	else
 		printf("\t\t%s.%s = function(e, name, val)\n"
@@ -361,16 +361,20 @@ gen_proto(int tsc, const char *ret, const char *func, ...)
 {
 	va_list	 	 ap;
 	int		 first = 1;
+	size_t		 sz;
 	const char	*name, *type;
 
 	printf("\tfunction %s(", func);
 	va_start(ap, func);
 	while (NULL != (name = va_arg(ap, char *))) {
+		sz = strlen(name);
+		if ( ! tsc && sz && '?' == name[sz - 1])
+			sz--;
 		if (0 == first)
 			printf(", ");
 		type = va_arg(ap, char *);
 		assert(NULL != type);
-		printf("%s", name);
+		printf("%.*s", (int)sz, name);
 		if (tsc)
 			printf(": %s", type);
 		if (first)
@@ -525,7 +529,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		"e", "HTMLElement|null",
 		"strct", "string",
 		"name", "string",
-		"funcs", "any",
+		"funcs", "DataCallbacks|null",
 		"obj", "any",
 		"inc", "boolean",
 		"cannull", "boolean",
@@ -536,8 +540,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		"list", "HTMLElement[]", NULL);
 	puts("\t\tfname = strct + '-' + name;\n"
 	     "\t\t/* First handle the custom callback. */\n"
-	     "\t\tif (typeof funcs !== 'undefined' && \n"
-	     "\t\t    null !== funcs && fname in funcs) {\n"
+	     "\t\tif (null !== funcs && fname in funcs) {\n"
 	     "\t\t\tif (funcs[fname] instanceof Array) {\n"
 	     "\t\t\t\tfor (i = 0; i < funcs[fname].length; i++)\n"
 	     "\t\t\t\t\tfuncs[fname][i](e, fname, obj);\n"
@@ -864,8 +867,9 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t\t\t\t\treturn;\n"
 		       "\t\t\t\to = o[0];\n"
 		       "\t\t\t}\n"
-		       "\t\t\tif (typeof custom !== 'undefined' && \n"
-		       "\t\t\t    null !== custom && '%s' in custom) {\n"
+		       "\t\t\tif (typeof custom === 'undefined')\n"
+		       "\t\t\t\tcustom = null;\n"
+		       "\t\t\tif (null !== custom && '%s' in custom) {\n"
 		       "\t\t\t\tif (custom['%s'] instanceof Array) {\n"
 		       "\t\t\t\t\tfor (i = 0; "
 				      "i < custom['%s'].length; i++)\n"

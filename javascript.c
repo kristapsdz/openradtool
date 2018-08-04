@@ -317,10 +317,10 @@ gen_func_static(int tsc, const char *cls, const char *name)
 	if (tsc)
 		printf("\t\tstatic %s(e: HTMLElement, "
 			"name: string, "
-			"val: number|null): void\n"
+			"v: number|null): void\n"
 		      "\t\t{\n", name);
 	else
-		printf("\t\t%s.%s = function(e, name, val)\n"
+		printf("\t\t%s.%s = function(e, name, v)\n"
 		       "\t\t{\n", cls, name);
 }
 
@@ -667,6 +667,12 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t}\n"
 	     "");
 	
+	print_commentv(1, COMMENT_JS,
+		"All possible callback functions for passing to "
+		"the \"custom\" associative array when filling "
+		"in DOM trees.\n"
+		"@interface %s.DataCallbacks", ns);
+
 	if (tsc) {
 		puts("\texport type DCbstring = (e: HTMLElement, name: "
 			"string, val: string) => void;\n"
@@ -685,7 +691,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		     "\texport interface DataCallbacks\n"
 		     "\t{");
 		TAILQ_FOREACH(s, &cfg->sq, entries) {
-			printf("\t\t'%s': DCbStruct%s|DCbStruct%s[];\n",
+			printf("\t\t'%s'?: DCbStruct%s|DCbStruct%s[];\n",
 				s->name, s->name, s->name);
 			TAILQ_FOREACH(f, &s->fq, entries) {
 				if (FTYPE_STRUCT == f->type) {
@@ -699,7 +705,7 @@ gen_javascript(const struct config *cfg, int tsc)
 				} else if (NULL == tstypes[f->type])
 					continue;
 
-				printf("\t\t'%s-%s': DCb%s%s|"
+				printf("\t\t'%s-%s'?: DCb%s%s|"
 					"DCb%s%s[];\n", s->name, 
 					f->name, tstypes[f->type], 
 					FIELD_NULL & f->flags ? 
@@ -724,7 +730,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			"@interface %s.%sData",
 			NULL == s->doc ? "" : "\n",
 			NULL == s->doc ? "" : s->doc,
-			NULL == s->doc ? "" : "<br />\n",
+			NULL == s->doc ? "" : "<br/>\n",
 			ns, s->name);
 		if ( ! tsc)
 			continue;
@@ -801,7 +807,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		print_commentt(2, COMMENT_JS_FRAG, "</ul>");
 		print_commentv(2, COMMENT_JS_FRAG_CLOSE,
 			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {DataCallbacks} custom - The "
+			"@param {%s.DataCallbacks} custom - The "
 			"optional dictionary of functions keyed "
 			"by structure and field name (e.g., "
 			"<i>foo</i> structure, <i>bar</i> "
@@ -814,7 +820,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			"instead of a singleton.\n"
 			"@function fill\n"
 			"@memberof %s.%s#",
-			ns, s->name);
+			ns, ns, s->name);
 		gen_class_proto(tsc, 0, s->name, "void", "fill",
 			"e", "HTMLElement|null",
 			"custom?", "DataCallbacks|null", NULL);
@@ -826,12 +832,12 @@ gen_javascript(const struct config *cfg, int tsc)
 			"Like {@link %s.%s#fill} but not "
 			"including the root element \"e\".\n"
 			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {DataCallbacks} custom - The optional "
+			"@param {%s.DataCallbacks} custom - The optional "
 			"custom handler dictionary (see {@link "
 			"%s.%s#fill} for details).\n"
 			"@function fillInner\n"
 			"@memberof %s.%s#",
-			ns, s->name, ns, s->name, ns, s->name);
+			ns, s->name, ns, ns, s->name, ns, s->name);
 		gen_class_proto(tsc, 0, s->name, "void", "fillInner",
 			"e", "HTMLElement|null",
 			"custom?", "DataCallbacks|null", NULL);
@@ -847,13 +853,13 @@ gen_javascript(const struct config *cfg, int tsc)
 			"(or array) to fill.\n"
 			"@param {Number} inc - Whether to include "
 			"the root or not when processing.\n"
-			"@param {DataCallbacks} custom - The optional "
+			"@param {%s.DataCallbacks} custom - The optional "
 			"custom handler dictionary (see {@link "
 			"%s.%s#fill}).\n"
 			"@private\n"
 			"@function _fill\n"
 			"@memberof %s.%s#",
-			ns, s->name, obj, ns, s->name, ns, s->name);
+			ns, s->name, obj, ns, ns, s->name, ns, s->name);
 		gen_class_proto(tsc, 1, s->name, "void", "_fill",
 			"e", "HTMLElement|null",
 			"o", obj,
@@ -872,13 +878,14 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t\t\tif (null !== custom && '%s' in custom) {\n"
 		       "\t\t\t\tif (custom['%s'] instanceof Array) {\n"
 		       "\t\t\t\t\tfor (i = 0; "
-				      "i < custom['%s'].length; i++)\n"
+				      "i < custom['%s']%s.length; i++)\n"
 		       "\t\t\t\t\t\t(%scustom['%s'])[i](e, '%s', o);\n"
 		       "\t\t\t\t} else {\n"
 		       "\t\t\t\t\t(%scustom['%s'])(e, '%s', o);\n"
 		       "\t\t\t\t}\n"
 		       "\t\t\t}\n",
 		       s->name, s->name, s->name, 
+		       tsc ? "!" : "",
 		       tsc ? typearray : "", s->name, s->name,
 		       tsc ? type : "", s->name, s->name);
 		TAILQ_FOREACH(f, &s->fq, entries)
@@ -902,18 +909,19 @@ gen_javascript(const struct config *cfg, int tsc)
 			"Otherwise, the <code>hide</code> class is "
 			"removed.\n"
 			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {DataCallbacks} custom - The "
+			"@param {%s.DataCallbacks} custom - The "
 			"optional custom handler dictionary (see "
 			"{@link %s.%s#fill}).\n"
 			"@memberof %s.%s#\n"
 			"@function fillArray",
-			ns, s->name, ns, s->name, ns, s->name, ns, s->name);
+			ns, s->name, ns, s->name, ns,
+			ns, s->name, ns, s->name);
 		gen_class_proto(tsc, 0, s->name, "void", "fillArray",
 			"e", "HTMLElement|null",
 			"custom?", "DataCallbacks", NULL);
 		gen_vars(tsc, 3, "j", "number", 
 			"o", obj,
-			"cln", "any",
+			"cln", "HTMLElement",
 			"ar", objarray,
 			"row", "HTMLElement", NULL);
 		printf("\t\t\to = this.obj;\n"
@@ -971,7 +979,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			"@class\n"
 			"@memberof %s", 
 			NULL == bf->doc ? "" : bf->doc,
-			NULL == bf->doc ? "" : "<br />\n",
+			NULL == bf->doc ? "" : "<br/>\n",
 			bf->name, ns);
 		gen_class_static(tsc, bf->name);
 		TAILQ_FOREACH(bi, &bf->bq, entries) {
@@ -982,7 +990,7 @@ gen_javascript(const struct config *cfg, int tsc)
 				"@readonly\n"
 				"@const {number} BITI_%s",
 				NULL == bi->doc ? "" : bi->doc,
-				NULL == bi->doc ? "" : "<br />\n",
+				NULL == bi->doc ? "" : "<br/>\n",
 				ns, bf->name, bi->name);
 			print_commentv(2, COMMENT_JS,
 				"%s%s"
@@ -991,7 +999,7 @@ gen_javascript(const struct config *cfg, int tsc)
 				"@readonly\n"
 				"@const {number} BITF_%s",
 				NULL == bi->doc ? "" : bi->doc,
-				NULL == bi->doc ? "" : "<br />\n",
+				NULL == bi->doc ? "" : "<br/>\n",
 				ns, bf->name, bi->name);
 			if (tsc)
 				printf("\t\tstatic readonly "
@@ -1026,17 +1034,19 @@ gen_javascript(const struct config *cfg, int tsc)
 			"<i>enum %s</i>.\n"
 			"@static\n"
 			"@function format\n"
+			"@param {HTMLElement} e - The DOM element.\n"
+			"@param {String} name - The class name root.\n"
+			"@param {Number} v - The bitfield.\n"
 			"@memberof %s.%s#",
 			ns, bf->name, bf->name, ns, bf->name);
 		gen_func_static(tsc, bf->name, "format");
 		gen_vars(tsc, 3, 
-			"v", "number",
 			"i", "number",
 			"str", "string", NULL);
 		printf("\t\t\tstr = '';\n"
 		       "\t\t\ti = 0;\n"
 		       "\t\t\tname += '-label';\n"
-		       "\t\t\tif (null === val) {\n"
+		       "\t\t\tif (null === v) {\n"
 		       "\t\t\t\t_classaddcl(e, name, "
 		         "\'kwbp-null\', false);\n"
 		       "\t\t\t\t_replcllang(e, name, ");
@@ -1044,7 +1054,6 @@ gen_javascript(const struct config *cfg, int tsc)
 		printf(");\n"
 		       "\t\t\t\treturn;\n"
 		       "\t\t\t}\n"
-		       "\t\t\tv = parseInt(val);\n"
 		       "\t\t\tif (0 === v) {\n"
 		       "\t\t\t\t_classaddcl(e, name, "
 		     	"\'kwbp-unset\', false);\n"
@@ -1090,7 +1099,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			"@memberof %s\n"
 			"@class", 
 			NULL == e->doc ? "" : e->doc,
-			NULL == e->doc ? "" : "<br />\n",
+			NULL == e->doc ? "" : "<br/>\n",
 			e->name, ns);
 		gen_class_static(tsc, e->name);
 
@@ -1101,7 +1110,7 @@ gen_javascript(const struct config *cfg, int tsc)
 				"@readonly\n"
 				"@const {number} %s", 
 				NULL == ei->doc ? "" : ei->doc,
-				NULL == ei->doc ? "" : "<br />\n",
+				NULL == ei->doc ? "" : "<br/>\n",
 				ns, e->name, ei->name);
 			if (tsc) 
 				printf("\t\tstatic readonly %s: number = %" 
@@ -1128,16 +1137,19 @@ gen_javascript(const struct config *cfg, int tsc)
 			"<i>enum %s</i>.\n"
 			"@static\n"
 			"@function format\n"
+			"@param {HTMLElement} e - The DOM element.\n"
+			"@param {String} name - The class name root.\n"
+			"@param {Number} v - The enumeration value.\n"
 			"@memberof %s.%s#",
 			ns, e->name, e->name, ns, e->name);
 		gen_func_static(tsc, e->name, "format");
 		printf("\t\t\tname += '-label';\n"
-		       "\t\t\tif (null === val) {\n"
+		       "\t\t\tif (null === v) {\n"
 		       "\t\t\t\t_replcl(e, name, \'not given\', false);\n"
 		       "\t\t\t\t_classaddcl(e, name, \'noanswer\', false);\n"
 		       "\t\t\t\treturn;\n"
 		       "\t\t\t}\n"
-		       "\t\t\tswitch(parseInt(val)) {\n");
+		       "\t\t\tswitch(v) {\n");
 		TAILQ_FOREACH(ei, &e->eq, entries) {
 			warn_label(cfg, &ei->labels, &ei->pos,
 				e->name, ei->name, "item");
@@ -1150,7 +1162,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		}
 		printf("\t\t\tdefault:\n"
 		       "\t\t\t\tconsole.log(\'%s.format: "
-		         "unknown value: ' + val);\n"
+		         "unknown value: ' + v);\n"
 		       "\t\t\t\t_replcl(e, name, \'\', false);\n"
 		       "\t\t\t\tbreak;\n"
 		       "\t\t\t}\n"

@@ -170,6 +170,27 @@ The callback function (or functions) will be invoked regardless of
 whether the value has been set.
 In the event of an unset field value, the function is passed
 .Dv null .
+.Pp
+When using TypeScript, the values of the format function are typed
+according to the structure or field passed.
+For example, if the
+.Dq dob
+field of structure
+.Dq client
+is a UNIX epoch, the format function accepts a number or null.
+.Bd -literal -offset indent
+function formatDate(e: HTMLElement, 
+  name: string, v: number|null): void
+{
+	/* Do something... */
+}
+.Ed
+.Pp
+The dictionary object is defined as follows:
+.Bd -literal -offset indent
+let custom: DataCallbacks = { 'client-dob': formatDate };
+new kwebapp.client(obj).fillInner(document, custom);
+.Ed
 .Ss Enumeration and Bitfield Labels
 Enumerations and bitfields in
 .Xr kwebapp 5
@@ -247,12 +268,26 @@ named
 .Li foo-no-bar ,
 and
 .Li foo-enum-select .
+.Pp
+The TypeScript interface would intsead look as follows, assuming that
+the JSON parse returns the
+.Dq foo
+JSON object.
+.Bd -literal -offset indent
+let obj: kwebapp.fooData = 
+  <kwebapp.fooData>JSON.parse(response);
+let e: HTMLElement|null = 
+  document.getElementById('foo');
+if (null !== e)
+  new kwebapp.foo(obj).fill(e);
+.Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
 .\" .Sh ERRORS
 .\" For sections 2, 3, 4, and 9 errno settings only.
 .Sh SEE ALSO
 .Xr jsdoc 1 ,
+.Xr tsc 1 ,
 .Xr kwebapp-c-header 1 ,
 .Xr kwebapp-c-source 1 ,
 .Xr kwebapp 5

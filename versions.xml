@@ -3,6 +3,20 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.5.5</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-08-04">2018-08-04</time>
+		</header>
+		<aside>
+			<p>
+				Significantly update the TypeScript functionality of <a
+					href="kwebapp-javascript.1.html">kwebapp-javascript(1)</a>:
+				stipulate callback function types for the custom format handler.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.5.4</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-08-02">2018-08-02</time>

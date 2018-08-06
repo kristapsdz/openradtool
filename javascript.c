@@ -420,10 +420,10 @@ gen_javascript(const struct config *cfg, int tsc)
 		"vals", "langmap", NULL);
 	gen_vars(tsc, 2, "lang", "string|null", NULL);
 	puts("\t\tlang = document.documentElement.lang;\n"
-	     "\t\tif (null === lang || '' === lang)\n"
-	     "\t\t\treturn vals['_default'];\n"
-	     "\t\telse if (lang in vals)\n"
+	     "\t\tif (null !== lang && lang in vals)\n"
 	     "\t\t\treturn vals[lang];\n"
+	     "\t\telse if ('_default' in vals)\n"
+	     "\t\t\treturn vals['_default'];\n"
 	     "\t\telse\n"
 	     "\t\t\treturn '';\n"
 	     "\t}\n"
@@ -1003,10 +1003,11 @@ gen_javascript(const struct config *cfg, int tsc)
 				ns, bf->name, bi->name);
 			if (tsc)
 				printf("\t\tstatic readonly "
-					 "BITF_%s: number;\n"
+					 "BITF_%s: number = %u;\n"
 					"\t\tstatic readonly "
-				      	 "BITI_%s: number;\n",
-					bi->name, bi->name);
+				      	 "BITI_%s: number = %" PRId64 ";\n",
+					bi->name, 1U << bi->value,
+					bi->name, bi->value);
 			else
 				printf("\t\t%s.BITI_%s = %" PRId64 ";\n"
 				       "\t\t%s.BITF_%s = %u;\n",

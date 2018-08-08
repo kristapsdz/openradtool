@@ -3,6 +3,20 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.5.6</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-08-04">2018-08-04</time>
+		</header>
+		<aside>
+			<p>
+				Fix TypeScript generation for enumerations.
+				Invert logic for language selection so that language not found gets
+				default.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.5.5</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-08-04">2018-08-04</time>

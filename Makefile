@@ -156,6 +156,19 @@ install: kwebapp
 	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/kwebapp
 	$(INSTALL_PROGRAM) $(BINS) $(DESTDIR)$(BINDIR)
 
+uninstall:
+	@for f in $(MAN1S); do \
+		echo rm -f $(DESTDIR)$(MANDIR)/man1/$$f ; \
+		rm -f $(DESTDIR)$(MANDIR)/man1/$$f ; \
+	done
+	rm -f $(DESTDIR)$(MANDIR)/man5/kwebapp.5
+	rm -f $(DESTDIR)$(SHAREDIR)/kwebapp/audit.{html,css,js}
+	rmdir $(DESTDIR)$(SHAREDIR)/kwebapp
+	@for f in $(BINS); do \
+		echo rm -f $(DESTDIR)$(BINDIR)/$$f ; \
+		rm -f $(DESTDIR)$(BINDIR)/$$f ; \
+	done
+
 kwebapp.tar.gz.sha512: kwebapp.tar.gz
 	sha512 kwebapp.tar.gz >$@
 

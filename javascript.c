@@ -233,13 +233,16 @@ gen_js_field(const struct field *f)
 	}
 
 	printf("\t\t\t_fillfield(e, '%s', '%s', custom, o.%s, "
-		"inc, %s, %s, %s, %s);\n",
+		"inc, %s, %s, %s);\n",
 		f->parent->name, f->name, f->name,
 		FIELD_NULL & f->flags ? "true" : "false",
 		FTYPE_BLOB == f->type ? "true" : "false",
-		NULL == buf ? "null" : buf,
-		FTYPE_ENUM == f->type ? "true" : "false");
+		NULL == buf ? "null" : buf);
 	free(buf);
+
+	if (FTYPE_BIT == f->type || FTYPE_BITFIELD == f->type)
+		printf("\t\t\t_fillbits(e, '%s', '%s', o.%s, inc);\n",
+			f->parent->name, f->name, f->name);
 }
 
 /*
@@ -525,6 +528,83 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t}\n"
 	     "");
 
+	print_commentv(1, COMMENT_JS,
+		"Internal function for checking inputs for all "
+		"elements of class strct-name-bits-checked whose "
+		"value is the bit-wise AND of the object\'s value. "
+		"If the object is null, all elements are "
+		"unchecked.\n"
+		"@param {HTMLElement|null} e - The root of the "
+		"DOM tree in which we query for elements to fill "
+		"into.\n"
+		"@param {String} strct - The name of the structure "
+		"that we\'re filling in.\n"
+		"@param {String} name - The name of the field.\n"
+		"@param {Number|null} obj - The data itself.\n"
+		"@param {Boolean} inc - Whether to include the "
+		"root element in looking for elements to fill.\n"
+		"@private\n"
+		"@function _fillbits\n"
+		"@memberof %s", ns);
+	gen_proto(tsc, "void", "_fillbits",
+		"e", "HTMLElement|null",
+		"strct", "string",
+		"name", "string",
+		"val", "number|null",
+		"inc", "boolean",
+		NULL);
+	gen_vars(tsc, 2, "list", "HTMLElement[]", 
+		"fname", "string",
+		"i", "number",
+		"v", "number", NULL);
+	printf("\t\tfname = strct + '-' + name + '-bits-checked';\n"
+	       "\t\tlist = _elemList(e, fname, inc);\n"
+	       "\t\tfor (i = 0; i < list.length; i++) {\n"
+	       "\t\t\tif (val === null) {\n"
+	       "\t\t\t\t_rattr(list[i], \'checked\');\n"
+	       "\t\t\t\tcontinue;\n"
+	       "\t\t\t}\n"
+	       "\t\t\tv = parseInt((%slist[i]).value);\n"
+	       "\t\t\tif (isNaN(v))\n"
+	       "\t\t\t\t_rattr(list[i], \'checked\');\n"
+	       "\t\t\telse if (0 === v && 0 === val)\n"
+	       "\t\t\t\t_attr(list[i], \'checked\', \'true\');\n"
+	       "\t\t\telse if ((1 << (v - 1)) & val)\n"
+	       "\t\t\t\t_attr(list[i], \'checked\', \'true\');\n"
+	       "\t\t\telse\n"
+	       "\t\t\t\t_rattr(list[i], \'checked\');\n"
+	       "\t\t}\n"
+	       "\t}\n"
+	       "\n",
+	       tsc ? "<HTMLInputElement>" : "");
+
+	print_commentv(1, COMMENT_JS,
+		"Internal function for filling a structure field.\n"
+		"@param {HTMLElement|null} e - The root of the "
+		"DOM tree in which we query for elements to fill "
+		"into.\n"
+		"@param {String} strct - The name of the structure "
+		"that we\'re filling in.\n"
+		"@param {String} name - The name of the field.\n"
+		"@param {%s.DataCallbacks|null} funcs - Custom "
+		"callback functions to invoke on the field.\n"
+		"@param obj - The data itself, which is either a "
+		"native type or one of the data interfaces for "
+		"an application-specific type.\n"
+		"@param {Boolean} inc - Whether to include the "
+		"root element in looking for elements to fill. "
+		"Note that nested structures are alwyas filled "
+		"non-inclusively.\n"
+		"@param {Boolean} cannull - Whether the data "
+		"object might be null.\n"
+		"@param {Boolean} isblob - Whether the data "
+		"object is a blob.\n"
+		"@param sub - If the data object is a nested "
+		"structure interface, this is the allocated class "
+		"of that interface.\n"
+		"@private\n"
+		"@function _fillfield\n"
+		"@memberof %s", ns, ns);
 	gen_proto(tsc, "void", "_fillfield",
 		"e", "HTMLElement|null",
 		"strct", "string",
@@ -534,8 +614,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		"inc", "boolean",
 		"cannull", "boolean",
 		"isblob", "boolean",
-		"sub", "any",
-		"isenum", "boolean", NULL);
+		"sub", "any", NULL);
 	gen_vars(tsc, 2, "i", "number", "fname", "string", 
 		"list", "HTMLElement[]", NULL);
 	puts("\t\tfname = strct + '-' + name;\n"

@@ -215,6 +215,27 @@ gen_jsdoc_field(const char *ns, const struct field *f)
 			FIELD_NULL & f->flags ? 
 			" (if non-null)" : "");
 	}
+
+	if (FTYPE_DATE == f->type ||
+	    FTYPE_EPOCH == f->type)
+		print_commentv(2, COMMENT_JS_FRAG,
+			"<li>%s-%s-date: set the element's "
+			"<code>value</code> to the ISO-8601 date "
+			"format of the data%s</li>",
+			f->parent->name, f->name, 
+			FIELD_NULL & f->flags ? 
+			" (if non-null)" : "");
+
+	if (FTYPE_BIT == f->type ||
+	    FTYPE_BITFIELD == f->type)
+		print_commentv(2, COMMENT_JS_FRAG,
+			"<li>%s-%s-bits-checked: set the "
+			"<code>checked</code> attribute when "
+			"the element's <code>value</code> is "
+			"covered by the data bitmask%s</li>",
+			f->parent->name, f->name, 
+			FIELD_NULL & f->flags ? 
+			" (if non-null)" : "");
 }
 
 static void
@@ -242,6 +263,9 @@ gen_js_field(const struct field *f)
 
 	if (FTYPE_BIT == f->type || FTYPE_BITFIELD == f->type)
 		printf("\t\t\t_fillbits(e, '%s', '%s', o.%s, inc);\n",
+			f->parent->name, f->name, f->name);
+	if (FTYPE_DATE == f->type || FTYPE_EPOCH == f->type)
+		printf("\t\t\t_filldate(e, '%s', '%s', o.%s, inc);\n",
 			f->parent->name, f->name, f->name);
 }
 
@@ -529,12 +553,54 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "");
 
 	print_commentv(1, COMMENT_JS,
+		"Internal function for filling in ISO-8601 dates.\n"
+		"@param {HTMLElement} e - The root of the "
+		"DOM tree in which we query for elements to fill "
+		"into.\n"
+		"@param {String} strct - The name of the structure "
+		"that we\'re filling in.\n"
+		"@param {String} name - The name of the field.\n"
+		"@param {Number|null} obj - The data itself.\n"
+		"@param {Boolean} inc - Whether to include the "
+		"root element in looking for elements to fill.\n"
+		"@private\n"
+		"@function _filldate\n"
+		"@memberof %s", ns);
+	gen_proto(tsc, "void", "_filldate",
+		"e", "HTMLElement",
+		"strct", "string",
+		"name", "string",
+		"val", "number|null",
+		"inc", "boolean",
+		NULL);
+	gen_vars(tsc, 2, "fname", "string",
+		"year", "number",
+		"mo", "number",
+		"day", "number",
+		"d", "Date",
+		"v", "number", NULL);
+	printf("\t\tfname = strct + '-' + name + '-date';\n"
+	       "\t\tif (null === val)\n"
+	       "\t\t\treturn;\n"
+	       "\t\td = new Date();\n"
+	       "\t\td.setTime(val * 1000);\n"
+	       "\t\tyear = d.getFullYear();\n"
+	       "\t\tmo = d.getMonth() + 1;\n"
+	       "\t\tday = d.getDate();\n"
+	       "\t\t_attrcl(e, 'value', fname,\n"
+	       "\t\t\tyear + '-' +\n"
+	       "\t\t\t(mo < 10 ? '0' : '') + mo + '-' +\n"
+	       "\t\t\t(day < 10 ? '0' : '') + day, inc);\n"
+	       "\t}\n"
+	       "\n");
+
+	print_commentv(1, COMMENT_JS,
 		"Internal function for checking inputs for all "
 		"elements of class strct-name-bits-checked whose "
 		"value is the bit-wise AND of the object\'s value. "
 		"If the object is null, all elements are "
 		"unchecked.\n"
-		"@param {HTMLElement|null} e - The root of the "
+		"@param {HTMLElement} e - The root of the "
 		"DOM tree in which we query for elements to fill "
 		"into.\n"
 		"@param {String} strct - The name of the structure "
@@ -547,7 +613,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		"@function _fillbits\n"
 		"@memberof %s", ns);
 	gen_proto(tsc, "void", "_fillbits",
-		"e", "HTMLElement|null",
+		"e", "HTMLElement",
 		"strct", "string",
 		"name", "string",
 		"val", "number|null",
@@ -580,7 +646,7 @@ gen_javascript(const struct config *cfg, int tsc)
 
 	print_commentv(1, COMMENT_JS,
 		"Internal function for filling a structure field.\n"
-		"@param {HTMLElement|null} e - The root of the "
+		"@param {HTMLElement} e - The root of the "
 		"DOM tree in which we query for elements to fill "
 		"into.\n"
 		"@param {String} strct - The name of the structure "
@@ -606,7 +672,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		"@function _fillfield\n"
 		"@memberof %s", ns, ns);
 	gen_proto(tsc, "void", "_fillfield",
-		"e", "HTMLElement|null",
+		"e", "HTMLElement",
 		"strct", "string",
 		"name", "string",
 		"funcs", "DataCallbacks|null",

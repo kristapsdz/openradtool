@@ -65,20 +65,37 @@ methods with a DOM tree node.
 These methods operate on elements with certain classes beneath a given
 element root as follows:
 .Bl -tag -width Ds
-.It Li foo-xxxx-text
-Replaces the contents of the element with the field value.
-This is only applicable for non-blob native types.
+.It Li foo-xxxx-bits-checked
+Sets or unsets the
+.Li checked
+attribute depending upon whether the input's
+.Li value
+attribute is covered by the object's bitmask.
+Only applicable to bit types.
+.It Li foo-xxxx-date
+Sets the
+.Li value
+attribute to the ISO 8601 date of the object's value.
+Only applicable to date and epoch types.
 .It Li foo-xxxx-enum-select
 All
 .Li <option>
 descendents of the element are marked as
 .Qq selected
 or not depending upon whether their value matches the field value.
+.It Li foo-xxxx-obj
+For structures, creates and invokes the
+.Fn fillInner
+method on the nested structure at the given element and its descendents.
+This is only applicable for structure types.
+.It Li foo-xxxx-text
+Replaces the contents of the element with the field value.
+This is not applicable to blob native types.
 .It Li foo-xxxx-value
 Sets the
-.Dq value
+.Li value
 attribute (as in a form submission) with the field value.
-This is only applicable for non-blob native types.
+This is not applicable to blob native types.
 .It Li foo-has-xxxx
 Remove the
 .Dq hide
@@ -91,11 +108,6 @@ Add the
 class if the object is null, otherwise remove the
 .Dq hide
 class.
-.It Li foo-xxxx-obj
-For structures, creates and invokes the
-.Fn fillInner
-method on the nested structure at the given element and its descendents.
-This is only applicable for structure types.
 .El
 .Pp
 The
@@ -179,7 +191,7 @@ field of structure
 .Dq client
 is a UNIX epoch, the format function accepts a number or null.
 .Bd -literal -offset indent
-function formatDate(e: HTMLElement, 
+function formatDate(e: HTMLElement,
   name: string, v: number|null): void
 {
 	/* Do something... */
@@ -274,9 +286,9 @@ the JSON parse returns the
 .Dq foo
 JSON object.
 .Bd -literal -offset indent
-let obj: kwebapp.fooData = 
+let obj: kwebapp.fooData =
   <kwebapp.fooData>JSON.parse(response);
-let e: HTMLElement|null = 
+let e: HTMLElement|null =
   document.getElementById('foo');
 if (null !== e)
   new kwebapp.foo(obj).fill(e);
@@ -287,9 +299,9 @@ if (null !== e)
 .\" For sections 2, 3, 4, and 9 errno settings only.
 .Sh SEE ALSO
 .Xr jsdoc 1 ,
-.Xr tsc 1 ,
 .Xr kwebapp-c-header 1 ,
 .Xr kwebapp-c-source 1 ,
+.Xr tsc 1 ,
 .Xr kwebapp 5
 .\" .Sh STANDARDS
 .\" .Sh HISTORY

@@ -72,9 +72,6 @@ gen_label_text(const char *cp)
 
 	while ('\0' != (c = *cp++))
 		switch (c) {
-		case '\\':
-			printf("\\\\");
-			break;
 		case '\'':
 			printf("\\\'");
 			break;
@@ -203,6 +200,13 @@ gen_jsdoc_field(const char *ns, const struct field *f)
 			FIELD_NULL & f->flags ? 
 			" (if non-null)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
+			"<li>%s-%s-value-checked: sets the "
+			"<code>checked</code> attribute under "
+			"the element matching the input%s</li>",
+			f->parent->name, f->name, 
+			FIELD_NULL & f->flags ? 
+			" (if non-null)" : "");
+		print_commentv(2, COMMENT_JS_FRAG,
 			"<li>%s-%s-text: replace contents "
 			"with <i>%s</i> data%s</li>",
 			f->parent->name, f->name, f->name,
@@ -262,10 +266,12 @@ gen_js_field(const struct field *f)
 	free(buf);
 
 	if (FTYPE_BIT == f->type || FTYPE_BITFIELD == f->type)
-		printf("\t\t\t_fillbits(e, '%s', '%s', o.%s, inc);\n",
+		printf("\t\t\t_fillBitsChecked"
+			"(e, '%s', '%s', o.%s, inc);\n",
 			f->parent->name, f->name, f->name);
 	if (FTYPE_DATE == f->type || FTYPE_EPOCH == f->type)
-		printf("\t\t\t_filldate(e, '%s', '%s', o.%s, inc);\n",
+		printf("\t\t\t_fillDateValue"
+			"(e, '%s', '%s', o.%s, inc);\n",
 			f->parent->name, f->name, f->name);
 }
 
@@ -481,7 +487,62 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t}\n"
 	     "");
 
-	gen_proto(tsc, "void", "_fillEnumSelect",
+	print_commentv(1, COMMENT_JS,
+		"Internal function for checking inputs for all "
+		"elements of class strct-name-value-checked whose "
+		"value matches the object\'s value. "
+		"If the object is null, all elements are "
+		"unchecked.\n"
+		"@param {HTMLElement} e - The root of the "
+		"DOM tree in which we query for elements to fill "
+		"into.\n"
+		"@param {String} strct - The name of the structure "
+		"that we\'re filling in.\n"
+		"@param {String} name - The name of the field.\n"
+		"@param {Number|String|null} obj - The data itself.\n"
+		"@param {Boolean} inc - Whether to include the "
+		"root element in looking for elements to fill.\n"
+		"@private\n"
+		"@function _fillValueChecked\n"
+		"@memberof %s", ns);
+	gen_proto(tsc, "void", "_fillValueChecked",
+		"e", "HTMLElement",
+		"fname", "string",
+		"val", "number|string|null",
+		"inc", "boolean",
+		NULL);
+	gen_vars(tsc, 2, "list", "HTMLElement[]", 
+		"i", "number",
+		"valstr", "string|null", NULL);
+	printf("\t\tfname += '-value-checked';\n"
+	       "\t\tvalstr = null === val ? null : \n"
+	       "\t\t\t(\"number\" === typeof val ? val.toString() : val);\n"
+	       "\t\tlist = _elemList(e, fname, inc);\n"
+	       "\t\tfor (i = 0; i < list.length; i++)\n"
+	       "\t\t\tif (valstr === null)\n"
+	       "\t\t\t\t_rattr(list[i], \'checked\');\n"
+	       "\t\t\telse if (valstr === (%slist[i]).value)\n"
+	       "\t\t\t\t_attr(list[i], \'checked\', \'true\');\n"
+	       "\t\t\telse\n"
+	       "\t\t\t\t_rattr(list[i], \'checked\');\n"
+	       "\t}\n"
+	       "\n",
+	       tsc ? "<HTMLInputElement>" : "");
+
+	print_commentv(1, COMMENT_JS,
+		"Internal function that takes all <code>"
+		"&lt;option&gt;</code> elements in the root and "
+		"sets or unsets their <code>selected</code> status "
+		"depending upon whether it matches the object\'s "
+		"value.\n"
+		"@param {HTMLElement} e - The root of the "
+		"DOM tree in which we query for elements to fill "
+		"into.\n"
+		"@param {Number|String} val - The object\'s value.\n"
+		"@private\n"
+		"@function _fillValueSelect\n"
+		"@memberof %s", ns);
+	gen_proto(tsc, "void", "_fillValueSelect",
 		"e", "HTMLElement|null",
 		"val", "number|string", NULL);
 	gen_vars(tsc, 2,
@@ -564,9 +625,9 @@ gen_javascript(const struct config *cfg, int tsc)
 		"@param {Boolean} inc - Whether to include the "
 		"root element in looking for elements to fill.\n"
 		"@private\n"
-		"@function _filldate\n"
+		"@function _fillDateValue\n"
 		"@memberof %s", ns);
-	gen_proto(tsc, "void", "_filldate",
+	gen_proto(tsc, "void", "_fillDateValue",
 		"e", "HTMLElement",
 		"strct", "string",
 		"name", "string",
@@ -609,9 +670,9 @@ gen_javascript(const struct config *cfg, int tsc)
 		"@param {Boolean} inc - Whether to include the "
 		"root element in looking for elements to fill.\n"
 		"@private\n"
-		"@function _fillbits\n"
+		"@function _fillBitsChecked\n"
 		"@memberof %s", ns);
-	gen_proto(tsc, "void", "_fillbits",
+	gen_proto(tsc, "void", "_fillBitsChecked",
 		"e", "HTMLElement",
 		"strct", "string",
 		"name", "string",
@@ -715,13 +776,14 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t\t\t\tsub.fillInner(list[i], funcs);\n"
 	     "\t\t\t}\n"
 	     "\t\t} else {\n"
-	     "\t\t\t_replcl(e, fname + '-text', obj, inc);\n"
 	     "\t\t\tlist = _elemList"
 	     	"(e, fname + '-enum-select', inc);\n"
 	     "\t\t\tfor (i = 0; i < list.length; i++) {\n"
-	     "\t\t\t\t_fillEnumSelect(list[i], obj);\n"
+	     "\t\t\t\t_fillValueSelect(list[i], obj);\n"
 	     "\t\t\t}\n"
+	     "\t\t\t_replcl(e, fname + '-text', obj, inc);\n"
 	     "\t\t\t_attrcl(e, 'value', fname + '-value', obj, inc);\n"
+	     "\t\t\t_fillValueChecked(e, fname, obj, inc);\n"
 	     "\t\t}\n"
 	     "\t}\n"
 	     "");

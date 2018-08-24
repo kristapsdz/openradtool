@@ -1,0 +1,46 @@
+digraph {
+	edge [arrowsize="0.5";];
+	bgcolor="transparent";
+	splines=false;
+
+	{ rank=source; kwebapp[fontcolor="blue"]; }
+
+	{ rank=same; 
+	  c[label="C", fontcolor="#888888", color="#888888"]; 
+	  yourcode[fontcolor="blue"];
+	  ts[label="TypeScript", fontcolor="#888888", color="#888888"]; 
+	  sql[label="SQL", fontcolor="#888888", color="#888888"]; }
+	{ rank=same; 
+	  tsc[label="tsc(1)", style="filled", fillcolor="#cccccc", fontcolor="#888888"]; 
+	  cc[label="cc(1)", style="filled", fillcolor="#cccccc", fontcolor="#888888"]; 
+	  sqlite1[label="sqlite3(1)", style="filled", fillcolor="#cccccc", fontcolor="#888888"]; }
+
+	{ rank=same; 
+	  yourapp;
+	  db[label="database", fontcolor="#888888", color="#888888"]; }
+
+	{ rank=same; 
+	  js[label="JavaScript", fontcolor="#888888", color="#888888"]; 
+	  html5[label="HTML5", fontcolor="blue"]; 
+	  json[label="JSON", fontcolor="#888888", color="#888888"]; }
+
+	{ rank=sink; user[style="filled", fillcolor="#07aabb"]; }
+
+	kwebapp -> sql;
+	sql -> sqlite1;
+	sqlite1 -> db;
+	yourapp -> json;
+	yourapp -> db[dir="both"];
+
+	c -> cc;
+	yourcode -> cc;
+	cc -> yourapp;
+
+	kwebapp -> c;
+	kwebapp -> ts;
+	html5 -> user;
+	js -> user;
+	json -> user;
+	ts -> tsc -> js;
+
+}

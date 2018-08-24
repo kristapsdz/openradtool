@@ -577,8 +577,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		"year", "number",
 		"mo", "number",
 		"day", "number",
-		"d", "Date",
-		"v", "number", NULL);
+		"d", "Date", NULL);
 	printf("\t\tfname = strct + '-' + name + '-date';\n"
 	       "\t\tif (null === val)\n"
 	       "\t\t\treturn;\n"

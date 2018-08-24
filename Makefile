@@ -87,6 +87,7 @@ BINS		 = kwebapp \
 		   kwebapp-sqldiff \
 		   kwebapp-xliff
 IMAGES		 = index.svg \
+		   index2.svg \
 		   index-fig1.svg \
 		   index-fig2.svg \
 		   index-fig3.svg \

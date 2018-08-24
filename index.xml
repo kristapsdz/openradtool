@@ -81,6 +81,18 @@
 					</li>
 				</ul>
 				<p>
+					Seen from the flow of information to and from the client, <span class="nm">kwebapp</span> manages all of
+					the data in grey.
+					External utilities have a background of grey.
+					The only parts requiring authorship are in blue: the business logic (<q>yourcode</q>), the front-end
+					material (<q>HTML5</q> and likely glue Java/TypeScript and CSS), and the <a
+						href="kwebapp.5.html">kwebapp(5)</a> configuration itself.
+					For simplicity, this assumes an un-translated data store.
+				</p>
+				<figure>
+					<img src="index2.svg" alt="" />
+				</figure>
+				<p>
 					These programs have no run-time dependencies; however, the generated C files use <a
 						href="https://kristaps.bsd.lv/ksql">ksql(3)</a> as a wrapper for the underlying <a
 						href="https://sqlite.org">SQLite</a> database, and often require

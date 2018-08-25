@@ -2537,14 +2537,14 @@ main(int argc, char *argv[])
 	fclose(conf);
 
 	if (NULL == cfg || ! parse_link(cfg)) {
-		parse_free(cfg);
+		config_free(cfg);
 		return EXIT_FAILURE;
 	}
 
 	gen_c_source(cfg, json, valids, 
 		splitproc, dbin, header, incls);
 
-	parse_free(cfg);
+	config_free(cfg);
 	return EXIT_SUCCESS;
 usage:
 	fprintf(stderr, 

@@ -1014,7 +1014,7 @@ main(int argc, char *argv[])
 	fclose(conf);
 
 	if (NULL == cfg || ! parse_link(cfg)) {
-		parse_free(cfg);
+		config_free(cfg);
 		return EXIT_FAILURE;
 	}
 
@@ -1025,7 +1025,7 @@ main(int argc, char *argv[])
 	else 
 		rc = gen_audit_gv(cfg, role);
 
-	parse_free(cfg);
+	config_free(cfg);
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	if (OP_AUDIT_GV == op)

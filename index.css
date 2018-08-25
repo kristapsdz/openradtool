@@ -12,6 +12,13 @@ body > header				{ width: 100%;
 					  margin-bottom: 2.2em;
 					  text-align: center; }
 b, strong				{ font-weight: 500; }
+.intro					{ font-size: larger; 
+					  margin-top: 2em; }
+.topicbox  + .topicbox			{ margin-top: 1.1em; }
+.topicbox > div:nth-child(2)		{ font-size: 12pt; }
+.topicbox > div:nth-child(2) a		{ text-decoration: none; 
+					  opacity: 0.8; }
+.topicbox > div:nth-child(2) a:hover	{ opacity: 1.0; }
 #archive > header			{ padding-bottom: 24pt; }
 #breadcrumbs > *			{ display: inline-block; 
 					  vertical-align: top;
@@ -96,6 +103,8 @@ nav[data-sblg-nav] li + li		{ margin-top: 2em; }
 					{ color: #000; }
 #archive nav[data-sblg-nav] li > div:first-child	
 					{ font-weight: 500; }
+.blue					{ color: blue; }
+.topics					{ margin: 2em 0; }
 
 @media only screen and (max-width: 900px), only screen and (max-device-width: 900px) {
  article > section			{ width: 80%; }

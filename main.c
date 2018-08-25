@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -34,6 +34,7 @@ main(int argc, char *argv[])
 	FILE		*conf = NULL;
 	struct config	*cfg;
 	size_t		 i;
+	int		 rc;
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio rpath", NULL))
@@ -46,37 +47,35 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	if (0 == argc) {
-		cfg = parse_config(stdin, "<stdin>");
-		if (NULL == cfg)
-			return EXIT_FAILURE;
-		if ( ! parse_link(cfg)) {
-			parse_free(cfg);
-			return EXIT_FAILURE;
-		}
-		parse_free(cfg);
-	} 
+	if (NULL == (cfg = config_alloc()))
+		return EXIT_FAILURE;
 
 	for (i = 0; i < (size_t)argc; i++)  {
-	    	conf = fopen(argv[i], "r");
-		if (NULL == conf)
+		if (NULL == (conf = fopen(argv[i], "r")))
 			err(EXIT_FAILURE, "%s", argv[i]);
-		cfg = parse_config(conf, argv[i]);
+		rc = parse_config_r(cfg, conf, argv[i]);
 		fclose(conf);
-		if (NULL == cfg)
+		if ( ! rc)
 			return EXIT_FAILURE;
-		if ( ! parse_link(cfg)) {
-			parse_free(cfg);
-			return EXIT_FAILURE;
-		}
-		parse_free(cfg);
 	}
 
-	return EXIT_SUCCESS;
+#if HAVE_PLEDGE
+	if (-1 == pledge("stdio", NULL))
+		err(EXIT_FAILURE, "pledge");
+#endif
 
+	if (0 == argc && ! parse_config_r(cfg, stdin, "<stdin>"))
+		return EXIT_FAILURE;
+
+	if (0 != (rc = parse_link(cfg)))
+		parse_write(stdout, cfg);
+
+	config_free(cfg);
+
+	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 
-		"usage: %s [config]\n",
+		"usage: %s [config...]\n",
 		getprogname());
 	return EXIT_FAILURE;
 }

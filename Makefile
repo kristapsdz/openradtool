@@ -8,6 +8,7 @@ VERSION_BUILD	 = 7
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = comments.o \
 		   compats.o \
+		   config.o \
 		   linker.o \
 		   parser.o \
 		   printer.o \
@@ -44,6 +45,7 @@ DOTAR		 = audit.c \
 		   audit.js \
 		   comments.c \
 		   compats.c \
+		   config.c \
 		   extern.h \
 		   header.c \
 		   javascript.c \

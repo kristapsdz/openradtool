@@ -676,8 +676,8 @@ main(int argc, char *argv[])
 	if ((NULL == cfg || ! parse_link(cfg)) ||
 	    (NULL != dconfile && 
 	     (NULL == dcfg || ! parse_link(dcfg)))) {
-		parse_free(cfg);
-		parse_free(dcfg);
+		config_free(cfg);
+		config_free(dcfg);
 		return EXIT_FAILURE;
 	}
 
@@ -686,7 +686,7 @@ main(int argc, char *argv[])
 	else 
 		rc = gen_diff(cfg, dcfg);
 
-	parse_free(cfg);
+	config_free(cfg);
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 
 usage:

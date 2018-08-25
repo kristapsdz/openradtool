@@ -886,7 +886,7 @@ main(int argc, char *argv[])
 	fclose(conf);
 
 	if (NULL == cfg || ! parse_link(cfg)) {
-		parse_free(cfg);
+		config_free(cfg);
 		return EXIT_FAILURE;
 	}
 
@@ -896,7 +896,7 @@ main(int argc, char *argv[])
 		xliff_join(cfg, copy, argc, (const char **)argv) :
 		xliff_update(cfg, copy, argv[0]);
 
-	parse_free(cfg);
+	config_free(cfg);
 	return c ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 

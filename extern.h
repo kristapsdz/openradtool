@@ -582,6 +582,8 @@ struct	config {
 #define	CFG_HAS_ROLES 	  0x01 /* has roles */
 	char		**langs; /* known label langs */
 	size_t		  langsz; /* number of langs */
+	char		**fnames; /* filenames referenced */
+	size_t		  fnamesz; /* number of fnames */
 };
 
 /*
@@ -603,8 +605,11 @@ __BEGIN_DECLS
 
 int		 parse_link(struct config *);
 struct config	*parse_config(FILE *, const char *);
-void		 parse_free(struct config *);
+int		 parse_config_r(struct config *, FILE *, const char *);
 void		 parse_write(FILE *, const struct config *);
+
+struct config	*config_alloc(void);
+void		 config_free(struct config *);
 
 void		 print_commentt(size_t, enum cmtt, const char *);
 void		 print_commentv(size_t, enum cmtt, const char *, ...)

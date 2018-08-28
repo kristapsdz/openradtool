@@ -26,12 +26,14 @@
 .Sh DESCRIPTION
 The
 .Nm
-utility accepts
+utility accepts a
 .Xr kwebapp 5
-files
 .Ar config
+.Pq defaulting to standard input
 and tests the configuration syntax.
 The configuration may be broken apart into several files.
+There are no arguments.
+.Pp
 Warnings and errors, if any, are printed to standard error.
 On success, the configuration is reproduced on standard output.
 .\" The following requests should be uncommented and used where appropriate.

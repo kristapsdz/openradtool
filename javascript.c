@@ -1400,10 +1400,10 @@ gen_javascript(const struct config *cfg, int tsc)
 int
 main(int argc, char *argv[])
 {
-	FILE		*conf = NULL;
-	const char	*confile = NULL;
-	struct config	*cfg;
-	int		 c, typescript = 0;
+	struct config	 *cfg;
+	int		  c, typescript = 0, rc = 0;
+	FILE		**confs = NULL;
+	size_t		  i, confsz;
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio rpath", NULL))
@@ -1420,36 +1420,48 @@ main(int argc, char *argv[])
 		}
 	argc -= optind;
 	argv += optind;
+	confsz = (size_t)argc;
+	
+	/* Read in all of our files now so we can repledge. */
 
-	if (0 == argc) {
-		confile = "<stdin>";
-		conf = stdin;
-	} else
-		confile = argv[0];
-
-	if (argc > 1)
-		goto usage;
-
-	if (NULL == conf &&
-	    NULL == (conf = fopen(confile, "r")))
-		err(EXIT_FAILURE, "%s", confile);
+	if (confsz > 0) {
+		confs = calloc(confsz, sizeof(FILE *));
+		if (NULL == confs)
+			err(EXIT_FAILURE, NULL);
+		for (i = 0; i < confsz; i++) {
+			confs[i] = fopen(argv[i], "r");
+			if (NULL == confs[i]) {
+				warn("%s", argv[i]);
+				goto out;
+			}
+		}
+	}
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio", NULL))
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	cfg = parse_config(conf, confile);
-	fclose(conf);
+	if (NULL == (cfg = config_alloc()))
+		goto out;
 
-	if (NULL == cfg || ! parse_link(cfg)) {
-		config_free(cfg);
-		return EXIT_FAILURE;
-	}
+	for (i = 0; i < confsz; i++)
+		if ( ! parse_config_r(cfg, confs[i], argv[i]))
+			goto out;
 
-	gen_javascript(cfg, typescript);
+	if (0 == confsz && ! parse_config_r(cfg, stdin, "<stdin>"))
+		goto out;
+
+	if (0 != (rc = parse_link(cfg)))
+		gen_javascript(cfg, typescript);
+
+out:
+	for (i = 0; i < confsz; i++)
+		if (EOF == fclose(confs[i]))
+			warn("%s", argv[i]);
+	free(confs);
 	config_free(cfg);
-	return EXIT_SUCCESS;
+	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 
 		"usage: %s [-t] [config]\n",

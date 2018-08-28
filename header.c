@@ -836,6 +836,8 @@ main(int argc, char *argv[])
 
 	if (confsz > 0) {
 		confs = calloc(confsz, sizeof(FILE *));
+		if (NULL == confs)
+			err(EXIT_FAILURE, NULL);
 		for (i = 0; i < confsz; i++) {
 			confs[i] = fopen(argv[i], "r");
 			if (NULL == confs[i]) {

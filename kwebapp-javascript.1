@@ -23,15 +23,20 @@
 .Sh SYNOPSIS
 .Nm kwebapp-javascript
 .Op Fl t
-.Op Ar config
+.Op Ar config...
 .Sh DESCRIPTION
 The
 .Nm
-utility creates the JavaScript or TypeScript classes that format the
-JSON produced by
+utility accepts a
+.Xr kwebapp 5
+.Ar config
+.Pq defaulting to standard input
+and creates JavaScript or TypeScript classes formatting the JSON
+produced by
 .Xr kwebapp-c-header 1
 and
 .Xr kwebapp-c-source 1 .
+The configuration may be broken apart into several files.
 Its arguments are as follows:
 .Bl -tag -width Ds
 .It Fl t

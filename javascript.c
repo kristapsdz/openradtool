@@ -1442,8 +1442,7 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	if (NULL == (cfg = config_alloc()))
-		goto out;
+	cfg = config_alloc();
 
 	for (i = 0; i < confsz; i++)
 		if ( ! parse_config_r(cfg, confs[i], argv[i]))

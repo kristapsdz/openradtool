@@ -1,6 +1,6 @@
 .\"	$OpenBSD$
 .\"
-.\" Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+.\" Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -22,14 +22,16 @@
 .Nd implement web application SQL schema
 .Sh SYNOPSIS
 .Nm kwebapp-sql
-.Op Ar config
+.Op Ar config...
 .Sh DESCRIPTION
 The
 .Nm
-utility accepts a configuration file
+utility accepts a
+.Xr kwebapp 5
 .Ar config
 .Pq defaulting to standard input
 and produces an SQL schema describing the configuration.
+The configuration may be broken apart into several files.
 .Pp
 The schema consists of a series of
 .Cm CREATE TABLE

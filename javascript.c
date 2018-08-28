@@ -223,7 +223,7 @@ gen_jsdoc_field(const char *ns, const struct field *f)
 	if (FTYPE_DATE == f->type ||
 	    FTYPE_EPOCH == f->type)
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-%s-date: set the element's "
+			"<li>%s-%s-date-value: set the element's "
 			"<code>value</code> to the ISO-8601 date "
 			"format of the data%s</li>",
 			f->parent->name, f->name, 
@@ -638,19 +638,22 @@ gen_javascript(const struct config *cfg, int tsc)
 		"year", "number",
 		"mo", "number",
 		"day", "number",
+		"full", "string",
 		"d", "Date", NULL);
-	printf("\t\tfname = strct + '-' + name + '-date';\n"
-	       "\t\tif (null === val)\n"
+	printf("\t\tif (null === val)\n"
 	       "\t\t\treturn;\n"
 	       "\t\td = new Date();\n"
 	       "\t\td.setTime(val * 1000);\n"
 	       "\t\tyear = d.getFullYear();\n"
 	       "\t\tmo = d.getMonth() + 1;\n"
 	       "\t\tday = d.getDate();\n"
-	       "\t\t_attrcl(e, 'value', fname,\n"
-	       "\t\t\tyear + '-' +\n"
+	       "\t\tfull = year + '-' +\n"
 	       "\t\t\t(mo < 10 ? '0' : '') + mo + '-' +\n"
-	       "\t\t\t(day < 10 ? '0' : '') + day, inc);\n"
+	       "\t\t\t(day < 10 ? '0' : '') + day;\n"
+	       "\t\tfname = strct + '-' + name + '-date-value';\n"
+	       "\t\t_attrcl(e, 'value', fname, full, inc);\n"
+	       "\t\tfname = strct + '-' + name + '-date-text';\n"
+	       "\t\t_replcl(e, fname, full, inc);\n"
 	       "\t}\n"
 	       "\n");
 

@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,6 +18,7 @@
 
 #include <sys/queue.h>
 
+#include <assert.h>
 #if HAVE_ERR
 # include <err.h>
 #endif
@@ -607,11 +608,12 @@ gen_diff(const struct config *cfg, const struct config *dcfg)
 int
 main(int argc, char *argv[])
 {
-	FILE		*conf = NULL, *dconf = NULL;
-	const char	*confile = NULL, *dconfile = NULL;
-	struct config	*cfg, *dcfg = NULL;
-	int		 rc = 1;
-	int		 diff = 0;
+	FILE		**confs = NULL, **dconfs = NULL;
+	struct config	 *cfg, *dcfg = NULL;
+	int		  rc = 1;
+	int		  diff = 0;
+	size_t		  confsz = 0, dconfsz = 0, i, j, 
+			  confstart = 0;
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio rpath", NULL))
@@ -623,80 +625,134 @@ main(int argc, char *argv[])
 			goto usage;
 		argc -= optind;
 		argv += optind;
+		confsz = (size_t)argc;
+		confs = calloc(confsz, sizeof(FILE *));
+		if (NULL == confs)
+			err(EXIT_FAILURE, NULL);
+		for (i = 0; i < confsz; i++) {
+			confs[i] = fopen(argv[i], "r");
+			if (NULL == confs[i]) {
+				warn("%s", argv[i]);
+				goto out;
+			}
+		}
 	} else if (0 == strcmp(getprogname(), "kwebapp-sqldiff")) {
 		diff = 1;
 		if (-1 != getopt(argc, argv, ""))
 			goto usage;
 		argc -= optind;
 		argv += optind;
-		if (0 == argc)
+		if (0 == argc ||
+		    (1 == argc && 0 == strcmp(argv[0], "--")))
 			goto usage;
-		dconfile = argv[0];
-		argv++;
-		argc--;
+
+		/* 
+		 * Invocations:
+		 * kwebapp-sqldiff dconf
+		 * kwebapp-sqldiff -- # error: no confs
+		 * kwebapp-sqldiff dconf conf # special case
+		 * kwebapp-sqldiff dconf1... "--" conf1...
+		 *
+		 * At least one dconf OR conf must be specified.
+		 * If either is zero and that holds, the zeroth is
+		 * replaced with stdin.
+		 */
+
+		for (dconfsz = 0; dconfsz < (size_t)argc; dconfsz++)
+			if (0 == strcmp(argv[dconfsz], "--"))
+				break;
+		if ((i = dconfsz) < (size_t)argc)
+			i++;
+		confstart = i;
+		confsz = argc - i;
+
+		/* Special case. */
+
+		if (0 == confsz && 2 == argc)
+			confsz = dconfsz = confstart = 1;
+
+		confs = calloc(confsz, sizeof(FILE *));
+		dconfs = calloc(dconfsz, sizeof(FILE *));
+		if (NULL == confs || NULL == dconfs)
+			err(EXIT_FAILURE, NULL);
+
+		for (i = 0; i < dconfsz; i++) {
+			dconfs[i] = fopen(argv[i], "r");
+			if (NULL == dconfs[i]) {
+				warn("%s", argv[i]);
+				goto out;
+			}
+		}
+		if (i < (size_t)argc && 0 == strcmp(argv[i], "--"))
+			i++;
+		for (j = 0; i < (size_t)argc; j++, i++) {
+			confs[j] = fopen(argv[i], "r");
+			if (NULL == confs[j]) {
+				warn("%s", argv[i]);
+				goto out;
+			}
+		}
 	}
-
-	if (0 == argc) {
-		confile = "<stdin>";
-		conf = stdin;
-	} else
-		confile = argv[0];
-
-	if (argc > 1)
-		goto usage;
-
-	if (NULL == conf &&
-	    NULL == (conf = fopen(confile, "r")))
-		err(EXIT_FAILURE, "%s", confile);
-
-	if (NULL != dconfile && 
-	    NULL == (dconf = fopen(dconfile, "r")))
-		err(EXIT_FAILURE, "%s", dconfile);
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio", NULL))
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	/*
-	 * First, parse the file.
-	 * This pulls all of the data from the configuration file.
-	 * If there are any errors, it will return NULL.
-	 * Also parse the "diff" configuration, if it exists.
-	 */
+	assert(confsz + dconfsz > 0 || ! diff);
 
-	cfg = parse_config(conf, confile);
-	fclose(conf);
+	cfg = config_alloc();
+	dcfg = config_alloc();
 
-	if (NULL != dconf) {
-		dcfg = parse_config(dconf, dconfile);
-		fclose(dconf);
-	}
+	for (i = 0; i < confsz; i++)
+		if ( ! parse_config_r(cfg, 
+		    confs[i], argv[confstart + i]))
+			goto out;
+	if (0 == confsz && ! parse_config_r(cfg, stdin, "<stdin>"))
+		goto out;
 
-	if ((NULL == cfg || ! parse_link(cfg)) ||
-	    (NULL != dconfile && 
-	     (NULL == dcfg || ! parse_link(dcfg)))) {
-		config_free(cfg);
-		config_free(dcfg);
-		return EXIT_FAILURE;
-	}
+	for (i = 0; i < dconfsz; i++)
+		if ( ! parse_config_r(dcfg, 
+		    dconfs[i], argv[i]))
+			goto out;
+	if (0 == dconfsz && diff &&
+	    ! parse_config_r(dcfg, stdin, "<stdin>"))
+		goto out;
 
-	if ( ! diff)
+	if ( ! parse_link(cfg))
+		goto out;
+	if (diff && ! parse_link(dcfg))
+		goto out;
+
+	if ( ! diff) {
 		gen_sql(&cfg->sq);
-	else 
+		rc = 1;
+	} else 
 		rc = gen_diff(cfg, dcfg);
 
+out:
+	for (i = 0; i < confsz; i++)
+		if (EOF == fclose(confs[i]))
+			warn("%s", argv[i]);
+	for (i = 0; i < dconfsz; i++)
+		if (EOF == fclose(dconfs[i]))
+			warn("%s", argv[i]);
+	free(confs);
+	free(dconfs);
 	config_free(cfg);
+
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 
 usage:
 	if ( ! diff)
 		fprintf(stderr, 
-			"usage: %s [config]\n",
+			"usage: %s [config...]\n",
 			getprogname());
 	else 
 		fprintf(stderr, 
-			"usage: %s oldconfig [config]\n",
-			getprogname());
+			"usage: %s oldconfig\n"
+			"usage: %s oldconfig config\n"
+			"usage: %s [oldconfig...] -- [config...]\n",
+			getprogname(), getprogname(), getprogname());
 	return EXIT_FAILURE;
 }

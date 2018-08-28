@@ -391,7 +391,7 @@ config_alloc(void)
 	struct config	*cfg;
 
 	if (NULL == (cfg = calloc(1, sizeof(struct config))))
-		return(NULL);
+		err(EXIT_FAILURE, NULL);
 
 	TAILQ_INIT(&cfg->sq);
 	TAILQ_INIT(&cfg->eq);

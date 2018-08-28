@@ -2875,9 +2875,7 @@ parse_config(FILE *f, const char *fname)
 {
 	struct config	*cfg;
 
-	if (NULL == (cfg = config_alloc()))
-		return NULL;
-
+	cfg = config_alloc();
 	return parse_config_r(cfg, f, fname) ? cfg : NULL;
 }
 

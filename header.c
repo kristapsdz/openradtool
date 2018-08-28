@@ -793,11 +793,12 @@ gen_c_header(const struct config *cfg, const char *guard,
 int
 main(int argc, char *argv[])
 {
-	FILE		*conf = NULL;
-	const char	*confile = NULL, *guard = "DB_H";
-	struct config	*cfg;
-	int		 c, json = 0, valids = 0,
-			 splitproc = 0, dbin = 1, dstruct = 1;
+	const char	 *guard = "DB_H";
+	struct config	 *cfg;
+	int		  c, json = 0, valids = 0, rc = 0,
+			  splitproc = 0, dbin = 1, dstruct = 1;
+	FILE		**confs = NULL;
+	size_t		  i, confsz;
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio rpath", NULL))
@@ -829,39 +830,47 @@ main(int argc, char *argv[])
 		}
 	argc -= optind;
 	argv += optind;
+	confsz = (size_t)argc;
+	
+	/* Read in all of our files now so we can repledge. */
 
-	if (0 == argc) {
-		confile = "<stdin>";
-		conf = stdin;
-	} else
-		confile = argv[0];
-
-	if (argc > 1)
-		goto usage;
-
-	if (NULL == conf &&
-	    NULL == (conf = fopen(confile, "r")))
-		err(EXIT_FAILURE, "%s", confile);
+	if (confsz > 0) {
+		confs = calloc(confsz, sizeof(FILE *));
+		for (i = 0; i < confsz; i++) {
+			confs[i] = fopen(argv[i], "r");
+			if (NULL == confs[i]) {
+				warn("%s", argv[i]);
+				goto out;
+			}
+		}
+	}
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio", NULL))
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	cfg = parse_config(conf, confile);
-	fclose(conf);
+	if (NULL == (cfg = config_alloc()))
+		goto out;
 
-	if (NULL == cfg || ! parse_link(cfg)) {
-		config_free(cfg);
-		return EXIT_FAILURE;
-	}
+	for (i = 0; i < confsz; i++)
+		if ( ! parse_config_r(cfg, confs[i], argv[i]))
+			goto out;
 
-	gen_c_header(cfg, guard, json, valids, 
-		splitproc, dbin, dstruct);
+	if (0 == confsz && ! parse_config_r(cfg, stdin, "<stdin>"))
+		goto out;
 
+	if (0 != (rc = parse_link(cfg)))
+		gen_c_header(cfg, guard, json, valids, 
+			splitproc, dbin, dstruct);
+
+out:
+	for (i = 0; i < confsz; i++)
+		if (EOF == fclose(confs[i]))
+			warn("%s", argv[i]);
+	free(confs);
 	config_free(cfg);
-	return EXIT_SUCCESS;
-
+	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 
 		"usage: %s "

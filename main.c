@@ -31,10 +31,10 @@
 int
 main(int argc, char *argv[])
 {
-	FILE		*conf = NULL;
-	struct config	*cfg;
-	size_t		 i;
-	int		 rc;
+	struct config	 *cfg;
+	size_t		  i, confsz;
+	int		  rc = 0;
+	FILE		**confs = NULL;
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio rpath", NULL))
@@ -46,17 +46,19 @@ main(int argc, char *argv[])
 
 	argc -= optind;
 	argv += optind;
+	confsz = (size_t)argc;
+	
+	/* Read in all of our files now so we can repledge. */
 
-	if (NULL == (cfg = config_alloc()))
-		return EXIT_FAILURE;
-
-	for (i = 0; i < (size_t)argc; i++)  {
-		if (NULL == (conf = fopen(argv[i], "r")))
-			err(EXIT_FAILURE, "%s", argv[i]);
-		rc = parse_config_r(cfg, conf, argv[i]);
-		fclose(conf);
-		if ( ! rc)
-			return EXIT_FAILURE;
+	if (confsz > 0) {
+		confs = calloc(confsz, sizeof(FILE *));
+		for (i = 0; i < confsz; i++) {
+			confs[i] = fopen(argv[i], "r");
+			if (NULL == confs[i]) {
+				warn("%s", argv[i]);
+				goto out;
+			}
+		}
 	}
 
 #if HAVE_PLEDGE
@@ -64,18 +66,30 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	if (0 == argc && ! parse_config_r(cfg, stdin, "<stdin>"))
-		return EXIT_FAILURE;
+	if (NULL == (cfg = config_alloc()))
+		goto out;
+
+	for (i = 0; i < confsz; i++)
+		if ( ! parse_config_r(cfg, confs[i], argv[i]))
+			goto out;
+
+	if (0 == confsz && ! parse_config_r(cfg, stdin, "<stdin>"))
+		goto out;
+
+	/* Only echo output on success. */
 
 	if (0 != (rc = parse_link(cfg)))
 		parse_write(stdout, cfg);
 
+out:
+	for (i = 0; i < confsz; i++)
+		if (EOF == fclose(confs[i]))
+			warn("%s", argv[i]);
+	free(confs);
 	config_free(cfg);
 
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
-	fprintf(stderr, 
-		"usage: %s [config...]\n",
-		getprogname());
+	fprintf(stderr, "usage: %s [config...]\n", getprogname());
 	return EXIT_FAILURE;
 }

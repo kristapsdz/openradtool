@@ -23,15 +23,17 @@
 .Sh SYNOPSIS
 .Nm kwebapp-audit
 .Ar role
-.Op Ar config
+.Op Ar config...
 .Sh DESCRIPTION
 The
 .Nm
-utility accepts a configuration file
+utility accepts a
+.Xr kwebapp 5
 .Ar config
 .Pq defaulting to standard input
 and audits all access available to
 .Ar role .
+The configuration may be broken apart into several files.
 .Pp
 It outputs the role's access to the data and operations available (if
 any) to each structure.

@@ -947,76 +947,66 @@ gen_audit_gv(const struct config *cfg, const char *role)
 int
 main(int argc, char *argv[])
 {
-	FILE		*conf = NULL;
-	const char	*confile = NULL, *role = NULL;
-	struct config	*cfg;
-	int		 rc = 1;
-	enum op		 op = OP_AUDIT;
+	const char	 *role = NULL;
+	struct config	 *cfg;
+	int		  rc = 0;
+	enum op		  op = OP_AUDIT;
+	size_t		  i, confsz;
+	FILE		**confs = NULL;
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio rpath", NULL))
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	if (0 == strcmp(getprogname(), "kwebapp-audit-gv")) {
+	if (0 == strcmp(getprogname(), "kwebapp-audit-gv"))
 		op = OP_AUDIT_GV;
-		if (-1 != getopt(argc, argv, ""))
-			goto usage;
-		argc -= optind;
-		argv += optind;
-		if (0 == argc)
-			goto usage;
-		role = argv[0];
-		argv++;
-		argc--;
-	} else if (0 == strcmp(getprogname(), "kwebapp-audit-json")) {
+	else if (0 == strcmp(getprogname(), "kwebapp-audit-json"))
 		op = OP_AUDIT_JSON;
-		if (-1 != getopt(argc, argv, ""))
-			goto usage;
-		argc -= optind;
-		argv += optind;
-		if (0 == argc)
-			goto usage;
-		role = argv[0];
-		argv++;
-		argc--;
-	} else {
-		if (-1 != getopt(argc, argv, ""))
-			goto usage;
-		argc -= optind;
-		argv += optind;
-		if (0 == argc)
-			goto usage;
-		role = argv[0];
-		argv++;
-		argc--;
-	} 
 
-	if (0 == argc) {
-		confile = "<stdin>";
-		conf = stdin;
-	} else
-		confile = argv[0];
-
-	if (argc > 1)
+	if (-1 != getopt(argc, argv, ""))
 		goto usage;
 
-	if (NULL == conf &&
-	    NULL == (conf = fopen(confile, "r")))
-		err(EXIT_FAILURE, "%s", confile);
+	argc -= optind;
+	argv += optind;
+	if (0 == argc)
+		goto usage;
+	role = argv[0];
+	argc--;
+	argv++;
+
+	confsz = (size_t)argc;
+	
+	/* Read in all of our files now so we can repledge. */
+
+	if (confsz > 0) {
+		confs = calloc(confsz, sizeof(FILE *));
+		if (NULL == confs)
+			err(EXIT_FAILURE, NULL);
+		for (i = 0; i < confsz; i++) {
+			confs[i] = fopen(argv[i], "r");
+			if (NULL == confs[i]) {
+				warn("%s", argv[i]);
+				goto out;
+			}
+		}
+	}
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio", NULL))
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	cfg = parse_config(conf, confile);
-	fclose(conf);
+	cfg = config_alloc();
 
-	if (NULL == cfg || ! parse_link(cfg)) {
-		config_free(cfg);
-		return EXIT_FAILURE;
-	}
+	for (i = 0; i < confsz; i++)
+		if ( ! parse_config_r(cfg, confs[i], argv[i]))
+			goto out;
+
+	if (0 == confsz && ! parse_config_r(cfg, stdin, "<stdin>"))
+		goto out;
+	if ( ! parse_link(cfg))
+		goto out;
 
 	if (OP_AUDIT == op)
 		rc = gen_audit(cfg, role);
@@ -1025,23 +1015,29 @@ main(int argc, char *argv[])
 	else 
 		rc = gen_audit_gv(cfg, role);
 
+out:
+	for (i = 0; i < confsz; i++)
+		if (EOF == fclose(confs[i]))
+			warn("%s", argv[i]);
+	free(confs);
 	config_free(cfg);
+
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	if (OP_AUDIT_GV == op)
 		fprintf(stderr, 
 			"usage: %s "
-			"role [config]\n",
+			"role [config...]\n",
 			getprogname());
 	else if (OP_AUDIT_JSON == op)
 		fprintf(stderr, 
 			"usage: %s "
-			"role [config]\n",
+			"role [config...]\n",
 			getprogname());
 	else 
 		fprintf(stderr, 
 			"usage: %s "
-			"role [config]\n",
+			"role [config...]\n",
 			getprogname());
 	return EXIT_FAILURE;
 }

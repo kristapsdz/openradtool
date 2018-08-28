@@ -72,7 +72,11 @@ attribute depending upon whether the input's
 .Li value
 attribute is covered by the object's bitmask.
 Only applicable to bit types.
-.It Li foo-xxxx-date
+.It Li foo-xxxx-date-text
+Replaces the contents of the element with the ISO 8601 date of the
+object's value.
+Only applicable to date and epoch types.
+.It Li foo-xxxx-date-value
 Sets the
 .Li value
 attribute to the ISO 8601 date of the object's value.
@@ -154,10 +158,9 @@ new kwebapp.client(obj).fillInner(document, custom);
 .Pp
 And letting a formatting function be:
 .Bd -literal -offset indent
-function formatDate(e, name, value)
-{
+function formatDate(e, name, value) {
   var list, i;
-  list = e.getElementsByClassName('client-dob-date');
+  list = e.getElementsByClassName('client-dob-date-moment');
   for (i = 0; i < list.length; i++)
     list[i].innerHTML =
       moment.unix(value).format('DD-MM-YYYY'));
@@ -199,8 +202,7 @@ field of structure
 is a UNIX epoch, the format function accepts a number or null.
 .Bd -literal -offset indent
 function formatDate(e: HTMLElement,
-  name: string, v: number|null): void
-{
+  name: string, v: number|null): void {
 	/* Do something... */
 }
 .Ed

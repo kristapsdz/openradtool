@@ -25,14 +25,16 @@
 .Op Fl jsv
 .Op Fl g Ar guard
 .Op Fl N Ar db
-.Op Ar config
+.Op Ar config...
 .Sh DESCRIPTION
 The
 .Nm
-utility accepts
+utility accepts a
+.Xr kwebapp 5
 .Ar config
 .Pq defaulting to standard input
 and produces a C API describing the configuration.
+The configuration may be broken apart into several files.
 These declarations is usually defined by the output of
 .Xr kwebapp-c-source 1 .
 Its arguments are as follows:

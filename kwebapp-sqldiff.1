@@ -1,6 +1,6 @@
 .\"	$OpenBSD$
 .\"
-.\" Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+.\" Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -22,15 +22,35 @@
 .Nd generate SQL web application schema differences
 .Sh SYNOPSIS
 .Nm kwebapp-sqldiff
-.Ar oldconfig
+.Op Ar oldconfig...
+.Op \&--
+.Op Ar config...
+.Nm kwebapp-sqldiff
+.Op Ar oldconfig
 .Op Ar config
 .Sh DESCRIPTION
 The
 .Nm
-utility accepts a configuration file
+utility accepts
+.Xr kwebapp 5
+configurations
 .Ar config
+and
+.Ar oldconfig
 .Pq defaulting to standard input
 and produces an SQL schema describing the configuration.
+.Pp
+The old and new configuration must be separated with a double-hyphen
+.Pq Li -- .
+In a special case for simplicity, a single old and new configuration may
+be specified together without the double-hyphen.
+Either
+.Ar oldconfig
+or
+.Ar config
+may be empty, and thus read from standard input, but not both.
+If there is no double-hyphen and there aren't two arguments, all are
+considered to be old configurations with the new read on standard input.
 .Pp
 It outputs a series of
 .Cm CREATE TABLE

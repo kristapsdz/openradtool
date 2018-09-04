@@ -733,7 +733,7 @@ main(int argc, char *argv[])
 out:
 	for (i = 0; i < confsz; i++)
 		if (EOF == fclose(confs[i]))
-			warn("%s", argv[i]);
+			warn("%s", argv[confstart + i]);
 	for (i = 0; i < dconfsz; i++)
 		if (EOF == fclose(dconfs[i]))
 			warn("%s", argv[i]);

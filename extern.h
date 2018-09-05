@@ -229,6 +229,11 @@ struct	field {
 	struct bref	  *bref;  /* enumeration ref (or null) */
 	char		  *doc; /* documentation */
 	struct pos	   pos; /* parse point */
+	union {
+		int64_t integer;
+		double decimal;
+		size_t len;
+	} def; /* a default value */
 	enum ftype	   type; /* type of column */
 	enum upact	   actdel; /* delete action */
 	struct rolemap	  *rolemap; /* roles for not exporting */
@@ -240,6 +245,7 @@ struct	field {
 #define	FIELD_UNIQUE	   0x02 /* this is a unique field */
 #define FIELD_NULL	   0x04 /* can be null */
 #define	FIELD_NOEXPORT	   0x08 /* don't export the field (JSON) */
+#define FIELD_HASDEF	   0x10 /* has a default value */
 	TAILQ_ENTRY(field) entries;
 };
 

@@ -1036,6 +1036,30 @@ parse_config_field_info(struct parse *p, struct field *fd)
 				break;
 			}
 			parse_action(p, &fd->actdel);
+		} else if (0 == strcasecmp(p->last.string, "default")) {
+			switch (fd->type) {
+			case FTYPE_BIT:
+			case FTYPE_BITFIELD:
+			case FTYPE_INT:
+				if (TOK_INTEGER != parse_next(p)) {
+					parse_errx(p, "expected integer");
+					return;
+				}
+				fd->flags |= FIELD_HASDEF;
+				fd->def.integer = p->last.integer;
+				break;
+			case FTYPE_REAL:
+				if (TOK_DECIMAL != parse_next(p)) {
+					parse_errx(p, "expected real");
+					return;
+				}
+				fd->flags |= FIELD_HASDEF;
+				fd->def.decimal = p->last.decimal;
+				break;
+			default:
+				parse_errx(p, "defaults restricted to integers");
+				break;
+			}
 		} else
 			parse_errx(p, "unknown field info token");
 	}

@@ -3,6 +3,36 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.6.0</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-09-06">2018-09-06</time>
+		</header>
+		<aside>
+			<p>
+				Allow configuration files to be broken apart for several applications.
+				Now, all <span class="nm">kwebapp</span> utilities may be invoked
+				with multiple files per configuration.
+				This has made <a href="kwebapp-sqldiff.1.html">kwebapp-sqldiff(1)</a>
+				and <a href="kwebapp-xliff.1.html">kwebapp-xliff(1)</a> have
+				slightly awkward syntax for many-many invocations, 
+				but the usual UNIX conventions of standard input and option parsing
+				are respected.
+				The existing calling convention is also still usable.
+			</p>
+			<p>
+				For <a href="kwebapp-sqldiff.1.html">kwebapp-sqldiff(1)</a>,
+				introduce the concept of a default value that's used in <code>ALTER
+					TABLE</code> statements for new columns.
+				This currently is only defined for number types.
+			</p>
+			<p>
+				Rename <code>xxx-yyy-date</code> to <code>xxx-yyy-date-value</code>
+				for consistency (oops!), then add <code>xxx-yyy-date-text</code>.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.5.7</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-08-25">2018-08-25</time>

@@ -962,10 +962,10 @@ out:
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 
-		"usage: %s [-c] -j config... -x xliffs...\n"
-		"       %s [-c] -j config xliff\n"
-		"       %s [-c] -u config... -x xliff\n"
-		"       %s [-c] -u config xliff\n"
+		"usage: %s [-c] -j [config...] -x [xliff...]\n"
+		"       %s [-c] -j config [xliff]\n"
+		"       %s [-c] -u [config...] -x [xliff]\n"
+		"       %s [-c] -u config [xliff]\n"
 		"       %s [-c] [config...]\n",
 		getprogname(), getprogname(), getprogname(),
 		getprogname(), getprogname());

@@ -22,6 +22,7 @@
 #if HAVE_ERR
 # include <err.h>
 #endif
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -398,6 +399,24 @@ gen_diff_fields_new(const struct strct *s,
 			if (UPACT_NONE != f->actdel)
 				printf(" ON DELETE %s", 
 					upacts[f->actdel]);
+			if (FIELD_HASDEF & f->flags) {
+				switch (f->type) {
+				case FTYPE_BIT:
+				case FTYPE_BITFIELD:
+				case FTYPE_INT:
+					printf(" DEFAULT %" PRId64,
+						f->def.integer);
+					break;
+				case FTYPE_REAL:
+					printf(" DEFAULT %g",
+						f->def.decimal);
+					break;
+				default:
+					abort();
+					break;
+				}
+			}
+
 			puts(";");
 			count++;
 		} else if ( ! gen_diff_field(f, df))

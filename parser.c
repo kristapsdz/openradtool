@@ -1043,18 +1043,23 @@ parse_config_field_info(struct parse *p, struct field *fd)
 			case FTYPE_INT:
 				if (TOK_INTEGER != parse_next(p)) {
 					parse_errx(p, "expected integer");
-					return;
+					break;
 				}
 				fd->flags |= FIELD_HASDEF;
 				fd->def.integer = p->last.integer;
 				break;
 			case FTYPE_REAL:
-				if (TOK_DECIMAL != parse_next(p)) {
-					parse_errx(p, "expected real");
-					return;
+				parse_next(p);
+				if (TOK_DECIMAL != p->lasttype &&
+				    TOK_INTEGER != p->lasttype) {
+					parse_errx(p, "expected "
+						"real or integer");
+					break;
 				}
 				fd->flags |= FIELD_HASDEF;
-				fd->def.decimal = p->last.decimal;
+				fd->def.decimal = 
+					TOK_DECIMAL == p->lasttype ?
+					p->last.decimal : p->last.integer;
 				break;
 			default:
 				parse_errx(p, "defaults restricted to integers");
@@ -2826,6 +2831,7 @@ int
 parse_config_r(struct config *cfg, FILE *f, const char *fname)
 {
 	struct parse	 p;
+	int		 rc = 0;
 
 	cfg->fnames = reallocarray
 		(cfg->fnames, 
@@ -2886,12 +2892,10 @@ parse_config_r(struct config *cfg, FILE *f, const char *fname)
 			parse_errx(&p, "unknown top-level type");
 	}
 
-	free(p.buf);
-	return 1;
+	rc = 1;
 error:
 	free(p.buf);
-	config_free(cfg);
-	return 0;
+	return rc;
 }
 
 struct config *
@@ -2900,6 +2904,8 @@ parse_config(FILE *f, const char *fname)
 	struct config	*cfg;
 
 	cfg = config_alloc();
-	return parse_config_r(cfg, f, fname) ? cfg : NULL;
+	if (parse_config_r(cfg, f, fname))
+		return cfg;
+	config_free(cfg);
+	return NULL;
 }
-

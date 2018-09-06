@@ -629,8 +629,7 @@ main(int argc, char *argv[])
 {
 	FILE		**confs = NULL, **dconfs = NULL;
 	struct config	 *cfg, *dcfg = NULL;
-	int		  rc = 1;
-	int		  diff = 0;
+	int		  rc = 1, diff = 0;
 	size_t		  confsz = 0, dconfsz = 0, i, j, 
 			  confstart = 0;
 
@@ -656,36 +655,28 @@ main(int argc, char *argv[])
 			}
 		}
 	} else if (0 == strcmp(getprogname(), "kwebapp-sqldiff")) {
+		argv++;
+		argc--;
 		diff = 1;
-		if (-1 != getopt(argc, argv, ""))
-			goto usage;
-		argc -= optind;
-		argv += optind;
-		if (0 == argc ||
-		    (1 == argc && 0 == strcmp(argv[0], "--")))
-			goto usage;
 
-		/* 
-		 * Invocations:
-		 * kwebapp-sqldiff dconf
-		 * kwebapp-sqldiff -- # error: no confs
-		 * kwebapp-sqldiff dconf conf # special case
-		 * kwebapp-sqldiff dconf1... "--" conf1...
-		 *
-		 * At least one dconf OR conf must be specified.
-		 * If either is zero and that holds, the zeroth is
-		 * replaced with stdin.
-		 */
+		/* Read up until "-f" (or argc) for old configs. */
 
 		for (dconfsz = 0; dconfsz < (size_t)argc; dconfsz++)
-			if (0 == strcmp(argv[dconfsz], "--"))
+			if (0 == strcmp(argv[dconfsz], "-f"))
 				break;
+		
+		/* If we have >2 w/o -f, error (which old/new?). */
+
+		if (dconfsz == (size_t)argc && argc > 2)
+			goto usage;
+
 		if ((i = dconfsz) < (size_t)argc)
 			i++;
+
 		confstart = i;
 		confsz = argc - i;
 
-		/* Special case. */
+		/* If we have 2 w/o -f, it's old-new. */
 
 		if (0 == confsz && 2 == argc)
 			confsz = dconfsz = confstart = 1;
@@ -702,7 +693,7 @@ main(int argc, char *argv[])
 				goto out;
 			}
 		}
-		if (i < (size_t)argc && 0 == strcmp(argv[i], "--"))
+		if (i < (size_t)argc && 0 == strcmp(argv[i], "-f"))
 			i++;
 		for (j = 0; i < (size_t)argc; j++, i++) {
 			confs[j] = fopen(argv[i], "r");
@@ -723,20 +714,29 @@ main(int argc, char *argv[])
 	cfg = config_alloc();
 	dcfg = config_alloc();
 
-	for (i = 0; i < confsz; i++)
+	for (i = 0; i < confsz; i++) {
+		warnx("new conf: %s", argv[confstart + i]);
 		if ( ! parse_config_r(cfg, 
 		    confs[i], argv[confstart + i]))
 			goto out;
-	if (0 == confsz && ! parse_config_r(cfg, stdin, "<stdin>"))
-		goto out;
+	}
+	if (0 == confsz) {
+		warnx("new conf: (stdin)");
+		if ( ! parse_config_r(cfg, stdin, "<stdin>"))
+			goto out;
+	}
 
-	for (i = 0; i < dconfsz; i++)
+	for (i = 0; i < dconfsz; i++) {
+		warnx("old conf: %s", argv[i]);
 		if ( ! parse_config_r(dcfg, 
 		    dconfs[i], argv[i]))
 			goto out;
-	if (0 == dconfsz && diff &&
-	    ! parse_config_r(dcfg, stdin, "<stdin>"))
-		goto out;
+	}
+	if (0 == dconfsz && diff) {
+		warnx("old conf: (stdin)");
+		if ( ! parse_config_r(dcfg, stdin, "<stdin>"))
+			goto out;
+	}
 
 	if ( ! parse_link(cfg))
 		goto out;
@@ -769,9 +769,8 @@ usage:
 			getprogname());
 	else 
 		fprintf(stderr, 
-			"usage: %s oldconfig\n"
-			"usage: %s oldconfig config\n"
-			"usage: %s [oldconfig...] -- [config...]\n",
-			getprogname(), getprogname(), getprogname());
+			"usage: %s oldconfig [config]\n"
+			"       %s [oldconfig...] -f [config...]\n",
+			getprogname(), getprogname());
 	return EXIT_FAILURE;
 }

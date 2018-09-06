@@ -23,22 +23,38 @@
 .Sh SYNOPSIS
 .Nm kwebapp-xliff
 .Op Fl c
-.Fl j Ar config
+.Fl j
+.Ar config
+.Op Ar xliff
+.Nm kwebapp-xliff
+.Op Fl c
+.Fl j
+.Op Ar config...
+.Fl x
 .Op Ar xliff...
 .Nm kwebapp-xliff
 .Op Fl c
-.Fl u Ar config
-.Ar xliff
+.Fl u
+.Ar config
+.Op Ar xliff
 .Nm kwebapp-xliff
 .Op Fl c
-.Op Ar config
+.Fl u
+.Op Ar config...
+.Fl x
+.Op Ar xliff
+.Nm kwebapp-xliff
+.Op Fl c
+.Op Ar config...
 .Sh DESCRIPTION
 The
 .Nm
 utility extracts, merges, and updates translatable strings from and into
+a
 .Xr kwebapp 5
-configurations.
-These strings are used only by
+configuration.
+The configuration may be broken apart into several files.
+The translated strings are used only by
 .Xr kwebapp-javascript 1 .
 By default,
 .Nm
@@ -49,16 +65,14 @@ The arguments are as follows:
 Instead of creating an empty target when extracting strings, joining
 translation, or updating with new translations, fill in the target with
 the source.
-.It Fl j Ar config
+.It Fl j
 Merges one or more
 .Ar xliff
 files with an untranslated
-.Xr kwebapp 5
-configuration file
 .Ar config ,
 producing another configuration on standard output containing the
 translated strings.
-.It Fl u Ar config
+.It Fl u
 Update the
 .Ar xliff
 file with new translation labels found in
@@ -70,7 +84,19 @@ An XLIFF 1.2 file containing translated strings.
 A
 .Xr kwebapp 5
 configuration file.
+There may be multiple files in a single configuration.
 .El
+.Pp
+When invoked with
+.Fl j
+or
+.Fl u ,
+multiple
+.Xr kwebapp 5
+configuration files and XLIFF files as arguments must be broken up by
+the
+.Fl x
+flag, which signals the beginning of the XLIFF files.
 .Pp
 Translatable content in
 .Xr kwebapp 5
@@ -99,7 +125,7 @@ Use the produced configuration for further use in
 .El
 .Pp
 With these steps, integral enumeration values produced by the JSON
-output of 
+output of
 .Xr kwebapp-c-source 1
 and
 .Xr kwebapp-c-header 1
@@ -115,7 +141,9 @@ may be translated into human-readable, language-specific labels.
 .Sh EXIT STATUS
 .Ex -std
 .Sh EXAMPLES
-Take a dummy configuration containing the following:
+Take a dummy configuration
+.Pa foo.kwbp
+containing the following:
 .Bd -literal
 enum foo {
   item bar 0 jslabel "bar";
@@ -123,10 +151,9 @@ enum foo {
 };
 .Ed
 .Pp
-When run through
-.Nm ,
-this configuration produces the following translatable strings:
+Begin by extracting translatable strings from the input.
 .Bd -literal
+% kwebapp-xliff foo.kwbp
 <xliff version="1.2">
   <file target-language="TODO" tool="kwebapp-xliff">
     <body>
@@ -148,11 +175,11 @@ and translate the strings into
 and
 .Qq le foo ,
 respectively.
-Run through
-.Nm
-.Fl j ,
-this produces:
+Then join the output,
+.Pa foo.fr.xliff ,
+with the input configuration.
 .Bd -literal
+% kwebapp-xliff -j foo.kwbp foo.fr.xliff
 enum foo {
   item bar 0
     jslabel "bar"
@@ -166,6 +193,25 @@ enum foo {
 This output file can then be used with
 .Xr kwebapp-javascript 1
 to have per-language label filling.
+.Pp
+Multiple configuration files, when joining, may also be specified.
+.Bd -literal
+% kwebapp-xliff -j foo1.kwbp foo2.kwbp -x foo.fr.xliff
+.Ed
+.Pp
+The configuration or XLIFF files may also be passed on standard input by
+omitting the file.
+In the first case, the configuration is omitted.
+(The special
+.Dq \&--
+is used to prevent
+.Fl x
+from being interpreted as a command-line option.)
+In the second case, it's the translation file.
+.Bd -literal
+% kwebapp-xliff -j -- -x foo.fr.xliff < foo.kwbp
+% kwebapp-xliff -j foo1.kwbp foo2.kwbp -x < foo.xliff
+.Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
 .\" .Sh ERRORS

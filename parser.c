@@ -322,17 +322,23 @@ check_dupetoplevel(struct parse *p, const char *name)
 
 	TAILQ_FOREACH(e, &p->cfg->eq, entries)
 		if (0 == strcasecmp(e->name, name)) {
-			parse_errx(p, "duplicates enum name");
+			parse_errx(p, "duplicates enum name: "
+				"%s:%zu:%zu", e->pos.fname, 
+				e->pos.line, e->pos.column);
 			return(0);
 		}
 	TAILQ_FOREACH(b, &p->cfg->bq, entries)
 		if (0 == strcasecmp(b->name, name)) {
-			parse_errx(p, "duplicates bitfield name");
+			parse_errx(p, "duplicates bitfield name: "
+				"%s:%zu:%zu", b->pos.fname, 
+				b->pos.line, b->pos.column);
 			return(0);
 		}
 	TAILQ_FOREACH(s, &p->cfg->sq, entries) 
 		if (0 == strcasecmp(s->name, name)) {
-			parse_errx(p, "duplicates struct name");
+			parse_errx(p, "duplicates struct name: "
+				"%s:%zu:%zu", s->pos.fname, 
+				s->pos.line, s->pos.column);
 			return(0);
 		}
 	

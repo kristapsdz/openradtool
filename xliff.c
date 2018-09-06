@@ -17,8 +17,6 @@
 #include "config.h"
 
 #include <sys/queue.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
 
 #include <assert.h>
 #if HAVE_ERR
@@ -54,7 +52,6 @@ struct	xliffset {
 struct	xparse {
 	XML_Parser	  p;
 	const char	 *fname; /* xliff filename */
-	const struct config *cfg;
 	struct xliffset	 *set; /* resulting translation units */
 	struct xliffunit *curunit; /* current translating unit */
 	int		  type; /* >0 source, <0 target, 0 none */
@@ -325,81 +322,47 @@ xend(void *dat, const XML_Char *s)
 	}
 }
 
-static int
-map_open(const char *fn, size_t *mapsz, char **map)
-{
-	struct stat	 st;
-	int	 	 fd;
-
-	if (-1 == (fd = open(fn, O_RDONLY, 0))) {
-		warn("%s", fn);
-		return -1;
-	} else if (-1 == fstat(fd, &st)) {
-		warn("%s", fn);
-		close(fd);
-		return -1;
-	} else if ( ! S_ISREG(st.st_mode)) {
-		warnx("%s: not regular", fn);
-		close(fd);
-		return -1;
-	} else if (st.st_size >= (1U << 31)) {
-		warnx("%s: too large", fn);
-		close(fd);
-		return -1;
-	}
-
-	*mapsz = st.st_size;
-	*map = mmap(NULL, st.st_size, 
-		PROT_READ, MAP_SHARED, fd, 0);
-
-	if (MAP_FAILED == *map) {
-		warn("%s", fn);
-		close(fd);
-		fd = -1;
-	}
-
-	return fd;
-}
-
-static void
-map_close(int fd, void *map, size_t mapsz)
-{
-
-	munmap(map, mapsz);
-	close(fd);
-}
-
+/*
+ * Parse an XLIFF file from stdin.
+ * Accepts "fn", which is usually "<stdin>".
+ * Returns NULL on failure or the xliffset on success.
+ */
 static struct xliffset *
-xliff_read(const struct config *cfg, const char *fn, XML_Parser p)
+xliff_read(int fd, const char *fn, XML_Parser p)
 {
 	struct xparse	*xp;
 	struct xliffset	*res = NULL;
-	char		*map;
-	size_t		 mapsz;
-	int		 fd, rc;
-
-	if (-1 == (fd = map_open(fn, &mapsz, &map)))
-		return NULL;
+	ssize_t		 ssz;
+	int		 rc;
+	char		 buf[BUFSIZ];
 
 	xp = xparse_alloc(fn, p);
 	assert(NULL != xp);
-	xp->cfg = cfg;
 
 	XML_ParserReset(p, NULL);
 	XML_SetDefaultHandlerExpand(p, NULL);
 	XML_SetElementHandler(p, xstart, xend);
 	XML_SetUserData(p, xp);
-	rc = XML_Parse(p, map, mapsz, 1);
 
-	map_close(fd, map, mapsz);
+	do {
+		ssz = read(fd, buf, sizeof(buf));
+		if (ssz < 0) {
+			warn("%s", fn);
+			xparse_free(xp);
+			return NULL;
+		} 
+		rc = XML_Parse(p, buf, ssz, 0 == ssz);
+		if (XML_STATUS_OK != rc) {
+			lerr(fn, p, "%s", 
+				XML_ErrorString
+				(XML_GetErrorCode(p)));
+			xparse_free(xp);
+			return NULL;
+		}
+	} while (ssz > 0);
 
-	if (XML_STATUS_OK == rc) {
-		res = xp->set;
-		xp->set = NULL;
-	} else
-		lerr(fn, p, "%s", XML_ErrorString
-			(XML_GetErrorCode(p)));
-
+	res = xp->set;
+	xp->set = NULL;
 	xparse_free(xp);
 	return res;
 }
@@ -702,7 +665,8 @@ xliff_join_xliff(struct config *cfg, int copy,
 }
 
 static int
-xliff_update(struct config *cfg, int copy, const char *fn)
+xliff_update(struct config *cfg, int copy, 
+	const int *xmls, size_t xmlsz, const char **argv)
 {
 	struct xliffset	*x;
 	int		 rc = 0;
@@ -713,13 +677,16 @@ xliff_update(struct config *cfg, int copy, const char *fn)
 	struct bitf	*b;
 	struct bitidx	*bi;
 
+	assert(xmlsz < 2);
+
 	if (NULL == (p = XML_ParserCreate(NULL))) {
 		warn("XML_ParserCreate");
 		return 0;
 	}
 
-	if (NULL == (x = xliff_read(cfg, fn, p)))
-		goto out;
+	x = xmlsz ?
+		xliff_read(xmls[0], argv[0], p) :
+		xliff_read(STDIN_FILENO, "<stdin>", p);
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		TAILQ_FOREACH(ei, &e->eq, entries)
@@ -782,12 +749,66 @@ out:
 	return rc;
 }
 
+/*
+ * Parse an XLIFF file with open descriptor "xml", which may be
+ * STDIN_FILENO (and thus not mmap-able), and merge the translations
+ * with labels in "cfg".
+ * Returns zero on XLIFF parse failure or merge failure, non-zero on
+ * success.
+ */
 static int
-xliff_join(struct config *cfg, int copy,
-	size_t argc, const char **argv)
+xliff_join(struct config *cfg, int copy, 
+	int xml, const char *fn, XML_Parser p)
 {
 	struct xliffset	*x;
-	size_t		 i, j;
+	size_t		 i;
+
+	if (NULL == (x = xliff_read(xml, fn, p)))
+		return 0;
+
+	assert(NULL != x->trglang);
+	for (i = 0; i < cfg->langsz; i++)
+		if (0 == strcmp(cfg->langs[i], x->trglang))
+			break;
+
+	if (i == cfg->langsz) {
+		cfg->langs = reallocarray
+			(cfg->langs,
+			 cfg->langsz + 1,
+			 sizeof(char *));
+		if (NULL == cfg->langs)
+			err(EXIT_FAILURE, NULL);
+		cfg->langs[cfg->langsz] =
+			strdup(x->trglang);
+		if (NULL == cfg->langs[cfg->langsz])
+			err(EXIT_FAILURE, NULL);
+		cfg->langsz++;
+	} else
+		fprintf(stderr, "%s: language \"%s\" is "
+			"already noted\n", fn, x->trglang);
+
+	if ( ! xliff_join_xliff(cfg, copy, i, x)) {
+		xparse_xliff_free(x);
+		return 0;
+	}
+
+	xparse_xliff_free(x);
+	return 1;
+}
+
+/*
+ * Given file descriptors "xmls" of size "xmlsz" identified by "argv",
+ * which may be NULL and zero and NULL, join to configuration "cfg".
+ * Returns zero on XLIFF parse failure or merge failure, non-zero on
+ * success.
+ * On success, the output is printed.
+ */
+static int
+xliff_join_fds(struct config *cfg, int copy, 
+	const int *xmls, size_t xmlsz, const char **argv)
+{
+	int	 	 rc = 1;
+	size_t		 i;
 	XML_Parser	 p;
 
 	if (NULL == (p = XML_ParserCreate(NULL))) {
@@ -795,72 +816,46 @@ xliff_join(struct config *cfg, int copy,
 		return 0;
 	}
 
-	for (i = 0; i < argc; i++) {
-		x = xliff_read(cfg, argv[i], p);
-		if (NULL == x)
-			return 0;
-
-		assert(NULL != x->trglang);
-		for (j = 0; j < cfg->langsz; j++)
-			if (0 == strcmp(cfg->langs[j], x->trglang))
-				break;
-
-		if (j == cfg->langsz) {
-			cfg->langs = reallocarray
-				(cfg->langs,
-				 cfg->langsz + 1,
-				 sizeof(char *));
-			if (NULL == cfg->langs)
-				err(EXIT_FAILURE, NULL);
-			cfg->langs[cfg->langsz] =
-				strdup(x->trglang);
-			if (NULL == cfg->langs[cfg->langsz])
-				err(EXIT_FAILURE, NULL);
-			cfg->langsz++;
-		} else
-			fprintf(stderr, "%s: language \"%s\" "
-				"is already noted\n",
-				argv[i], x->trglang);
-
-		if ( ! xliff_join_xliff(cfg, copy, j, x)) {
-			xparse_xliff_free(x);
-			break;
-		}
-		xparse_xliff_free(x);
-	}
+	for (i = 0; rc && i < xmlsz; i++) 
+		rc = xliff_join(cfg, copy, xmls[i], argv[i], p);
+	if (0 == xmlsz)
+		rc = xliff_join(cfg, copy, STDIN_FILENO, "<stdin>", p);
 
 	XML_ParserFree(p);
 
-	if (i == argc)
+	if (rc)
 		parse_write(stdout, cfg);
-	return i == argc;
+
+	return rc;
 }
 
 int
 main(int argc, char *argv[])
 {
-	FILE		*conf = NULL;
-	const char	*confile = NULL;
-	struct config	*cfg;
-	int		 c, op = 0, copy = 0;
+	FILE		**confs = NULL;
+	int		 *xmls = NULL;
+	struct config	 *cfg;
+#define	OP_EXTRACT	  0
+#define	OP_JOIN		  1
+#define	OP_UPDATE	 (-1)
+	int		  c, op = OP_EXTRACT, copy = 0, rc = 0;
+	size_t		  confsz = 0, i, j, xmlsz = 0, xmlstart = 0;
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio rpath", NULL))
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "cj:u:")))
+	while (-1 != (c = getopt(argc, argv, "cju")))
 		switch (c) {
 		case 'c':
 			copy = 1;
 			break;
 		case 'j':
-			op = 1;
-			confile = optarg;
+			op = OP_JOIN;
 			break;
 		case 'u':
-			op = -1;
-			confile = optarg;
+			op = OP_UPDATE;
 			break;
 		default:
 			goto usage;
@@ -869,40 +864,110 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	if (0 == op) {
-		if (0 == argc) {
-			confile = "<stdin>";
-			conf = stdin;
-		} else
-			confile = argv[0];
-	} else if (op < 0 && 1 != argc)
-		goto usage;
+	if (OP_JOIN == op || OP_UPDATE == op) {
+		for (confsz = 0; confsz < (size_t)argc; confsz++)
+			if (0 == strcmp(argv[confsz], "-x"))
+				break;
 
-	if (NULL == conf &&
-	    NULL == (conf = fopen(confile, "r")))
-		err(EXIT_FAILURE, "%s", confile);
+		/* If we have >2 w/o -x, error (which conf/xml?). */
 
-	cfg = parse_config(conf, confile);
-	fclose(conf);
+		if (confsz == (size_t)argc && argc > 2)
+			goto usage;
+		if ((i = confsz) < (size_t)argc)
+			i++;
 
-	if (NULL == cfg || ! parse_link(cfg)) {
-		config_free(cfg);
-		return EXIT_FAILURE;
+		xmlstart = i;
+		xmlsz = argc - i;
+
+		/* If we have 2 w/o -f, it's old-new. */
+
+		if (0 == xmlsz && 2 == argc)
+			xmlsz = confsz = xmlstart = 1;
+
+		xmls = calloc(xmlsz, sizeof(int));
+		confs = calloc(confsz, sizeof(FILE *));
+		if (NULL == xmls || NULL == confs)
+			err(EXIT_FAILURE, NULL);
+
+		for (i = 0; i < confsz; i++) {
+			confs[i] = fopen(argv[i], "r");
+			if (NULL == confs[i]) {
+				warn("%s", argv[i]);
+				goto out;
+			}
+		}
+		if (i < (size_t)argc && 0 == strcmp(argv[i], "-x"))
+			i++;
+		for (j = 0; i < (size_t)argc; j++, i++) {
+			xmls[j] = open(argv[i], O_RDONLY, 0);
+			if (-1 == xmls[j]) {
+				warn("%s", argv[i]);
+				goto out;
+			}
+		}
+		if (OP_UPDATE == op && xmlsz > 1)
+			goto usage;
+	} else {
+		confsz = (size_t)argc;
+		confs = calloc(confsz, sizeof(FILE *));
+		if (NULL == confs)
+			err(EXIT_FAILURE, NULL);
+		for (i = 0; i < confsz; i++) {
+			confs[i] = fopen(argv[i], "r");
+			if (NULL == confs[i]) {
+				warn("%s", argv[i]);
+				goto out;
+			}
+		}
 	}
 
-	c = 0 == op ? 
-		xliff_extract(cfg, copy) :
-	    op > 0 ?
-		xliff_join(cfg, copy, argc, (const char **)argv) :
-		xliff_update(cfg, copy, argv[0]);
+#if HAVE_PLEDGE
+	if (-1 == pledge("stdio", NULL))
+		err(EXIT_FAILURE, "pledge");
+#endif
 
+	cfg = config_alloc();
+
+	for (i = 0; i < confsz; i++)
+		if ( ! parse_config_r(cfg, confs[i], argv[i]))
+			goto out;
+
+	if (0 == confsz)
+		if ( ! parse_config_r(cfg, stdin, "<stdin>"))
+			goto out;
+
+	if ( ! parse_link(cfg))
+		goto out;
+
+	rc = OP_EXTRACT == op ? 
+		xliff_extract(cfg, copy) :
+	    OP_JOIN == op ?
+		xliff_join_fds(cfg, copy, xmls, xmlsz, 
+			(const char **)&argv[xmlstart + i]) :
+		xliff_update(cfg, copy, xmls, xmlsz, 
+			(const char **)&argv[xmlstart + i]);
+
+out:
+	for (i = 0; i < xmlsz; i++)
+		if (-1 != xmls[i] && -1 == close(xmls[i]))
+			warn("%s", argv[xmlstart + i]);
+	for (i = 0; i < confsz; i++)
+		if (EOF == fclose(confs[i]))
+			warn("%s", argv[i]);
+
+	free(confs);
+	free(xmls);
 	config_free(cfg);
-	return c ? EXIT_SUCCESS : EXIT_FAILURE;
+
+	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 
-		"usage: %s [-c] -j config xliffs...\n"
+		"usage: %s [-c] -j config... -x xliffs...\n"
+		"       %s [-c] -j config xliff\n"
+		"       %s [-c] -u config... -x xliff\n"
 		"       %s [-c] -u config xliff\n"
-		"       %s [-c] [config]\n",
-		getprogname(), getprogname(), getprogname());
+		"       %s [-c] [config...]\n",
+		getprogname(), getprogname(), getprogname(),
+		getprogname(), getprogname());
 	return EXIT_FAILURE;
 }

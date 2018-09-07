@@ -82,6 +82,10 @@ to wrap the edit script in a transaction.
     echo "COMMIT TRANSACTION ;" ) | sqlite3 foo.db
 .Ed
 .Pp
+There is no additional processing in the database edit script: if the
+script is run twice, it will attempt to create tables and modify columns
+twice.
+.Pp
 The SQL generated is designed for
 .Xr sqlite3 1 .
 .\" The following requests should be uncommented and used where appropriate.

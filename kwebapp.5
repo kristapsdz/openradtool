@@ -1,6 +1,6 @@
 .\"	$Id$
 .\"
-.\" Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+.\" Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -351,6 +351,12 @@ or
 This is only available on foreign key references.
 .It Cm comment Ar string_literal
 Documents the field using the quoted string.
+.It Cm default Ar integer|decimal
+Set a default value for the column that's used
+.Em only
+when adding columns to the SQL schema via
+.Xr kwebapp-sqldiff 1 .
+It's only valid for numeric field types.
 .It Cm limit Ar limit_op limit_val
 Used when generating validation functions.
 Only available for native types.
@@ -852,7 +858,8 @@ Labels specify how
 .Cm bits
 and
 .Cm enum
-types and their items may be described by a front-end formatter.
+types and their items may be described by a front-end formatter such as
+.Xr kwebapp-javascript 1 .
 That is, while the string value of a
 .Cm struct
 item describes itself, an

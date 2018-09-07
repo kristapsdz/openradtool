@@ -75,7 +75,50 @@ The SQL generated is designed for
 .\" .Sh FILES
 .Sh EXIT STATUS
 .Ex -std
-.\" .Sh EXAMPLES
+.Sh EXAMPLES
+Let an existing configuration,
+.Pa old.kwbp ,
+consist of a
+.Dq client
+structure.
+.Bd -literal
+struct client {
+  field name text limit gt 0;
+  field id int rowid;
+};
+.Ed
+.Pp
+A new configuration,
+.Pa new.kwbp ,
+augments this structure by adding a new field, and also adds a structure.
+.Bd -literal
+struct client {
+  field name text limit gt 0;
+  field dob epoch;
+  field id int rowid;
+};
+struct admin {
+  field name text limit gt 0;
+  field id int rowid;
+};
+.Ed
+.Pp
+This generates the following update script.
+.Bd -literal
+% kwebapp-sqldiff old.kwbp new.kwbp
+PRAGMA foreign_keys=ON;
+CREATE TABLE admin (
+  name TEXT NOT NULL,
+  id INTEGER PRIMARY KEY
+);
+ALTER TABLE client ADD COLUMN dob INTEGER NOT NULL DEFAULT 0;
+.Ed
+.Pp
+Since edit scripts are always non-destructive, the results may be piped
+directly into the database.
+.Bd -literal
+% kwebapp-sqldiff old.kwbp new.kwbp | sqlite3 foo.db
+.Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
 .\" .Sh ERRORS

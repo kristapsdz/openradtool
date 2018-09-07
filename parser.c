@@ -1046,6 +1046,7 @@ parse_config_field_info(struct parse *p, struct field *fd)
 			switch (fd->type) {
 			case FTYPE_BIT:
 			case FTYPE_BITFIELD:
+			case FTYPE_EPOCH:
 			case FTYPE_INT:
 				if (TOK_INTEGER != parse_next(p)) {
 					parse_errx(p, "expected integer");

@@ -2476,7 +2476,7 @@ int
 main(int argc, char *argv[])
 {
 	const char	 *header = NULL, *incls = NULL;
-	struct config	 *cfg;
+	struct config	 *cfg = NULL;
 	int		  c, json = 0, valids = 0,
 			  splitproc = 0, dbin = 1, rc = 0;
 	FILE		**confs = NULL;

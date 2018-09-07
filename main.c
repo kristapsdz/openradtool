@@ -31,7 +31,7 @@
 int
 main(int argc, char *argv[])
 {
-	struct config	 *cfg;
+	struct config	 *cfg = NULL;
 	size_t		  i, confsz;
 	int		  rc = 0;
 	FILE		**confs = NULL;

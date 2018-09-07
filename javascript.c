@@ -1400,7 +1400,7 @@ gen_javascript(const struct config *cfg, int tsc)
 int
 main(int argc, char *argv[])
 {
-	struct config	 *cfg;
+	struct config	 *cfg = NULL;
 	int		  c, typescript = 0, rc = 0;
 	FILE		**confs = NULL;
 	size_t		  i, confsz;

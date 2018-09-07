@@ -834,7 +834,7 @@ main(int argc, char *argv[])
 {
 	FILE		**confs = NULL;
 	int		 *xmls = NULL;
-	struct config	 *cfg;
+	struct config	 *cfg = NULL;
 #define	OP_EXTRACT	  0
 #define	OP_JOIN		  1
 #define	OP_UPDATE	 (-1)

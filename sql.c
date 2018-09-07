@@ -403,6 +403,7 @@ gen_diff_fields_new(const struct strct *s,
 				switch (f->type) {
 				case FTYPE_BIT:
 				case FTYPE_BITFIELD:
+				case FTYPE_EPOCH:
 				case FTYPE_INT:
 					printf(" DEFAULT %" PRId64,
 						f->def.integer);
@@ -631,7 +632,7 @@ main(int argc, char *argv[])
 	struct config	 *cfg, *dcfg = NULL;
 	int		  rc = 1, diff = 0;
 	size_t		  confsz = 0, dconfsz = 0, i, j, 
-			  confstart = 0;
+			  confst = 0;
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio rpath", NULL))
@@ -673,13 +674,13 @@ main(int argc, char *argv[])
 		if ((i = dconfsz) < (size_t)argc)
 			i++;
 
-		confstart = i;
+		confst = i;
 		confsz = argc - i;
 
 		/* If we have 2 w/o -f, it's old-new. */
 
 		if (0 == confsz && 2 == argc)
-			confsz = dconfsz = confstart = 1;
+			confsz = dconfsz = confst = 1;
 
 		confs = calloc(confsz, sizeof(FILE *));
 		dconfs = calloc(dconfsz, sizeof(FILE *));
@@ -714,29 +715,19 @@ main(int argc, char *argv[])
 	cfg = config_alloc();
 	dcfg = config_alloc();
 
-	for (i = 0; i < confsz; i++) {
-		warnx("new conf: %s", argv[confstart + i]);
-		if ( ! parse_config_r(cfg, 
-		    confs[i], argv[confstart + i]))
+	for (i = 0; i < confsz; i++)
+		if ( ! parse_config_r(cfg, confs[i], argv[confst + i]))
 			goto out;
-	}
-	if (0 == confsz) {
-		warnx("new conf: (stdin)");
+	if (0 == confsz)
 		if ( ! parse_config_r(cfg, stdin, "<stdin>"))
 			goto out;
-	}
 
-	for (i = 0; i < dconfsz; i++) {
-		warnx("old conf: %s", argv[i]);
-		if ( ! parse_config_r(dcfg, 
-		    dconfs[i], argv[i]))
+	for (i = 0; i < dconfsz; i++)
+		if ( ! parse_config_r(dcfg, dconfs[i], argv[i]))
 			goto out;
-	}
-	if (0 == dconfsz && diff) {
-		warnx("old conf: (stdin)");
+	if (0 == dconfsz && diff)
 		if ( ! parse_config_r(dcfg, stdin, "<stdin>"))
 			goto out;
-	}
 
 	if ( ! parse_link(cfg))
 		goto out;
@@ -752,7 +743,7 @@ main(int argc, char *argv[])
 out:
 	for (i = 0; i < confsz; i++)
 		if (EOF == fclose(confs[i]))
-			warn("%s", argv[confstart + i]);
+			warn("%s", argv[confst + i]);
 	for (i = 0; i < dconfsz; i++)
 		if (EOF == fclose(dconfs[i]))
 			warn("%s", argv[i]);

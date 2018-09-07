@@ -63,6 +63,25 @@ The configuration files are considered incompatible if they contain
 destructive differences: dropped objects (structures or fields) or
 different fields (types, references, attributes).
 .Pp
+If fields are added to a structure (columns to a table), the
+.Cm default
+statement is used for generating an SQL default value.
+If a
+.Cm default
+statement is not provided for columns
+.Cm NOT NULL ,
+the update will fail as-is and must be manually edited with default
+values.
+.Pp
+It's good practise, but not enforced by
+.Nm ,
+to wrap the edit script in a transaction.
+.Bd -literal
+% ( echo "BEGIN EXCLUSIVE TRANSACTION ;" \e
+    kwebapp-sqldiff old.kwbp new.kwbp ; \e
+    echo "COMMIT TRANSACTION ;" ) | sqlite3 foo.db
+.Ed
+.Pp
 The SQL generated is designed for
 .Xr sqlite3 1 .
 .\" The following requests should be uncommented and used where appropriate.

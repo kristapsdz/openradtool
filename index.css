@@ -5,14 +5,14 @@ body					{ font-family: "Alegreya Sans", sans-serif;
 				 	  font-size: 14pt; }
 a					{ color: #07889b; }
 body > header				{ width: 100%; 
-					  padding-bottom: 64pt;
+					  padding-bottom: 32pt;
 					  background-color: #07aabb;
 					  color: #fff;
 					  font-size: 0;
 					  margin-bottom: 2.2em;
 					  text-align: center; }
 b, strong				{ font-weight: 500; }
-.intro					{ font-size: larger; 
+.intro					{ font-size: 15pt; 
 					  margin-top: 2em; }
 .topicbox  + .topicbox			{ margin-top: 1.1em; }
 .topicbox > div:nth-child(2)		{ font-size: 12pt; }
@@ -32,7 +32,7 @@ b, strong				{ font-weight: 500; }
 					  padding: 10pt 32pt;
 					  border-bottom-left-radius: 8pt; }
 #archive #header			{ margin-top: 24pt; }
-#header					{ margin-top: 64pt; 
+#header					{ margin-top: 48pt; 
 					  font-size: 16pt; }
 #header > div:first-child		{ margin: 1em 0; }
 #header nav a				{ color: #eee; 
@@ -104,7 +104,7 @@ nav[data-sblg-nav] li + li		{ margin-top: 2em; }
 #archive nav[data-sblg-nav] li > div:first-child	
 					{ font-weight: 500; }
 .blue					{ color: blue; }
-.topics					{ margin: 2em 0; }
+.topics					{ margin: 1.1em 0; }
 
 @media only screen and (max-width: 900px), only screen and (max-device-width: 900px) {
  article > section			{ width: 80%; }

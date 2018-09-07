@@ -24,6 +24,7 @@
 				introduce the concept of a default value that's used in <code>ALTER
 					TABLE</code> statements for new columns.
 				This currently is only defined for number types.
+				The default is documented in <a href="kwebapp.5.html">kwebapp(5)</a>.
 			</p>
 			<p>
 				Rename <code>xxx-yyy-date</code> to <code>xxx-yyy-date-value</code>

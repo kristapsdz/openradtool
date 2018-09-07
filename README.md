@@ -1,8 +1,9 @@
 # Introduction
 
 *kwebapp* translates business logic of a database application---objects
-and queries---into C, SQL ([SQLite](https://sqlite.org)), and JavaScript
-code.  The business logic is given as a configuration file, for example:
+and queries---into C, SQL ([SQLite](https://sqlite.org)), and
+TypeScript/JavaScript code.  The business logic is given as a
+configuration file, for example:
 
 ```
 struct user {
@@ -59,6 +60,8 @@ the database and allocating objects.  Some more features:
 - Optional JSON output functions.
 - Optional field validation ([kcgi(3)](https://kristaps.bsd.lv/kcgi))
   functions.
+- Well-documented JavaScript or TypeScript handling of the JSON
+  output generator.
 
 See the [TODO](TODO.md) for what still needs to be done.
 

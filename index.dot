@@ -32,12 +32,12 @@ digraph {
 	ksql[label="ksql(3)", fontcolor="#888888", color="#888888"];
 	sqlite[label="sqlite3(3)", fontcolor="#888888", color="#888888"];
 
-	sql -> sqlite1[style="dotted"];
+	sql -> sqlite1;
 
 	js -> tsc;
 	js -> jsdoc;
 
-	src -> ksql[dir="both"; style="dotted"];
-	src -> kcgi[dir="both"; style="dotted"];
-	ksql -> sqlite[dir="both"; style="dotted"];
+	src -> ksql[dir="both"];
+	src -> kcgi[dir="both"];
+	ksql -> sqlite[dir="both"];
 }

@@ -44,10 +44,10 @@
 			<section>
 				<p class="intro">
 					<span class="nm">kwebapp</span> is an <a href="https://opensource.org/licenses/ISC">open source</a> UNIX
-					system generating front-end (<strong>JavaScript</strong>, <strong>TypeScript</strong>) and back-end
-					(<strong>SQL</strong>, <strong>C</strong>) for your web application, leaving you to develop your
-					business and presentation logic.
-					This system is still being developed.
+					<abbr title="rapid application development">RAD</abbr> tool generating front-end code
+					(<strong>JavaScript</strong>, <strong>TypeScript</strong>) and back-end code (<strong>SQL</strong>,
+					<strong>C</strong>) for your web application, leaving you to develop your <q>middle-tier</q> business
+					and presentation logic.  It's designed for small to medium deployments.
 				</p>
 				<p>
 					The system consists of a set of source generators, each accepting a single <a

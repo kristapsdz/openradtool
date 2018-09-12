@@ -23,6 +23,7 @@
 #if HAVE_ERR
 # include <err.h>
 #endif
+#include <fcntl.h>
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -31,7 +32,15 @@
 #include <unistd.h>
 
 #include "version.h"
+#include "paths.h"
 #include "extern.h"
+
+enum	external {
+	EX_GENSALT, /* gensalt.c */
+	EX_B64_NTOP, /* b64_ntop.c */
+	EX_JSMN, /* jsmn.c */
+	EX__MAX
+};
 
 /*
  * SQL operators.
@@ -160,7 +169,7 @@ gen_print_newpass(int ptr, size_t pos, size_t npos)
 		"hash%zu, sizeof(hash%zu));\n",
 		ptr ? "*" : "", npos, pos, pos);
 #else
-	printf("\tstrncpy(hash%zu, crypt(%sv%zu, gensalt()), "
+	printf("\tstrncpy(hash%zu, crypt(%sv%zu, _gensalt()), "
 		"sizeof(hash%zu));\n",
 		pos, ptr ? "*" : "", npos, pos);
 #endif
@@ -1702,6 +1711,153 @@ gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 	}
 }
 
+static size_t
+count_json_tokens_r(const struct strct *p)
+{
+	const struct field *f;
+	size_t	 tok = 0;
+
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (FTYPE_STRUCT == f->type) {
+			tok += count_json_tokens_r
+				(f->ref->target->parent);
+		} else
+			tok += 2;
+
+	return 1 + tok;
+}
+
+static void
+gen_func_json_parse(const struct strct *p)
+{
+	size_t	 	 toks;
+	int		 hasenum = 0, hasint = 0;
+	const struct field *f;
+
+	TAILQ_FOREACH(f, &p->fq, entries) 
+		if ( ! (FIELD_NOEXPORT & f->flags))
+			switch (f->type) {
+			case FTYPE_EPOCH:
+				hasenum = 1;
+				/* FALLTHROUGH */
+			case FTYPE_BIT:
+			case FTYPE_BITFIELD:
+			case FTYPE_DATE:
+			case FTYPE_INT:
+			case FTYPE_REAL:
+				hasint = 1;
+				break;
+			default:
+				break;
+			}
+
+	toks = count_json_tokens_r(p);
+	print_func_json_parse(p, 0);
+	printf("\n"
+	       "{\n"
+	       "\tint rc;\n"
+	       "\tsize_t i, toksz;\n"
+	       "\tjsmn_parser jp;\n"
+	       "\tjsmntok_t t[%zu];\n",
+	       toks);
+	if (hasenum)
+		puts("\tint64_t tmpint;");
+	if (hasint)
+		puts("\tchar tmp[128];");
+
+	printf("\n"
+	       "\t_jsmn_init(&jp);\n"
+	       "\tmemset(p, 0, sizeof(struct %s));\n"
+	       "\tif ((rc = _jsmn_parse(&jp, buf, sz, t, %zu)) <= 0)\n"
+	       "\t\treturn 0;\n"
+	       "\ttoksz = (size_t)rc;\n"
+	       "\tfor (i = 0; i < toksz; i++) {\n",
+	       p->name, toks);
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FIELD_NOEXPORT & f->flags)
+			continue;
+		printf("\t\tif (_jsmn_eq(buf, &t[i], \"%s\")) {\n",
+			f->name);
+
+		if (FIELD_NULL & f->flags)
+			printf("\t\t\tp->has_%s = 1;\n", f->name);
+
+		switch (f->type) {
+		case FTYPE_BIT:
+		case FTYPE_BITFIELD:
+		case FTYPE_DATE:
+		case FTYPE_EPOCH:
+		case FTYPE_INT:
+			printf("\t\t\tmemset(tmp, 0, sizeof(tmp));\n"
+			       "\t\t\tmemcpy(tmp, buf + t[i+1].start, "
+			       	"t[i+1].end - t[i+1].start);\n"
+			       "\t\t\trc = sscanf(tmp, \"%%\" "
+			        "SCNd64, &p->%s);\n"
+			       "\t\t\tif (rc < 0)\n"
+			       "\t\t\t\treturn -1;\n"
+			       "\t\t\telse if (1 != rc)\n"
+			       "\t\t\t\treturn 0;\n", f->name);
+			break;
+		case FTYPE_ENUM:
+			printf("\t\t\tmemset(tmp, 0, sizeof(tmp));\n"
+			       "\t\t\tmemcpy(tmp, buf + t[i+1].start, "
+			       	"t[i+1].end - t[i+1].start);\n"
+			       "\t\t\trc = sscanf(tmp, \"%%\" "
+			        "SCNd64, &tmpint);\n"
+			       "\t\t\tif (rc < 0)\n"
+			       "\t\t\t\treturn -1;\n"
+			       "\t\t\telse if (1 != rc)\n"
+			       "\t\t\t\treturn 0;\n"
+			       "\t\t\tp->%s = tmpint;\n", 
+			       f->name);
+			break;
+		case FTYPE_REAL:
+			printf("\t\t\tmemset(tmp, 0, sizeof(tmp));\n"
+			       "\t\t\tmemcpy(tmp, buf + t[i+1].start, "
+			       	"t[i+1].end - t[i+1].start);\n"
+			       "\t\t\trc = sscanf(tmp, \"%%lf\", &p->%s);\n"
+			       "\t\t\tif (rc < 0)\n"
+			       "\t\t\t\treturn -1;\n"
+			       "\t\t\telse if (1 != rc)\n"
+			       "\t\t\t\treturn 0;\n", f->name);
+			break;
+		case FTYPE_BLOB:
+			/* TODO. */
+			break;
+		case FTYPE_TEXT:
+		case FTYPE_PASSWORD:
+		case FTYPE_EMAIL:
+			printf("\t\t\tp->%s = strndup("
+				"buf + t[i+1].start, "
+				"t[i+1].end - t[i+1].start);\n"
+			       "\t\t\tif (NULL == p->%s)\n"
+			       "\t\t\t\treturn -1;\n",
+			       f->name, f->name);
+			break;
+		case FTYPE_STRUCT:
+			printf("\t\t\trc = json_%s_parse(&p->%s, "
+				"buf + t[i+1].start, "
+				"t[i+1].end - t[i+1].start);\n"
+			       "\t\t\tif (rc <= 0)\n"
+			       "\t\t\t\treturn rc;\n"
+			       "\t\t\ti += t[i+1].size + 1;\n",
+			       f->ref->target->parent->name,
+			       f->name);
+			break;
+		default:
+			abort();
+		}
+		printf("\t\t\tcontinue;\n"
+		       "\t\t}\n");
+	}
+
+	puts("\t}\n"
+	     "\treturn 1;\n"
+	     "}\n"
+	     "");
+}
+
 static void
 gen_func_json_data(const struct strct *p)
 {
@@ -1785,7 +1941,7 @@ gen_func_json_data(const struct strct *p)
  */
 static void
 gen_funcs(const struct config *cfg, const struct strct *p, 
-	int json, int valids, int dbin)
+	int json, int jsonparse, int valids, int dbin)
 {
 	const struct search *s;
 	const struct update *u;
@@ -1806,6 +1962,9 @@ gen_funcs(const struct config *cfg, const struct strct *p,
 		gen_func_json_data(p);
 		gen_func_json_obj(p);
 	}
+
+	if (jsonparse) 
+		gen_func_json_parse(p);
 
 	if (valids)
 		gen_func_valids(p);
@@ -2212,13 +2371,31 @@ gen_valid_struct(const struct strct *p)
 	}
 }
 
+static int
+genfile(const char *file, int fd)
+{
+	ssize_t	 ssz;
+	char	 buf[BUFSIZ];
+
+	print_commentv(0, COMMENT_C,
+		"File imported from %s.", file);
+
+	while ((ssz = read(fd, buf, sizeof(buf))) > 0)
+		fwrite(buf, 1, ssz, stdout);
+
+	if (ssz < 0)
+		warn("%s", file);
+
+	return 0 == ssz;
+}
+
 /*
  * Generate the C source file from "cfg"s structure objects.
  */
-static void
-gen_c_source(const struct config *cfg, int json, 
-	int valids, int splitproc, int dbin, 
-	const char *header, const char *incls)
+static int
+gen_c_source(const struct config *cfg, int json, int jsonparse,
+	int valids, int splitproc, int dbin, const char *header, 
+	const char *incls, const int *exs)
 {
 	const struct strct *p;
 	const char	*start;
@@ -2265,6 +2442,9 @@ gen_c_source(const struct config *cfg, int json,
 	if (json || strchr(incls, 'j'))
 		need_kcgi = need_kcgijson = 1;
 
+	if (jsonparse)
+		puts("#include <inttypes.h>");
+
 	if (need_kcgi) {
 		puts("#include <stdarg.h>");
 		puts("#include <stdint.h>");
@@ -2306,77 +2486,15 @@ gen_c_source(const struct config *cfg, int json,
 	puts("");
 
 #ifndef __OpenBSD__
-	puts("static const char *\n"
-	     "gensalt(void)\n"
-	     "{\n"
-	     "\tsize_t i;\n"
-	     "\tstatic char salt[] = \"$1$........\";\n"
-	     "\tconst char *const seedchars =\n"
-	     "\t\t\"./0123456789ABCDEFGHIJKLMNOPQRST\"\n"
-	     "\t\t\"UVWXYZabcdefghijklmnopqrstuvwxyz\";\n"
-	     "\tfor (i = 0; i < 8; i++)\n"
-	     "\t\tsalt[i + 3] = seedchars[random() % 64];\n"
-	     "\treturn salt;\n"
-	     "}\n");
+	if ( ! genfile(PATH_GENSALT, exs[EX_GENSALT]))
+		return 0;
 #endif
 #if ! HAVE_B64_NTOP
-	puts("static int\n"
-	     "b64_ntop(unsigned char *src, size_t srclength,\n"
-	     "\tchar *target, size_t targsize)\n"
-	     "{\n"
-	     "\tstatic const char Base64[] =\n"
-	     "\t\t\"ABCDEFGHIJKLMNOPQRSTUVWXYZ\"\n"
-	     "\t\t\"abcdefghijklmnopqrstuvwxyz0123456789+/\";\n"
-	     "\tstatic const char Pad64 = \'=\';\n"
-	     "\tsize_t datalength = 0;\n"
-	     "\tunsigned char input[3];\n"
-	     "\tunsigned char output[4];\n"
-	     "\tsize_t i;\n"
-	     "\n"
-	     "\twhile (2 < srclength) {\n"
-	     "\t\tinput[0] = *src++;\n"
-	     "\t\tinput[1] = *src++;\n"
-	     "\t\tinput[2] = *src++;\n"
-	     "\t\tsrclength -= 3;\n"
-	     "\n"
-	     "\t\toutput[0] = input[0] >> 2;\n"
-	     "\t\toutput[1] = ((input[0] & 0x03) << 4) + (input[1] >> 4);\n"
-	     "\t\toutput[2] = ((input[1] & 0x0f) << 2) + (input[2] >> 6);\n"
-	     "\t\toutput[3] = input[2] & 0x3f;\n"
-	     "\n"
-	     "\t\tif (datalength + 4 > targsize)\n"
-	     "\t\t\treturn (-1);\n"
-	     "\t\ttarget[datalength++] = Base64[output[0]];\n"
-	     "\t\ttarget[datalength++] = Base64[output[1]];\n"
-	     "\t\ttarget[datalength++] = Base64[output[2]];\n"
-	     "\t\ttarget[datalength++] = Base64[output[3]];\n"
-	     "\t}\n"
-	     "\n"
-	     "\tif (0 != srclength) {\n"
-	     "\t\tinput[0] = input[1] = input[2] = \'\\0\';\n"
-	     "\t\tfor (i = 0; i < srclength; i++)\n"
-	     "\t\t\tinput[i] = *src++;\n"
-	     "\n"
-	     "\t\toutput[0] = input[0] >> 2;\n"
-	     "\t\toutput[1] = ((input[0] & 0x03) << 4) + (input[1] >> 4);\n"
-	     "\t\toutput[2] = ((input[1] & 0x0f) << 2) + (input[2] >> 6);\n"
-	     "\n"
-	     "\t\tif (datalength + 4 > targsize)\n"
-	     "\t\t\treturn (-1);\n"
-	     "\t\ttarget[datalength++] = Base64[output[0]];\n"
-	     "\t\ttarget[datalength++] = Base64[output[1]];\n"
-	     "\t\tif (srclength == 1)\n"
-	     "\t\t\ttarget[datalength++] = Pad64;\n"
-	     "\t\telse\n"
-	     "\t\t\ttarget[datalength++] = Base64[output[2]];\n"
-	     "\t\ttarget[datalength++] = Pad64;\n"
-	     "\t}\n"
-	     "\tif (datalength >= targsize)\n"
-	     "\t\treturn (-1);\n"
-	     "\ttarget[datalength] = \'\\0\';\n"
-	     "\treturn (datalength);\n"
-	     "}\n");
+	if ( ! genfile(PATH_B64_NTOP, exs[EX_B64_NTOP]))
+		return 0;
 #endif
+	if (jsonparse && ! genfile(PATH_JSMN, exs[EX_JSMN]))
+		return 0;
 
 	if (dbin) {
 		print_commentt(0, COMMENT_C,
@@ -2469,7 +2587,9 @@ gen_c_source(const struct config *cfg, int json,
 	}
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		gen_funcs(cfg, p, json, valids, dbin);
+		gen_funcs(cfg, p, json, jsonparse, valids, dbin);
+
+	return 1;
 }
 
 int
@@ -2477,17 +2597,18 @@ main(int argc, char *argv[])
 {
 	const char	 *header = NULL, *incls = NULL;
 	struct config	 *cfg = NULL;
-	int		  c, json = 0, valids = 0,
+	int		  c, json = 0, jsonparse = 0, valids = 0,
 			  splitproc = 0, dbin = 1, rc = 0;
 	FILE		**confs = NULL;
 	size_t		  i, confsz;
+	int		  exs[EX__MAX] = { -1, -1 };
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio rpath", NULL))
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "h:I:jN:sv")))
+	while (-1 != (c = getopt(argc, argv, "h:I:jJN:sv")))
 		switch (c) {
 		case ('h'):
 			header = optarg;
@@ -2497,6 +2618,9 @@ main(int argc, char *argv[])
 			break;
 		case ('j'):
 			json = 1;
+			break;
+		case ('J'):
+			jsonparse = 1;
 			break;
 		case ('N'):
 			if (NULL != strchr(optarg, 'd'))
@@ -2531,6 +2655,22 @@ main(int argc, char *argv[])
 		}
 	}
 
+	/* 
+	 * Open all of the source files we might optionally embed in the
+	 * output source code.
+	 * FIXME: for security, compute MD5 hash and crosscheck. 
+	 */
+
+	exs[EX_GENSALT] = open(PATH_GENSALT, O_RDONLY, 0);
+	if (-1 == exs[EX_GENSALT])
+		err(EXIT_FAILURE, "%s", PATH_GENSALT);
+	exs[EX_B64_NTOP] = open(PATH_B64_NTOP, O_RDONLY, 0);
+	if (-1 == exs[EX_B64_NTOP])
+		err(EXIT_FAILURE, "%s", PATH_B64_NTOP);
+	exs[EX_JSMN] = open(PATH_JSMN, O_RDONLY, 0);
+	if (-1 == exs[EX_JSMN])
+		err(EXIT_FAILURE, "%s", PATH_JSMN);
+
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio", NULL))
 		err(EXIT_FAILURE, "pledge");
@@ -2546,10 +2686,13 @@ main(int argc, char *argv[])
 		goto out;
 
 	if (0 != (rc = parse_link(cfg)))
-		gen_c_source(cfg, json, valids, 
-			splitproc, dbin, header, incls);
+		rc = gen_c_source(cfg, json, jsonparse, valids, 
+			splitproc, dbin, header, incls, exs);
 
 out:
+	for (i = 0; i < EX__MAX; i++)
+		if (-1 != exs[i])
+			close(exs[i]);
 	for (i = 0; i < confsz; i++)
 		if (EOF == fclose(confs[i]))
 			warn("%s", argv[i]);
@@ -2559,9 +2702,9 @@ out:
 usage:
 	fprintf(stderr, 
 		"usage: %s "
-		"[-jsv] "
+		"[-jJsv] "
 		"[-h header[,header...] "
-		"[-I bjv] "
+		"[-I bjJv] "
 		"[-N b] "
 		"[config...]\n",
 		getprogname());

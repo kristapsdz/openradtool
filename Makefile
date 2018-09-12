@@ -144,10 +144,17 @@ installwww: www
 	$(INSTALL_DATA) kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz.sha512
 
 version.h: Makefile
-	( echo "#define VERSION \"$(VERSION)\"" ; \
-	  echo "#define VSTAMP `echo $$((($(VERSION_BUILD)+1)+($(VERSION_MINOR)+1)*100+($(VERSION_MAJOR)+1)*10000))`" ; ) >$@
+	echo "#define VERSION \"$(VERSION)\"" >$@
+	echo "#define VSTAMP `echo $$((($(VERSION_BUILD)+1)+($(VERSION_MINOR)+1)*100+($(VERSION_MAJOR)+1)*10000))`" >>$@
 
 header.o source.o: version.h
+
+paths.h: Makefile
+	echo "#define PATH_GENSALT \"$(SHAREDIR)/kwebapp/gensalt.c\"" >$@
+	echo "#define PATH_B64_NTOP \"$(SHAREDIR)/kwebapp/b64_ntop.c\"" >>$@
+	echo "#define PATH_JSMN \"$(SHAREDIR)/kwebapp/jsmn.c\"" >>$@
+
+source.o: paths.h
 
 install: kwebapp
 	mkdir -p $(DESTDIR)$(BINDIR)
@@ -157,6 +164,7 @@ install: kwebapp
 	$(INSTALL_MAN) $(MAN1S) $(DESTDIR)$(MANDIR)/man1
 	$(INSTALL_MAN) kwebapp.5 $(DESTDIR)$(MANDIR)/man5
 	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/kwebapp
+	$(INSTALL_DATA) b64_ntop.c jsmn.c gensalt.c $(DESTDIR)$(SHAREDIR)/kwebapp
 	$(INSTALL_PROGRAM) $(BINS) $(DESTDIR)$(BINDIR)
 
 uninstall:
@@ -166,6 +174,7 @@ uninstall:
 	done
 	rm -f $(DESTDIR)$(MANDIR)/man5/kwebapp.5
 	rm -f $(DESTDIR)$(SHAREDIR)/kwebapp/audit.{html,css,js}
+	rm -f $(DESTDIR)$(SHAREDIR)/kwebapp/{b64_ntop,jsmn,gensalt}.c
 	rmdir $(DESTDIR)$(SHAREDIR)/kwebapp
 	@for f in $(BINS); do \
 		echo rm -f $(DESTDIR)$(BINDIR)/$$f ; \
@@ -195,10 +204,10 @@ test.o: test.c db.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c test.c
 
 db.c: kwebapp-c-source db.txt
-	./kwebapp-c-source -vsj db.txt >$@
+	./kwebapp-c-source -vsjJ db.txt >$@
 
 db.h: kwebapp-c-header db.txt
-	./kwebapp-c-header -vsj db.txt >$@
+	./kwebapp-c-header -vsjJ db.txt >$@
 
 db.sql: kwebapp-sql db.txt
 	./kwebapp-sql db.txt >$@
@@ -311,7 +320,7 @@ atom.xml: versions.xml
 	sblg -s date -a versions.xml >$@
 
 clean:
-	rm -f $(BINS) version.h $(LIBOBJS) test test.o
+	rm -f $(BINS) version.h paths.h $(LIBOBJS) test test.o
 	rm -f db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db db.trans.txt
 	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml

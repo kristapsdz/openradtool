@@ -459,6 +459,16 @@ print_func_valid(const struct field *p, int decl)
 		decl ? ";\n" : "\n");
 }
 
+void
+print_func_json_parse(const struct strct *p, int decl)
+{
+
+	printf("int%sjson_%s_parse"
+		"(struct %s *p, const char *buf, size_t sz)%s",
+		decl ? " " : "\n", p->name, 
+		p->name, decl ? ";\n" : "");
+}
+
 /*
  * Generate the JSON internal data function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the

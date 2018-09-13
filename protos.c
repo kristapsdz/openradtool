@@ -463,10 +463,11 @@ void
 print_func_json_parse(const struct strct *p, int decl)
 {
 
-	printf("int%sjson_%s_parse"
-		"(struct %s *p, const char *buf, size_t sz)%s",
+	printf("struct %s *%sjson_%s_parse"
+		"(const char *buf, size_t sz)%s",
+		p->name, 
 		decl ? " " : "\n", p->name, 
-		p->name, decl ? ";\n" : "");
+		decl ? ";\n" : "");
 }
 
 /*

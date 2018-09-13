@@ -445,6 +445,14 @@ gen_funcs_dbin(const struct config *cfg, const struct strct *p)
 }
 
 static void
+gen_funcs_json_parse(const struct config *cfg, const struct strct *p)
+{
+
+	print_func_json_parse(p, 1);
+	puts("");
+}
+
+static void
 gen_funcs_json(const struct config *cfg, const struct strct *p)
 {
 
@@ -679,8 +687,8 @@ gen_role(const struct role *r, int *nf)
  * For "splitproc", note that db_open uses ksql_alloc_child.
  */
 static void
-gen_c_header(const struct config *cfg, const char *guard,
-	int json, int valids, int splitproc, int dbin, int dstruct)
+gen_c_header(const struct config *cfg, const char *guard, int json, 
+	int jsonparse, int valids, int splitproc, int dbin, int dstruct)
 {
 	const struct strct *p;
 	const struct enm *e;
@@ -781,6 +789,9 @@ gen_c_header(const struct config *cfg, const char *guard,
 	if (json)
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			gen_funcs_json(cfg, p);
+	if (jsonparse)
+		TAILQ_FOREACH(p, &cfg->sq, entries)
+			gen_funcs_json_parse(cfg, p);
 	if (valids)
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			gen_funcs_valids(cfg, p);
@@ -796,7 +807,8 @@ main(int argc, char *argv[])
 	const char	 *guard = "DB_H";
 	struct config	 *cfg;
 	int		  c, json = 0, valids = 0, rc = 0,
-			  splitproc = 0, dbin = 1, dstruct = 1;
+			  splitproc = 0, dbin = 1, dstruct = 1,
+			  jsonparse = 0;
 	FILE		**confs = NULL;
 	size_t		  i, confsz;
 
@@ -805,13 +817,16 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "g:jN:sv")))
+	while (-1 != (c = getopt(argc, argv, "g:jJN:sv")))
 		switch (c) {
 		case ('g'):
 			guard = optarg;
 			break;
 		case ('j'):
 			json = 1;
+			break;
+		case ('J'):
+			jsonparse = 1;
 			break;
 		case ('N'):
 			if (NULL != strchr(optarg, 'b'))
@@ -862,8 +877,8 @@ main(int argc, char *argv[])
 		goto out;
 
 	if (0 != (rc = parse_link(cfg)))
-		gen_c_header(cfg, guard, json, valids, 
-			splitproc, dbin, dstruct);
+		gen_c_header(cfg, guard, json, jsonparse,
+			valids, splitproc, dbin, dstruct);
 
 out:
 	for (i = 0; i < confsz; i++)
@@ -875,7 +890,7 @@ out:
 usage:
 	fprintf(stderr, 
 		"usage: %s "
-		"[-jsv] "
+		"[-jJsv] "
 		"[-N bd] "
 		"[config]\n",
 		getprogname());

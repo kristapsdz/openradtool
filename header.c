@@ -448,6 +448,13 @@ static void
 gen_funcs_json_parse(const struct config *cfg, const struct strct *p)
 {
 
+	print_commentv(0, COMMENT_C,
+		"Parse a %s from a buffer \"buf\" of length \"sz\".\n"
+		"Result \"res\" is allocated on success, otherwise "
+		"the pointer is set to NULL.\n"
+		"Allocated results must be freed with db_%s_free().\n"
+		"Returns <0 on memory allocation failure, 0 on parse "
+		"failure, >0 on success.", p->name, p->name);
 	print_func_json_parse(p, 1);
 	puts("");
 }

@@ -459,14 +459,18 @@ print_func_valid(const struct field *p, int decl)
 		decl ? ";\n" : "\n");
 }
 
+/*
+ * JSON parsing routine for a given structure.
+ * If this is NOT a declaration ("decl"), then print a newline after the
+ * return type; otherwise, have it on one line followed by a newline.
+ */
 void
 print_func_json_parse(const struct strct *p, int decl)
 {
 
-	printf("struct %s *%sjson_%s_parse"
-		"(const char *buf, size_t sz)%s",
-		p->name, 
-		decl ? " " : "\n", p->name, 
+	printf("int%sjson_%s_parse"
+		"(const char *buf, size_t sz, struct %s **res)%s",
+		decl ? " " : "\n", p->name, p->name, 
 		decl ? ";\n" : "");
 }
 

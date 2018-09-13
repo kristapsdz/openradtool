@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1756,9 +1756,15 @@ gen_func_json_parse(const struct strct *p)
 
 	/* Start with an internal function with pre-parsed tokens. */
 
+	print_commentt(0, COMMENT_C,
+		"Deserialise the parsed JSON buffer \"buf\", which "
+		"need not be NUL terminated, with parse tokens "
+		"\"t\" of length \"toksz\", into \"p\".\n"
+		"Returns 0 on parse failure, <0 on memory allocation "
+		"failure, >1 on success.");
 	printf("static int\n"
-	       "json_%s_parse_r(struct %s *p, const char *buf, "
-	        "const jsmntok_t *t, size_t toksz)\n"
+	       "json_%s_parse_r(struct %s *p,\n"
+	       "\tconst char *buf, const jsmntok_t *t, size_t toksz)\n"
 	       "{\n"
 	       "\tsize_t i;\n",
 	       p->name, p->name);
@@ -1769,13 +1775,11 @@ gen_func_json_parse(const struct strct *p)
 	if (hasblob)
 		puts("\tchar *tmpbuf;");
 
-	printf("\n"
-	       "\tif (toksz < 1 || t[0].type != JSMN_OBJECT)\n"
-	       "\t\treturn 0;\n"
-	       "\n"
-	       "\tmemset(p, 0, sizeof(struct %s));\n"
-	       "\tfor (i = 1; i < toksz; i++) {\n",
-	       p->name);
+	puts("\n"
+	     "\tif (toksz < 1 || t[0].type != JSMN_OBJECT)\n"
+	     "\t\treturn 0;\n"
+	     "\n"
+	     "\tfor (i = 1; i < toksz; i += 2) {");
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FIELD_NOEXPORT & f->flags)
@@ -1787,8 +1791,8 @@ gen_func_json_parse(const struct strct *p)
 
 		if (FIELD_NULL & f->flags)
 			printf("\t\t\tif (t[i+1].type == "
-				"JSMN_PRIMITIVE && "
-			        "\'n\' == buf[t[i+1].start]) {\n"
+				"JSMN_PRIMITIVE &&\n"
+			       "\t\t\t    \'n\' == buf[t[i+1].start]) {\n"
 			       "\t\t\t\tp->has_%s = 0;\n"
 			       "\t\t\t\tcontinue;\n"
 			       "\t\t\t} else\n"
@@ -1803,9 +1807,10 @@ gen_func_json_parse(const struct strct *p)
 		case FTYPE_EPOCH:
 		case FTYPE_INT:
 		case FTYPE_REAL:
-			puts("\t\t\tif (t[0].type != JSMN_PRIMITIVE || "
-			      "(\'-\' != buf[t[i+1].start] && "
-			      "!isdigit((unsigned int)"
+			puts("\t\t\tif (t[i+1].type != "
+			      "JSMN_PRIMITIVE ||\n"
+			     "\t\t\t    (\'-\' != buf[t[i+1].start] &&\n"
+			     "\t\t\t    ! isdigit((unsigned int)"
 			      "buf[t[i+1].start])))\n"
 			     "\t\t\t\treturn 0;");
 			break;
@@ -1813,11 +1818,11 @@ gen_func_json_parse(const struct strct *p)
 		case FTYPE_TEXT:
 		case FTYPE_PASSWORD:
 		case FTYPE_EMAIL:
-			puts("\t\t\tif (t[0].type != JSMN_STRING)\n"
+			puts("\t\t\tif (t[i+1].type != JSMN_STRING)\n"
 			     "\t\t\t\treturn 0;");
 			break;
 		case FTYPE_STRUCT:
-			puts("\t\t\tif (t[0].type != JSMN_OBJECT)\n"
+			puts("\t\t\tif (t[i+1].type != JSMN_OBJECT)\n"
 			     "\t\t\t\treturn 0;");
 			break;
 		default:
@@ -1831,38 +1836,41 @@ gen_func_json_parse(const struct strct *p)
 		case FTYPE_EPOCH:
 		case FTYPE_INT:
 			printf("\t\t\tif ( ! _jsmn_parse_int("
-				"buf + t[i+1].start, "
-				"t[i+1].end - t[i+1].start, &p->%s))\n"
+				"buf + t[i+1].start,\n"
+			       "\t\t\t    t[i+1].end - t[i+1].start, "
+			        "&p->%s))\n"
 			       "\t\t\t\treturn 0;\n",
 			       f->name);
 			break;
 		case FTYPE_ENUM:
 			printf("\t\t\tif ( ! _jsmn_parse_int("
-				"buf + t[i+1].start, "
-				"t[i+1].end - t[i+1].start, &tmpint))\n"
+				"buf + t[i+1].start,\n"
+			       "\t\t\t    t[i+1].end - t[i+1].start, "
+			        "&tmpint))\n"
 			       "\t\t\t\treturn 0;\n"
 			       "\t\t\tp->%s = tmpint;\n",
 			       f->name);
 			break;
 		case FTYPE_REAL:
 			printf("\t\t\tif ( ! _jsmn_parse_real("
-				"buf + t[i+1].start, "
-				"t[i+1].end - t[i+1].start, &p->%s))\n"
+				"buf + t[i+1].start,\n"
+			       "\t\t\t    t[i+1].end - t[i+1].start, "
+			        "&p->%s))\n"
 			       "\t\t\t\treturn 0;\n",
 			       f->name);
 			break;
 		case FTYPE_BLOB:
-			printf("\t\t\ttmpbuf = strndup("
-				"buf + t[i+1].start, "
-				"t[i+1].end - t[i+1].start);\n"
+			printf("\t\t\ttmpbuf = strndup\n"
+			       "\t\t\t\t(buf + t[i+1].start,\n"
+			       "\t\t\t\t t[i+1].end - t[i+1].start);\n"
 			       "\t\t\tif (NULL == tmpbuf)\n"
 			       "\t\t\t\treturn -1;\n"
 			       "\t\t\tp->%s = malloc((t[i+1].end - "
 			       	"t[i+1].start) + 1);\n"
 			       "\t\t\tif (NULL == p->%s)\n"
 			       "\t\t\t\treturn -1;\n"
-			       "\t\t\trc = b64_pton(tmpbuf, p->%s, "
-			        "(t[i+1].end - t[i+1].start) + 1);\n"
+			       "\t\t\trc = b64_pton(tmpbuf, p->%s,\n"
+			       "\t\t\t\t(t[i+1].end - t[i+1].start) + 1);\n"
 			       "\t\t\tif (rc < 0)\n"
 			       "\t\t\t\treturn -1;\n"
 			       "\t\t\tp->%s_sz = rc;\n",
@@ -1871,20 +1879,20 @@ gen_func_json_parse(const struct strct *p)
 		case FTYPE_TEXT:
 		case FTYPE_PASSWORD:
 		case FTYPE_EMAIL:
-			printf("\t\t\tp->%s = strndup("
-				"buf + t[i+1].start, "
-				"t[i+1].end - t[i+1].start);\n"
+			printf("\t\t\tp->%s = strndup\n"
+			       "\t\t\t\t(buf + t[i+1].start,\n"
+			       "\t\t\t\t t[i+1].end - t[i+1].start);\n"
 			       "\t\t\tif (NULL == p->%s)\n"
 			       "\t\t\t\treturn -1;\n",
 			       f->name, f->name);
 			break;
 		case FTYPE_STRUCT:
-			printf("\t\t\trc = json_%s_parse_r(&p->%s, "
-				"buf + t[i+2].start, "
-				"&t[i+2], t[i+1].size);\n"
+			printf("\t\t\trc = json_%s_parse_r\n"
+			       "\t\t\t\t(&p->%s, buf + t[i+1].start,\n"
+			       "\t\t\t\t &t[i+1], t[i+1].size);\n"
 			       "\t\t\tif (rc <= 0)\n"
 			       "\t\t\t\treturn rc;\n"
-			       "\t\t\ti += t[i+1].size + 1;\n",
+			       "\t\t\ti += t[i+1].size;\n",
 			       f->ref->target->parent->name,
 			       f->name);
 			break;
@@ -1895,7 +1903,13 @@ gen_func_json_parse(const struct strct *p)
 		       "\t\t}\n");
 	}
 
-	puts("\t}\n"
+	puts("");
+	print_commentt(2, COMMENT_C,
+		"Anything else is unexpected.");
+
+	puts("\n"
+	     "\t\treturn 0;\n"
+	     "\t}\n"
 	     "\treturn 1;\n"
 	     "}\n"
 	     "");
@@ -1906,31 +1920,24 @@ gen_func_json_parse(const struct strct *p)
 	print_func_json_parse(p, 0);
 	printf("\n"
 	       "{\n"
-	       "\tint rc;\n"
-	       "\tsize_t toksz;\n"
+	       "\tint toks, rc;\n"
 	       "\tjsmn_parser jp;\n"
-	       "\tstruct %s *p;\n"
 	       "\tjsmntok_t t[%zu];\n"
 	       "\n"
-	       "\tif (NULL == (p = calloc(1, sizeof(struct %s))))\n"
-	       "\t\treturn NULL;\n"
 	       "\t_jsmn_init(&jp);\n"
-	       "\tmemset(p, 0, sizeof(struct %s));\n"
-	       "\trc = _jsmn_parse(&jp, buf, sz, t, %zu);\n"
-	       "\tif (rc <= 0) {\n"
-	       "\t\tdb_%s_free(p);\n"
-	       "\t\treturn NULL;\n"
-	       "\t}\n"
-	       "\ttoksz = (size_t)rc;\n"
-	       "\tif ( ! json_%s_parse_r(p, buf, t, toksz)) {\n"
-	       "\t\tdb_%s_free(p);\n"
-	       "\t\treturn NULL;\n"
-	       "\t}\n"
-	       "\treturn p;\n"
+	       "\t*res = NULL;\n"
+	       "\n"
+	       "\tif ((toks = _jsmn_parse(&jp, buf, sz, t, %zu)) <= 0)\n"
+	       "\t\treturn 0;\n"
+	       "\tif (NULL == (*res = calloc(1, sizeof(struct %s))))\n"
+	       "\t\treturn -1;\n"
+	       "\tif ((rc = json_%s_parse_r(*res, buf, t, toks)) > 0)\n"
+	       "\t\treturn 1;\n"
+	       "\tdb_%s_free(*res);\n"
+	       "\t*res = NULL;\n"
+	       "\treturn rc;\n"
 	       "}\n"
-	       "\n",
-	       p->name, toks, p->name, 
-	       p->name, toks, p->name, p->name, p->name);
+	       "\n", toks, toks, p->name, p->name, p->name);
 }
 
 static void

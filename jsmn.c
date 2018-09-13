@@ -400,12 +400,52 @@ _jsmn_init(jsmn_parser *parser)
 	parser->toksuper = -1;
 }
 
+/*
+ * The remainder here are written for kwebapp.
+ */
+
 static int 
-_jsmn_eq(const char *json, jsmntok_t *tok, const char *s) 
+_jsmn_eq(const char *json, const jsmntok_t *tok, const char *s) 
 {
 	if (tok->type == JSMN_STRING && 
 	    (int)strlen(s) == tok->end - tok->start &&
 	    strncmp(json + tok->start, s, tok->end - tok->start) == 0) 
 		return 0;
 	return 1;
+}
+
+static int
+_jsmn_parse_real(const char *buf, size_t sz, double *ret)
+{
+	char 	 tmp[128];
+	int	 rc;
+
+	if (sz > sizeof(tmp) - 1)
+		return 0;
+
+	memcpy(tmp, buf, sz);
+	tmp[sz] = '\0';
+
+	if ((rc = sscanf(tmp, "%lf", ret)) < 0)
+		return -1;
+
+	return 1 == rc;
+}
+
+static int
+_jsmn_parse_int(const char *buf, size_t sz, int64_t *ret)
+{
+	char 	 tmp[32];
+	int	 rc;
+
+	if (sz > sizeof(tmp) - 1)
+		return 0;
+
+	memcpy(tmp, buf, sz);
+	tmp[sz] = '\0';
+
+	if ((rc = sscanf(tmp, "%" SCNd64, ret)) < 0)
+		return -1;
+
+	return 1 == rc;
 }

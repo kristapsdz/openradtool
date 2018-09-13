@@ -1711,6 +1711,12 @@ gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 	}
 }
 
+/*
+ * Count the maximum number of JSON tokens that can be exported by any
+ * given structure.
+ * Each key-pair has two, the whole object has one, and each sub-struct
+ * is recursively examined.
+ */
 static size_t
 count_json_tokens_r(const struct strct *p)
 {
@@ -1718,10 +1724,11 @@ count_json_tokens_r(const struct strct *p)
 	size_t	 tok = 0;
 
 	TAILQ_FOREACH(f, &p->fq, entries)
-		if (FTYPE_STRUCT == f->type) {
+		if ( ! (FIELD_NOEXPORT & f->flags) &&
+		    FTYPE_STRUCT == f->type)
 			tok += count_json_tokens_r
 				(f->ref->target->parent);
-		} else
+		else if ( ! (FIELD_NOEXPORT & f->flags))
 			tok += 2;
 
 	return 1 + tok;
@@ -1731,48 +1738,44 @@ static void
 gen_func_json_parse(const struct strct *p)
 {
 	size_t	 	 toks;
-	int		 hasenum = 0, hasint = 0;
+	int		 hasenum = 0, hasstruct = 0, hasblob = 0;
 	const struct field *f;
 
-	TAILQ_FOREACH(f, &p->fq, entries) 
-		if ( ! (FIELD_NOEXPORT & f->flags))
-			switch (f->type) {
-			case FTYPE_EPOCH:
-				hasenum = 1;
-				/* FALLTHROUGH */
-			case FTYPE_BIT:
-			case FTYPE_BITFIELD:
-			case FTYPE_DATE:
-			case FTYPE_INT:
-			case FTYPE_REAL:
-				hasint = 1;
-				break;
-			default:
-				break;
-			}
+	/* Whether we need conversion space. */
 
-	toks = count_json_tokens_r(p);
-	print_func_json_parse(p, 0);
-	printf("\n"
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FIELD_NOEXPORT & f->flags)
+			continue;
+		if (FTYPE_ENUM == f->type) 
+			hasenum = 1;
+		else if (FTYPE_BLOB == f->type) 
+			hasblob = 1;
+		else if (FTYPE_STRUCT == f->type) 
+			hasstruct = 1;
+	}
+
+	/* Start with an internal function with pre-parsed tokens. */
+
+	printf("static int\n"
+	       "json_%s_parse_r(struct %s *p, const char *buf, "
+	        "const jsmntok_t *t, size_t toksz)\n"
 	       "{\n"
-	       "\tint rc;\n"
-	       "\tsize_t i, toksz;\n"
-	       "\tjsmn_parser jp;\n"
-	       "\tjsmntok_t t[%zu];\n",
-	       toks);
+	       "\tsize_t i;\n",
+	       p->name, p->name);
 	if (hasenum)
 		puts("\tint64_t tmpint;");
-	if (hasint)
-		puts("\tchar tmp[128];");
+	if (hasstruct || hasblob)
+		puts("\tint rc;");
+	if (hasblob)
+		puts("\tchar *tmpbuf;");
 
 	printf("\n"
-	       "\t_jsmn_init(&jp);\n"
-	       "\tmemset(p, 0, sizeof(struct %s));\n"
-	       "\tif ((rc = _jsmn_parse(&jp, buf, sz, t, %zu)) <= 0)\n"
+	       "\tif (toksz < 1 || t[0].type != JSMN_OBJECT)\n"
 	       "\t\treturn 0;\n"
-	       "\ttoksz = (size_t)rc;\n"
-	       "\tfor (i = 0; i < toksz; i++) {\n",
-	       p->name, toks);
+	       "\n"
+	       "\tmemset(p, 0, sizeof(struct %s));\n"
+	       "\tfor (i = 1; i < toksz; i++) {\n",
+	       p->name);
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FIELD_NOEXPORT & f->flags)
@@ -1780,8 +1783,46 @@ gen_func_json_parse(const struct strct *p)
 		printf("\t\tif (_jsmn_eq(buf, &t[i], \"%s\")) {\n",
 			f->name);
 
+		/* Check correct kind of token. */
+
 		if (FIELD_NULL & f->flags)
-			printf("\t\t\tp->has_%s = 1;\n", f->name);
+			printf("\t\t\tif (t[i+1].type == "
+				"JSMN_PRIMITIVE && "
+			        "\'n\' == buf[t[i+1].start]) {\n"
+			       "\t\t\t\tp->has_%s = 0;\n"
+			       "\t\t\t\tcontinue;\n"
+			       "\t\t\t} else\n"
+			       "\t\t\t\tp->has_%s = 1;\n",
+			       f->name, f->name);
+
+		switch (f->type) {
+		case FTYPE_BIT:
+		case FTYPE_BITFIELD:
+		case FTYPE_DATE:
+		case FTYPE_ENUM:
+		case FTYPE_EPOCH:
+		case FTYPE_INT:
+		case FTYPE_REAL:
+			puts("\t\t\tif (t[0].type != JSMN_PRIMITIVE || "
+			      "(\'-\' != buf[t[i+1].start] && "
+			      "!isdigit((unsigned int)"
+			      "buf[t[i+1].start])))\n"
+			     "\t\t\t\treturn 0;");
+			break;
+		case FTYPE_BLOB:
+		case FTYPE_TEXT:
+		case FTYPE_PASSWORD:
+		case FTYPE_EMAIL:
+			puts("\t\t\tif (t[0].type != JSMN_STRING)\n"
+			     "\t\t\t\treturn 0;");
+			break;
+		case FTYPE_STRUCT:
+			puts("\t\t\tif (t[0].type != JSMN_OBJECT)\n"
+			     "\t\t\t\treturn 0;");
+			break;
+		default:
+			abort();
+		}
 
 		switch (f->type) {
 		case FTYPE_BIT:
@@ -1789,41 +1830,43 @@ gen_func_json_parse(const struct strct *p)
 		case FTYPE_DATE:
 		case FTYPE_EPOCH:
 		case FTYPE_INT:
-			printf("\t\t\tmemset(tmp, 0, sizeof(tmp));\n"
-			       "\t\t\tmemcpy(tmp, buf + t[i+1].start, "
-			       	"t[i+1].end - t[i+1].start);\n"
-			       "\t\t\trc = sscanf(tmp, \"%%\" "
-			        "SCNd64, &p->%s);\n"
-			       "\t\t\tif (rc < 0)\n"
-			       "\t\t\t\treturn -1;\n"
-			       "\t\t\telse if (1 != rc)\n"
-			       "\t\t\t\treturn 0;\n", f->name);
+			printf("\t\t\tif ( ! _jsmn_parse_int("
+				"buf + t[i+1].start, "
+				"t[i+1].end - t[i+1].start, &p->%s))\n"
+			       "\t\t\t\treturn 0;\n",
+			       f->name);
 			break;
 		case FTYPE_ENUM:
-			printf("\t\t\tmemset(tmp, 0, sizeof(tmp));\n"
-			       "\t\t\tmemcpy(tmp, buf + t[i+1].start, "
-			       	"t[i+1].end - t[i+1].start);\n"
-			       "\t\t\trc = sscanf(tmp, \"%%\" "
-			        "SCNd64, &tmpint);\n"
-			       "\t\t\tif (rc < 0)\n"
-			       "\t\t\t\treturn -1;\n"
-			       "\t\t\telse if (1 != rc)\n"
+			printf("\t\t\tif ( ! _jsmn_parse_int("
+				"buf + t[i+1].start, "
+				"t[i+1].end - t[i+1].start, &tmpint))\n"
 			       "\t\t\t\treturn 0;\n"
-			       "\t\t\tp->%s = tmpint;\n", 
+			       "\t\t\tp->%s = tmpint;\n",
 			       f->name);
 			break;
 		case FTYPE_REAL:
-			printf("\t\t\tmemset(tmp, 0, sizeof(tmp));\n"
-			       "\t\t\tmemcpy(tmp, buf + t[i+1].start, "
-			       	"t[i+1].end - t[i+1].start);\n"
-			       "\t\t\trc = sscanf(tmp, \"%%lf\", &p->%s);\n"
-			       "\t\t\tif (rc < 0)\n"
-			       "\t\t\t\treturn -1;\n"
-			       "\t\t\telse if (1 != rc)\n"
-			       "\t\t\t\treturn 0;\n", f->name);
+			printf("\t\t\tif ( ! _jsmn_parse_real("
+				"buf + t[i+1].start, "
+				"t[i+1].end - t[i+1].start, &p->%s))\n"
+			       "\t\t\t\treturn 0;\n",
+			       f->name);
 			break;
 		case FTYPE_BLOB:
-			/* TODO. */
+			printf("\t\t\ttmpbuf = strndup("
+				"buf + t[i+1].start, "
+				"t[i+1].end - t[i+1].start);\n"
+			       "\t\t\tif (NULL == tmpbuf)\n"
+			       "\t\t\t\treturn -1;\n"
+			       "\t\t\tp->%s = malloc((t[i+1].end - "
+			       	"t[i+1].start) + 1);\n"
+			       "\t\t\tif (NULL == p->%s)\n"
+			       "\t\t\t\treturn -1;\n"
+			       "\t\t\trc = b64_pton(tmpbuf, p->%s, "
+			        "(t[i+1].end - t[i+1].start) + 1);\n"
+			       "\t\t\tif (rc < 0)\n"
+			       "\t\t\t\treturn -1;\n"
+			       "\t\t\tp->%s_sz = rc;\n",
+			       f->name, f->name, f->name, f->name);
 			break;
 		case FTYPE_TEXT:
 		case FTYPE_PASSWORD:
@@ -1836,9 +1879,9 @@ gen_func_json_parse(const struct strct *p)
 			       f->name, f->name);
 			break;
 		case FTYPE_STRUCT:
-			printf("\t\t\trc = json_%s_parse(&p->%s, "
-				"buf + t[i+1].start, "
-				"t[i+1].end - t[i+1].start);\n"
+			printf("\t\t\trc = json_%s_parse_r(&p->%s, "
+				"buf + t[i+2].start, "
+				"&t[i+2], t[i+1].size);\n"
 			       "\t\t\tif (rc <= 0)\n"
 			       "\t\t\t\treturn rc;\n"
 			       "\t\t\ti += t[i+1].size + 1;\n",
@@ -1856,6 +1899,38 @@ gen_func_json_parse(const struct strct *p)
 	     "\treturn 1;\n"
 	     "}\n"
 	     "");
+
+	/* Now our external function. */
+
+	toks = count_json_tokens_r(p);
+	print_func_json_parse(p, 0);
+	printf("\n"
+	       "{\n"
+	       "\tint rc;\n"
+	       "\tsize_t toksz;\n"
+	       "\tjsmn_parser jp;\n"
+	       "\tstruct %s *p;\n"
+	       "\tjsmntok_t t[%zu];\n"
+	       "\n"
+	       "\tif (NULL == (p = calloc(1, sizeof(struct %s))))\n"
+	       "\t\treturn NULL;\n"
+	       "\t_jsmn_init(&jp);\n"
+	       "\tmemset(p, 0, sizeof(struct %s));\n"
+	       "\trc = _jsmn_parse(&jp, buf, sz, t, %zu);\n"
+	       "\tif (rc <= 0) {\n"
+	       "\t\tdb_%s_free(p);\n"
+	       "\t\treturn NULL;\n"
+	       "\t}\n"
+	       "\ttoksz = (size_t)rc;\n"
+	       "\tif ( ! json_%s_parse_r(p, buf, t, toksz)) {\n"
+	       "\t\tdb_%s_free(p);\n"
+	       "\t\treturn NULL;\n"
+	       "\t}\n"
+	       "\treturn p;\n"
+	       "}\n"
+	       "\n",
+	       p->name, toks, p->name, 
+	       p->name, toks, p->name, p->name, p->name);
 }
 
 static void
@@ -2429,6 +2504,8 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 		if (STRCT_HAS_BLOB & p->flags) {
 			print_commentt(0, COMMENT_C,
 				"Required for b64_ntop().");
+			if ( ! jsonparse)
+			     puts("#include <ctype.h>");
 			puts("#include <netinet/in.h>\n"
 			     "#include <resolv.h>");
 			break;
@@ -2442,8 +2519,10 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 	if (json || strchr(incls, 'j'))
 		need_kcgi = need_kcgijson = 1;
 
-	if (jsonparse)
+	if (jsonparse) {
+		puts("#include <ctype.h>");
 		puts("#include <inttypes.h>");
+	}
 
 	if (need_kcgi) {
 		puts("#include <stdarg.h>");

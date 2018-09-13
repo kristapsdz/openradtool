@@ -156,7 +156,7 @@ paths.h: Makefile
 
 source.o: paths.h
 
-install: kwebapp
+install: all
 	mkdir -p $(DESTDIR)$(BINDIR)
 	mkdir -p $(DESTDIR)$(MANDIR)/man1
 	mkdir -p $(DESTDIR)$(MANDIR)/man5

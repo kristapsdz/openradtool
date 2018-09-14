@@ -448,14 +448,24 @@ static void
 gen_funcs_json_parse(const struct config *cfg, const struct strct *p)
 {
 
+	print_commentt(0, COMMENT_C,
+		"Deserialise the parsed JSON buffer \"buf\", which "
+		"need not be NUL terminated, with parse tokens "
+		"\"t\" of length \"toksz\", into \"p\".\n"
+		"Returns 0 on parse failure, <0 on memory allocation "
+		"failure, >1 on success.");
+	print_func_json_parse(p, 1);
 	print_commentv(0, COMMENT_C,
 		"Parse a %s from a buffer \"buf\" of length \"sz\".\n"
-		"Result \"res\" is allocated on success, otherwise "
-		"the pointer is set to NULL.\n"
+		"Result \"res\" is allocated on demand, otherwise "
+		"the pointer may be set to NULL.\n"
 		"Allocated results must be freed with db_%s_free().\n"
 		"Returns <0 on memory allocation failure, 0 on parse "
-		"failure, >0 on success.", p->name, p->name);
-	print_func_json_parse(p, 1);
+		"failure, >0 on success.\n"
+		"The \"res\" pointer may still be set upon failure, "
+		"so it should be freed regardless.",
+		p->name, p->name);
+	print_func_json_parse_alloc(p, 1);
 	puts("");
 }
 
@@ -712,8 +722,12 @@ gen_c_header(const struct config *cfg, const char *guard, int json,
 	       "DO NOT EDIT!");
 	puts("");
 
-	printf("#define KWBP_VERSION \"%s\"\n"
-	       "#define KWBP_VSTAMP %lld\n"
+	printf("#ifndef KWBP_VERSION\n"
+	       "# define KWBP_VERSION \"%s\"\n"
+	       "#endif\n"
+	       "#ifndef KWBP_VSTAMP\n"
+	       "# define KWBP_VSTAMP %lld\n"
+	       "#endif\n"
 	       "\n", VERSION, (long long)VSTAMP);
 	
 	if (dbin && ! TAILQ_EMPTY(&cfg->rq)) {
@@ -779,6 +793,39 @@ gen_c_header(const struct config *cfg, const char *guard, int json,
 		      "valid_keys[VALID__MAX];");
 	}
 
+	if (jsonparse) {
+		print_commentt(0, COMMENT_C,
+			"Type of JSON token");
+		puts("typedef enum {\n"
+		     "\tJSMN_UNDEFINED = 0,\n"
+		     "\tJSMN_OBJECT = 1,\n"
+		     "\tJSMN_ARRAY = 2,\n"
+		     "\tJSMN_STRING = 3,\n"
+		     "\tJSMN_PRIMITIVE = 4\n"
+		     "} jsmntype_t;\n"
+		     "");
+		print_commentt(0, COMMENT_C,
+			"JSON token description.");
+		puts("typedef struct {\n"
+		     "\tjsmntype_t type;\n"
+		     "\tint start;\n"
+		     "\tint end;\n"
+		     "\tint size;\n"
+		     "} jsmntok_t;\n"
+		     "");
+		print_commentt(0, COMMENT_C,
+			"JSON parser. Contains an array of token "
+			"blocks available. Also stores the string "
+			"being parsed now and current position in "
+			"that string.");
+		puts("typedef struct {\n"
+		     "\tunsigned int pos;\n"
+		     "\tunsigned int toknext;\n"
+		     "\tint toksuper;\n"
+		     "} jsmn_parser;\n"
+		     "");
+	}
+
 	puts("\n"
 	     "__BEGIN_DECLS\n"
 	     "");
@@ -796,9 +843,17 @@ gen_c_header(const struct config *cfg, const char *guard, int json,
 	if (json)
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			gen_funcs_json(cfg, p);
-	if (jsonparse)
+	if (jsonparse) {
+		puts("void\n"
+		     "jsmn_init(jsmn_parser *);\n"
+		     "\n"
+		     "int\n"
+		     "jsmn_parse(jsmn_parser *, const char *, "
+		      "size_t, jsmntok_t *, unsigned int);\n"
+		     "");
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			gen_funcs_json_parse(cfg, p);
+	}
 	if (valids)
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			gen_funcs_valids(cfg, p);

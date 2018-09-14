@@ -647,6 +647,7 @@ size_t		 print_name_db_update(const struct update *);
 void		 print_func_json_array(const struct strct *, int);
 void		 print_func_json_data(const struct strct *, int);
 void		 print_func_json_parse(const struct strct *, int);
+void		 print_func_json_parse_alloc(const struct strct *, int);
 void		 print_func_json_obj(const struct strct *, int);
 void		 print_func_json_iterate(const struct strct *, int);
 

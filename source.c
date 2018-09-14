@@ -1756,18 +1756,9 @@ gen_func_json_parse(const struct strct *p)
 
 	/* Start with an internal function with pre-parsed tokens. */
 
-	print_commentt(0, COMMENT_C,
-		"Deserialise the parsed JSON buffer \"buf\", which "
-		"need not be NUL terminated, with parse tokens "
-		"\"t\" of length \"toksz\", into \"p\".\n"
-		"Returns 0 on parse failure, <0 on memory allocation "
-		"failure, >1 on success.");
-	printf("static int\n"
-	       "json_%s_parse_r(struct %s *p,\n"
-	       "\tconst char *buf, const jsmntok_t *t, size_t toksz)\n"
-	       "{\n"
-	       "\tsize_t i;\n",
-	       p->name, p->name);
+	print_func_json_parse(p, 0);
+	puts("{\n"
+	     "\tsize_t i;");
 	if (hasenum)
 		puts("\tint64_t tmpint;");
 	if (hasstruct || hasblob)
@@ -1784,7 +1775,7 @@ gen_func_json_parse(const struct strct *p)
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FIELD_NOEXPORT & f->flags)
 			continue;
-		printf("\t\tif (_jsmn_eq(buf, &t[i], \"%s\")) {\n",
+		printf("\t\tif (jsmn_eq(buf, &t[i], \"%s\")) {\n",
 			f->name);
 
 		/* Check correct kind of token. */
@@ -1835,7 +1826,7 @@ gen_func_json_parse(const struct strct *p)
 		case FTYPE_DATE:
 		case FTYPE_EPOCH:
 		case FTYPE_INT:
-			printf("\t\t\tif ( ! _jsmn_parse_int("
+			printf("\t\t\tif ( ! jsmn_parse_int("
 				"buf + t[i+1].start,\n"
 			       "\t\t\t    t[i+1].end - t[i+1].start, "
 			        "&p->%s))\n"
@@ -1843,7 +1834,7 @@ gen_func_json_parse(const struct strct *p)
 			       f->name);
 			break;
 		case FTYPE_ENUM:
-			printf("\t\t\tif ( ! _jsmn_parse_int("
+			printf("\t\t\tif ( ! jsmn_parse_int("
 				"buf + t[i+1].start,\n"
 			       "\t\t\t    t[i+1].end - t[i+1].start, "
 			        "&tmpint))\n"
@@ -1852,7 +1843,7 @@ gen_func_json_parse(const struct strct *p)
 			       f->name);
 			break;
 		case FTYPE_REAL:
-			printf("\t\t\tif ( ! _jsmn_parse_real("
+			printf("\t\t\tif ( ! jsmn_parse_real("
 				"buf + t[i+1].start,\n"
 			       "\t\t\t    t[i+1].end - t[i+1].start, "
 			        "&p->%s))\n"
@@ -1887,7 +1878,7 @@ gen_func_json_parse(const struct strct *p)
 			       f->name, f->name);
 			break;
 		case FTYPE_STRUCT:
-			printf("\t\t\trc = json_%s_parse_r\n"
+			printf("\t\t\trc = json_%s_parse\n"
 			       "\t\t\t\t(&p->%s, buf + t[i+1].start,\n"
 			       "\t\t\t\t &t[i+1], t[i+1].size);\n"
 			       "\t\t\tif (rc <= 0)\n"
@@ -1917,27 +1908,22 @@ gen_func_json_parse(const struct strct *p)
 	/* Now our external function. */
 
 	toks = count_json_tokens_r(p);
-	print_func_json_parse(p, 0);
-	printf("\n"
-	       "{\n"
-	       "\tint toks, rc;\n"
+	print_func_json_parse_alloc(p, 0);
+	printf("{\n"
+	       "\tint toks;\n"
 	       "\tjsmn_parser jp;\n"
 	       "\tjsmntok_t t[%zu];\n"
 	       "\n"
-	       "\t_jsmn_init(&jp);\n"
+	       "\tjsmn_init(&jp);\n"
 	       "\t*res = NULL;\n"
 	       "\n"
-	       "\tif ((toks = _jsmn_parse(&jp, buf, sz, t, %zu)) <= 0)\n"
+	       "\tif ((toks = jsmn_parse(&jp, buf, sz, t, %zu)) <= 0)\n"
 	       "\t\treturn 0;\n"
 	       "\tif (NULL == (*res = calloc(1, sizeof(struct %s))))\n"
 	       "\t\treturn -1;\n"
-	       "\tif ((rc = json_%s_parse_r(*res, buf, t, toks)) > 0)\n"
-	       "\t\treturn 1;\n"
-	       "\tdb_%s_free(*res);\n"
-	       "\t*res = NULL;\n"
-	       "\treturn rc;\n"
+	       "\treturn json_%s_parse(*res, buf, t, toks);\n"
 	       "}\n"
-	       "\n", toks, toks, p->name, p->name, p->name);
+	       "\n", toks, toks, p->name, p->name);
 }
 
 static void

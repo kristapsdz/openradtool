@@ -20,15 +20,6 @@
  * THE SOFTWARE.
  */
 
-enum jsmnerr_t {
-	/* Not enough tokens were provided */
-	JSMN_ERROR_NOMEM = -1,
-	/* Invalid character inside JSON string */
-	JSMN_ERROR_INVAL = -2,
-	/* The string is not a full JSON packet, more bytes expected */
-	JSMN_ERROR_PART = -3
-};
-
 /**
  * Allocates a fresh unused token from the token pull.
  */
@@ -309,14 +300,14 @@ jsmn_init(jsmn_parser *parser)
  * The remainder here are written for kwebapp.
  */
 
-static int 
+int 
 jsmn_eq(const char *json, const jsmntok_t *tok, const char *s) 
 {
 	if (tok->type == JSMN_STRING && 
 	    (int)strlen(s) == tok->end - tok->start &&
 	    strncmp(json + tok->start, s, tok->end - tok->start) == 0) 
-		return 0;
-	return 1;
+		return 1;
+	return 0;
 }
 
 static int

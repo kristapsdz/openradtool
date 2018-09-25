@@ -375,7 +375,7 @@ gen_funcs_dbin(const struct config *cfg, const struct strct *p)
 	size_t	 pos;
 
 	print_commentt(0, COMMENT_C,
-	       "Unfill resources and free \"p\".\n"
+	       "Clear resources and free \"p\".\n"
 	       "Has no effect if \"p\" is NULL.");
 	print_func_db_free(p, 1);
 	puts("");
@@ -389,8 +389,8 @@ gen_funcs_dbin(const struct config *cfg, const struct strct *p)
 	}
 
 	/*
-	 * The fill and unfill routines are part of the low-level API
-	 * that we don't expose if we have roles defined.
+	 * The fill routine is part of the low-level API that we don't
+	 * expose if we have roles defined.
 	 */
 
 	if ( ! (CFG_HAS_ROLES & cfg->flags)) {
@@ -401,11 +401,10 @@ gen_funcs_dbin(const struct config *cfg, const struct strct *p)
 		       "This follows DB_SCHEMA_%s's order for columns.",
 		       p->name, p->cname);
 		print_func_db_fill(p, 0, 1);
-		puts("");
-		print_commentv(0, COMMENT_C,
-		       "Free memory allocated by db_%s_fill().\n"
-		       "Has not effect if \"p\" is NULL.",
-		       p->name);
+		print_commentt(0, COMMENT_C,
+		       "Free resources from \"p\" and all nested objects.\n"
+		       "Does not free the \"p\" pointer itself.\n"
+		       "Has no effect if \"p\" is NULL.");
 		print_func_db_unfill(p, 0, 1);
 		puts("");
 	}
@@ -453,8 +452,10 @@ gen_funcs_json_parse(const struct config *cfg, const struct strct *p)
 		"need not be NUL terminated, with parse tokens "
 		"\"t\" of length \"toksz\", into \"p\".\n"
 		"Returns 0 on parse failure, <0 on memory allocation "
-		"failure, >1 on success.");
+		"failure, or the count of tokens parsed on success.");
 	print_func_json_parse(p, 1);
+	puts("");
+
 	print_commentv(0, COMMENT_C,
 		"Parse a %s from a buffer \"buf\" of length \"sz\".\n"
 		"Result \"res\" is allocated on demand, otherwise "
@@ -466,6 +467,30 @@ gen_funcs_json_parse(const struct config *cfg, const struct strct *p)
 		"so it should be freed regardless.",
 		p->name, p->name);
 	print_func_json_parse_alloc(p, 1);
+	puts("");
+
+	print_commentv(0, COMMENT_C,
+		"Deserialise the parsed JSON buffer \"buf\", which "
+		"need not be NUL terminated, with parse tokens "
+		"\"t\" of length \"toksz\", into an array \"p\" "
+		"allocated with \"sz\" elements.\n"
+		"The array must be freed with json_%s_free_array().\n"
+		"Returns 0 on parse failure, <0 on memory allocation "
+		"failure, or the count of tokens parsed on success.",
+		p->name);
+	print_func_json_parse_array(p, 1);
+	puts("");
+
+	print_commentv(0, COMMENT_C,
+		"Free an array from json_%s_parse_array().\n"
+		"May be passed NULL.", p->name);
+	print_func_json_free_array(p, 1);
+	puts("");
+
+	print_commentv(0, COMMENT_C,
+		"Clear memory from json_%s_parse().\n"
+		"May be passed NULL.", p->name);
+	print_func_json_clear(p, 1);
 	puts("");
 }
 
@@ -790,10 +815,20 @@ gen_c_header(const struct config *cfg, const char *guard, int json,
 			"the field, and can be used standalone.\n"
 			"The form inputs are named \"xxx-yyy\".");
 		puts("extern const struct kvalid "
-		      "valid_keys[VALID__MAX];");
+		      "valid_keys[VALID__MAX];\n"
+		      "");
 	}
 
 	if (jsonparse) {
+		print_commentt(0, COMMENT_C,
+			"Possible error returns from jsmn_parse(), "
+			"if returning a <0 error code.");
+		puts("enum jsmnerr_t {\n"
+		     "\tJSMN_ERROR_NOMEM = -1,\n"
+		     "\tJSMN_ERROR_INVAL = -2,\n"
+		     "\tJSMN_ERROR_PART = -3\n"
+		     "};\n"
+		     "");
 		print_commentt(0, COMMENT_C,
 			"Type of JSON token");
 		puts("typedef enum {\n"
@@ -826,8 +861,7 @@ gen_c_header(const struct config *cfg, const char *guard, int json,
 		     "");
 	}
 
-	puts("\n"
-	     "__BEGIN_DECLS\n"
+	puts("__BEGIN_DECLS\n"
 	     "");
 
 	if (dbin) {
@@ -844,12 +878,36 @@ gen_c_header(const struct config *cfg, const char *guard, int json,
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			gen_funcs_json(cfg, p);
 	if (jsonparse) {
+		print_commentt(0, COMMENT_C,
+			"Check whether the current token in a "
+			"JSON parse sequence \"tok\" parsed from "
+			"\"json\" is equal to a string.\n"
+			"Usually used when checking for key "
+			"equality.\n"
+			"Returns non-zero on equality, zero "
+			"otherwise.");
+		puts("int\n"
+		     "jsmn_eq(const char *json,\n"
+		     "\tconst jsmntok_t *tok, const char *s);\n"
+		     "");
+		print_commentt(0, COMMENT_C,
+			"Initialise a JSON parser sequence \"p\".");
 		puts("void\n"
-		     "jsmn_init(jsmn_parser *);\n"
-		     "\n"
-		     "int\n"
-		     "jsmn_parse(jsmn_parser *, const char *, "
-		      "size_t, jsmntok_t *, unsigned int);\n"
+		     "jsmn_init(jsmn_parser *p);\n"
+		     "");
+		print_commentt(0, COMMENT_C,
+			"Parse a buffer \"buf\" of length \"sz\" "
+			"into tokens \"toks\" of length \"toksz\" "
+			"with parser \"p\".\n"
+			"Returns the number of tokens parsed or "
+			"<0 on failure (possible errors described "
+			"in enum jsmnerr_t).\n"
+			"If passed NULL \"toks\", simply computes "
+			"the number of tokens required.");
+		puts("int\n"
+		     "jsmn_parse(jsmn_parser *p, const char *buf,\n"
+		     "\tsize_t sz, jsmntok_t *toks, "
+		      "unsigned int toksz);\n"
 		     "");
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			gen_funcs_json_parse(cfg, p);

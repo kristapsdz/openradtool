@@ -651,7 +651,6 @@ void		 print_func_json_free_array(const struct strct *, int);
 void		 print_func_json_iterate(const struct strct *, int);
 void		 print_func_json_parse(const struct strct *, int);
 void		 print_func_json_parse_array(const struct strct *, int);
-void		 print_func_json_parse_alloc(const struct strct *, int);
 void		 print_func_json_obj(const struct strct *, int);
 
 void		 print_func_valid(const struct field *, int);

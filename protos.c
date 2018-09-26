@@ -402,9 +402,10 @@ void
 print_func_db_unfill(const struct strct *p, int priv, int decl)
 {
 
-	if (priv || decl)
+	if (priv && decl)
 		return;
-	printf("void%sdb_%s_unfill(struct %s *p)%s",
+	printf("%svoid%sdb_%s_unfill(struct %s *p)%s",
+	       priv ? "static " : "",
 	       decl ? " " : "\n", p->name, p->name,
 	       decl ? ";\n" : "");
 }
@@ -465,7 +466,7 @@ void
 print_func_json_clear(const struct strct *p, int decl)
 {
 
-	printf("int%sjson_%s_clear(struct %s *p)%s",
+	printf("void%sjsmn_%s_clear(struct %s *p)%s",
 		decl ? " " : "\n", p->name, p->name, 
 		decl ? ";\n" : "\n");
 }
@@ -479,22 +480,7 @@ void
 print_func_json_free_array(const struct strct *p, int decl)
 {
 
-	printf("int%sjson_%s_free_array(struct %s *p, size_t sz)%s",
-		decl ? " " : "\n", p->name, p->name, 
-		decl ? ";\n" : "\n");
-}
-
-/*
- * JSON parsing routine for a given structure.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line followed by a newline.
- */
-void
-print_func_json_parse_alloc(const struct strct *p, int decl)
-{
-
-	printf("int%sjson_%s_parse_alloc"
-		"(const char *buf, size_t sz, struct %s **res)%s",
+	printf("void%sjsmn_%s_free_array(struct %s *p, size_t sz)%s",
 		decl ? " " : "\n", p->name, p->name, 
 		decl ? ";\n" : "\n");
 }
@@ -508,7 +494,7 @@ void
 print_func_json_parse_array(const struct strct *p, int decl)
 {
 
-	printf("int%sjson_%s_parse_array(struct %s **p, size_t *sz, "
+	printf("int%sjsmn_%s_array(struct %s **p, size_t *sz, "
 		"const char *buf, const jsmntok_t *t, size_t toksz)%s",
 		decl ? " " : "\n", p->name, p->name, 
 		decl ? ";\n" : "\n");
@@ -523,7 +509,7 @@ void
 print_func_json_parse(const struct strct *p, int decl)
 {
 
-	printf("int%sjson_%s_parse(struct %s *p, "
+	printf("int%sjsmn_%s(struct %s *p, "
 		"const char *buf, const jsmntok_t *t, size_t toksz)%s",
 		decl ? " " : "\n", p->name, p->name, 
 		decl ? ";\n" : "\n");

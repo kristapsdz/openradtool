@@ -1885,7 +1885,7 @@ gen_func_json_parse(const struct strct *p)
 			       f->name, f->name);
 			break;
 		case FTYPE_STRUCT:
-			printf("\t\t\trc = json_%s_parse\n"
+			printf("\t\t\trc = jsmn_%s\n"
 			       "\t\t\t\t(&p->%s, buf,\n"
 			       "\t\t\t\t &t[j+1], toksz - j);\n"
 			       "\t\t\tif (rc <= 0)\n"
@@ -1928,11 +1928,11 @@ gen_func_json_parse(const struct strct *p)
 		case (FTYPE_STRUCT):
 			if (FIELD_NULL & f->ref->source->flags)
 				printf("\tif (p->has_%s)\n"
-				       "\t\tjson_%s_clear(&p->%s);\n",
+				       "\t\tjsmn_%s_clear(&p->%s);\n",
 					f->ref->source->name, 
 					f->ref->tstrct, f->name);
 			else
-				printf("\tjson_%s_clear(&p->%s);\n",
+				printf("\tjsmn_%s_clear(&p->%s);\n",
 					f->ref->tstrct, f->name);
 			break;
 		default:
@@ -1945,7 +1945,7 @@ gen_func_json_parse(const struct strct *p)
 	printf("{\n"
 	       "\tsize_t i;\n"
 	       "\tfor (i = 0; i < sz; i++)\n"
-	       "\t\tjson_%s_clear(p[i]);\n"
+	       "\t\tjsmn_%s_clear(&p[i]);\n"
 	       "\tfree(p);\n"
 	       "}\n"
 	       "\n", p->name);
@@ -1966,32 +1966,14 @@ gen_func_json_parse(const struct strct *p)
 	       "\t\treturn -1;\n"
 	       "\n"
 	       "\tfor (i = j = 0; i < *sz; i++) {\n"
-	       "\t\trc = json_%s_parse\n"
-	       "\t\t\t(&(*p)[i], buf, &t[j+1], toksz - j);\n"
+	       "\t\trc = jsmn_%s(&(*p)[i], buf, &t[j+1], toksz - j);\n"
 	       "\t\tif (rc <= 0)\n"
 	       "\t\t\treturn rc;\n"
 	       "\t\tj += rc;\n"
 	       "\t}\n"
-	       "\treturn 1;\n"
+	       "\treturn j + 1;\n"
 	       "}\n"
 	       "\n", p->name, p->name);
-
-	print_func_json_parse_alloc(p, 0);
-	printf("{\n"
-	       "\tint toks;\n"
-	       "\tjsmn_parser jp;\n"
-	       "\tjsmntok_t t[%zu];\n"
-	       "\n"
-	       "\tjsmn_init(&jp);\n"
-	       "\t*res = NULL;\n"
-	       "\n"
-	       "\tif ((toks = jsmn_parse(&jp, buf, sz, t, %zu)) <= 0)\n"
-	       "\t\treturn 0;\n"
-	       "\tif (NULL == (*res = calloc(1, sizeof(struct %s))))\n"
-	       "\t\treturn -1;\n"
-	       "\treturn json_%s_parse(*res, buf, t, toks);\n"
-	       "}\n"
-	       "\n", toks, toks, p->name, p->name);
 }
 
 static void

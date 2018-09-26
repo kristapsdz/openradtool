@@ -1,3 +1,7 @@
+/* 
+ * https://github.com/zserge/jsmn
+ * Current as of 26-09-2018.
+ */
 /**
  * Copyright (c) 2010 Serge A. Zaitsev
  *

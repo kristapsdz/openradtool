@@ -457,24 +457,11 @@ gen_funcs_json_parse(const struct config *cfg, const struct strct *p)
 	puts("");
 
 	print_commentv(0, COMMENT_C,
-		"Parse a %s from a buffer \"buf\" of length \"sz\".\n"
-		"Result \"res\" is allocated on demand, otherwise "
-		"the pointer may be set to NULL.\n"
-		"Allocated results must be freed with db_%s_free().\n"
-		"Returns <0 on memory allocation failure, 0 on parse "
-		"failure, >0 on success.\n"
-		"The \"res\" pointer may still be set upon failure, "
-		"so it should be freed regardless.",
-		p->name, p->name);
-	print_func_json_parse_alloc(p, 1);
-	puts("");
-
-	print_commentv(0, COMMENT_C,
 		"Deserialise the parsed JSON buffer \"buf\", which "
 		"need not be NUL terminated, with parse tokens "
 		"\"t\" of length \"toksz\", into an array \"p\" "
 		"allocated with \"sz\" elements.\n"
-		"The array must be freed with json_%s_free_array().\n"
+		"The array must be freed with jsmn_%s_free_array().\n"
 		"Returns 0 on parse failure, <0 on memory allocation "
 		"failure, or the count of tokens parsed on success.",
 		p->name);
@@ -482,13 +469,15 @@ gen_funcs_json_parse(const struct config *cfg, const struct strct *p)
 	puts("");
 
 	print_commentv(0, COMMENT_C,
-		"Free an array from json_%s_parse_array().\n"
+		"Free an array from jsmn_%s_array(). "
+		"Frees the pointer as well.\n"
 		"May be passed NULL.", p->name);
 	print_func_json_free_array(p, 1);
 	puts("");
 
 	print_commentv(0, COMMENT_C,
-		"Clear memory from json_%s_parse().\n"
+		"Clear memory from jsmn_%s(). "
+		"Does not touch the pointer itself.\n"
 		"May be passed NULL.", p->name);
 	print_func_json_clear(p, 1);
 	puts("");
@@ -886,14 +875,12 @@ gen_c_header(const struct config *cfg, const char *guard, int json,
 			"equality.\n"
 			"Returns non-zero on equality, zero "
 			"otherwise.");
-		puts("int\n"
-		     "jsmn_eq(const char *json,\n"
+		puts("int jsmn_eq(const char *json,\n"
 		     "\tconst jsmntok_t *tok, const char *s);\n"
 		     "");
 		print_commentt(0, COMMENT_C,
 			"Initialise a JSON parser sequence \"p\".");
-		puts("void\n"
-		     "jsmn_init(jsmn_parser *p);\n"
+		puts("void jsmn_init(jsmn_parser *p);\n"
 		     "");
 		print_commentt(0, COMMENT_C,
 			"Parse a buffer \"buf\" of length \"sz\" "
@@ -904,8 +891,7 @@ gen_c_header(const struct config *cfg, const char *guard, int json,
 			"in enum jsmnerr_t).\n"
 			"If passed NULL \"toks\", simply computes "
 			"the number of tokens required.");
-		puts("int\n"
-		     "jsmn_parse(jsmn_parser *p, const char *buf,\n"
+		puts("int jsmn_parse(jsmn_parser *p, const char *buf,\n"
 		     "\tsize_t sz, jsmntok_t *toks, "
 		      "unsigned int toksz);\n"
 		     "");

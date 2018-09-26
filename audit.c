@@ -948,7 +948,7 @@ int
 main(int argc, char *argv[])
 {
 	const char	 *role = NULL;
-	struct config	 *cfg;
+	struct config	 *cfg = NULL;
 	int		  rc = 0;
 	enum op		  op = OP_AUDIT;
 	size_t		  i, confsz;

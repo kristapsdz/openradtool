@@ -2549,8 +2549,7 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 		"DO NOT EDIT!");
 
 #ifndef __OpenBSD__
-	puts("#define _BSD_SOURCE\n"
-	     "#define _XOPEN_SOURCE\n"
+	puts("#define _GNU_SOURCE /* strndup */\n"
 	     "");
 #endif
 

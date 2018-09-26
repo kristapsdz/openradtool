@@ -1711,6 +1711,7 @@ gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 	}
 }
 
+#if 0
 /*
  * Count the maximum number of JSON tokens that can be exported by any
  * given structure.
@@ -1733,11 +1734,11 @@ count_json_tokens_r(const struct strct *p)
 
 	return 1 + tok;
 }
+#endif
 
 static void
 gen_func_json_parse(const struct strct *p)
 {
-	size_t	 	 toks;
 	int		 hasenum = 0, hasstruct = 0, hasblob = 0;
 	const struct field *f;
 
@@ -1753,8 +1754,6 @@ gen_func_json_parse(const struct strct *p)
 		else if (FTYPE_STRUCT == f->type) 
 			hasstruct = 1;
 	}
-
-	toks = count_json_tokens_r(p);
 
 	print_func_json_parse(p, 0);
 	puts("{\n"
@@ -2532,6 +2531,7 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 
 #ifndef __OpenBSD__
 	puts("#define _GNU_SOURCE /* strndup */\n"
+	     "#define _XOPEN_SOURCE /* crypt */\n"
 	     "");
 #endif
 

@@ -911,7 +911,7 @@ int
 main(int argc, char *argv[])
 {
 	const char	 *guard = "DB_H";
-	struct config	 *cfg;
+	struct config	 *cfg = NULL;
 	int		  c, json = 0, valids = 0, rc = 0,
 			  splitproc = 0, dbin = 1, dstruct = 1,
 			  jsonparse = 0;

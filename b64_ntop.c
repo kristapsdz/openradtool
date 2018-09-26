@@ -42,18 +42,19 @@
  * IF IBM IS APPRISED OF THE POSSIBILITY OF SUCH DAMAGES.
  */
 
+static const char b64_Base64[] =
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	"abcdefghijklmnopqrstuvwxyz0123456789+/";
+static const char b64_Pad64 = '=';
+
 static int
 b64_ntop(unsigned char *src, size_t srclength,
 	char *target, size_t targsize)
 {
-	static const char Base64[] =
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-		"abcdefghijklmnopqrstuvwxyz0123456789+/";
-	static const char Pad64 = '=';
-	size_t datalength = 0;
-	unsigned char input[3];
-	unsigned char output[4];
-	size_t i;
+	size_t 		 datalength = 0;
+	unsigned char 	 input[3];
+	unsigned char 	 output[4];
+	size_t 		 i;
 
 	while (2 < srclength) {
 		input[0] = *src++;
@@ -68,10 +69,10 @@ b64_ntop(unsigned char *src, size_t srclength,
 
 		if (datalength + 4 > targsize)
 			return (-1);
-		target[datalength++] = Base64[output[0]];
-		target[datalength++] = Base64[output[1]];
-		target[datalength++] = Base64[output[2]];
-		target[datalength++] = Base64[output[3]];
+		target[datalength++] = b64_Base64[output[0]];
+		target[datalength++] = b64_Base64[output[1]];
+		target[datalength++] = b64_Base64[output[2]];
+		target[datalength++] = b64_Base64[output[3]];
 	}
 
 	if (0 != srclength) {
@@ -85,13 +86,13 @@ b64_ntop(unsigned char *src, size_t srclength,
 
 		if (datalength + 4 > targsize)
 			return (-1);
-		target[datalength++] = Base64[output[0]];
-		target[datalength++] = Base64[output[1]];
+		target[datalength++] = b64_Base64[output[0]];
+		target[datalength++] = b64_Base64[output[1]];
 		if (srclength == 1)
-			target[datalength++] = Pad64;
+			target[datalength++] = b64_Pad64;
 		else
-			target[datalength++] = Base64[output[2]];
-		target[datalength++] = Pad64;
+			target[datalength++] = b64_Base64[output[2]];
+		target[datalength++] = b64_Pad64;
 	}
 	if (datalength >= targsize)
 		return (-1);
@@ -105,24 +106,22 @@ b64_ntop(unsigned char *src, size_t srclength,
    it returns the number of data bytes stored at the target, or -1 on error.
  */
 
-int
+static int
 b64_pton(const char *src, u_char *target, size_t targsize)
 {
-	int tarindex, state, ch;
-	u_char nextbyte;
-	char *pos;
-
-	state = 0;
-	tarindex = 0;
+	int 	 state = 0, ch;
+	size_t 	 tarindex = 0;
+	u_char 	 nextbyte;
+	char 	*pos;
 
 	while ((ch = (unsigned char)*src++) != '\0') {
 		if (isspace(ch))	/* Skip whitespace anywhere. */
 			continue;
 
-		if (ch == Pad64)
+		if (ch == b64_Pad64)
 			break;
 
-		pos = strchr(Base64, ch);
+		pos = strchr(b64_Base64, ch);
 		if (pos == 0) 		/* A non-base64 character. */
 			return (-1);
 
@@ -131,7 +130,7 @@ b64_pton(const char *src, u_char *target, size_t targsize)
 			if (target) {
 				if (tarindex >= targsize)
 					return (-1);
-				target[tarindex] = (pos - Base64) << 2;
+				target[tarindex] = (pos - b64_Base64) << 2;
 			}
 			state = 1;
 			break;
@@ -139,8 +138,8 @@ b64_pton(const char *src, u_char *target, size_t targsize)
 			if (target) {
 				if (tarindex >= targsize)
 					return (-1);
-				target[tarindex]   |=  (pos - Base64) >> 4;
-				nextbyte = ((pos - Base64) & 0x0f) << 4;
+				target[tarindex]   |=  (pos - b64_Base64) >> 4;
+				nextbyte = ((pos - b64_Base64) & 0x0f) << 4;
 				if (tarindex + 1 < targsize)
 					target[tarindex+1] = nextbyte;
 				else if (nextbyte)
@@ -153,8 +152,8 @@ b64_pton(const char *src, u_char *target, size_t targsize)
 			if (target) {
 				if (tarindex >= targsize)
 					return (-1);
-				target[tarindex]   |=  (pos - Base64) >> 2;
-				nextbyte = ((pos - Base64) & 0x03) << 6;
+				target[tarindex]   |=  (pos - b64_Base64) >> 2;
+				nextbyte = ((pos - b64_Base64) & 0x03) << 6;
 				if (tarindex + 1 < targsize)
 					target[tarindex+1] = nextbyte;
 				else if (nextbyte)
@@ -167,7 +166,7 @@ b64_pton(const char *src, u_char *target, size_t targsize)
 			if (target) {
 				if (tarindex >= targsize)
 					return (-1);
-				target[tarindex] |= (pos - Base64);
+				target[tarindex] |= (pos - b64_Base64);
 			}
 			tarindex++;
 			state = 0;
@@ -180,7 +179,7 @@ b64_pton(const char *src, u_char *target, size_t targsize)
 	 * on a byte boundary, and/or with erroneous trailing characters.
 	 */
 
-	if (ch == Pad64) {			/* We got a pad char. */
+	if (ch == b64_Pad64) {			/* We got a pad char. */
 		ch = (unsigned char)*src++;	/* Skip it, get next. */
 		switch (state) {
 		case 0:		/* Invalid = in first position */
@@ -193,7 +192,7 @@ b64_pton(const char *src, u_char *target, size_t targsize)
 				if (!isspace(ch))
 					break;
 			/* Make sure there is another trailing = sign. */
-			if (ch != Pad64)
+			if (ch != b64_Pad64)
 				return (-1);
 			ch = (unsigned char)*src++;		/* Skip the = */
 			/* Fall through to "single trailing =" case. */

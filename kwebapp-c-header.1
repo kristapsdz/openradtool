@@ -22,7 +22,7 @@
 .Nd define web application C API
 .Sh SYNOPSIS
 .Nm kwebapp-c-header
-.Op Fl jsv
+.Op Fl jJsv
 .Op Fl g Ar guard
 .Op Fl N Ar db
 .Op Ar config...
@@ -42,6 +42,12 @@ Its arguments are as follows:
 .It Fl j
 Output JSON output declarations as documented in
 .Sx JSON export .
+.It Fl J
+Like
+.Fl j ,
+but for
+.Sx JSON import
+functions.
 .It Fl v
 Output data validators declarations as documented in
 .Sx Data validation .
@@ -560,8 +566,89 @@ as a key-value pair where the key is the structure name and the value is
 an object consisting of
 .Fn json_foo_data .
 .El
-.
-.
+.Ss JSON import
+Utility functions for parsing buffers into objects defined in a
+.Xr kwebapp 5
+configuration.
+Unlike the functions in
+.Sx JSON export ,
+these do not require any additional headers.
+The following use
+.Dq foo
+as an example structure.
+.Bl -tag -width Ds
+.It Li int jsmn_init(jsmn_parser *p)
+Initialise a parser.
+This must be called each time before
+.Fn jsmn_parse
+is invoked.
+.It Li int jsmn_parse(jsmn_parse *p, const char *buf, size_t sz, jsmntok_t *toks, unsigned int toksz)
+Parse a buffer
+.Fa buf
+of length
+.Fa sz
+into a series of tokens
+.Fa toks
+of length
+.Fa toksz .
+Returns less than zero on failure or the number of tokens parsed.
+If invoked with a
+.Dv NULL
+value for
+.Fa toks ,
+tokens are parsed but not filled in.
+This is the usual practise for parsing an unknown set of objects: a set
+of tokens may be allocated using the non-negative return value.
+.It Li int jsmn_eq(const char *buf, const jsmntok_t *t, const char *s)
+Test whether the current token
+.Fa t
+referencing buffer
+.Fa buf
+is a string equal (case sensitive) to
+.Fa s .
+.It Li int jsmn_foo(struct foo *p, const char *buf, const jsmntok_t *t, size_t toksz)
+Parse an object starting at token
+.Fa t
+referencing buffer
+.Fa buf
+with
+.Fa toksz
+remaining tokens into
+.Fa p .
+Returns less than zero on allocation failure, zero on parse error
+(malformed fields), or the number of tokens parsed.
+The input structure should be zeroed prior to calling.
+Regardless the return value, the resulting pointer should be passed to
+.Fn jsmn_foo_free .
+.It Li int jsmn_foo_array(struct foo **p, size_t *sz, const char *buf, const jsmntok_t *t, size_t toksz)
+Like
+.Fn jsmn_foo ,
+but allocating and filling an array of structures.
+The array must be freed with
+.Fn jsmn_foo_free_array
+regardless the return value.
+.It Li void jsmn_foo_free_array(struct foo *p, size_t sz)
+Free an array of structures, recursively clearing all nested data.
+Does nothing if
+.Fa p
+is
+.Dv NULL .
+.It Li void jsmn_foo_clear(struct foo *p)
+Recursively clears all nested data, not touching the pointer.
+Does nothing if
+.Fa p
+is
+.Dv NULL .
+.El
+.Pp
+The parser writes the parse tree tokens into a linear array in infix
+order.
+Each node is either an object (consisting of string key and value
+pairs), an array, a primitive, or a string.
+To drive the parser, initialise a parse, parse the input (usually twice:
+once to get the number of tokens, the second to fill in tokens),
+recursively descend into the token stream.
+The descent should occur for all objects and arrays.
 .Ss Data validation
 These functions invoke
 .Xr kcgi 3

@@ -4,7 +4,7 @@ include Makefile.configure
 
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 6
-VERSION_BUILD	 = 1
+VERSION_BUILD	 = 2
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = comments.o \
 		   compats.o \
@@ -43,12 +43,15 @@ DOTAR		 = audit.c \
 		   audit.css \
 		   audit.html \
 		   audit.js \
+		   b64_ntop.c \
 		   comments.c \
 		   compats.c \
 		   config.c \
 		   extern.h \
+		   gensalt.c \
 		   header.c \
 		   javascript.c \
+		   jsmn.c \
 		   $(MAN1S) \
 		   kwebapp.5 \
 		   linker.c \

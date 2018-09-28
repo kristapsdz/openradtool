@@ -3,6 +3,28 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.6.2</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-09-28">2018-09-28</time>
+		</header>
+		<aside>
+			<p>
+				<i>Same as 0.6.1 except a small fix for packaging.
+					Below is the message from 0.6.1</i>.
+			</p>
+			<p>
+				Add ability to convert <i>from</i> JSON back into objects.
+				This uses <a
+					href="https://github.com/zserge/jsmn">jsmn</a>,
+				as it's simple, fast, and easy to bundle directly into the sources.
+				See the <code><b>-J</b></code> flag in 
+				<a href="kwebapp-c-header.1.html">kwebapp-c-header(1)</a> and
+				<a href="kwebapp-c-source.1.html">kwebapp-c-source(1)</a> for details.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.6.1</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-09-26">2018-09-26</time>

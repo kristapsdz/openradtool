@@ -1017,7 +1017,7 @@ main(int argc, char *argv[])
 
 out:
 	for (i = 0; i < confsz; i++)
-		if (EOF == fclose(confs[i]))
+		if (NULL != confs[i] && EOF == fclose(confs[i]))
 			warn("%s", argv[i]);
 	free(confs);
 	config_free(cfg);

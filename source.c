@@ -2818,7 +2818,7 @@ out:
 		if (-1 != exs[i])
 			close(exs[i]);
 	for (i = 0; i < confsz; i++)
-		if (EOF == fclose(confs[i]))
+		if (NULL != confs[i] && EOF == fclose(confs[i]))
 			warn("%s", argv[i]);
 	free(confs);
 	config_free(cfg);

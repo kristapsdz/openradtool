@@ -738,6 +738,43 @@ check_searchtype(struct strct *p)
 }
 
 /*
+ * Let resolve_search() find unique entries that use the "unique"
+ * clause for multiple fields instead of a "unique" or "rowid" on the
+ * field itself.
+ * All of the search terms ("sent") must be for equality, otherwise the
+ * uniqueness is irrelevant.
+ * Returns zero if not found, non-zero if found.
+ */
+static int
+check_search_unique(const struct search *srch)
+{
+	const struct unique *uq;
+	const struct sent *sent;
+	const struct sref *sr;
+	const struct nref *nr;
+
+	TAILQ_FOREACH(uq, &srch->parent->nq, entries) {
+		TAILQ_FOREACH(nr, &uq->nq, entries) {
+			assert(NULL != nr->field);
+			TAILQ_FOREACH(sent, &srch->sntq, entries) {
+				if (OPTYPE_EQUAL != sent->op) 
+					continue;
+				sr = TAILQ_LAST(&sent->srq, srefq);
+				assert(NULL != sr->field);
+				if (sr->field == nr->field)
+					break;
+			}
+			if (NULL == sent)
+				break;
+		}
+		if (NULL == nr)
+			return 1;
+	}
+
+	return 0;
+}
+
+/*
  * Resolve the chain of search terms.
  * To do so, descend into each set of search terms for the structure and
  * resolve the fields.
@@ -791,6 +828,15 @@ resolve_search(struct search *srch)
 		assert(NULL != a);
 		sent->alias = a;
 	}
+
+	/* 
+	 * If we're not unique on a per-field basis, see if our "unique"
+	 * clause stipulates a unique search.
+	 */
+
+	if ( ! (SEARCH_IS_UNIQUE & srch->flags) &&
+	    check_search_unique(srch))
+		srch->flags |= SEARCH_IS_UNIQUE;
 
 	/* Now the same but for order statements. */
 
@@ -1374,14 +1420,14 @@ parse_link(struct config *cfg)
 	/* Resolve search terms. */
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		TAILQ_FOREACH(srch, &p->sq, entries)
-			if ( ! resolve_search(srch))
-				return(0);
-
-	TAILQ_FOREACH(p, &cfg->sq, entries)
 		TAILQ_FOREACH(n, &p->nq, entries)
 			if ( ! resolve_unique(n) ||
 			     ! check_unique(n))
+				return(0);
+
+	TAILQ_FOREACH(p, &cfg->sq, entries)
+		TAILQ_FOREACH(srch, &p->sq, entries)
+			if ( ! resolve_search(srch))
 				return(0);
 
 	/* See if our search type is wonky. */

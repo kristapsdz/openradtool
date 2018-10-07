@@ -664,15 +664,28 @@ specified with the
 structure-level keyword.
 The syntax is as follows:
 .Bd -literal -offset indent
-"unique" [fields]2+ ";"
+"unique" field ["," field]+ ";"
 .Ed
 .Pp
-The
-.Cm fields
+Each
+.Cm field
 must be in the local structure, and must be native types.
 There must be at least two fields in the statement.
 There can be only one unique statement per combination of fields (in any
 order).
+.Pp
+For example, consider a request for something involving two parties,
+where the pair requesting must be unique.
+.Bd -literal -offset indent
+struct request {
+  field userid:user.id int;
+  field ownerid:user.id int;
+  unique userid, ownerid;
+};
+.Ed
+.Pp
+This stipulates that adding the same pair will result in a constraint
+failure.
 .Ss Updates
 Update statements (update, delete, insert) define how the database will be
 modified.

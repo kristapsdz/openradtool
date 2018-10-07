@@ -952,7 +952,7 @@ out:
 		if (-1 != xmls[i] && -1 == close(xmls[i]))
 			warn("%s", argv[xmlstart + i]);
 	for (i = 0; i < confsz; i++)
-		if (EOF == fclose(confs[i]))
+		if (NULL != confs[i] && EOF == fclose(confs[i]))
 			warn("%s", argv[i]);
 
 	free(confs);

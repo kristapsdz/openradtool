@@ -742,10 +742,10 @@ main(int argc, char *argv[])
 
 out:
 	for (i = 0; i < confsz; i++)
-		if (EOF == fclose(confs[i]))
+		if (NULL != confs[i] && EOF == fclose(confs[i]))
 			warn("%s", argv[confst + i]);
 	for (i = 0; i < dconfsz; i++)
-		if (EOF == fclose(dconfs[i]))
+		if (NULL != dconfs[i] && EOF == fclose(dconfs[i]))
 			warn("%s", argv[i]);
 	free(confs);
 	free(dconfs);

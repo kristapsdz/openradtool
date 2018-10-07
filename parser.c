@@ -1634,7 +1634,7 @@ parse_config_search_params(struct parse *p, struct search *s)
  * Parse a unique clause.
  * This has the following syntax:
  *
- *  "unique" [field]2+ ";"
+ *  "unique" field ["," field]+ ";"
  *
  * The fields are within the current structure.
  */

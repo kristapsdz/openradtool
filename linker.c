@@ -1278,6 +1278,11 @@ parse_link(struct config *cfg)
 	struct enm	 *en;
 	size_t		  colour = 1, sz = 0, i, hasrowid = 0;
 
+	if (TAILQ_EMPTY(&cfg->sq)) {
+		fprintf(stderr, "no structures in configuration\n");
+		return 0;
+	}
+
 	TAILQ_FOREACH(en, &cfg->eq, entries)
 		if (ENM_AUTO & en->flags)
 			resolve_enum_auto(en);

@@ -141,11 +141,10 @@ xtext(void *dat, const XML_Char *s, int len)
 				 sz + len + 1);
 			if (NULL == p->curunit->source)
 				err(EXIT_FAILURE, NULL);
-			strlcpy(p->curunit->source + sz,
-				s, len + 1);
+			memcpy(p->curunit->source + sz, s, len);
+			p->curunit->source[sz + len] = '\0';
 		} else {
-			p->curunit->source = 
-				strndup(s, len);
+			p->curunit->source = strndup(s, len);
 			if (NULL == p->curunit->source)
 				err(EXIT_FAILURE, NULL);
 		}
@@ -157,11 +156,10 @@ xtext(void *dat, const XML_Char *s, int len)
 				 sz + len + 1);
 			if (NULL == p->curunit->target)
 				err(EXIT_FAILURE, NULL);
-			strlcpy(p->curunit->target + sz,
-				s, len + 1);
+			memcpy(p->curunit->target + sz, s, len);
+			p->curunit->target[sz + len] = '\0';
 		} else {
-			p->curunit->target = 
-				strndup(s, len);
+			p->curunit->target = strndup(s, len);
 			if (NULL == p->curunit->target)
 				err(EXIT_FAILURE, NULL);
 		}

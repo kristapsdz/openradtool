@@ -3,6 +3,24 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.6.3</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-10-07">2018-10-07</time>
+		</header>
+		<aside>
+			<p>
+				Take <code>unique</code> statements into account when warning
+				whether a <code>search</code> statement might return multiple
+				results.
+				Also add some examples for using <code>unique</code>.
+			</p>
+			<p>
+				Fix a crash in <a href="kwebapp-xliff.1.html">kwebapp-xliff(1)</a>.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.6.2</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-09-28">2018-09-28</time>

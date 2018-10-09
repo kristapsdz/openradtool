@@ -147,15 +147,15 @@ installwww: www
 	$(INSTALL_DATA) kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz.sha512
 
 version.h: Makefile
-	echo "#define VERSION \"$(VERSION)\"" >$@
-	echo "#define VSTAMP `echo $$((($(VERSION_BUILD)+1)+($(VERSION_MINOR)+1)*100+($(VERSION_MAJOR)+1)*10000))`" >>$@
+	( echo "#define VERSION \"$(VERSION)\"" ; \
+	  echo "#define VSTAMP `echo $$((($(VERSION_BUILD)+1)+($(VERSION_MINOR)+1)*100+($(VERSION_MAJOR)+1)*10000))`" ; ) >$@
 
 header.o source.o: version.h
 
 paths.h: Makefile
-	echo "#define PATH_GENSALT \"$(SHAREDIR)/kwebapp/gensalt.c\"" >$@
-	echo "#define PATH_B64_NTOP \"$(SHAREDIR)/kwebapp/b64_ntop.c\"" >>$@
-	echo "#define PATH_JSMN \"$(SHAREDIR)/kwebapp/jsmn.c\"" >>$@
+	( echo "#define PATH_GENSALT \"$(SHAREDIR)/kwebapp/gensalt.c\"" ; \
+	  echo "#define PATH_B64_NTOP \"$(SHAREDIR)/kwebapp/b64_ntop.c\"" ; \
+	  echo "#define PATH_JSMN \"$(SHAREDIR)/kwebapp/jsmn.c\"" ; ) >$@
 
 source.o: paths.h
 
@@ -231,7 +231,7 @@ db.db: db.sql
 	rm -f $@
 	sqlite3 $@ < db.sql
 
- $(LIBOBJS): config.h extern.h
+$(LIBOBJS): config.h extern.h
 
 .5.5.html:
 	mandoc -Thtml -Ostyle=mandoc.css $< >$@

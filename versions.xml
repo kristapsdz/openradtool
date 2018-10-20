@@ -3,6 +3,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.6.4</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-10-20">2018-10-20</time>
+		</header>
+		<aside>
+			<p>
+				Make sure that <a href="https://kristaps.bsd.lv/ksql">ksql(3)</a> is
+				configured for foreign keys.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.6.3</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-10-09">2018-10-09</time>

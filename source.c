@@ -811,7 +811,8 @@ gen_func_open(const struct config *cfg, int splitproc)
 		       "\n", i);
 	} else 
 		puts("\n"
-		     "\tksql_cfg_defaults(&cfg);\n");
+		     "\tksql_cfg_defaults(&cfg);\n"
+		     "\tcfg.flags |= KSQL_FOREIGN_KEYS;\n");
 
 	if (splitproc)
 		puts("\tdb = ksql_alloc_child(&cfg, NULL, NULL);");

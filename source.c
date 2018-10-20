@@ -802,6 +802,7 @@ gen_func_open(const struct config *cfg, int splitproc)
 				puts("");
 		}
 		printf("\tksql_cfg_defaults(&cfg);\n"
+		       "\tcfg.flags |= KSQL_FOREIGN_KEYS;\n"
 		       "\tcfg.stmts.stmts = stmts;\n"
 		       "\tcfg.stmts.stmtsz = STMT__MAX;\n"
 		       "\tcfg.roles.roles = roles;\n"

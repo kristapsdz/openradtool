@@ -403,6 +403,7 @@ gen_diff_fields_new(const struct strct *s,
 				switch (f->type) {
 				case FTYPE_BIT:
 				case FTYPE_BITFIELD:
+				case FTYPE_DATE:
 				case FTYPE_EPOCH:
 				case FTYPE_INT:
 					printf(" DEFAULT %" PRId64,
@@ -412,12 +413,15 @@ gen_diff_fields_new(const struct strct *s,
 					printf(" DEFAULT %g",
 						f->def.decimal);
 					break;
+				case FTYPE_EMAIL:
+				case FTYPE_TEXT:
+					printf(" DEFAULT '%s'",
+						f->def.string);
 				default:
 					abort();
 					break;
 				}
 			}
-
 			puts(";");
 			count++;
 		} else if ( ! gen_diff_field(f, df))

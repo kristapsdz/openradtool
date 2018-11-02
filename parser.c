@@ -1098,8 +1098,20 @@ parse_config_field_info(struct parse *p, struct field *fd)
 					TOK_DECIMAL == p->lasttype ?
 					p->last.decimal : p->last.integer;
 				break;
+			case FTYPE_EMAIL:
+			case FTYPE_TEXT:
+				if (TOK_LITERAL != p->lasttype) {
+					parse_errx(p, "expected literal");
+					break;
+				}
+				fd->flags |= FIELD_HASDEF;
+				fd->def.string = strdup(p->last.string);
+				if (NULL == fd->def.string)
+					err(EXIT_FAILURE, NULL);
+				break;
 			default:
-				parse_errx(p, "defaults restricted to integers");
+				parse_errx(p, "defaults not "
+					"available for type");
 				break;
 			}
 		} else

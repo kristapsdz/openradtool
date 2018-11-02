@@ -417,6 +417,7 @@ gen_diff_fields_new(const struct strct *s,
 				case FTYPE_TEXT:
 					printf(" DEFAULT '%s'",
 						f->def.string);
+					break;
 				default:
 					abort();
 					break;

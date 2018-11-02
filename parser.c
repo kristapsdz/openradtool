@@ -1100,7 +1100,7 @@ parse_config_field_info(struct parse *p, struct field *fd)
 				break;
 			case FTYPE_EMAIL:
 			case FTYPE_TEXT:
-				if (TOK_LITERAL != p->lasttype) {
+				if (TOK_LITERAL != parse_next(p)) {
 					parse_errx(p, "expected literal");
 					break;
 				}

@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "extern.h"
 
@@ -953,6 +954,7 @@ parse_action(struct parse *p, enum upact *act)
 static void
 parse_config_field_info(struct parse *p, struct field *fd)
 {
+	struct tm	 tm;
 
 	while ( ! PARSE_STOP(p)) {
 		if (TOK_SEMICOLON == parse_next(p))
@@ -1044,6 +1046,34 @@ parse_config_field_info(struct parse *p, struct field *fd)
 			parse_action(p, &fd->actdel);
 		} else if (0 == strcasecmp(p->last.string, "default")) {
 			switch (fd->type) {
+			case FTYPE_DATE:
+				/* We want a date. */
+				memset(&tm, 0, sizeof(struct tm));
+				if (TOK_INTEGER != parse_next(p)) {
+					parse_errx(p, "expected year (integer)");
+					break;
+				}
+				tm.tm_year = p->last.integer - 1900;
+				if (TOK_INTEGER != parse_next(p)) {
+					parse_errx(p, "expected month (integer)");
+					break;
+				} else if (p->last.integer >= 0) {
+					parse_errx(p, "invalid month");
+					break;
+				}
+				tm.tm_mon = -p->last.integer - 1;
+				if (TOK_INTEGER != parse_next(p)) {
+					parse_errx(p, "expected day (integer)");
+					break;
+				} else if (p->last.integer >= 0) {
+					parse_errx(p, "invalid day");
+					break;
+				}
+				tm.tm_mday = -p->last.integer;
+				tm.tm_isdst = -1;
+				fd->flags |= FIELD_HASDEF;
+				fd->def.integer = mktime(&tm); 
+				break;
 			case FTYPE_BIT:
 			case FTYPE_BITFIELD:
 			case FTYPE_EPOCH:

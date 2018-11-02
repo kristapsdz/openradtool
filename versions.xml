@@ -3,6 +3,18 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.6.5</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-11-02">2018-11-02</time>
+		</header>
+		<aside>
+			<p>
+				Add <code>default</code> support for text, emails, and dates.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.6.4</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-10-23">2018-10-23</time>

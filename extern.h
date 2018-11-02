@@ -232,7 +232,7 @@ struct	field {
 	union {
 		int64_t integer;
 		double decimal;
-		size_t len;
+		char *string;
 	} def; /* a default value */
 	enum ftype	   type; /* type of column */
 	enum upact	   actdel; /* delete action */

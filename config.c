@@ -53,6 +53,10 @@ parse_free_field(struct field *p)
 		free(p->ref->tstrct);
 		free(p->ref);
 	}
+	if (FIELD_HASDEF && 
+	    (FTYPE_TEXT == p->type ||
+	     FTYPE_EMAIL == p->type))
+		free(p->def.string);
 	if (NULL != p->eref) {
 		free(p->eref->ename);
 		free(p->eref);

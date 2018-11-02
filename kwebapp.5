@@ -351,12 +351,13 @@ or
 This is only available on foreign key references.
 .It Cm comment Ar string_literal
 Documents the field using the quoted string.
-.It Cm default Ar integer|decimal
+.It Cm default Ar integer|decimal|date
 Set a default value for the column that's used
 .Em only
 when adding columns to the SQL schema via
 .Xr kwebapp-sqldiff 1 .
-It's only valid for numeric field types.
+It's only valid for numeric and date field types.
+Dates must be in yyyy-mm-dd format.
 .It Cm limit Ar limit_op limit_val
 Used when generating validation functions.
 Only available for native types.

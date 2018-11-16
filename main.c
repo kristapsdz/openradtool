@@ -26,7 +26,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "extern.h"
+#include "kwebapp.h"
 
 int
 main(int argc, char *argv[])
@@ -71,10 +71,11 @@ main(int argc, char *argv[])
 	cfg = config_alloc();
 
 	for (i = 0; i < confsz; i++)
-		if ( ! parse_config_r(cfg, confs[i], argv[i]))
+		if ( ! kwbp_parse_file_r(cfg, confs[i], argv[i]))
 			goto out;
 
-	if (0 == confsz && ! parse_config_r(cfg, stdin, "<stdin>"))
+	if (0 == confsz && 
+	    ! kwbp_parse_file_r(cfg, stdin, "<stdin>"))
 		goto out;
 
 	/* Only echo output on success. */

@@ -596,11 +596,12 @@ __BEGIN_DECLS
 
 int		 parse_link(struct config *);
 struct config	*kwbp_parse_file(FILE *, const char *);
+struct config	*kwbp_parse_buf(const char *, size_t);
 int		 kwbp_parse_file_r(struct config *, FILE *, const char *);
 void		 parse_write(FILE *, const struct config *);
 
-struct config	*config_alloc(void);
-void		 config_free(struct config *);
+struct config	*kwbp_config_alloc(void);
+void		 kwbp_config_free(struct config *);
 
 __END_DECLS
 

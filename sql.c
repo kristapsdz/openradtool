@@ -718,8 +718,8 @@ main(int argc, char *argv[])
 
 	assert(confsz + dconfsz > 0 || ! diff);
 
-	cfg = config_alloc();
-	dcfg = config_alloc();
+	cfg = kwbp_config_alloc();
+	dcfg = kwbp_config_alloc();
 
 	for (i = 0; i < confsz; i++)
 		if ( ! kwbp_parse_file_r(cfg, confs[i], argv[confst + i]))
@@ -757,7 +757,7 @@ out:
 			warn("%s", argv[i]);
 	free(confs);
 	free(dconfs);
-	config_free(cfg);
+	kwbp_config_free(cfg);
 
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 

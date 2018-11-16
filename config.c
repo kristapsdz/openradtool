@@ -308,7 +308,7 @@ parse_free_rolemap(struct rolemap *rm)
  * Does nothing if "q" is empty or NULL.
  */
 void
-config_free(struct config *cfg)
+kwbp_config_free(struct config *cfg)
 {
 	struct strct	*p;
 	struct field	*f;
@@ -391,7 +391,7 @@ config_free(struct config *cfg)
 }
 
 struct config *
-config_alloc(void)
+kwbp_config_alloc(void)
 {
 	struct config	*cfg;
 

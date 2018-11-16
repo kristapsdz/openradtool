@@ -496,6 +496,10 @@ static int
 parse_check_eof(struct parse *p)
 {
 
+	if (PARSETYPE_BUF == p->type)
+		return p->inbuf.pos >= p->inbuf.len;
+
+	assert(PARSETYPE_FILE == p->type);
 	assert(NULL != p->infile.f);
 	return feof(p->infile.f);
 }
@@ -504,6 +508,10 @@ static int
 parse_check_error(struct parse *p)
 {
 
+	if (PARSETYPE_BUF == p->type)
+		return 0;
+
+	assert(PARSETYPE_FILE == p->type);
 	assert(NULL != p->infile.f);
 	return ferror(p->infile.f);
 }
@@ -512,6 +520,10 @@ static int
 parse_check_error_eof(struct parse *p)
 {
 
+	if (PARSETYPE_BUF == p->type)
+		return p->inbuf.pos >= p->inbuf.len;
+
+	assert(PARSETYPE_FILE == p->type);
 	assert(NULL != p->infile.f);
 	return feof(p->infile.f) || ferror(p->infile.f);
 }
@@ -526,6 +538,14 @@ parse_ungetc(struct parse *p, int c)
 		p->line--;
 	else if (p->column > 0)
 		p->column--;
+
+	if (PARSETYPE_BUF == p->type) {
+		assert(p->inbuf.pos > 0);
+		p->inbuf.pos--;
+		return;
+	}
+
+	assert(PARSETYPE_FILE == p->type);
 	ungetc(c, p->infile.f);
 }
 
@@ -539,10 +559,14 @@ parse_nextchar(struct parse *p)
 {
 	int	 c;
 
-	c = fgetc(p->infile.f);
+	if (PARSETYPE_BUF == p->type)
+		c = p->inbuf.pos >= p->inbuf.len ?
+			EOF : p->inbuf.buf[p->inbuf.pos++];
+	else
+		c = fgetc(p->infile.f);
 
 	if (parse_check_error_eof(p))
-		return(EOF);
+		return EOF;
 
 	p->column++;
 
@@ -551,7 +575,7 @@ parse_nextchar(struct parse *p)
 		p->column = 0;
 	}
 
-	return(c);
+	return c;
 }
 
 /*
@@ -3013,13 +3037,49 @@ kwbp_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 }
 
 struct config *
+kwbp_parse_buf(const char *buf, size_t len)
+{
+	struct parse	 p;
+	int		 rc = 0;
+	struct config	*cfg;
+
+	cfg = kwbp_config_alloc();
+	cfg->fnames = reallocarray
+		(cfg->fnames, 
+		 cfg->fnamesz + 1,
+		 sizeof(char *));
+	if (NULL == cfg->fnames)
+		err(EXIT_FAILURE, NULL);
+	cfg->fnames[cfg->fnamesz] = strdup("<buffer>");
+	if (NULL == cfg->fnames[cfg->fnamesz])
+		err(EXIT_FAILURE, NULL);
+	cfg->fnamesz++;
+
+	memset(&p, 0, sizeof(struct parse));
+	p.column = 0;
+	p.line = 1;
+	p.fname = cfg->fnames[cfg->fnamesz - 1];
+	p.inbuf.buf = buf;
+	p.inbuf.len = len;
+	p.type = PARSETYPE_BUF;
+	p.cfg = cfg;
+	rc = kwbp_parse_r(&p);
+	free(p.buf);
+	if (0 == rc) {
+		kwbp_config_free(cfg);
+		return NULL;
+	}
+	return cfg;
+}
+
+struct config *
 kwbp_parse_file(FILE *f, const char *fname)
 {
 	struct config	*cfg;
 
-	cfg = config_alloc();
+	cfg = kwbp_config_alloc();
 	if (kwbp_parse_file_r(cfg, f, fname))
 		return cfg;
-	config_free(cfg);
+	kwbp_config_free(cfg);
 	return NULL;
 }

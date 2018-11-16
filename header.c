@@ -974,7 +974,7 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	cfg = config_alloc();
+	cfg = kwbp_config_alloc();
 
 	for (i = 0; i < confsz; i++)
 		if ( ! kwbp_parse_file_r(cfg, confs[i], argv[i]))
@@ -993,7 +993,7 @@ out:
 		if (NULL != confs[i] && EOF == fclose(confs[i]))
 			warn("%s", argv[i]);
 	free(confs);
-	config_free(cfg);
+	kwbp_config_free(cfg);
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 

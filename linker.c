@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "kwebapp.h"
 #include "extern.h"
 
 static void gen_errx(const struct pos *, const char *, ...)

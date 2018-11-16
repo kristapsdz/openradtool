@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "kwebapp.h"
 #include "extern.h"
 
 /*

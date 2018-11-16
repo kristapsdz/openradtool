@@ -29,6 +29,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "kwebapp.h"
 #include "extern.h"
 
 static	const char *const realtypes[FTYPE__MAX] = {
@@ -721,17 +722,19 @@ main(int argc, char *argv[])
 	dcfg = config_alloc();
 
 	for (i = 0; i < confsz; i++)
-		if ( ! parse_config_r(cfg, confs[i], argv[confst + i]))
+		if ( ! kwbp_parse_file_r(cfg, confs[i], argv[confst + i]))
 			goto out;
-	if (0 == confsz)
-		if ( ! parse_config_r(cfg, stdin, "<stdin>"))
+
+	if (0 == confsz &&
+	    ! kwbp_parse_file_r(cfg, stdin, "<stdin>"))
 			goto out;
 
 	for (i = 0; i < dconfsz; i++)
-		if ( ! parse_config_r(dcfg, dconfs[i], argv[i]))
+		if ( ! kwbp_parse_file_r(dcfg, dconfs[i], argv[i]))
 			goto out;
-	if (0 == dconfsz && diff)
-		if ( ! parse_config_r(dcfg, stdin, "<stdin>"))
+
+	if (0 == dconfsz && diff &&
+	    ! kwbp_parse_file_r(dcfg, stdin, "<stdin>"))
 			goto out;
 
 	if ( ! parse_link(cfg))

@@ -31,8 +31,12 @@
 #include <string.h>
 #include <time.h>
 
+#include "kwebapp.h"
 #include "extern.h"
 
+/*
+ * These are our lexical tokens parsed from input.
+ */
 enum	tok {
 	TOK_NONE, /* special case: just starting */
 	TOK_COLON, /* : */
@@ -49,15 +53,40 @@ enum	tok {
 	TOK_SEMICOLON /* ; */
 };
 
+/*
+ * Shorthand for checking whether we should stop parsing (we're at the
+ * end of file or have an error).
+ */
 #define	PARSE_STOP(_p) \
 	(TOK_ERR == (_p)->lasttype || TOK_EOF == (_p)->lasttype)
 
+struct	parsefile {
+	FILE		*f;
+};
+
+struct	parsebuf {
+	const char	*buf;
+	size_t		 len;
+	size_t		 pos;
+};
+
+enum	parsetype {
+	PARSETYPE_BUF,
+	PARSETYPE_FILE
+};
+
+/*
+ * The current parse.
+ * If we have multiple files to parse, we must reinitialise this
+ * structure (including freeing resources, for now limited to "buf"), as
+ * it only pertains to the current one.
+ */
 struct	parse {
 	union {
-		char *string;
-		int64_t integer;
-		double decimal;
-	} last; /* last parsed if TOK_IDENT or TOK_INTEGER */
+		const char *string; /* last parsed string */
+		int64_t integer; /* ...integer */
+		double decimal; /* ...double */
+	} last;
 	enum tok	 lasttype; /* last parse type */
 	char		*buf; /* buffer for storing up reads */
 	size_t		 bufsz; /* length of buffer */
@@ -65,8 +94,12 @@ struct	parse {
 	size_t		 line; /* current line (from 1) */
 	size_t		 column; /* current column (from 1) */
 	const char	*fname; /* current filename */
-	FILE		*f; /* current parser */
 	struct config	*cfg; /* current configuration */
+	enum parsetype	 type;
+	union {
+		struct parsebuf inbuf;
+		struct parsefile infile;
+	};
 };
 
 static	const char *const rolemapts[ROLEMAP__MAX] = {
@@ -83,6 +116,8 @@ static	const char *const rolemapts[ROLEMAP__MAX] = {
 /*
  * Disallowed field names.
  * The SQL ones are from https://sqlite.org/lang_keywords.html.
+ * FIXME: think about this more carefully, as in SQL, there are many
+ * things that we can put into string literals.
  */
 static	const char *const badidents[] = {
 	/* Things not allowed in C. */
@@ -300,6 +335,10 @@ parse_point(const struct parse *p, struct pos *pp)
 	pp->column = p->column;
 }
 
+/*
+ * Iterate through the list of reserved keywords and return non-zero if
+ * the current string (case insensitively) matches, zero otherwise.
+ */
 static int
 check_badidents(struct parse *p, const char *s)
 {
@@ -453,6 +492,68 @@ sent_alloc(const struct parse *p, struct search *up)
 	return(sent);
 }
 
+static int
+parse_check_eof(struct parse *p)
+{
+
+	assert(NULL != p->infile.f);
+	return feof(p->infile.f);
+}
+
+static int
+parse_check_error(struct parse *p)
+{
+
+	assert(NULL != p->infile.f);
+	return ferror(p->infile.f);
+}
+
+static int
+parse_check_error_eof(struct parse *p)
+{
+
+	assert(NULL != p->infile.f);
+	return feof(p->infile.f) || ferror(p->infile.f);
+}
+
+static void
+parse_ungetc(struct parse *p, int c)
+{
+
+	/* FIXME: puts us at last line, not column */
+
+	if ('\n' == c)
+		p->line--;
+	else if (p->column > 0)
+		p->column--;
+	ungetc(c, p->infile.f);
+}
+
+/*
+ * Get the next character and advance us within the file.
+ * If we've already reached an error condition, this just keeps us
+ * there.
+ */
+static int
+parse_nextchar(struct parse *p)
+{
+	int	 c;
+
+	c = fgetc(p->infile.f);
+
+	if (parse_check_error_eof(p))
+		return(EOF);
+
+	p->column++;
+
+	if ('\n' == c) {
+		p->line++;
+		p->column = 0;
+	}
+
+	return(c);
+}
+
 /*
  * Trigger a "hard" error condition: stream error or EOF.
  * This sets the lasttype appropriately.
@@ -461,7 +562,7 @@ static enum tok
 parse_err(struct parse *p)
 {
 
-	if (ferror(p->f)) {
+	if (parse_check_error(p)) {
 		parse_errx(p, "system error");
 		p->lasttype = TOK_ERR;
 	} else 
@@ -517,44 +618,6 @@ parse_errx(struct parse *p, const char *fmt, ...)
 	return(p->lasttype);
 }
 
-static void
-parse_ungetc(struct parse *p, int c)
-{
-
-	/* FIXME: puts us at last line, not column */
-
-	if ('\n' == c)
-		p->line--;
-	else if (p->column > 0)
-		p->column--;
-	ungetc(c, p->f);
-}
-
-/*
- * Get the next character and advance us within the file.
- * If we've already reached an error condition, this just keeps us
- * there.
- */
-static int
-parse_nextchar(struct parse *p)
-{
-	int	 c;
-
-	c = fgetc(p->f);
-
-	if (feof(p->f) || ferror(p->f))
-		return(EOF);
-
-	p->column++;
-
-	if ('\n' == c) {
-		p->line++;
-		p->column = 0;
-	}
-
-	return(c);
-}
-
 /*
  * Parse the next token from "f".
  * If we've already encountered an error or an EOF condition, this
@@ -569,8 +632,7 @@ parse_next(struct parse *p)
 	char		*epp = NULL;
 
 again:
-	if (TOK_ERR == p->lasttype || 
-	    TOK_EOF == p->lasttype) 
+	if (PARSE_STOP(p))
 		return(p->lasttype);
 
 	/* 
@@ -582,7 +644,7 @@ again:
 		c = parse_nextchar(p);
 	} while (isspace(c));
 
-	if (feof(p->f) || ferror(p->f))
+	if (parse_check_error_eof(p))
 		return(parse_err(p));
 
 	if ('#' == c) {
@@ -601,7 +663,7 @@ again:
 
 	if ('-' == c) {
 		c = parse_nextchar(p);
-		if (feof(p->f) || ferror(p->f))
+		if (parse_check_error_eof(p))
 			return(parse_err(p));
 		if ( ! isdigit(c))
 			return(parse_errx(p, "expected digit"));
@@ -646,7 +708,7 @@ again:
 			last = c;
 		} 
 
-		if (ferror(p->f))
+		if (parse_check_error(p))
 			return(parse_err(p));
 
 		buf_push(p, '\0');
@@ -675,9 +737,9 @@ again:
 				buf_push(p, c);
 		} while (isdigit(c) || '.' == c);
 
-		if (ferror(p->f))
+		if (parse_check_error(p))
 			return(parse_err(p));
-		else if ( ! feof(p->f))
+		else if ( ! parse_check_eof(p))
 			parse_ungetc(p, c);
 
 		buf_push(p, '\0');
@@ -704,9 +766,9 @@ again:
 				buf_push(p, c);
 		} while (isalnum(c));
 
-		if (ferror(p->f))
+		if (parse_check_error(p))
 			return(parse_err(p));
-		else if ( ! feof(p->f))
+		else if ( ! parse_check_eof(p))
 			parse_ungetc(p, c);
 
 		buf_push(p, '\0');
@@ -1667,9 +1729,7 @@ parse_config_search_params(struct parse *p, struct search *s)
 			break;
 	}
 
-	assert(TOK_SEMICOLON == p->lasttype ||
-	       (TOK_ERR == p->lasttype || 
-		TOK_EOF == p->lasttype));
+	assert(TOK_SEMICOLON == p->lasttype || PARSE_STOP(p));
 }
 
 /*
@@ -1695,7 +1755,7 @@ parse_config_unique(struct parse *p, struct strct *s)
 	TAILQ_INIT(&up->nq);
 	TAILQ_INSERT_TAIL(&s->nq, up, entries);
 
-	while (TOK_ERR != p->lasttype && TOK_EOF != p->lasttype) {
+	while ( ! PARSE_STOP(p)) {
 		if (TOK_IDENT != parse_next(p)) {
 			parse_errx(p, "expected unique field");
 			break;
@@ -2874,10 +2934,57 @@ parse_struct(struct parse *p)
  * alphanumeric (starting with alpha), non-reserved string.
  *
  * Returns zero on failure, non-zero otherwise.
- * On failure, the "cfg" pointer is completely freed.
  */
+static int
+kwbp_parse_r(struct parse *p)
+{
+
+	for (;;) {
+		if (TOK_ERR == parse_next(p))
+			return 0;
+		else if (TOK_EOF == p->lasttype)
+			break;
+
+		/* Our top-level identifier. */
+
+		if (TOK_IDENT != p->lasttype) {
+			parse_errx(p, "expected top-level type");
+			continue;
+		}
+
+		/* Parse whether we're struct, enum, or roles. */
+
+		if (0 == strcasecmp(p->last.string, "roles")) {
+			parse_roles(p);
+			continue;
+		} else if (0 == strcasecmp(p->last.string, "struct")) {
+			if (TOK_IDENT == parse_next(p)) {
+				parse_struct(p);
+				continue;
+			}
+			parse_errx(p, "expected struct name");
+		} else if (0 == strcasecmp(p->last.string, "enum")) {
+			if (TOK_IDENT == parse_next(p)) {
+				parse_enum(p);
+				continue;
+			}
+			parse_errx(p, "expected enum name");
+		} else if (0 == strcasecmp(p->last.string, "bits") ||
+		           0 == strcasecmp(p->last.string, "bitfield")) {
+			if (TOK_IDENT == parse_next(p)) {
+				parse_bitfield(p);
+				continue;
+			}
+			parse_errx(p, "expected bitfield name");
+		} else
+			parse_errx(p, "unknown top-level type");
+	}
+
+	return 1;
+}
+
 int
-parse_config_r(struct config *cfg, FILE *f, const char *fname)
+kwbp_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 {
 	struct parse	 p;
 	int		 rc = 0;
@@ -2897,63 +3004,21 @@ parse_config_r(struct config *cfg, FILE *f, const char *fname)
 	p.column = 0;
 	p.line = 1;
 	p.fname = cfg->fnames[cfg->fnamesz - 1];
-	p.f = f;
+	p.infile.f = f;
+	p.type = PARSETYPE_FILE;
 	p.cfg = cfg;
-	
-	for (;;) {
-		if (TOK_ERR == parse_next(&p))
-			goto error;
-		else if (TOK_EOF == p.lasttype)
-			break;
-
-		/* Our top-level identifier. */
-
-		if (TOK_IDENT != p.lasttype) {
-			parse_errx(&p, "expected top-level type");
-			continue;
-		}
-
-		/* Parse whether we're struct, enum, or roles. */
-
-		if (0 == strcasecmp(p.last.string, "roles")) {
-			parse_roles(&p);
-			continue;
-		} else if (0 == strcasecmp(p.last.string, "struct")) {
-			if (TOK_IDENT == parse_next(&p)) {
-				parse_struct(&p);
-				continue;
-			}
-			parse_errx(&p, "expected struct name");
-		} else if (0 == strcasecmp(p.last.string, "enum")) {
-			if (TOK_IDENT == parse_next(&p)) {
-				parse_enum(&p);
-				continue;
-			}
-			parse_errx(&p, "expected enum name");
-		} else if (0 == strcasecmp(p.last.string, "bits") ||
-		           0 == strcasecmp(p.last.string, "bitfield")) {
-			if (TOK_IDENT == parse_next(&p)) {
-				parse_bitfield(&p);
-				continue;
-			}
-			parse_errx(&p, "expected bitfield name");
-		} else
-			parse_errx(&p, "unknown top-level type");
-	}
-
-	rc = 1;
-error:
+	rc = kwbp_parse_r(&p);
 	free(p.buf);
 	return rc;
 }
 
 struct config *
-parse_config(FILE *f, const char *fname)
+kwbp_parse_file(FILE *f, const char *fname)
 {
 	struct config	*cfg;
 
 	cfg = config_alloc();
-	if (parse_config_r(cfg, f, fname))
+	if (kwbp_parse_file_r(cfg, f, fname))
 		return cfg;
 	config_free(cfg);
 	return NULL;

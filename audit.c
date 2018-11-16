@@ -28,6 +28,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "kwebapp.h"
 #include "extern.h"
 
 #define	SPACE	"\t" /* Space for output indentation. */
@@ -1000,10 +1001,11 @@ main(int argc, char *argv[])
 	cfg = config_alloc();
 
 	for (i = 0; i < confsz; i++)
-		if ( ! parse_config_r(cfg, confs[i], argv[i]))
+		if ( ! kwbp_parse_file_r(cfg, confs[i], argv[i]))
 			goto out;
 
-	if (0 == confsz && ! parse_config_r(cfg, stdin, "<stdin>"))
+	if (0 == confsz && 
+	    ! kwbp_parse_file_r(cfg, stdin, "<stdin>"))
 		goto out;
 	if ( ! parse_link(cfg))
 		goto out;

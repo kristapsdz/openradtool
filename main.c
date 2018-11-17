@@ -81,7 +81,7 @@ main(int argc, char *argv[])
 	/* Only echo output on success. */
 
 	if (0 != (rc = parse_link(cfg)))
-		parse_write(stdout, cfg);
+		kwbp_write_file(stdout, cfg);
 
 out:
 	for (i = 0; i < confsz; i++)

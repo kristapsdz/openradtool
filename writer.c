@@ -504,7 +504,7 @@ parse_write_roles(FILE *f, const struct config *cfg)
 }
 
 void
-parse_write(FILE *f, const struct config *cfg)
+kwbp_write_file(FILE *f, const struct config *cfg)
 {
 	const struct strct *s;
 	const struct enm   *e;

@@ -1697,6 +1697,8 @@ parse_config_search_params(struct parse *p, struct search *s)
 				if (NULL == ss->name ||
 				    strcasecmp(ss->name, p->last.string))
 					continue;
+				if (s->type != ss->type)
+					continue;
 				parse_errx(p, "duplicate query name");
 				break;
 			}

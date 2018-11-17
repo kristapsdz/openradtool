@@ -823,7 +823,7 @@ xliff_join_fds(struct config *cfg, int copy,
 	XML_ParserFree(p);
 
 	if (rc)
-		parse_write(stdout, cfg);
+		kwbp_write_file(stdout, cfg);
 
 	return rc;
 }

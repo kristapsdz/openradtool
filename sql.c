@@ -737,9 +737,9 @@ main(int argc, char *argv[])
 	    ! kwbp_parse_file_r(dcfg, stdin, "<stdin>"))
 			goto out;
 
-	if ( ! parse_link(cfg))
+	if ( ! kwbp_parse_close(cfg))
 		goto out;
-	if (diff && ! parse_link(dcfg))
+	if (diff && ! kwbp_parse_close(dcfg))
 		goto out;
 
 	if ( ! diff) {

@@ -1267,7 +1267,7 @@ resolve_enum_auto(struct enm *en)
 }
 
 int
-parse_link(struct config *cfg)
+kwbp_parse_close(struct config *cfg)
 {
 	struct update	 *u;
 	struct strct	 *p;

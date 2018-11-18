@@ -34,6 +34,165 @@
 #include "extern.h"
 
 /*
+ * Disallowed field names.
+ * The SQL ones are from https://sqlite.org/lang_keywords.html.
+ * FIXME: think about this more carefully, as in SQL, there are many
+ * things that we can put into string literals.
+ */
+static	const char *const badidents[] = {
+	/* Things not allowed in C. */
+	"auto",
+	"break",
+	"case",
+	"char",
+	"const",
+	"continue",
+	"default",
+	"do",
+	"double",
+	"enum",
+	"extern",
+	"float",
+	"goto",
+	"long",
+	"register",
+	"short",
+	"signed",
+	"static",
+	"struct",
+	"typedef",
+	"union",
+	"unsigned",
+	"void",
+	"volatile",
+	/* Things not allowed in SQLite. */
+	"ABORT",
+	"ACTION",
+	"ADD",
+	"AFTER",
+	"ALL",
+	"ALTER",
+	"ANALYZE",
+	"AND",
+	"AS",
+	"ASC",
+	"ATTACH",
+	"AUTOINCREMENT",
+	"BEFORE",
+	"BEGIN",
+	"BETWEEN",
+	"BY",
+	"CASCADE",
+	"CASE",
+	"CAST",
+	"CHECK",
+	"COLLATE",
+	"COLUMN",
+	"COMMIT",
+	"CONFLICT",
+	"CONSTRAINT",
+	"CREATE",
+	"CROSS",
+	"CURRENT_DATE",
+	"CURRENT_TIME",
+	"CURRENT_TIMESTAMP",
+	"DATABASE",
+	"DEFAULT",
+	"DEFERRABLE",
+	"DEFERRED",
+	"DELETE",
+	"DESC",
+	"DETACH",
+	"DISTINCT",
+	"DROP",
+	"EACH",
+	"ELSE",
+	"END",
+	"ESCAPE",
+	"EXCEPT",
+	"EXCLUSIVE",
+	"EXISTS",
+	"EXPLAIN",
+	"FAIL",
+	"FOR",
+	"FOREIGN",
+	"FROM",
+	"FULL",
+	"GLOB",
+	"GROUP",
+	"HAVING",
+	"IF",
+	"IGNORE",
+	"IMMEDIATE",
+	"IN",
+	"INDEX",
+	"INDEXED",
+	"INITIALLY",
+	"INNER",
+	"INSERT",
+	"INSTEAD",
+	"INTERSECT",
+	"INTO",
+	"IS",
+	"ISNULL",
+	"JOIN",
+	"KEY",
+	"LEFT",
+	"LIKE",
+	"LIMIT",
+	"MATCH",
+	"NATURAL",
+	"NOT",
+	"NOTNULL",
+	"NULL",
+	"OF",
+	"OFFSET",
+	"ON",
+	"OR",
+	"ORDER",
+	"OUTER",
+	"PLAN",
+	"PRAGMA",
+	"PRIMARY",
+	"QUERY",
+	"RAISE",
+	"RECURSIVE",
+	"REFERENCES",
+	"REGEXP",
+	"REINDEX",
+	"RELEASE",
+	"RENAME",
+	"REPLACE",
+	"RESTRICT",
+	"RIGHT",
+	"ROLLBACK",
+	"ROW",
+	"SAVEPOINT",
+	"SELECT",
+	"SET",
+	"TABLE",
+	"TEMP",
+	"TEMPORARY",
+	"THEN",
+	"TO",
+	"TRANSACTION",
+	"TRIGGER",
+	"UNION",
+	"UNIQUE",
+	"UPDATE",
+	"USING",
+	"VACUUM",
+	"VALUES",
+	"VIEW",
+	"VIRTUAL",
+	"WHEN",
+	"WHERE",
+	"WITH",
+	"WITHOUT",
+	NULL
+};
+
+/*
  * Free a field entity.
  * Does nothing if "p" is NULL.
  */
@@ -302,6 +461,127 @@ parse_free_rolemap(struct rolemap *rm)
 	free(rm->name);
 	free(rm);
 }
+
+static int
+check_dupetoplevel(struct config *cfg, const char *name)
+{
+	const struct enm *e;
+	const struct bitf *b;
+	const struct strct *s;
+
+	TAILQ_FOREACH(e, &cfg->eq, entries)
+		if (0 == strcasecmp(e->name, name))
+			return 0;
+
+	TAILQ_FOREACH(b, &cfg->bq, entries)
+		if (0 == strcasecmp(b->name, name))
+			return 0;
+
+	TAILQ_FOREACH(s, &cfg->sq, entries) 
+		if (0 == strcasecmp(s->name, name))
+			return 0;
+	
+	return 1;
+}
+
+enum kwbp_err
+kwbp_field_alloc(struct config *cfg, struct strct *s,
+	const char *name, struct field **p)
+{
+	struct field	  *fd;
+	const char *const *cp;
+
+	if (NULL != p)
+		*p = NULL;
+
+	/* Check reserved identifiers. */
+
+	for (cp = badidents; NULL != *cp; cp++)
+		if (0 == strcasecmp(*cp, name))
+			return KWBP_RESERVED_NAME;
+
+	/* Check other fields in struct having same name. */
+
+	TAILQ_FOREACH(fd, &s->fq, entries)
+		if (0 == strcasecmp(fd->name, name))
+			return KWBP_DUPE_NAME;
+
+	/* Now the actual allocation. */
+
+	if (NULL == (fd = calloc(1, sizeof(struct field))))
+		goto out;
+	if (NULL == (fd->name = strdup(name)))
+		goto out;
+
+	fd->type = FTYPE_INT;
+	fd->parent = s;
+	TAILQ_INIT(&fd->fvq);
+	TAILQ_INSERT_TAIL(&s->fq, fd, entries);
+	if (NULL != p)
+		*p = fd;
+	return KWBP_OK;
+out:
+	if (NULL != fd)
+		free(fd->name);
+	free(fd);
+	return KWBP_MEMORY;
+}
+
+enum kwbp_err
+kwbp_strct_alloc(struct config *cfg, 
+	const char *name, struct strct **p)
+{
+	struct strct	  *s;
+	char		  *caps;
+	const char *const *cp;
+
+	if (NULL != p)
+		*p = NULL;
+
+	/* Check reserved identifiers. */
+
+	for (cp = badidents; NULL != *cp; cp++)
+		if (0 == strcasecmp(*cp, name))
+			return KWBP_RESERVED_NAME;
+
+	/* Check other toplevels having same name. */
+
+	if ( ! check_dupetoplevel(cfg, name))
+		return KWBP_DUPE_NAME;
+
+	/* Now make allocation. */
+
+	if (NULL == (s = calloc(1, sizeof(struct strct))))
+		goto out;
+	if (NULL == (s->name = strdup(name)))
+		goto out;
+	if (NULL == (s->cname = strdup(s->name)))
+		goto out;
+
+	for (caps = s->cname; '\0' != *caps; caps++)
+		*caps = toupper((unsigned char)*caps);
+
+	s->cfg = cfg;
+	TAILQ_INSERT_TAIL(&cfg->sq, s, entries);
+	TAILQ_INIT(&s->fq);
+	TAILQ_INIT(&s->sq);
+	TAILQ_INIT(&s->aq);
+	TAILQ_INIT(&s->uq);
+	TAILQ_INIT(&s->nq);
+	TAILQ_INIT(&s->dq);
+	TAILQ_INIT(&s->rq);
+	if (NULL != p)
+		*p = s;
+	return KWBP_OK;
+out:
+	if (NULL != s) {
+		free(s->name);
+		free(s->cname);
+	}
+	free(s);
+	return KWBP_MEMORY;
+}
+
 
 /*
  * Free all resources from the queue of structures.

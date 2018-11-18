@@ -935,7 +935,7 @@ main(int argc, char *argv[])
 	    ! kwbp_parse_file_r(cfg, stdin, "<stdin>"))
 			goto out;
 
-	if ( ! parse_link(cfg))
+	if ( ! kwbp_parse_close(cfg))
 		goto out;
 
 	rc = OP_EXTRACT == op ? 

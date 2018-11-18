@@ -3,6 +3,20 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.6.6</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-11-17">ongoing</time>
+		</header>
+		<aside>
+			<p>
+				Re-organise internals for better library support.
+				The library isn't exported, but may be (and is) used.
+				No functional change.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.6.5</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-11-02">2018-11-02</time>

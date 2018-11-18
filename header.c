@@ -984,7 +984,7 @@ main(int argc, char *argv[])
 	    ! kwbp_parse_file_r(cfg, stdin, "<stdin>"))
 		goto out;
 
-	if (0 != (rc = parse_link(cfg)))
+	if (0 != (rc = kwbp_parse_close(cfg)))
 		gen_c_header(cfg, guard, json, jsonparse,
 			valids, splitproc, dbin, dstruct);
 

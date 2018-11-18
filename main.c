@@ -80,8 +80,11 @@ main(int argc, char *argv[])
 
 	/* Only echo output on success. */
 
-	if (0 != (rc = parse_link(cfg)))
-		kwbp_write_file(stdout, cfg);
+	if (0 != (rc = kwbp_parse_close(cfg))) {
+		char *cp = kwbp_write_buf(cfg);
+		puts(cp);
+		free(cp);
+	}
 
 out:
 	for (i = 0; i < confsz; i++)

@@ -1007,7 +1007,7 @@ main(int argc, char *argv[])
 	if (0 == confsz && 
 	    ! kwbp_parse_file_r(cfg, stdin, "<stdin>"))
 		goto out;
-	if ( ! parse_link(cfg))
+	if ( ! kwbp_parse_close(cfg))
 		goto out;
 
 	if (OP_AUDIT == op)

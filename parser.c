@@ -2429,7 +2429,8 @@ cleanup:
 static void
 parse_struct_data(struct parse *p, struct strct *s)
 {
-	struct field	 *fd;
+	struct field	*fd;
+	enum kwbp_err	 er;
 
 	if (TOK_LBRACE != parse_next(p)) {
 		parse_errx(p, "expected left brace");
@@ -2499,26 +2500,20 @@ parse_struct_data(struct parse *p, struct strct *s)
 		if (TOK_IDENT != parse_next(p)) {
 			parse_errx(p, "expected field name");
 			return;
-		} else if ( ! check_badidents(p, p->last.string))
-			return;
+		} 
+		
+		er = kwbp_field_alloc(p->cfg, s, p->last.string, &fd);
 
-		TAILQ_FOREACH(fd, &s->fq, entries) {
-			if (strcasecmp(fd->name, p->last.string))
-				continue;
+		if (KWBP_RESERVED_NAME == er) {
+			parse_errx(p, "reserved identifier");
+			return;
+		} else if (KWBP_DUPE_NAME == er) {
 			parse_errx(p, "duplicate field name");
 			return;
-		}
-
-		if (NULL == (fd = calloc(1, sizeof(struct field))))
-			err(EXIT_FAILURE, NULL);
-		if (NULL == (fd->name = strdup(p->last.string)))
+		} else if (KWBP_MEMORY == er)
 			err(EXIT_FAILURE, NULL);
 
-		fd->type = FTYPE_INT;
-		fd->parent = s;
 		parse_point(p, &fd->pos);
-		TAILQ_INIT(&fd->fvq);
-		TAILQ_INSERT_TAIL(&s->fq, fd, entries);
 		parse_field(p, fd);
 	}
 
@@ -2917,33 +2912,20 @@ static void
 parse_struct(struct parse *p)
 {
 	struct strct	*s;
-	char		*caps;
+	enum kwbp_err	 er;
 
-	/* Disallow duplicate and bad names. */
+	er = kwbp_strct_alloc(p->cfg, p->last.string, &s);
 
-	if ( ! check_dupetoplevel(p, p->last.string) ||
-	     ! check_badidents(p, p->last.string))
+	if (KWBP_RESERVED_NAME == er) {
+		parse_errx(p, "reserved identifier");
 		return;
+	} else if (KWBP_DUPE_NAME == er) {
+		parse_errx(p, "duplicate top-level name");
+		return;
+	} else if (KWBP_MEMORY == er)
+		err(EXIT_FAILURE, NULL);
 
-	if (NULL == (s = calloc(1, sizeof(struct strct))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (s->name = strdup(p->last.string)))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (s->cname = strdup(s->name)))
-		err(EXIT_FAILURE, NULL);
-	for (caps = s->cname; '\0' != *caps; caps++)
-		*caps = toupper((int)*caps);
-
-	s->cfg = p->cfg;
 	parse_point(p, &s->pos);
-	TAILQ_INSERT_TAIL(&p->cfg->sq, s, entries);
-	TAILQ_INIT(&s->fq);
-	TAILQ_INIT(&s->sq);
-	TAILQ_INIT(&s->aq);
-	TAILQ_INIT(&s->uq);
-	TAILQ_INIT(&s->nq);
-	TAILQ_INIT(&s->dq);
-	TAILQ_INIT(&s->rq);
 	parse_struct_data(p, s);
 }
 

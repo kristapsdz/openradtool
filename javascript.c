@@ -710,13 +710,17 @@ gen_javascript(const struct config *cfg, int tsc)
 
 	print_commentv(1, COMMENT_JS,
 		"Internal function for filling a structure field.\n"
+		"This first does the has/no class setting for "
+		"null values, then optionally returns if null, "
+		"then the generic text/value/etc fills, then "
+		"finally the custom fields.\n"
 		"@param {HTMLElement} e - The root of the "
 		"DOM tree in which we query for elements to fill "
 		"into.\n"
 		"@param {String} strct - The name of the structure "
 		"that we\'re filling in.\n"
 		"@param {String} name - The name of the field.\n"
-		"@param {%s.DataCallbacks|null} funcs - Custom "
+		"@param {%s.DataCallbacks|null} custom - Custom "
 		"callback functions to invoke on the field.\n"
 		"@param obj - The data itself, which is either a "
 		"native type or one of the data interfaces for "
@@ -739,7 +743,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		"e", "HTMLElement",
 		"strct", "string",
 		"name", "string",
-		"funcs", "DataCallbacks|null",
+		"custom", "DataCallbacks|null",
 		"obj", "any",
 		"inc", "boolean",
 		"cannull", "boolean",
@@ -748,16 +752,7 @@ gen_javascript(const struct config *cfg, int tsc)
 	gen_vars(tsc, 2, "i", "number", "fname", "string", 
 		"list", "HTMLElement[]", NULL);
 	puts("\t\tfname = strct + '-' + name;\n"
-	     "\t\t/* First handle the custom callback. */\n"
-	     "\t\tif (null !== funcs && fname in funcs) {\n"
-	     "\t\t\tif (funcs[fname] instanceof Array) {\n"
-	     "\t\t\t\tfor (i = 0; i < funcs[fname].length; i++)\n"
-	     "\t\t\t\t\tfuncs[fname][i](e, fname, obj);\n"
-	     "\t\t\t} else {\n"
-	     "\t\t\t\tfuncs[fname](e, fname, obj);\n"
-	     "\t\t\t}\n"
-	     "\t\t}\n"
-	     "\t\t/* Now handle our has/no null situation. */\n"
+	     "\t\t/* First handle our has/no null situation. */\n"
 	     "\t\tif (cannull) {\n"
 	     "\t\t\tif (null === obj) {\n"
 	     "\t\t\t\t_hidecl(e, strct + '-has-' + name, inc);\n"
@@ -767,19 +762,17 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t\t\t\t_hidecl(e, strct + '-no-' + name, inc);\n"
 	     "\t\t\t}\n"
 	     "\t\t}\n"
-	     "\t\t/* Don't account for blobs any more. */\n"
-	     "\t\tif (isblob)\n"
-	     "\t\t\treturn;\n"
 	     "\t\t/* Don't process null values that can be null. */\n"
 	     "\t\tif (cannull && null === obj)\n"
 	     "\t\t\treturn;\n"
 	     "\t\t/* Non-null non-structs. */\n"
+	     "\t\t/* Don't account for blobs. */\n"
 	     "\t\tif (null !== sub) {\n"
 	     "\t\t\tlist = _elemList(e, fname + '-obj', inc);\n"
 	     "\t\t\tfor (i = 0; i < list.length; i++) {\n"
-	     "\t\t\t\tsub.fillInner(list[i], funcs);\n"
+	     "\t\t\t\tsub.fillInner(list[i], custom);\n"
 	     "\t\t\t}\n"
-	     "\t\t} else {\n"
+	     "\t\t} else if ( ! isblob) {\n"
 	     "\t\t\tlist = _elemList"
 	     	"(e, fname + '-enum-select', inc);\n"
 	     "\t\t\tfor (i = 0; i < list.length; i++) {\n"
@@ -788,6 +781,15 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t\t\t_replcl(e, fname + '-text', obj, inc);\n"
 	     "\t\t\t_attrcl(e, 'value', fname + '-value', obj, inc);\n"
 	     "\t\t\t_fillValueChecked(e, fname, obj, inc);\n"
+	     "\t\t}\n"
+	     "\t\t/* Lastly, handle the custom callback. */\n"
+	     "\t\tif (null !== custom && fname in custom) {\n"
+	     "\t\t\tif (custom[fname] instanceof Array) {\n"
+	     "\t\t\t\tfor (i = 0; i < custom[fname].length; i++)\n"
+	     "\t\t\t\t\tcustom[fname][i](e, fname, obj);\n"
+	     "\t\t\t} else {\n"
+	     "\t\t\t\tcustom[fname](e, fname, obj);\n"
+	     "\t\t\t}\n"
 	     "\t\t}\n"
 	     "\t}\n"
 	     "");
@@ -1028,6 +1030,8 @@ gen_javascript(const struct config *cfg, int tsc)
 			"value of the structure and field.\n"
 			"You may also specify an array of functions "
 			"instead of a singleton.\n"
+			"These callbacks are invoked <b>after</b> "
+			"the generic classes are filled.\n"
 			"@function fill\n"
 			"@memberof %s.%s#",
 			ns, ns, s->name);
@@ -1035,6 +1039,34 @@ gen_javascript(const struct config *cfg, int tsc)
 			"e", "HTMLElement|null",
 			"custom?", "DataCallbacks|null", NULL);
 		printf("\t\t\tthis._fill(e, this.obj, true, custom);\n"
+		       "\t\t}%s\n"
+		       "\n", tsc ? "" : ";");
+
+		print_commentv(2, COMMENT_JS,
+			"Like {@link %s.%s#fill} but instead of "
+			"accepting a single element to fill, filling "
+			"into all elements (non-inclusive) matching the "
+			"given class name beneath (non-inclusive) the "
+			"given root.\n"
+			"@param {HTMLElement} e - The DOM element.\n"
+			"@param {String} name - The name of the class "
+			"into which to fill.\n"
+			"@param {%s.DataCallbacks} custom - The optional "
+			"custom handler dictionary (see {@link "
+			"%s.%s#fill} for details).\n"
+			"@function fillByClass\n"
+			"@memberof %s.%s#",
+			ns, s->name, ns, ns, s->name, ns, s->name);
+		gen_class_proto(tsc, 0, s->name, "void", "fillByClass",
+			"e", "HTMLElement|null",
+			"name", "string", 
+			"custom?", "DataCallbacks|null", NULL);
+		gen_vars(tsc, 3, "i", "number", 
+			"list", "HTMLElement[]", NULL);
+		printf("\t\t\tlist = _elemList(e, name, false);\n"
+	     	       "\t\t\tfor (i = 0; i < list.length; i++)\n"
+		       "\t\t\t\tthis._fill(list[i], this.obj, "
+		        "true, custom);\n"
 		       "\t\t}%s\n"
 		       "\n", tsc ? "" : ";");
 
@@ -1076,16 +1108,18 @@ gen_javascript(const struct config *cfg, int tsc)
 			"inc", "boolean",
 			"custom?", "DataCallbacks|null", NULL);
 		gen_vars(tsc, 3, "i", "number", NULL);
-		printf("\t\t\tif (null === o || null === e)\n"
-		       "\t\t\t\treturn;\n"
-		       "\t\t\tif (o instanceof Array) {\n"
-		       "\t\t\t\tif (0 === o.length)\n"
-		       "\t\t\t\t\treturn;\n"
-		       "\t\t\t\to = o[0];\n"
-		       "\t\t\t}\n"
-		       "\t\t\tif (typeof custom === 'undefined')\n"
-		       "\t\t\t\tcustom = null;\n"
-		       "\t\t\tif (null !== custom && '%s' in custom) {\n"
+		puts("\t\t\tif (null === o || null === e)\n"
+		     "\t\t\t\treturn;\n"
+		     "\t\t\tif (o instanceof Array) {\n"
+		     "\t\t\t\tif (0 === o.length)\n"
+		     "\t\t\t\t\treturn;\n"
+		     "\t\t\t\to = o[0];\n"
+		     "\t\t\t}");
+		printf("\t\t\tif (typeof custom === 'undefined')\n"
+		       "\t\t\t\tcustom = null;\n");
+		TAILQ_FOREACH(f, &s->fq, entries)
+			gen_js_field(f);
+		printf("\t\t\tif (null !== custom && '%s' in custom) {\n"
 		       "\t\t\t\tif (custom['%s'] instanceof Array) {\n"
 		       "\t\t\t\t\tfor (i = 0; "
 				      "i < custom['%s']%s.length; i++)\n"
@@ -1093,29 +1127,96 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t\t\t\t} else {\n"
 		       "\t\t\t\t\t(%scustom['%s'])(e, '%s', o);\n"
 		       "\t\t\t\t}\n"
-		       "\t\t\t}\n",
-		       s->name, s->name, s->name, 
+		       "\t\t\t}\n"
+		       "\t\t}%s\n"
+		       "\n", s->name, s->name, s->name, 
 		       tsc ? "!" : "",
 		       tsc ? typearray : "", s->name, s->name,
-		       tsc ? type : "", s->name, s->name);
-		TAILQ_FOREACH(f, &s->fq, entries)
-			gen_js_field(f);
-		printf("\t\t}%s\n"
-		       "\n", tsc ? "" : ";");
+		       tsc ? type : "", s->name, s->name,
+		       tsc ? "" : ";");
+
+		print_commentv(2, COMMENT_JS,
+			"Like {@link %s.%s#fillArray}, but hiding an "
+			"element if the array is empty or null.\n"
+			"@param {HTMLElement|null} e - The DOM element.\n"
+			"@param {HTMLElement|null} tohide - The "
+			"DOM element to hide.\n"
+			"@param {%s} o - The array (or object) to fill.\n"
+			"@param {%s.DataCallbacks} custom - The optional "
+			"custom handler dictionary (see {@link "
+			"%s.%s#fill}).\n"
+			"@function fillArrayOrHide\n"
+			"@memberof %s.%s#",
+			ns, s->name, obj, ns, ns, s->name, ns, s->name);
+		gen_class_proto(tsc, 0, s->name, "void", 
+			"fillArrayOrHide", 
+			"e", "HTMLElement|null",
+			"tohide", "HTMLElement|null",
+			"custom?", "DataCallbacks", NULL);
+		gen_vars(tsc, 3, "len", "number", NULL);
+		printf("\t\t\tif (null === this.obj)\n"
+		       "\t\t\t\tlen = 0;\n"
+		       "\t\t\telse if (this.obj instanceof Array)\n"
+		       "\t\t\t\tlen = this.obj.length;\n"
+		       "\t\t\telse\n"
+		       "\t\t\t\tlen = 1;\n"
+		       "\t\t\tif (null !== e)\n"
+		       "\t\t\t\t_hide(e);\n"
+		       "\t\t\tif (null !== tohide)\n"
+		       "\t\t\t\t_show(tohide);\n"
+		       "\t\t\tthis.fillArray(e, custom);\n"
+		       "\t\t\tif (null !== tohide && 0 === len)\n"
+		       "\t\t\t\t_hide(tohide);\n"
+		       "\t\t}%s\n", tsc ? "" : ";");
+
+		print_commentv(2, COMMENT_JS,
+			"Like {@link %s.%s#fillArray}, but showing an "
+			"element if the array is empty or null.\n"
+			"@param {HTMLElement|null} e - The DOM element.\n"
+			"@param {HTMLElement|null} toshow - The "
+			"DOM element to show.\n"
+			"@param {%s} o - The array (or object) to fill.\n"
+			"@param {%s.DataCallbacks} custom - The optional "
+			"custom handler dictionary (see {@link "
+			"%s.%s#fill}).\n"
+			"@function fillArrayOrHide\n"
+			"@memberof %s.%s#",
+			ns, s->name, obj, ns, ns, s->name, ns, s->name);
+		gen_class_proto(tsc, 0, s->name, "void", 
+			"fillArrayOrShow", 
+			"e", "HTMLElement|null",
+			"toshow", "HTMLElement|null",
+			"custom?", "DataCallbacks", NULL);
+		gen_vars(tsc, 3, "len", "number", NULL);
+		printf("\t\t\tif (null === this.obj)\n"
+		       "\t\t\t\tlen = 0;\n"
+		       "\t\t\telse if (this.obj instanceof Array)\n"
+		       "\t\t\t\tlen = this.obj.length;\n"
+		       "\t\t\telse\n"
+		       "\t\t\t\tlen = 1;\n"
+		       "\t\t\tif (null !== e)\n"
+		       "\t\t\t\t_hide(e);\n"
+		       "\t\t\tif (null !== toshow)\n"
+		       "\t\t\t\t_hide(toshow);\n"
+		       "\t\t\tthis.fillArray(e, custom);\n"
+		       "\t\t\tif (null !== toshow && 0 === len)\n"
+		       "\t\t\t\t_show(toshow);\n"
+		       "\t\t}%s\n", tsc ? "" : ";");
 
 		print_commentv(2, COMMENT_JS,
 			"Like {@link %s.%s#fill} but for an "
 			"array of {@link %s.%sData}.\n"
+			"If the data is not an array, it is remapped "
+			"as an array of one.\n"
 			"This will save the first element within "
 			"\"e\", remove all children of \"e\", "
 			"then repeatedly clone the saved element "
 			"and re-append it, filling in the cloned "
 			"subtree with the array (inclusive of the "
 			"subtree root).\n"
-			"If \"e\" is not an array, it is construed "
-			"as an array of one.\n"
-			"If the input array is empty, \"e\" is hidden "
-			"by using the <code>hide</code> class.\n"
+			"If the input array is empty or null, "
+			"\"e\" is hidden by using the "
+			"<code>hide</code> class.\n"
 			"Otherwise, the <code>hide</code> class is "
 			"removed.\n"
 			"@param {HTMLElement} e - The DOM element.\n"
@@ -1135,6 +1236,8 @@ gen_javascript(const struct config *cfg, int tsc)
 			"ar", objarray,
 			"row", "HTMLElement", NULL);
 		printf("\t\t\to = this.obj;\n"
+		       "\t\t\tif (null !== e)\n"
+		       "\t\t\t\t_hide(e);\n"
 		       "\t\t\tif (null === o || null === e)\n"
 		       "\t\t\t\treturn;\n"
 		       "\t\t\tif ( ! (o instanceof Array)) {\n"
@@ -1142,10 +1245,8 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t\t\t\tar.push(o);\n"
 		       "\t\t\t\to = ar;\n"
 		       "\t\t\t}\n"
-		       "\t\t\tif (0 === o.length) {\n"
-		       "\t\t\t\t_hide(e);\n"
+		       "\t\t\tif (0 === o.length)\n"
 		       "\t\t\t\treturn;\n"
-		       "\t\t\t}\n"
 		       "\t\t\t_show(e);\n"
 		       "\t\t\trow = %se.children[0];\n"
 		       "\t\t\tif (null === row)\n"

@@ -82,7 +82,7 @@ gen_errx(const struct pos *pos, const char *fmt, ...)
  * and that it must happen on a native type.
  */
 static int
-checkrowid(const struct field *f, int hasrowid)
+checkrowid(struct config *cfg, const struct field *f, int hasrowid)
 {
 
 	if (hasrowid)
@@ -102,7 +102,7 @@ checkrowid(const struct field *f, int hasrowid)
  * On success, this sets the "source" field for the referrer.
  */
 static int
-resolve_field_source(struct field *f)
+resolve_field_source(struct config *cfg, struct field *f)
 {
 	struct field	*ff;
 
@@ -165,7 +165,8 @@ resolve_field_source(struct field *f)
  * On success, this sets the "target" field for the referrent.
  */
 static int
-resolve_field_target(struct field *f, struct strctq *q)
+resolve_field_target(struct config *cfg, 
+	struct field *f, struct strctq *q)
 {
 	struct strct	*p;
 	struct field	*ff;
@@ -207,7 +208,8 @@ resolve_field_target(struct field *f, struct strctq *q)
  * In the success case, it sets the bitfield link.
  */
 static int
-resolve_field_bitfield(struct bref *ref, struct bitfq *q)
+resolve_field_bitfield(struct config *cfg,
+	struct bref *ref, struct bitfq *q)
 {
 	struct bitf	*b;
 
@@ -227,7 +229,8 @@ resolve_field_bitfield(struct bref *ref, struct bitfq *q)
  * In the success case, it sets the enumeration link.
  */
 static int
-resolve_field_enum(struct eref *ref, struct enmq *q)
+resolve_field_enum(struct config *cfg, 
+	struct eref *ref, struct enmq *q)
 {
 	struct enm	*e;
 
@@ -293,7 +296,7 @@ annotate(struct ref *ref, size_t height, size_t colour)
  * Return zero on failure, non-zero on success.
  */
 static int
-resolve_uref(struct uref *ref, int crq)
+resolve_uref(struct config *cfg, struct uref *ref, int crq)
 {
 	struct field	*f;
 
@@ -323,7 +326,7 @@ resolve_uref(struct uref *ref, int crq)
  * (For the time being, this always returns non-zero.)
  */
 static int
-check_updatetype(struct update *up)
+check_updatetype(struct config *cfg, struct update *up)
 {
 	struct uref	*ref;
 
@@ -350,7 +353,7 @@ check_updatetype(struct update *up)
  * really make sense.
  */
 static int
-check_modtype(const struct uref *ref)
+check_modtype(struct config *cfg, const struct uref *ref)
 {
 
 	assert(MODTYPE__MAX != ref->mod);
@@ -375,7 +378,7 @@ check_modtype(const struct uref *ref)
  * Return zero on failure, non-zero on success.
  */
 static int
-resolve_update(struct update *up)
+resolve_update(struct config *cfg, struct update *up)
 {
 	struct uref	*ref;
 	struct field	*f;
@@ -407,13 +410,13 @@ resolve_update(struct update *up)
 	/* Will always be empty for UP_DELETE. */
 
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
-		if ( ! resolve_uref(ref, 0))
+		if ( ! resolve_uref(cfg, ref, 0))
 			return(0);
-		if ( ! check_modtype(ref))
+		if ( ! check_modtype(cfg, ref))
 			return(0);
 	}
 	TAILQ_FOREACH(ref, &up->crq, entries)
-		if ( ! resolve_uref(ref, 1))
+		if ( ! resolve_uref(cfg, ref, 1))
 			return(0);
 
 	return(1);
@@ -424,7 +427,7 @@ resolve_update(struct update *up)
  * These must be always non-null struct refs.
  */
 static int
-resolve_dref(struct dref *ref, struct strct *s)
+resolve_dref(struct config *cfg, struct dref *ref, struct strct *s)
 {
 	struct field	*f;
 
@@ -450,7 +453,7 @@ resolve_dref(struct dref *ref, struct strct *s)
 
 	if (NULL != TAILQ_NEXT(ref, entries)) {
 		ref = TAILQ_NEXT(ref, entries);
-		return(resolve_dref(ref, f->ref->target->parent));
+		return(resolve_dref(cfg, ref, f->ref->target->parent));
 	}
 
 	ref->parent->strct = f->ref->target->parent;
@@ -463,7 +466,7 @@ resolve_dref(struct dref *ref, struct strct *s)
  * must be a regular field.
  */
 static int
-resolve_oref(struct oref *ref, struct strct *s)
+resolve_oref(struct config *cfg, struct oref *ref, struct strct *s)
 {
 	struct field	*f;
 
@@ -503,7 +506,7 @@ resolve_oref(struct oref *ref, struct strct *s)
 	}
 
 	ref = TAILQ_NEXT(ref, entries);
-	return(resolve_oref(ref, f->ref->target->parent));
+	return(resolve_oref(cfg, ref, f->ref->target->parent));
 }
 
 /*
@@ -512,7 +515,7 @@ resolve_oref(struct oref *ref, struct strct *s)
  * Returns zero on failure, non-zero on success.
  */
 static int
-resolve_sref(struct sref *ref, struct strct *s)
+resolve_sref(struct config *cfg, struct sref *ref, struct strct *s)
 {
 	struct field	*f;
 
@@ -550,7 +553,7 @@ resolve_sref(struct sref *ref, struct strct *s)
 	}
 
 	ref = TAILQ_NEXT(ref, entries);
-	return(resolve_sref(ref, f->ref->target->parent));
+	return(resolve_sref(cfg, ref, f->ref->target->parent));
 }
 
 /*
@@ -574,8 +577,8 @@ parse_cmp(const void *a1, const void *a2)
  * FIXME: limited to 26*26*26 entries.
  */
 static void
-resolve_aliases(struct strct *orig, struct strct *p, 
-	size_t *offs, const struct alias *prior)
+resolve_aliases(struct config *cfg, struct strct *orig, 
+	struct strct *p, size_t *offs, const struct alias *prior)
 {
 	struct field	*f;
 	struct alias	*a;
@@ -621,7 +624,8 @@ resolve_aliases(struct strct *orig, struct strct *p,
 
 		(*offs)++;
 		TAILQ_INSERT_TAIL(&orig->aq, a, entries);
-		resolve_aliases(orig, f->ref->target->parent, offs, a);
+		resolve_aliases(cfg, orig, 
+			f->ref->target->parent, offs, a);
 	}
 }
 
@@ -635,7 +639,7 @@ resolve_aliases(struct strct *orig, struct strct *p,
  * Return zero on failure, non-zero on success.
  */
 static int
-check_searchtype(struct strct *p)
+check_searchtype(struct config *cfg, struct strct *p)
 {
 	const struct sent *sent;
 	const struct sref *sr;
@@ -709,7 +713,7 @@ check_searchtype(struct strct *p)
 
 		if (NULL != srch->dst->cname) {
 			dr = TAILQ_FIRST(&srch->dst->drefq);
-			if ( ! resolve_dref(dr, p))
+			if ( ! resolve_dref(cfg, dr, p))
 				return(0);
 		} else {
 			srch->dst->strct = p;
@@ -747,7 +751,7 @@ check_searchtype(struct strct *p)
  * Returns zero if not found, non-zero if found.
  */
 static int
-check_search_unique(const struct search *srch)
+check_search_unique(struct config *cfg, const struct search *srch)
 {
 	const struct unique *uq;
 	const struct sent *sent;
@@ -782,7 +786,7 @@ check_search_unique(const struct search *srch)
  * Also set whether we have row identifiers within the search expansion.
  */
 static int
-resolve_search(struct search *srch)
+resolve_search(struct config *cfg, struct search *srch)
 {
 	struct sent	*sent;
 	struct sref	*sref;
@@ -795,7 +799,7 @@ resolve_search(struct search *srch)
 
 	TAILQ_FOREACH(sent, &srch->sntq, entries) {
 		sref = TAILQ_FIRST(&sent->srq);
-		if ( ! resolve_sref(sref, p))
+		if ( ! resolve_sref(cfg, sref, p))
 			return(0);
 
 		/*
@@ -836,14 +840,14 @@ resolve_search(struct search *srch)
 	 */
 
 	if ( ! (SEARCH_IS_UNIQUE & srch->flags) &&
-	    check_search_unique(srch))
+	    check_search_unique(cfg, srch))
 		srch->flags |= SEARCH_IS_UNIQUE;
 
 	/* Now the same but for order statements. */
 
 	TAILQ_FOREACH(ord, &srch->ordq, entries) {
 		oref = TAILQ_FIRST(&ord->orq);
-		if ( ! resolve_oref(oref, p))
+		if ( ! resolve_oref(cfg, oref, p))
 			return(0);
 
 		if (NULL == ord->name)
@@ -859,7 +863,7 @@ resolve_search(struct search *srch)
 }
 
 static int
-check_unique(const struct unique *u)
+check_unique(struct config *cfg, const struct unique *u)
 {
 	const struct nref *n;
 
@@ -878,7 +882,7 @@ check_unique(const struct unique *u)
  * These are all in the local structure.
  */
 static int
-resolve_unique(struct unique *u)
+resolve_unique(struct config *cfg, struct unique *u)
 {
 	struct nref	*n;
 	struct field	*f;
@@ -904,7 +908,7 @@ resolve_unique(struct unique *u)
  * On failure, returns zero.
  */
 static int
-resolve_roles(struct roleset *rs, struct roleq *rq)
+resolve_roles(struct config *cfg, struct roleset *rs, struct roleq *rq)
 {
 	struct role 	*r;
 
@@ -912,7 +916,7 @@ resolve_roles(struct roleset *rs, struct roleq *rq)
 		if (0 == strcasecmp(rs->name, r->name)) {
 			rs->role = r;
 			return(1);
-		} else if (resolve_roles(rs, &r->subrq))
+		} else if (resolve_roles(cfg, rs, &r->subrq))
 			return(1);
 	}
 
@@ -928,7 +932,7 @@ resolve_roles(struct roleset *rs, struct roleq *rq)
  * Reports its errors.
  */
 static size_t
-resolve_roleset(struct rolemap *rm, struct config *cfg)
+resolve_roleset(struct config *cfg, struct rolemap *rm)
 {
 	struct roleset	*rs, *rrs;
 	struct role	*rp;
@@ -937,7 +941,7 @@ resolve_roleset(struct rolemap *rm, struct config *cfg)
 	TAILQ_FOREACH(rs, &rm->setq, entries) {
 		if (NULL != rs->role)
 			continue;
-		if (resolve_roles(rs, &cfg->rq))
+		if (resolve_roles(cfg, rs, &cfg->rq))
 			continue;
 		gen_errx(&rs->parent->pos, "unknown role: %s", rs->name);
 		i++;
@@ -979,9 +983,9 @@ resolve_roleset(struct rolemap *rm, struct config *cfg)
  * This might mean that we're going to create a rolemap in the process.
  */
 static size_t
-resolve_roleset_coverset(const struct roleset *rs, 
-	struct rolemap **rm, enum rolemapt type, 
-	const char *name, struct strct *p)
+resolve_roleset_coverset(struct config *cfg,
+	const struct roleset *rs, struct rolemap **rm, 
+	enum rolemapt type, const char *name, struct strct *p)
 {
 	struct roleset	*rrs;
 
@@ -1040,7 +1044,7 @@ resolve_roleset_coverset(const struct roleset *rs,
  * through their rolemaps.
  */
 static size_t
-resolve_roleset_cover(struct strct *p, struct config *cfg)
+resolve_roleset_cover(struct config *cfg, struct strct *p)
 {
 	struct roleset  *rs;
 	struct update	*u;
@@ -1054,28 +1058,28 @@ resolve_roleset_cover(struct strct *p, struct config *cfg)
 			continue;
 		TAILQ_FOREACH(u, &p->dq, entries) 
 			i += resolve_roleset_coverset
-				(rs, &u->rolemap,
+				(cfg, rs, &u->rolemap,
 				 ROLEMAP_DELETE, u->name, p);
 		TAILQ_FOREACH(u, &p->uq, entries) 
 			i += resolve_roleset_coverset
-				(rs, &u->rolemap,
+				(cfg, rs, &u->rolemap,
 				 ROLEMAP_UPDATE, u->name, p);
 		TAILQ_FOREACH(s, &p->sq, entries)
 			if (STYPE_ITERATE == s->type)
 				i += resolve_roleset_coverset
-					(rs, &s->rolemap, 
+					(cfg, rs, &s->rolemap, 
 					 ROLEMAP_ITERATE, s->name, p);
 			else if (STYPE_LIST == s->type)
 				i += resolve_roleset_coverset
-					(rs, &s->rolemap, 
+					(cfg, rs, &s->rolemap, 
 					 ROLEMAP_LIST, s->name, p);
 			else if (STYPE_SEARCH == s->type)
 				i += resolve_roleset_coverset
-					(rs, &s->rolemap, 
+					(cfg, rs, &s->rolemap, 
 					 ROLEMAP_SEARCH, s->name, p);
 		if (NULL != p->ins)
 			i += resolve_roleset_coverset
-				(rs, &p->ins->rolemap, 
+				(cfg, rs, &p->ins->rolemap, 
 				 ROLEMAP_INSERT, NULL, p);
 	}
 	
@@ -1090,7 +1094,8 @@ resolve_roleset_cover(struct strct *p, struct config *cfg)
  * unique, which is otherwise guaranteed with named fields.
  */
 static void
-rolemap_merge(struct rolemap *src, struct rolemap **dst)
+rolemap_merge(struct config *cfg, 
+	struct rolemap *src, struct rolemap **dst)
 {
 	struct roleset	*rdst, *rsrc;
 
@@ -1123,7 +1128,7 @@ rolemap_merge(struct rolemap *src, struct rolemap **dst)
  * On success, the rolemap is assigned into the structure.
  */
 static size_t
-resolve_rolemap(struct rolemap *rm, struct config *cfg, struct strct *p)
+resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
 {
 	struct update	*u;
 	struct search	*s;
@@ -1137,19 +1142,19 @@ resolve_rolemap(struct rolemap *rm, struct config *cfg, struct strct *p)
 			    0 == strcasecmp(u->name, rm->name)) {
 				assert(NULL == u->rolemap);
 				u->rolemap = rm;
-				return(resolve_roleset(rm, cfg));
+				return(resolve_roleset(cfg, rm));
 			}
 		break;
 	case ROLEMAP_ALL:
 		assert(NULL == p->arolemap);
 		p->arolemap = rm;
-		return(resolve_roleset(rm, cfg));
+		return(resolve_roleset(cfg, rm));
 	case ROLEMAP_INSERT:
 		if (NULL == p->ins) 
 			break;
 		assert(NULL == p->ins->rolemap);
 		p->ins->rolemap = rm;
-		return(resolve_roleset(rm, cfg));
+		return(resolve_roleset(cfg, rm));
 	case ROLEMAP_ITERATE:
 		TAILQ_FOREACH(s, &p->sq, entries) 
 			if (STYPE_ITERATE == s->type &&
@@ -1157,7 +1162,7 @@ resolve_rolemap(struct rolemap *rm, struct config *cfg, struct strct *p)
 			    0 == strcasecmp(s->name, rm->name)) {
 				assert(NULL == s->rolemap);
 				s->rolemap = rm;
-				return(resolve_roleset(rm, cfg));
+				return(resolve_roleset(cfg, rm));
 			}
 		break;
 	case ROLEMAP_LIST:
@@ -1167,7 +1172,7 @@ resolve_rolemap(struct rolemap *rm, struct config *cfg, struct strct *p)
 			    0 == strcasecmp(s->name, rm->name)) {
 				assert(NULL == s->rolemap);
 				s->rolemap = rm;
-				return(resolve_roleset(rm, cfg));
+				return(resolve_roleset(cfg, rm));
 			}
 		break;
 	case ROLEMAP_SEARCH:
@@ -1177,7 +1182,7 @@ resolve_rolemap(struct rolemap *rm, struct config *cfg, struct strct *p)
 			    0 == strcasecmp(s->name, rm->name)) {
 				assert(NULL == s->rolemap);
 				s->rolemap = rm;
-				return(resolve_roleset(rm, cfg));
+				return(resolve_roleset(cfg, rm));
 			}
 		break;
 	case ROLEMAP_NOEXPORT:
@@ -1189,15 +1194,15 @@ resolve_rolemap(struct rolemap *rm, struct config *cfg, struct strct *p)
 		 */
 		if (NULL == rm->name) {
 			TAILQ_FOREACH(f, &p->fq, entries) {
-				rolemap_merge(rm, &f->rolemap);
-				i += resolve_roleset(f->rolemap, cfg);
+				rolemap_merge(cfg, rm, &f->rolemap);
+				i += resolve_roleset(cfg, f->rolemap);
 			}
 			return(i);
 		}
 		TAILQ_FOREACH(f, &p->fq, entries) 
 			if (0 == strcasecmp(f->name, rm->name)) {
-				rolemap_merge(rm, &f->rolemap);
-				return(resolve_roleset(f->rolemap, cfg));
+				rolemap_merge(cfg, rm, &f->rolemap);
+				return(resolve_roleset(cfg, f->rolemap));
 			}
 		break;
 	case ROLEMAP_UPDATE:
@@ -1206,7 +1211,7 @@ resolve_rolemap(struct rolemap *rm, struct config *cfg, struct strct *p)
 			    0 == strcasecmp(u->name, rm->name)) {
 				assert(NULL == u->rolemap);
 				u->rolemap = rm;
-				return(resolve_roleset(rm, cfg));
+				return(resolve_roleset(cfg, rm));
 			}
 		break;
 	default:
@@ -1229,7 +1234,7 @@ resolve_rolemap(struct rolemap *rm, struct config *cfg, struct strct *p)
  * during the query itself.
  */
 static int
-check_reffind(const struct strct *p)
+check_reffind(struct config *cfg, const struct strct *p)
 {
 	const struct field *f;
 
@@ -1241,7 +1246,7 @@ check_reffind(const struct strct *p)
 		    FIELD_NULL & f->ref->source->flags)
 			return(1);
 		if (FTYPE_STRUCT == f->type &&
-		    check_reffind(f->ref->target->parent))
+		    check_reffind(cfg, f->ref->target->parent))
 			return(1);
 	}
 
@@ -1249,7 +1254,7 @@ check_reffind(const struct strct *p)
 }
 
 static void
-resolve_enum_auto(struct enm *en)
+resolve_enum_auto(struct config *cfg, struct enm *en)
 {
 	struct eitem	*ei;
 	int64_t		 v = INT64_MIN;
@@ -1286,7 +1291,7 @@ kwbp_parse_close(struct config *cfg)
 
 	TAILQ_FOREACH(en, &cfg->eq, entries)
 		if (ENM_AUTO & en->flags)
-			resolve_enum_auto(en);
+			resolve_enum_auto(cfg, en);
 
 	/* Check for row identifier validity. */
 
@@ -1294,7 +1299,7 @@ kwbp_parse_close(struct config *cfg)
 		hasrowid = 0;
 		TAILQ_FOREACH(f, &p->fq, entries)
 			if (FIELD_ROWID & f->flags &&
-			    ! checkrowid(f, hasrowid++))
+			    ! checkrowid(cfg, f, hasrowid++))
 				return(0);
 	}
 
@@ -1307,11 +1312,11 @@ kwbp_parse_close(struct config *cfg)
 	i = 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries) {
 		TAILQ_FOREACH(rm, &p->rq, entries)
-			i += resolve_rolemap(rm, cfg, p);
+			i += resolve_rolemap(cfg, rm, p);
 		if (NULL != p->ins && NULL != p->ins->rolemap)
-			i += resolve_roleset(p->ins->rolemap, cfg);
+			i += resolve_roleset(cfg, p->ins->rolemap);
 		if (NULL != p->arolemap)
-			i += resolve_roleset_cover(p, cfg);
+			i += resolve_roleset_cover(cfg, p);
 	}
 	if (i > 0)
 		return(0);
@@ -1359,23 +1364,23 @@ kwbp_parse_close(struct config *cfg)
 	TAILQ_FOREACH(p, &cfg->sq, entries) {
 		TAILQ_FOREACH(f, &p->fq, entries) {
 			if (NULL != f->ref &&
-			    (! resolve_field_source(f) ||
-			     ! resolve_field_target(f, &cfg->sq)))
+			    (! resolve_field_source(cfg, f) ||
+			     ! resolve_field_target(cfg, f, &cfg->sq)))
 				return(0);
 			if (NULL != f->eref &&
-			    ! resolve_field_enum(f->eref, &cfg->eq))
+			    ! resolve_field_enum(cfg, f->eref, &cfg->eq))
 				return(0);
 			if (NULL != f->bref &&
-			    ! resolve_field_bitfield(f->bref, &cfg->bq))
+			    ! resolve_field_bitfield(cfg, f->bref, &cfg->bq))
 				return(0);
 		}
 		TAILQ_FOREACH(u, &p->uq, entries)
-			if ( ! resolve_update(u) ||
-			     ! check_updatetype(u))
+			if ( ! resolve_update(cfg, u) ||
+			     ! check_updatetype(cfg, u))
 				return(0);
 		TAILQ_FOREACH(u, &p->dq, entries)
-			if ( ! resolve_update(u) ||
-			     ! check_updatetype(u))
+			if ( ! resolve_update(cfg, u) ||
+			     ! check_updatetype(cfg, u))
 				return(0);
 	}
 
@@ -1421,25 +1426,25 @@ kwbp_parse_close(struct config *cfg)
 
 	i = 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		resolve_aliases(p, p, &i, NULL);
+		resolve_aliases(cfg, p, p, &i, NULL);
 
 	/* Resolve search terms. */
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		TAILQ_FOREACH(n, &p->nq, entries)
-			if ( ! resolve_unique(n) ||
-			     ! check_unique(n))
+			if ( ! resolve_unique(cfg, n) ||
+			     ! check_unique(cfg, n))
 				return(0);
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		TAILQ_FOREACH(srch, &p->sq, entries)
-			if ( ! resolve_search(srch))
+			if ( ! resolve_search(cfg, srch))
 				return(0);
 
 	/* See if our search type is wonky. */
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		if ( ! check_searchtype(p))
+		if ( ! check_searchtype(cfg, p))
 			return(0);
 
 	/* 
@@ -1465,7 +1470,7 @@ kwbp_parse_close(struct config *cfg)
 	/* Check for null struct references. */
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		if (check_reffind(p))
+		if (check_reffind(cfg, p))
 			p->flags |= STRCT_HAS_NULLREFS;
 
 	free(pa);

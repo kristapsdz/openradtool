@@ -747,6 +747,7 @@ kwbp_write_file(FILE *f, const struct config *cfg)
 	const struct enm   *e;
 	const struct bitf  *b;
 	struct writer	    w;
+	int		    rc = 0;
 
 	memset(&w, 0, sizeof(struct writer));
 	w.type = WTYPE_FILE;
@@ -754,7 +755,8 @@ kwbp_write_file(FILE *f, const struct config *cfg)
 
 	if (CFG_HAS_ROLES & cfg->flags)
 		if ( ! parse_write_roles(&w, cfg))
-			return 0;
+			goto out;
+
 	TAILQ_FOREACH(s, &cfg->sq, entries)
 		parse_write_strct(&w, s);
 	TAILQ_FOREACH(e, &cfg->eq, entries)
@@ -762,7 +764,10 @@ kwbp_write_file(FILE *f, const struct config *cfg)
 	TAILQ_FOREACH(b, &cfg->bq, entries)
 		parse_write_bitf(&w, cfg, b);
 
-	return 1;
+	rc = 1;
+out:
+	free(w.buf.buf);
+	return rc;
 }
 
 char *

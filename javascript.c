@@ -1063,10 +1063,30 @@ gen_javascript(const struct config *cfg, int tsc)
 			"custom?", "DataCallbacks|null", NULL);
 		gen_vars(tsc, 3, "i", "number", 
 			"list", "HTMLElement[]", NULL);
-		printf("\t\t\tlist = _elemList(e, name, false);\n"
-	     	       "\t\t\tfor (i = 0; i < list.length; i++)\n"
-		       "\t\t\t\tthis._fill(list[i], this.obj, "
-		        "true, custom);\n"
+		printf("\t\t\tthis._fillByClass(e, name, true, custom);\n"
+		       "\t\t}%s\n"
+		       "\n", tsc ? "" : ";");
+
+		print_commentv(2, COMMENT_JS,
+			"Like {@link %s.%s#fillByClass} but inclusive "
+			"the root and targets by class.\n"
+			"@param {HTMLElement} e - The DOM element.\n"
+			"@param {String} name - The name of the class "
+			"into which to fill.\n"
+			"@param {%s.DataCallbacks} custom - The optional "
+			"custom handler dictionary (see {@link "
+			"%s.%s#fill} for details).\n"
+			"@function fillInnerByClass\n"
+			"@memberof %s.%s#",
+			ns, s->name, ns, ns, s->name, ns, s->name);
+		gen_class_proto(tsc, 0, s->name, "void", 
+			"fillInnerByClass",
+			"e", "HTMLElement|null",
+			"name", "string", 
+			"custom?", "DataCallbacks|null", NULL);
+		gen_vars(tsc, 3, "i", "number", 
+			"list", "HTMLElement[]", NULL);
+		printf("\t\t\tthis._fillByClass(e, name, false, custom);\n"
 		       "\t\t}%s\n"
 		       "\n", tsc ? "" : ";");
 
@@ -1093,7 +1113,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			"@param {HTMLElement} e - The DOM element.\n"
 			"@param {%s} o - The object "
 			"(or array) to fill.\n"
-			"@param {Number} inc - Whether to include "
+			"@param {Boolean} inc - Whether to include "
 			"the root or not when processing.\n"
 			"@param {%s.DataCallbacks} custom - The optional "
 			"custom handler dictionary (see {@link "
@@ -1134,6 +1154,37 @@ gen_javascript(const struct config *cfg, int tsc)
 		       tsc ? typearray : "", s->name, s->name,
 		       tsc ? type : "", s->name, s->name,
 		       tsc ? "" : ";");
+
+		print_commentv(2, COMMENT_JS,
+			"Like {@link %s.%s#_fill} but instead of "
+			"accepting a single element to fill, filling "
+			"into all elements matching the given class "
+			"name beneath the given root.\n"
+			"@param {HTMLElement} e - The DOM element.\n"
+			"@param {String} name - The name of the class "
+			"into which to fill.\n"
+			"@param {Boolean} inc - Whether to include "
+			"the roots or not when processing.\n"
+			"@param {%s.DataCallbacks} custom - The optional "
+			"custom handler dictionary (see {@link "
+			"%s.%s#fill} for details).\n"
+			"@private\n"
+			"@function _fillByClass\n"
+			"@memberof %s.%s#",
+			ns, s->name, ns, ns, s->name, ns, s->name);
+		gen_class_proto(tsc, 1, s->name, "void", "_fillByClass",
+			"e", "HTMLElement|null",
+			"name", "string", 
+			"inc", "boolean",
+			"custom?", "DataCallbacks|null", NULL);
+		gen_vars(tsc, 3, "i", "number", 
+			"list", "HTMLElement[]", NULL);
+		printf("\t\t\tlist = _elemList(e, name, inc);\n"
+	     	       "\t\t\tfor (i = 0; i < list.length; i++)\n"
+		       "\t\t\t\tthis._fill(list[i], this.obj, "
+		        "inc, custom);\n"
+		       "\t\t}%s\n"
+		       "\n", tsc ? "" : ";");
 
 		print_commentv(2, COMMENT_JS,
 			"Like {@link %s.%s#fillArray}, but hiding an "

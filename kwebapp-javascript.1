@@ -62,9 +62,13 @@ create objects from the JSON exported by
 .Xr kwebapp-c-source 1 ,
 and invoke the applicable object's
 .Fn fill ,
+.Fn fillByClass ,
 .Fn fillInner ,
+.Fn fillInnerByClass ,
+.Fn fillArray ,
+.Fn fillArrayOrHide ,
 and
-.Fn fillArray
+.Fn fillArrayOrShow ,
 methods with a DOM tree node.
 .Pp
 These methods operate on elements with certain classes beneath a given
@@ -128,16 +132,25 @@ class.
 .Pp
 The
 .Fn fillInner
-method may be used to exclude the passed-in element, while
+and
+.Fn fillInnerByClass
+methods may be used to exclude the passed-in root element, while
 .Fn fill
-includes this element.
+and
+.Fn fillByClass
+include this element.
 .Pp
 The
-.Fn fillArray
-method invokes
+.Fn fillArray ,
+.Fn fillArrayOrHide ,
+and
+.Fn fillArrayOrShow
+methods invoke
 .Fn fill
 repeatedly over an array of objects by removing, then subsequently
 cloning and appending, the first element of the give DOM root.
+The show and hide variants perform additional labour, usually to show a
+message that elements have not or (more rarely) have been found.
 .Pp
 Enumeration and bitfield classes are also generated from the input file.
 These are appended to the namespace as a series of classes
@@ -158,7 +171,7 @@ with a field
 consisting of a UNIX epoch:
 .Bd -literal -offset indent
 var custom = { 'client-dob': formatDate };
-new kwebapp.client(obj).fillInner(document, custom);
+new kwebapp.client(obj).fillInner(document.body, custom);
 .Ed
 .Pp
 And letting a formatting function be:
@@ -181,7 +194,7 @@ structures.
 The keys for these are simply the structure name.
 .Bd -literal -offset indent
 var custom = { 'client': formatClient };
-new kwebapp.client(obj).fillInner(document, custom);
+new kwebapp.client(obj).fillInner(document.body, custom);
 .Ed
 .Pp
 The callback will then be provided the full client object.
@@ -215,7 +228,7 @@ function formatDate(e: HTMLElement,
 The dictionary object is defined as follows:
 .Bd -literal -offset indent
 let custom: DataCallbacks = { 'client-dob': formatDate };
-new kwebapp.client(obj).fillInner(document, custom);
+new kwebapp.client(obj).fillInner(document.body, custom);
 .Ed
 .Ss Enumeration and Bitfield Labels
 Enumerations and bitfields in
@@ -281,12 +294,13 @@ and an AJAX response
 an example invocation may be as follows:
 .Bd -literal -offset indent
 var obj = JSON.parse(response);
-var e = document.getElementById('foo');
-new kwebapp.foo(obj).fill(e);
+new kwebapp.foo(obj).fill
+  (document.getElementById('foo'));
 .Ed
 .Pp
 This will fill in all classes under
 .Li e
+.Pq if found
 named
 .Li foo-bar-value ,
 .Li foo-bar-text ,
@@ -295,17 +309,15 @@ named
 and
 .Li foo-enum-select .
 .Pp
-The TypeScript interface would intsead look as follows, assuming that
+The TypeScript interface would instead look as follows, assuming that
 the JSON parse returns the
 .Dq foo
 JSON object.
 .Bd -literal -offset indent
 let obj: kwebapp.fooData =
   <kwebapp.fooData>JSON.parse(response);
-let e: HTMLElement|null =
-  document.getElementById('foo');
-if (null !== e)
-  new kwebapp.foo(obj).fill(e);
+new kwebapp.foo(obj).fill
+  (document.getElementById('foo'));
 .Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.

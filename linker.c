@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,6 +22,7 @@
 #if HAVE_ERR
 # include <err.h>
 #endif
+#include <errno.h>
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -65,6 +66,16 @@ gen_warnx(struct config *cfg,
 }
 
 static void
+gen_err(struct config *cfg, const struct pos *pos)
+{
+	int	 er = errno;
+
+	fprintf(stderr, "%s:%zu:%zu: error: %s\n", 
+		pos->fname, pos->line, pos->column, 
+		strerror(er));
+}
+
+static void
 gen_errx(struct config *cfg, 
 	const struct pos *pos, const char *fmt, ...)
 {
@@ -79,11 +90,11 @@ gen_errx(struct config *cfg,
 		pos->fname, pos->line, pos->column, buf);
 }
 
-
 /*
  * Check that a given row identifier is valid.
  * The rules are that only one row identifier can exist on a structure
  * and that it must happen on a native type.
+ * Return non-zero on success, zero on failure.
  */
 static int
 checkrowid(struct config *cfg, const struct field *f, int hasrowid)
@@ -400,14 +411,18 @@ resolve_update(struct config *cfg, struct update *up)
 			if (FTYPE_STRUCT == f->type)
 				continue;
 			ref = calloc(1, sizeof(struct uref));
-			if (NULL == ref)
-				err(EXIT_FAILURE, NULL);
+			if (NULL == ref) {
+				gen_err(cfg, &up->pos);
+				return 0;
+			}
+			TAILQ_INSERT_TAIL(&up->mrq, ref, entries);
 			ref->name = strdup(f->name);
-			if (NULL == ref->name)
-				err(EXIT_FAILURE, NULL);
+			if (NULL == ref->name) {
+				gen_err(cfg, &up->pos);
+				return 0;
+			}
 			ref->parent = up;
 			ref->pos = up->pos;
-			TAILQ_INSERT_TAIL(&up->mrq, ref, entries);
 		}
 	}
 
@@ -415,15 +430,15 @@ resolve_update(struct config *cfg, struct update *up)
 
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
 		if ( ! resolve_uref(cfg, ref, 0))
-			return(0);
+			return 0;
 		if ( ! check_modtype(cfg, ref))
-			return(0);
+			return 0;
 	}
 	TAILQ_FOREACH(ref, &up->crq, entries)
 		if ( ! resolve_uref(cfg, ref, 1))
-			return(0);
+			return 0;
 
-	return(1);
+	return 1;
 }
 
 /*
@@ -579,8 +594,9 @@ parse_cmp(const void *a1, const void *a2)
  * This consists of all "parent.child" chains of structure that descend
  * from the given "orig" original structure.
  * FIXME: limited to 26*26*26 entries.
+ * Return zero on failure, non-zero on success.
  */
-static void
+static int
 resolve_aliases(struct config *cfg, struct strct *orig, 
 	struct strct *p, size_t *offs, const struct alias *prior)
 {
@@ -594,19 +610,26 @@ resolve_aliases(struct config *cfg, struct strct *orig,
 		assert(NULL != f->ref);
 		
 		a = calloc(1, sizeof(struct alias));
-		if (NULL == a)
-			err(EXIT_FAILURE, NULL);
+		if (NULL == a) {
+			gen_err(cfg, &f->pos);
+			return 0;
+		}
+		TAILQ_INSERT_TAIL(&orig->aq, a, entries);
 
 		if (NULL != prior) {
 			c = asprintf(&a->name, "%s.%s",
 				prior->name, f->name);
-			if (c < 0)
-				err(EXIT_FAILURE, NULL);
-		} else
+			if (c < 0) {
+				gen_err(cfg, &f->pos);
+				return 0;
+			}
+		} else {
 			a->name = strdup(f->name);
-
-		if (NULL == a->name)
-			err(EXIT_FAILURE, NULL);
+			if (NULL == a->name) {
+				gen_err(cfg, &f->pos);
+				return 0;
+			}
+		}
 
 		assert(*offs < 26 * 26 * 26);
 
@@ -623,14 +646,19 @@ resolve_aliases(struct config *cfg, struct strct *orig,
 			c = asprintf(&a->alias, 
 				"_%c", (char)*offs + 97);
 
-		if (c < 0)
-			err(EXIT_FAILURE, NULL);
+		if (c < 0) {
+			gen_err(cfg, &f->pos);
+			return 0;
+		}
 
 		(*offs)++;
-		TAILQ_INSERT_TAIL(&orig->aq, a, entries);
-		resolve_aliases(cfg, orig, 
+		c = resolve_aliases(cfg, orig, 
 			f->ref->target->parent, offs, a);
+		if (0 == c)
+			return 0;
 	}
+
+	return 1;
 }
 
 /*
@@ -888,6 +916,7 @@ check_unique(struct config *cfg, const struct unique *u)
 /*
  * Resolve the chain of unique fields.
  * These are all in the local structure.
+ * Returns zero on failure, non-zero on success.
  */
 static int
 resolve_unique(struct config *cfg, struct unique *u)
@@ -936,15 +965,14 @@ resolve_roles(struct config *cfg, struct roleset *rs, struct roleq *rq)
  * match the roles to those given in the configuration "cfg".
  * Then make sure that the matched roles, if any, don't overlap in the
  * tree of roles.
- * Return the number of bad matches (zero means all good).
- * Reports its errors.
+ * Return zero on success, >0 with errors, and <0 on fatal errors.
  */
-static size_t
+static ssize_t
 resolve_roleset(struct config *cfg, struct rolemap *rm)
 {
 	struct roleset	*rs, *rrs;
 	struct role	*rp;
-	size_t		 i = 0;
+	ssize_t		 i = 0;
 
 	TAILQ_FOREACH(rs, &rm->setq, entries) {
 		if (NULL != rs->role)
@@ -990,8 +1018,9 @@ resolve_roleset(struct config *cfg, struct rolemap *rm)
  * we're clobbering an existing role.
  * If we're not, then we add our role to the roleset.
  * This might mean that we're going to create a rolemap in the process.
+ * Return zero on success, >0 with errors, and <0 on fatal errors.
  */
-static size_t
+static ssize_t
 resolve_roleset_coverset(struct config *cfg,
 	const struct roleset *rs, struct rolemap **rm, 
 	enum rolemapt type, const char *name, struct strct *p)
@@ -1051,48 +1080,66 @@ resolve_roleset_coverset(struct config *cfg,
  * At this level, we just go through all possible functions (queries,
  * updates, deletes, and inserts, all named but for the latter) and look
  * through their rolemaps.
+ * Return zero on success, >0 with errors, and <0 on fatal errors.
  */
-static size_t
+static ssize_t
 resolve_roleset_cover(struct config *cfg, struct strct *p)
 {
 	struct roleset  *rs;
 	struct update	*u;
 	struct search	*s;
-	size_t		 i = 0;
+	ssize_t		 i = 0, rc;
 
 	assert(NULL != p->arolemap);
 
 	TAILQ_FOREACH(rs, &p->arolemap->setq, entries) {
 		if (NULL == rs->role)
 			continue;
-		TAILQ_FOREACH(u, &p->dq, entries) 
-			i += resolve_roleset_coverset
+		TAILQ_FOREACH(u, &p->dq, entries) {
+			rc = resolve_roleset_coverset
 				(cfg, rs, &u->rolemap,
 				 ROLEMAP_DELETE, u->name, p);
-		TAILQ_FOREACH(u, &p->uq, entries) 
-			i += resolve_roleset_coverset
+			if (rc < 0)
+				return rc;
+			i += rc;
+		}
+		TAILQ_FOREACH(u, &p->uq, entries) {
+			rc = resolve_roleset_coverset
 				(cfg, rs, &u->rolemap,
 				 ROLEMAP_UPDATE, u->name, p);
-		TAILQ_FOREACH(s, &p->sq, entries)
+			if (rc < 0)
+				return rc;
+			i += rc;
+		}
+		TAILQ_FOREACH(s, &p->sq, entries) {
+			rc = 0;
 			if (STYPE_ITERATE == s->type)
-				i += resolve_roleset_coverset
+				rc = resolve_roleset_coverset
 					(cfg, rs, &s->rolemap, 
 					 ROLEMAP_ITERATE, s->name, p);
 			else if (STYPE_LIST == s->type)
-				i += resolve_roleset_coverset
+				rc = resolve_roleset_coverset
 					(cfg, rs, &s->rolemap, 
 					 ROLEMAP_LIST, s->name, p);
 			else if (STYPE_SEARCH == s->type)
-				i += resolve_roleset_coverset
+				rc = resolve_roleset_coverset
 					(cfg, rs, &s->rolemap, 
 					 ROLEMAP_SEARCH, s->name, p);
-		if (NULL != p->ins)
-			i += resolve_roleset_coverset
+			if (rc < 0)
+				return rc;
+			i += rc;
+		}
+		if (NULL != p->ins) {
+			rc = resolve_roleset_coverset
 				(cfg, rs, &p->ins->rolemap, 
 				 ROLEMAP_INSERT, NULL, p);
+			if (rc < 0)
+				return rc;
+			i += rc;
+		}
 	}
 	
-	return(i);
+	return i;
 }
 
 /*
@@ -1101,8 +1148,9 @@ resolve_roleset_cover(struct config *cfg, struct strct *p)
  *   roles foo { noexport; noexport foo; };
  * Which would otherwise crash because the rolemap assignment isn't
  * unique, which is otherwise guaranteed with named fields.
+ * Return zero on failure, non-zero on success.
  */
-static void
+static int
 rolemap_merge(struct config *cfg, 
 	struct rolemap *src, struct rolemap **dst)
 {
@@ -1110,7 +1158,7 @@ rolemap_merge(struct config *cfg,
 
 	if (NULL == *dst) {
 		*dst = src;
-		return;
+		return 1;
 	}
 
 	assert(src->type == (*dst)->type);
@@ -1128,21 +1176,23 @@ rolemap_merge(struct config *cfg,
 		rdst->parent = *dst;
 		TAILQ_INSERT_TAIL(&(*dst)->setq, rdst, entries);
 	}
+
+	return 1;
 }
 
 /*
  * Given the rolemap "rm", which we know to have a unique name and type
  * in "p", assign to the correspending function type in "p".
- * Return zero on failure to lookup, non-zero on success.
+ * Return zero on success, >0 with errors, and <0 on fatal errors.
  * On success, the rolemap is assigned into the structure.
  */
-static size_t
+static ssize_t
 resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
 {
 	struct update	*u;
 	struct search	*s;
 	struct field	*f;
-	size_t		 i = 0;
+	ssize_t		 i = 0, rc;
 
 	switch (rm->type) {
 	case ROLEMAP_DELETE:
@@ -1151,19 +1201,19 @@ resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
 			    0 == strcasecmp(u->name, rm->name)) {
 				assert(NULL == u->rolemap);
 				u->rolemap = rm;
-				return(resolve_roleset(cfg, rm));
+				return resolve_roleset(cfg, rm);
 			}
 		break;
 	case ROLEMAP_ALL:
 		assert(NULL == p->arolemap);
 		p->arolemap = rm;
-		return(resolve_roleset(cfg, rm));
+		return resolve_roleset(cfg, rm);
 	case ROLEMAP_INSERT:
 		if (NULL == p->ins) 
 			break;
 		assert(NULL == p->ins->rolemap);
 		p->ins->rolemap = rm;
-		return(resolve_roleset(cfg, rm));
+		return resolve_roleset(cfg, rm);
 	case ROLEMAP_ITERATE:
 		TAILQ_FOREACH(s, &p->sq, entries) 
 			if (STYPE_ITERATE == s->type &&
@@ -1171,7 +1221,7 @@ resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
 			    0 == strcasecmp(s->name, rm->name)) {
 				assert(NULL == s->rolemap);
 				s->rolemap = rm;
-				return(resolve_roleset(cfg, rm));
+				return resolve_roleset(cfg, rm);
 			}
 		break;
 	case ROLEMAP_LIST:
@@ -1181,7 +1231,7 @@ resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
 			    0 == strcasecmp(s->name, rm->name)) {
 				assert(NULL == s->rolemap);
 				s->rolemap = rm;
-				return(resolve_roleset(cfg, rm));
+				return resolve_roleset(cfg, rm);
 			}
 		break;
 	case ROLEMAP_SEARCH:
@@ -1191,7 +1241,7 @@ resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
 			    0 == strcasecmp(s->name, rm->name)) {
 				assert(NULL == s->rolemap);
 				s->rolemap = rm;
-				return(resolve_roleset(cfg, rm));
+				return resolve_roleset(cfg, rm);
 			}
 		break;
 	case ROLEMAP_NOEXPORT:
@@ -1203,15 +1253,20 @@ resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
 		 */
 		if (NULL == rm->name) {
 			TAILQ_FOREACH(f, &p->fq, entries) {
-				rolemap_merge(cfg, rm, &f->rolemap);
-				i += resolve_roleset(cfg, f->rolemap);
+				if ( ! rolemap_merge(cfg, rm, &f->rolemap))
+					return -1;
+				rc = resolve_roleset(cfg, f->rolemap);
+				if (rc < 0)
+					return rc;
+				i += rc;
 			}
-			return(i);
+			return i;
 		}
 		TAILQ_FOREACH(f, &p->fq, entries) 
 			if (0 == strcasecmp(f->name, rm->name)) {
-				rolemap_merge(cfg, rm, &f->rolemap);
-				return(resolve_roleset(cfg, f->rolemap));
+				if ( ! rolemap_merge(cfg, rm, &f->rolemap))
+					return -1;
+				return resolve_roleset(cfg, f->rolemap);
 			}
 		break;
 	case ROLEMAP_UPDATE:
@@ -1220,7 +1275,7 @@ resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
 			    0 == strcasecmp(u->name, rm->name)) {
 				assert(NULL == u->rolemap);
 				u->rolemap = rm;
-				return(resolve_roleset(cfg, rm));
+				return resolve_roleset(cfg, rm);
 			}
 		break;
 	default:
@@ -1232,7 +1287,7 @@ resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
 		ROLEMAP_NOEXPORT == rm->type ? "field" : "function",
 		ROLEMAP_INSERT == rm->type ? "" : ": ",
 		ROLEMAP_INSERT == rm->type ? "" : rm->name);
-	return(1);
+	return 1;
 }
 
 /*
@@ -1292,6 +1347,7 @@ kwbp_parse_close(struct config *cfg)
 	struct search	 *srch;
 	struct enm	 *en;
 	size_t		  colour = 1, sz = 0, i, hasrowid = 0;
+	ssize_t		  rc;
 
 	if (TAILQ_EMPTY(&cfg->sq)) {
 		fprintf(stderr, "no structures in configuration\n");
@@ -1320,13 +1376,26 @@ kwbp_parse_close(struct config *cfg)
 
 	i = 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries) {
-		TAILQ_FOREACH(rm, &p->rq, entries)
-			i += resolve_rolemap(cfg, rm, p);
-		if (NULL != p->ins && NULL != p->ins->rolemap)
-			i += resolve_roleset(cfg, p->ins->rolemap);
-		if (NULL != p->arolemap)
-			i += resolve_roleset_cover(cfg, p);
+		TAILQ_FOREACH(rm, &p->rq, entries) {
+			rc = resolve_rolemap(cfg, rm, p);
+			if (rc < 0)
+				return 0;
+			i += rc;
+		}
+		if (NULL != p->ins && NULL != p->ins->rolemap) {
+			rc = resolve_roleset(cfg, p->ins->rolemap);
+			if (rc < 0)
+				return 0;
+			i += rc;
+		}
+		if (NULL != p->arolemap) {
+			rc = resolve_roleset_cover(cfg, p);
+			if (rc < 0)
+				return 0;
+			i += rc;
+		}
 	}
+
 	if (i > 0)
 		return(0);
 
@@ -1436,7 +1505,8 @@ kwbp_parse_close(struct config *cfg)
 
 	i = 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		resolve_aliases(cfg, p, p, &i, NULL);
+		if ( ! resolve_aliases(cfg, p, p, &i, NULL))
+			return 0;
 
 	/* Resolve search terms. */
 

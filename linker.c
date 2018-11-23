@@ -31,10 +31,12 @@
 #include "kwebapp.h"
 #include "extern.h"
 
-static void gen_errx(const struct pos *, const char *, ...)
-	__attribute__((format(printf, 2, 3)));
-static void gen_warnx(const struct pos *, const char *, ...)
-	__attribute__((format(printf, 2, 3)));
+static void gen_errx(struct config *, 
+	const struct pos *, const char *, ...)
+	__attribute__((format(printf, 3, 4)));
+static void gen_warnx(struct config *,
+	const struct pos *, const char *, ...)
+	__attribute__((format(printf, 3, 4)));
 
 static	const char *const rolemapts[ROLEMAP__MAX] = {
 	"all", /* ROLEMAP_ALL */
@@ -48,7 +50,8 @@ static	const char *const rolemapts[ROLEMAP__MAX] = {
 };
 
 static void
-gen_warnx(const struct pos *pos, const char *fmt, ...)
+gen_warnx(struct config *cfg, 
+	const struct pos *pos, const char *fmt, ...)
 {
 	va_list	 ap;
 	char	 buf[1024];
@@ -62,7 +65,8 @@ gen_warnx(const struct pos *pos, const char *fmt, ...)
 }
 
 static void
-gen_errx(const struct pos *pos, const char *fmt, ...)
+gen_errx(struct config *cfg, 
+	const struct pos *pos, const char *fmt, ...)
 {
 	va_list	 ap;
 	char	 buf[1024];
@@ -86,9 +90,9 @@ checkrowid(struct config *cfg, const struct field *f, int hasrowid)
 {
 
 	if (hasrowid)
-		gen_errx(&f->pos, "multiple rowids");
+		gen_errx(cfg, &f->pos, "multiple rowids");
 	else if (FTYPE_STRUCT == f->type)
-		gen_errx(&f->pos, "rowid on non-native type");
+		gen_errx(cfg, &f->pos, "rowid on non-native type");
 	else
 		return(1);
 
@@ -136,13 +140,13 @@ resolve_field_source(struct config *cfg, struct field *f)
 		}
 
 	if (NULL == f->ref->source) {
-		gen_errx(&f->pos, "unknown reference source");
+		gen_errx(cfg, &f->pos, "unknown reference source");
 		return(0);
 	} else if (NULL == f->ref->source->ref) {
-		gen_errx(&f->pos, "reference to non-foreign key");
+		gen_errx(cfg, &f->pos, "reference to non-foreign key");
 		return(0);
 	} else if (FTYPE_STRUCT == f->ref->source->type) {
-		gen_errx(&f->pos, "reference to non-native type");
+		gen_errx(cfg, &f->pos, "reference to non-native type");
 		return(0);
 	} 
 
@@ -188,14 +192,14 @@ resolve_field_target(struct config *cfg,
 	}
 
 	if (NULL == f->ref->target) {
-		gen_errx(&f->pos, "unknown reference target");
+		gen_errx(cfg, &f->pos, "unknown reference target");
 		return(0);
 	} else if (f->ref->source->type != f->ref->target->type) {
-		gen_errx(&f->pos, "target type mismatch");
+		gen_errx(cfg, &f->pos, "target type mismatch");
 		return(0);
 	} else if ( ! (FIELD_ROWID & f->ref->target->flags) &&
 	            ! (FIELD_UNIQUE & f->ref->target->flags)) {
-		gen_errx(&f->pos, "target is not a rowid or unique");
+		gen_errx(cfg, &f->pos, "target is not a rowid or unique");
 		return(0);
 	}
 
@@ -219,7 +223,7 @@ resolve_field_bitfield(struct config *cfg,
 			return(1);
 		}
 
-	gen_errx(&ref->parent->pos, "unknown bitfield reference");
+	gen_errx(cfg, &ref->parent->pos, "unknown bitfield reference");
 	return(0);
 }
 
@@ -240,7 +244,7 @@ resolve_field_enum(struct config *cfg,
 			return(1);
 		}
 
-	gen_errx(&ref->parent->pos, "unknown enum reference");
+	gen_errx(cfg, &ref->parent->pos, "unknown enum reference");
 	return(0);
 }
 
@@ -308,11 +312,11 @@ resolve_uref(struct config *cfg, struct uref *ref, int crq)
 			break;
 
 	if (NULL == (ref->field = f))
-		gen_errx(&ref->pos, "term not found");
+		gen_errx(cfg, &ref->pos, "term not found");
 	else if (FTYPE_STRUCT == f->type)
-		gen_errx(&ref->pos, "term is a struct");
+		gen_errx(cfg, &ref->pos, "term is a struct");
 	else if (crq && FTYPE_PASSWORD == f->type)
-		gen_errx(&ref->pos, "term is a password");
+		gen_errx(cfg, &ref->pos, "term is a password");
 	else
 		return(1);
 
@@ -334,12 +338,12 @@ check_updatetype(struct config *cfg, struct update *up)
 		if ((OPTYPE_NOTNULL == ref->op ||
 		     OPTYPE_ISNULL == ref->op) &&
 		    ! (FIELD_NULL & ref->field->flags))
-			gen_warnx(&ref->pos, "null operator "
+			gen_warnx(cfg, &ref->pos, "null operator "
 				"on field that's never null");
 		if (OPTYPE_LIKE == ref->op &&
 		    FTYPE_TEXT != ref->field->type &&
 		    FTYPE_EMAIL != ref->field->type) {
-			gen_errx(&ref->pos, "LIKE operator "
+			gen_errx(cfg, &ref->pos, "LIKE operator "
 				"on non-textual field.");
 			return(0);
 		}
@@ -366,7 +370,7 @@ check_modtype(struct config *cfg, const struct uref *ref)
 	    FTYPE_REAL == ref->field->type)
 		return(1);
 
-	gen_errx(&ref->pos, "update modification on "
+	gen_errx(cfg, &ref->pos, "update modification on "
 		"invalid field type (not numeric)");
 	return(0);
 }
@@ -438,15 +442,15 @@ resolve_dref(struct config *cfg, struct dref *ref, struct strct *s)
 	/* Make sure we're a non-null struct. */
 
 	if (NULL == f) {
-		gen_errx(&ref->pos, "distinct field "
+		gen_errx(cfg, &ref->pos, "distinct field "
 			"not found: %s", ref->name);
 		return(0);
 	} else if (FTYPE_STRUCT != f->type) {
-		gen_errx(&ref->pos, "distinct field "
+		gen_errx(cfg, &ref->pos, "distinct field "
 			"not a struct: %s", f->name);
 		return(0);
 	} else if (FIELD_NULL & f->ref->source->flags) {
-		gen_errx(&ref->pos, "distinct field "
+		gen_errx(cfg, &ref->pos, "distinct field "
 			"is a null struct: %s", f->name);
 		return(0);
 	}
@@ -475,7 +479,7 @@ resolve_oref(struct config *cfg, struct oref *ref, struct strct *s)
 			break;
 
 	if (NULL == (ref->field = f)) {
-		gen_errx(&ref->pos, "order term "
+		gen_errx(cfg, &ref->pos, "order term "
 			"not found: %s", ref->name);
 		return(0);
 	}
@@ -488,7 +492,7 @@ resolve_oref(struct config *cfg, struct oref *ref, struct strct *s)
 	if (NULL == TAILQ_NEXT(ref, entries)) {
 		if (FTYPE_STRUCT != f->type) 
 			return(1);
-		gen_errx(&ref->pos, "order terminal field "
+		gen_errx(cfg, &ref->pos, "order terminal field "
 			"is a struct: %s", f->name);
 		return(0);
 	} 
@@ -496,11 +500,11 @@ resolve_oref(struct config *cfg, struct oref *ref, struct strct *s)
 	/* Non-terminals must be non-null structs. */
 	
 	if (FTYPE_STRUCT != f->type) {
-		gen_errx(&ref->pos, "order non-terminal "
+		gen_errx(cfg, &ref->pos, "order non-terminal "
 			"field not a struct: %s", f->name);
 		return(0);
 	} else if (FIELD_NULL & f->ref->source->flags) {
-		gen_errx(&ref->pos, "order non-terminal "
+		gen_errx(cfg, &ref->pos, "order non-terminal "
 			"field is a null struct: %s", f->name);
 		return(0);
 	}
@@ -524,7 +528,7 @@ resolve_sref(struct config *cfg, struct sref *ref, struct strct *s)
 			break;
 
 	if (NULL == (ref->field = f)) {
-		gen_errx(&ref->pos, "search term "
+		gen_errx(cfg, &ref->pos, "search term "
 			"not found: %s", ref->name);
 		return(0);
 	}
@@ -537,17 +541,17 @@ resolve_sref(struct config *cfg, struct sref *ref, struct strct *s)
 	if (NULL == TAILQ_NEXT(ref, entries)) {
 		if (FTYPE_STRUCT != f->type) 
 			return(1);
-		gen_errx(&ref->pos, "search terminal field "
+		gen_errx(cfg, &ref->pos, "search terminal field "
 			"is a struct: %s", f->name);
 		return(0);
 	} 
 	
 	if (FTYPE_STRUCT != f->type) {
-		gen_errx(&ref->pos, "search non-terminal "
+		gen_errx(cfg, &ref->pos, "search non-terminal "
 			"field not a struct: %s", f->name);
 		return(0);
 	} else if (FIELD_NULL & f->ref->source->flags) {
-		gen_errx(&ref->pos, "search non-terminal "
+		gen_errx(cfg, &ref->pos, "search non-terminal "
 			"field is a null struct: %s", f->name);
 		return(0);
 	}
@@ -656,17 +660,20 @@ check_searchtype(struct config *cfg, struct strct *p)
 		 */
 		if (STYPE_SEARCH == srch->type &&
 		    TAILQ_EMPTY(&srch->sntq)) {
-			gen_errx(&srch->pos, "unique result search "
+			gen_errx(cfg, &srch->pos, 
+				"unique result search "
 				"without parameters");
 			return(0);
 		}
 		if (SEARCH_IS_UNIQUE & srch->flags && 
 		    STYPE_SEARCH != srch->type) 
-			gen_warnx(&srch->pos, "multiple-result search "
+			gen_warnx(cfg, &srch->pos, 
+				"multiple-result search "
 				"on a unique field");
 		if ( ! (SEARCH_IS_UNIQUE & srch->flags) && 
 		    STYPE_SEARCH == srch->type && 1 != srch->limit)
-			gen_warnx(&srch->pos, "single-result search "
+			gen_warnx(cfg, &srch->pos, 
+				"single-result search "
 				"on a non-unique field without a "
 				"limit of one");
 
@@ -675,7 +682,8 @@ check_searchtype(struct config *cfg, struct strct *p)
 			if ((OPTYPE_NOTNULL == sent->op ||
 			     OPTYPE_ISNULL == sent->op) &&
 			    ! (FIELD_NULL & sr->field->flags))
-				gen_warnx(&sent->pos, "null operator "
+				gen_warnx(cfg, &sent->pos, 
+					"null operator "
 					"on field that's never null");
 
 			/* 
@@ -686,7 +694,7 @@ check_searchtype(struct config *cfg, struct strct *p)
 
 			if (OPTYPE_EQUAL != sent->op &&
 			    FTYPE_PASSWORD == sr->field->type) {
-				gen_errx(&sent->pos, "password field "
+				gen_errx(cfg, &sent->pos, "password field "
 					"only processes equality");
 				return(0);
 			}
@@ -696,7 +704,7 @@ check_searchtype(struct config *cfg, struct strct *p)
 			if (OPTYPE_LIKE == sent->op &&
 			    FTYPE_TEXT != sr->field->type &&
 			    FTYPE_EMAIL != sr->field->type) {
-				gen_errx(&sent->pos, "LIKE operator "
+				gen_errx(cfg, &sent->pos, "LIKE operator "
 					"on non-textual field.");
 				return(0);
 			}
@@ -732,7 +740,7 @@ check_searchtype(struct config *cfg, struct strct *p)
 			sr = TAILQ_LAST(&sent->srq, srefq);
 			if (FTYPE_PASSWORD != sr->field->type) 
 				continue;
-			gen_errx(&sent->pos, "password search "
+			gen_errx(cfg, &sent->pos, "password search "
 				"types not allowed when searching "
 				"on distinct subsets");
 			return(0);
@@ -870,7 +878,7 @@ check_unique(struct config *cfg, const struct unique *u)
 	TAILQ_FOREACH(n, &u->nq, entries) {
 		if (FTYPE_STRUCT != n->field->type)
 			continue;
-		gen_errx(&n->pos, "field not a native type");
+		gen_errx(cfg, &n->pos, "field not a native type");
 		return(0);
 	}
 
@@ -893,7 +901,7 @@ resolve_unique(struct config *cfg, struct unique *u)
 				break;
 		if (NULL != (n->field = f))
 			continue;
-		gen_errx(&n->pos, "field not found");
+		gen_errx(cfg, &n->pos, "field not found");
 		return(0);
 	}
 
@@ -943,7 +951,8 @@ resolve_roleset(struct config *cfg, struct rolemap *rm)
 			continue;
 		if (resolve_roles(cfg, rs, &cfg->rq))
 			continue;
-		gen_errx(&rs->parent->pos, "unknown role: %s", rs->name);
+		gen_errx(cfg, &rs->parent->pos, 
+			"unknown role: %s", rs->name);
 		i++;
 	}
 
@@ -966,7 +975,7 @@ resolve_roleset(struct config *cfg, struct rolemap *rm)
 					break;
 			if (NULL == rp)
 				continue;
-			gen_errx(&rs->parent->pos, 
+			gen_errx(cfg, &rs->parent->pos, 
 				"overlapping role: %s", rs->name);
 			i++;
 		}
@@ -1015,7 +1024,7 @@ resolve_roleset_coverset(struct config *cfg,
 		if (NULL == rrs->role ||
 		    rs->role != rrs->role)
 			continue;
-		gen_errx(&(*rm)->pos, "role overlapped "
+		gen_errx(cfg, &(*rm)->pos, "role overlapped "
 			"by \"all\" statement");
 		return(1);
 	}
@@ -1218,7 +1227,7 @@ resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
 		abort();
 	}
 
-	gen_errx(&rm->pos, "corresponding %s %s not found%s%s",
+	gen_errx(cfg, &rm->pos, "corresponding %s %s not found%s%s",
 		rolemapts[rm->type],
 		ROLEMAP_NOEXPORT == rm->type ? "field" : "function",
 		ROLEMAP_INSERT == rm->type ? "" : ": ",
@@ -1333,27 +1342,28 @@ kwbp_parse_close(struct config *cfg)
 			TAILQ_FOREACH(srch, &p->sq, entries) {
 				if (srch->rolemap)
 					continue;
-				gen_warnx(&srch->pos,
+				gen_warnx(cfg, &srch->pos,
 					"no roles defined for "
 					"query function");
 			}
 			TAILQ_FOREACH(u, &p->dq, entries) {
 				if (u->rolemap)
 					continue;
-				gen_warnx(&u->pos,
+				gen_warnx(cfg, &u->pos,
 					"no roles defined for "
 					"delete function");
 			}
 			TAILQ_FOREACH(u, &p->uq, entries) {
 				if (u->rolemap)
 					continue;
-				gen_warnx(&u->pos,
+				gen_warnx(cfg, &u->pos,
 					"no roles defined for "
 					"update function");
 			}
 			if (NULL != p->ins && NULL == p->ins->rolemap)
-				gen_warnx(&p->ins->pos, "no roles "
-					"defined for insert function");
+				gen_warnx(cfg, &p->ins->pos, 
+					"no roles defined for "
+					"insert function");
 		}
 
 	/* 
@@ -1391,7 +1401,7 @@ kwbp_parse_close(struct config *cfg)
 			if (FTYPE_STRUCT == f->type) {
 				if (check_recursive(f->ref, p))
 					continue;
-				gen_errx(&f->pos, "recursive ref");
+				gen_errx(cfg, &f->pos, "recursive ref");
 				return(0);
 			}
 

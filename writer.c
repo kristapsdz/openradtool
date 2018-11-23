@@ -253,6 +253,7 @@ parse_write_field(struct writer *w, const struct field *p)
 {
 	const struct fvalid *fv;
 	unsigned int	 fl;
+	int		 rc;
 
 	/* Name, type, refs. */
 
@@ -298,6 +299,34 @@ parse_write_field(struct writer *w, const struct field *p)
 			return 0;
 		fl &= ~FIELD_NOEXPORT;
 	}
+	if (FIELD_HASDEF & fl) {
+		switch (p->type) {
+		case FTYPE_BIT:
+		case FTYPE_BITFIELD:
+		case FTYPE_DATE:
+		case FTYPE_EPOCH:
+		case FTYPE_INT:
+			rc = wprint(w, " default %" PRId64,
+				p->def.integer);
+			break;
+		case FTYPE_REAL:
+			rc = wprint(w, " default %g",
+				p->def.decimal);
+			break;
+		case FTYPE_EMAIL:
+		case FTYPE_TEXT:
+			rc = wprint(w, " default \"%s\"",
+				p->def.string);
+			break;
+		default:
+			abort();
+			break;
+		}
+		if (0 == rc)
+			return 0;
+		fl &= ~FIELD_HASDEF;
+	}
+
 	assert(0 == fl);
 
 	/* Validations. */

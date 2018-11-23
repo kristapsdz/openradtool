@@ -29,6 +29,10 @@
 				The library isn't exported, but may be (and is) used.
 				No functional change.
 			</p>
+			<p>
+				Make <code>default</code> keyword be handled when emitted
+				configurations.
+			</p>
 		</aside>
 	</article>
 	<article data-sblg-article="1" data-sblg-tags="version">

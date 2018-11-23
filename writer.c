@@ -795,7 +795,6 @@ kwbp_write_file(FILE *f, const struct config *cfg)
 
 	rc = 1;
 out:
-	free(w.buf.buf);
 	return rc;
 }
 

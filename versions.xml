@@ -5,9 +5,25 @@
 		<header>
 			<h3>0.6.6</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2018-11-17">ongoing</time>
+			<time datetime="2018-11-23">2018-11-23</time>
 		</header>
 		<aside>
+			<p>
+				Add the <code>fillArrayOrHide</code>, <code>fillArrayOrShow</code>,
+				<code>fillByClass</code>, and <code>fillInnerByClass</code> methods
+				to the TypeScript and JavaScript output.
+				The former two captures common uses of <code>fillArray</code>:
+				hiding or showing an element if there are non-zero elements in the
+				given array.
+				The latter are convenience methods of wrapping a <code>fill</code>
+				invocation with a <code>getElementsByClassName</code>.
+			</p>
+			<p>
+				Make custom callbacks in the JavaScript/TypeScript output override
+				the defaults, instead of coming beforehand.
+				Document this behaviour.
+				(Before, the order was unspecified.)
+			</p>
 			<p>
 				Re-organise internals for better library support.
 				The library isn't exported, but may be (and is) used.

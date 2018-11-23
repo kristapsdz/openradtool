@@ -1230,7 +1230,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			"@param {%s.DataCallbacks} custom - The optional "
 			"custom handler dictionary (see {@link "
 			"%s.%s#fill}).\n"
-			"@function fillArrayOrHide\n"
+			"@function fillArrayOrShow\n"
 			"@memberof %s.%s#",
 			ns, s->name, obj, ns, ns, s->name, ns, s->name);
 		gen_class_proto(tsc, 0, s->name, "void", 

@@ -390,7 +390,7 @@ check_modtype(struct config *cfg, const struct uref *ref)
  * Resolve all of the fields managed by struct update.
  * These are all local to the current structure.
  * (This is a constraint of SQL.)
- * Return zero on failure, non-zero on success.
+ * Return zero on failure (fatal), non-zero on success.
  */
 static int
 resolve_update(struct config *cfg, struct update *up)
@@ -444,6 +444,7 @@ resolve_update(struct config *cfg, struct update *up)
 /*
  * Like resolve_sref() but for distinct references.
  * These must be always non-null struct refs.
+ * Return zero on failure, non-zero on success.
  */
 static int
 resolve_dref(struct config *cfg, struct dref *ref, struct strct *s)
@@ -459,30 +460,32 @@ resolve_dref(struct config *cfg, struct dref *ref, struct strct *s)
 	if (NULL == f) {
 		gen_errx(cfg, &ref->pos, "distinct field "
 			"not found: %s", ref->name);
-		return(0);
+		return 0;
 	} else if (FTYPE_STRUCT != f->type) {
 		gen_errx(cfg, &ref->pos, "distinct field "
 			"not a struct: %s", f->name);
-		return(0);
+		return 0;
 	} else if (FIELD_NULL & f->ref->source->flags) {
 		gen_errx(cfg, &ref->pos, "distinct field "
 			"is a null struct: %s", f->name);
-		return(0);
+		return 0;
 	}
 
 	if (NULL != TAILQ_NEXT(ref, entries)) {
 		ref = TAILQ_NEXT(ref, entries);
-		return(resolve_dref(cfg, ref, f->ref->target->parent));
+		return resolve_dref(cfg, 
+			ref, f->ref->target->parent);
 	}
 
 	ref->parent->strct = f->ref->target->parent;
-	return(1);
+	return 1;
 }
 
 /*
  * Like resolve_sref() but for order references.
  * The non-terminal fields must be non-null structs; the terminal field
  * must be a regular field.
+ * Return zero on failure, non-zero on success.
  */
 static int
 resolve_oref(struct config *cfg, struct oref *ref, struct strct *s)
@@ -496,7 +499,7 @@ resolve_oref(struct config *cfg, struct oref *ref, struct strct *s)
 	if (NULL == (ref->field = f)) {
 		gen_errx(cfg, &ref->pos, "order term "
 			"not found: %s", ref->name);
-		return(0);
+		return 0;
 	}
 
 	/* 
@@ -506,10 +509,10 @@ resolve_oref(struct config *cfg, struct oref *ref, struct strct *s)
 
 	if (NULL == TAILQ_NEXT(ref, entries)) {
 		if (FTYPE_STRUCT != f->type) 
-			return(1);
+			return 1;
 		gen_errx(cfg, &ref->pos, "order terminal field "
 			"is a struct: %s", f->name);
-		return(0);
+		return 0;
 	} 
 
 	/* Non-terminals must be non-null structs. */
@@ -517,15 +520,15 @@ resolve_oref(struct config *cfg, struct oref *ref, struct strct *s)
 	if (FTYPE_STRUCT != f->type) {
 		gen_errx(cfg, &ref->pos, "order non-terminal "
 			"field not a struct: %s", f->name);
-		return(0);
+		return 0;
 	} else if (FIELD_NULL & f->ref->source->flags) {
 		gen_errx(cfg, &ref->pos, "order non-terminal "
 			"field is a null struct: %s", f->name);
-		return(0);
+		return 0;
 	}
 
 	ref = TAILQ_NEXT(ref, entries);
-	return(resolve_oref(cfg, ref, f->ref->target->parent));
+	return resolve_oref(cfg, ref, f->ref->target->parent);
 }
 
 /*
@@ -545,7 +548,7 @@ resolve_sref(struct config *cfg, struct sref *ref, struct strct *s)
 	if (NULL == (ref->field = f)) {
 		gen_errx(cfg, &ref->pos, "search term "
 			"not found: %s", ref->name);
-		return(0);
+		return 0;
 	}
 
 	/* 
@@ -555,24 +558,24 @@ resolve_sref(struct config *cfg, struct sref *ref, struct strct *s)
 
 	if (NULL == TAILQ_NEXT(ref, entries)) {
 		if (FTYPE_STRUCT != f->type) 
-			return(1);
+			return 1;
 		gen_errx(cfg, &ref->pos, "search terminal field "
 			"is a struct: %s", f->name);
-		return(0);
+		return 0;
 	} 
 	
 	if (FTYPE_STRUCT != f->type) {
 		gen_errx(cfg, &ref->pos, "search non-terminal "
 			"field not a struct: %s", f->name);
-		return(0);
+		return 0;
 	} else if (FIELD_NULL & f->ref->source->flags) {
 		gen_errx(cfg, &ref->pos, "search non-terminal "
 			"field is a null struct: %s", f->name);
-		return(0);
+		return 0;
 	}
 
 	ref = TAILQ_NEXT(ref, entries);
-	return(resolve_sref(cfg, ref, f->ref->target->parent));
+	return resolve_sref(cfg, ref, f->ref->target->parent);
 }
 
 /*
@@ -585,7 +588,7 @@ parse_cmp(const void *a1, const void *a2)
 	      *p1 = *(const struct strct **)a1, 
 	      *p2 = *(const struct strct **)a2;
 
-	return((ssize_t)p1->height - (ssize_t)p2->height);
+	return (ssize_t)p1->height - (ssize_t)p2->height;
 }
 
 /*
@@ -686,12 +689,13 @@ check_searchtype(struct config *cfg, struct strct *p)
 		 * about as well), but it's sometimes desirable like in
 		 * the case of having a single-entry table.
 		 */
+
 		if (STYPE_SEARCH == srch->type &&
 		    TAILQ_EMPTY(&srch->sntq)) {
 			gen_errx(cfg, &srch->pos, 
 				"unique result search "
 				"without parameters");
-			return(0);
+			return 0;
 		}
 		if (SEARCH_IS_UNIQUE & srch->flags && 
 		    STYPE_SEARCH != srch->type) 
@@ -724,7 +728,7 @@ check_searchtype(struct config *cfg, struct strct *p)
 			    FTYPE_PASSWORD == sr->field->type) {
 				gen_errx(cfg, &sent->pos, "password field "
 					"only processes equality");
-				return(0);
+				return 0;
 			}
 
 			/* Require text types for LIKE operator. */
@@ -734,7 +738,7 @@ check_searchtype(struct config *cfg, struct strct *p)
 			    FTYPE_EMAIL != sr->field->type) {
 				gen_errx(cfg, &sent->pos, "LIKE operator "
 					"on non-textual field.");
-				return(0);
+				return 0;
 			}
 		}
 
@@ -750,7 +754,7 @@ check_searchtype(struct config *cfg, struct strct *p)
 		if (NULL != srch->dst->cname) {
 			dr = TAILQ_FIRST(&srch->dst->drefq);
 			if ( ! resolve_dref(cfg, dr, p))
-				return(0);
+				return 0;
 		} else {
 			srch->dst->strct = p;
 			continue;
@@ -771,11 +775,11 @@ check_searchtype(struct config *cfg, struct strct *p)
 			gen_errx(cfg, &sent->pos, "password search "
 				"types not allowed when searching "
 				"on distinct subsets");
-			return(0);
+			return 0;
 		}
 	}
 
-	return(1);
+	return 1;
 }
 
 /*
@@ -820,6 +824,7 @@ check_search_unique(struct config *cfg, const struct search *srch)
  * To do so, descend into each set of search terms for the structure and
  * resolve the fields.
  * Also set whether we have row identifiers within the search expansion.
+ * Return zero on failure, non-zero on success.
  */
 static int
 resolve_search(struct config *cfg, struct search *srch)
@@ -836,7 +841,7 @@ resolve_search(struct config *cfg, struct search *srch)
 	TAILQ_FOREACH(sent, &srch->sntq, entries) {
 		sref = TAILQ_FIRST(&sent->srq);
 		if ( ! resolve_sref(cfg, sref, p))
-			return(0);
+			return 0;
 
 		/*
 		 * Check if this is a unique search result that will
@@ -884,7 +889,7 @@ resolve_search(struct config *cfg, struct search *srch)
 	TAILQ_FOREACH(ord, &srch->ordq, entries) {
 		oref = TAILQ_FIRST(&ord->orq);
 		if ( ! resolve_oref(cfg, oref, p))
-			return(0);
+			return 0;
 
 		if (NULL == ord->name)
 			continue;
@@ -895,9 +900,13 @@ resolve_search(struct config *cfg, struct search *srch)
 		ord->alias = a;
 	}
 
-	return(1);
+	return 1;
 }
 
+/*
+ * Make sure that a unique entry is on non-struct types.
+ * Return zero on failure, non-zero on success.
+ */
 static int
 check_unique(struct config *cfg, const struct unique *u)
 {
@@ -907,10 +916,10 @@ check_unique(struct config *cfg, const struct unique *u)
 		if (FTYPE_STRUCT != n->field->type)
 			continue;
 		gen_errx(cfg, &n->pos, "field not a native type");
-		return(0);
+		return 0;
 	}
 
-	return(1);
+	return 1;
 }
 
 /*
@@ -931,10 +940,10 @@ resolve_unique(struct config *cfg, struct unique *u)
 		if (NULL != (n->field = f))
 			continue;
 		gen_errx(cfg, &n->pos, "field not found");
-		return(0);
+		return 0;
 	}
 
-	return(1);
+	return 1;
 }
 
 /*
@@ -952,12 +961,12 @@ resolve_roles(struct config *cfg, struct roleset *rs, struct roleq *rq)
 	TAILQ_FOREACH(r, rq, entries) {
 		if (0 == strcasecmp(rs->name, r->name)) {
 			rs->role = r;
-			return(1);
+			return 1;
 		} else if (resolve_roles(cfg, rs, &r->subrq))
-			return(1);
+			return 1;
 	}
 
-	return(0);
+	return 0;
 }
 
 /*
@@ -966,6 +975,7 @@ resolve_roles(struct config *cfg, struct roleset *rs, struct roleq *rq)
  * Then make sure that the matched roles, if any, don't overlap in the
  * tree of roles.
  * Return zero on success, >0 with errors, and <0 on fatal errors.
+ * (Never returns the <0 case: this is just for caller convenience.)
  */
 static ssize_t
 resolve_roleset(struct config *cfg, struct rolemap *rm)
@@ -1009,7 +1019,7 @@ resolve_roleset(struct config *cfg, struct rolemap *rm)
 		}
 	}
 
-	return(i);
+	return i;
 }
 
 /*
@@ -1036,15 +1046,19 @@ resolve_roleset_coverset(struct config *cfg,
 
 	if (NULL == *rm) {
 		*rm = calloc(1, sizeof(struct rolemap));
-		if (NULL == *rm)
-			err(EXIT_FAILURE, NULL);
-		(*rm)->type = type;
-		if (NULL != name &&
-		    NULL == ((*rm)->name = strdup(name)))
-			err(EXIT_FAILURE, NULL);
+		if (NULL == *rm) {
+			gen_err(cfg, &rs->parent->pos);
+			return -1;
+		}
+		TAILQ_INSERT_TAIL(&p->rq, *rm, entries);
 		TAILQ_INIT(&(*rm)->setq);
 		(*rm)->pos = rs->parent->pos;
-		TAILQ_INSERT_TAIL(&p->rq, *rm, entries);
+		(*rm)->type = type;
+		if (NULL != name &&
+		    NULL == ((*rm)->name = strdup(name))) {
+			gen_err(cfg, &rs->parent->pos);
+			return -1;
+		}
 	}
 
 	/* See if our role overlaps. */
@@ -1055,7 +1069,7 @@ resolve_roleset_coverset(struct config *cfg,
 			continue;
 		gen_errx(cfg, &(*rm)->pos, "role overlapped "
 			"by \"all\" statement");
-		return(1);
+		return 1;
 	}
 
 	/*
@@ -1063,14 +1077,18 @@ resolve_roleset_coverset(struct config *cfg,
 	 * Add it now.
 	 */
 
-	if (NULL == (rrs = malloc(sizeof(struct roleset))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (rrs->name = strdup(rs->name)))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (rrs = calloc(1, sizeof(struct roleset)))) {
+		gen_err(cfg, &rs->parent->pos);
+		return -1;
+	}
+	TAILQ_INSERT_TAIL(&(*rm)->setq, rrs, entries);
 	rrs->role = rs->role;
 	rrs->parent = *rm;
-	TAILQ_INSERT_TAIL(&(*rm)->setq, rrs, entries);
-	return(0);
+	if (NULL == (rrs->name = strdup(rs->name))) {
+		gen_err(cfg, &rs->parent->pos);
+		return -1;
+	}
+	return 0;
 }
 
 /*
@@ -1171,10 +1189,19 @@ rolemap_merge(struct config *cfg,
 			continue;
 
 		/* Source doesn't exist in destination. */
+
 		rdst = calloc(1, sizeof(struct roleset));
-		rdst->name = strdup(rsrc->name);
-		rdst->parent = *dst;
+		if (NULL == rdst) {
+			gen_err(cfg, &src->pos);
+			return -1;
+		}
 		TAILQ_INSERT_TAIL(&(*dst)->setq, rdst, entries);
+		rdst->parent = *dst;
+		rdst->name = strdup(rsrc->name);
+		if (NULL == rdst->name) {
+			gen_err(cfg, &src->pos);
+			return -1;
+		}
 	}
 
 	return 1;
@@ -1296,6 +1323,7 @@ resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
  * references.
  * FIXME: this can be made much more efficient by having the bit be set
  * during the query itself.
+ * Return zero on failure, non-zero on success.
  */
 static int
 check_reffind(struct config *cfg, const struct strct *p)
@@ -1303,18 +1331,18 @@ check_reffind(struct config *cfg, const struct strct *p)
 	const struct field *f;
 
 	if (STRCT_HAS_NULLREFS & p->flags)
-		return(1);
+		return 1;
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_STRUCT == f->type &&
 		    FIELD_NULL & f->ref->source->flags)
-			return(1);
+			return 1;
 		if (FTYPE_STRUCT == f->type &&
 		    check_reffind(cfg, f->ref->target->parent))
-			return(1);
+			return 1;
 	}
 
-	return(0);
+	return 0;
 }
 
 static void

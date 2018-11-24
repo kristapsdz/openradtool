@@ -61,8 +61,11 @@ gen_warnx(struct config *cfg,
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 
-	fprintf(stderr, "%s:%zu:%zu: warning: %s\n", 
-		pos->fname, pos->line, pos->column, buf);
+	if (NULL != pos)
+		fprintf(stderr, "%s:%zu:%zu: warning: %s\n", 
+			pos->fname, pos->line, pos->column, buf);
+	else
+		fprintf(stderr, "warning: %s\n", buf);
 }
 
 static void
@@ -70,9 +73,12 @@ gen_err(struct config *cfg, const struct pos *pos)
 {
 	int	 er = errno;
 
-	fprintf(stderr, "%s:%zu:%zu: error: %s\n", 
-		pos->fname, pos->line, pos->column, 
-		strerror(er));
+	if (NULL != pos)
+		fprintf(stderr, "%s:%zu:%zu: error: %s\n", 
+			pos->fname, pos->line, pos->column, 
+			strerror(er));
+	else
+		fprintf(stderr, "error: %s\n", strerror(er));
 }
 
 static void
@@ -86,8 +92,11 @@ gen_errx(struct config *cfg,
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 
-	fprintf(stderr, "%s:%zu:%zu: error: %s\n", 
-		pos->fname, pos->line, pos->column, buf);
+	if (NULL != pos)
+		fprintf(stderr, "%s:%zu:%zu: error: %s\n", 
+			pos->fname, pos->line, pos->column, buf);
+	else
+		fprintf(stderr, "error: %s\n", buf);
 }
 
 /*
@@ -1378,7 +1387,7 @@ kwbp_parse_close(struct config *cfg)
 	ssize_t		  rc;
 
 	if (TAILQ_EMPTY(&cfg->sq)) {
-		fprintf(stderr, "no structures in configuration\n");
+		gen_errx(cfg, NULL, "no structures in configuration");
 		return 0;
 	}
 
@@ -1393,7 +1402,7 @@ kwbp_parse_close(struct config *cfg)
 		TAILQ_FOREACH(f, &p->fq, entries)
 			if (FIELD_ROWID & f->flags &&
 			    ! checkrowid(cfg, f, hasrowid++))
-				return(0);
+				return 0;
 	}
 
 	/* 
@@ -1425,7 +1434,7 @@ kwbp_parse_close(struct config *cfg)
 	}
 
 	if (i > 0)
-		return(0);
+		return 0;
 
 	/* 
 	 * Some role warnings.
@@ -1473,22 +1482,22 @@ kwbp_parse_close(struct config *cfg)
 			if (NULL != f->ref &&
 			    (! resolve_field_source(cfg, f) ||
 			     ! resolve_field_target(cfg, f, &cfg->sq)))
-				return(0);
+				return 0;
 			if (NULL != f->eref &&
 			    ! resolve_field_enum(cfg, f->eref, &cfg->eq))
-				return(0);
+				return 0;
 			if (NULL != f->bref &&
 			    ! resolve_field_bitfield(cfg, f->bref, &cfg->bq))
-				return(0);
+				return 0;
 		}
 		TAILQ_FOREACH(u, &p->uq, entries)
 			if ( ! resolve_update(cfg, u) ||
 			     ! check_updatetype(cfg, u))
-				return(0);
+				return 0;
 		TAILQ_FOREACH(u, &p->dq, entries)
 			if ( ! resolve_update(cfg, u) ||
 			     ! check_updatetype(cfg, u))
-				return(0);
+				return 0;
 	}
 
 	/* Check for reference recursion. */
@@ -1499,7 +1508,7 @@ kwbp_parse_close(struct config *cfg)
 				if (check_recursive(f->ref, p))
 					continue;
 				gen_errx(cfg, &f->pos, "recursive ref");
-				return(0);
+				return 0;
 			}
 
 	/* 
@@ -1561,8 +1570,10 @@ kwbp_parse_close(struct config *cfg)
 	 * Finally, re-create the list from the sorted elements.
 	 */
 
-	if (NULL == (pa = calloc(sz, sizeof(struct strct *))))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (pa = calloc(sz, sizeof(struct strct *)))) {
+		gen_err(cfg, NULL);
+		return 0;
+	}
 
 	i = 0;
 	while (NULL != (p = TAILQ_FIRST(&cfg->sq))) {
@@ -1582,5 +1593,5 @@ kwbp_parse_close(struct config *cfg)
 			p->flags |= STRCT_HAS_NULLREFS;
 
 	free(pa);
-	return(1);
+	return 1;
 }

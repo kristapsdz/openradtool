@@ -33,6 +33,12 @@
 #include "kwebapp.h"
 #include "extern.h"
 
+static	const char *const msgtypes[] = {
+	"warning", /* MSGTYPE_WARN */
+	"error", /* MSGTYPE_ERROR */
+	"fatal" /* MSGTYPE_FATAL */
+};
+
 /*
  * Disallowed field names.
  * The SQL ones are from https://sqlite.org/lang_keywords.html.
@@ -667,6 +673,10 @@ kwbp_config_free(struct config *cfg)
 		free(cfg->fnames[i]);
 	free(cfg->fnames);
 
+	for (i = 0; i < cfg->msgsz; i++)
+		free(cfg->msgs[i].buf);
+	free(cfg->msgs);
+
 	free(cfg);
 }
 
@@ -697,5 +707,56 @@ kwbp_config_alloc(void)
 	cfg->langsz = 1;
 
 	return cfg;
+}
+
+/*
+ * Generic message formatting.
+ * Puts all messages into the message array and prints them to stderr as
+ * well.
+ * On memory exhaustion, does nothing.
+ */
+void
+kwbp_config_msg(struct config *cfg, enum msgtype type, 
+	const char *chan, int er, const struct pos *pos, 
+	const char *fmt, va_list ap)
+{
+	void		*pp;
+	struct msg	*m;
+
+	pp = reallocarray(cfg->msgs, 
+		cfg->msgsz + 1, sizeof(struct msg));
+
+	/* Well, shit. */
+	if (NULL == pp)
+		return;
+
+	cfg->msgs = pp;
+	m = &cfg->msgs[cfg->msgsz++];
+	memset(m, 0, sizeof(struct msg));
+
+	m->type = type;
+	m->er = er;
+	if (NULL != pos)
+		m->pos = *pos;
+	if (NULL != fmt)
+		(void)vasprintf(&m->buf, fmt, ap);
+
+	/* Now we also print the message to stderr. */
+
+	if (NULL != pos)
+		fprintf(stderr, "%s:%zu:%zu: %s %s: ", 
+			pos->fname, pos->line, pos->column, 
+			chan, msgtypes[m->type]);
+	else 
+		fprintf(stderr, "%s %s: ", chan, msgtypes[m->type]);
+
+	if (NULL != fmt)
+		vfprintf(stderr, fmt, ap);
+
+	if (MSGTYPE_FATAL == m->type)
+		fprintf(stderr, "%s%s", NULL != fmt ? 
+			": " : "", strerror(m->er)); 
+
+	fputc('\n', stderr);
 }
 

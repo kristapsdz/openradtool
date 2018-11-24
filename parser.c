@@ -301,6 +301,8 @@ static	const char *const vtypes[VALIDATE__MAX] = {
 	"eq", /* VALIDATE_EQ */
 };
 
+static	const char *const channel = "parser";
+
 static enum tok parse_errx(struct parse *, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
 static void parse_warnx(struct parse *p, const char *, ...)
@@ -597,49 +599,52 @@ parse_err(struct parse *p)
 
 /*
  * Print a warning.
- * This doesn't do anything else (like set any error conditions).
- * XXX: limited to 1024 bytes of message content.
  */
 static void
 parse_warnx(struct parse *p, const char *fmt, ...)
 {
-	char	 buf[1024];
-	va_list	 ap;
+	va_list	 	 ap;
+	struct pos	 pos;
+
+	pos.fname = p->fname;
+	pos.line = p->line;
+	pos.column = p->column;
 
 	if (NULL != fmt) {
 		va_start(ap, fmt);
-		vsnprintf(buf, sizeof(buf), fmt, ap);
+		kwbp_config_msg(p->cfg, MSGTYPE_WARN, 
+			channel, 0, &pos, fmt, ap);
 		va_end(ap);
-		fprintf(stderr, "%s:%zu:%zu: %s\n", 
-			p->fname, p->line, p->column, buf);
 	} else
-		fprintf(stderr, "%s:%zu:%zu: syntax warning\n", 
-			p->fname, p->line, p->column);
+		kwbp_config_msg(p->cfg, MSGTYPE_WARN, 
+			channel, 0, &pos, NULL, NULL);
 }
 
 /*
  * Trigger a "soft" error condition.
  * This sets the lasttype appropriately.
- * XXX: limited to 1024 bytes of message content.
  */
 static enum tok
 parse_errx(struct parse *p, const char *fmt, ...)
 {
-	char	 buf[1024];
-	va_list	 ap;
+	va_list	 	 ap;
+	struct pos	 pos;
+
+	pos.fname = p->fname;
+	pos.line = p->line;
+	pos.column = p->column;
 
 	if (NULL != fmt) {
 		va_start(ap, fmt);
-		vsnprintf(buf, sizeof(buf), fmt, ap);
+		kwbp_config_msg(p->cfg, MSGTYPE_ERROR, 
+			channel, 0, &pos, fmt, ap);
 		va_end(ap);
-		fprintf(stderr, "%s:%zu:%zu: %s\n", 
-			p->fname, p->line, p->column, buf);
 	} else
-		fprintf(stderr, "%s:%zu:%zu: syntax error\n", 
-			p->fname, p->line, p->column);
+		kwbp_config_msg(p->cfg, MSGTYPE_ERROR, 
+			channel, 0, &pos, NULL, NULL);
 
 	p->lasttype = TOK_ERR;
-	return(p->lasttype);
+	return p->lasttype;
 }
 
 /*
@@ -3049,7 +3054,7 @@ kwbp_parse_buf(const char *buf, size_t len)
 	p.cfg = cfg;
 	rc = kwbp_parse_r(&p);
 	free(p.buf);
-	if (0 == rc) {
+	if (0 == rc || 0 == kwbp_parse_close(cfg)) {
 		kwbp_config_free(cfg);
 		return NULL;
 	}
@@ -3062,8 +3067,10 @@ kwbp_parse_file(FILE *f, const char *fname)
 	struct config	*cfg;
 
 	cfg = kwbp_config_alloc();
-	if (kwbp_parse_file_r(cfg, f, fname))
-		return cfg;
-	kwbp_config_free(cfg);
-	return NULL;
+	if (0 == kwbp_parse_file_r(cfg, f, fname) ||
+	    0 == kwbp_parse_close(cfg)) {
+		kwbp_config_free(cfg);
+		return NULL;
+	}
+	return cfg;
 }

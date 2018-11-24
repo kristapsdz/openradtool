@@ -32,6 +32,8 @@
 #include "kwebapp.h"
 #include "extern.h"
 
+static	const char *const channel = "linker";
+
 static void gen_errx(struct config *, 
 	const struct pos *, const char *, ...)
 	__attribute__((format(printf, 3, 4)));
@@ -55,17 +57,15 @@ gen_warnx(struct config *cfg,
 	const struct pos *pos, const char *fmt, ...)
 {
 	va_list	 ap;
-	char	 buf[1024];
 
-	va_start(ap, fmt);
-	vsnprintf(buf, sizeof(buf), fmt, ap);
-	va_end(ap);
-
-	if (NULL != pos)
-		fprintf(stderr, "%s:%zu:%zu: warning: %s\n", 
-			pos->fname, pos->line, pos->column, buf);
-	else
-		fprintf(stderr, "warning: %s\n", buf);
+	if (NULL != fmt) {
+		va_start(ap, fmt);
+		kwbp_config_msg(cfg, MSGTYPE_WARN, 
+			channel, 0, pos, fmt, ap);
+		va_end(ap);
+	} else
+		kwbp_config_msg(cfg, MSGTYPE_WARN, 
+			channel, 0, pos, NULL, NULL);
 }
 
 static void
@@ -73,12 +73,8 @@ gen_err(struct config *cfg, const struct pos *pos)
 {
 	int	 er = errno;
 
-	if (NULL != pos)
-		fprintf(stderr, "%s:%zu:%zu: error: %s\n", 
-			pos->fname, pos->line, pos->column, 
-			strerror(er));
-	else
-		fprintf(stderr, "error: %s\n", strerror(er));
+	kwbp_config_msg(cfg, MSGTYPE_FATAL, 
+		channel, er, pos, NULL, NULL);
 }
 
 static void
@@ -86,17 +82,15 @@ gen_errx(struct config *cfg,
 	const struct pos *pos, const char *fmt, ...)
 {
 	va_list	 ap;
-	char	 buf[1024];
 
-	va_start(ap, fmt);
-	vsnprintf(buf, sizeof(buf), fmt, ap);
-	va_end(ap);
-
-	if (NULL != pos)
-		fprintf(stderr, "%s:%zu:%zu: error: %s\n", 
-			pos->fname, pos->line, pos->column, buf);
-	else
-		fprintf(stderr, "error: %s\n", buf);
+	if (NULL != fmt) {
+		va_start(ap, fmt);
+		kwbp_config_msg(cfg, MSGTYPE_ERROR, 
+			channel, 0, pos, fmt, ap);
+		va_end(ap);
+	} else
+		kwbp_config_msg(cfg, MSGTYPE_ERROR, 
+			channel, 0, pos, NULL, NULL);
 }
 
 /*

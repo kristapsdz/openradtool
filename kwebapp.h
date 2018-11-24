@@ -576,6 +576,19 @@ struct	role {
 	TAILQ_ENTRY(role)  entries;
 };
 
+enum	msgtype {
+	MSGTYPE_WARN, /* recoverable warning */
+	MSGTYPE_ERROR, /* fatal non-system error */
+	MSGTYPE_FATAL /* fatal system error */
+};
+
+struct	msg {
+	struct pos	 pos; /* position (or zero/NULL) */
+	enum msgtype	 type; /* type of message */
+	char		*buf; /* custom buffer or NULL */
+	int		 er; /* if MSGTYPE_FATAL, errno */
+};
+
 /*
  * Hold entire parse sequence results.
  */
@@ -590,6 +603,8 @@ struct	config {
 	size_t		  langsz; /* number of langs */
 	char		**fnames; /* filenames referenced */
 	size_t		  fnamesz; /* number of fnames */
+	struct msg	 *msgs; /* warning/error messages */
+	size_t		  msgsz; /* count of msgs */
 };
 
 enum	kwbp_err {
@@ -601,10 +616,17 @@ enum	kwbp_err {
 
 __BEGIN_DECLS
 
+struct config	*kwbp_config_alloc(void);
+void		 kwbp_config_free(struct config *);
+void		 kwbp_config_msg(struct config *, enum msgtype, 
+			const char *, int, const struct pos *, 
+			const char *, va_list);
+
 int		 kwbp_parse_close(struct config *);
+int		 kwbp_parse_file_r(struct config *, FILE *, const char *);
+
 struct config	*kwbp_parse_file(FILE *, const char *);
 struct config	*kwbp_parse_buf(const char *, size_t);
-int		 kwbp_parse_file_r(struct config *, FILE *, const char *);
 
 char		*kwbp_write_buf(const struct config *);
 int		 kwbp_write_file(FILE *, const struct config *);
@@ -613,9 +635,6 @@ enum kwbp_err	 kwbp_strct_alloc(struct config *, const char *,
 			struct strct **);
 enum kwbp_err	 kwbp_field_alloc(struct config *, struct strct *, 
 			const char *, struct field **);
-
-struct config	*kwbp_config_alloc(void);
-void		 kwbp_config_free(struct config *);
 
 __END_DECLS
 

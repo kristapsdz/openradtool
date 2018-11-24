@@ -80,11 +80,8 @@ main(int argc, char *argv[])
 
 	/* Only echo output on success. */
 
-	if (0 != (rc = kwbp_parse_close(cfg))) {
-		char *cp = kwbp_write_buf(cfg);
-		puts(cp);
-		free(cp);
-	}
+	if (0 != (rc = kwbp_parse_close(cfg)))
+		kwbp_write_file(stdout, cfg);
 
 out:
 	for (i = 0; i < confsz; i++)

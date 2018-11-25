@@ -905,8 +905,10 @@ parse_label(struct parse *p, struct labelq *q)
 			p->cfg->langs = pp;
 			p->cfg->langs[p->cfg->langsz] =
 				strdup(p->last.string);
-			if (NULL == p->cfg->langs[p->cfg->langsz])
-				err(EXIT_FAILURE, NULL);
+			if (NULL == p->cfg->langs[p->cfg->langsz]) {
+				parse_err(p);
+				return 0;
+			}
 			p->cfg->langsz++;
 		}
 		parse_next(p);
@@ -1306,12 +1308,17 @@ parse_field_enum(struct parse *p, struct field *fd)
 		return;
 	}
 
-	if (NULL == (fd->eref = calloc(1, sizeof(struct eref))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (fd->eref->ename = strdup(p->last.string)))
-		err(EXIT_FAILURE, NULL);
-
+	if (NULL == (fd->eref = calloc(1, sizeof(struct eref)))) {
+		parse_err(p);
+		return;
+	}
 	fd->eref->parent = fd;
+	if (NULL != (fd->eref->ename = strdup(p->last.string)))
+		return;
+
+	parse_err(p);
+	free(fd->eref);
+	fd->eref = NULL;
 }
 
 /*
@@ -1337,21 +1344,27 @@ parse_field(struct parse *p, struct field *fd)
 
 	if (TOK_COLON == p->lasttype) {
 		fd->ref = calloc(1, sizeof(struct ref));
-		if (NULL == fd->ref)
-			err(EXIT_FAILURE, NULL);
+		if (NULL == fd->ref) {
+			parse_err(p);
+			return;
+		}
 
 		fd->ref->parent = fd;
 		fd->ref->sfield = strdup(fd->name);
-		if (NULL == fd->ref->sfield)
-			err(EXIT_FAILURE, NULL);
+		if (NULL == fd->ref->sfield) {
+			parse_err(p);
+			return;
+		}
 
 		if (TOK_IDENT != parse_next(p)) {
 			parse_errx(p, "expected target struct");
 			return;
 		}
 		fd->ref->tstrct = strdup(p->last.string);
-		if (NULL == fd->ref->tstrct)
-			err(EXIT_FAILURE, NULL);
+		if (NULL == fd->ref->tstrct) {
+			parse_err(p);
+			return;
+		}
 
 		if (TOK_PERIOD != parse_next(p)) {
 			parse_errx(p, "expected period");
@@ -1363,8 +1376,10 @@ parse_field(struct parse *p, struct field *fd)
 			return;
 		}
 		fd->ref->tfield = strdup(p->last.string);
-		if (NULL == fd->ref->tfield)
-			err(EXIT_FAILURE, NULL);
+		if (NULL == fd->ref->tfield) {
+			parse_err(p);
+			return;
+		}
 
 		if (TOK_SEMICOLON == parse_next(p))
 			return;
@@ -1462,16 +1477,24 @@ parse_field(struct parse *p, struct field *fd)
 	if (NULL != fd->ref) {
 		parse_errx(p, "reference cannot self-define target");
 		return;
-	} else if (NULL == (fd->ref = calloc(1, sizeof(struct ref))))
-		err(EXIT_FAILURE, NULL);
+	} 
+	
+	if (NULL == (fd->ref = calloc(1, sizeof(struct ref)))) {
+		parse_err(p);
+		return;
+	}
 
 	fd->ref->parent = fd;
 
 	if (TOK_IDENT != parse_next(p)) {
 		parse_errx(p, "expected source field");
 		return;
-	} else if (NULL == (fd->ref->sfield = strdup(p->last.string)))
-		err(EXIT_FAILURE, NULL);
+	} 
+	
+	if (NULL == (fd->ref->sfield = strdup(p->last.string))) {
+		parse_err(p);
+		return;
+	}
 
 	parse_config_field_info(p, fd);
 }
@@ -1489,9 +1512,12 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 	struct dref	*df;
 	struct dstnct	*d;
 	size_t		 sz = 0, nsz;
+	void		*pp;
 
-	if (NULL == (d = calloc(1, sizeof(struct dstnct))))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (d = calloc(1, sizeof(struct dstnct)))) {
+		parse_err(p);
+		return;
+	}
 
 	srch->dst = d;
 	d->parent = srch;
@@ -1508,11 +1534,15 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 			parse_errx(p, "expected distinct field");
 			return;
 		}
-		if (NULL == (df = calloc(1, sizeof(struct dref))))
-			err(EXIT_FAILURE, NULL);
-		if (NULL == (df->name = strdup(p->last.string)))
-			err(EXIT_FAILURE, NULL);
+		if (NULL == (df = calloc(1, sizeof(struct dref)))) {
+			parse_err(p);
+			return;
+		}
 		TAILQ_INSERT_TAIL(&d->drefq, df, entries);
+		if (NULL == (df->name = strdup(p->last.string))) {
+			parse_err(p);
+			return;
+		}
 		parse_point(p, &df->pos);
 		df->parent = d;
 
@@ -1524,9 +1554,11 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 		nsz = sz + strlen(df->name) + 
 			(0 == sz ? 0 : 1) + 1;
 
-		d->cname = realloc(d->cname, nsz);
-		if (NULL == d->cname)
-			err(EXIT_FAILURE, NULL);
+		if (NULL == (pp = realloc(d->cname, nsz))) {
+			parse_err(p);
+			return;
+		}
+		d->cname = pp;
 		if (0 == sz) 
 			d->cname[0] = '\0';
 		else
@@ -1551,14 +1583,17 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 	struct oref	*of;
 	size_t		 sz;
 	struct ord	*ord;
+	void		*pp;
 
 	if (TOK_IDENT != p->lasttype) {
 		parse_errx(p, "expected order identifier");
 		return;
 	}
 
-	if (NULL == (ord = calloc(1, sizeof(struct ord))))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (ord = calloc(1, sizeof(struct ord)))) {
+		parse_err(p);
+		return;
+	}
 	ord->parent = srch;
 	ord->op = ORDTYPE_ASC;
 	parse_point(p, &ord->pos);
@@ -1607,7 +1642,11 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 		}
 		sz = strlen(ord->fname) +
 		     strlen(of->name) + 2;
-		ord->fname = realloc(ord->fname, sz);
+		if (NULL == (pp = realloc(ord->fname, sz))) {
+			parse_err(p);
+			return;
+		}
+		ord->fname = pp;
 		strlcat(ord->fname, ".", sz);
 		strlcat(ord->fname, of->name, sz);
 	}
@@ -1623,7 +1662,11 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 		}
 		sz = strlen(ord->name) +
 		     strlen(of->name) + 2;
-		ord->name = realloc(ord->name, sz);
+		if (NULL == (pp = realloc(ord->name, sz))) {
+			parse_err(p);
+			return;
+		}
+		ord->name = pp;
 		strlcat(ord->name, ".", sz);
 		strlcat(ord->name, of->name, sz);
 	}
@@ -1643,6 +1686,7 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 	struct sref	*sf;
 	size_t		 sz;
 	struct sent	*sent;
+	void		*pp;
 
 	if (TOK_IDENT != p->lasttype) {
 		parse_errx(p, "expected field identifier");
@@ -1712,7 +1756,11 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 		}
 		sz = strlen(sent->fname) +
 		     strlen(sf->name) + 2;
-		sent->fname = realloc(sent->fname, sz);
+		if (NULL == (pp = realloc(sent->fname, sz))) {
+			parse_err(p);
+			return;
+		}
+		sent->fname = pp;
 		strlcat(sent->fname, ".", sz);
 		strlcat(sent->fname, sf->name, sz);
 	}
@@ -1728,7 +1776,11 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 		}
 		sz = strlen(sent->name) +
 		     strlen(sf->name) + 2;
-		sent->name = realloc(sent->name, sz);
+		if (NULL == (pp = realloc(sent->name, sz))) {
+			parse_err(p);
+			return;
+		}
+		sent->name = pp;
 		strlcat(sent->name, ".", sz);
 		strlcat(sent->name, sf->name, sz);
 	}
@@ -1842,9 +1894,12 @@ parse_config_unique(struct parse *p, struct strct *s)
 	struct unique	*up, *upp;
 	struct nref	*n;
 	size_t		 sz, num = 0;
+	void		*pp;
 
-	if (NULL == (up = calloc(1, sizeof(struct unique))))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (up = calloc(1, sizeof(struct unique)))) {
+		parse_err(p);
+		return;
+	}
 
 	up->parent = s;
 	parse_point(p, &up->pos);
@@ -1877,9 +1932,11 @@ parse_config_unique(struct parse *p, struct strct *s)
 	sz = 0;
 	TAILQ_FOREACH(n, &up->nq, entries) {
 		sz += strlen(n->name) + 1; /* comma */
-		up->cname = realloc(up->cname, sz + 1);
-		if (NULL == up->cname)
-			err(EXIT_FAILURE, NULL);
+		if (NULL == (pp = realloc(up->cname, sz + 1))) {
+			parse_err(p);
+			return;
+		}
+		up->cname = pp;
 		strlcat(up->cname, n->name, sz + 1);
 		strlcat(up->cname, ",", sz + 1);
 	}
@@ -1917,8 +1974,10 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 	struct update	*up;
 	struct uref	*ur;
 
-	if (NULL == (up = calloc(1, sizeof(struct update))))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (up = calloc(1, sizeof(struct update)))) {
+		parse_err(p);
+		return;
+	}
 	up->parent = s;
 	up->type = type;
 	parse_point(p, &up->pos);
@@ -2098,8 +2157,10 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 {
 	struct search	*srch;
 
-	if (NULL == (srch = calloc(1, sizeof(struct search))))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (srch = calloc(1, sizeof(struct search)))) {
+		parse_err(p);
+		return;
+	}
 	srch->parent = s;
 	srch->type = stype;
 	parse_point(p, &srch->pos);
@@ -2250,15 +2311,18 @@ parse_enum_data(struct parse *p, struct enm *e)
 			return;
 		}
 
-		if (NULL == (ei = calloc(1, sizeof(struct eitem))))
-			err(EXIT_FAILURE, NULL);
-		if (NULL == (ei->name = strdup(p->last.string)))
-			err(EXIT_FAILURE, NULL);
-
+		if (NULL == (ei = calloc(1, sizeof(struct eitem)))) {
+			parse_err(p);
+			return;
+		}
 		TAILQ_INIT(&ei->labels);
-		parse_point(p, &ei->pos);
 		TAILQ_INSERT_TAIL(&e->eq, ei, entries);
+		parse_point(p, &ei->pos);
 		ei->parent = e;
+		if (NULL == (ei->name = strdup(p->last.string))) {
+			parse_err(p);
+			return;
+		}
 		parse_enum_item(p, ei);
 	}
 
@@ -2271,37 +2335,39 @@ parse_enum_data(struct parse *p, struct enm *e)
 		parse_errx(p, "no items in enum");
 }
 
-static struct roleset *
-roleset_alloc(struct rolesetq *rq, 
+static int
+roleset_alloc(struct parse *p, struct rolesetq *rq, 
 	const char *name, struct rolemap *parent)
 {
 	struct roleset	*rs;
 
-	if (NULL == (rs = calloc(1, sizeof(struct roleset))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (rs->name = strdup(name)))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (rs = calloc(1, sizeof(struct roleset)))) {
+		parse_err(p);
+		return 0;
+	} else if (NULL == (rs->name = strdup(name))) {
+		parse_err(p);
+		free(rs);
+		return 0;
+	}
+
 	rs->parent = parent;
 	TAILQ_INSERT_TAIL(rq, rs, entries);
-	return(rs);
+	return 1;
 }
 
-static void
+/*
+ * Look up a rolemap of the given type with the give name, e.g.,
+ * "noexport foo", where "noexport" is the type and "foo" is the name.
+ * Each structure has a single rolemap that's distributed for all roles
+ * that have access to that role.
+ * For example, "noexport foo" might be assigned to roles 1, 2, and 3.
+ */
+static int
 roleset_assign(struct parse *p, struct strct *s, 
 	struct rolesetq *rq, enum rolemapt type, const char *name)
 {
 	struct roleset	*rs, *rrs;
 	struct rolemap	*rm;
-
-	/*
-	 * Look up a rolemap of the given type with the give name, e.g.,
-	 * "noexport foo", where "noexport" is the type and "foo" is
-	 * the name.
-	 * Each structure has a single rolemap that's distributed for
-	 * all roles that have access to that role.
-	 * For example, "noexport foo" might be assigned to roles 1, 2,
-	 * and 3.
-	 */
 
 	TAILQ_FOREACH(rm, &s->rq, entries) {
 		if (rm->type != type)
@@ -2316,17 +2382,21 @@ roleset_assign(struct parse *p, struct strct *s,
 
 	if (NULL == rm) {
 		rm = calloc(1, sizeof(struct rolemap));
-		if (NULL == rm)
-			err(EXIT_FAILURE, NULL);
+		if (NULL == rm) {
+			parse_err(p);
+			return 0;
+		}
 		TAILQ_INIT(&rm->setq);
 		rm->type = type;
-		if (NULL != name) {
-			rm->name = strdup(name);
-			if (NULL == rm->name)
-				err(EXIT_FAILURE, NULL);
-		} 
 		parse_point(p, &rm->pos);
 		TAILQ_INSERT_TAIL(&s->rq, rm, entries);
+		if (NULL != name) {
+			rm->name = strdup(name);
+			if (NULL == rm->name) {
+				parse_err(p);
+				return 0;
+			}
+		} 
 	}
 
 	/*
@@ -2345,8 +2415,11 @@ roleset_assign(struct parse *p, struct strct *s,
 		}
 		if (NULL != rrs)
 			continue;
-		roleset_alloc(&rm->setq, rs->name, rm);
+		if ( ! roleset_alloc(p, &rm->setq, rs->name, rm))
+			return 0;
 	}
+
+	return 1;
 }
 
 /*
@@ -2391,8 +2464,10 @@ parse_config_roles(struct parse *p, struct strct *s)
 	} else if (0 == strcasecmp("none", p->last.string)) {
 		parse_errx(p, "cannot assign \"none\" role");
 		return;
-	}
-	roleset_alloc(&rq, p->last.string, NULL);
+	} 
+	
+	if ( ! roleset_alloc(p, &rq, p->last.string, NULL))
+		goto cleanup;
 
 	while ( ! PARSE_STOP(p) && TOK_LBRACE != parse_next(p)) {
 		if (TOK_COMMA != p->lasttype) {
@@ -2411,7 +2486,8 @@ parse_config_roles(struct parse *p, struct strct *s)
 			parse_errx(p, "duplicate role name");
 			goto cleanup;
 		}
-		roleset_alloc(&rq, p->last.string, NULL);
+		if ( ! roleset_alloc(p, &rq, p->last.string, NULL))
+			goto cleanup;
 	}
 
 	/* If something bad has happened, clean up. */
@@ -2453,7 +2529,9 @@ parse_config_roles(struct parse *p, struct strct *s)
 					"role constraint name");
 				goto cleanup;
 			}
-			roleset_assign(p, s, &rq, type, p->last.string);
+			if ( ! roleset_assign(p, s, 
+			    &rq, type, p->last.string))
+				goto cleanup;
 			parse_next(p);
 		} else if (TOK_SEMICOLON == p->lasttype) {
 			if (ROLEMAP_INSERT != type &&
@@ -2463,7 +2541,8 @@ parse_config_roles(struct parse *p, struct strct *s)
 					"role constraint name");
 				goto cleanup;
 			}
-			roleset_assign(p, s, &rq, type, NULL);
+			if ( ! roleset_assign(p, s, &rq, type, NULL))
+				goto cleanup;
 		} else {
 			parse_errx(p, "expected role constraint "
 				"name or semicolon");
@@ -2553,8 +2632,10 @@ parse_struct_data(struct parse *p, struct strct *s)
 				return;
 			}
 			s->ins = calloc(1, sizeof(struct insert));
-			if (NULL == s->ins)
-				err(EXIT_FAILURE, NULL);
+			if (NULL == s->ins) {
+				parse_err(p);
+				return;
+			}
 			s->ins->parent = s;
 			parse_point(p, &s->ins->pos);
 			if (TOK_SEMICOLON != parse_next(p)) {
@@ -2736,15 +2817,18 @@ parse_bitidx(struct parse *p, struct bitf *b)
 			return;
 		}
 
-		if (NULL == (bi = calloc(1, sizeof(struct bitidx))))
-			err(EXIT_FAILURE, NULL);
-		if (NULL == (bi->name = strdup(p->last.string)))
-			err(EXIT_FAILURE, NULL);
-
+		if (NULL == (bi = calloc(1, sizeof(struct bitidx)))) {
+			parse_err(p);
+			return;
+		}
 		TAILQ_INIT(&bi->labels);
 		parse_point(p, &bi->pos);
 		TAILQ_INSERT_TAIL(&b->bq, bi, entries);
 		bi->parent = b;
+		if (NULL == (bi->name = strdup(p->last.string))) {
+			parse_err(p);
+			return;
+		}
 		parse_bitidx_item(p, bi);
 	}
 
@@ -2778,20 +2862,26 @@ parse_bitfield(struct parse *p)
 	     ! check_badidents(p, p->last.string))
 		return;
 
-	if (NULL == (b = calloc(1, sizeof(struct bitf))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (b->name = strdup(p->last.string)))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (b->cname = strdup(b->name)))
-		err(EXIT_FAILURE, NULL);
-	for (caps = b->cname; '\0' != *caps; caps++)
-		*caps = toupper((int)*caps);
-
+	if (NULL == (b = calloc(1, sizeof(struct bitf)))) {
+		parse_err(p);
+		return;
+	}
 	TAILQ_INIT(&b->labels_unset);
 	TAILQ_INIT(&b->labels_null);
 	parse_point(p, &b->pos);
 	TAILQ_INSERT_TAIL(&p->cfg->bq, b, entries);
 	TAILQ_INIT(&b->bq);
+	if (NULL == (b->name = strdup(p->last.string))) {
+		parse_err(p);
+		return;
+	}
+	if (NULL == (b->cname = strdup(b->name))) {
+		parse_err(p);
+		return;
+	}
+	for (caps = b->cname; '\0' != *caps; caps++)
+		*caps = toupper((int)*caps);
+
 	parse_bitidx(p, b);
 }
 
@@ -2813,18 +2903,24 @@ parse_enum(struct parse *p)
 	     ! check_badidents(p, p->last.string))
 		return;
 
-	if (NULL == (e = calloc(1, sizeof(struct enm))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (e->name = strdup(p->last.string)))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (e->cname = strdup(e->name)))
-		err(EXIT_FAILURE, NULL);
-	for (caps = e->cname; '\0' != *caps; caps++)
-		*caps = toupper((int)*caps);
-
+	if (NULL == (e = calloc(1, sizeof(struct enm)))) {
+		parse_err(p);
+		return;
+	}
 	parse_point(p, &e->pos);
 	TAILQ_INSERT_TAIL(&p->cfg->eq, e, entries);
 	TAILQ_INIT(&e->eq);
+	if (NULL == (e->name = strdup(p->last.string))) {
+		parse_err(p);
+		return;
+	}
+	if (NULL == (e->cname = strdup(e->name))) {
+		parse_err(p);
+		return;
+	}
+	for (caps = e->cname; '\0' != *caps; caps++)
+		*caps = toupper((int)*caps);
+
 	parse_enum_data(p, e);
 }
 
@@ -2853,10 +2949,15 @@ role_alloc(struct parse *p, const char *name, struct role *parent)
 	struct role	*r;
 	char		*cp;
 
-	if (NULL == (r = calloc(1, sizeof(struct role))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (r->name = strdup(name)))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (r = calloc(1, sizeof(struct role)))) {
+		parse_err(p);
+		return NULL;
+	}
+	if (NULL == (r->name = strdup(name))) {
+		parse_err(p);
+		free(r);
+		return NULL;
+	}
 
 	/* Add a lowercase version. */
 
@@ -2867,7 +2968,7 @@ role_alloc(struct parse *p, const char *name, struct role *parent)
 	TAILQ_INIT(&r->subrq);
 	if (NULL != parent)
 		TAILQ_INSERT_TAIL(&parent->subrq, r, entries);
-	return(r);
+	return r;
 }
 
 /*
@@ -2903,7 +3004,8 @@ parse_role(struct parse *p, struct role *parent)
 	} else if ( ! check_badidents(p, p->last.string))
 		return;
 
-	r = role_alloc(p, p->last.string, parent);
+	if (NULL == (r = role_alloc(p, p->last.string, parent)))
+		return;
 
 	if (TOK_IDENT == parse_next(p)) {
 		if (strcasecmp(p->last.string, "comment")) {
@@ -2956,13 +3058,16 @@ parse_roles(struct parse *p)
 	 * Make the "all" one the parent of everything.
 	 */
 
-	r = role_alloc(p, "none", NULL);
+	if (NULL == (r = role_alloc(p, "none", NULL)))
+		return;
 	TAILQ_INSERT_TAIL(&p->cfg->rq, r, entries);
 
-	r = role_alloc(p, "default", NULL);
+	if (NULL == (r = role_alloc(p, "default", NULL)))
+		return;
 	TAILQ_INSERT_TAIL(&p->cfg->rq, r, entries);
 
-	r = role_alloc(p, "all", NULL);
+	if (NULL == (r = role_alloc(p, "all", NULL)))
+		return;
 	TAILQ_INSERT_TAIL(&p->cfg->rq, r, entries);
 
 	if (TOK_LBRACE != parse_next(p)) {
@@ -3075,17 +3180,24 @@ kwbp_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 {
 	struct parse	 p;
 	int		 rc = 0;
+	void		*pp;
 
-	cfg->fnames = reallocarray
-		(cfg->fnames, 
-		 cfg->fnamesz + 1,
-		 sizeof(char *));
-	if (NULL == cfg->fnames)
-		err(EXIT_FAILURE, NULL);
-	cfg->fnames[cfg->fnamesz] = strdup(fname);
-	if (NULL == cfg->fnames[cfg->fnamesz])
-		err(EXIT_FAILURE, NULL);
+	pp = reallocarray(cfg->fnames, 
+		cfg->fnamesz + 1, sizeof(char *));
+	if (NULL == pp) {
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
+			channel, errno, NULL, NULL, NULL);
+		return 0;
+	}
+	cfg->fnames = pp;
 	cfg->fnamesz++;
+
+	cfg->fnames[cfg->fnamesz - 1] = strdup(fname);
+	if (NULL == cfg->fnames[cfg->fnamesz - 1]) {
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
+			channel, errno, NULL, NULL, NULL);
+		return 0;
+	}
 
 	memset(&p, 0, sizeof(struct parse));
 	p.column = 0;
@@ -3105,18 +3217,29 @@ kwbp_parse_buf(const char *buf, size_t len)
 	struct parse	 p;
 	int		 rc = 0;
 	struct config	*cfg;
+	void		*pp;
 
-	cfg = kwbp_config_alloc();
-	cfg->fnames = reallocarray
-		(cfg->fnames, 
-		 cfg->fnamesz + 1,
-		 sizeof(char *));
-	if (NULL == cfg->fnames)
-		err(EXIT_FAILURE, NULL);
-	cfg->fnames[cfg->fnamesz] = strdup("<buffer>");
-	if (NULL == cfg->fnames[cfg->fnamesz])
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (cfg = kwbp_config_alloc()))
+		return NULL;
+
+	pp = reallocarray(cfg->fnames, 
+		 cfg->fnamesz + 1, sizeof(char *));
+	if (NULL == pp) {
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
+			channel, errno, NULL, NULL, NULL);
+		kwbp_config_free(cfg);
+		return NULL;
+	}
+	cfg->fnames = pp;
 	cfg->fnamesz++;
+
+	cfg->fnames[cfg->fnamesz - 1] = strdup("<buffer>");
+	if (NULL == cfg->fnames[cfg->fnamesz - 1]) {
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
+			channel, errno, NULL, NULL, NULL);
+		kwbp_config_free(cfg);
+		return NULL;
+	}
 
 	memset(&p, 0, sizeof(struct parse));
 	p.column = 0;
@@ -3140,11 +3263,14 @@ kwbp_parse_file(FILE *f, const char *fname)
 {
 	struct config	*cfg;
 
-	cfg = kwbp_config_alloc();
+	if (NULL == (cfg = kwbp_config_alloc()))
+		return NULL;
+
 	if (0 == kwbp_parse_file_r(cfg, f, fname) ||
 	    0 == kwbp_parse_close(cfg)) {
 		kwbp_config_free(cfg);
 		return NULL;
 	}
+
 	return cfg;
 }

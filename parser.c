@@ -64,15 +64,18 @@ struct	parsefile {
 	FILE		*f;
 };
 
+/*
+ * Used for parsing from a buffer (PARSETYPE_BUF) instead of a file.
+ */
 struct	parsebuf {
-	const char	*buf;
-	size_t		 len;
-	size_t		 pos;
+	const char	*buf; /* the (possibly binary) buffer */
+	size_t		 len; /* length of the buffer */
+	size_t		 pos; /* position during the parse */
 };
 
 enum	parsetype {
-	PARSETYPE_BUF,
-	PARSETYPE_FILE
+	PARSETYPE_BUF, /* a character buffer */
+	PARSETYPE_FILE /* a FILE stream */
 };
 
 /*
@@ -95,10 +98,10 @@ struct	parse {
 	size_t		 column; /* current column (from 1) */
 	const char	*fname; /* current filename */
 	struct config	*cfg; /* current configuration */
-	enum parsetype	 type;
+	enum parsetype	 type; /* how we're getting input */
 	union {
-		struct parsebuf inbuf;
-		struct parsefile infile;
+		struct parsebuf inbuf; /* from a buffer */
+		struct parsefile infile; /* ...file */
 	};
 };
 
@@ -309,23 +312,6 @@ static void parse_warnx(struct parse *p, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
 
 /*
- * Push a single character into the retaining buffer.
- * This bails out on memory allocation failure.
- */
-static void
-buf_push(struct parse *p, char c)
-{
-
-	if (p->bufsz + 1 >= p->bufmax) {
-		p->bufmax += 1024;
-		p->buf = realloc(p->buf, p->bufmax);
-		if (NULL == p->buf)
-			err(EXIT_FAILURE, NULL);
-	}
-	p->buf[p->bufsz++] = c;
-}
-
-/*
  * Copy the current parse point into a saved position buffer.
  */
 static void
@@ -335,6 +321,89 @@ parse_point(const struct parse *p, struct pos *pp)
 	pp->fname = p->fname;
 	pp->line = p->line;
 	pp->column = p->column;
+}
+
+static void
+parse_warnx(struct parse *p, const char *fmt, ...)
+{
+	va_list	 	 ap;
+	struct pos	 pos;
+
+	pos.fname = p->fname;
+	pos.line = p->line;
+	pos.column = p->column;
+
+	if (NULL != fmt) {
+		va_start(ap, fmt);
+		kwbp_config_msg(p->cfg, MSGTYPE_WARN, 
+			channel, 0, &pos, fmt, ap);
+		va_end(ap);
+	} else
+		kwbp_config_msg(p->cfg, MSGTYPE_WARN, 
+			channel, 0, &pos, NULL, NULL);
+}
+
+static enum tok
+parse_err(struct parse *p)
+{
+	int	 	 er = errno;
+	struct pos	 pos;
+
+	pos.fname = p->fname;
+	pos.line = p->line;
+	pos.column = p->column;
+
+	kwbp_config_msg(p->cfg, MSGTYPE_FATAL, 
+		channel, er, &pos, NULL, NULL);
+
+	p->lasttype = TOK_ERR;
+	return p->lasttype;
+}
+
+static enum tok
+parse_errx(struct parse *p, const char *fmt, ...)
+{
+	va_list	 	 ap;
+	struct pos	 pos;
+
+	pos.fname = p->fname;
+	pos.line = p->line;
+	pos.column = p->column;
+
+	if (NULL != fmt) {
+		va_start(ap, fmt);
+		kwbp_config_msg(p->cfg, MSGTYPE_ERROR, 
+			channel, 0, &pos, fmt, ap);
+		va_end(ap);
+	} else
+		kwbp_config_msg(p->cfg, MSGTYPE_ERROR, 
+			channel, 0, &pos, NULL, NULL);
+
+	p->lasttype = TOK_ERR;
+	return p->lasttype;
+}
+
+/*
+ * Push a single character into the retaining buffer.
+ * Returns zero on memory failure, non-zero otherwise.
+ */
+static int
+buf_push(struct parse *p, char c)
+{
+	void		*pp;
+	const size_t	 inc = 1024;
+
+	if (p->bufsz + 1 >= p->bufmax) {
+		pp = realloc(p->buf, p->bufmax + inc);
+		if (NULL == pp) {
+			parse_err(p);
+			return 0;
+		}
+		p->buf = pp;
+		p->bufmax += inc;
+	}
+	p->buf[p->bufsz++] = c;
+	return 1;
 }
 
 /*
@@ -390,18 +459,22 @@ check_dupetoplevel(struct parse *p, const char *name)
 /*
  * Allocate a unique reference and add it to the parent queue in order
  * by alpha.
- * Always returns the created pointer.
+ * Returns the created pointer or NULL.
  */
 static struct nref *
-nref_alloc(const struct parse *p, const char *name, 
-	struct unique *up)
+nref_alloc(struct parse *p, const char *name, struct unique *up)
 {
 	struct nref	*ref, *n;
 
-	if (NULL == (ref = calloc(1, sizeof(struct nref))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (ref->name = strdup(name)))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (ref = calloc(1, sizeof(struct nref)))) {
+		parse_err(p);
+		return NULL;
+	} else if (NULL == (ref->name = strdup(name))) {
+		free(ref);
+		parse_err(p);
+		return NULL;
+	}
+
 	ref->parent = up;
 	parse_point(p, &ref->pos);
 
@@ -410,88 +483,107 @@ nref_alloc(const struct parse *p, const char *name,
 	TAILQ_FOREACH(n, &up->nq, entries)
 		if (strcasecmp(n->name, ref->name) >= 0)
 			break;
+
 	if (NULL == n)
 		TAILQ_INSERT_TAIL(&up->nq, ref, entries);
 	else
 		TAILQ_INSERT_BEFORE(n, ref, entries);
 
-	return(ref);
+	return ref;
 }
 
 /*
  * Allocate an update reference and add it to the parent queue.
- * Always returns the created pointer.
+ * Returns the created pointer or NULL.
  */
 static struct uref *
-uref_alloc(const struct parse *p, const char *name, 
+uref_alloc(struct parse *p, const char *name, 
 	struct update *up, struct urefq *q)
 {
 	struct uref	*ref;
 
-	if (NULL == (ref = calloc(1, sizeof(struct uref))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (ref->name = strdup(name)))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (ref = calloc(1, sizeof(struct uref)))) {
+		parse_err(p);
+		return NULL;
+	} else if (NULL == (ref->name = strdup(name))) {
+		free(ref);
+		parse_err(p);
+		return NULL;
+	}
+
 	ref->parent = up;
 	parse_point(p, &ref->pos);
 	TAILQ_INSERT_TAIL(q, ref, entries);
-	return(ref);
+	return ref;
 }
 
 /*
  * Allocate a search reference and add it to the parent queue.
- * Always returns the created pointer.
+ * Returns the created pointer or NULL.
  */
 static struct oref *
-oref_alloc(const struct parse *p, const char *name, struct ord *up)
+oref_alloc(struct parse *p, const char *name, struct ord *up)
 {
 	struct oref	*ref;
 
-	if (NULL == (ref = calloc(1, sizeof(struct oref))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (ref->name = strdup(name)))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (ref = calloc(1, sizeof(struct oref)))) {
+		parse_err(p);
+		return NULL;
+	} else if (NULL == (ref->name = strdup(name))) {
+		free(ref);
+		parse_err(p);
+		return NULL;
+	}
+
 	ref->parent = up;
 	parse_point(p, &ref->pos);
 	TAILQ_INSERT_TAIL(&up->orq, ref, entries);
-	return(ref);
+	return ref;
 }
 
 /*
  * Allocate a search reference and add it to the parent queue.
- * Always returns the created pointer.
+ * Returns the created pointer or NULL.
  */
 static struct sref *
-sref_alloc(const struct parse *p, const char *name, struct sent *up)
+sref_alloc(struct parse *p, const char *name, struct sent *up)
 {
 	struct sref	*ref;
 
-	if (NULL == (ref = calloc(1, sizeof(struct sref))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (ref->name = strdup(name)))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (ref = calloc(1, sizeof(struct sref)))) {
+		parse_err(p);
+		return NULL;
+	} else if (NULL == (ref->name = strdup(name))) {
+		free(ref);
+		parse_err(p);
+		return NULL;
+	}
+
 	ref->parent = up;
 	parse_point(p, &ref->pos);
 	TAILQ_INSERT_TAIL(&up->srq, ref, entries);
-	return(ref);
+	return ref;
 }
 
 /*
  * Allocate a search entity and add it to the parent queue.
- * Always returns the created pointer.
+ * Returns the created pointer or NULL.
  */
 static struct sent *
-sent_alloc(const struct parse *p, struct search *up)
+sent_alloc(struct parse *p, struct search *up)
 {
 	struct sent	*sent;
 
-	if (NULL == (sent = calloc(1, sizeof(struct sent))))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (sent = calloc(1, sizeof(struct sent)))) {
+		parse_err(p);
+		return NULL;
+	}
+
 	sent->parent = up;
 	parse_point(p, &sent->pos);
 	TAILQ_INIT(&sent->srq);
 	TAILQ_INSERT_TAIL(&up->sntq, sent, entries);
-	return(sent);
+	return sent;
 }
 
 static int
@@ -581,69 +673,18 @@ parse_nextchar(struct parse *p)
 }
 
 /*
- * Trigger a "hard" error condition: stream error or EOF.
+ * Trigger a "hard" error condition at stream error or EOF.
  * This sets the lasttype appropriately.
  */
 static enum tok
-parse_err(struct parse *p)
+parse_read_err(struct parse *p)
 {
 
-	if (parse_check_error(p)) {
-		parse_errx(p, "system error");
-		p->lasttype = TOK_ERR;
-	} else 
+	if (parse_check_error(p))
+		parse_err(p);
+	else 
 		p->lasttype = TOK_EOF;
 
-	return(p->lasttype);
-}
-
-/*
- * Print a warning.
- */
-static void
-parse_warnx(struct parse *p, const char *fmt, ...)
-{
-	va_list	 	 ap;
-	struct pos	 pos;
-
-	pos.fname = p->fname;
-	pos.line = p->line;
-	pos.column = p->column;
-
-	if (NULL != fmt) {
-		va_start(ap, fmt);
-		kwbp_config_msg(p->cfg, MSGTYPE_WARN, 
-			channel, 0, &pos, fmt, ap);
-		va_end(ap);
-	} else
-		kwbp_config_msg(p->cfg, MSGTYPE_WARN, 
-			channel, 0, &pos, NULL, NULL);
-}
-
-/*
- * Trigger a "soft" error condition.
- * This sets the lasttype appropriately.
- */
-static enum tok
-parse_errx(struct parse *p, const char *fmt, ...)
-{
-	va_list	 	 ap;
-	struct pos	 pos;
-
-	pos.fname = p->fname;
-	pos.line = p->line;
-	pos.column = p->column;
-
-	if (NULL != fmt) {
-		va_start(ap, fmt);
-		kwbp_config_msg(p->cfg, MSGTYPE_ERROR, 
-			channel, 0, &pos, fmt, ap);
-		va_end(ap);
-	} else
-		kwbp_config_msg(p->cfg, MSGTYPE_ERROR, 
-			channel, 0, &pos, NULL, NULL);
-
-	p->lasttype = TOK_ERR;
 	return p->lasttype;
 }
 
@@ -674,14 +715,14 @@ again:
 	} while (isspace(c));
 
 	if (parse_check_error_eof(p))
-		return(parse_err(p));
+		return(parse_read_err(p));
 
 	if ('#' == c) {
 		do {
 			c = parse_nextchar(p);
 		} while (EOF != c && '\n' != c);
 		if ('\n' != c)
-			return(parse_err(p));
+			return(parse_read_err(p));
 		goto again;
 	}
 
@@ -693,7 +734,7 @@ again:
 	if ('-' == c) {
 		c = parse_nextchar(p);
 		if (parse_check_error_eof(p))
-			return(parse_err(p));
+			return(parse_read_err(p));
 		if ( ! isdigit(c))
 			return(parse_errx(p, "expected digit"));
 		minus = 1;
@@ -733,22 +774,26 @@ again:
 				last = c;
 				continue;
 			}
-			buf_push(p, c);
+			if ( ! buf_push(p, c))
+				return TOK_ERR;
 			last = c;
 		} 
 
 		if (parse_check_error(p))
-			return(parse_err(p));
+			return(parse_read_err(p));
 
-		buf_push(p, '\0');
+		if ( ! buf_push(p, '\0'))
+			return TOK_ERR;
 		p->last.string = p->buf;
 		p->lasttype = TOK_LITERAL;
 	} else if (isdigit(c)) {
 		hasdot = 0;
 		p->bufsz = 0;
-		if (minus)
-			buf_push(p, '-');
-		buf_push(p, c);
+		if (minus && ! buf_push(p, '-'))
+			return TOK_ERR;
+		if ( ! buf_push(p, c))
+			return TOK_ERR;
+
 		do {
 			c = parse_nextchar(p);
 			/*
@@ -763,15 +808,17 @@ again:
 				hasdot = 1;
 			}
 			if (isdigit(c) || '.' == c)
-				buf_push(p, c);
+				if ( ! buf_push(p, c))
+					return TOK_ERR;
 		} while (isdigit(c) || '.' == c);
 
 		if (parse_check_error(p))
-			return(parse_err(p));
+			return(parse_read_err(p));
 		else if ( ! parse_check_eof(p))
 			parse_ungetc(p, c);
 
-		buf_push(p, '\0');
+		if ( ! buf_push(p, '\0'))
+			return TOK_ERR;
 		if (hasdot) {
 			p->last.decimal = strtod(p->buf, &epp);
 			if (epp == p->buf || ERANGE == errno)
@@ -788,19 +835,21 @@ again:
 		}
 	} else if (isalpha(c)) {
 		p->bufsz = 0;
-		buf_push(p, c);
+		if ( ! buf_push(p, c))
+			return TOK_ERR;
 		do {
 			c = parse_nextchar(p);
-			if (isalnum(c))
-				buf_push(p, c);
+			if (isalnum(c) && ! buf_push(p, c))
+				return TOK_ERR;
 		} while (isalnum(c));
 
 		if (parse_check_error(p))
-			return(parse_err(p));
+			return(parse_read_err(p));
 		else if ( ! parse_check_eof(p))
 			parse_ungetc(p, c);
 
-		buf_push(p, '\0');
+		if ( ! buf_push(p, '\0'))
+			return TOK_ERR;
 		p->last.string = p->buf;
 		p->lasttype = TOK_IDENT;
 	} else
@@ -818,6 +867,7 @@ again:
  * Attach it to the given queue of labels, possibly clearing out any
  * prior labels of the same language.
  * If this is the case, emit a warning.
+ * Return zero on failure, non-zero on success.
  */
 static int
 parse_label(struct parse *p, struct labelq *q)
@@ -825,6 +875,7 @@ parse_label(struct parse *p, struct labelq *q)
 	size_t	 	 lang = 0;
 	struct label	*l;
 	const char	*cp;
+	void		*pp;
 
 	/* 
 	 * If we have a period (like jslabel.en), then interpret the
@@ -843,12 +894,15 @@ parse_label(struct parse *p, struct labelq *q)
 			    (p->cfg->langs[lang], p->last.string))
 				break;
 		if (lang == p->cfg->langsz) {
-			p->cfg->langs = reallocarray
+			pp = reallocarray
 				(p->cfg->langs,
 				 p->cfg->langsz + 1,
 				 sizeof(char *));
-			if (NULL == p->cfg->langs)
-				err(EXIT_FAILURE, NULL);
+			if (NULL == pp) {
+				parse_err(p);
+				return 0;
+			}
+			p->cfg->langs = pp;
 			p->cfg->langs[p->cfg->langsz] =
 				strdup(p->last.string);
 			if (NULL == p->cfg->langs[p->cfg->langsz])
@@ -891,8 +945,10 @@ parse_label(struct parse *p, struct labelq *q)
 		}
 
 	l = calloc(1, sizeof(struct label));
-	if (NULL == l)
-		err(EXIT_FAILURE, NULL);
+	if (NULL == l) {
+		parse_err(p);
+		return 0;
+	}
 	parse_point(p, &l->pos);
 	l->lang = lang;
 	l->label = strdup(p->last.string);
@@ -956,8 +1012,10 @@ parse_validate(struct parse *p, struct field *fd)
 		return;
 	}
 
-	if (NULL == (v = calloc(1, sizeof(struct fvalid))))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (v = calloc(1, sizeof(struct fvalid)))) {
+		parse_err(p);
+		return;
+	}
 	v->type = vt;
 	TAILQ_INSERT_TAIL(&fd->fvq, v, entries);
 
@@ -1222,13 +1280,17 @@ parse_field_bitfield(struct parse *p, struct field *fd)
 		parse_errx(p, "expected bitfield name");
 		return;
 	}
-
-	if (NULL == (fd->bref = calloc(1, sizeof(struct bref))))
-		err(EXIT_FAILURE, NULL);
-	if (NULL == (fd->bref->name = strdup(p->last.string)))
-		err(EXIT_FAILURE, NULL);
-
+	if (NULL == (fd->bref = calloc(1, sizeof(struct bref)))) {
+		parse_err(p);
+		return;
+	} 
 	fd->bref->parent = fd;
+	if (NULL != (fd->bref->name = strdup(p->last.string))) 
+		return;
+
+	parse_err(p);
+	free(fd->bref);
+	fd->bref = NULL;
 }
 
 /*
@@ -1503,7 +1565,8 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 	TAILQ_INIT(&ord->orq);
 	TAILQ_INSERT_TAIL(&srch->ordq, ord, entries);
 
-	oref_alloc(p, p->last.string, ord);
+	if (NULL == oref_alloc(p, p->last.string, ord))
+		return;
 
 	while ( ! PARSE_STOP(p)) {
 		if (TOK_COMMA == parse_next(p) ||
@@ -1522,14 +1585,14 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 			break;
 		}
 
-		if (TOK_PERIOD != p->lasttype) {
+		if (TOK_PERIOD != p->lasttype)
 			parse_errx(p, "expected field separator");
-			return;
-		} else if (TOK_IDENT != parse_next(p)) {
+		else if (TOK_IDENT != parse_next(p))
 			parse_errx(p, "expected field identifier");
-			return;
-		}
-		oref_alloc(p, p->last.string, ord);
+		else if (NULL != oref_alloc(p, p->last.string, ord))
+			continue;
+
+		return;
 	}
 
 	if (PARSE_STOP(p))
@@ -1586,8 +1649,10 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 		return;
 	}
 
-	sent = sent_alloc(p, srch);
-	sref_alloc(p, p->last.string, sent);
+	if (NULL == (sent = sent_alloc(p, srch)))
+		return;
+	if (NULL == sref_alloc(p, p->last.string, sent))
+		return;
 
 	while ( ! PARSE_STOP(p)) {
 		if (TOK_COMMA == parse_next(p) ||
@@ -1620,14 +1685,14 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 
 		/* Next in field chain... */
 
-		if (TOK_PERIOD != p->lasttype) {
+		if (TOK_PERIOD != p->lasttype)
 			parse_errx(p, "expected field separator");
-			return;
-		} else if (TOK_IDENT != parse_next(p)) {
+		else if (TOK_IDENT != parse_next(p))
 			parse_errx(p, "expected field identifier");
-			return;
-		}
-		sref_alloc(p, p->last.string, sent);
+		else if (NULL != sref_alloc(p, p->last.string, sent))
+			continue;
+
+		return;
 	}
 
 	/*
@@ -1791,7 +1856,8 @@ parse_config_unique(struct parse *p, struct strct *s)
 			parse_errx(p, "expected unique field");
 			break;
 		}
-		nref_alloc(p, p->last.string, up);
+		if (NULL == nref_alloc(p, p->last.string, up))
+			return;
 		num++;
 		if (TOK_SEMICOLON == parse_next(p))
 			break;
@@ -1883,6 +1949,8 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 			return;
 		}
 		ur = uref_alloc(p, p->last.string, up, &up->mrq);
+		if (NULL == ur)
+			return;
 		while (TOK_COLON != parse_next(p)) {
 			if (TOK_SEMICOLON == p->lasttype)
 				return;
@@ -1919,6 +1987,8 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 				return;
 			}
 			ur = uref_alloc(p, p->last.string, up, &up->mrq);
+			if (NULL == ur)
+				return;
 		}
 		assert(TOK_COLON == p->lasttype);
 		parse_next(p);
@@ -1943,6 +2013,8 @@ crq:
 	}
 
 	ur = uref_alloc(p, p->last.string, up, &up->crq);
+	if (NULL == ur)
+		return;
 
 	while (TOK_COLON != parse_next(p)) {
 		if (TOK_SEMICOLON == p->lasttype)
@@ -1974,6 +2046,8 @@ crq:
 			return;
 		}
 		ur = uref_alloc(p, p->last.string, up, &up->crq);
+		if (NULL == ur)
+			return;
 	}
 	assert(TOK_COLON == p->lasttype);
 

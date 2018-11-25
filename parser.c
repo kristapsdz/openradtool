@@ -941,8 +941,10 @@ parse_label(struct parse *p, struct labelq *q)
 			parse_warnx(p, "replacing prior label");
 			free(l->label);
 			l->label = strdup(p->last.string);
-			if (NULL == l->label)
-				err(EXIT_FAILURE, NULL);
+			if (NULL == l->label) {
+				parse_err(p);
+				return 0;
+			}
 			return 1;
 		}
 
@@ -951,13 +953,14 @@ parse_label(struct parse *p, struct labelq *q)
 		parse_err(p);
 		return 0;
 	}
+	TAILQ_INSERT_TAIL(q, l, entries);
 	parse_point(p, &l->pos);
 	l->lang = lang;
 	l->label = strdup(p->last.string);
-	if (NULL == l->label)
-		err(EXIT_FAILURE, NULL);
-
-	TAILQ_INSERT_TAIL(q, l, entries);
+	if (NULL == l->label) {
+		parse_err(p);
+		return 0;
+	}
 	return 1;
 }
 
@@ -973,16 +976,18 @@ parse_comment(struct parse *p, char **doc)
 
 	if (TOK_LITERAL != parse_next(p)) {
 		parse_errx(p, "expected quoted string");
-		return(0);
+		return 0;
 	} else if (NULL != *doc) {
 		parse_warnx(p, "replaces prior comment");
 		free(*doc);
 	}
 
-	if (NULL == (*doc = strdup(p->last.string)))
-		err(EXIT_FAILURE, NULL);
+	if (NULL == (*doc = strdup(p->last.string))) {
+		parse_err(p);
+		return 0;
+	}
 
-	return(1);
+	return 1;
 }
 
 static void
@@ -1257,8 +1262,10 @@ parse_config_field_info(struct parse *p, struct field *fd)
 				}
 				fd->flags |= FIELD_HASDEF;
 				fd->def.string = strdup(p->last.string);
-				if (NULL == fd->def.string)
-					err(EXIT_FAILURE, NULL);
+				if (NULL == fd->def.string) {
+					parse_err(p);
+					return;
+				}
 				break;
 			default:
 				parse_errx(p, "defaults not "
@@ -1636,8 +1643,10 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 	TAILQ_FOREACH(of, &ord->orq, entries) {
 		if (NULL == ord->fname) {
 			ord->fname = strdup(of->name);
-			if (NULL == ord->fname)
-				err(EXIT_FAILURE, NULL);
+			if (NULL == ord->fname) {
+				parse_err(p);
+				return;
+			}
 			continue;
 		}
 		sz = strlen(ord->fname) +
@@ -1656,8 +1665,10 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 			break;
 		if (NULL == ord->name) {
 			ord->name = strdup(of->name);
-			if (NULL == ord->name)
-				err(EXIT_FAILURE, NULL);
+			if (NULL == ord->name) {
+				parse_err(p);
+				return;
+			}
 			continue;
 		}
 		sz = strlen(ord->name) +
@@ -1750,8 +1761,10 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 	TAILQ_FOREACH(sf, &sent->srq, entries) {
 		if (NULL == sent->fname) {
 			sent->fname = strdup(sf->name);
-			if (NULL == sent->fname)
-				err(EXIT_FAILURE, NULL);
+			if (NULL == sent->fname) {
+				parse_err(p);
+				return;
+			}
 			continue;
 		}
 		sz = strlen(sent->fname) +
@@ -1770,8 +1783,10 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 			break;
 		if (NULL == sent->name) {
 			sent->name = strdup(sf->name);
-			if (NULL == sent->name)
-				err(EXIT_FAILURE, NULL);
+			if (NULL == sent->name) {
+				parse_err(p);
+				return;
+			}
 			continue;
 		}
 		sz = strlen(sent->name) +
@@ -1827,8 +1842,10 @@ parse_config_search_params(struct parse *p, struct search *s)
 
 			free(s->name);
 			s->name = strdup(p->last.string);
-			if (NULL == s->name)
-				err(EXIT_FAILURE, NULL);
+			if (NULL == s->name) {
+				parse_err(p);
+				return;
+			}
 			parse_next(p);
 		} else if (0 == strcasecmp("comment", p->last.string)) {
 			if ( ! parse_comment(p, &s->doc))
@@ -2132,10 +2149,13 @@ terms:
 			}
 			free(up->name);
 			up->name = strdup(p->last.string);
-			if (NULL == up->name)
-				err(EXIT_FAILURE, NULL);
+			if (NULL == up->name) {
+				parse_err(p);
+				return;
+			}
 		} else if (0 == strcasecmp(p->last.string, "comment")) {
-			parse_comment(p, &up->doc);
+			if ( ! parse_comment(p, &up->doc))
+				return;
 		} else
 			parse_errx(p, "unknown term: %s", p->last.string);
 
@@ -2236,7 +2256,8 @@ parse_enum_item(struct parse *p, struct eitem *ei)
 	while ( ! PARSE_STOP(p) && TOK_IDENT == p->lasttype) {
 		next = p->last.string;
 		if (0 == strcasecmp(next, "comment")) {
-			parse_comment(p, &ei->doc);
+			if ( ! parse_comment(p, &ei->doc))
+				return;
 			parse_next(p);
 		} else if (0 == strcasecmp(next, "jslabel")) {
 			parse_label(p, &ei->labels);
@@ -2670,8 +2691,10 @@ parse_struct_data(struct parse *p, struct strct *s)
 		} else if (KWBP_DUPE_NAME == er) {
 			parse_errx(p, "duplicate field name");
 			return;
-		} else if (KWBP_MEMORY == er)
-			err(EXIT_FAILURE, NULL);
+		} else if (KWBP_MEMORY == er) {
+			parse_err(p);
+			return;
+		}
 
 		parse_point(p, &fd->pos);
 		parse_field(p, fd);
@@ -3012,7 +3035,8 @@ parse_role(struct parse *p, struct role *parent)
 			parse_errx(p, "expected comment");
 			return;
 		}
-		parse_comment(p, &r->doc);
+		if ( ! parse_comment(p, &r->doc))
+			return;
 		if (PARSE_STOP(p))
 			return;
 		parse_next(p);
@@ -3106,8 +3130,10 @@ parse_struct(struct parse *p)
 	} else if (KWBP_DUPE_NAME == er) {
 		parse_errx(p, "duplicate top-level name");
 		return;
-	} else if (KWBP_MEMORY == er)
-		err(EXIT_FAILURE, NULL);
+	} else if (KWBP_MEMORY == er) {
+		parse_err(p);
+		return;
+	}
 
 	parse_point(p, &s->pos);
 	parse_struct_data(p, s);

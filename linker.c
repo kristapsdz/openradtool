@@ -60,11 +60,11 @@ gen_warnx(struct config *cfg,
 
 	if (NULL != fmt) {
 		va_start(ap, fmt);
-		kwbp_config_msg(cfg, MSGTYPE_WARN, 
+		kwbp_config_msgv(cfg, MSGTYPE_WARN, 
 			channel, 0, pos, fmt, ap);
 		va_end(ap);
 	} else
-		kwbp_config_msg(cfg, MSGTYPE_WARN, 
+		kwbp_config_msgv(cfg, MSGTYPE_WARN, 
 			channel, 0, pos, NULL, NULL);
 }
 
@@ -73,7 +73,7 @@ gen_err(struct config *cfg, const struct pos *pos)
 {
 	int	 er = errno;
 
-	kwbp_config_msg(cfg, MSGTYPE_FATAL, 
+	kwbp_config_msgv(cfg, MSGTYPE_FATAL, 
 		channel, er, pos, NULL, NULL);
 }
 
@@ -85,11 +85,11 @@ gen_errx(struct config *cfg,
 
 	if (NULL != fmt) {
 		va_start(ap, fmt);
-		kwbp_config_msg(cfg, MSGTYPE_ERROR, 
+		kwbp_config_msgv(cfg, MSGTYPE_ERROR, 
 			channel, 0, pos, fmt, ap);
 		va_end(ap);
 	} else
-		kwbp_config_msg(cfg, MSGTYPE_ERROR, 
+		kwbp_config_msgv(cfg, MSGTYPE_ERROR, 
 			channel, 0, pos, NULL, NULL);
 }
 

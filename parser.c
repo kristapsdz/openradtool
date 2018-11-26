@@ -335,11 +335,11 @@ parse_warnx(struct parse *p, const char *fmt, ...)
 
 	if (NULL != fmt) {
 		va_start(ap, fmt);
-		kwbp_config_msg(p->cfg, MSGTYPE_WARN, 
+		kwbp_config_msgv(p->cfg, MSGTYPE_WARN, 
 			channel, 0, &pos, fmt, ap);
 		va_end(ap);
 	} else
-		kwbp_config_msg(p->cfg, MSGTYPE_WARN, 
+		kwbp_config_msgv(p->cfg, MSGTYPE_WARN, 
 			channel, 0, &pos, NULL, NULL);
 }
 
@@ -353,7 +353,7 @@ parse_err(struct parse *p)
 	pos.line = p->line;
 	pos.column = p->column;
 
-	kwbp_config_msg(p->cfg, MSGTYPE_FATAL, 
+	kwbp_config_msgv(p->cfg, MSGTYPE_FATAL, 
 		channel, er, &pos, NULL, NULL);
 
 	p->lasttype = TOK_ERR;
@@ -372,11 +372,11 @@ parse_errx(struct parse *p, const char *fmt, ...)
 
 	if (NULL != fmt) {
 		va_start(ap, fmt);
-		kwbp_config_msg(p->cfg, MSGTYPE_ERROR, 
+		kwbp_config_msgv(p->cfg, MSGTYPE_ERROR, 
 			channel, 0, &pos, fmt, ap);
 		va_end(ap);
 	} else
-		kwbp_config_msg(p->cfg, MSGTYPE_ERROR, 
+		kwbp_config_msgv(p->cfg, MSGTYPE_ERROR, 
 			channel, 0, &pos, NULL, NULL);
 
 	p->lasttype = TOK_ERR;
@@ -2610,7 +2610,7 @@ static void
 parse_struct_data(struct parse *p, struct strct *s)
 {
 	struct field	*fd;
-	enum kwbp_err	 er;
+	struct pos	 pos;
 
 	if (TOK_LBRACE != parse_next(p)) {
 		parse_errx(p, "expected left brace");
@@ -2684,20 +2684,10 @@ parse_struct_data(struct parse *p, struct strct *s)
 			return;
 		} 
 		
-		er = kwbp_field_alloc(p->cfg, s, p->last.string, &fd);
-
-		if (KWBP_RESERVED_NAME == er) {
-			parse_errx(p, "reserved identifier");
+		parse_point(p, &pos);
+		fd = kwbp_field_alloc(p->cfg, s, &pos, p->last.string);
+		if (NULL == fd)
 			return;
-		} else if (KWBP_DUPE_NAME == er) {
-			parse_errx(p, "duplicate field name");
-			return;
-		} else if (KWBP_MEMORY == er) {
-			parse_err(p);
-			return;
-		}
-
-		parse_point(p, &fd->pos);
 		parse_field(p, fd);
 	}
 
@@ -3121,22 +3111,12 @@ static void
 parse_struct(struct parse *p)
 {
 	struct strct	*s;
-	enum kwbp_err	 er;
+	struct pos	 pos;
 
-	er = kwbp_strct_alloc(p->cfg, p->last.string, &s);
-
-	if (KWBP_RESERVED_NAME == er) {
-		parse_errx(p, "reserved identifier");
+	parse_point(p, &pos);
+	s = kwbp_strct_alloc(p->cfg, &pos, p->last.string);
+	if (NULL == s)
 		return;
-	} else if (KWBP_DUPE_NAME == er) {
-		parse_errx(p, "duplicate top-level name");
-		return;
-	} else if (KWBP_MEMORY == er) {
-		parse_err(p);
-		return;
-	}
-
-	parse_point(p, &s->pos);
 	parse_struct_data(p, s);
 }
 
@@ -3213,7 +3193,7 @@ kwbp_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 		cfg->fnamesz + 1, sizeof(char *));
 	if (NULL == pp) {
 		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
-			channel, errno, NULL, NULL, NULL);
+			channel, errno, NULL, NULL);
 		return 0;
 	}
 	cfg->fnames = pp;
@@ -3222,7 +3202,7 @@ kwbp_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 	cfg->fnames[cfg->fnamesz - 1] = strdup(fname);
 	if (NULL == cfg->fnames[cfg->fnamesz - 1]) {
 		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
-			channel, errno, NULL, NULL, NULL);
+			channel, errno, NULL, NULL);
 		return 0;
 	}
 
@@ -3251,19 +3231,21 @@ kwbp_parse_buf(const char *buf, size_t len)
 
 	pp = reallocarray(cfg->fnames, 
 		 cfg->fnamesz + 1, sizeof(char *));
+
 	if (NULL == pp) {
 		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
-			channel, errno, NULL, NULL, NULL);
+			channel, errno, NULL, NULL);
 		kwbp_config_free(cfg);
 		return NULL;
 	}
+
 	cfg->fnames = pp;
 	cfg->fnamesz++;
 
 	cfg->fnames[cfg->fnamesz - 1] = strdup("<buffer>");
 	if (NULL == cfg->fnames[cfg->fnamesz - 1]) {
 		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
-			channel, errno, NULL, NULL, NULL);
+			channel, errno, NULL, NULL);
 		kwbp_config_free(cfg);
 		return NULL;
 	}
@@ -3276,8 +3258,10 @@ kwbp_parse_buf(const char *buf, size_t len)
 	p.inbuf.len = len;
 	p.type = PARSETYPE_BUF;
 	p.cfg = cfg;
+
 	rc = kwbp_parse_r(&p);
 	free(p.buf);
+
 	if (0 == rc || 0 == kwbp_parse_close(cfg)) {
 		kwbp_config_free(cfg);
 		return NULL;

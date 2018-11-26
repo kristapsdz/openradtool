@@ -618,9 +618,12 @@ __BEGIN_DECLS
 
 struct config	*kwbp_config_alloc(void);
 void		 kwbp_config_free(struct config *);
-void		 kwbp_config_msg(struct config *, enum msgtype, 
+void		 kwbp_config_msgv(struct config *, enum msgtype, 
 			const char *, int, const struct pos *, 
 			const char *, va_list);
+void		 kwbp_config_msg(struct config *, enum msgtype, 
+			const char *, int, const struct pos *, 
+			const char *, ...);
 
 int		 kwbp_parse_close(struct config *);
 int		 kwbp_parse_file_r(struct config *, FILE *, const char *);
@@ -631,10 +634,11 @@ struct config	*kwbp_parse_buf(const char *, size_t);
 char		*kwbp_write_buf(const struct config *);
 int		 kwbp_write_file(FILE *, const struct config *);
 
-enum kwbp_err	 kwbp_strct_alloc(struct config *, const char *, 
-			struct strct **);
-enum kwbp_err	 kwbp_field_alloc(struct config *, struct strct *, 
-			const char *, struct field **);
+struct strct	*kwbp_strct_alloc(struct config *, 
+			const struct pos *, const char *);
+struct field	*kwbp_field_alloc(struct config *, struct strct *, 
+			const struct pos *, const char *);
+
 
 __END_DECLS
 

@@ -121,6 +121,7 @@ static	const char *const rolemapts[ROLEMAP__MAX] = {
  * The SQL ones are from https://sqlite.org/lang_keywords.html.
  * FIXME: think about this more carefully, as in SQL, there are many
  * things that we can put into string literals.
+ * FIXME: this is in config.c now. 
  */
 static	const char *const badidents[] = {
 	/* Things not allowed in C. */
@@ -409,6 +410,7 @@ buf_push(struct parse *p, char c)
 /*
  * Iterate through the list of reserved keywords and return non-zero if
  * the current string (case insensitively) matches, zero otherwise.
+ * FIXME: this is in config.c now. 
  */
 static int
 check_badidents(struct parse *p, const char *s)
@@ -424,6 +426,7 @@ check_badidents(struct parse *p, const char *s)
 	return(1);
 }
 
+/* FIXME: this is in config.c now. */
 static int
 check_dupetoplevel(struct parse *p, const char *name)
 {

@@ -607,13 +607,6 @@ struct	config {
 	size_t		  msgsz; /* count of msgs */
 };
 
-enum	kwbp_err {
-	KWBP_OK,
-	KWBP_DUPE_NAME,
-	KWBP_RESERVED_NAME,
-	KWBP_MEMORY
-};
-
 __BEGIN_DECLS
 
 struct config	*kwbp_config_alloc(void);

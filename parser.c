@@ -1033,6 +1033,7 @@ parse_validate(struct parse *p, struct field *fd)
 
 	switch (fd->type) {
 	case (FTYPE_BIT):
+	case (FTYPE_BITFIELD):
 	case (FTYPE_DATE):
 	case (FTYPE_EPOCH):
 	case (FTYPE_INT):

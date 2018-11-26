@@ -750,8 +750,8 @@ kwbp_config_msg(struct config *cfg, enum msgtype type,
 	else 
 		fprintf(stderr, "%s %s: ", chan, msgtypes[m->type]);
 
-	if (NULL != fmt)
-		vfprintf(stderr, fmt, ap);
+	if (NULL != m->buf)
+		fputs(m->buf, stderr);
 
 	if (MSGTYPE_FATAL == m->type)
 		fprintf(stderr, "%s%s", NULL != fmt ? 

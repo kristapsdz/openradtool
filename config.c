@@ -33,6 +33,8 @@
 #include "kwebapp.h"
 #include "extern.h"
 
+static	const char *const chan = "internal";
+
 static	const char *const msgtypes[] = {
 	"warning", /* MSGTYPE_WARN */
 	"error", /* MSGTYPE_ERROR */
@@ -468,105 +470,156 @@ parse_free_rolemap(struct rolemap *rm)
 	free(rm);
 }
 
+/*
+ * For all structs, enumerations, and bitfields, make sure that we don't
+ * have any of the same top-level names.
+ * That's because the C output for these will be, given "name", "struct
+ * name", "enum name", which can't be the same.
+ */
 static int
-check_dupetoplevel(struct config *cfg, const char *name)
+check_dupetoplevel(struct config *cfg, 
+	const struct pos *pos, const char *name)
 {
 	const struct enm *e;
 	const struct bitf *b;
 	const struct strct *s;
+	struct pos	 npos;
+
+	memset(&npos, 0, sizeof(struct pos));
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
-		if (0 == strcasecmp(e->name, name))
-			return 0;
-
+		if (0 == strcasecmp(e->name, name)) {
+			npos = e->pos;
+			goto found;
+		}
 	TAILQ_FOREACH(b, &cfg->bq, entries)
-		if (0 == strcasecmp(b->name, name))
-			return 0;
-
+		if (0 == strcasecmp(b->name, name)) {
+			npos = b->pos;
+			goto found;
+		}
 	TAILQ_FOREACH(s, &cfg->sq, entries) 
-		if (0 == strcasecmp(s->name, name))
-			return 0;
-	
+		if (0 == strcasecmp(s->name, name)) {
+			npos = s->pos;
+			goto found;
+		}
+
 	return 1;
+
+found:
+	/* 
+	 * If we were called from the parser, we'll have a file and line
+	 * number; otherwise, this will be empty.
+	 */
+
+	if (NULL != npos.fname && npos.line)
+		kwbp_config_msg(cfg, MSGTYPE_ERROR, chan, 0,
+			pos, "duplicate top-level name: %s:%zu:%zu",
+			npos.fname, npos.line, npos.column);
+	else
+		kwbp_config_msg(cfg, MSGTYPE_ERROR, chan, 0, 
+			pos, "duplicate top-level name");
+
+	return 0;
 }
 
-enum kwbp_err
+struct field *
 kwbp_field_alloc(struct config *cfg, struct strct *s,
-	const char *name, struct field **p)
+	const struct pos *pos, const char *name)
 {
 	struct field	  *fd;
 	const char *const *cp;
 
-	if (NULL != p)
-		*p = NULL;
-
 	/* Check reserved identifiers. */
 
 	for (cp = badidents; NULL != *cp; cp++)
-		if (0 == strcasecmp(*cp, name))
-			return KWBP_RESERVED_NAME;
+		if (0 == strcasecmp(*cp, name)) {
+			kwbp_config_msg(cfg, MSGTYPE_ERROR, 
+				chan, 0, NULL, 
+				"reserved identifier");
+			return NULL;
+		}
 
 	/* Check other fields in struct having same name. */
 
-	TAILQ_FOREACH(fd, &s->fq, entries)
-		if (0 == strcasecmp(fd->name, name))
-			return KWBP_DUPE_NAME;
+	TAILQ_FOREACH(fd, &s->fq, entries) {
+		if (strcasecmp(fd->name, name))
+			continue;
+		if (NULL != fd->pos.fname && fd->pos.line)
+			kwbp_config_msg(cfg, MSGTYPE_ERROR, chan, 0,
+				pos, "duplicate field in struct: "
+				"%s:%zu:%zu", fd->pos.fname, 
+				fd->pos.line, fd->pos.column);
+		else
+			kwbp_config_msg(cfg, MSGTYPE_ERROR, chan, 0, 
+				pos, "duplicate field in struct");
+		return NULL;
+	}
 
 	/* Now the actual allocation. */
 
-	if (NULL == (fd = calloc(1, sizeof(struct field))))
-		goto out;
-	if (NULL == (fd->name = strdup(name)))
-		goto out;
+	if (NULL == (fd = calloc(1, sizeof(struct field)))) {
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
+			chan, errno, pos, NULL);
+		return NULL;
+	} else if (NULL == (fd->name = strdup(name))) {
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
+			chan, errno, pos, NULL);
+		free(fd);
+		return NULL;
+	}
 
+	if (NULL != pos)
+		fd->pos = *pos;
 	fd->type = FTYPE_INT;
 	fd->parent = s;
 	TAILQ_INIT(&fd->fvq);
 	TAILQ_INSERT_TAIL(&s->fq, fd, entries);
-	if (NULL != p)
-		*p = fd;
-	return KWBP_OK;
-out:
-	if (NULL != fd)
-		free(fd->name);
-	free(fd);
-	return KWBP_MEMORY;
+	return fd;
 }
 
-enum kwbp_err
+struct strct *
 kwbp_strct_alloc(struct config *cfg, 
-	const char *name, struct strct **p)
+	const struct pos *pos, const char *name)
 {
 	struct strct	  *s;
 	char		  *caps;
 	const char *const *cp;
 
-	if (NULL != p)
-		*p = NULL;
-
 	/* Check reserved identifiers. */
 
 	for (cp = badidents; NULL != *cp; cp++)
-		if (0 == strcasecmp(*cp, name))
-			return KWBP_RESERVED_NAME;
+		if (0 == strcasecmp(*cp, name)) {
+			kwbp_config_msg(cfg, MSGTYPE_ERROR, 
+				chan, 0, NULL, 
+				"reserved identifier");
+			return NULL;
+		}
 
 	/* Check other toplevels having same name. */
 
-	if ( ! check_dupetoplevel(cfg, name))
-		return KWBP_DUPE_NAME;
+	if ( ! check_dupetoplevel(cfg, pos, name))
+		return NULL;
 
 	/* Now make allocation. */
 
-	if (NULL == (s = calloc(1, sizeof(struct strct))))
-		goto out;
-	if (NULL == (s->name = strdup(name)))
-		goto out;
-	if (NULL == (s->cname = strdup(s->name)))
-		goto out;
+	if (NULL == (s = calloc(1, sizeof(struct strct))) ||
+	    NULL == (s->name = strdup(name)) ||
+	    NULL == (s->cname = strdup(s->name))) {
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
+			chan, errno, pos, NULL);
+		if (NULL != s) {
+			free(s->name);
+			free(s->cname);
+		}
+		free(s);
+		return NULL;
+	}
 
 	for (caps = s->cname; '\0' != *caps; caps++)
 		*caps = toupper((unsigned char)*caps);
 
+	if (NULL != pos)
+		s->pos = *pos;
 	s->cfg = cfg;
 	TAILQ_INSERT_TAIL(&cfg->sq, s, entries);
 	TAILQ_INIT(&s->fq);
@@ -576,18 +629,8 @@ kwbp_strct_alloc(struct config *cfg,
 	TAILQ_INIT(&s->nq);
 	TAILQ_INIT(&s->dq);
 	TAILQ_INIT(&s->rq);
-	if (NULL != p)
-		*p = s;
-	return KWBP_OK;
-out:
-	if (NULL != s) {
-		free(s->name);
-		free(s->cname);
-	}
-	free(s);
-	return KWBP_MEMORY;
+	return s;
 }
-
 
 /*
  * Free all resources from the queue of structures.
@@ -716,7 +759,7 @@ kwbp_config_alloc(void)
  * On memory exhaustion, does nothing.
  */
 void
-kwbp_config_msg(struct config *cfg, enum msgtype type, 
+kwbp_config_msgv(struct config *cfg, enum msgtype type, 
 	const char *chan, int er, const struct pos *pos, 
 	const char *fmt, va_list ap)
 {
@@ -743,10 +786,13 @@ kwbp_config_msg(struct config *cfg, enum msgtype type,
 
 	/* Now we also print the message to stderr. */
 
-	if (NULL != pos)
+	if (NULL != pos && NULL != pos->fname && pos->line > 0)
 		fprintf(stderr, "%s:%zu:%zu: %s %s: ", 
 			pos->fname, pos->line, pos->column, 
 			chan, msgtypes[m->type]);
+	else if (NULL != pos && NULL != pos->fname)
+		fprintf(stderr, "%s: %s %s: ", 
+			pos->fname, chan, msgtypes[m->type]);
 	else 
 		fprintf(stderr, "%s %s: ", chan, msgtypes[m->type]);
 
@@ -760,3 +806,20 @@ kwbp_config_msg(struct config *cfg, enum msgtype type,
 	fputc('\n', stderr);
 }
 
+void
+kwbp_config_msg(struct config *cfg, enum msgtype type, 
+	const char *chan, int er, const struct pos *pos, 
+	const char *fmt, ...)
+{
+	va_list	 ap;
+
+	if (NULL == fmt) {
+		kwbp_config_msgv(cfg, type, 
+			chan, er, pos, NULL, NULL);
+		return;
+	}
+
+	va_start(ap, fmt);
+	kwbp_config_msgv(cfg, type, chan, er, pos, fmt, ap);
+	va_end(ap);
+}

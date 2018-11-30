@@ -33,8 +33,6 @@
 #include "kwebapp.h"
 #include "extern.h"
 
-static	const char *const chan = "internal";
-
 static	const char *const msgtypes[] = {
 	"warning", /* MSGTYPE_WARN */
 	"error", /* MSGTYPE_ERROR */
@@ -512,14 +510,83 @@ found:
 	 */
 
 	if (NULL != npos.fname && npos.line)
-		kwbp_config_msg(cfg, MSGTYPE_ERROR, chan, 0,
+		kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 0,
 			pos, "duplicate top-level name: %s:%zu:%zu",
 			npos.fname, npos.line, npos.column);
 	else
-		kwbp_config_msg(cfg, MSGTYPE_ERROR, chan, 0, 
+		kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 0, 
 			pos, "duplicate top-level name");
 
 	return 0;
+}
+
+int
+kwbp_field_set_ref_foreign(struct config *cfg, 
+	const struct pos *pos, struct field *f, 
+	const char *sname, const char *fname)
+{
+
+	if (NULL != f->ref) {
+		kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 
+			0, NULL, "reference already set");
+		return 0;
+	} else if (NULL == f->name) {
+		kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 
+			0, NULL, "reference source unnamed");
+		return 0;
+	} else if (NULL == (f->ref = calloc(1, sizeof(struct ref)))) {
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+			errno, pos, NULL);
+		return 0;
+	} else if (NULL == (f->ref->sfield = strdup(f->name))) {
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+			errno, pos, NULL);
+		goto out;
+	} else if (NULL == (f->ref->tfield = strdup(fname))) {
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+			errno, pos, NULL);
+		goto out;
+	} else if (NULL == (f->ref->tstrct = strdup(sname))) {
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+			errno, pos, NULL);
+		goto out;
+	}
+
+	f->ref->parent = f;
+	return 1;
+out:
+	free(f->ref->sfield);
+	free(f->ref->tfield);
+	free(f->ref->tstrct);
+	free(f->ref);
+	f->ref = NULL;
+	return 0;
+}
+
+int
+kwbp_field_set_ref_struct(struct config *cfg, 
+	const struct pos *pos, struct field *f, const char *name)
+{
+
+	if (NULL != f->ref) {
+		kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 
+			0, NULL, "reference already set");
+		return 0;
+	} else if (NULL == (f->ref = calloc(1, sizeof(struct ref)))) {
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+			errno, pos, NULL);
+		return 0;
+	} else if (NULL == (f->ref->sfield = strdup(name))) {
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+			errno, pos, NULL);
+		free(f->ref);
+		f->ref = NULL;
+		return 0;
+	}
+
+	f->ref->parent = f;
+	f->type = FTYPE_STRUCT;
+	return 1;
 }
 
 struct field *
@@ -533,9 +600,8 @@ kwbp_field_alloc(struct config *cfg, struct strct *s,
 
 	for (cp = badidents; NULL != *cp; cp++)
 		if (0 == strcasecmp(*cp, name)) {
-			kwbp_config_msg(cfg, MSGTYPE_ERROR, 
-				chan, 0, NULL, 
-				"reserved identifier");
+			kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 
+				0, NULL, "reserved identifier");
 			return NULL;
 		}
 
@@ -545,25 +611,25 @@ kwbp_field_alloc(struct config *cfg, struct strct *s,
 		if (strcasecmp(fd->name, name))
 			continue;
 		if (NULL != fd->pos.fname && fd->pos.line)
-			kwbp_config_msg(cfg, MSGTYPE_ERROR, chan, 0,
-				pos, "duplicate field in struct: "
+			kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 
+				0, pos, "duplicate field name: "
 				"%s:%zu:%zu", fd->pos.fname, 
 				fd->pos.line, fd->pos.column);
 		else
-			kwbp_config_msg(cfg, MSGTYPE_ERROR, chan, 0, 
-				pos, "duplicate field in struct");
+			kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 
+				0, pos, "duplicate field name");
 		return NULL;
 	}
 
 	/* Now the actual allocation. */
 
 	if (NULL == (fd = calloc(1, sizeof(struct field)))) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
-			chan, errno, pos, NULL);
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+			errno, pos, NULL);
 		return NULL;
 	} else if (NULL == (fd->name = strdup(name))) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
-			chan, errno, pos, NULL);
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+			errno, pos, NULL);
 		free(fd);
 		return NULL;
 	}
@@ -590,7 +656,7 @@ kwbp_strct_alloc(struct config *cfg,
 	for (cp = badidents; NULL != *cp; cp++)
 		if (0 == strcasecmp(*cp, name)) {
 			kwbp_config_msg(cfg, MSGTYPE_ERROR, 
-				chan, 0, NULL, 
+				__func__, 0, NULL, 
 				"reserved identifier");
 			return NULL;
 		}
@@ -605,8 +671,8 @@ kwbp_strct_alloc(struct config *cfg,
 	if (NULL == (s = calloc(1, sizeof(struct strct))) ||
 	    NULL == (s->name = strdup(name)) ||
 	    NULL == (s->cname = strdup(s->name))) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
-			chan, errno, pos, NULL);
+		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+			errno, pos, NULL);
 		if (NULL != s) {
 			free(s->name);
 			free(s->cname);

@@ -1333,20 +1333,22 @@ parse_field_enum(struct parse *p, struct field *fd)
 }
 
 /*
- * Read an individual field declaration.
- * Its syntax is:
+ * Read an individual field declaration with syntax
  *
  *   [:refstruct.reffield] TYPE TYPEINFO
  *
  * By default, fields are integers.  TYPE can be "int", "integer",
- * "text", or "txt".  
+ * "text", "txt", etc.
  * A reference clause triggers a foreign key reference.
+ * A "struct" type triggers a local key reference.
  * The TYPEINFO depends upon the type and is processed by
- * parse_config_field_info().
+ * parse_config_field_info(), which must always be run.
  */
 static void
 parse_field(struct parse *p, struct field *fd)
 {
+	struct pos	 pos;
+	char		*sn;
 
 	if (TOK_SEMICOLON == parse_next(p))
 		return;
@@ -1354,52 +1356,36 @@ parse_field(struct parse *p, struct field *fd)
 	/* Check if this is a reference. */
 
 	if (TOK_COLON == p->lasttype) {
-		fd->ref = calloc(1, sizeof(struct ref));
-		if (NULL == fd->ref) {
-			parse_err(p);
-			return;
-		}
-
-		fd->ref->parent = fd;
-		fd->ref->sfield = strdup(fd->name);
-		if (NULL == fd->ref->sfield) {
-			parse_err(p);
-			return;
-		}
-
+		parse_point(p, &pos);
 		if (TOK_IDENT != parse_next(p)) {
 			parse_errx(p, "expected target struct");
 			return;
-		}
-		fd->ref->tstrct = strdup(p->last.string);
-		if (NULL == fd->ref->tstrct) {
+		} else if (NULL == (sn = strdup(p->last.string))) {
 			parse_err(p);
 			return;
-		}
-
-		if (TOK_PERIOD != parse_next(p)) {
+		} else if (TOK_PERIOD != parse_next(p)) {
 			parse_errx(p, "expected period");
+			free(sn);
 			return;
-		}
-
-		if (TOK_IDENT != parse_next(p)) {
+		} else if (TOK_IDENT != parse_next(p)) {
 			parse_errx(p, "expected target field");
+			free(sn);
 			return;
-		}
-		fd->ref->tfield = strdup(p->last.string);
-		if (NULL == fd->ref->tfield) {
-			parse_err(p);
-			return;
-		}
+		} 
 
+		if ( ! kwbp_field_set_ref_foreign
+		    (p->cfg, &pos, fd, sn, p->last.string)) {
+			free(sn);
+			return;
+		}
+		free(sn);
 		if (TOK_SEMICOLON == parse_next(p))
 			return;
+	} 
+	
+	/* Now we're on to the "type" field. */
 
-		if (TOK_IDENT != p->lasttype) {
-			parse_errx(p, "expected field type");
-			return;
-		}
-	} else if (TOK_IDENT != p->lasttype) {
+	if (TOK_IDENT != p->lasttype) {
 		parse_errx(p, "expected field type");
 		return;
 	}
@@ -1483,29 +1469,21 @@ parse_field(struct parse *p, struct field *fd)
 		return;
 	}
 
-	fd->type = FTYPE_STRUCT;
+	/* 
+	 * struct needs special handling because we need to link the
+	 * name of the field, which may be "below" us in the parse.
+	 * So simply store the name here and we'll resolve it when we
+	 * running the link phase.
+	 */
 
-	if (NULL != fd->ref) {
-		parse_errx(p, "reference cannot self-define target");
-		return;
-	} 
-	
-	if (NULL == (fd->ref = calloc(1, sizeof(struct ref)))) {
-		parse_err(p);
-		return;
-	}
-
-	fd->ref->parent = fd;
-
+	parse_point(p, &pos);
 	if (TOK_IDENT != parse_next(p)) {
 		parse_errx(p, "expected source field");
 		return;
 	} 
-	
-	if (NULL == (fd->ref->sfield = strdup(p->last.string))) {
-		parse_err(p);
+	if ( ! kwbp_field_set_ref_struct
+	    (p->cfg, &pos, fd, p->last.string))
 		return;
-	}
 
 	parse_config_field_info(p, fd);
 }

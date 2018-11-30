@@ -631,6 +631,12 @@ struct strct	*kwbp_strct_alloc(struct config *,
 			const struct pos *, const char *);
 struct field	*kwbp_field_alloc(struct config *, struct strct *, 
 			const struct pos *, const char *);
+int		 kwbp_field_set_ref_struct(struct config *, 
+			const struct pos *, struct field *, 
+			const char *);
+int		 kwbp_field_set_ref_foreign(struct config *, 
+			const struct pos *, struct field *, 
+			const char *, const char *);
 
 
 __END_DECLS

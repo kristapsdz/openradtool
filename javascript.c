@@ -711,8 +711,9 @@ gen_javascript(const struct config *cfg, int tsc)
 	print_commentv(1, COMMENT_JS,
 		"Internal function for filling a structure field.\n"
 		"This first does the has/no class setting for "
-		"null values, then optionally returns if null, "
-		"then the generic text/value/etc fills, then "
+		"null values, then optionally returns if null "
+		"(running the custom fields first), "
+		"otherwise the generic text/value/etc fields, then "
 		"finally the custom fields.\n"
 		"@param {HTMLElement} e - The root of the "
 		"DOM tree in which we query for elements to fill "
@@ -763,8 +764,17 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "\t\t\t}\n"
 	     "\t\t}\n"
 	     "\t\t/* Don't process null values that can be null. */\n"
-	     "\t\tif (cannull && null === obj)\n"
+	     "\t\tif (cannull && null === obj) {\n"
+	     "\t\t\tif (null !== custom && fname in custom) {\n"
+	     "\t\t\t\tif (custom[fname] instanceof Array) {\n"
+	     "\t\t\t\t\tfor (i = 0; i < custom[fname].length; i++)\n"
+	     "\t\t\t\t\t\tcustom[fname][i](e, fname, null);\n"
+	     "\t\t\t\t} else {\n"
+	     "\t\t\t\t\tcustom[fname](e, fname, null);\n"
+	     "\t\t\t\t}\n"
+	     "\t\t\t}\n"
 	     "\t\t\treturn;\n"
+	     "\t\t}\n"
 	     "\t\t/* Non-null non-structs. */\n"
 	     "\t\t/* Don't account for blobs. */\n"
 	     "\t\tif (null !== sub) {\n"
@@ -1061,8 +1071,6 @@ gen_javascript(const struct config *cfg, int tsc)
 			"e", "HTMLElement|null",
 			"name", "string", 
 			"custom?", "DataCallbacks|null", NULL);
-		gen_vars(tsc, 3, "i", "number", 
-			"list", "HTMLElement[]", NULL);
 		printf("\t\t\tthis._fillByClass(e, name, true, custom);\n"
 		       "\t\t}%s\n"
 		       "\n", tsc ? "" : ";");
@@ -1084,8 +1092,6 @@ gen_javascript(const struct config *cfg, int tsc)
 			"e", "HTMLElement|null",
 			"name", "string", 
 			"custom?", "DataCallbacks|null", NULL);
-		gen_vars(tsc, 3, "i", "number", 
-			"list", "HTMLElement[]", NULL);
 		printf("\t\t\tthis._fillByClass(e, name, false, custom);\n"
 		       "\t\t}%s\n"
 		       "\n", tsc ? "" : ";");
@@ -1314,6 +1320,33 @@ gen_javascript(const struct config *cfg, int tsc)
 			tsc ? "<HTMLElement>" : "",
 			tsc ? "<HTMLElement>" : "",
 			tsc ? "" : ";");
+
+		print_commentv(2, COMMENT_JS,
+			"Like {@link %s.%s#fillArray} but instead of "
+			"accepting a single element to fill, filling "
+			"all elements by class name beneath the "
+			"given root (non-inclusive).\n"
+			"@param {HTMLElement} e - The DOM element.\n"
+			"@param {String} name - The name of the class "
+			"into which to fill.\n"
+			"@param {%s.DataCallbacks} custom - The optional "
+			"custom handler dictionary (see {@link "
+			"%s.%s#fill} for details).\n"
+			"@function fillArrayByClass\n"
+			"@memberof %s.%s#",
+			ns, s->name, ns, ns, s->name, ns, s->name);
+		gen_class_proto(tsc, 0, s->name, 
+			"void", "fillArrayByClass",
+			"e", "HTMLElement|null",
+			"name", "string", 
+			"custom?", "DataCallbacks", NULL);
+		gen_vars(tsc, 3, "i", "number", 
+			"list", "HTMLElement[]", NULL);
+		printf("\t\t\tlist = _elemList(e, name, false);\n"
+	     	       "\t\t\tfor (i = 0; i < list.length; i++)\n"
+		       "\t\t\t\tthis.fillArray(list[i], custom);\n"
+		       "\t\t}%s\n"
+		       "\n", tsc ? "" : ";");
 
 		if ( ! tsc)
 			printf("\t\treturn %s;\n", s->name);

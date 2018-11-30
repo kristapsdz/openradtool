@@ -33,7 +33,7 @@
 
 #include "version.h"
 #include "paths.h"
-#include "kwebapp.h"
+#include "ort.h"
 #include "extern.h"
 
 enum	external {
@@ -2803,17 +2803,17 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	cfg = kwbp_config_alloc();
+	cfg = ort_config_alloc();
 
 	for (i = 0; i < confsz; i++)
-		if ( ! kwbp_parse_file_r(cfg, confs[i], argv[i]))
+		if ( ! ort_parse_file_r(cfg, confs[i], argv[i]))
 			goto out;
 
 	if (0 == confsz && 
-	    ! kwbp_parse_file_r(cfg, stdin, "<stdin>"))
+	    ! ort_parse_file_r(cfg, stdin, "<stdin>"))
 		goto out;
 
-	if (0 != (rc = kwbp_parse_close(cfg)))
+	if (0 != (rc = ort_parse_close(cfg)))
 		rc = gen_c_source(cfg, json, jsonparse, valids, 
 			splitproc, dbin, header, incls, exs);
 
@@ -2825,7 +2825,7 @@ out:
 		if (NULL != confs[i] && EOF == fclose(confs[i]))
 			warn("%s", argv[i]);
 	free(confs);
-	kwbp_config_free(cfg);
+	ort_config_free(cfg);
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 

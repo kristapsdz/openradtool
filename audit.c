@@ -28,7 +28,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "kwebapp.h"
+#include "ort.h"
 #include "extern.h"
 
 #define	SPACE	"\t" /* Space for output indentation. */
@@ -998,16 +998,16 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	cfg = kwbp_config_alloc();
+	cfg = ort_config_alloc();
 
 	for (i = 0; i < confsz; i++)
-		if ( ! kwbp_parse_file_r(cfg, confs[i], argv[i]))
+		if ( ! ort_parse_file_r(cfg, confs[i], argv[i]))
 			goto out;
 
 	if (0 == confsz && 
-	    ! kwbp_parse_file_r(cfg, stdin, "<stdin>"))
+	    ! ort_parse_file_r(cfg, stdin, "<stdin>"))
 		goto out;
-	if ( ! kwbp_parse_close(cfg))
+	if ( ! ort_parse_close(cfg))
 		goto out;
 
 	if (OP_AUDIT == op)
@@ -1022,7 +1022,7 @@ out:
 		if (NULL != confs[i] && EOF == fclose(confs[i]))
 			warn("%s", argv[i]);
 	free(confs);
-	kwbp_config_free(cfg);
+	ort_config_free(cfg);
 
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:

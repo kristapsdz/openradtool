@@ -14,8 +14,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KWEBAPP_H
-#define KWEBAPP_H
+#ifndef ORT_H
+#define ORT_H
 
 /*
  * We use many queues.
@@ -609,36 +609,36 @@ struct	config {
 
 __BEGIN_DECLS
 
-struct config	*kwbp_config_alloc(void);
-void		 kwbp_config_free(struct config *);
-void		 kwbp_config_msgv(struct config *, enum msgtype, 
+struct config	*ort_config_alloc(void);
+void		 ort_config_free(struct config *);
+void		 ort_config_msgv(struct config *, enum msgtype, 
 			const char *, int, const struct pos *, 
 			const char *, va_list);
-void		 kwbp_config_msg(struct config *, enum msgtype, 
+void		 ort_config_msg(struct config *, enum msgtype, 
 			const char *, int, const struct pos *, 
 			const char *, ...);
 
-int		 kwbp_parse_close(struct config *);
-int		 kwbp_parse_file_r(struct config *, FILE *, const char *);
+int		 ort_parse_close(struct config *);
+int		 ort_parse_file_r(struct config *, FILE *, const char *);
 
-struct config	*kwbp_parse_file(FILE *, const char *);
-struct config	*kwbp_parse_buf(const char *, size_t);
+struct config	*ort_parse_file(FILE *, const char *);
+struct config	*ort_parse_buf(const char *, size_t);
 
-char		*kwbp_write_buf(const struct config *);
-int		 kwbp_write_file(FILE *, const struct config *);
+char		*ort_write_buf(const struct config *);
+int		 ort_write_file(FILE *, const struct config *);
 
-struct strct	*kwbp_strct_alloc(struct config *, 
+struct strct	*ort_strct_alloc(struct config *, 
 			const struct pos *, const char *);
-struct field	*kwbp_field_alloc(struct config *, struct strct *, 
+struct field	*ort_field_alloc(struct config *, struct strct *, 
 			const struct pos *, const char *);
-int		 kwbp_field_set_ref_struct(struct config *, 
+int		 ort_field_set_ref_struct(struct config *, 
 			const struct pos *, struct field *, 
 			const char *);
-int		 kwbp_field_set_ref_foreign(struct config *, 
+int		 ort_field_set_ref_foreign(struct config *, 
 			const struct pos *, struct field *, 
 			const char *, const char *);
 
 
 __END_DECLS
 
-#endif /* !KWEBAPP_H */
+#endif /* !ORT_H */

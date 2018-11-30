@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "kwebapp.h"
+#include "ort.h"
 #include "extern.h"
 
 static	const char *const stypes[] = {
@@ -770,7 +770,7 @@ parse_write_roles(struct writer *w, const struct config *cfg)
 }
 
 int
-kwbp_write_file(FILE *f, const struct config *cfg)
+ort_write_file(FILE *f, const struct config *cfg)
 {
 	const struct strct *s;
 	const struct enm   *e;
@@ -799,7 +799,7 @@ out:
 }
 
 char *
-kwbp_write_buf(const struct config *cfg)
+ort_write_buf(const struct config *cfg)
 {
 	const struct strct *s;
 	const struct enm   *e;

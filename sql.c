@@ -29,7 +29,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "kwebapp.h"
+#include "ort.h"
 #include "extern.h"
 
 static	const char *const realtypes[FTYPE__MAX] = {
@@ -718,28 +718,28 @@ main(int argc, char *argv[])
 
 	assert(confsz + dconfsz > 0 || ! diff);
 
-	cfg = kwbp_config_alloc();
-	dcfg = kwbp_config_alloc();
+	cfg = ort_config_alloc();
+	dcfg = ort_config_alloc();
 
 	for (i = 0; i < confsz; i++)
-		if ( ! kwbp_parse_file_r(cfg, confs[i], argv[confst + i]))
+		if ( ! ort_parse_file_r(cfg, confs[i], argv[confst + i]))
 			goto out;
 
 	if (0 == confsz &&
-	    ! kwbp_parse_file_r(cfg, stdin, "<stdin>"))
+	    ! ort_parse_file_r(cfg, stdin, "<stdin>"))
 			goto out;
 
 	for (i = 0; i < dconfsz; i++)
-		if ( ! kwbp_parse_file_r(dcfg, dconfs[i], argv[i]))
+		if ( ! ort_parse_file_r(dcfg, dconfs[i], argv[i]))
 			goto out;
 
 	if (0 == dconfsz && diff &&
-	    ! kwbp_parse_file_r(dcfg, stdin, "<stdin>"))
+	    ! ort_parse_file_r(dcfg, stdin, "<stdin>"))
 			goto out;
 
-	if ( ! kwbp_parse_close(cfg))
+	if ( ! ort_parse_close(cfg))
 		goto out;
-	if (diff && ! kwbp_parse_close(dcfg))
+	if (diff && ! ort_parse_close(dcfg))
 		goto out;
 
 	if ( ! diff) {
@@ -757,7 +757,7 @@ out:
 			warn("%s", argv[i]);
 	free(confs);
 	free(dconfs);
-	kwbp_config_free(cfg);
+	ort_config_free(cfg);
 
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 

@@ -30,7 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "kwebapp.h"
+#include "ort.h"
 #include "extern.h"
 
 static	const char *const msgtypes[] = {
@@ -510,44 +510,44 @@ found:
 	 */
 
 	if (NULL != npos.fname && npos.line)
-		kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 0,
+		ort_config_msg(cfg, MSGTYPE_ERROR, __func__, 0,
 			pos, "duplicate top-level name: %s:%zu:%zu",
 			npos.fname, npos.line, npos.column);
 	else
-		kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 0, 
+		ort_config_msg(cfg, MSGTYPE_ERROR, __func__, 0, 
 			pos, "duplicate top-level name");
 
 	return 0;
 }
 
 int
-kwbp_field_set_ref_foreign(struct config *cfg, 
+ort_field_set_ref_foreign(struct config *cfg, 
 	const struct pos *pos, struct field *f, 
 	const char *sname, const char *fname)
 {
 
 	if (NULL != f->ref) {
-		kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 
+		ort_config_msg(cfg, MSGTYPE_ERROR, __func__, 
 			0, NULL, "reference already set");
 		return 0;
 	} else if (NULL == f->name) {
-		kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 
+		ort_config_msg(cfg, MSGTYPE_ERROR, __func__, 
 			0, NULL, "reference source unnamed");
 		return 0;
 	} else if (NULL == (f->ref = calloc(1, sizeof(struct ref)))) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+		ort_config_msg(cfg, MSGTYPE_FATAL, __func__, 
 			errno, pos, NULL);
 		return 0;
 	} else if (NULL == (f->ref->sfield = strdup(f->name))) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+		ort_config_msg(cfg, MSGTYPE_FATAL, __func__, 
 			errno, pos, NULL);
 		goto out;
 	} else if (NULL == (f->ref->tfield = strdup(fname))) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+		ort_config_msg(cfg, MSGTYPE_FATAL, __func__, 
 			errno, pos, NULL);
 		goto out;
 	} else if (NULL == (f->ref->tstrct = strdup(sname))) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+		ort_config_msg(cfg, MSGTYPE_FATAL, __func__, 
 			errno, pos, NULL);
 		goto out;
 	}
@@ -564,20 +564,20 @@ out:
 }
 
 int
-kwbp_field_set_ref_struct(struct config *cfg, 
+ort_field_set_ref_struct(struct config *cfg, 
 	const struct pos *pos, struct field *f, const char *name)
 {
 
 	if (NULL != f->ref) {
-		kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 
+		ort_config_msg(cfg, MSGTYPE_ERROR, __func__, 
 			0, NULL, "reference already set");
 		return 0;
 	} else if (NULL == (f->ref = calloc(1, sizeof(struct ref)))) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+		ort_config_msg(cfg, MSGTYPE_FATAL, __func__, 
 			errno, pos, NULL);
 		return 0;
 	} else if (NULL == (f->ref->sfield = strdup(name))) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+		ort_config_msg(cfg, MSGTYPE_FATAL, __func__, 
 			errno, pos, NULL);
 		free(f->ref);
 		f->ref = NULL;
@@ -590,7 +590,7 @@ kwbp_field_set_ref_struct(struct config *cfg,
 }
 
 struct field *
-kwbp_field_alloc(struct config *cfg, struct strct *s,
+ort_field_alloc(struct config *cfg, struct strct *s,
 	const struct pos *pos, const char *name)
 {
 	struct field	  *fd;
@@ -600,7 +600,7 @@ kwbp_field_alloc(struct config *cfg, struct strct *s,
 
 	for (cp = badidents; NULL != *cp; cp++)
 		if (0 == strcasecmp(*cp, name)) {
-			kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 
+			ort_config_msg(cfg, MSGTYPE_ERROR, __func__, 
 				0, NULL, "reserved identifier");
 			return NULL;
 		}
@@ -611,12 +611,12 @@ kwbp_field_alloc(struct config *cfg, struct strct *s,
 		if (strcasecmp(fd->name, name))
 			continue;
 		if (NULL != fd->pos.fname && fd->pos.line)
-			kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 
+			ort_config_msg(cfg, MSGTYPE_ERROR, __func__, 
 				0, pos, "duplicate field name: "
 				"%s:%zu:%zu", fd->pos.fname, 
 				fd->pos.line, fd->pos.column);
 		else
-			kwbp_config_msg(cfg, MSGTYPE_ERROR, __func__, 
+			ort_config_msg(cfg, MSGTYPE_ERROR, __func__, 
 				0, pos, "duplicate field name");
 		return NULL;
 	}
@@ -624,11 +624,11 @@ kwbp_field_alloc(struct config *cfg, struct strct *s,
 	/* Now the actual allocation. */
 
 	if (NULL == (fd = calloc(1, sizeof(struct field)))) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+		ort_config_msg(cfg, MSGTYPE_FATAL, __func__, 
 			errno, pos, NULL);
 		return NULL;
 	} else if (NULL == (fd->name = strdup(name))) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+		ort_config_msg(cfg, MSGTYPE_FATAL, __func__, 
 			errno, pos, NULL);
 		free(fd);
 		return NULL;
@@ -644,7 +644,7 @@ kwbp_field_alloc(struct config *cfg, struct strct *s,
 }
 
 struct strct *
-kwbp_strct_alloc(struct config *cfg, 
+ort_strct_alloc(struct config *cfg, 
 	const struct pos *pos, const char *name)
 {
 	struct strct	  *s;
@@ -655,7 +655,7 @@ kwbp_strct_alloc(struct config *cfg,
 
 	for (cp = badidents; NULL != *cp; cp++)
 		if (0 == strcasecmp(*cp, name)) {
-			kwbp_config_msg(cfg, MSGTYPE_ERROR, 
+			ort_config_msg(cfg, MSGTYPE_ERROR, 
 				__func__, 0, NULL, 
 				"reserved identifier");
 			return NULL;
@@ -671,7 +671,7 @@ kwbp_strct_alloc(struct config *cfg,
 	if (NULL == (s = calloc(1, sizeof(struct strct))) ||
 	    NULL == (s->name = strdup(name)) ||
 	    NULL == (s->cname = strdup(s->name))) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, __func__, 
+		ort_config_msg(cfg, MSGTYPE_FATAL, __func__, 
 			errno, pos, NULL);
 		if (NULL != s) {
 			free(s->name);
@@ -703,7 +703,7 @@ kwbp_strct_alloc(struct config *cfg,
  * Does nothing if "q" is empty or NULL.
  */
 void
-kwbp_config_free(struct config *cfg)
+ort_config_free(struct config *cfg)
 {
 	struct strct	*p;
 	struct field	*f;
@@ -790,7 +790,7 @@ kwbp_config_free(struct config *cfg)
 }
 
 struct config *
-kwbp_config_alloc(void)
+ort_config_alloc(void)
 {
 	struct config	*cfg;
 
@@ -825,7 +825,7 @@ kwbp_config_alloc(void)
  * On memory exhaustion, does nothing.
  */
 void
-kwbp_config_msgv(struct config *cfg, enum msgtype type, 
+ort_config_msgv(struct config *cfg, enum msgtype type, 
 	const char *chan, int er, const struct pos *pos, 
 	const char *fmt, va_list ap)
 {
@@ -873,19 +873,19 @@ kwbp_config_msgv(struct config *cfg, enum msgtype type,
 }
 
 void
-kwbp_config_msg(struct config *cfg, enum msgtype type, 
+ort_config_msg(struct config *cfg, enum msgtype type, 
 	const char *chan, int er, const struct pos *pos, 
 	const char *fmt, ...)
 {
 	va_list	 ap;
 
 	if (NULL == fmt) {
-		kwbp_config_msgv(cfg, type, 
+		ort_config_msgv(cfg, type, 
 			chan, er, pos, NULL, NULL);
 		return;
 	}
 
 	va_start(ap, fmt);
-	kwbp_config_msgv(cfg, type, chan, er, pos, fmt, ap);
+	ort_config_msgv(cfg, type, chan, er, pos, fmt, ap);
 	va_end(ap);
 }

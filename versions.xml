@@ -3,6 +3,22 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.6.7</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-11-23">2018-11-23</time>
+		</header>
+		<aside>
+			<p>
+				Fix that custom handlers are invoked for null values if null values
+				are allowed by the configuration.
+			</p>
+			<p>
+				Add <code>fillArrayByClass</code>, which is like
+				<code>fillArray</code> but invoked over matching classes.
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.6.6</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-11-23">2018-11-23</time>

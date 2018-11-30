@@ -31,7 +31,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "kwebapp.h"
+#include "ort.h"
 #include "extern.h"
 
 /*
@@ -336,11 +336,11 @@ parse_warnx(struct parse *p, const char *fmt, ...)
 
 	if (NULL != fmt) {
 		va_start(ap, fmt);
-		kwbp_config_msgv(p->cfg, MSGTYPE_WARN, 
+		ort_config_msgv(p->cfg, MSGTYPE_WARN, 
 			channel, 0, &pos, fmt, ap);
 		va_end(ap);
 	} else
-		kwbp_config_msgv(p->cfg, MSGTYPE_WARN, 
+		ort_config_msgv(p->cfg, MSGTYPE_WARN, 
 			channel, 0, &pos, NULL, NULL);
 }
 
@@ -354,7 +354,7 @@ parse_err(struct parse *p)
 	pos.line = p->line;
 	pos.column = p->column;
 
-	kwbp_config_msgv(p->cfg, MSGTYPE_FATAL, 
+	ort_config_msgv(p->cfg, MSGTYPE_FATAL, 
 		channel, er, &pos, NULL, NULL);
 
 	p->lasttype = TOK_ERR;
@@ -373,11 +373,11 @@ parse_errx(struct parse *p, const char *fmt, ...)
 
 	if (NULL != fmt) {
 		va_start(ap, fmt);
-		kwbp_config_msgv(p->cfg, MSGTYPE_ERROR, 
+		ort_config_msgv(p->cfg, MSGTYPE_ERROR, 
 			channel, 0, &pos, fmt, ap);
 		va_end(ap);
 	} else
-		kwbp_config_msgv(p->cfg, MSGTYPE_ERROR, 
+		ort_config_msgv(p->cfg, MSGTYPE_ERROR, 
 			channel, 0, &pos, NULL, NULL);
 
 	p->lasttype = TOK_ERR;
@@ -1373,7 +1373,7 @@ parse_field(struct parse *p, struct field *fd)
 			return;
 		} 
 
-		if ( ! kwbp_field_set_ref_foreign
+		if ( ! ort_field_set_ref_foreign
 		    (p->cfg, &pos, fd, sn, p->last.string)) {
 			free(sn);
 			return;
@@ -1481,7 +1481,7 @@ parse_field(struct parse *p, struct field *fd)
 		parse_errx(p, "expected source field");
 		return;
 	} 
-	if ( ! kwbp_field_set_ref_struct
+	if ( ! ort_field_set_ref_struct
 	    (p->cfg, &pos, fd, p->last.string))
 		return;
 
@@ -2666,7 +2666,7 @@ parse_struct_data(struct parse *p, struct strct *s)
 		} 
 		
 		parse_point(p, &pos);
-		fd = kwbp_field_alloc(p->cfg, s, &pos, p->last.string);
+		fd = ort_field_alloc(p->cfg, s, &pos, p->last.string);
 		if (NULL == fd)
 			return;
 		parse_field(p, fd);
@@ -3095,7 +3095,7 @@ parse_struct(struct parse *p)
 	struct pos	 pos;
 
 	parse_point(p, &pos);
-	s = kwbp_strct_alloc(p->cfg, &pos, p->last.string);
+	s = ort_strct_alloc(p->cfg, &pos, p->last.string);
 	if (NULL == s)
 		return;
 	parse_struct_data(p, s);
@@ -3116,7 +3116,7 @@ parse_struct(struct parse *p)
  * Returns zero on failure, non-zero otherwise.
  */
 static int
-kwbp_parse_r(struct parse *p)
+ort_parse_r(struct parse *p)
 {
 
 	for (;;) {
@@ -3164,7 +3164,7 @@ kwbp_parse_r(struct parse *p)
 }
 
 int
-kwbp_parse_file_r(struct config *cfg, FILE *f, const char *fname)
+ort_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 {
 	struct parse	 p;
 	int		 rc = 0;
@@ -3173,7 +3173,7 @@ kwbp_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 	pp = reallocarray(cfg->fnames, 
 		cfg->fnamesz + 1, sizeof(char *));
 	if (NULL == pp) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
+		ort_config_msg(cfg, MSGTYPE_FATAL, 
 			channel, errno, NULL, NULL);
 		return 0;
 	}
@@ -3182,7 +3182,7 @@ kwbp_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 
 	cfg->fnames[cfg->fnamesz - 1] = strdup(fname);
 	if (NULL == cfg->fnames[cfg->fnamesz - 1]) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
+		ort_config_msg(cfg, MSGTYPE_FATAL, 
 			channel, errno, NULL, NULL);
 		return 0;
 	}
@@ -3194,29 +3194,29 @@ kwbp_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 	p.infile.f = f;
 	p.type = PARSETYPE_FILE;
 	p.cfg = cfg;
-	rc = kwbp_parse_r(&p);
+	rc = ort_parse_r(&p);
 	free(p.buf);
 	return rc;
 }
 
 struct config *
-kwbp_parse_buf(const char *buf, size_t len)
+ort_parse_buf(const char *buf, size_t len)
 {
 	struct parse	 p;
 	int		 rc = 0;
 	struct config	*cfg;
 	void		*pp;
 
-	if (NULL == (cfg = kwbp_config_alloc()))
+	if (NULL == (cfg = ort_config_alloc()))
 		return NULL;
 
 	pp = reallocarray(cfg->fnames, 
 		 cfg->fnamesz + 1, sizeof(char *));
 
 	if (NULL == pp) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
+		ort_config_msg(cfg, MSGTYPE_FATAL, 
 			channel, errno, NULL, NULL);
-		kwbp_config_free(cfg);
+		ort_config_free(cfg);
 		return NULL;
 	}
 
@@ -3225,9 +3225,9 @@ kwbp_parse_buf(const char *buf, size_t len)
 
 	cfg->fnames[cfg->fnamesz - 1] = strdup("<buffer>");
 	if (NULL == cfg->fnames[cfg->fnamesz - 1]) {
-		kwbp_config_msg(cfg, MSGTYPE_FATAL, 
+		ort_config_msg(cfg, MSGTYPE_FATAL, 
 			channel, errno, NULL, NULL);
-		kwbp_config_free(cfg);
+		ort_config_free(cfg);
 		return NULL;
 	}
 
@@ -3240,27 +3240,27 @@ kwbp_parse_buf(const char *buf, size_t len)
 	p.type = PARSETYPE_BUF;
 	p.cfg = cfg;
 
-	rc = kwbp_parse_r(&p);
+	rc = ort_parse_r(&p);
 	free(p.buf);
 
-	if (0 == rc || 0 == kwbp_parse_close(cfg)) {
-		kwbp_config_free(cfg);
+	if (0 == rc || 0 == ort_parse_close(cfg)) {
+		ort_config_free(cfg);
 		return NULL;
 	}
 	return cfg;
 }
 
 struct config *
-kwbp_parse_file(FILE *f, const char *fname)
+ort_parse_file(FILE *f, const char *fname)
 {
 	struct config	*cfg;
 
-	if (NULL == (cfg = kwbp_config_alloc()))
+	if (NULL == (cfg = ort_config_alloc()))
 		return NULL;
 
-	if (0 == kwbp_parse_file_r(cfg, f, fname) ||
-	    0 == kwbp_parse_close(cfg)) {
-		kwbp_config_free(cfg);
+	if (0 == ort_parse_file_r(cfg, f, fname) ||
+	    0 == ort_parse_close(cfg)) {
+		ort_config_free(cfg);
 		return NULL;
 	}
 

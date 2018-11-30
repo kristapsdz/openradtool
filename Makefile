@@ -54,7 +54,7 @@ DOTAR		 = audit.c \
 		   jsmn.c \
 		   $(MAN1S) \
 		   kwebapp.5 \
-		   kwebapp.h \
+		   ort.h \
 		   linker.c \
 		   Makefile \
 		   main.c \
@@ -107,38 +107,38 @@ afl::
 	$(MAKE) all CC=afl-gcc
 	cp $(BINS) afl
 
-kwebapp: main.o libkwebapp.a
-	$(CC) -o $@ main.o libkwebapp.a
+kwebapp: main.o libort.a
+	$(CC) -o $@ main.o libort.a
 
-libkwebapp.a: $(LIBOBJS)
+libort.a: $(LIBOBJS)
 	$(AR) rs $@ $(LIBOBJS)
 
-kwebapp-c-source: source.o libkwebapp.a
-	$(CC) -o $@ source.o libkwebapp.a
+kwebapp-c-source: source.o libort.a
+	$(CC) -o $@ source.o libort.a
 
-kwebapp-c-header: header.o libkwebapp.a
-	$(CC) -o $@ header.o libkwebapp.a
+kwebapp-c-header: header.o libort.a
+	$(CC) -o $@ header.o libort.a
 
-kwebapp-javascript: javascript.o libkwebapp.a
-	$(CC) -o $@ javascript.o libkwebapp.a
+kwebapp-javascript: javascript.o libort.a
+	$(CC) -o $@ javascript.o libort.a
 
-kwebapp-sql: sql.o libkwebapp.a
-	$(CC) -o $@ sql.o libkwebapp.a
+kwebapp-sql: sql.o libort.a
+	$(CC) -o $@ sql.o libort.a
 
-kwebapp-sqldiff: sql.o libkwebapp.a
-	$(CC) -o $@ sql.o libkwebapp.a
+kwebapp-sqldiff: sql.o libort.a
+	$(CC) -o $@ sql.o libort.a
 
-kwebapp-audit: audit.o libkwebapp.a
-	$(CC) -o $@ audit.o libkwebapp.a
+kwebapp-audit: audit.o libort.a
+	$(CC) -o $@ audit.o libort.a
 
-kwebapp-audit-gv: audit.o libkwebapp.a
-	$(CC) -o $@ audit.o libkwebapp.a
+kwebapp-audit-gv: audit.o libort.a
+	$(CC) -o $@ audit.o libort.a
 
-kwebapp-audit-json: audit.o libkwebapp.a
-	$(CC) -o $@ audit.o libkwebapp.a
+kwebapp-audit-json: audit.o libort.a
+	$(CC) -o $@ audit.o libort.a
 
-kwebapp-xliff: xliff.o libkwebapp.a
-	$(CC) -o $@ xliff.o libkwebapp.a -lexpat
+kwebapp-xliff: xliff.o libort.a
+	$(CC) -o $@ xliff.o libort.a -lexpat
 
 www: $(IMAGES) $(HTMLS) kwebapp.tar.gz kwebapp.tar.gz.sha512 atom.xml
 
@@ -235,7 +235,7 @@ db.db: db.sql
 	rm -f $@
 	sqlite3 $@ < db.sql
 
-$(LIBOBJS): config.h extern.h kwebapp.h
+$(LIBOBJS): config.h extern.h ort.h
 
 .5.5.html:
 	mandoc -Thtml -Ostyle=mandoc.css $< >$@
@@ -327,7 +327,7 @@ atom.xml: versions.xml
 	sblg -s date -a versions.xml >$@
 
 clean:
-	rm -f $(BINS) version.h paths.h $(LIBOBJS) libkwebapp.a test test.o
+	rm -f $(BINS) version.h paths.h $(LIBOBJS) libort.a test test.o
 	rm -f db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db db.trans.txt
 	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml

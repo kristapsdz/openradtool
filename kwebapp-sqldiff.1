@@ -26,8 +26,8 @@
 .Op Ar oldconfig...
 .Fl f
 .Op Ar config...
-.Op Fl d
 .Nm kwebapp-sqldiff
+.Op Fl d
 .Ar oldconfig
 .Op Ar config
 .Sh DESCRIPTION
@@ -70,15 +70,17 @@ If
 .Fl d
 was specified,
 .Cm DROP TABLE
-and
-.Cm ALTER TABLE .. DROP COLUMN
 SQL commands are also emitted.
+(Dropped columns are noted, but not actually dropped.
+This is a limitation of
+.Xr sqlite3 1 . )
 .Pp
 The configuration files are considered incompatible if they contain
-destructive differences
-.Pq or Fl d No was specified :
-dropped objects (structures or fields) or different fields (types,
-references, attributes).
+destructive differences: dropped objects (structures or fields) or
+different fields (types, references, attributes).
+If
+.Fl d
+was specified, dropped objects are not considered errors.
 .Pp
 If fields are added to a structure (columns to a table), the
 .Cm default

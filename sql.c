@@ -343,7 +343,7 @@ gen_diff_fields_old(const struct strct *s,
 		if (NULL == f && FTYPE_STRUCT == df->type) {
 			gen_warnx(&df->pos, "old inner joined field");
 		} else if (NULL == f && destruct) {
-			printf("# ALTER TABLE %s DROP COLUMN %s;\n", 
+			printf("-- ALTER TABLE %s DROP COLUMN %s;\n", 
 				df->parent->name, df->name);
 		} else if (NULL == f) {
 			gen_warnx(&df->pos, "column was dropped");

@@ -22,9 +22,11 @@
 .Nd generate SQL web application schema differences
 .Sh SYNOPSIS
 .Nm kwebapp-sqldiff
+.Op Fl d
 .Op Ar oldconfig...
 .Fl f
 .Op Ar config...
+.Op Fl d
 .Nm kwebapp-sqldiff
 .Ar oldconfig
 .Op Ar config
@@ -38,6 +40,12 @@ configurations
 and
 .Ar oldconfig
 and produces an SQL schema describing the configuration.
+Its arguments are as follows:
+.Bl -tag -width Ds
+.It Fl d
+Apply some destructive changes to the database.
+.El
+.Pp
 The new configuration is preceded by 
 .Fl f .
 In a special case for simplicity, a single old and new configuration may
@@ -58,10 +66,19 @@ SQL commands to update the configuration
 .Ar oldconfig
 to the new configuration
 .Ar config .
+If
+.Fl d
+was specified,
+.Cm DROP TABLE
+and
+.Cm ALTER TABLE .. DROP COLUMN
+SQL commands are also emitted.
 .Pp
 The configuration files are considered incompatible if they contain
-destructive differences: dropped objects (structures or fields) or
-different fields (types, references, attributes).
+destructive differences
+.Pq or Fl d No was specified :
+dropped objects (structures or fields) or different fields (types,
+references, attributes).
 .Pp
 If fields are added to a structure (columns to a table), the
 .Cm default
@@ -137,8 +154,9 @@ CREATE TABLE admin (
 ALTER TABLE client ADD COLUMN dob INTEGER NOT NULL DEFAULT 0;
 .Ed
 .Pp
-Since edit scripts are always non-destructive, the results may be piped
-directly into the database.
+Since edit scripts are always non-destructive unless
+.Fl d
+was specified, the results may be piped directly into the database.
 .Bd -literal
 % kwebapp-sqldiff old.kwbp new.kwbp | sqlite3 foo.db
 .Ed

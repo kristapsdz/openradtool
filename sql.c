@@ -329,7 +329,8 @@ gen_diff_field(const struct field *f, const struct field *df)
 }
 
 static int
-gen_diff_fields_old(const struct strct *s, const struct strct *ds)
+gen_diff_fields_old(const struct strct *s, 
+	const struct strct *ds, int destruct)
 {
 	const struct field *f, *df;
 	size_t	 errors = 0;
@@ -341,6 +342,9 @@ gen_diff_fields_old(const struct strct *s, const struct strct *ds)
 
 		if (NULL == f && FTYPE_STRUCT == df->type) {
 			gen_warnx(&df->pos, "old inner joined field");
+		} else if (NULL == f && destruct) {
+			printf("ALTER TABLE %s DROP COLUMN %s;\n", 
+				df->parent->name, df->name);
 		} else if (NULL == f) {
 			gen_warnx(&df->pos, "column was dropped");
 			errors++;
@@ -545,7 +549,8 @@ gen_diff_enums(const struct config *cfg, const struct config *dcfg)
 }
 
 static int
-gen_diff(const struct config *cfg, const struct config *dcfg)
+gen_diff(const struct config *cfg, 
+	const struct config *dcfg, int destruct)
 {
 	const struct strct *s, *ds;
 	size_t	 errors = 0;
@@ -601,10 +606,12 @@ gen_diff(const struct config *cfg, const struct config *dcfg)
 		TAILQ_FOREACH(s, &cfg->sq, entries)
 			if (0 == strcasecmp(s->name, ds->name))
 				break;
-		if (NULL == s) {
+		if (NULL == s && destruct) {
+			printf("DROP TABLE %s;\n", ds->name);
+		} else if (NULL == s) {
 			gen_warnx(&ds->pos, "table was dropped");
 			errors++;
-		} else if ( ! gen_diff_fields_old(s, ds))
+		} else if ( ! gen_diff_fields_old(s, ds, destruct))
 			errors++;
 	}
 
@@ -636,7 +643,7 @@ main(int argc, char *argv[])
 {
 	FILE		**confs = NULL, **dconfs = NULL;
 	struct config	 *cfg = NULL, *dcfg = NULL;
-	int		  rc = 1, diff = 0;
+	int		  rc = 1, diff = 0, c, destruct = 0;
 	size_t		  confsz = 0, dconfsz = 0, i, j, 
 			  confst = 0;
 
@@ -648,8 +655,10 @@ main(int argc, char *argv[])
 	if (0 == strcmp(getprogname(), "kwebapp-sql")) {
 		if (-1 != getopt(argc, argv, ""))
 			goto usage;
+
 		argc -= optind;
 		argv += optind;
+
 		confsz = (size_t)argc;
 		confs = calloc(confsz, sizeof(FILE *));
 		if (NULL == confs)
@@ -662,9 +671,18 @@ main(int argc, char *argv[])
 			}
 		}
 	} else if (0 == strcmp(getprogname(), "kwebapp-sqldiff")) {
-		argv++;
-		argc--;
 		diff = 1;
+		while (-1 != (c = getopt(argc, argv, "d")))
+			switch (c) {
+			case 'd':
+				destruct = 1;
+				break;
+			default:
+				goto usage;
+			}
+
+		argc -= optind;
+		argv += optind;
 
 		/* Read up until "-f" (or argc) for old configs. */
 
@@ -746,7 +764,7 @@ main(int argc, char *argv[])
 		gen_sql(&cfg->sq);
 		rc = 1;
 	} else 
-		rc = gen_diff(cfg, dcfg);
+		rc = gen_diff(cfg, dcfg, destruct);
 
 out:
 	for (i = 0; i < confsz; i++)
@@ -762,14 +780,16 @@ out:
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 
 usage:
-	if ( ! diff)
+	if ( ! diff) {
 		fprintf(stderr, 
 			"usage: %s [config...]\n",
 			getprogname());
-	else 
-		fprintf(stderr, 
-			"usage: %s oldconfig [config]\n"
-			"       %s [oldconfig...] -f [config...]\n",
-			getprogname(), getprogname());
+		return EXIT_FAILURE;
+	}
+
+	fprintf(stderr, 
+		"usage: %s [-d] oldconfig [config]\n"
+		"       %s [-d] [oldconfig...] -f [config...]\n",
+		getprogname(), getprogname());
 	return EXIT_FAILURE;
 }

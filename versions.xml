@@ -5,9 +5,13 @@
 		<header>
 			<h3>0.6.7</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2018-11-23">2018-11-23</time>
+			<time datetime="2018-23-03">2018-23-03</time>
 		</header>
 		<aside>
+			<p>
+				Allow <a href="kwebapp-sqldiff.1.html">kwebapp-sqldiff(1)</a> to
+				optionally produce <q>drop table</q> commands.
+			</p>
 			<p>
 				Fix that custom handlers are invoked for null values if null values
 				are allowed by the configuration.
@@ -15,6 +19,10 @@
 			<p>
 				Add <code>fillArrayByClass</code>, which is like
 				<code>fillArray</code> but invoked over matching classes.
+			</p>
+			<p>
+				Begin migration (internally) to new name, <i>openradtool</i>.
+			</p>
 		</aside>
 	</article>
 	<article data-sblg-article="1" data-sblg-tags="version">

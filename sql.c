@@ -328,7 +328,12 @@ gen_diff_field(const struct field *f, const struct field *df)
 	return(rc);
 }
 
-static int
+/*
+ * Compare all fields in the old "ds" with the new "s" and see if any
+ * columns have been added or removed.
+ * Returns the number of errors (or zero).
+ */
+static size_t
 gen_diff_fields_old(const struct strct *s, 
 	const struct strct *ds, int destruct)
 {
@@ -343,6 +348,15 @@ gen_diff_fields_old(const struct strct *s,
 		if (NULL == f && FTYPE_STRUCT == df->type) {
 			gen_warnx(&df->pos, "old inner joined field");
 		} else if (NULL == f && destruct) {
+			/*
+			 * TODO: we don't have a way to drop columns in
+			 * sqlite3: the "approved" way is to do the
+			 * whole rename, create, copy.
+			 * Meanwhile, if we're in destruct mode, just
+			 * ignore it as an error, since the column will
+			 * simply go away.
+			 * Of course, not if we re-add it later...
+			 */
 			printf("-- ALTER TABLE %s DROP COLUMN %s;\n", 
 				df->parent->name, df->name);
 		} else if (NULL == f) {
@@ -352,7 +366,7 @@ gen_diff_fields_old(const struct strct *s,
 			errors++;
 	}
 
-	return(errors ? 0 : 1);
+	return errors;
 }
 
 static int
@@ -548,6 +562,14 @@ gen_diff_enums(const struct config *cfg, const struct config *dcfg)
 	return(errors);
 }
 
+/*
+ * Generate an SQL diff with "cfg" being the new, "dfcg" being the old.
+ * This returns zero on failure, non-zero on success.
+ * "Failure" means that there were irreconcilable errors between the two
+ * configurations, such as new tables or removed colunms or some such.
+ * If "destruct" is non-zero, this allows for certain modifications that
+ * would change the database, such as dropping tables.
+ */
 static int
 gen_diff(const struct config *cfg, 
 	const struct config *dcfg, int destruct)
@@ -611,8 +633,9 @@ gen_diff(const struct config *cfg,
 		} else if (NULL == s) {
 			gen_warnx(&ds->pos, "table was dropped");
 			errors++;
-		} else if ( ! gen_diff_fields_old(s, ds, destruct))
-			errors++;
+		} else
+			errors += gen_diff_fields_old
+				(s, ds, destruct);
 	}
 
 	/*
@@ -651,6 +674,7 @@ main(int argc, char *argv[])
 	if (-1 == pledge("stdio rpath", NULL))
 		err(EXIT_FAILURE, "pledge");
 #endif
+	/* Handle being called as kwebapp-sql and -sqldiff. */
 
 	if (0 == strcmp(getprogname(), "kwebapp-sql")) {
 		if (-1 != getopt(argc, argv, ""))

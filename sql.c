@@ -800,6 +800,7 @@ out:
 	free(confs);
 	free(dconfs);
 	ort_config_free(cfg);
+	ort_config_free(dcfg);
 
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 

@@ -386,6 +386,7 @@ parse_errx(struct parse *p, const char *fmt, ...)
 
 /*
  * Push a single character into the retaining buffer.
+ * XXX: creates a binary buffer.
  * Returns zero on memory failure, non-zero otherwise.
  */
 static int
@@ -1542,7 +1543,6 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 
 		nsz = sz + strlen(df->name) + 
 			(0 == sz ? 0 : 1) + 1;
-
 		if (NULL == (pp = realloc(d->cname, nsz))) {
 			parse_err(p);
 			return;
@@ -1631,6 +1631,7 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 			}
 			continue;
 		}
+		assert(NULL != ord->fname);
 		sz = strlen(ord->fname) +
 		     strlen(of->name) + 2;
 		if (NULL == (pp = realloc(ord->fname, sz))) {
@@ -1653,6 +1654,7 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 			}
 			continue;
 		}
+		assert(NULL != ord->name);
 		sz = strlen(ord->name) +
 		     strlen(of->name) + 2;
 		if (NULL == (pp = realloc(ord->name, sz))) {
@@ -1749,6 +1751,7 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 			}
 			continue;
 		}
+		assert(NULL != sent->fname);
 		sz = strlen(sent->fname) +
 		     strlen(sf->name) + 2;
 		if (NULL == (pp = realloc(sent->fname, sz))) {
@@ -1771,6 +1774,7 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 			}
 			continue;
 		}
+		assert(NULL != sent->name);
 		sz = strlen(sent->name) +
 		     strlen(sf->name) + 2;
 		if (NULL == (pp = realloc(sent->name, sz))) {
@@ -1931,11 +1935,20 @@ parse_config_unique(struct parse *p, struct strct *s)
 	sz = 0;
 	TAILQ_FOREACH(n, &up->nq, entries) {
 		sz += strlen(n->name) + 1; /* comma */
-		if (NULL == (pp = realloc(up->cname, sz + 1))) {
-			parse_err(p);
-			return;
+		if (NULL == up->cname) {
+			up->cname = calloc(sz + 1, 1);
+			if (NULL == up->cname) {
+				parse_err(p);
+				return;
+			}
+		} else {
+			pp = realloc(up->cname, sz + 1);
+			if (NULL == pp) {
+				parse_err(p);
+				return;
+			}
+			up->cname = pp;
 		}
-		up->cname = pp;
 		strlcat(up->cname, n->name, sz + 1);
 		strlcat(up->cname, ",", sz + 1);
 	}

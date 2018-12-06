@@ -335,6 +335,7 @@ parse_free_unique(struct unique *p)
 		parse_free_nref(u);
 	}
 
+	free(p->cname);
 	free(p);
 }
 

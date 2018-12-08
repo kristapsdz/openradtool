@@ -3,6 +3,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.6.8</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-12-06">2018-12-06</time>
+		</header>
+		<aside>
+			<p>
+				Forgot to zero some allocated memory in <code>unique</code> statements.
+				Found with valgrind.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.6.7</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-12-03">2018-12-03</time>

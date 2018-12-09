@@ -3,6 +3,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.6.9</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2018-12-09">2018-12-09</time>
+		</header>
+		<aside>
+			<p>
+				TypeScript now errors out if <code>NodeListOf</code> is used instead
+				of <code>HTMLCollectionOf</code>, so use the proper invocation.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.6.8</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2018-12-06">2018-12-06</time>

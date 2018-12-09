@@ -547,7 +547,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		"e", "HTMLElement|null",
 		"val", "number|string", NULL);
 	gen_vars(tsc, 2,
-	     "list", "NodeListOf<Element>", 
+	     "list", "HTMLCollectionOf<Element>", 
 	     "i", "number", 
 	     "v", "string|number", NULL);
 	printf("\t\tif (null === e)\n"
@@ -589,7 +589,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		"cls", "string",
 		"inc", "boolean", NULL);
 	gen_vars(tsc, 2, "a", "HTMLElement[]",
-		"list", "NodeListOf<Element>",
+		"list", "HTMLCollectionOf<Element>",
 		"i", "number", NULL);
 	printf("\t\ta = [];\n"
 	       "\t\tif (null === e)\n"

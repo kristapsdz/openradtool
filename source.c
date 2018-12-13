@@ -2543,17 +2543,17 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 
 	/* Start with all headers we'll need. */
 
-	puts("#include <sys/queue.h>\n"
+	puts("#include <sys/types.h>\n"
+	     "#include <sys/queue.h>\n"
 	     "\n"
-	     "#include <assert.h>");
+	     "#include <assert.h>\n"
+	     "#include <ctype.h>");
 
 #if HAVE_B64_NTOP
 	TAILQ_FOREACH(p, &cfg->sq, entries) 
 		if (STRCT_HAS_BLOB & p->flags) {
 			print_commentt(0, COMMENT_C,
 				"Required for b64_ntop().");
-			if ( ! jsonparse)
-			     puts("#include <ctype.h>");
 			puts("#include <netinet/in.h>\n"
 			     "#include <resolv.h>");
 			break;
@@ -2568,16 +2568,15 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 		need_kcgi = need_kcgijson = 1;
 
 	if (jsonparse) {
-		puts("#include <ctype.h>");
 		puts("#include <inttypes.h>");
 	}
 
 	if (need_kcgi) {
 		puts("#include <stdarg.h>");
-		puts("#include <stdint.h>");
 	}
 
-	puts("#include <stdio.h>\n"
+	puts("#include <stdint.h>\n"
+	     "#include <stdio.h>\n"
 	     "#include <stdlib.h>\n"
 	     "#include <string.h>\n"
 	     "#include <time.h>\n" /* Linux with _XOPEN_SOURCE */

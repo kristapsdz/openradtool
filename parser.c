@@ -340,8 +340,8 @@ parse_warnx(struct parse *p, const char *fmt, ...)
 			channel, 0, &pos, fmt, ap);
 		va_end(ap);
 	} else
-		ort_config_msgv(p->cfg, MSGTYPE_WARN, 
-			channel, 0, &pos, NULL, NULL);
+		ort_config_msg(p->cfg, MSGTYPE_WARN, 
+			channel, 0, &pos, NULL);
 }
 
 static enum tok
@@ -354,8 +354,8 @@ parse_err(struct parse *p)
 	pos.line = p->line;
 	pos.column = p->column;
 
-	ort_config_msgv(p->cfg, MSGTYPE_FATAL, 
-		channel, er, &pos, NULL, NULL);
+	ort_config_msg(p->cfg, MSGTYPE_FATAL, 
+		channel, er, &pos, NULL);
 
 	p->lasttype = TOK_ERR;
 	return p->lasttype;
@@ -378,7 +378,7 @@ parse_errx(struct parse *p, const char *fmt, ...)
 		va_end(ap);
 	} else
 		ort_config_msgv(p->cfg, MSGTYPE_ERROR, 
-			channel, 0, &pos, NULL, NULL);
+			channel, 0, &pos, NULL, ap);
 
 	p->lasttype = TOK_ERR;
 	return p->lasttype;

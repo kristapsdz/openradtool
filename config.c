@@ -882,7 +882,7 @@ ort_config_msg(struct config *cfg, enum msgtype type,
 
 	if (NULL == fmt) {
 		ort_config_msgv(cfg, type, 
-			chan, er, pos, NULL, NULL);
+			chan, er, pos, NULL, ap);
 		return;
 	}
 

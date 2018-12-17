@@ -820,7 +820,7 @@ ort_config_alloc(void)
 }
 
 /*
- * Generic message formatting.
+ * Generic message formatting (va_list version).
  * Puts all messages into the message array and prints them to stderr as
  * well.
  * On memory exhaustion, does nothing.
@@ -873,6 +873,12 @@ ort_config_msgv(struct config *cfg, enum msgtype type,
 	fputc('\n', stderr);
 }
 
+/*
+ * Generic message formatting.
+ * Puts all messages into the message array and prints them to stderr as
+ * well.
+ * On memory exhaustion, does nothing.
+ */
 void
 ort_config_msg(struct config *cfg, enum msgtype type, 
 	const char *chan, int er, const struct pos *pos, 
@@ -882,7 +888,7 @@ ort_config_msg(struct config *cfg, enum msgtype type,
 
 	if (NULL == fmt) {
 		ort_config_msgv(cfg, type, 
-			chan, er, pos, NULL, NULL);
+			chan, er, pos, NULL, ap);
 		return;
 	}
 

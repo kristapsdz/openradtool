@@ -47,6 +47,7 @@ static	const char *const modtypes[MODTYPE__MAX] = {
 	"set", /* MODTYPE_SET */
 	"inc", /* MODTYPE_INC */
 	"dec", /* MODTYPE_DEC */
+	"concat", /* MODTYPE_CONCAT */
 };
 
 static	const char *const ftypes[FTYPE__MAX] = {

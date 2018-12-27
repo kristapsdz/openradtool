@@ -365,27 +365,45 @@ check_updatetype(struct config *cfg, struct update *up)
 }
 
 /*
- * Make sure that our modification type is numeric.
- * (Text-based modifications with "add" or "sub" or otherwise don't
- * really make sense.
+ * Make sure that our modification type is appropriate to the field.
+ * That is, non-numeric types with numeric operations (e.g., increment)
+ * and non-textual types with text operations (e.g., concatenate).
+ * Returns zero on failure, non-zero on success.
  */
 static int
 check_modtype(struct config *cfg, const struct uref *ref)
 {
 
-	assert(MODTYPE__MAX != ref->mod);
+	switch (ref->mod) {
+	case MODTYPE_CONCAT:
+		if (FTYPE_BLOB == ref->field->type ||
+		    FTYPE_TEXT == ref->field->type ||
+		    FTYPE_EMAIL == ref->field->type)
+			break;
+		gen_errx(cfg, &ref->pos, "concatenate "
+			"modification on non-textual field");
+		return 0;
+	case MODTYPE_SET:
+		/* Can be done with anything. */
+		break;
+	case MODTYPE_INC:
+	case MODTYPE_DEC:
+		if (FTYPE_BIT == ref->field->type ||
+		    FTYPE_BITFIELD == ref->field->type ||
+		    FTYPE_DATE == ref->field->type ||
+		    FTYPE_ENUM == ref->field->type ||
+		    FTYPE_EPOCH == ref->field->type ||
+		    FTYPE_INT == ref->field->type ||
+		    FTYPE_REAL == ref->field->type)
+			break;
+		gen_errx(cfg, &ref->pos, "increment or decrement "
+			"modification on non-numeric field");
+		return 0;
+	default:
+		abort();
+	}
 
-	if (MODTYPE_SET == ref->mod ||
-	    FTYPE_BIT == ref->field->type ||
-	    FTYPE_DATE == ref->field->type ||
-	    FTYPE_EPOCH == ref->field->type ||
-	    FTYPE_INT == ref->field->type ||
-	    FTYPE_REAL == ref->field->type)
-		return(1);
-
-	gen_errx(cfg, &ref->pos, "update modification on "
-		"invalid field type (not numeric)");
-	return(0);
+	return 1;
 }
 
 /*

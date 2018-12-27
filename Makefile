@@ -4,7 +4,7 @@ include Makefile.configure
 
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 6
-VERSION_BUILD	 = 9
+VERSION_BUILD	 = 10
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = comments.o \
 		   compats.o \

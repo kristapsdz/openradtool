@@ -11,6 +11,8 @@
 			<p>
 				Add the string concatenation operator (<code>concat</code>) for 
 				updating fields.
+				Put in more support for running on musl libc.
+				(Work in progress.)
 			</p>
 		</aside>
 	</article>

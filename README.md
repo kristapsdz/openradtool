@@ -58,6 +58,7 @@ the database and allocating objects.  Some more features:
 - Several different types of SQL query (and update and delete)
   operators.
 - Optional JSON output functions.
+- Optional JSON input functions.
 - Optional field validation ([kcgi(3)](https://kristaps.bsd.lv/kcgi))
   functions.
 - Well-documented JavaScript or TypeScript handling of the JSON

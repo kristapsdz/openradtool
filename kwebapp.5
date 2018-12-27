@@ -745,6 +745,8 @@ cfld [operator]?
 The following augment operations are available, but only to numeric
 types:
 .Bl -tag -width Ds
+.It Cm concat
+String concatenate the current field by a given value (x = x || ?).
 .It Cm inc
 Increment the current field by a given value (x = x + ?).
 .It Cm dec

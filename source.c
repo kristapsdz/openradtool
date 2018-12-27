@@ -2583,12 +2583,11 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 		puts("#include <inttypes.h>");
 	}
 
-	if (need_kcgi) {
+	if (need_kcgi)
 		puts("#include <stdarg.h>");
-		puts("#include <stdint.h>");
-	}
 
 	puts("#include <stdio.h>\n"
+	     "#include <stdint.h>\n" /* int64_t */
 	     "#include <stdlib.h>\n"
 	     "#include <string.h>\n"
 	     "#include <time.h>\n" /* Linux with _XOPEN_SOURCE */

@@ -2537,6 +2537,11 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 	int		 need_kcgi = 0, 
 			 need_kcgijson = 0, 
 			 need_ksql = 0;
+#if HAVE_B64_NTOP
+	int		 need_b64 = 0;
+#else
+	int		 need_b64 = 1;
+#endif
 
 	if (NULL == incls)
 		incls = "";
@@ -2554,22 +2559,25 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 
 	/* Start with all headers we'll need. */
 
+	/* FIXME: HAVE_SYS_QUEUE pulled in from compat. */
+
 	puts("#include <sys/queue.h>\n"
 	     "\n"
 	     "#include <assert.h>");
 
-#if HAVE_B64_NTOP
-	TAILQ_FOREACH(p, &cfg->sq, entries) 
-		if (STRCT_HAS_BLOB & p->flags) {
-			print_commentt(0, COMMENT_C,
-				"Required for b64_ntop().");
-			if ( ! jsonparse)
-			     puts("#include <ctype.h>");
-			puts("#include <netinet/in.h>\n"
-			     "#include <resolv.h>");
-			break;
-		}
-#endif
+	if ( ! need_b64) {
+		TAILQ_FOREACH(p, &cfg->sq, entries) 
+			if (STRCT_HAS_BLOB & p->flags) {
+				print_commentt(0, COMMENT_C,
+					"Required for b64_ntop().");
+				if ( ! jsonparse)
+					puts("#include <ctype.h>");
+				puts("#include <netinet/in.h>\n"
+				     "#include <resolv.h>");
+				break;
+			}
+	} else
+		puts("#include <ctype.h>");
 
 	if (dbin || strchr(incls, 'd'))
 		need_ksql = 1;
@@ -2579,7 +2587,8 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 		need_kcgi = need_kcgijson = 1;
 
 	if (jsonparse) {
-		puts("#include <ctype.h>");
+		if ( ! need_b64)
+			puts("#include <ctype.h>");
 		puts("#include <inttypes.h>");
 	}
 
@@ -2626,10 +2635,8 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 	if ( ! genfile(PATH_GENSALT, exs[EX_GENSALT]))
 		return 0;
 #endif
-#if ! HAVE_B64_NTOP
-	if ( ! genfile(PATH_B64_NTOP, exs[EX_B64_NTOP]))
+	if (need_b64 && ! genfile(PATH_B64_NTOP, exs[EX_B64_NTOP]))
 		return 0;
-#endif
 	if (jsonparse && ! genfile(PATH_JSMN, exs[EX_JSMN]))
 		return 0;
 

@@ -2431,14 +2431,23 @@ gen_stmt(const struct strct *p)
 		TAILQ_FOREACH(ur, &up->mrq, entries) {
 			putchar(first ? ' ' : ',');
 			first = 0;
-			if (MODTYPE_INC == ur->mod) 
+			switch (ur->mod) {
+			case MODTYPE_INC:
 				printf("%s = %s + ?", 
 					ur->name, ur->name);
-			else if (MODTYPE_DEC == ur->mod) 
+				break;
+			case MODTYPE_DEC:
 				printf("%s = %s - ?", 
 					ur->name, ur->name);
-			else
+				break;
+			case MODTYPE_CONCAT:
+				printf("%s = %s || ?", 
+					ur->name, ur->name);
+				break;
+			default:
 				printf("%s = ?", ur->name);
+				break;
+			}
 		}
 		first = 1;
 		TAILQ_FOREACH(ur, &up->crq, entries) {

@@ -317,6 +317,7 @@ enum	modtype {
 	MODTYPE_SET = 0, /* direct set (default) */
 	MODTYPE_INC, /* x = x + ? */
 	MODTYPE_DEC, /* x = x - ? */
+	MODTYPE_CONCAT, /* x = x || ? */
 	MODTYPE__MAX
 };
 

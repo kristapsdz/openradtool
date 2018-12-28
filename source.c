@@ -247,8 +247,11 @@ gen_strct_fill_field(const struct field *f)
 		return;
 
 	if (FIELD_NULL & f->flags)
-		printf("\tp->has_%s = ! "
-			"ksql_stmt_isnull(stmt, *pos);\n",
+		print_src(1, 
+			"c = ksql_result_isnull(stmt, "
+			 "&p->has_%s, *pos);\n"
+			"if (KSQL_OK != c)\n"
+			"\texit(EXIT_FAILURE);",
 			f->name);
 
 	/*

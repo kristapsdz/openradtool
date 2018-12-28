@@ -2561,6 +2561,9 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 
 	/* FIXME: HAVE_SYS_QUEUE pulled in from compat. */
 
+	if (need_b64)
+		puts("#include <sys/types.h> /* b64_ntop() */");
+
 	puts("#include <sys/queue.h>\n"
 	     "\n"
 	     "#include <assert.h>");
@@ -2577,7 +2580,7 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 				break;
 			}
 	} else
-		puts("#include <ctype.h>");
+		puts("#include <ctype.h> /* b64_ntop() */");
 
 	if (dbin || strchr(incls, 'd'))
 		need_ksql = 1;

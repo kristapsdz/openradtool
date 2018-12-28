@@ -66,8 +66,8 @@ gen_warnx(struct config *cfg,
 			channel, 0, pos, fmt, ap);
 		va_end(ap);
 	} else
-		ort_config_msgv(cfg, MSGTYPE_WARN, 
-			channel, 0, pos, NULL, ap);
+		ort_config_msg(cfg, MSGTYPE_WARN, 
+			channel, 0, pos, NULL);
 }
 
 static void
@@ -90,8 +90,8 @@ gen_errx(struct config *cfg,
 			channel, 0, pos, fmt, ap);
 		va_end(ap);
 	} else
-		ort_config_msgv(cfg, MSGTYPE_ERROR, 
-			channel, 0, pos, NULL, ap);
+		ort_config_msg(cfg, MSGTYPE_ERROR, 
+			channel, 0, pos, NULL);
 }
 
 /*

@@ -343,8 +343,8 @@ parse_warnx(struct parse *p, const char *fmt, ...)
 			channel, 0, &pos, fmt, ap);
 		va_end(ap);
 	} else
-		ort_config_msgv(p->cfg, MSGTYPE_WARN, 
-			channel, 0, &pos, NULL, ap);
+		ort_config_msg(p->cfg, MSGTYPE_WARN, 
+			channel, 0, &pos, NULL);
 }
 
 static enum tok
@@ -380,8 +380,8 @@ parse_errx(struct parse *p, const char *fmt, ...)
 			channel, 0, &pos, fmt, ap);
 		va_end(ap);
 	} else
-		ort_config_msgv(p->cfg, MSGTYPE_ERROR, 
-			channel, 0, &pos, NULL, ap);
+		ort_config_msg(p->cfg, MSGTYPE_ERROR, 
+			channel, 0, &pos, NULL);
 
 	p->lasttype = TOK_ERR;
 	return p->lasttype;

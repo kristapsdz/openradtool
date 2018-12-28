@@ -100,6 +100,9 @@ IMAGES		 = index.svg \
 		   index-fig5.svg \
 		   index-fig6.svg
 
+# FreeBSD's make doesn't support CPPFLAGS.
+# CFLAGS += $(CPPFLAGS)
+
 all: kwebapp $(BINS)
 
 afl::
@@ -138,7 +141,7 @@ kwebapp-audit-json: audit.o libort.a
 	$(CC) -o $@ audit.o libort.a
 
 kwebapp-xliff: xliff.o libort.a
-	$(CC) -o $@ xliff.o libort.a -lexpat
+	$(CC) -o $@ xliff.o libort.a $(LDFLAGS) -lexpat
 
 www: $(IMAGES) $(HTMLS) kwebapp.tar.gz kwebapp.tar.gz.sha512 atom.xml
 
@@ -199,7 +202,7 @@ kwebapp.tar.gz: $(DOTAR) $(DOTAREXEC)
 	rm -rf .dist/
 
 test: test.o db.o db.db
-	$(CC) $(LDFLAGS) -o $@ test.o db.o -lksql -lsqlite3 -lpthread -lkcgijson -lkcgi -lz $(LDADD)
+	$(CC) -o $@ test.o db.o $(LDFLAGS) -lksql -lsqlite3 -lpthread -lkcgijson -lkcgi -lz $(LDADD)
 
 audit-out.js: kwebapp-audit-json audit-example.txt
 	./kwebapp-audit-json user audit-example.txt >$@

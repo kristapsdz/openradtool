@@ -821,16 +821,9 @@ ort_config_alloc(void)
 	return cfg;
 }
 
-/*
- * Generic message formatting (va_list version).
- * Puts all messages into the message array and prints them to stderr as
- * well.
- * On memory exhaustion, does nothing.
- */
-void
-ort_config_msgv(struct config *cfg, enum msgtype type, 
-	const char *chan, int er, const struct pos *pos, 
-	const char *fmt, va_list ap)
+static void
+ort_config_log(struct config *cfg, enum msgtype type, 
+	const char *chan, int er, const struct pos *pos, char *msg)
 {
 	void		*pp;
 	struct msg	*m;
@@ -839,8 +832,10 @@ ort_config_msgv(struct config *cfg, enum msgtype type,
 		cfg->msgsz + 1, sizeof(struct msg));
 
 	/* Well, shit. */
-	if (NULL == pp)
+	if (NULL == pp) {
+		free(msg);
 		return;
+	}
 
 	cfg->msgs = pp;
 	m = &cfg->msgs[cfg->msgsz++];
@@ -850,8 +845,8 @@ ort_config_msgv(struct config *cfg, enum msgtype type,
 	m->er = er;
 	if (NULL != pos)
 		m->pos = *pos;
-	if (NULL != fmt)
-		(void)vasprintf(&m->buf, fmt, ap);
+	if (NULL != msg)
+		m->buf = msg;
 
 	/* Now we also print the message to stderr. */
 
@@ -869,10 +864,28 @@ ort_config_msgv(struct config *cfg, enum msgtype type,
 		fputs(m->buf, stderr);
 
 	if (MSGTYPE_FATAL == m->type)
-		fprintf(stderr, "%s%s", NULL != fmt ? 
+		fprintf(stderr, "%s%s", NULL != m->buf ? 
 			": " : "", strerror(m->er)); 
 
 	fputc('\n', stderr);
+}
+
+/*
+ * Generic message formatting (va_list version).
+ * Puts all messages into the message array and prints them to stderr as
+ * well.
+ * On memory exhaustion, does nothing.
+ */
+void
+ort_config_msgv(struct config *cfg, enum msgtype type, 
+	const char *chan, int er, const struct pos *pos, 
+	const char *fmt, va_list ap)
+{
+	char	*buf = NULL;
+
+	if (NULL != fmt && vasprintf(&buf, fmt, ap) < 0)
+		return;
+	ort_config_log(cfg, type, chan, er, pos, buf);
 }
 
 /*
@@ -889,8 +902,7 @@ ort_config_msg(struct config *cfg, enum msgtype type,
 	va_list	 ap;
 
 	if (NULL == fmt) {
-		ort_config_msgv(cfg, type, 
-			chan, er, pos, NULL, ap);
+		ort_config_log(cfg, type, chan, er, pos, NULL);
 		return;
 	}
 

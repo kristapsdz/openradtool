@@ -5,14 +5,19 @@
 		<header>
 			<h3>0.6.10</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2018-12-27">2018-12-27</time>
+			<time datetime="2018-12-29">2018-12-29</time>
 		</header>
 		<aside>
 			<p>
 				Add the string concatenation operator (<code>concat</code>) for 
 				updating fields.
-				Put in more support for running on musl libc.
-				(Work in progress.)
+				Now produces code usable on musl Linux thanks to 
+				<a href="https://github.com/Duncaen">Duncaen</a> (alongside the
+				earlier support for glibc).
+				Also produces code running properly on FreeBSD.
+				Stop using a deprecated function in 
+				<a href="https://kristaps.bsd.lv/ksql">ksql</a> and use the safe
+				version instead.
 			</p>
 		</aside>
 	</article>

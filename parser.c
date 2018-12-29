@@ -2047,9 +2047,10 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 					parse_errx(p, "bad modifier");
 					return;
 				} 
-				if (TOK_COLON == parse_next(p))
+				parse_next(p);
+				if (TOK_COLON == p->lasttype)
 					break;
-				if (TOK_SEMICOLON == parse_next(p))
+				if (TOK_SEMICOLON == p->lasttype)
 					return;
 			}
 

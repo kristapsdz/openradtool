@@ -248,10 +248,10 @@ gen_strct_fill_field(const struct field *f)
 
 	if (FIELD_NULL & f->flags)
 		print_src(1, 
-			"c = ksql_result_isnull(stmt, "
-			 "&p->has_%s, *pos);\n"
+			"c = ksql_result_isnull(stmt, &hasval, *pos);\n"
 			"if (KSQL_OK != c)\n"
-			"\texit(EXIT_FAILURE);",
+			"\texit(EXIT_FAILURE);\n"
+			"p->has_%s = !hasval;",
 			f->name);
 
 	/*
@@ -1384,11 +1384,14 @@ static void
 gen_func_fill(const struct config *cfg, const struct strct *p)
 {
 	const struct field *f;
-	int	 needint = 0;
+	int	 needint = 0, needbool = 0;
 
-	TAILQ_FOREACH(f, &p->fq, entries)
+	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_ENUM == f->type)
 			needint = 1;
+		if (FIELD_NULL & f->flags)
+			needbool = 1;
+	}
 
 	print_func_db_fill(p, CFG_HAS_ROLES & cfg->flags, 0);
 	puts("\n"
@@ -1397,6 +1400,8 @@ gen_func_fill(const struct config *cfg, const struct strct *p)
 	     "\tenum ksqlc c;");
 	if (needint)
 		puts("\tint64_t tmpint;");
+	if (needbool)
+		puts("\tint hasval;");
 	puts("\n"
 	     "\tif (NULL == pos)\n"
 	     "\t\tpos = &i;\n"

@@ -239,6 +239,52 @@ parse_free_field(struct field *p)
 }
 
 /*
+ * Free the aggregate queue.
+ * Does not free the "q" pointer.
+ */
+static void
+parse_free_aggrq(struct aggrq *q)
+{
+	struct aggr	*aggr;
+	struct aref	*aref;
+
+	while (NULL != (aggr = TAILQ_FIRST(q))) {
+		TAILQ_REMOVE(q, aggr, entries);
+		while (NULL != (aref = TAILQ_FIRST(&aggr->arq))) {
+			TAILQ_REMOVE(&aggr->arq, aref, entries);
+			free(aref->name);
+			free(aref);
+		}
+		free(aggr->fname);
+		free(aggr->name);
+		free(aggr);
+	}
+}
+
+/*
+ * Free the order queue.
+ * Does not free the "q" pointer.
+ */
+static void
+parse_free_ordq(struct ordq *q)
+{
+	struct ord	*ord;
+	struct oref	*oref;
+
+	while (NULL != (ord = TAILQ_FIRST(q))) {
+		TAILQ_REMOVE(q, ord, entries);
+		while (NULL != (oref = TAILQ_FIRST(&ord->orq))) {
+			TAILQ_REMOVE(&ord->orq, oref, entries);
+			free(oref->name);
+			free(oref);
+		}
+		free(ord->fname);
+		free(ord->name);
+		free(ord);
+	}
+}
+
+/*
  * Free a search series.
  * Does nothing if "p" is NULL.
  */
@@ -247,8 +293,6 @@ parse_free_search(struct search *p)
 {
 	struct sref	*s;
 	struct sent	*sent;
-	struct ord	*ord;
-	struct oref	*oref;
 	struct dref	*d;
 
 	if (NULL == p)
@@ -264,17 +308,8 @@ parse_free_search(struct search *p)
 		free(p->dst);
 	}
 
-	while (NULL != (ord = TAILQ_FIRST(&p->ordq))) {
-		TAILQ_REMOVE(&p->ordq, ord, entries);
-		while (NULL != (oref = TAILQ_FIRST(&ord->orq))) {
-			TAILQ_REMOVE(&ord->orq, oref, entries);
-			free(oref->name);
-			free(oref);
-		}
-		free(ord->fname);
-		free(ord->name);
-		free(ord);
-	}
+	parse_free_aggrq(&p->aggrq);
+	parse_free_ordq(&p->ordq);
 
 	while (NULL != (sent = TAILQ_FIRST(&p->sntq))) {
 		TAILQ_REMOVE(&p->sntq, sent, entries);

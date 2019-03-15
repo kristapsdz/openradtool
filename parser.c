@@ -464,6 +464,32 @@ check_dupetoplevel(struct parse *p, const char *name)
 }
 
 /*
+ * Appends a reference "v" to "p".
+ * If "p" is NULL, this will simply duplicate "p".
+ * Else, "p" += "." "v".
+ * Returns zero on allocation failure, non-zero otherwise.
+ */
+static int
+ref_append(char **p, const char *v)
+{
+	size_t	 sz;
+	void	*pp;
+
+	if (NULL == *p)
+		return(NULL != (*p = strdup(v)));
+
+	assert(NULL != *p);
+	sz = strlen(*p) + strlen(v) + 2;
+	if (NULL == (pp = realloc(*p, sz)))
+		return(0);
+
+	*p = pp;
+	strlcat(*p, ".", sz);
+	strlcat(*p, v, sz);
+	return(1);
+}
+
+/*
  * Allocate a unique reference and add it to the parent queue in order
  * by alpha.
  * Returns the created pointer or NULL.
@@ -523,6 +549,32 @@ uref_alloc(struct parse *p, const char *name,
 	TAILQ_INSERT_TAIL(q, ref, entries);
 	return ref;
 }
+
+#if 0
+/*
+ * Allocate a search reference and add it to the parent queue.
+ * Returns the created pointer or NULL.
+ */
+static struct aref *
+aref_alloc(struct parse *p, const char *name, struct aggr *up)
+{
+	struct aref	*ref;
+
+	if (NULL == (ref = calloc(1, sizeof(struct aref)))) {
+		parse_err(p);
+		return NULL;
+	} else if (NULL == (ref->name = strdup(name))) {
+		free(ref);
+		parse_err(p);
+		return NULL;
+	}
+
+	ref->parent = up;
+	parse_point(p, &ref->pos);
+	TAILQ_INSERT_TAIL(&up->arq, ref, entries);
+	return ref;
+}
+#endif
 
 /*
  * Allocate a search reference and add it to the parent queue.
@@ -1564,6 +1616,72 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 	}
 }
 
+#if 0
+/*
+ * Like parse_config_search_terms() but for aggregate terms.
+ *
+ *   field[.field]* 
+ */
+static void
+parse_config_aggr_terms(struct parse *p,
+	enum aggrtype type, struct search *srch)
+{
+	struct aref	*af;
+	struct aggr	*aggr;
+
+	if (TOK_IDENT != p->lasttype) {
+		parse_errx(p, "expected aggregate identifier");
+		return;
+	} else if (NULL == (aggr = calloc(1, sizeof(struct aggr)))) {
+		parse_err(p);
+		return;
+	}
+
+	aggr->parent = srch;
+	aggr->op = type;
+	parse_point(p, &aggr->pos);
+	TAILQ_INIT(&aggr->arq);
+	TAILQ_INSERT_TAIL(&srch->aggrq, aggr, entries);
+
+	if (NULL == aref_alloc(p, p->last.string, aggr))
+		return;
+
+	for (;;) {
+		if (PARSE_STOP(p))
+			return;
+		if (TOK_COMMA == parse_next(p) ||
+		    TOK_SEMICOLON == p->lasttype)
+			break;
+		if (TOK_PERIOD != p->lasttype)
+			parse_errx(p, "expected field separator");
+		else if (TOK_IDENT != parse_next(p))
+			parse_errx(p, "expected field identifier");
+		else if (NULL != aref_alloc(p, p->last.string, aggr))
+			continue;
+		return;
+	}
+
+	/* Full (structure and field) canonical name of field. */
+
+	TAILQ_FOREACH(af, &aggr->arq, entries)
+		if ( ! ref_append(&aggr->fname, af->name)) {
+			parse_err(p);
+			return;
+		}
+
+	/* Partial (structure-only) canonical name. */
+
+	TAILQ_FOREACH(af, &aggr->arq, entries) {
+		if (NULL == TAILQ_NEXT(af, entries))
+			break;
+		if ( ! ref_append(&aggr->name, af->name)) {
+			parse_err(p);
+			return;
+		}
+	}
+}
+#endif
+
 /*
  * Like parse_config_search_terms() but for order terms.
  *
@@ -1573,19 +1691,16 @@ static void
 parse_config_order_terms(struct parse *p, struct search *srch)
 {
 	struct oref	*of;
-	size_t		 sz;
 	struct ord	*ord;
-	void		*pp;
 
 	if (TOK_IDENT != p->lasttype) {
 		parse_errx(p, "expected order identifier");
 		return;
-	}
-
-	if (NULL == (ord = calloc(1, sizeof(struct ord)))) {
+	} else if (NULL == (ord = calloc(1, sizeof(struct ord)))) {
 		parse_err(p);
 		return;
 	}
+
 	ord->parent = srch;
 	ord->op = ORDTYPE_ASC;
 	parse_point(p, &ord->pos);
@@ -1625,48 +1740,19 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 	if (PARSE_STOP(p))
 		return;
 
-	TAILQ_FOREACH(of, &ord->orq, entries) {
-		if (NULL == ord->fname) {
-			ord->fname = strdup(of->name);
-			if (NULL == ord->fname) {
-				parse_err(p);
-				return;
-			}
-			continue;
-		}
-		assert(NULL != ord->fname);
-		sz = strlen(ord->fname) +
-		     strlen(of->name) + 2;
-		if (NULL == (pp = realloc(ord->fname, sz))) {
+	TAILQ_FOREACH(of, &ord->orq, entries)
+		if ( ! ref_append(&ord->fname, of->name)) {
 			parse_err(p);
 			return;
 		}
-		ord->fname = pp;
-		strlcat(ord->fname, ".", sz);
-		strlcat(ord->fname, of->name, sz);
-	}
 
 	TAILQ_FOREACH(of, &ord->orq, entries) {
 		if (NULL == TAILQ_NEXT(of, entries))
 			break;
-		if (NULL == ord->name) {
-			ord->name = strdup(of->name);
-			if (NULL == ord->name) {
-				parse_err(p);
-				return;
-			}
-			continue;
-		}
-		assert(NULL != ord->name);
-		sz = strlen(ord->name) +
-		     strlen(of->name) + 2;
-		if (NULL == (pp = realloc(ord->name, sz))) {
+		if ( ! ref_append(&ord->name, of->name)) {
 			parse_err(p);
 			return;
 		}
-		ord->name = pp;
-		strlcat(ord->name, ".", sz);
-		strlcat(ord->name, of->name, sz);
 	}
 }
 
@@ -1682,9 +1768,7 @@ static void
 parse_config_search_terms(struct parse *p, struct search *srch)
 {
 	struct sref	*sf;
-	size_t		 sz;
 	struct sent	*sent;
-	void		*pp;
 
 	if (TOK_IDENT != p->lasttype) {
 		parse_errx(p, "expected field identifier");
@@ -1745,48 +1829,19 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 	 * For a singleton field (e.g., "userid"), this is NULL.
 	 */
 
-	TAILQ_FOREACH(sf, &sent->srq, entries) {
-		if (NULL == sent->fname) {
-			sent->fname = strdup(sf->name);
-			if (NULL == sent->fname) {
-				parse_err(p);
-				return;
-			}
-			continue;
-		}
-		assert(NULL != sent->fname);
-		sz = strlen(sent->fname) +
-		     strlen(sf->name) + 2;
-		if (NULL == (pp = realloc(sent->fname, sz))) {
+	TAILQ_FOREACH(sf, &sent->srq, entries)
+		if ( ! ref_append(&sent->fname, sf->name)) {
 			parse_err(p);
 			return;
 		}
-		sent->fname = pp;
-		strlcat(sent->fname, ".", sz);
-		strlcat(sent->fname, sf->name, sz);
-	}
 
 	TAILQ_FOREACH(sf, &sent->srq, entries) {
 		if (NULL == TAILQ_NEXT(sf, entries))
 			break;
-		if (NULL == sent->name) {
-			sent->name = strdup(sf->name);
-			if (NULL == sent->name) {
-				parse_err(p);
-				return;
-			}
-			continue;
-		}
-		assert(NULL != sent->name);
-		sz = strlen(sent->name) +
-		     strlen(sf->name) + 2;
-		if (NULL == (pp = realloc(sent->name, sz))) {
+		if ( ! ref_append(&sent->name, sf->name)) {
 			parse_err(p);
 			return;
 		}
-		sent->name = pp;
-		strlcat(sent->name, ".", sz);
-		strlcat(sent->name, sf->name, sz);
 	}
 }
 

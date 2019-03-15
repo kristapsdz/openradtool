@@ -477,9 +477,13 @@ parse_write_query(struct writer *w, const struct search *p)
 	if ( ! wputc(w, ':'))
 		return 0;
 
+	/* Explicit name of function. */
+
 	if (NULL != p->name)
 		if ( ! wprint(w, " name %s", p->name))
 			return 0;
+
+	/* Ordering. */
 
 	nf = 0;
 	if (TAILQ_FIRST(&p->ordq))
@@ -489,12 +493,17 @@ parse_write_query(struct writer *w, const struct search *p)
 		if ( ! wprint(w, "%s %s", nf++ ? "," : "", o->fname))
 			return 0;
 
+	/* Limit and offset. */
+
 	if (p->limit)
 		if ( ! wprint(w, " limit %" PRId64, p->limit))
 			return 0;
 	if (p->offset)
 		if ( ! wprint(w, " offset %" PRId64, p->offset))
 			return 0;
+
+	/* Distinct selection. */
+
 	if (NULL != p->dst)
 		if ( ! wprint(w, " distinct %s", p->dst->cname))
 			return 0;

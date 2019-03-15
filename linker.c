@@ -518,8 +518,8 @@ resolve_sref(struct config *cfg, struct sref *ref, struct strct *s)
 			break;
 
 	if (NULL == (ref->field = f)) {
-		gen_errx(cfg, &ref->pos, "search term "
-			"not found: %s", ref->name);
+		gen_errx(cfg, &ref->pos,
+			"term not found: %s", ref->name);
 		return 0;
 	}
 
@@ -531,17 +531,17 @@ resolve_sref(struct config *cfg, struct sref *ref, struct strct *s)
 	if (NULL == TAILQ_NEXT(ref, entries)) {
 		if (FTYPE_STRUCT != f->type) 
 			return 1;
-		gen_errx(cfg, &ref->pos, "search terminal field "
+		gen_errx(cfg, &ref->pos, "terminal field "
 			"is a struct: %s", f->name);
 		return 0;
 	} 
 	
 	if (FTYPE_STRUCT != f->type) {
-		gen_errx(cfg, &ref->pos, "search non-terminal "
+		gen_errx(cfg, &ref->pos, "non-terminal "
 			"field not a struct: %s", f->name);
 		return 0;
 	} else if (FIELD_NULL & f->ref->source->flags) {
-		gen_errx(cfg, &ref->pos, "search non-terminal "
+		gen_errx(cfg, &ref->pos, "non-terminal "
 			"field is a null struct: %s", f->name);
 		return 0;
 	}
@@ -807,6 +807,8 @@ resolve_search(struct config *cfg, struct search *srch)
 	struct strct	*p;
 	struct ord	*ord;
 	struct aggr	*aggr;
+	struct group	*grp;
+	struct field	*f1, *f2;
 
 	p = srch->parent;
 
@@ -856,7 +858,7 @@ resolve_search(struct config *cfg, struct search *srch)
 	    check_search_unique(cfg, srch))
 		srch->flags |= SEARCH_IS_UNIQUE;
 
-	/* Now the same but for order statements. */
+	/* Now for order, group, and aggregate statements. */
 
 	TAILQ_FOREACH(ord, &srch->ordq, entries) {
 		sref = TAILQ_FIRST(&ord->orq);
@@ -871,10 +873,40 @@ resolve_search(struct config *cfg, struct search *srch)
 		ord->alias = a;
 	}
 
+	TAILQ_FOREACH(grp, &srch->groupq, entries) {
+		sref = TAILQ_FIRST(&grp->grq);
+		if ( ! resolve_sref(cfg, sref, p))
+			return 0;
+		if (NULL == grp->name)
+			continue;
+		TAILQ_FOREACH(a, &p->aq, entries)
+			if (0 == strcasecmp(a->name, grp->name))
+				break;
+		assert(NULL != a);
+		grp->alias = a;
+	}
+
+	/*
+	 * For the aggregate function, we also want to make sure that we
+	 * haven't defined the same columns to aggregate as the ones we
+	 * want to group.
+	 */
+
 	TAILQ_FOREACH(aggr, &srch->aggrq, entries) {
 		sref = TAILQ_FIRST(&aggr->arq);
 		if ( ! resolve_sref(cfg, sref, p))
 			return 0;
+		f1 = TAILQ_LAST(&aggr->arq, srefq)->field;
+		assert(NULL != f1);
+		TAILQ_FOREACH(grp, &srch->groupq, entries) {
+			f2 = TAILQ_LAST(&grp->grq, srefq)->field;
+			assert(NULL != f2);
+			if (f1 != f2)
+				continue;
+			gen_warnx(cfg, &grp->pos,
+				"same column used for both grouping "
+				"and aggregating");
+		}
 		if (NULL == aggr->name)
 			continue;
 		TAILQ_FOREACH(a, &p->aq, entries)

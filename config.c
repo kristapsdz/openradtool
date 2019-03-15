@@ -273,8 +273,30 @@ parse_free_aggrq(struct aggrq *q)
 }
 
 /*
+ * Free the group queue.
+ * Does not free the "q" pointer, which may not be NULL.
+ */
+static void
+parse_free_groupq(struct groupq *q)
+{
+	struct group	*grp;
+	struct sref	*ref;
+
+	while (NULL != (grp = TAILQ_FIRST(q))) {
+		TAILQ_REMOVE(q, grp, entries);
+		while (NULL != (ref = TAILQ_FIRST(&grp->grq))) {
+			TAILQ_REMOVE(&grp->grq, ref, entries);
+			parse_free_sref(ref);
+		}
+		free(grp->fname);
+		free(grp->name);
+		free(grp);
+	}
+}
+
+/*
  * Free the order queue.
- * Does not free the "q" pointer.
+ * Does not free the "q" pointer, which may not be NULL.
  */
 static void
 parse_free_ordq(struct ordq *q)
@@ -320,6 +342,7 @@ parse_free_search(struct search *p)
 
 	parse_free_aggrq(&p->aggrq);
 	parse_free_ordq(&p->ordq);
+	parse_free_groupq(&p->groupq);
 
 	while (NULL != (sent = TAILQ_FIRST(&p->sntq))) {
 		TAILQ_REMOVE(&p->sntq, sent, entries);

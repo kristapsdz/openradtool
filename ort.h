@@ -30,6 +30,7 @@ TAILQ_HEAD(eitemq, eitem);
 TAILQ_HEAD(enmq, enm);
 TAILQ_HEAD(fieldq, field);
 TAILQ_HEAD(fvalidq, fvalid);
+TAILQ_HEAD(groupq, group);
 TAILQ_HEAD(labelq, label);
 TAILQ_HEAD(nrefq, nref);
 TAILQ_HEAD(ordq, ord);
@@ -400,6 +401,23 @@ enum	aggrtype {
 };
 
 /*
+ * A grouping reference.
+ * This will resolve to a native field in a structure for which query
+ * commands will be generated.
+ * It may not be equal to any aggregate functions within the same
+ * structure, so we can't do SELECT MAX(foo) ... GROUP BY foo.
+ */
+struct	group {
+	struct srefq	   grq; /* queue of group fields */
+	char		  *name; /* sub-structure dot-form name or NULL */
+	char		  *fname; /* canonical dot-form name */
+	struct pos	   pos; /* position in parse */
+	struct search	  *parent; /* up-reference */
+	struct alias	  *alias; /* resolved alias */
+	TAILQ_ENTRY(group) entries;
+};
+
+/*
  * An aggregate reference.
  * This will resolve to a native field in a structure for which query
  * commands will be generated.
@@ -461,6 +479,7 @@ struct	search {
 	struct sentq	    sntq; /* nested reference chain */
 	struct ordq	    ordq; /* ordering chains */
 	struct aggrq	    aggrq; /* aggregate chains */
+	struct groupq	    groupq; /* grouping chains */
 	struct pos	    pos; /* parse point */
 	struct dstnct	   *dst; /* distinct constraint or NULL */
 	char		   *name; /* named or NULL */

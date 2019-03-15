@@ -1605,21 +1605,18 @@ parse_config_aggr_terms(struct parse *p,
 			parse_errx(p, "expected field separator");
 		else if (TOK_IDENT != parse_next(p))
 			parse_errx(p, "expected field identifier");
-		else if ( ! sref_alloc(p, p->last.string, &aggr->arq))
+		else if (sref_alloc(p, p->last.string, &aggr->arq))
 			continue;
 		return;
 	}
 
-	/* Full (structure and field) canonical name of field. */
+	/* Canonical names. */
 
 	TAILQ_FOREACH(af, &aggr->arq, entries)
 		if ( ! ref_append(&aggr->fname, af->name)) {
 			parse_err(p);
 			return;
 		}
-
-	/* Partial (structure-only) canonical name. */
-
 	TAILQ_FOREACH(af, &aggr->arq, entries) {
 		if (NULL == TAILQ_NEXT(af, entries))
 			break;
@@ -1631,9 +1628,68 @@ parse_config_aggr_terms(struct parse *p,
 }
 
 /*
+ * Like parse_config_search_terms() but for grouping terms.
+ *
+ *  field[.field]*
+ */
+static void
+parse_config_group_terms(struct parse *p, struct search *srch)
+{
+	struct sref	*of;
+	struct group	*grp;
+
+	if (TOK_IDENT != p->lasttype) {
+		parse_errx(p, "expected group identifier");
+		return;
+	} else if (NULL == (grp = calloc(1, sizeof(struct group)))) {
+		parse_err(p);
+		return;
+	}
+
+	grp->parent = srch;
+	parse_point(p, &grp->pos);
+	TAILQ_INIT(&grp->grq);
+	TAILQ_INSERT_TAIL(&srch->groupq, grp, entries);
+
+	if ( ! sref_alloc(p, p->last.string, &grp->grq))
+		return;
+
+	while ( ! PARSE_STOP(p)) {
+		if (TOK_COMMA == parse_next(p) ||
+		    TOK_SEMICOLON == p->lasttype ||
+		    TOK_IDENT == p->lasttype)
+			break;
+		if (TOK_PERIOD != p->lasttype)
+			parse_errx(p, "expected field separator");
+		else if (TOK_IDENT != parse_next(p))
+			parse_errx(p, "expected field identifier");
+		else if (sref_alloc(p, p->last.string, &grp->grq))
+			continue;
+		return;
+	}
+
+	if (PARSE_STOP(p))
+		return;
+
+	TAILQ_FOREACH(of, &grp->grq, entries)
+		if ( ! ref_append(&grp->fname, of->name)) {
+			parse_err(p);
+			return;
+		}
+	TAILQ_FOREACH(of, &grp->grq, entries) {
+		if (NULL == TAILQ_NEXT(of, entries))
+			break;
+		if ( ! ref_append(&grp->name, of->name)) {
+			parse_err(p);
+			return;
+		}
+	}
+}
+
+/*
  * Like parse_config_search_terms() but for order terms.
  *
- *  field[.field]* ["asc" | "desc"]?
+ *  field[.field]* ["asc"|"desc"]?
  */
 static void
 parse_config_order_terms(struct parse *p, struct search *srch)
@@ -1679,7 +1735,7 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 			parse_errx(p, "expected field separator");
 		else if (TOK_IDENT != parse_next(p))
 			parse_errx(p, "expected field identifier");
-		else if ( ! sref_alloc(p, p->last.string, &ord->orq))
+		else if (sref_alloc(p, p->last.string, &ord->orq))
 			continue;
 
 		return;
@@ -1693,7 +1749,6 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 			parse_err(p);
 			return;
 		}
-
 	TAILQ_FOREACH(of, &ord->orq, entries) {
 		if (NULL == TAILQ_NEXT(of, entries))
 			break;
@@ -1710,7 +1765,7 @@ parse_config_order_terms(struct parse *p, struct search *srch)
  * This may consist of nested structures, which uses dot-notation to
  * signify the field within a field's reference structure.
  *
- *  field.[field]*
+ *  field.[field]* [operator]?
  */
 static void
 parse_config_search_terms(struct parse *p, struct search *srch)
@@ -1763,7 +1818,7 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 			parse_errx(p, "expected field separator");
 		else if (TOK_IDENT != parse_next(p))
 			parse_errx(p, "expected field identifier");
-		else if ( ! sref_alloc(p, p->last.string, &sent->srq))
+		else if (sref_alloc(p, p->last.string, &sent->srq))
 			continue;
 
 		return;
@@ -1782,7 +1837,6 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 			parse_err(p);
 			return;
 		}
-
 	TAILQ_FOREACH(sf, &sent->srq, entries) {
 		if (NULL == TAILQ_NEXT(sf, entries))
 			break;
@@ -1799,6 +1853,8 @@ parse_config_search_terms(struct parse *p, struct search *srch)
  *   [ "name" name |
  *     "comment" quoted_string |
  *     "distinct" distinct_struct |
+ *     "min"|"max" aggr_fields ]* |
+ *     "group" group_fields |
  *     "order" order_fields ]* ";"
  */
 static void
@@ -1884,6 +1940,13 @@ parse_config_search_params(struct parse *p, struct search *s)
 			while (TOK_COMMA == p->lasttype) {
 				parse_next(p);
 				parse_config_order_terms(p, s);
+			}
+		} else if (0 == strcasecmp("group", p->last.string)) {
+			parse_next(p);
+			parse_config_group_terms(p, s);
+			while (TOK_COMMA == p->lasttype) {
+				parse_next(p);
+				parse_config_group_terms(p, s);
 			}
 		} else if (0 == strcasecmp("distinct", p->last.string)) {
 			if (NULL != s->dst) {

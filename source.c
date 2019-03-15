@@ -2154,6 +2154,82 @@ gen_enum(const struct strct *p)
 }
 
 /*
+ * Like gen_stmt_schema(), but also accepting search parameters so that
+ * we can define MAX() and MIN() functions in-line.
+ * This means we can't use the DB_SCHEMA_xxx macros.
+ */
+static void
+gen_stmt_schema_aggr(const struct strct *orig,
+	int first, const struct strct *p, 
+	const char *pname, const struct search *srch)
+{
+	const struct field *f, *ff;
+	const struct alias *a = NULL;
+	const struct aggr  *aggr;
+	int	 	    c;
+	char		   *name = NULL;
+
+	/* 
+	 * If aggr != NULL, that means that this structure contains the
+	 * aggregate function on one of its fields.
+	 */
+
+	TAILQ_FOREACH(aggr, &srch->aggrq, entries) {
+		ff = TAILQ_LAST(&aggr->arq, arefq)->field;
+		assert(NULL != ff);
+		if (ff->parent == p)
+			break;
+	}
+
+	/* 
+	 * If applicable, looks up our alias and emit it as the alias
+	 * for the table; otherwise, use the table name itself.
+	 * If the aggregation function is defined for this particular
+	 * structure, then don't use the DB_SCHEMA_xxx at all, but
+	 * hard-code it to use the given MAX() or MIN() functions.
+	 */
+
+	printf("\"%s ", 0 == first ? ",\"" : "");
+
+	if (NULL != pname) {
+		TAILQ_FOREACH(a, &orig->aq, entries)
+			if (0 == strcasecmp(a->name, pname))
+				break;
+		assert(NULL != a);
+		if (NULL == aggr)
+			printf("DB_SCHEMA_%s(%s) ", p->cname, a->alias);
+		else
+			print_aggr_schema(p, a->alias, srch);
+	} else if (NULL == aggr) {
+		printf("DB_SCHEMA_%s(%s) ", p->cname, p->name);
+	} else
+		print_aggr_schema(p, p->name, srch);
+
+	/*
+	 * Recursive step: search through all of our fields for
+	 * structures; and, if we find them, build up the canonical
+	 * field reference and recurse.
+	 */
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT != f->type ||
+		    FIELD_NULL & f->ref->source->flags)
+			continue;
+
+		if (NULL != pname) {
+			c = asprintf(&name, "%s.%s", pname, f->name);
+			if (c < 0)
+				err(EXIT_FAILURE, NULL);
+		} else if (NULL == (name = strdup(f->name)))
+			err(EXIT_FAILURE, NULL);
+
+		gen_stmt_schema_aggr(orig, 0,
+			f->ref->target->parent, name, srch);
+		free(name);
+	}
+}
+
+/*
  * Recursively generate a series of DB_SCHEMA_xxx statements for getting
  * data on a structure.
  * This will specify the schema of the top-level structure (pname is
@@ -2322,8 +2398,10 @@ gen_stmt(const struct strct *p)
 			gen_stmt_schema(p, 1,
 				s->dst->strct, 
 				s->dst->cname);
-		} else
+		} else if (TAILQ_EMPTY(&s->aggrq)) {
 			gen_stmt_schema(p, 1, p, NULL);
+		} else
+			gen_stmt_schema_aggr(p, 1, p, NULL, s);
 
 		hastrail = 
 			(! TAILQ_EMPTY(&s->sntq)) ||

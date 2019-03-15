@@ -410,7 +410,6 @@ struct	ord {
 	char		*name; /* sub-structure dot-form name or NULL */
 	char		*fname; /* canonical dot-form name */
 	enum ordtype	 op; /* type of ordering */
-	struct field	*field; /* resolved field */
 	struct pos	 pos; /* position in parse */
 	struct search	*parent; /* up-reference */
 	struct alias	*alias; /* resolved alias */
@@ -437,7 +436,6 @@ struct	aggr {
 	char		 *name; /* sub-structure dot-form name or NULL */
 	char		 *fname; /* canonical dot-form name */
 	enum aggrtype	  op; /* type of aggregation */
-	struct field	 *field; /* resolved field */
 	struct pos	  pos; /* position in parse */
 	struct search	 *parent; /* up-reference */
 	struct alias	 *alias; /* resolved alias */

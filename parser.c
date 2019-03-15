@@ -1647,7 +1647,8 @@ parse_config_aggr_terms(struct parse *p,
 		if (PARSE_STOP(p))
 			return;
 		if (TOK_COMMA == parse_next(p) ||
-		    TOK_SEMICOLON == p->lasttype)
+		    TOK_SEMICOLON == p->lasttype ||
+		    TOK_IDENT == p->lasttype)
 			break;
 		if (TOK_PERIOD != p->lasttype)
 			parse_errx(p, "expected field separator");

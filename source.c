@@ -2350,7 +2350,7 @@ gen_stmt(const struct strct *p)
 	const struct field *f;
 	const struct update *up;
 	const struct uref *ur;
-	const struct oref *or;
+	const struct sref *or;
 	const struct ord *ord;
 	int	 first, hastrail;
 	size_t	 pos, rc;
@@ -2452,7 +2452,7 @@ gen_stmt(const struct strct *p)
 		if ( ! TAILQ_EMPTY(&s->ordq))
 			printf(" ORDER BY ");
 		TAILQ_FOREACH(ord, &s->ordq, entries) {
-			or = TAILQ_LAST(&ord->orq, orefq);
+			or = TAILQ_LAST(&ord->orq, srefq);
 			if ( ! first)
 				printf(", ");
 			first = 0;

@@ -262,6 +262,18 @@ parse_free_aggrq(struct aggrq *q)
 }
 
 /*
+ * Free a chain reference.
+ * Must not be NULL.
+ */
+static void
+parse_free_sref(struct sref *p)
+{
+
+	free(p->name);
+	free(p);
+}
+
+/*
  * Free the order queue.
  * Does not free the "q" pointer.
  */
@@ -269,14 +281,13 @@ static void
 parse_free_ordq(struct ordq *q)
 {
 	struct ord	*ord;
-	struct oref	*oref;
+	struct sref	*ref;
 
 	while (NULL != (ord = TAILQ_FIRST(q))) {
 		TAILQ_REMOVE(q, ord, entries);
-		while (NULL != (oref = TAILQ_FIRST(&ord->orq))) {
-			TAILQ_REMOVE(&ord->orq, oref, entries);
-			free(oref->name);
-			free(oref);
+		while (NULL != (ref = TAILQ_FIRST(&ord->orq))) {
+			TAILQ_REMOVE(&ord->orq, ref, entries);
+			parse_free_sref(ref);
 		}
 		free(ord->fname);
 		free(ord->name);
@@ -315,8 +326,7 @@ parse_free_search(struct search *p)
 		TAILQ_REMOVE(&p->sntq, sent, entries);
 		while (NULL != (s = TAILQ_FIRST(&sent->srq))) {
 			TAILQ_REMOVE(&sent->srq, s, entries);
-			free(s->name);
-			free(s);
+			parse_free_sref(s);
 		}
 		free(sent->fname);
 		free(sent->name);

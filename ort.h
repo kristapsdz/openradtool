@@ -34,7 +34,6 @@ TAILQ_HEAD(fvalidq, fvalid);
 TAILQ_HEAD(labelq, label);
 TAILQ_HEAD(nrefq, nref);
 TAILQ_HEAD(ordq, ord);
-TAILQ_HEAD(orefq, oref);
 TAILQ_HEAD(rolemapq, rolemap);
 TAILQ_HEAD(roleq, role);
 TAILQ_HEAD(rolesetq, roleset);
@@ -267,39 +266,27 @@ struct 	alias {
 };
 
 /*
- * A single search field reference within a chain.
+ * A single field reference within a chain.
  * For example, in a chain of "user.company.name", which presumes
  * structures "user" and "company", then a "name" in the latter, the
  * fields would be "user", "company", an "name".
- * These compose search entities, "struct sent".
+ * These compose search entities, order entities, etc.
  */
 struct	sref {
 	char		 *name; /* field name */
 	struct pos	  pos; /* parse point */
 	struct field	 *field; /* field (after link) */
-	struct sent	 *parent; /* up-reference */
 	TAILQ_ENTRY(sref) entries;
 };
 
 /*
- * A single order field reference within a chain.
- */
-struct	oref {
-	char		 *name; /* field name */
-	struct pos	  pos; /* parse point */
-	struct field	 *field; /* field (after link) */
-	struct ord	 *parent; /* up-reference */
-	TAILQ_ENTRY(oref) entries;
-};
-
-/*
  * A single aggregate field reference within a chain.
+ * See struct sref.
  */
 struct	aref {
 	char		 *name; /* field name */
 	struct pos	  pos; /* parse point */
 	struct field	 *field; /* field (after link) */
-	struct aggr	 *parent; /* up-reference */
 	TAILQ_ENTRY(aref) entries;
 };
 
@@ -406,7 +393,7 @@ enum	ordtype {
  * specifying the SQL order of a query.
  */
 struct	ord {
-	struct orefq	 orq; /* queue of order fields */
+	struct srefq	 orq; /* queue of order fields */
 	char		*name; /* sub-structure dot-form name or NULL */
 	char		*fname; /* canonical dot-form name */
 	enum ordtype	 op; /* type of ordering */

@@ -568,7 +568,6 @@ aref_alloc(struct parse *p, const char *name, struct aggr *up)
 		return NULL;
 	}
 
-	ref->parent = up;
 	parse_point(p, &ref->pos);
 	TAILQ_INSERT_TAIL(&up->arq, ref, entries);
 	return ref;
@@ -578,48 +577,23 @@ aref_alloc(struct parse *p, const char *name, struct aggr *up)
  * Allocate a search reference and add it to the parent queue.
  * Returns the created pointer or NULL.
  */
-static struct oref *
-oref_alloc(struct parse *p, const char *name, struct ord *up)
-{
-	struct oref	*ref;
-
-	if (NULL == (ref = calloc(1, sizeof(struct oref)))) {
-		parse_err(p);
-		return NULL;
-	} else if (NULL == (ref->name = strdup(name))) {
-		free(ref);
-		parse_err(p);
-		return NULL;
-	}
-
-	ref->parent = up;
-	parse_point(p, &ref->pos);
-	TAILQ_INSERT_TAIL(&up->orq, ref, entries);
-	return ref;
-}
-
-/*
- * Allocate a search reference and add it to the parent queue.
- * Returns the created pointer or NULL.
- */
-static struct sref *
-sref_alloc(struct parse *p, const char *name, struct sent *up)
+static int
+sref_alloc(struct parse *p, const char *name, struct srefq *q)
 {
 	struct sref	*ref;
 
 	if (NULL == (ref = calloc(1, sizeof(struct sref)))) {
 		parse_err(p);
-		return NULL;
+		return 0;
 	} else if (NULL == (ref->name = strdup(name))) {
 		free(ref);
 		parse_err(p);
-		return NULL;
+		return 0;
 	}
 
-	ref->parent = up;
 	parse_point(p, &ref->pos);
-	TAILQ_INSERT_TAIL(&up->srq, ref, entries);
-	return ref;
+	TAILQ_INSERT_TAIL(q, ref, entries);
+	return 1;
 }
 
 /*
@@ -1687,7 +1661,7 @@ parse_config_aggr_terms(struct parse *p,
 static void
 parse_config_order_terms(struct parse *p, struct search *srch)
 {
-	struct oref	*of;
+	struct sref	*of;
 	struct ord	*ord;
 
 	if (TOK_IDENT != p->lasttype) {
@@ -1704,7 +1678,7 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 	TAILQ_INIT(&ord->orq);
 	TAILQ_INSERT_TAIL(&srch->ordq, ord, entries);
 
-	if (NULL == oref_alloc(p, p->last.string, ord))
+	if ( ! sref_alloc(p, p->last.string, &ord->orq))
 		return;
 
 	while ( ! PARSE_STOP(p)) {
@@ -1728,7 +1702,7 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 			parse_errx(p, "expected field separator");
 		else if (TOK_IDENT != parse_next(p))
 			parse_errx(p, "expected field identifier");
-		else if (NULL != oref_alloc(p, p->last.string, ord))
+		else if ( ! sref_alloc(p, p->last.string, &ord->orq))
 			continue;
 
 		return;
@@ -1774,7 +1748,7 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 
 	if (NULL == (sent = sent_alloc(p, srch)))
 		return;
-	if (NULL == sref_alloc(p, p->last.string, sent))
+	if ( ! sref_alloc(p, p->last.string, &sent->srq))
 		return;
 
 	while ( ! PARSE_STOP(p)) {
@@ -1812,7 +1786,7 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 			parse_errx(p, "expected field separator");
 		else if (TOK_IDENT != parse_next(p))
 			parse_errx(p, "expected field identifier");
-		else if (NULL != sref_alloc(p, p->last.string, sent))
+		else if ( ! sref_alloc(p, p->last.string, &sent->srq))
 			continue;
 
 		return;

@@ -554,56 +554,6 @@ resolve_aref(struct config *cfg, struct aref *ref, struct strct *s)
 }
 
 /*
- * Like resolve_sref() but for order references.
- * The non-terminal fields must be non-null structs; the terminal field
- * must be a regular field.
- * Return zero on failure, non-zero on success.
- */
-static int
-resolve_oref(struct config *cfg, struct oref *ref, struct strct *s)
-{
-	struct field	*f;
-
-	TAILQ_FOREACH(f, &s->fq, entries)
-		if (0 == strcasecmp(f->name, ref->name))
-			break;
-
-	if (NULL == (ref->field = f)) {
-		gen_errx(cfg, &ref->pos, "order term "
-			"not found: %s", ref->name);
-		return 0;
-	}
-
-	/* 
-	 * Terminal field must be a non-struct.
-	 * Null is ok but it'll make for strange results...?
-	 */
-
-	if (NULL == TAILQ_NEXT(ref, entries)) {
-		if (FTYPE_STRUCT != f->type) 
-			return 1;
-		gen_errx(cfg, &ref->pos, "order terminal field "
-			"is a struct: %s", f->name);
-		return 0;
-	} 
-
-	/* Non-terminals must be non-null structs. */
-	
-	if (FTYPE_STRUCT != f->type) {
-		gen_errx(cfg, &ref->pos, "order non-terminal "
-			"field not a struct: %s", f->name);
-		return 0;
-	} else if (FIELD_NULL & f->ref->source->flags) {
-		gen_errx(cfg, &ref->pos, "order non-terminal "
-			"field is a null struct: %s", f->name);
-		return 0;
-	}
-
-	ref = TAILQ_NEXT(ref, entries);
-	return resolve_oref(cfg, ref, f->ref->target->parent);
-}
-
-/*
  * Recursively follow the chain of references in a search target,
  * finding out whether it's well-formed in the process.
  * Returns zero on failure, non-zero on success.
@@ -903,7 +853,6 @@ resolve_search(struct config *cfg, struct search *srch)
 {
 	struct sent	*sent;
 	struct sref	*sref;
-	struct oref	*oref;
 	struct aref	*aref;
 	struct alias	*a;
 	struct strct	*p;
@@ -961,10 +910,9 @@ resolve_search(struct config *cfg, struct search *srch)
 	/* Now the same but for order statements. */
 
 	TAILQ_FOREACH(ord, &srch->ordq, entries) {
-		oref = TAILQ_FIRST(&ord->orq);
-		if ( ! resolve_oref(cfg, oref, p))
+		sref = TAILQ_FIRST(&ord->orq);
+		if ( ! resolve_sref(cfg, sref, p))
 			return 0;
-
 		if (NULL == ord->name)
 			continue;
 		TAILQ_FOREACH(a, &p->aq, entries)

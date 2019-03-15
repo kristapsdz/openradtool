@@ -100,14 +100,10 @@ There are many disallowed or reserved identifiers.
 There are also unique name constraints to consider (e.g., no two
 structures can have the same name, etc.).
 .Pp
-An example identifier:
+A conforming and non-conforming identifier:
 .Bd -literal -offset indent
-enum foobar { ... };
-.Ed
-.Pp
-A non-confirming identifier may be:
-.Bd -literal -offset indent
-enum foo_bar { ... };
+enum foobar { ... };  # ok
+enum foo_bar { ... }; # no
 .Ed
 .Ss String literals
 Another comment syntactic element is the string literal: a double-quoted
@@ -184,6 +180,177 @@ or
 for querying data; and zero or more
 .Cm roles
 statements enumerating role-based access control.
+.Ss Fields
+Column definitions.
+Each field consists of the
+.Cm field
+keyword followed by an identifier and, optionally, a
+type with additional information.
+.Bd -literal -offset indent
+"field" name[":" target]? [type [typeinfo]*]? ";"
+.Ed
+.Pp
+The name may either be a standalone identifier or a
+.Qq foreign key
+referencing a field in another structure by the structure and field
+name.
+In this case, the referenced field must be a
+.Cm rowid
+or
+.Cm unique
+and have the same type.
+.Pp
+The type, if specified, may be one of the following.
+.Bl -tag -width Ds -offset indent
+.It Cm bit
+Integer constrained to 64-bit bit index (that is, 0\(en64).
+The bit indices start from 1 in order to represent a zero value (no bits
+to set).
+Each non-zero value is usually merged into a bit-field by setting
+.Li 1u << (value - 1)
+for some input or output value.
+For entire bitfields, see
+.Cm bits .
+.It Cm bits Ar name
+Integer constrained to the given
+.Ar name
+bitfield's bits.
+.It Cm blob
+A fixed-size binary buffer.
+.It Cm email
+Text constrained to e-mail address format.
+.It Cm enum Ar name
+Integer constrained to valid enumeration values of
+.Ar name .
+.It Cm int
+A 64-bit signed integer.
+.It Cm password
+Text.
+This field is special in that it converts an input password into a hash
+before insertion into the database.
+It also can properly search for password hashes by running the hash
+verification after extraction.
+Thus, there is a difference between a password field that is being
+inserted or updated (as a password, which is hashed) and extracted using
+a search (as a hash).
+.It Cm real
+A double-precision float.
+.It Cm epoch
+Integer constrained to valid
+.Vt time_t
+values and similarly represented in the C API.
+The
+.Cm date
+alias is also available, which is the same but using a date (ISO 8601)
+sequence input validator.
+.It Cm struct Ar field
+A non-native type filled in by joining the given
+.Ar field
+with its referent structure.
+This type is
+.Dq non-native
+because it is not represented in the database schema, and is instead
+filled in with the referenced row.
+In the C API, this is represented by a
+.Vt struct name
+of the referent structure.
+The
+.Ar field
+may be marked with
+.Cm null ,
+but this involves a not-inconsiderable performance hit when querying
+(directly or indirectly) on the structure.
+.It Cm text
+Text, usually encoded in ASCII or UTF-8.
+.El
+.Pp
+The
+.Cm typeinfo
+provides further information (or operations) regarding the field, and
+may consist of the following:
+.Bl -tag -width Ds -offset indent
+.It Cm actdel Ar action
+Like
+.Cm actup
+but on deletion of the field in the database.
+.It Cm actup Ar action
+SQL actions taken when the field is updated.
+May be one of
+.Ar none
+.Pq do nothing ,
+.Ar restrict ,
+.Pq disallow if having child referents ,
+.Ar nullify
+.Pq set child referents to null ,
+.Ar cascade ,
+.Pq propogate operation to referents ,
+or
+.Ar default
+.Pq set child referents to their default values .
+This is only available on foreign key references.
+.It Cm comment Ar string_literal
+Documents the field using the quoted string.
+.It Cm default Ar integer|decimal|date|string_literal
+Set a default value for the column that's used
+.Em only
+when adding columns to the SQL schema via
+.Xr kwebapp-sqldiff 1 .
+It's only valid for numeric, date, or string literal (email, text) field
+types.
+Dates must be in yyyy-mm-dd format.
+.It Cm limit Ar limit_op limit_val
+Used when generating validation functions.
+Only available for native types.
+The
+.Ar limit_op
+argument consists of an operator the
+.Ar limit_val
+is checked against.
+Available operators are
+.Ar ge ,
+.Ar le ,
+.Ar gt ,
+.Ar lt ,
+and
+.Ar eq .
+Respectively, these mean the field should be greater than or equal to,
+less than or equal to, greater than, less than, or equal to the given
+value.
+If the field type is
+.Cm text ,
+.Cm email ,
+.Cm password ,
+or
+.Cm blob ,
+this refers to the string (or binary) length in bytes.
+For numeric types, it's the value itself.
+The given value must match the field type: an integer (which may be
+signed) for integers, integer or real-valued for real, or a positive
+integer for lengths.
+.It Cm noexport
+Never exported using the JSON interface.
+This is useful for sensitive internal information.
+Fields with type
+.Cm password
+are never exported by default.
+.It Cm null
+Accepts null SQL or C values, and is only available for native types.
+A
+.Cm rowid
+field may not also be
+.Cm null .
+.It Cm rowid
+The field is an SQL primary key.
+This is only available for the
+.Cm int
+type and may only appear for one field in a given structure.
+.It Cm unique
+Has a unique SQL column value.
+.El
+.Pp
+A field declaration may consist of any number of
+.Cm typeinfo
+statements.
 .Ss Comments
 A comment is a string literal describing the entire structure.
 .Bd -literal -offset indent
@@ -192,6 +359,9 @@ struct foo {
   comment "A foo widget.";
 };
 .Ed
+.Pp
+There's currently no structure imposed on comments: they are interpreted
+as opaque text and passed into the frontend.
 .Ss Queries
 Query data with the
 .Cm search
@@ -212,10 +382,8 @@ Queries are always by field and may be followed by parameters:
 "};"
 .Ed
 .Pp
-Here,
-.Cm term
-consists of the possibly-nested field names to search for and an
-optional operator.
+The term consists of the possibly-nested field names to search for and
+an optional operator.
 (Searchers of type
 .Cm search
 require at least one field.)
@@ -225,7 +393,7 @@ Nested fields are in dotted-notation:
 .Ed
 .Pp
 This would produce functions searching the field
-.Dq field
+.Qq field
 within the
 .Cm struct
 structures as listed.
@@ -263,33 +431,13 @@ The
 .Cm password
 field does not accept any operator but the default check for equality.
 .Pp
-The
-.Cm parms
-search parameters are a series of key-value pairs:
-.Bd -literal -offset indent
-"comment" string_literal
-"distinct" ["." | [field ["." field]*]]
-"limit" limitval["," offsetval]?
-"name" searchname
-"order" term [type]? ["," term [type]?]*
-"group" term ["," term]*
-["min" | "max"] term ["," term]*
-.Ed
-.Pp
-The available parameter keys are as follows:
+The search parameters are a series of key-value pairs.
+In each of these, terms are all in dotted-notation and may represent
+nested columns.
 .Bl -tag -width Ds -offset indent
-.It Cm comment
-String literal included in the API comments for the function.
-.It Cm limit
-A value >0 that limits the number of returned results.
-By default, there is no limit.
-This can be used in a
-.Cm search
-singleton result statement as a way to limit non-unique results to a
-single result.
-If followed by a comma, the next term is used to offset the query.
-This is usually used to page through results.
-.It Cm distinct
+.It Cm comment Ar string_literal
+Documents the query using the quoted string.
+.It Cm distinct Ar ["." | term]
 Return only distinct rows.
 If only a period
 .Pq Dq \&.
@@ -301,29 +449,8 @@ This does not work with
 .Cm null
 structures; and moreover, disallows searching by fields of type
 .Cm password .
-.It Cm name
-A unique identifier used in the C API for the search function.
-.It Cm order
-Result ordering.
-The
-.Cm term ,
-like the search term, consists of order fields with periods indicating
-fields nested within structures.
-Each term may be followed by an order direction:
-.Cm asc
-for ascending and
-.Cm desc
-for descending.
-Result ordering is applied from left-to-right.
-.It Cm max , min
-Return the maximum or minimum value instead of the value itself.
-This is known as an
-.Qq aggregation function
-and is usually used with the
-.Cm group
-keyword.
-.It Cm group
-Groups results by the given column.
+.It Cm group Ar term ["," term]*
+Groups results by the given columns.
 This collapses all rows with the same value for the given column into a
 single row.
 It is usually used with the
@@ -331,6 +458,32 @@ It is usually used with the
 or
 .Cm min
 keyword.
+.It Cm limit Ar limitval ["," offsetval]?
+A value >0 that limits the number of returned results.
+By default, there is no limit.
+This can be used in a
+.Cm search
+singleton result statement as a way to limit non-unique results to a
+single result.
+If followed by a comma, the next term is used to offset the query.
+This is usually used to page through results.
+.It Cm max | min Ar term ["," term]*
+Return the maximum or minimum value instead of the value itself.
+This is known as an
+.Qq aggregation function
+and is usually used with the
+.Cm group
+keyword.
+.It Cm name Ar searchname
+A unique identifier used in the C API for the search function.
+.It Cm order Ar term [type]? ["," term [type]?]*
+Result ordering.
+Each term may be followed by an order direction:
+.Cm asc
+for ascending and
+.Cm desc
+for descending.
+Result ordering is applied from left-to-right.
 .El
 .Pp
 If you're searching (in any way) on a
@@ -502,191 +655,6 @@ struct request {
 .Pp
 This stipulates that adding the same pair will result in a constraint
 failure.
-.Ss Fields
-Data specification beginning with the
-.Cm field
-keyword.
-Each field consists of the word
-.Cm field
-followed by an identifier
-.Cm name
-and, optionally, a
-.Cm type
-then additional information.
-.Bd -literal -offset indent
-"field" name[":" target]? [type [typeinfo]*]? ";"
-.Ed
-.Pp
-The
-.Cm name
-may either be a standalone identifier or a
-.Dq foreign key
-referencing a field in another structure by the structure and field
-name.
-In this case, the referenced field must be a
-.Cm rowid
-or
-.Cm unique
-and have the same type.
-.Pp
-The
-.Cm type ,
-if specified,
-may be one of the following:
-.Bl -tag -width Ds -offset indent
-.It Cm bit
-Native integer constained to 64-bit bit index (that is, 0\(en64).
-The bit indices start from 1 in order to represent a zero value (no bits
-to set).
-Each non-zero value is usually merged into a bit-field by setting
-.Li 1u << (value - 1)
-for some input or output value.
-For entire bitfields, see
-.Cm bits .
-.It Cm bits Ar name
-Native type mapping into a 64-bit integer, constrained to valid
-bitfield
-.Ar name .
-.It Cm blob
-Native type mapping into a fixed-size binary buffer.
-.It Cm email
-Native type mapping into a nil-terminated character string, constrained
-to e-mail address format.
-.It Cm enum Ar name
-Native type mapping into a 64-bit integer, constrained to valid
-enumeration values of
-.Ar name .
-.It Cm int
-Native type mapping into a 64-bit integer,
-.Vt int64_t .
-.It Cm password
-Native type mapping into a nil-terminated character string.
-This field is special in that it converts an input password into a hash
-before insertion into the database.
-It also can properly search for password hashes by running the hash
-verification after extraction.
-Thus, there is a difference between a password field that is being
-inserted or updated (as a password, which is hashed) and extracted using
-a search (as a hash).
-.It Cm real
-Native type mapping into a double-precision float.
-.It Cm epoch
-Native type mapping into a 64-bit integer, constrained to valid
-.Vt time_t
-values and similarly represented in the C API.
-The
-.Cm date
-alias is also available, which is the same but using a date (ISO 8601)
-sequence input validator.
-.It Cm struct Ar field
-A non-native type filled in by joining the given
-.Ar field
-with its referent structure.
-This type is
-.Dq non-native
-because it is not represented in the database schema, and is instead
-filled in with the referenced row.
-In the C API, this is represented by a
-.Vt struct name
-of the referent structure.
-The
-.Ar field
-may be marked with
-.Cm null ,
-but this involves a not-inconsiderable performance hit when querying
-(directly or indirectly) on the structure.
-.It Cm text
-Native type mapping into a nil-terminated character string, usually
-encoded in UTF-8.
-.El
-.Pp
-The
-.Cm typeinfo
-provides further information (or operations) regarding the field, and
-may consist of the following:
-.Bl -tag -width Ds -offset indent
-.It Cm actdel Ar action
-Like
-.Cm actup
-but on deletion of the field in the database.
-.It Cm actup Ar action
-SQL actions taken when the field is updated.
-May be one of
-.Ar none
-.Pq do nothing ,
-.Ar restrict ,
-.Pq disallow if having child referents ,
-.Ar nullify
-.Pq set child referents to null ,
-.Ar cascade ,
-.Pq propogate operation to referents ,
-or
-.Ar default
-.Pq set child referents to their default values .
-This is only available on foreign key references.
-.It Cm comment Ar string_literal
-Documents the field using the quoted string.
-.It Cm default Ar integer|decimal|date|string_literal
-Set a default value for the column that's used
-.Em only
-when adding columns to the SQL schema via
-.Xr kwebapp-sqldiff 1 .
-It's only valid for numeric, date, or string literal (email, text) field
-types.
-Dates must be in yyyy-mm-dd format.
-.It Cm limit Ar limit_op limit_val
-Used when generating validation functions.
-Only available for native types.
-The
-.Ar limit_op
-argument consists of an operator the
-.Ar limit_val
-is checked against.
-Available operators are
-.Ar ge ,
-.Ar le ,
-.Ar gt ,
-.Ar lt ,
-and
-.Ar eq .
-Respectively, these mean the field should be greater than or equal to,
-less than or equal to, greater than, less than, or equal to the given
-value.
-If the field type is
-.Cm text ,
-.Cm email ,
-.Cm password ,
-or
-.Cm blob ,
-this refers to the string (or binary) length in bytes.
-For numeric types, it's the value itself.
-The given value must match the field type: an integer (which may be
-signed) for integers, integer or real-valued for real, or a positive
-integer for lengths.
-.It Cm noexport
-Never exported using the JSON interface.
-This is useful for sensitive internal information.
-Fields with type
-.Cm password
-are never exported by default.
-.It Cm null
-Accepts null SQL or C values, and is only available for native types.
-A
-.Cm rowid
-field may not also be
-.Cm null .
-.It Cm rowid
-The field is an SQL primary key.
-This is only available for the
-.Cm int
-type and may only appear for one field in a given structure.
-.It Cm unique
-Has a unique SQL column value.
-.El
-.Pp
-A field declaration may consist of any number of
-.Cm typeinfo
-statements.
 .Sh TYPES
 To provide more strong typing for data,
 .Nm

@@ -25,10 +25,11 @@ The
 .Nm
 configuration is used by the
 .Xr kwebapp 1
-family to define how an application's data types; the data itself; how
+family to define an application's data types; the data itself; how
 the data is created, modified, and deleted; and how the data is queried.
 .Pp
-Configurations have the following rough structure:
+Configurations usually have one or more structures, zero or more
+enumerations and bitfields (types), and possibly a role definition.
 .Bd -literal -offset indent
 config :== [ enum | bitfield | struct ]+ [ roles ]?
 roles :== "roles" "{"
@@ -58,25 +59,19 @@ bitfield :== "bits" bitsname "{"
 "};"
 .Ed
 .Pp
-In short, one or more structure definitions, zero or more enumerations
-and bitfields, and zero or one role definition.
-.Pp
-.Sx Structures
-describe data structures and operations (queries, insertions, updates,
-deletions).
-.Sx Fields
-contained in each structure describe data fields, validation
+Structures describe data structures and operations on the data (queries,
+insertions, updates, deletions).
+The data is arranged in fields describing data types, validation
 constraints, and so on.
 .Pp
-.Sx Enumerations
-define fixed constants used in data field definitions.
-These are used only for validation and for formatting output data.
-.Sx Bitfields
-are similar to enumerations except that they describe bits set in a
-single value instead of independent values.
+Types consist of enumerations and bit-fields.
+Enumerations define fixed constants used in data field definitions.
+Bit-fields are similar, except that they describe bits set within an
+single value.
+Both are used only for validation and for formatting output data.
 .Pp
-.Sx Roles
-stipulate the use of role-based access control on data operations.
+Lastly, roles stipulate the use of role-based access control on data
+operations.
 .Pp
 Collectively, these are called a configuration's
 .Dq objects .
@@ -121,7 +116,7 @@ backslash.
 .Bd -literal -offset indent
 struct ident { field id int comment "\e"Literal\e"."; };
 .Ed
-.Ss Document comments
+.Ss Comments
 Document comments are begun by the hash mark
 .Pq Dq #
 and extend to the end of the line.
@@ -135,9 +130,6 @@ struct ident {
 .Pp
 They are always discarded and not considered part of the parsed
 configuration file.
-They shouldn't be confused with
-.Sx Comments
-possible for individual statements.
 .Ss Numbers
 Both decimal and integral numbers are recognised.
 Integral numbers are signed and limited to 64 bits and formatted as
@@ -145,34 +137,13 @@ Integral numbers are signed and limited to 64 bits and formatted as
 Decimal numbers are similarly formatted as
 .Li [-]?[0-9]+.[0-9]* .
 The difference between the two is the existence of the decimal.
-.Sh SEMANTICS
-Every
-.Nm
-document consists of a set of top-level objects.
-These objects describe data types 
-.Sx ( Enumeration
-and
-.Sx Bitfields ) ,
-data and operations
-.Sx ( Structures
-and their
-.Sx fields ) ,
-and access control
-.Pq Sx Roles .
-.Pp
+.Ss Ordering
 There are no ordering constraints on objects: all linkage between
 components (e.g., referenced fields, roles, types, etc.) occurs after
 parsing the document.
-.Ss Structures
-A structure object is the foundational type of
-.Nm .
-It is similar to a class and consists primarily of data definitions and
-operations.
-A structure is represented as a struct in a C API along with functions
-operating on that struct.
-In SQL, it is a table.
-.Pp
-Its definition begins with the word
+.Sh STRUCTURES
+A structure consists of data definitions, operations, and access.
+It begins with
 .Cm struct ,
 then the unique identifier of the structure, then elements within the
 curly braces.
@@ -193,38 +164,336 @@ curly braces.
 .Pp
 The elements may consist of one or more
 .Cm field
-describing data fields (see
-.Sx Fields ) ;
-optionally a
+describing data fields; optionally a
 .Cm comment
-for describing the structure (see
-.Sx Comments ) ;
+for describing the structure;
 zero or more
 .Cm update ,
 .Cm delete ,
 or
 .Cm insert
-statements that define data modifiers (see
-.Sx Updates ) ;
+statements that define data modification;
 zero or more
 .Cm unique
-statements that create unique constraints on multiple fields (see
-.Sx Uniques ) ;
+statements that create unique constraints on multiple fields;
 and zero or more
 .Cm list ,
 .Cm iterate ,
 or
 .Cm search
-statements that define data queries (see
-.Sx Queries ) .
-Lastly, the
+for querying data; and zero or more
 .Cm roles
-statement describes modifiers and queries available to roles (see
-.Sx Roles ) .
+statements enumerating role-based access control.
+.Ss Comments
+A comment is a string literal describing the entire structure.
+.Bd -literal -offset indent
+struct foo {
+  field name text;
+  comment "A foo widget.";
+};
+.Ed
+.Ss Queries
+Query data with the
+.Cm search
+keyword for an individual row (i.e., on a unique column or with a
+.Cm limit
+of 1) and store the result in memory, the
+.Cm list
+key word for retrieving multiple results in an array, or the
+.Cm iterate
+key word for iterating over each result as it's returned.
+.Pp
+Queries are always by field, and may be followed by parameters:
+.Bd -literal -offset indent
+"struct" name "{"
+  [ "search" [term ["," term]*]? [":" [parms]* ]? ";" ]*
+  [ "list" [term ["," term]*]? [":" [parms]* ]? ";" ]*
+  [ "iterate" [term ["," term]*]? [":" [parms]* ]? ";" ]*
+"};"
+.Ed
+.Pp
+Here,
+.Cm term
+consists of the possibly-nested field names to search for and an
+optional operator.
+(Searchers of type
+.Cm search
+require at least one field.)
+Nested fields are in dotted-notation:
+.Bd -literal -offset indent
+[structure "."]*field [operator]?
+.Ed
+.Pp
+This would produce functions searching the field
+.Dq field
+within the
+.Cm struct
+structures as listed.
+The following operators may be used:
+.Bl -tag -width Ds
+.It Cm and , or
+Logical AND
+.Pq \&&
+and logical OR
+.Pq \&| ,
+respectively.
+.It Cm eq , neq
+Equality or non-equality binary operator.
+The
+.Cm eq
+operator is the default.
+.It Cm lt , gt
+Less than or greater than binary operators.
+For text, the comparison is lexical; otherwise, it is by value.
+.It Cm le , ge
+Less than/equality or greater than/equality binary operators.
+For text, the comparison is lexical; otherwise, it is by value.
+.It Cm like
+The LIKE SQL operator.
+This only applies to
+.Cm text
+and
+.Cm email
+fields.
+.It Cm isnull , notnull
+Unary operator to check whether the field is null or not null.
+.El
+.Pp
+The
+.Cm password
+field does not accept any operator but the default check for equality.
+.Pp
+The
+.Cm parms
+search parameters are a series of key-value pairs:
+.Bd -literal -offset indent
+"comment" string_literal
+"distinct" ["." | [field ["." field]*]]
+"limit" limitval["," offsetval]?
+"name" searchname
+"order" term [type]? ["," term [type]?]*
+.Ed
+.Pp
+The available parameter keys are as follows:
+.Bl -tag -width Ds
+.It Cm comment
+String literal included in the API comments for the function.
+.It Cm limit
+A value >0 that limits the number of returned results.
+By default, there is no limit.
+This can be used in a
+.Cm search
+singleton result statement as a way to limit non-unique results to a
+single result.
+If followed by a comma, the next term is used to offset the query.
+This is usually used to page through results.
+.It Cm distinct
+Return only distinct rows.
+If only a period
+.Pq Dq \&.
+follows the keyword, then the distinct applies to the entire returned
+structure.
+If a nested structure follows the keyword, only distinct rows of the
+given structure are returned by the search operation.
+This does not work with
+.Cm null
+structures; and moreover, disallows searching by fields of type
+.Cm password .
+.It Cm name
+A unique identifier used in the C API for the search function.
+.It Cm order
+Result ordering.
+The
+.Cm term ,
+like the search term, consists of order fields with periods indicating
+fields nested within structures.
+Each term may be followed by an order direction:
+.Cm asc
+for ascending and
+.Cm desc
+for descending.
+Result ordering is applied from left-to-right.
+.El
+.Pp
+If you're searching (in any way) on a
+.Cm password
+field, the field is omitted from the initial search, then hash-verified
+after being extracted from the database.
+Thus, this doesn't have the same performance as a normal search.
+.Ss Roles
+Limit role access with the
+.Cm roles
+key word as follows:
+.Bd -literal -offset indent
+"struct" name "{"
+  [ "roles" role ["," role]* "{" roletype [name]? "};" ]*
+"};"
+.Ed
+.Pp
+The
+.Cm role
+is a list of roles as defined in the top-level block, or one of the
+reserved roles but for
+.Cm none ,
+which can never be assigned.
+The role may be one of the following types:
+.Bl -tag -width Ds
+.It Cm all
+A special type referring to all function types.
+.It Cm delete Ar name
+The named delete operation.
+.It Cm insert
+The insert operation.
+.It Cm iterate Ar name
+The named iterate operation.
+.It Cm list Ar name
+The named list operation.
+.It Cm noexport Op Ar name
+Do not export the field
+.Ar name
+via the JSON export routines.
+If no name is given, don't export any fields.
+.It Cm search Ar name
+The named search operation.
+.It Cm update Ar name
+The name update operation.
+.El
+.Pp
+To refer to an operation, use its
+.Cm name .
+The only way to refer to un-named operations is to use
+.Cm all ,
+which refers to all operations (i.e., all types but
+.Cm noexport ) .
+.Pp
+If, during run-time, the current role is not a subtype (inclusive) of
+the given role for an operation, the application is immediately
+terminated.
+.Ss Updates
+Data modifiers.
+These begin with the
+.Cm update ,
+.Cm delete ,
+or
+.Cm insert
+key words.
+By default, there are no update, delete, or insert functions defined.
+The syntax is as follows:
+.Bd -literal -offset indent
+"struct" name "{"
+  [ "update" [mflds]* [":" [cflds]* [":" [parms]* ]? ]? ";" ]*
+  [ "delete" [cflds]* [":" [parms]* ]? ";" ]*
+  [ "insert" ";" ]?
+"};"
+.Ed
+.Pp
+Both
+.Cm mflds
+and
+.Cm cflds
+are a sequence of comma-separated native-type fields in the current
+structure.
+The former refers to the fields that will be modified; the latter refers
+to fields that will act as constraints.
+In other words, modify fields constraint by
+.Cm cflds
+to contain the
+.Cm cflds .
+Usually, the latter will be the
+.Cm rowid
+and the former will be any other fields.
+.Pp
+The
+.Cm delete
+statement obviously does not accept fields to modify
+.Pq Cm mflds .
+If the
+.Cm update
+statement does not have
+.Cm mflds ,
+it's taken to mean that all fields will be modified using the default
+operator.
+.Pp
+The fields in
+.Cm mflds
+may accept a modifier type that modifies the existing field instead
+of setting it externally.
+This is only available for numeric types.
+The fields in
+.Cm cflds
+may accept an optional operator type as described for
+.Sx Queries .
+.Bd -literal -offset indent
+mfld [modifier]?
+cfld [operator]?
+.Ed
+.Pp
+The following augment operations are available, but only to numeric
+types:
+.Bl -tag -width Ds
+.It Cm concat
+String concatenate the current field by a given value (x = x || ?).
+.It Cm inc
+Increment the current field by a given value (x = x + ?).
+.It Cm dec
+Decrement the current field by a given value (x = x - ?).
+.It Cm set
+Default behaviour of setting to a value (x = ?).
+.El
+.Pp
+The parms search parameters are a series of key-value pairs:
+.Bd -literal -offset indent
+"comment" string_literal
+"name" name
+.Ed
+.Pp
+The
+.Cm name
+sets a unique name for the generated function, while
+.Cm comment
+is used for the API comments.
+.Pp
+Fields of type
+.Cm password
+are not allowed as
+.Cm cflds
+since they are not stored directly as comparable strings, but hashed
+with a unique salt.
+.Ss Uniques
+While individual fields may be marked
+.Cm unique
+on a per-column basis, multiple-column unique constraints may be
+specified with the
+.Cm unique
+structure-level keyword.
+The syntax is as follows:
+.Bd -literal -offset indent
+"unique" field ["," field]+ ";"
+.Ed
+.Pp
+Each
+.Cm field
+must be in the local structure, and must be native types.
+There must be at least two fields in the statement.
+There can be only one unique statement per combination of fields (in any
+order).
+.Pp
+For example, consider a request for something involving two parties,
+where the pair requesting must be unique.
+.Bd -literal -offset indent
+struct request {
+  field userid:user.id int;
+  field ownerid:user.id int;
+  unique userid, ownerid;
+};
+.Ed
+.Pp
+This stipulates that adding the same pair will result in a constraint
+failure.
 .Ss Fields
-A field object defines the data contained within a structure.
-In the C API, a field is a struct member.
-In SQL, it is a column specification.
+Data specification beginning with the
+.Cm field
+key word.
 Each field consists of the word
 .Cm field
 followed by an identifier
@@ -266,9 +535,6 @@ For entire bitfields, see
 Native type mapping into a 64-bit integer, constrained to valid
 bitfield
 .Ar name .
-See
-.Sx Bitfields
-for more documentation.
 .It Cm blob
 Native type mapping into a fixed-size binary buffer.
 .It Cm email
@@ -278,9 +544,6 @@ to e-mail address format.
 Native type mapping into a 64-bit integer, constrained to valid
 enumeration values of
 .Ar name .
-See
-.Sx Enumerations
-for more documentation.
 .It Cm int
 Native type mapping into a 64-bit integer,
 .Vt int64_t .
@@ -407,14 +670,16 @@ This is only available for the
 type and may only appear for one field in a given structure.
 .It Cm unique
 Has a unique SQL column value.
-See
-.Sx Uniques
-for multi-field unique constraints.
 .El
 .Pp
 A field declaration may consist of any number of
 .Cm typeinfo
 statements.
+.Sh TYPES
+To provide more strong typing for data,
+.Nm
+provides enumerations and bit-field types.
+These are used only for validating data input.
 .Ss Enumerations
 Enumerations constrain an
 .Cm int
@@ -429,8 +694,8 @@ They are defined as follows:
 .Pp
 For example,
 .Bd -literal -offset indent
-enum enumname { 
-  item "val1" 1 jslabel "Value one"; 
+enum enumname {
+  item "val1" 1 jslabel "Value one";
 };
 .Ed
 .Pp
@@ -485,9 +750,9 @@ They are defined as follows:
 .Pp
 For example,
 .Bd -literal -offset indent
-bits bitsname { 
-  item "bit1" 0 jslabel "Bit one"; 
-  isunset jslabel "No bits"; 
+bits bitsname {
+  item "bit1" 0 jslabel "Bit one";
+  isunset jslabel "No bits";
 };
 .Ed
 .Pp
@@ -528,252 +793,38 @@ is passed into the output media, and the
 statement serves to provide a label
 .Pq see Sx Labels
 for when no bits are set (i.e., the field evaluates to zero).
-.Ss Queries
-There are three types of searches that may be defined to produce
-searching functions on structures:
-.Cm search
-for an individual row (i.e., on a unique column or with a
-.Cm limit
-of 1) and store the result in memory, store a
-.Cm list
-of retrieved results in memory, or
-.Cm iterate
-a function for each retrieved result in an active query.
-.Pp
-Queries are always by field, and may be followed by parameters:
-.Bd -literal -offset indent
-"struct" name "{"
-  [ "search" [term ["," term]*]? [":" [parms]* ]? ";" ]*
-  [ "list" [term ["," term]*]? [":" [parms]* ]? ";" ]*
-  [ "iterate" [term ["," term]*]? [":" [parms]* ]? ";" ]*
-"};"
-.Ed
-.Pp
-Here,
-.Cm term
-consists of the possibly-nested field names to search for and an
-optional operator.
-(Searchers of type
-.Cm search
-require at least one field.)
-Nested fields are in dotted-notation:
-.Bd -literal -offset indent
-[structure "."]*field [operator]?
-.Ed
-.Pp
-This would produce functions searching the field
-.Dq field
-within the
+.Ss Labels
+Labels specify how
+.Cm bits
+and
+.Cm enum
+types and their items may be described by a front-end formatter such as
+.Xr kwebapp-javascript 1 .
+That is, while the string value of a
 .Cm struct
-structures as listed.
-The following operators may be used:
-.Bl -tag -width Ds
-.It Cm and , or
-Logical AND
-.Pq \&&
-and logical OR
-.Pq \&| ,
-respectively.
-.It Cm eq , neq
-Equality or non-equality binary operator.
-The
-.Cm eq
-operator is the default.
-.It Cm lt , gt
-Less than or greater than binary operators.
-For text, the comparison is lexical; otherwise, it is by value.
-.It Cm le , ge
-Less than/equality or greater than/equality binary operators.
-For text, the comparison is lexical; otherwise, it is by value.
-.It Cm like
-The LIKE SQL operator.
-This only applies to
-.Cm text
-and
-.Cm email
-fields.
-.It Cm isnull , notnull
-Unary operator to check whether the field is null or not null.
-.El
+item describes itself, an
+.Cm enum
+maps to a numeric value that needs to be translated into a meaningful
+format.
+Labels export string representations of the internal numeric value to
+the front-end formatters.
 .Pp
-The
-.Cm password
-field does not accept any operator but the default check for equality.
-.Pp
-The
-.Cm parms
-search parameters are a series of key-value pairs:
-.Bd -literal -offset indent
-"comment" string_literal
-"distinct" ["." | [field ["." field]*]]
-"limit" limitval["," offsetval]?
-"name" searchname
-"order" term [type]? ["," term [type]?]*
-.Ed
-.Pp
-The available parameter keys are as follows:
-.Bl -tag -width Ds
-.It Cm comment
-String literal included in the API comments for the function.
-.It Cm limit
-A value >0 that limits the number of returned results.
-By default, there is no limit.
-This can be used in a
-.Cm search
-singleton result statement as a way to limit non-unique results to a
-single result.
-If followed by a comma, the next term is used to offset the query.
-This is usually used to page through results.
-.It Cm distinct
-Return only distinct rows.
-If only a period
-.Pq Dq \&.
-follows the keyword, then the distinct applies to the entire returned
-structure.
-If a nested structure follows the keyword, only distinct rows of the
-given structure are returned by the search operation.
-This does not work with
-.Cm null
-structures; and moreover, disallows searching by fields of type
-.Cm password .
-.It Cm name
-A unique identifier used in the C API for the search function.
-.It Cm order
-Result ordering.
-The
-.Cm term ,
-like the search term, consists of order fields with periods indicating
-fields nested within structures.
-Each term may be followed by an order direction:
-.Cm asc
-for ascending and
-.Cm desc
-for descending.
-Result ordering is applied from left-to-right.
-.El
-.Pp
-If you're searching (in any way) on a
-.Cm password
-field, the field is omitted from the initial search, then hash-verified
-after being extracted from the database.
-Thus, this doesn't have the same performance as a normal search.
-.Ss Uniques
-While individual fields may be marked
-.Cm unique
-on a per-column basis, multiple-column unique constraints may be
-specified with the
-.Cm unique
-structure-level keyword.
 The syntax is as follows:
 .Bd -literal -offset indent
-"unique" field ["," field]+ ";"
+"jslabel" ["." lang]? quoted_string
 .Ed
-.Pp
-Each
-.Cm field
-must be in the local structure, and must be native types.
-There must be at least two fields in the statement.
-There can be only one unique statement per combination of fields (in any
-order).
-.Pp
-For example, consider a request for something involving two parties,
-where the pair requesting must be unique.
-.Bd -literal -offset indent
-struct request {
-  field userid:user.id int;
-  field ownerid:user.id int;
-  unique userid, ownerid;
-};
-.Ed
-.Pp
-This stipulates that adding the same pair will result in a constraint
-failure.
-.Ss Updates
-Update statements (update, delete, insert) define how the database will be
-modified.
-By default, there are no update, delete, or insert functions defined.
-The syntax is as follows:
-.Bd -literal -offset indent
-"struct" name "{"
-  [ "update" [mflds]* [":" [cflds]* [":" [parms]* ]? ]? ";" ]*
-  [ "delete" [cflds]* [":" [parms]* ]? ";" ]*
-  [ "insert" ";" ]?
-"};"
-.Ed
-.Pp
-Both
-.Cm mflds
-and
-.Cm cflds
-are a sequence of comma-separated native-type fields in the current
-structure.
-The former refers to the fields that will be modified; the latter refers
-to fields that will act as constraints.
-In other words, modify fields constraint by
-.Cm cflds
-to contain the
-.Cm cflds .
-Usually, the latter will be the
-.Cm rowid
-and the former will be any other fields.
 .Pp
 The
-.Cm delete
-statement obviously does not accept fields to modify
-.Pq Cm mflds .
+.Cm lang
+token is usually an ISO 639-1 code, but may be any identifier.
 If the
-.Cm update
-statement does not have
-.Cm mflds ,
-it's taken to mean that all fields will be modified using the default
-operator.
+.Cm lang
+is not specified, the label is considered to be the default label.
 .Pp
-The fields in
-.Cm mflds
-may accept a modifier type that modifies the existing field instead
-of setting it externally.
-This is only available for numeric types.
-The fields in
-.Cm cflds
-may accept an optional operator type as described for
-.Sx Queries .
-.Bd -literal -offset indent
-mfld [modifier]?
-cfld [operator]?
-.Ed
-.Pp
-The following augment operations are available, but only to numeric
-types:
-.Bl -tag -width Ds
-.It Cm concat
-String concatenate the current field by a given value (x = x || ?).
-.It Cm inc
-Increment the current field by a given value (x = x + ?).
-.It Cm dec
-Decrement the current field by a given value (x = x - ?).
-.It Cm set
-Default behaviour of setting to a value (x = ?).
-.El
-.Pp
-The parms search parameters are a series of key-value pairs:
-.Bd -literal -offset indent
-"comment" string_literal
-"name" name
-.Ed
-.Pp
-The
-.Cm name
-sets a unique name for the generated function, while
-.Cm comment
-is used for the API comments.
-.Pp
-Fields of type
-.Cm password
-are not allowed as
-.Cm cflds
-since they are not stored directly as comparable strings, but hashed
-with a unique salt.
-.Ss Roles
+If a label is not specified for a given language, it inherits the
+default label.
+If the default label is not provided, it is an empty string.
+.Sh ROLES
 Full role-based access control is available in
 .Nm
 when a top-level
@@ -815,92 +866,6 @@ Each role may be associated with parameters limited to:
 The
 .Cm comment
 field is only produced for role documentation.
-.Pp
-Within
-.Sx Structures ,
-roles are defined as follows:
-.Bd -literal -offset indent
-"struct" name "{"
-  [ "roles" role ["," role]* "{" roletype [name]? "};" ]*
-"};"
-.Ed
-.Pp
-The
-.Cm role
-is a list of roles as defined in the top-level block, or one of the
-reserved roles but for
-.Cm none ,
-which can never be assigned.
-The role may be one of the following types:
-.Bl -tag -width Ds
-.It Cm all
-A special type referring to all function types.
-.It Cm delete Ar name
-The named delete operation.
-.It Cm insert
-The insert operation.
-.It Cm iterate Ar name
-The named iterate operation.
-.It Cm list Ar name
-The named list operation.
-.It Cm noexport Op Ar name
-Do not export the field
-.Ar name
-via the JSON export routines.
-If no name is given, don't export any fields.
-.It Cm search Ar name
-The named search operation.
-.It Cm update Ar name
-The name update operation.
-.El
-.Pp
-To refer to an operation, use its
-.Cm name .
-The only way to refer to un-named operations is to use
-.Cm all ,
-which refers to all operations (i.e., all types but
-.Cm noexport ) .
-.Pp
-If, during run-time, the current role is not a subtype (inclusive) of
-the given role for an operation, the application is immediately
-terminated.
-.Ss Comments
-Comments attached to statements are used to document the output and
-serve no other purpose.
-For the time being, there is no syntax attached to comments: they should
-be considered opaque text for the time being, and copied as-is into the
-output documentation.
-.Ss Labels
-Labels specify how
-.Cm bits
-and
-.Cm enum
-types and their items may be described by a front-end formatter such as
-.Xr kwebapp-javascript 1 .
-That is, while the string value of a
-.Cm struct
-item describes itself, an
-.Cm enum
-maps to a numeric value that needs to be translated into a meaningful
-format.
-Labels export string representations of the internal numeric value to
-the front-end formatters.
-.Pp
-The syntax is as follows:
-.Bd -literal -offset indent
-"jslabel" ["." lang]? quoted_string
-.Ed
-.Pp
-The
-.Cm lang
-token is usually an ISO 639-1 code, but may be any identifier.
-If the
-.Cm lang
-is not specified, the label is considered to be the default label.
-.Pp
-If a label is not specified for a given language, it inherits the
-default label.
-If the default label is not provided, it is an empty string.
 .Sh EXAMPLES
 A trivial example is as follows:
 .Bd -literal

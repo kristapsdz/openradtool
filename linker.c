@@ -916,6 +916,15 @@ resolve_search(struct config *cfg, struct search *srch)
 		aggr->alias = a;
 	}
 
+	/* Aggregation and grouping go together. */
+
+	if (!TAILQ_EMPTY(&srch->aggrq) && TAILQ_EMPTY(&srch->groupq))
+		gen_warnx(cfg, &srch->pos, 
+			"group given without min/max");
+	if (TAILQ_EMPTY(&srch->aggrq) && !TAILQ_EMPTY(&srch->groupq))
+		gen_warnx(cfg, &srch->pos, 
+			"min/max given without group");
+
 	return 1;
 }
 

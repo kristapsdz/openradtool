@@ -22,6 +22,8 @@
  * Here they are...
  */
 TAILQ_HEAD(aliasq, alias);
+TAILQ_HEAD(aggrq, aggr);
+TAILQ_HEAD(arefq, aref);
 TAILQ_HEAD(bitfq, bitf);
 TAILQ_HEAD(bitidxq, bitidx);
 TAILQ_HEAD(drefq, dref);
@@ -281,7 +283,6 @@ struct	sref {
 
 /*
  * A single order field reference within a chain.
- * See "struct sref".
  */
 struct	oref {
 	char		 *name; /* field name */
@@ -289,6 +290,17 @@ struct	oref {
 	struct field	 *field; /* field (after link) */
 	struct ord	 *parent; /* up-reference */
 	TAILQ_ENTRY(oref) entries;
+};
+
+/*
+ * A single aggregate field reference within a chain.
+ */
+struct	aref {
+	char		 *name; /* field name */
+	struct pos	  pos; /* parse point */
+	struct field	 *field; /* field (after link) */
+	struct aggr	 *parent; /* up-reference */
+	TAILQ_ENTRY(aref) entries;
 };
 
 /*
@@ -388,19 +400,48 @@ enum	ordtype {
 
 /*
  * An order reference.
- * This resolves to be a native field in a structure for which update
+ * This will resolve to a native field in a structure for which query
  * commands will be generated.
+ * It will be produced as, for example, "ORDER BY a.b.c ASC" in
+ * specifying the SQL order of a query.
  */
 struct	ord {
 	struct orefq	 orq; /* queue of order fields */
-	char		 *name; /* sub-structure dot-form name or NULL */
+	char		*name; /* sub-structure dot-form name or NULL */
 	char		*fname; /* canonical dot-form name */
 	enum ordtype	 op; /* type of ordering */
 	struct field	*field; /* resolved field */
 	struct pos	 pos; /* position in parse */
 	struct search	*parent; /* up-reference */
-	struct alias	 *alias; /* resolved alias */
+	struct alias	*alias; /* resolved alias */
 	TAILQ_ENTRY(ord) entries;
+};
+
+/*
+ * Possible aggregate functions defined by SQL in a group.
+ */
+enum	aggrtype {
+	AGGR_MAX, /* maximum of all values */
+	AGGR_MIN /* minimum of all values */
+};
+
+/*
+ * An aggregate reference.
+ * This will resolve to a native field in a structure for which query
+ * commands will be generated.
+ * It will be produced as, for example, "MAX(a.b.c)" in the column
+ * specification of the generated query.
+ */
+struct	aggr {
+	struct arefq	  arq; /* queue of aggregate fields */
+	char		 *name; /* sub-structure dot-form name or NULL */
+	char		 *fname; /* canonical dot-form name */
+	enum aggrtype	  op; /* type of aggregation */
+	struct field	 *field; /* resolved field */
+	struct pos	  pos; /* position in parse */
+	struct search	 *parent; /* up-reference */
+	struct alias	 *alias; /* resolved alias */
+	TAILQ_ENTRY(aggr) entries;
 };
 
 /*
@@ -446,6 +487,7 @@ struct	dstnct {
 struct	search {
 	struct sentq	    sntq; /* nested reference chain */
 	struct ordq	    ordq; /* ordering chain */
+	struct aggrq	    aggrq; /* aggregate chain */
 	struct pos	    pos; /* parse point */
 	struct dstnct	   *dst; /* distinct constraint or NULL */
 	char		   *name; /* named or NULL */
@@ -525,6 +567,11 @@ struct	update {
 	TAILQ_ENTRY(update) entries;
 };
 
+/*
+ * Simply an insertion.
+ * There's nothing complicated here: it indicates that a structure can
+ * have the "insert" operation.
+ */
 struct	insert {
 	struct rolemap	*rolemap; /* roles assigned to function */
 	struct strct	*parent; /* up-reference */

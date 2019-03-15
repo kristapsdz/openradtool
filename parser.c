@@ -2266,6 +2266,7 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 	TAILQ_INIT(&srch->sntq);
 	TAILQ_INIT(&srch->ordq);
 	TAILQ_INIT(&srch->aggrq);
+	TAILQ_INIT(&srch->groupq);
 	TAILQ_INSERT_TAIL(&s->sq, srch, entries);
 
 	if (STYPE_LIST == stype)

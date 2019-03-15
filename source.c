@@ -2344,13 +2344,13 @@ gen_stmt_joins(const struct strct *orig, const struct strct *p,
 static void
 gen_stmt(const struct strct *p)
 {
+	const struct group *grp;
 	const struct search *s;
 	const struct sent *sent;
 	const struct sref *sr;
 	const struct field *f;
 	const struct update *up;
 	const struct uref *ur;
-	const struct sref *or;
 	const struct ord *ord;
 	int	 first, hastrail;
 	size_t	 pos, rc;
@@ -2449,17 +2449,29 @@ gen_stmt(const struct strct *p)
 		}
 
 		first = 1;
+		if ( ! TAILQ_EMPTY(&s->groupq))
+			printf(" GROUP BY ");
+		TAILQ_FOREACH(grp, &s->groupq, entries) {
+			sr = TAILQ_LAST(&grp->grq, srefq);
+			if ( ! first)
+				printf(", ");
+			first = 0;
+			printf("%s.%s", NULL == grp->alias ?
+				p->name : grp->alias->alias, sr->name);
+		}
+
+		first = 1;
 		if ( ! TAILQ_EMPTY(&s->ordq))
 			printf(" ORDER BY ");
 		TAILQ_FOREACH(ord, &s->ordq, entries) {
-			or = TAILQ_LAST(&ord->orq, srefq);
+			sr = TAILQ_LAST(&ord->orq, srefq);
 			if ( ! first)
 				printf(", ");
 			first = 0;
 			printf("%s.%s %s",
 				NULL == ord->alias ?
 				p->name : ord->alias->alias,
-				or->name, 
+				sr->name, 
 				ORDTYPE_ASC == ord->op ?
 				"ASC" : "DESC");
 		}

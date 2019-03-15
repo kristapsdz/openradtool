@@ -14,6 +14,13 @@ LIBOBJS		 = comments.o \
 		   printer.o \
 		   protos.o \
 		   writer.o
+OBJS		 = audit.o \
+		   main.o \
+		   header.o \
+		   javascript.o \
+		   source.o \
+		   sql.o \
+		   xliff.o
 HTMLS		 = archive.html \
 		   index.html \
 		   kwebapp.1.html \
@@ -238,7 +245,7 @@ db.db: db.sql
 	rm -f $@
 	sqlite3 $@ < db.sql
 
-$(LIBOBJS): config.h extern.h ort.h
+$(LIBOBJS) $(OBJS): config.h extern.h ort.h
 
 .5.5.html:
 	mandoc -Thtml -Ostyle=mandoc.css $< >$@

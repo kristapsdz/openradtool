@@ -554,29 +554,6 @@ uref_alloc(struct parse *p, const char *name,
  * Allocate a search reference and add it to the parent queue.
  * Returns the created pointer or NULL.
  */
-static struct aref *
-aref_alloc(struct parse *p, const char *name, struct aggr *up)
-{
-	struct aref	*ref;
-
-	if (NULL == (ref = calloc(1, sizeof(struct aref)))) {
-		parse_err(p);
-		return NULL;
-	} else if (NULL == (ref->name = strdup(name))) {
-		free(ref);
-		parse_err(p);
-		return NULL;
-	}
-
-	parse_point(p, &ref->pos);
-	TAILQ_INSERT_TAIL(&up->arq, ref, entries);
-	return ref;
-}
-
-/*
- * Allocate a search reference and add it to the parent queue.
- * Returns the created pointer or NULL.
- */
 static int
 sref_alloc(struct parse *p, const char *name, struct srefq *q)
 {
@@ -1597,7 +1574,7 @@ static void
 parse_config_aggr_terms(struct parse *p,
 	enum aggrtype type, struct search *srch)
 {
-	struct aref	*af;
+	struct sref	*af;
 	struct aggr	*aggr;
 
 	if (TOK_IDENT != p->lasttype) {
@@ -1614,7 +1591,7 @@ parse_config_aggr_terms(struct parse *p,
 	TAILQ_INIT(&aggr->arq);
 	TAILQ_INSERT_TAIL(&srch->aggrq, aggr, entries);
 
-	if (NULL == aref_alloc(p, p->last.string, aggr))
+	if ( ! sref_alloc(p, p->last.string, &aggr->arq))
 		return;
 
 	for (;;) {
@@ -1628,7 +1605,7 @@ parse_config_aggr_terms(struct parse *p,
 			parse_errx(p, "expected field separator");
 		else if (TOK_IDENT != parse_next(p))
 			parse_errx(p, "expected field identifier");
-		else if (NULL != aref_alloc(p, p->last.string, aggr))
+		else if ( ! sref_alloc(p, p->last.string, &aggr->arq))
 			continue;
 		return;
 	}

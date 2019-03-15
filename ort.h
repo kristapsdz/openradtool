@@ -23,7 +23,6 @@
  */
 TAILQ_HEAD(aliasq, alias);
 TAILQ_HEAD(aggrq, aggr);
-TAILQ_HEAD(arefq, aref);
 TAILQ_HEAD(bitfq, bitf);
 TAILQ_HEAD(bitidxq, bitidx);
 TAILQ_HEAD(drefq, dref);
@@ -280,17 +279,6 @@ struct	sref {
 };
 
 /*
- * A single aggregate field reference within a chain.
- * See struct sref.
- */
-struct	aref {
-	char		 *name; /* field name */
-	struct pos	  pos; /* parse point */
-	struct field	 *field; /* field (after link) */
-	TAILQ_ENTRY(aref) entries;
-};
-
-/*
  * SQL operator to use.
  */
 enum	optype {
@@ -419,7 +407,7 @@ enum	aggrtype {
  * specification of the generated query.
  */
 struct	aggr {
-	struct arefq	  arq; /* queue of aggregate fields */
+	struct srefq	  arq; /* queue of aggregate fields */
 	char		 *name; /* sub-structure dot-form name or NULL */
 	char		 *fname; /* canonical dot-form name */
 	enum aggrtype	  op; /* type of aggregation */
@@ -445,8 +433,8 @@ enum	stype {
  */
 struct	dref {
 	char		 *name; /* name of field in ref chain */
-	struct pos	 pos; /* parse point */
-	struct dstnct	*parent; /* parent entry */
+	struct pos	  pos; /* parse point */
+	struct dstnct	 *parent; /* parent entry */
 	TAILQ_ENTRY(dref) entries;
 };
 
@@ -471,8 +459,8 @@ struct	dstnct {
  */
 struct	search {
 	struct sentq	    sntq; /* nested reference chain */
-	struct ordq	    ordq; /* ordering chain */
-	struct aggrq	    aggrq; /* aggregate chain */
+	struct ordq	    ordq; /* ordering chains */
+	struct aggrq	    aggrq; /* aggregate chains */
 	struct pos	    pos; /* parse point */
 	struct dstnct	   *dst; /* distinct constraint or NULL */
 	char		   *name; /* named or NULL */

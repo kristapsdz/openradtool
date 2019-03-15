@@ -550,7 +550,6 @@ uref_alloc(struct parse *p, const char *name,
 	return ref;
 }
 
-#if 0
 /*
  * Allocate a search reference and add it to the parent queue.
  * Returns the created pointer or NULL.
@@ -574,7 +573,6 @@ aref_alloc(struct parse *p, const char *name, struct aggr *up)
 	TAILQ_INSERT_TAIL(&up->arq, ref, entries);
 	return ref;
 }
-#endif
 
 /*
  * Allocate a search reference and add it to the parent queue.
@@ -1616,7 +1614,6 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 	}
 }
 
-#if 0
 /*
  * Like parse_config_search_terms() but for aggregate terms.
  *
@@ -1680,7 +1677,6 @@ parse_config_aggr_terms(struct parse *p,
 		}
 	}
 }
-#endif
 
 /*
  * Like parse_config_search_terms() but for order terms.
@@ -1915,6 +1911,20 @@ parse_config_search_params(struct parse *p, struct search *s)
 				}
 				s->offset = p->last.integer;
 				parse_next(p);
+			}
+		} else if (0 == strcasecmp("min", p->last.string)) {
+			parse_next(p);
+			parse_config_aggr_terms(p, AGGR_MIN, s);
+			while (TOK_COMMA == p->lasttype) {
+				parse_next(p);
+				parse_config_aggr_terms(p, AGGR_MIN, s);
+			}
+		} else if (0 == strcasecmp("max", p->last.string)) {
+			parse_next(p);
+			parse_config_aggr_terms(p, AGGR_MAX, s);
+			while (TOK_COMMA == p->lasttype) {
+				parse_next(p);
+				parse_config_aggr_terms(p, AGGR_MAX, s);
 			}
 		} else if (0 == strcasecmp("order", p->last.string)) {
 			parse_next(p);

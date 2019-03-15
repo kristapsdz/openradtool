@@ -614,7 +614,7 @@ print_aggr_schema(const struct strct *p,
 		if (FTYPE_STRUCT == f->type)
 			continue;
 		TAILQ_FOREACH(aggr, &srch->aggrq, entries) {
-			ff = TAILQ_LAST(&aggr->arq, arefq)->field;
+			ff = TAILQ_LAST(&aggr->arq, srefq)->field;
 			assert(NULL != ff);
 			if (ff == f)
 				break;

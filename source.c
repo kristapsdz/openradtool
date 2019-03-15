@@ -2175,7 +2175,7 @@ gen_stmt_schema_aggr(const struct strct *orig,
 	 */
 
 	TAILQ_FOREACH(aggr, &srch->aggrq, entries) {
-		ff = TAILQ_LAST(&aggr->arq, arefq)->field;
+		ff = TAILQ_LAST(&aggr->arq, srefq)->field;
 		assert(NULL != ff);
 		if (ff->parent == p)
 			break;

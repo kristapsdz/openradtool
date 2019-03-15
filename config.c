@@ -239,29 +239,6 @@ parse_free_field(struct field *p)
 }
 
 /*
- * Free the aggregate queue.
- * Does not free the "q" pointer.
- */
-static void
-parse_free_aggrq(struct aggrq *q)
-{
-	struct aggr	*aggr;
-	struct aref	*aref;
-
-	while (NULL != (aggr = TAILQ_FIRST(q))) {
-		TAILQ_REMOVE(q, aggr, entries);
-		while (NULL != (aref = TAILQ_FIRST(&aggr->arq))) {
-			TAILQ_REMOVE(&aggr->arq, aref, entries);
-			free(aref->name);
-			free(aref);
-		}
-		free(aggr->fname);
-		free(aggr->name);
-		free(aggr);
-	}
-}
-
-/*
  * Free a chain reference.
  * Must not be NULL.
  */
@@ -271,6 +248,28 @@ parse_free_sref(struct sref *p)
 
 	free(p->name);
 	free(p);
+}
+
+/*
+ * Free the aggregate queue.
+ * Does not free the "q" pointer.
+ */
+static void
+parse_free_aggrq(struct aggrq *q)
+{
+	struct aggr	*aggr;
+	struct sref	*ref;
+
+	while (NULL != (aggr = TAILQ_FIRST(q))) {
+		TAILQ_REMOVE(q, aggr, entries);
+		while (NULL != (ref = TAILQ_FIRST(&aggr->arq))) {
+			TAILQ_REMOVE(&aggr->arq, ref, entries);
+			parse_free_sref(ref);
+		}
+		free(aggr->fname);
+		free(aggr->name);
+		free(aggr);
+	}
 }
 
 /*

@@ -504,7 +504,7 @@ resolve_dref(struct config *cfg, struct dref *ref, struct strct *s)
 }
 
 /*
- * Like resolve_sref() but for order references.
+ * Like resolve_sref() but for aggregate references.
  * The non-terminal fields must be non-null structs; the terminal field
  * must be a regular field.
  * Return zero on failure, non-zero on success.

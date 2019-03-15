@@ -195,15 +195,15 @@ struct foo {
 .Ss Queries
 Query data with the
 .Cm search
-keyword for an individual row (i.e., on a unique column or with a
+keyword to return an individual row (i.e., on a unique column or with a
 .Cm limit
-of 1) and store the result in memory, the
+of one), the
 .Cm list
-key word for retrieving multiple results in an array, or the
+keyword for retrieving multiple results in an array, or the
 .Cm iterate
-key word for iterating over each result as it's returned.
+keyword for iterating over each result as it's returned.
 .Pp
-Queries are always by field, and may be followed by parameters:
+Queries are always by field and may be followed by parameters:
 .Bd -literal -offset indent
 "struct" name "{"
   [ "search" [term ["," term]*]? [":" [parms]* ]? ";" ]*
@@ -230,7 +230,7 @@ within the
 .Cm struct
 structures as listed.
 The following operators may be used:
-.Bl -tag -width Ds
+.Bl -tag -width Ds -offset indent
 .It Cm and , or
 Logical AND
 .Pq \&&
@@ -272,10 +272,12 @@ search parameters are a series of key-value pairs:
 "limit" limitval["," offsetval]?
 "name" searchname
 "order" term [type]? ["," term [type]?]*
+"group" term ["," term]*
+["min" | "max"] term ["," term]*
 .Ed
 .Pp
 The available parameter keys are as follows:
-.Bl -tag -width Ds
+.Bl -tag -width Ds -offset indent
 .It Cm comment
 String literal included in the API comments for the function.
 .It Cm limit
@@ -313,6 +315,22 @@ for ascending and
 .Cm desc
 for descending.
 Result ordering is applied from left-to-right.
+.It Cm max , min
+Return the maximum or minimum value instead of the value itself.
+This is known as an
+.Qq aggregation function
+and is usually used with the
+.Cm group
+keyword.
+.It Cm group
+Groups results by the given column.
+This collapses all rows with the same value for the given column into a
+single row.
+It is usually used with the
+.Cm max
+or
+.Cm min
+keyword.
 .El
 .Pp
 If you're searching (in any way) on a
@@ -323,7 +341,7 @@ Thus, this doesn't have the same performance as a normal search.
 .Ss Roles
 Limit role access with the
 .Cm roles
-key word as follows:
+keyword as follows:
 .Bd -literal -offset indent
 "struct" name "{"
   [ "roles" role ["," role]* "{" roletype [name]? "};" ]*
@@ -337,7 +355,7 @@ reserved roles but for
 .Cm none ,
 which can never be assigned.
 The role may be one of the following types:
-.Bl -tag -width Ds
+.Bl -tag -width Ds -offset indent
 .It Cm all
 A special type referring to all function types.
 .It Cm delete Ar name
@@ -376,7 +394,7 @@ These begin with the
 .Cm delete ,
 or
 .Cm insert
-key words.
+keyword.
 By default, there are no update, delete, or insert functions defined.
 The syntax is as follows:
 .Bd -literal -offset indent
@@ -392,16 +410,9 @@ Both
 and
 .Cm cflds
 are a sequence of comma-separated native-type fields in the current
-structure.
+structure followed by operators.
 The former refers to the fields that will be modified; the latter refers
 to fields that will act as constraints.
-In other words, modify fields constraint by
-.Cm cflds
-to contain the
-.Cm cflds .
-Usually, the latter will be the
-.Cm rowid
-and the former will be any other fields.
 .Pp
 The
 .Cm delete
@@ -412,25 +423,26 @@ If the
 statement does not have
 .Cm mflds ,
 it's taken to mean that all fields will be modified using the default
-operator.
+modifier.
+.Pp
+Fields of type
+.Cm password
+are not allowed as
+.Cm cflds
+since they are not stored directly as comparable strings, but hashed
+with a unique salt.
+.Pp
+Each field type has its own operators.
+.Bd -literal -offset indent
+mflds :== mfld [modify_operator]?
+cflds :== cfld [constraint_operator]?
+.Ed
 .Pp
 The fields in
 .Cm mflds
-may accept a modifier type that modifies the existing field instead
+accept an optional modifier that modifies the existing field instead
 of setting it externally.
-This is only available for numeric types.
-The fields in
-.Cm cflds
-may accept an optional operator type as described for
-.Sx Queries .
-.Bd -literal -offset indent
-mfld [modifier]?
-cfld [operator]?
-.Ed
-.Pp
-The following augment operations are available, but only to numeric
-types:
-.Bl -tag -width Ds
+.Bl -tag -width Ds -offset indent
 .It Cm concat
 String concatenate the current field by a given value (x = x || ?).
 .It Cm inc
@@ -441,7 +453,14 @@ Decrement the current field by a given value (x = x - ?).
 Default behaviour of setting to a value (x = ?).
 .El
 .Pp
-The parms search parameters are a series of key-value pairs:
+The
+.Cm cflds
+accept an optional operator type as described for
+.Sx Queries .
+.Pp
+The
+.Cm parms
+are an optional series of key-value pairs consisting of the following:
 .Bd -literal -offset indent
 "comment" string_literal
 "name" name
@@ -452,13 +471,6 @@ The
 sets a unique name for the generated function, while
 .Cm comment
 is used for the API comments.
-.Pp
-Fields of type
-.Cm password
-are not allowed as
-.Cm cflds
-since they are not stored directly as comparable strings, but hashed
-with a unique salt.
 .Ss Uniques
 While individual fields may be marked
 .Cm unique
@@ -493,7 +505,7 @@ failure.
 .Ss Fields
 Data specification beginning with the
 .Cm field
-key word.
+keyword.
 Each field consists of the word
 .Cm field
 followed by an identifier
@@ -521,7 +533,7 @@ The
 .Cm type ,
 if specified,
 may be one of the following:
-.Bl -tag -width Ds
+.Bl -tag -width Ds -offset indent
 .It Cm bit
 Native integer constained to 64-bit bit index (that is, 0\(en64).
 The bit indices start from 1 in order to represent a zero value (no bits
@@ -592,7 +604,7 @@ The
 .Cm typeinfo
 provides further information (or operations) regarding the field, and
 may consist of the following:
-.Bl -tag -width Ds
+.Bl -tag -width Ds -offset indent
 .It Cm actdel Ar action
 Like
 .Cm actup

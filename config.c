@@ -251,47 +251,45 @@ parse_free_sref(struct sref *p)
 }
 
 /*
- * Free the aggregate queue.
- * Does not free the "q" pointer.
+ * Free the aggregate and its pointer.
+ * Passing a NULL pointer is a noop.
  */
 static void
-parse_free_aggrq(struct aggrq *q)
+parse_free_aggr(struct aggr *aggr)
 {
-	struct aggr	*aggr;
 	struct sref	*ref;
 
-	while (NULL != (aggr = TAILQ_FIRST(q))) {
-		TAILQ_REMOVE(q, aggr, entries);
-		while (NULL != (ref = TAILQ_FIRST(&aggr->arq))) {
-			TAILQ_REMOVE(&aggr->arq, ref, entries);
-			parse_free_sref(ref);
-		}
-		free(aggr->fname);
-		free(aggr->name);
-		free(aggr);
+	if (NULL == aggr)
+		return;
+
+	while (NULL != (ref = TAILQ_FIRST(&aggr->arq))) {
+		TAILQ_REMOVE(&aggr->arq, ref, entries);
+		parse_free_sref(ref);
 	}
+	free(aggr->fname);
+	free(aggr->name);
+	free(aggr);
 }
 
 /*
- * Free the group queue.
- * Does not free the "q" pointer, which may not be NULL.
+ * Free the group and its pointer.
+ * Passing a NULL pointer is a noop.
  */
 static void
-parse_free_groupq(struct groupq *q)
+parse_free_group(struct group *grp)
 {
-	struct group	*grp;
 	struct sref	*ref;
+	
+	if (NULL == grp)
+		return;
 
-	while (NULL != (grp = TAILQ_FIRST(q))) {
-		TAILQ_REMOVE(q, grp, entries);
-		while (NULL != (ref = TAILQ_FIRST(&grp->grq))) {
-			TAILQ_REMOVE(&grp->grq, ref, entries);
-			parse_free_sref(ref);
-		}
-		free(grp->fname);
-		free(grp->name);
-		free(grp);
+	while (NULL != (ref = TAILQ_FIRST(&grp->grq))) {
+		TAILQ_REMOVE(&grp->grq, ref, entries);
+		parse_free_sref(ref);
 	}
+	free(grp->fname);
+	free(grp->name);
+	free(grp);
 }
 
 /*
@@ -340,9 +338,9 @@ parse_free_search(struct search *p)
 		free(p->dst);
 	}
 
-	parse_free_aggrq(&p->aggrq);
+	parse_free_aggr(p->aggr);
 	parse_free_ordq(&p->ordq);
-	parse_free_groupq(&p->groupq);
+	parse_free_group(p->group);
 
 	while (NULL != (sent = TAILQ_FIRST(&p->sntq))) {
 		TAILQ_REMOVE(&p->sntq, sent, entries);

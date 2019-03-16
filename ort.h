@@ -22,7 +22,6 @@
  * Here they are...
  */
 TAILQ_HEAD(aliasq, alias);
-TAILQ_HEAD(aggrq, aggr);
 TAILQ_HEAD(bitfq, bitf);
 TAILQ_HEAD(bitidxq, bitidx);
 TAILQ_HEAD(drefq, dref);
@@ -30,7 +29,6 @@ TAILQ_HEAD(eitemq, eitem);
 TAILQ_HEAD(enmq, enm);
 TAILQ_HEAD(fieldq, field);
 TAILQ_HEAD(fvalidq, fvalid);
-TAILQ_HEAD(groupq, group);
 TAILQ_HEAD(labelq, label);
 TAILQ_HEAD(nrefq, nref);
 TAILQ_HEAD(ordq, ord);
@@ -478,8 +476,8 @@ struct	dstnct {
 struct	search {
 	struct sentq	    sntq; /* nested reference chain */
 	struct ordq	    ordq; /* ordering chains */
-	struct aggrq	    aggrq; /* aggregate chains */
-	struct groupq	    groupq; /* grouping chains */
+	struct aggr	   *aggr; /* aggregate chain or NULL */
+	struct group	   *group; /* grouping chain or NULL */
 	struct pos	    pos; /* parse point */
 	struct dstnct	   *dst; /* distinct constraint or NULL */
 	char		   *name; /* named or NULL */

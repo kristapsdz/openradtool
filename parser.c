@@ -1577,7 +1577,10 @@ parse_config_aggr_terms(struct parse *p,
 	struct sref	*af;
 	struct aggr	*aggr;
 
-	if (TOK_IDENT != p->lasttype) {
+	if (NULL != srch->aggr) {
+		parse_errx(p, "group constraint duplicate");
+		return;
+	} else if (TOK_IDENT != p->lasttype) {
 		parse_errx(p, "expected aggregate identifier");
 		return;
 	} else if (NULL == (aggr = calloc(1, sizeof(struct aggr)))) {
@@ -1585,11 +1588,11 @@ parse_config_aggr_terms(struct parse *p,
 		return;
 	}
 
+	srch->aggr = aggr;
 	aggr->parent = srch;
 	aggr->op = type;
 	parse_point(p, &aggr->pos);
 	TAILQ_INIT(&aggr->arq);
-	TAILQ_INSERT_TAIL(&srch->aggrq, aggr, entries);
 
 	if ( ! sref_alloc(p, p->last.string, &aggr->arq))
 		return;
@@ -1597,8 +1600,8 @@ parse_config_aggr_terms(struct parse *p,
 	for (;;) {
 		if (PARSE_STOP(p))
 			return;
-		if (TOK_COMMA == parse_next(p) ||
-		    TOK_SEMICOLON == p->lasttype ||
+		parse_next(p);
+		if (TOK_SEMICOLON == p->lasttype ||
 		    TOK_IDENT == p->lasttype)
 			break;
 		if (TOK_PERIOD != p->lasttype)
@@ -1638,7 +1641,10 @@ parse_config_group_terms(struct parse *p, struct search *srch)
 	struct sref	*of;
 	struct group	*grp;
 
-	if (TOK_IDENT != p->lasttype) {
+	if (NULL != srch->group) {
+		parse_errx(p, "duplicate group identifier");
+		return;
+	} else if (TOK_IDENT != p->lasttype) {
 		parse_errx(p, "expected group identifier");
 		return;
 	} else if (NULL == (grp = calloc(1, sizeof(struct group)))) {
@@ -1646,17 +1652,19 @@ parse_config_group_terms(struct parse *p, struct search *srch)
 		return;
 	}
 
+	srch->group = grp;
 	grp->parent = srch;
 	parse_point(p, &grp->pos);
 	TAILQ_INIT(&grp->grq);
-	TAILQ_INSERT_TAIL(&srch->groupq, grp, entries);
 
 	if ( ! sref_alloc(p, p->last.string, &grp->grq))
 		return;
 
-	while ( ! PARSE_STOP(p)) {
-		if (TOK_COMMA == parse_next(p) ||
-		    TOK_SEMICOLON == p->lasttype ||
+	for (;;) {
+		if (PARSE_STOP(p))
+			return;
+		parse_next(p);
+		if (TOK_SEMICOLON == p->lasttype ||
 		    TOK_IDENT == p->lasttype)
 			break;
 		if (TOK_PERIOD != p->lasttype)
@@ -1668,8 +1676,7 @@ parse_config_group_terms(struct parse *p, struct search *srch)
 		return;
 	}
 
-	if (PARSE_STOP(p))
-		return;
+	/* Canonical names. */
 
 	TAILQ_FOREACH(of, &grp->grq, entries)
 		if ( ! ref_append(&grp->fname, of->name)) {
@@ -1923,17 +1930,9 @@ parse_config_search_params(struct parse *p, struct search *s)
 		} else if (0 == strcasecmp("min", p->last.string)) {
 			parse_next(p);
 			parse_config_aggr_terms(p, AGGR_MIN, s);
-			while (TOK_COMMA == p->lasttype) {
-				parse_next(p);
-				parse_config_aggr_terms(p, AGGR_MIN, s);
-			}
 		} else if (0 == strcasecmp("max", p->last.string)) {
 			parse_next(p);
 			parse_config_aggr_terms(p, AGGR_MAX, s);
-			while (TOK_COMMA == p->lasttype) {
-				parse_next(p);
-				parse_config_aggr_terms(p, AGGR_MAX, s);
-			}
 		} else if (0 == strcasecmp("order", p->last.string)) {
 			parse_next(p);
 			parse_config_order_terms(p, s);
@@ -1944,10 +1943,6 @@ parse_config_search_params(struct parse *p, struct search *s)
 		} else if (0 == strcasecmp("group", p->last.string)) {
 			parse_next(p);
 			parse_config_group_terms(p, s);
-			while (TOK_COMMA == p->lasttype) {
-				parse_next(p);
-				parse_config_group_terms(p, s);
-			}
 		} else if (0 == strcasecmp("distinct", p->last.string)) {
 			if (NULL != s->dst) {
 				parse_errx(p, "distinct already set");
@@ -2265,8 +2260,6 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 	parse_point(p, &srch->pos);
 	TAILQ_INIT(&srch->sntq);
 	TAILQ_INIT(&srch->ordq);
-	TAILQ_INIT(&srch->aggrq);
-	TAILQ_INIT(&srch->groupq);
 	TAILQ_INSERT_TAIL(&s->sq, srch, entries);
 
 	if (STYPE_LIST == stype)

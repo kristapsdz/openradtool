@@ -39,7 +39,7 @@ static	const char *types[FTYPE__MAX] = {
 	"number", /* FTYPE_DATE */
 	"number", /* FTYPE_EPOCH */
 	"number", /* FTYPE_INT */
-	"double", /* FTYPE_REAL */
+	"number", /* FTYPE_REAL */
 	NULL, /* FTYPE_BLOB */
 	"string", /* FTYPE_TEXT */
 	"string", /* FTYPE_PASSWORD */

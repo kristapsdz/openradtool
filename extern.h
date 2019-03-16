@@ -40,8 +40,6 @@ void		 print_commentv(size_t, enum cmtt, const char *, ...)
 
 void		 print_src(size_t, const char *, ...);
 
-void		 print_aggr_schema(const struct strct *,
-			const char *, const struct search *);
 void		 print_define_schema(const struct strct *);
 void		 print_func_db_close(int, int);
 void		 print_func_db_role(int);

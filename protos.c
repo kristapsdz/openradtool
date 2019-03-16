@@ -601,35 +601,3 @@ print_define_schema(const struct strct *p)
 	}
 	puts("");
 }
-
-void
-print_aggr_schema(const struct strct *p, 
-	const char *name, const struct search *srch)
-{
-	const struct aggr  *aggr;
-	const struct field *f, *ff;
-
-	printf("\"");
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT == f->type)
-			continue;
-		TAILQ_FOREACH(aggr, &srch->aggrq, entries) {
-			ff = TAILQ_LAST(&aggr->arq, srefq)->field;
-			assert(NULL != ff);
-			if (ff == f)
-				break;
-		}
-		if (NULL == aggr)
-			printf("%s.%s", name, f->name);
-		else if (AGGR_MAX == aggr->op)
-			printf("MAX(%s.%s)", name, f->name);
-		else if (AGGR_MIN == aggr->op)
-			printf("MIN(%s.%s)", name, f->name);
-		else
-			printf("%s.%s", name, f->name);
-		if (TAILQ_NEXT(f, entries))
-			printf(", ");
-	}
-	printf("\" ");
-}
-

@@ -2154,82 +2154,6 @@ gen_enum(const struct strct *p)
 }
 
 /*
- * Like gen_stmt_schema(), but also accepting search parameters so that
- * we can define MAX() and MIN() functions in-line.
- * This means we can't use the DB_SCHEMA_xxx macros.
- */
-static void
-gen_stmt_schema_aggr(const struct strct *orig,
-	int first, const struct strct *p, 
-	const char *pname, const struct search *srch)
-{
-	const struct field *f, *ff;
-	const struct alias *a = NULL;
-	const struct aggr  *aggr;
-	int	 	    c;
-	char		   *name = NULL;
-
-	/* 
-	 * If aggr != NULL, that means that this structure contains the
-	 * aggregate function on one of its fields.
-	 */
-
-	TAILQ_FOREACH(aggr, &srch->aggrq, entries) {
-		ff = TAILQ_LAST(&aggr->arq, srefq)->field;
-		assert(NULL != ff);
-		if (ff->parent == p)
-			break;
-	}
-
-	/* 
-	 * If applicable, looks up our alias and emit it as the alias
-	 * for the table; otherwise, use the table name itself.
-	 * If the aggregation function is defined for this particular
-	 * structure, then don't use the DB_SCHEMA_xxx at all, but
-	 * hard-code it to use the given MAX() or MIN() functions.
-	 */
-
-	printf("\"%s ", 0 == first ? ",\"" : "");
-
-	if (NULL != pname) {
-		TAILQ_FOREACH(a, &orig->aq, entries)
-			if (0 == strcasecmp(a->name, pname))
-				break;
-		assert(NULL != a);
-		if (NULL == aggr)
-			printf("DB_SCHEMA_%s(%s) ", p->cname, a->alias);
-		else
-			print_aggr_schema(p, a->alias, srch);
-	} else if (NULL == aggr) {
-		printf("DB_SCHEMA_%s(%s) ", p->cname, p->name);
-	} else
-		print_aggr_schema(p, p->name, srch);
-
-	/*
-	 * Recursive step: search through all of our fields for
-	 * structures; and, if we find them, build up the canonical
-	 * field reference and recurse.
-	 */
-
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT != f->type ||
-		    FIELD_NULL & f->ref->source->flags)
-			continue;
-
-		if (NULL != pname) {
-			c = asprintf(&name, "%s.%s", pname, f->name);
-			if (c < 0)
-				err(EXIT_FAILURE, NULL);
-		} else if (NULL == (name = strdup(f->name)))
-			err(EXIT_FAILURE, NULL);
-
-		gen_stmt_schema_aggr(orig, 0,
-			f->ref->target->parent, name, srch);
-		free(name);
-	}
-}
-
-/*
  * Recursively generate a series of DB_SCHEMA_xxx statements for getting
  * data on a structure.
  * This will specify the schema of the top-level structure (pname is
@@ -2344,11 +2268,10 @@ gen_stmt_joins(const struct strct *orig, const struct strct *p,
 static void
 gen_stmt(const struct strct *p)
 {
-	const struct group *grp;
 	const struct search *s;
 	const struct sent *sent;
 	const struct sref *sr;
-	const struct field *f;
+	const struct field *f, *ff;
 	const struct update *up;
 	const struct uref *ur;
 	const struct ord *ord;
@@ -2390,20 +2313,24 @@ gen_stmt(const struct strct *p)
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries) {
 		printf("\t/* STMT_%s_BY_SEARCH_%zu */\n"
-		       "\t\"SELECT ",
-			p->cname, pos++);
+		       "\t\"SELECT ", p->cname, pos++);
 
 		if (s->dst) {
 			printf("DISTINCT ");
 			gen_stmt_schema(p, 1,
 				s->dst->strct, 
 				s->dst->cname);
-		} else if (TAILQ_EMPTY(&s->aggrq)) {
-			gen_stmt_schema(p, 1, p, NULL);
 		} else
-			gen_stmt_schema_aggr(p, 1, p, NULL, s);
+			gen_stmt_schema(p, 1, p, NULL);
+
+		/* 
+		 * Whether anything is coming after the "FROM" clause,
+		 * which includes all ORDER, WHERE, GROUP, LIMIT, and
+		 * OFFSET commands.
+		 */
 
 		hastrail = 
+			(NULL != s->aggr && NULL != s->group) ||
 			(! TAILQ_EMPTY(&s->sntq)) ||
 			(! TAILQ_EMPTY(&s->ordq)) ||
 			(STYPE_SEARCH != s->type && s->limit > 0) ||
@@ -2412,6 +2339,35 @@ gen_stmt(const struct strct *p)
 		printf("\" FROM %s", p->name);
 		rc = 0;
 		gen_stmt_joins(p, p, NULL, &rc);
+
+		/* 
+		 * We need to have a special JOIN command for aggregate
+		 * groupings: we LEFT OUTER JOIN the grouped set to
+		 * itself, conditioning upon the aggregate inequality.
+		 * We'll filter NULL joinings in the WHERE statement.
+		 */
+
+		if (NULL != s->aggr && NULL != s->group) {
+			f = TAILQ_LAST(&s->aggr->arq, srefq)->field;
+			assert(NULL != f);
+			ff = TAILQ_LAST(&s->group->grq, srefq)->field;
+			assert(NULL != ff);
+			assert(f->parent == ff->parent);
+			printf("\n\t\t\"LEFT OUTER JOIN %s as _custom "
+				"ON %s.%s = _custom.%s "
+				"AND %s.%s %s _custom.%s \"",
+				ff->parent->name, 
+				NULL == s->group->alias ?
+				ff->parent->name : 
+				s->group->alias->alias,
+				ff->name, ff->name,
+				NULL == s->group->alias ?
+				ff->parent->name : 
+				s->group->alias->alias, f->name, 
+				AGGR_MAX == s->aggr->op ?  "<" : ">",
+				f->name);
+		}
+
 		if ( ! hastrail) {
 			if (0 == rc)
 				putchar('"');
@@ -2419,16 +2375,31 @@ gen_stmt(const struct strct *p)
 			continue;
 		}
 
-		if (rc > 0) {
+		if (rc > 0)
 			printf("\n\t\t\"");
-		} else {
+		else
 			printf(" \"\n\t\t\"");
-		}
 
-		if ( ! TAILQ_EMPTY(&s->sntq))
+		if ( ! TAILQ_EMPTY(&s->sntq) || 
+		    (NULL != s->aggr && NULL != s->group))
 			printf("WHERE");
 
 		first = 1;
+
+		/* 
+		 * If we're grouping, filter out all of the joins that
+		 * failed and aren't part of the results.
+		 */
+
+		if (NULL != s->group) {
+			f = TAILQ_LAST(&s->group->grq, srefq)->field;
+			assert(NULL != f);
+			printf(" _custom.%s IS NULL", f->name);
+			first = 0;
+		}
+
+		/* Continue with our proper WHERE clauses. */
+
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
 			if (FTYPE_PASSWORD == sr->field->type)
@@ -2446,18 +2417,6 @@ gen_stmt(const struct strct *p)
 					NULL == sent->alias ?
 					p->name : sent->alias->alias,
 					sr->name, optypes[sent->op]);
-		}
-
-		first = 1;
-		if ( ! TAILQ_EMPTY(&s->groupq))
-			printf(" GROUP BY ");
-		TAILQ_FOREACH(grp, &s->groupq, entries) {
-			sr = TAILQ_LAST(&grp->grq, srefq);
-			if ( ! first)
-				printf(", ");
-			first = 0;
-			printf("%s.%s", NULL == grp->alias ?
-				p->name : grp->alias->alias, sr->name);
 		}
 
 		first = 1;

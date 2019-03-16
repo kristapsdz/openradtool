@@ -806,8 +806,6 @@ resolve_search(struct config *cfg, struct search *srch)
 	struct alias	*a;
 	struct strct	*p;
 	struct ord	*ord;
-	struct aggr	*aggr;
-	struct group	*grp;
 	struct field	*f1, *f2;
 
 	p = srch->parent;
@@ -858,7 +856,7 @@ resolve_search(struct config *cfg, struct search *srch)
 	    check_search_unique(cfg, srch))
 		srch->flags |= SEARCH_IS_UNIQUE;
 
-	/* Now for order, group, and aggregate statements. */
+	/* Now resolve the order statement. */
 
 	TAILQ_FOREACH(ord, &srch->ordq, entries) {
 		sref = TAILQ_FIRST(&ord->orq);
@@ -873,57 +871,78 @@ resolve_search(struct config *cfg, struct search *srch)
 		ord->alias = a;
 	}
 
-	TAILQ_FOREACH(grp, &srch->groupq, entries) {
-		sref = TAILQ_FIRST(&grp->grq);
+	/* 
+	 * Only resolve the group if we have an aggregator.
+	 * The group identifier cannot be NULL because that would ruin
+	 * the post-join filter of NULL fields.
+	 */
+
+	if (NULL != srch->group) {
+		if (NULL == srch->aggr) {
+			gen_errx(cfg, &srch->group->pos, 
+				"group without a constraint");
+			return 0;
+		}
+		sref = TAILQ_FIRST(&srch->group->grq);
 		if ( ! resolve_sref(cfg, sref, p))
 			return 0;
-		if (NULL == grp->name)
-			continue;
-		TAILQ_FOREACH(a, &p->aq, entries)
-			if (0 == strcasecmp(a->name, grp->name))
-				break;
-		assert(NULL != a);
-		grp->alias = a;
+		if (NULL != srch->group->name) {
+			TAILQ_FOREACH(a, &p->aq, entries)
+				if (0 == strcasecmp
+				    (a->name, srch->group->name))
+					break;
+			assert(NULL != a);
+			srch->group->alias = a;
+		}
+		f1 = TAILQ_LAST(&srch->group->grq, srefq)->field;
+		assert(NULL != f1);
+		if (FIELD_NULL & f1->flags) {
+			gen_errx(cfg, &srch->group->pos,
+				"group cannot be null");
+			return 0;
+		}
 	}
 
 	/*
 	 * For the aggregate function, we also want to make sure that we
 	 * haven't defined the same columns to aggregate as the ones we
 	 * want to group.
+	 * It doesn't make a lot of sense to have a NULL field but it
+	 * also doesn't break anything, so it's ok.
 	 */
 
-	TAILQ_FOREACH(aggr, &srch->aggrq, entries) {
-		sref = TAILQ_FIRST(&aggr->arq);
+	if (NULL != srch->aggr) {
+		if (NULL == srch->group) {
+			gen_errx(cfg, &srch->aggr->pos, 
+				"constraint without a group");
+			return 0;
+		}
+		sref = TAILQ_FIRST(&srch->aggr->arq);
 		if ( ! resolve_sref(cfg, sref, p))
 			return 0;
-		f1 = TAILQ_LAST(&aggr->arq, srefq)->field;
+		f1 = TAILQ_LAST(&srch->aggr->arq, srefq)->field;
 		assert(NULL != f1);
-		TAILQ_FOREACH(grp, &srch->groupq, entries) {
-			f2 = TAILQ_LAST(&grp->grq, srefq)->field;
-			assert(NULL != f2);
-			if (f1 != f2)
-				continue;
-			gen_warnx(cfg, &grp->pos,
-				"same column used for both grouping "
-				"and aggregating");
+		f2 = TAILQ_LAST(&srch->group->grq, srefq)->field;
+		assert(NULL != f2);
+		if (f1 == f2) {
+			gen_errx(cfg, &srch->group->pos, "same "
+				"column for group and constraint");
+			return 0;
+		} else if (f1->parent != f2->parent) {
+			gen_errx(cfg, &srch->group->pos, 
+				"structure for group and constraint "
+				"must be the same");
+			return 0;
 		}
-		if (NULL == aggr->name)
-			continue;
-		TAILQ_FOREACH(a, &p->aq, entries)
-			if (0 == strcasecmp(a->name, aggr->name))
-				break;
-		assert(NULL != a);
-		aggr->alias = a;
+		if (NULL != srch->aggr->name) {
+			TAILQ_FOREACH(a, &p->aq, entries)
+				if (0 == strcasecmp
+				    (a->name, srch->aggr->name))
+					break;
+			assert(NULL != a);
+			srch->aggr->alias = a;
+		}
 	}
-
-	/* Aggregation and grouping go together. */
-
-	if (!TAILQ_EMPTY(&srch->aggrq) && TAILQ_EMPTY(&srch->groupq))
-		gen_warnx(cfg, &srch->pos, 
-			"group given without min/max");
-	if (TAILQ_EMPTY(&srch->aggrq) && !TAILQ_EMPTY(&srch->groupq))
-		gen_warnx(cfg, &srch->pos, 
-			"min/max given without group");
 
 	return 1;
 }

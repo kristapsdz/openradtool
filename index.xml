@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 	<head>
 		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 		<meta charset="utf-8" /> 
@@ -10,7 +10,7 @@
 		<link rel="stylesheet" href="highlight.css" />
 		<link rel="stylesheet" href="index.css" />
 	</head>
-	<body lang="en" itemscope="itemscope" itemtype="http://schema.org/SoftwareApplication">
+	<body itemscope="itemscope" itemtype="http://schema.org/SoftwareApplication">
 		<header>
 			<section id="breadcrumbs">
 				<div>
@@ -34,7 +34,7 @@
 				</div>
 				<nav>
 					<a href="https://github.com/kristapsdz/kwebapp">github</a>
-					<a href="snapshots/kwebapp.tar.gz">source</a>
+					<a href="snapshots/ort.tar.gz">source</a>
 					<a href="snapshots">archive</a>
 					<a href="atom.xml"><i class="fa fa-rss"></i></a>
 				</nav>

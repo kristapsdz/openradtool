@@ -111,7 +111,7 @@
 							accessable by user roles.
 						</div>
 						<div>
-							<a href="kwebapp-audit.1.html">kwebapp-audit(1)</a>,
+							<a href="ort-audit.1.html">ort-audit(1)</a>,
 							<a href="ort-audit-json.1.html">ort-audit-json(1)</a>,
 							<a href="ort-audit-gv.1.html">ort-audit-gv(1)</a>
 						</div>
@@ -398,16 +398,16 @@
 				audit role-based access
 			</h2>
 			<code>
-				% <a href="kwebapp-audit.1.html">kwebapp-audit</a>
+				% <a href="ort-audit.1.html">ort-audit</a>
 				<a href="audit-example.txt.html">audit-example.txt</a> user
 			</code>
 			<section>
 				<p>
 					We can audit <a href="https://learnbchs.org/rbac.html">role-based access control</a> access with <a
-						href="kwebapp-audit.1.html">kwebapp-audit(1)</a>, <a
+						href="ort-audit.1.html">ort-audit(1)</a>, <a
 						href="ort-audit-json.1.html">ort-audit-json(1)</a>, and <a
 						href="ort-audit-gv.1.html">ort-audit-gv(1)</a>.
-					By passing a role defined in the configuration to <a href="kwebapp-audit.1.html">kwebapp-audit(1)</a>,
+					By passing a role defined in the configuration to <a href="ort-audit.1.html">ort-audit(1)</a>,
 					we're able to see the full availability of data and operations available to the role.
 				</p>
 				<p>

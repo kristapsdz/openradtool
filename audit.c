@@ -962,7 +962,7 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	if (0 == strcmp(getprogname(), "kwebapp-audit-gv"))
+	if (0 == strcmp(getprogname(), "ort-audit-gv"))
 		op = OP_AUDIT_GV;
 	else if (0 == strcmp(getprogname(), "kwebapp-audit-json"))
 		op = OP_AUDIT_JSON;

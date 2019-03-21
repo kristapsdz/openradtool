@@ -3,8 +3,8 @@ digraph {
 	bgcolor="transparent";
 
 	cfg[label="ort(5)"];
-	bin[label="kwebapp(1)"];
-	bin2[label="kwebapp(1)"];
+	bin[label="ort(1)"];
+	bin2[label="ort(1)"];
 	xliff[label="XLIFF"];
 
 	cfg -> bin;

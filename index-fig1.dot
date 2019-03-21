@@ -3,7 +3,7 @@ digraph {
 	bgcolor="transparent";
 
 	cfg[label="ort(5)"];
-	bin[label="kwebapp(1)"];
+	bin[label="ort(1)"];
 	out[label="check"];
 
 	cfg -> bin;

@@ -3,7 +3,7 @@ digraph {
 	bgcolor="transparent";
 	splines=false;
 
-	{ rank=source; kwebapp[label="your configuration", fontcolor="blue"]; }
+	{ rank=source; ort[label="your configuration", fontcolor="blue"]; }
 
 	{ rank=same; 
 	  c[label="C", fontcolor="#888888", color="#aaaaaa"]; 
@@ -26,7 +26,7 @@ digraph {
 
 	{ rank=sink; client[label="client browser", color="#666666"]; }
 
-	kwebapp -> sql;
+	ort -> sql;
 	sql -> sqlite1;
 	sqlite1 -> db;
 	yourapp -> json;
@@ -36,8 +36,8 @@ digraph {
 	yourcode -> cc;
 	cc -> yourapp;
 
-	kwebapp -> c;
-	kwebapp -> ts;
+	ort -> c;
+	ort -> ts;
 	html5 -> client;
 	js -> client;
 	json -> client;

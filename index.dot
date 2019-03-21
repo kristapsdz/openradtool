@@ -4,7 +4,7 @@ digraph {
 	splines=false;
 
 	cfg[label="ort(5)"];
-	bin[label="kwebapp(1)"];
+	bin[label="ort(1)"];
 
 	{ rank=same; cfg; }
 	{ rank=same; bin; }

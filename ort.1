@@ -15,24 +15,24 @@
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .Dd $Mdocdate$
-.Dt KWEBAPP 1
+.Dt ORT 1
 .Os
 .Sh NAME
-.Nm kwebapp
-.Nd test web application configuration syntax
+.Nm ort
+.Nd test ort configuration syntax
 .Sh SYNOPSIS
-.Nm kwebapp
+.Nm ort
 .Op Ar config...
 .Sh DESCRIPTION
 The
 .Nm
-utility accepts a
+utility accepts an
 .Xr ort 5
-.Ar config
-.Pq defaulting to standard input
-and tests the configuration syntax.
+.Ar config ,
+defaulting to standard input, and tests its syntax.
 The configuration may be broken apart into several files.
-There are no arguments.
+.Nm
+accepts no arguments.
 .Pp
 Warnings and errors, if any, are printed to standard error.
 On success, the configuration is reproduced on standard output.

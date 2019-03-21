@@ -166,7 +166,7 @@
 				parse and validate configuration
 			</h2>
 			<code>
-				% <a href="kwebapp.1.html">kwebapp</a> <a href="db.txt.html">db.txt</a>
+				% <a href="ort.1.html">ort</a> <a href="db.txt.html">db.txt</a>
 			</code>
 			<section class="special">
 				<figure>
@@ -188,7 +188,7 @@
 						(A normal application would have more, but for brevity&#8230;)
 					</p>
 					<p>
-						The <a href="kwebapp.1.html">kwebapp(1)</a> utility parses and validates the configuration.
+						The <a href="ort.1.html">ort(1)</a> utility parses and validates the configuration.
 						To <em>do</em> something with this configuration, we need to have code.
 						Most applications start by creating an API from the data configuration as described in the next section.
 						<em>Note</em>: this validation is superfluous, as all other compilation processes will do the same.

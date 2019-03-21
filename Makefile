@@ -29,7 +29,7 @@ HTMLS		 = archive.html \
 		   ort-audit-json.1.html \
 		   ort-c-header.1.html \
 		   ort-c-source.1.html \
-		   kwebapp-javascript.1.html \
+		   ort-javascript.1.html \
 		   kwebapp-sql.1.html \
 		   kwebapp-sqldiff.1.html \
 		   kwebapp-xliff.1.html \
@@ -41,7 +41,7 @@ MAN1S		 = ort.1 \
 		   ort-audit-json.1 \
 		   ort-c-header.1 \
 		   ort-c-source.1 \
-		   kwebapp-javascript.1 \
+		   ort-javascript.1 \
 		   kwebapp-sql.1 \
 		   kwebapp-sqldiff.1 \
 		   kwebapp-xliff.1
@@ -95,7 +95,7 @@ BINS		 = ort \
 		   ort-audit-json \
 		   ort-c-header \
 		   ort-c-source \
-		   kwebapp-javascript \
+		   ort-javascript \
 		   kwebapp-sql \
 		   kwebapp-sqldiff \
 		   kwebapp-xliff
@@ -129,7 +129,7 @@ ort-c-source: source.o libort.a
 ort-c-header: header.o libort.a
 	$(CC) -o $@ header.o libort.a
 
-kwebapp-javascript: javascript.o libort.a
+ort-javascript: javascript.o libort.a
 	$(CC) -o $@ javascript.o libort.a
 
 kwebapp-sql: sql.o libort.a
@@ -229,11 +229,11 @@ db.h: ort-c-header db.txt
 db.sql: kwebapp-sql db.txt
 	./kwebapp-sql db.txt >$@
 
-db.js: kwebapp-javascript db.txt
-	./kwebapp-javascript db.txt >$@
+db.js: ort-javascript db.txt
+	./ort-javascript db.txt >$@
 
-db.ts: kwebapp-javascript db.txt
-	./kwebapp-javascript -t db.txt >$@
+db.ts: ort-javascript db.txt
+	./ort-javascript -t db.txt >$@
 
 db.update.sql: kwebapp-sqldiff db.old.txt db.txt
 	./kwebapp-sqldiff db.old.txt db.txt >$@

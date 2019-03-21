@@ -51,7 +51,7 @@ The
 .Nm
 utility extracts, merges, and updates translatable strings from and into
 a
-.Xr kwebapp 5
+.Xr ort 5
 configuration.
 The configuration may be broken apart into several files.
 The translated strings are used only by
@@ -82,7 +82,7 @@ The updated translations are emitted on standard output.
 An XLIFF 1.2 file containing translated strings.
 .It Ar config
 A
-.Xr kwebapp 5
+.Xr ort 5
 configuration file.
 There may be multiple files in a single configuration.
 .El
@@ -92,14 +92,14 @@ When invoked with
 or
 .Fl u ,
 multiple
-.Xr kwebapp 5
+.Xr ort 5
 configuration files and XLIFF files as arguments must be broken up by
 the
 .Fl x
 flag, which signals the beginning of the XLIFF files.
 .Pp
 Translatable content in
-.Xr kwebapp 5
+.Xr ort 5
 is limited to
 .Cm jslabel
 phrases for enumerations and bitfields.
@@ -108,13 +108,13 @@ The usual usage sequence is as follows:
 .Bl -enum
 .It
 Extract translatable content from a
-.Xr kwebapp 5
+.Xr ort 5
 configuration into an XLIFF file.
 .It
 Give the XLIFF file a target language and translate the strings.
 .It
 Merge the XLIFF file back into the original
-.Xr kwebapp 5
+.Xr ort 5
 with
 .Fl j .
 Already-translated labels for the given language are not overriden by
@@ -218,7 +218,7 @@ In the second case, it's the translation file.
 .\" For sections 2, 3, 4, and 9 errno settings only.
 .Sh SEE ALSO
 .Xr kwebapp-javascript 1 ,
-.Xr kwebapp 5
+.Xr ort 5
 .\" .Sh STANDARDS
 .\" .Sh HISTORY
 .\" .Sh AUTHORS

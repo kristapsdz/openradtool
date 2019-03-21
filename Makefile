@@ -33,7 +33,7 @@ HTMLS		 = archive.html \
 		   kwebapp-sql.1.html \
 		   kwebapp-sqldiff.1.html \
 		   kwebapp-xliff.1.html \
-		   kwebapp.5.html
+		   ort.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
 MAN1S		 = kwebapp.1 \
 		   kwebapp-audit.1 \
@@ -60,7 +60,7 @@ DOTAR		 = audit.c \
 		   javascript.c \
 		   jsmn.c \
 		   $(MAN1S) \
-		   kwebapp.5 \
+		   ort.5 \
 		   ort.h \
 		   linker.c \
 		   Makefile \
@@ -179,7 +179,7 @@ install: all
 	mkdir -p $(DESTDIR)$(MANDIR)/man5
 	mkdir -p $(DESTDIR)$(SHAREDIR)/kwebapp
 	$(INSTALL_MAN) $(MAN1S) $(DESTDIR)$(MANDIR)/man1
-	$(INSTALL_MAN) kwebapp.5 $(DESTDIR)$(MANDIR)/man5
+	$(INSTALL_MAN) ort.5 $(DESTDIR)$(MANDIR)/man5
 	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/kwebapp
 	$(INSTALL_DATA) b64_ntop.c jsmn.c gensalt.c $(DESTDIR)$(SHAREDIR)/kwebapp
 	$(INSTALL_PROGRAM) $(BINS) $(DESTDIR)$(BINDIR)
@@ -189,7 +189,7 @@ uninstall:
 		echo rm -f $(DESTDIR)$(MANDIR)/man1/$$f ; \
 		rm -f $(DESTDIR)$(MANDIR)/man1/$$f ; \
 	done
-	rm -f $(DESTDIR)$(MANDIR)/man5/kwebapp.5
+	rm -f $(DESTDIR)$(MANDIR)/man5/ort.5
 	rm -f $(DESTDIR)$(SHAREDIR)/kwebapp/audit.{html,css,js}
 	rm -f $(DESTDIR)$(SHAREDIR)/kwebapp/{b64_ntop,jsmn,gensalt}.c
 	rmdir $(DESTDIR)$(SHAREDIR)/kwebapp

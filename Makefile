@@ -25,7 +25,7 @@ HTMLS		 = archive.html \
 		   index.html \
 		   ort.1.html \
 		   kwebapp-audit.1.html \
-		   kwebapp-audit-gv.1.html \
+		   ort-audit-gv.1.html \
 		   kwebapp-audit-json.1.html \
 		   kwebapp-c-header.1.html \
 		   kwebapp-c-source.1.html \
@@ -37,7 +37,7 @@ HTMLS		 = archive.html \
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
 MAN1S		 = ort.1 \
 		   kwebapp-audit.1 \
-		   kwebapp-audit-gv.1 \
+		   ort-audit-gv.1 \
 		   kwebapp-audit-json.1 \
 		   kwebapp-c-header.1 \
 		   kwebapp-c-source.1 \
@@ -91,7 +91,7 @@ IHTMLS		 = audit-example.txt.html \
 		   test.c.html
 BINS		 = ort \
 		   kwebapp-audit \
-		   kwebapp-audit-gv \
+		   ort-audit-gv \
 		   kwebapp-audit-json \
 		   kwebapp-c-header \
 		   kwebapp-c-source \
@@ -141,7 +141,7 @@ kwebapp-sqldiff: sql.o libort.a
 kwebapp-audit: audit.o libort.a
 	$(CC) -o $@ audit.o libort.a
 
-kwebapp-audit-gv: audit.o libort.a
+ort-audit-gv: audit.o libort.a
 	$(CC) -o $@ audit.o libort.a
 
 kwebapp-audit-json: audit.o libort.a

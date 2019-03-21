@@ -102,7 +102,7 @@
 							labels.
 						</div>
 						<div>
-							<a href="kwebapp-xliff.1.html">kwebapp-xliff(1)</a>
+							<a href="ort-xliff.1.html">ort-xliff(1)</a>
 						</div>
 					</div>
 					<div class="topicbox">
@@ -364,11 +364,11 @@
 			</h2>
 			<code>
 				<div>
-					% <a href="kwebapp-xliff.1.html">kwebapp-xliff</a>
+					% <a href="ort-xliff.1.html">ort-xliff</a>
 					<a href="db.txt.html">db.txt</a> &gt; <a href="db.fr.xml.html">db.fr.xml</a>
 				</div>
 				<div>
-					% <a href="kwebapp-xliff.1.html">kwebapp-xliff</a> -j
+					% <a href="ort-xliff.1.html">ort-xliff</a> -j
 					<a href="db.txt.html">db.txt</a> <a href="db.fr.xml.html">db.fr.xml</a> &gt; <a href="db.trans.txt.html">db.trans.txt</a>
 				</div>
 			</code>
@@ -386,7 +386,7 @@
 						callback.
 					</p>
 					<p>
-						These strings may be translated by using the <a href="kwebapp-xliff.1.html">kwebapp-xliff(1)</a>
+						These strings may be translated by using the <a href="ort-xliff.1.html">ort-xliff(1)</a>
 						utility, which extracts translatable strings into the industry-standard <a
 							href="http://docs.oasis-open.org/xliff/v1.2/os/xliff-core.html">XLIFF 1.2</a> format.
 						The translation files may then be merged back into the configuration file, with the output piped

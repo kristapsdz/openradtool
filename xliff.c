@@ -448,8 +448,8 @@ xliff_extract(const struct config *cfg, int copy)
 
 	printf("<xliff version=\"1.2\">\n"
 	       "\t<file target-language=\"TODO\" "
-	          "tool=\"kwebapp-xliff\">\n"
-	       "\t\t<body>\n");
+	          "tool=\"%s\">\n"
+	       "\t\t<body>\n", getprogname());
 
 	for (i = 0; i < ssz; i++)
 		if (copy) 
@@ -712,9 +712,9 @@ xliff_update(struct config *cfg, int copy,
 
 	printf("<xliff version=\"1.2\">\n"
 	       "\t<file target-language=\"%s\" "
-	          "tool=\"kwebapp-xliff\">\n"
+	          "tool=\"%s\">\n"
 	       "\t\t<body>\n",
-	       x->trglang);
+	       x->trglang, getprogname());
 
 	for (i = 0; i < x->usz; i++)
 		if (NULL == x->u[i].target && copy)

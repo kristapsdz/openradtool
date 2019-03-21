@@ -15,35 +15,35 @@
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .Dd $Mdocdate$
-.Dt KWEBAPP-XLIFF 1
+.Dt ORT-XLIFF 1
 .Os
 .Sh NAME
-.Nm kwebapp-xliff
-.Nd extract and merge translatable strings from kwebapp configurations
+.Nm ort-xliff
+.Nd extract and merge translatable strings from ort configurations
 .Sh SYNOPSIS
-.Nm kwebapp-xliff
+.Nm ort-xliff
 .Op Fl c
 .Fl j
 .Ar config
 .Op Ar xliff
-.Nm kwebapp-xliff
+.Nm ort-xliff
 .Op Fl c
 .Fl j
 .Op Ar config...
 .Fl x
 .Op Ar xliff...
-.Nm kwebapp-xliff
+.Nm ort-xliff
 .Op Fl c
 .Fl u
 .Ar config
 .Op Ar xliff
-.Nm kwebapp-xliff
+.Nm ort-xliff
 .Op Fl c
 .Fl u
 .Op Ar config...
 .Fl x
 .Op Ar xliff
-.Nm kwebapp-xliff
+.Nm ort-xliff
 .Op Fl c
 .Op Ar config...
 .Sh DESCRIPTION
@@ -153,9 +153,9 @@ enum foo {
 .Pp
 Begin by extracting translatable strings from the input.
 .Bd -literal
-% kwebapp-xliff foo.kwbp
+% ort-xliff foo.kwbp
 <xliff version="1.2">
-  <file target-language="TODO" tool="kwebapp-xliff">
+  <file target-language="TODO" tool="ort-xliff">
     <body>
       <trans-unit id="1">
         <source>bar</source>
@@ -179,7 +179,7 @@ Then join the output,
 .Pa foo.fr.xliff ,
 with the input configuration.
 .Bd -literal
-% kwebapp-xliff -j foo.kwbp foo.fr.xliff
+% ort-xliff -j foo.kwbp foo.fr.xliff
 enum foo {
   item bar 0
     jslabel "bar"
@@ -196,7 +196,7 @@ to have per-language label filling.
 .Pp
 Multiple configuration files, when joining, may also be specified.
 .Bd -literal
-% kwebapp-xliff -j foo1.kwbp foo2.kwbp -x foo.fr.xliff
+% ort-xliff -j foo1.kwbp foo2.kwbp -x foo.fr.xliff
 .Ed
 .Pp
 The configuration or XLIFF files may also be passed on standard input by
@@ -209,8 +209,8 @@ is used to prevent
 from being interpreted as a command-line option.)
 In the second case, it's the translation file.
 .Bd -literal
-% kwebapp-xliff -j -- -x foo.fr.xliff < foo.kwbp
-% kwebapp-xliff -j foo1.kwbp foo2.kwbp -x < foo.xliff
+% ort-xliff -j -- -x foo.fr.xliff < foo.kwbp
+% ort-xliff -j foo1.kwbp foo2.kwbp -x < foo.xliff
 .Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.

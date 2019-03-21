@@ -676,9 +676,9 @@ main(int argc, char *argv[])
 	if (-1 == pledge("stdio rpath", NULL))
 		err(EXIT_FAILURE, "pledge");
 #endif
-	/* Handle being called as kwebapp-sql and -sqldiff. */
+	/* Handle being called as ort-sql and -sqldiff. */
 
-	if (0 == strcmp(getprogname(), "kwebapp-sql")) {
+	if (0 == strcmp(getprogname(), "ort-sql")) {
 		if (-1 != getopt(argc, argv, ""))
 			goto usage;
 

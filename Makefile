@@ -31,7 +31,7 @@ HTMLS		 = archive.html \
 		   ort-c-source.1.html \
 		   ort-javascript.1.html \
 		   ort-sql.1.html \
-		   kwebapp-sqldiff.1.html \
+		   ort-sqldiff.1.html \
 		   kwebapp-xliff.1.html \
 		   ort.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
@@ -43,7 +43,7 @@ MAN1S		 = ort.1 \
 		   ort-c-source.1 \
 		   ort-javascript.1 \
 		   ort-sql.1 \
-		   kwebapp-sqldiff.1 \
+		   ort-sqldiff.1 \
 		   kwebapp-xliff.1
 DOTAREXEC	 = configure
 DOTAR		 = audit.c \
@@ -97,7 +97,7 @@ BINS		 = ort \
 		   ort-c-source \
 		   ort-javascript \
 		   ort-sql \
-		   kwebapp-sqldiff \
+		   ort-sqldiff \
 		   kwebapp-xliff
 IMAGES		 = index.svg \
 		   index2.svg \
@@ -135,7 +135,7 @@ ort-javascript: javascript.o libort.a
 ort-sql: sql.o libort.a
 	$(CC) -o $@ sql.o libort.a
 
-kwebapp-sqldiff: sql.o libort.a
+ort-sqldiff: sql.o libort.a
 	$(CC) -o $@ sql.o libort.a
 
 ort-audit: audit.o libort.a
@@ -235,8 +235,8 @@ db.js: ort-javascript db.txt
 db.ts: ort-javascript db.txt
 	./ort-javascript -t db.txt >$@
 
-db.update.sql: kwebapp-sqldiff db.old.txt db.txt
-	./kwebapp-sqldiff db.old.txt db.txt >$@
+db.update.sql: ort-sqldiff db.old.txt db.txt
+	./ort-sqldiff db.old.txt db.txt >$@
 
 db.trans.txt: kwebapp-xliff db.txt db.fr.xml
 	./kwebapp-xliff -j db.txt db.fr.xml >$@

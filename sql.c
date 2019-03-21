@@ -696,7 +696,7 @@ main(int argc, char *argv[])
 				goto out;
 			}
 		}
-	} else if (0 == strcmp(getprogname(), "kwebapp-sqldiff")) {
+	} else if (0 == strcmp(getprogname(), "ort-sqldiff")) {
 		diff = 1;
 		while (-1 != (c = getopt(argc, argv, "d")))
 			switch (c) {

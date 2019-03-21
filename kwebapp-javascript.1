@@ -35,7 +35,7 @@ and creates JavaScript or TypeScript classes formatting the JSON
 produced by
 .Xr ort-c-header 1
 and
-.Xr kwebapp-c-source 1 .
+.Xr ort-c-source 1 .
 The configuration may be broken apart into several files.
 Its arguments are as follows:
 .Bl -tag -width Ds
@@ -55,11 +55,11 @@ The method for acquiring the JSON is not managed by
 but is usually provided by a CGI interfacing with
 .Xr ort-c-header 1
 and
-.Xr kwebapp-c-source 1 .
+.Xr ort-c-source 1 .
 .Pp
 To use the interface, simply include the generated file as a script,
 create objects from the JSON exported by
-.Xr kwebapp-c-source 1 ,
+.Xr ort-c-source 1 ,
 and invoke the applicable object's
 .Fn fill ,
 .Fn fillByClass ,
@@ -326,7 +326,7 @@ new kwebapp.foo(obj).fill
 .Sh SEE ALSO
 .Xr jsdoc 1 ,
 .Xr ort-c-header 1 ,
-.Xr kwebapp-c-source 1 ,
+.Xr ort-c-source 1 ,
 .Xr tsc 1 ,
 .Xr ort 5
 .\" .Sh STANDARDS

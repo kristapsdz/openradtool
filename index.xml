@@ -82,7 +82,7 @@
 							This must be driven by your program code.
 						</div>
 						<div>
-							<a href="kwebapp-c-source.1.html">kwebapp-c-source(1)</a>, 
+							<a href="ort-c-source.1.html">ort-c-source(1)</a>, 
 							<a href="ort-c-header.1.html">ort-c-header(1)</a>
 						</div>
 					</div>
@@ -204,7 +204,7 @@
 					<a href="db.txt.html">db.txt</a> &gt; <a href="db.h.html">db.h</a>
 				</div>
 				<div>
-					% <a href="kwebapp-c-source.1.html">kwebapp-c-source</a> -jv 
+					% <a href="ort-c-source.1.html">ort-c-source</a> -jv 
 					-h <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt; <a href="db.c.html">db.c</a>
 				</div>
 			</code>

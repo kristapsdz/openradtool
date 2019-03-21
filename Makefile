@@ -26,7 +26,7 @@ HTMLS		 = archive.html \
 		   ort.1.html \
 		   kwebapp-audit.1.html \
 		   ort-audit-gv.1.html \
-		   kwebapp-audit-json.1.html \
+		   ort-audit-json.1.html \
 		   kwebapp-c-header.1.html \
 		   kwebapp-c-source.1.html \
 		   kwebapp-javascript.1.html \
@@ -38,7 +38,7 @@ WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
 MAN1S		 = ort.1 \
 		   kwebapp-audit.1 \
 		   ort-audit-gv.1 \
-		   kwebapp-audit-json.1 \
+		   ort-audit-json.1 \
 		   kwebapp-c-header.1 \
 		   kwebapp-c-source.1 \
 		   kwebapp-javascript.1 \
@@ -92,7 +92,7 @@ IHTMLS		 = audit-example.txt.html \
 BINS		 = ort \
 		   kwebapp-audit \
 		   ort-audit-gv \
-		   kwebapp-audit-json \
+		   ort-audit-json \
 		   kwebapp-c-header \
 		   kwebapp-c-source \
 		   kwebapp-javascript \
@@ -144,7 +144,7 @@ kwebapp-audit: audit.o libort.a
 ort-audit-gv: audit.o libort.a
 	$(CC) -o $@ audit.o libort.a
 
-kwebapp-audit-json: audit.o libort.a
+ort-audit-json: audit.o libort.a
 	$(CC) -o $@ audit.o libort.a
 
 kwebapp-xliff: xliff.o libort.a
@@ -211,8 +211,8 @@ kwebapp.tar.gz: $(DOTAR) $(DOTAREXEC)
 test: test.o db.o db.db
 	$(CC) -o $@ test.o db.o $(LDFLAGS) -lksql -lsqlite3 -lpthread -lkcgijson -lkcgi -lz $(LDADD)
 
-audit-out.js: kwebapp-audit-json audit-example.txt
-	./kwebapp-audit-json user audit-example.txt >$@
+audit-out.js: ort-audit-json audit-example.txt
+	./ort-audit-json user audit-example.txt >$@
 
 db.o: db.c db.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c db.c

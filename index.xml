@@ -112,7 +112,7 @@
 						</div>
 						<div>
 							<a href="kwebapp-audit.1.html">kwebapp-audit(1)</a>,
-							<a href="kwebapp-audit-json.1.html">kwebapp-audit-json(1)</a>,
+							<a href="ort-audit-json.1.html">ort-audit-json(1)</a>,
 							<a href="ort-audit-gv.1.html">ort-audit-gv(1)</a>
 						</div>
 					</div>
@@ -405,7 +405,7 @@
 				<p>
 					We can audit <a href="https://learnbchs.org/rbac.html">role-based access control</a> access with <a
 						href="kwebapp-audit.1.html">kwebapp-audit(1)</a>, <a
-						href="kwebapp-audit-json.1.html">kwebapp-audit-json(1)</a>, and <a
+						href="ort-audit-json.1.html">ort-audit-json(1)</a>, and <a
 						href="ort-audit-gv.1.html">ort-audit-gv(1)</a>.
 					By passing a role defined in the configuration to <a href="kwebapp-audit.1.html">kwebapp-audit(1)</a>,
 					we're able to see the full availability of data and operations available to the role.
@@ -414,7 +414,7 @@
 					In the example role-backed <a href="audit-example.txt.html">audit-example.txt</a> with roles
 					<code>user</code> and <code>admin</code>, for example, we can fully audit for the <code>user</code> role
 					as seen in the exemplar <a href="audit.html">audit.html</a>.
-					We create with <a href="kwebapp-audit-json.1.html">kwebapp-audit-json(1)</a>.
+					We create with <a href="ort-audit-json.1.html">ort-audit-json(1)</a>.
 					This visualisation breaks down access by structures (the foundational objects of <a
 						href="ort.5.html">ort(5)</a>) and then grouped by operation.
 				</p>

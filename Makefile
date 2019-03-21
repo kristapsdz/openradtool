@@ -30,7 +30,7 @@ HTMLS		 = archive.html \
 		   ort-c-header.1.html \
 		   ort-c-source.1.html \
 		   ort-javascript.1.html \
-		   kwebapp-sql.1.html \
+		   ort-sql.1.html \
 		   kwebapp-sqldiff.1.html \
 		   kwebapp-xliff.1.html \
 		   ort.5.html
@@ -42,7 +42,7 @@ MAN1S		 = ort.1 \
 		   ort-c-header.1 \
 		   ort-c-source.1 \
 		   ort-javascript.1 \
-		   kwebapp-sql.1 \
+		   ort-sql.1 \
 		   kwebapp-sqldiff.1 \
 		   kwebapp-xliff.1
 DOTAREXEC	 = configure
@@ -96,7 +96,7 @@ BINS		 = ort \
 		   ort-c-header \
 		   ort-c-source \
 		   ort-javascript \
-		   kwebapp-sql \
+		   ort-sql \
 		   kwebapp-sqldiff \
 		   kwebapp-xliff
 IMAGES		 = index.svg \
@@ -132,7 +132,7 @@ ort-c-header: header.o libort.a
 ort-javascript: javascript.o libort.a
 	$(CC) -o $@ javascript.o libort.a
 
-kwebapp-sql: sql.o libort.a
+ort-sql: sql.o libort.a
 	$(CC) -o $@ sql.o libort.a
 
 kwebapp-sqldiff: sql.o libort.a
@@ -226,8 +226,8 @@ db.c: ort-c-source db.txt
 db.h: ort-c-header db.txt
 	./ort-c-header -vsjJ db.txt >$@
 
-db.sql: kwebapp-sql db.txt
-	./kwebapp-sql db.txt >$@
+db.sql: ort-sql db.txt
+	./ort-sql db.txt >$@
 
 db.js: ort-javascript db.txt
 	./ort-javascript db.txt >$@

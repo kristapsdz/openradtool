@@ -71,7 +71,7 @@
 								upgrade</a> commands) for your SQLite database.
 						</div>
 						<div>
-							<a href="kwebapp-sql.1.html">kwebapp-sql(1)</a>, 
+							<a href="ort-sql.1.html">ort-sql(1)</a>, 
 							<a href="kwebapp-sqldiff.1.html">kwebapp-sqldiff(1)</a>
 						</div>
 					</div>
@@ -265,7 +265,7 @@
 			</h2>
 			<code>
 				<div>
-					% <a href="kwebapp-sql.1.html">kwebapp-sql</a>
+					% <a href="ort-sql.1.html">ort-sql</a>
 					<a href="db.txt.html">db.txt</a> &gt; <a href="db.sql.html">db.sql</a>
 				</div>
 				<div>

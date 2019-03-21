@@ -15,16 +15,16 @@
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .Dd $Mdocdate$
-.Dt KWEBAPP 5
+.Dt ORT 5
 .Os
 .Sh NAME
-.Nm kwebapp
-.Nd syntax for kwebapp configuration
+.Nm ort
+.Nd syntax for ort configuration
 .Sh DESCRIPTION
 The
 .Nm
 configuration is used by the
-.Xr kwebapp 1
+.Xr ort 1
 family to define an application's data types; the data itself; how
 the data is created, modified, and deleted; and how the data is queried.
 .Pp
@@ -294,7 +294,7 @@ Documents the field using the quoted string.
 Set a default value for the column that's used
 .Em only
 when adding columns to the SQL schema via
-.Xr kwebapp-sqldiff 1 .
+.Xr ort-sqldiff 1 .
 It's only valid for numeric, date, or string literal (email, text) field
 types.
 Dates must be in yyyy-mm-dd format.
@@ -779,7 +779,7 @@ Labels specify how
 and
 .Cm enum
 types and their items may be described by a front-end formatter such as
-.Xr kwebapp-javascript 1 .
+.Xr ort-javascript 1 .
 That is, while the string value of a
 .Cm struct
 item describes itself, an
@@ -875,7 +875,7 @@ The
 structure contains a
 .Li struct user
 as well; thus, there is a declarative order that
-.Xr kwebapp 1
+.Xr ort 1
 enforces when writing out structures.
 .Pp
 The SQL interface, when fetching a
@@ -886,7 +886,7 @@ over the user identifier and session
 .Li userid
 field.
 .Sh SEE ALSO
-.Xr kwebapp 1
+.Xr ort 1
 .\" .Sh STANDARDS
 .\" .Sh HISTORY
 .\" .Sh AUTHORS

@@ -3,7 +3,7 @@ digraph {
 	bgcolor="transparent";
 	splines=false;
 
-	cfg[label="kwebapp(5)"];
+	cfg[label="ort(5)"];
 	bin[label="kwebapp(1)"];
 
 	{ rank=same; cfg; }

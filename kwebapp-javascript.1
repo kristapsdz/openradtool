@@ -28,7 +28,7 @@
 The
 .Nm
 utility accepts a
-.Xr kwebapp 5
+.Xr ort 5
 .Ar config
 .Pq defaulting to standard input
 and creates JavaScript or TypeScript classes formatting the JSON
@@ -43,7 +43,7 @@ Its arguments are as follows:
 Emits Typescript instead of JavaScript.
 .It Ar config
 Configuration file in
-.Xr kwebapp 5
+.Xr ort 5
 syntax.
 .El
 .Pp
@@ -232,13 +232,13 @@ new kwebapp.client(obj).fillInner(document.body, custom);
 .Ed
 .Ss Enumeration and Bitfield Labels
 Enumerations and bitfields in
-.Xr kwebapp 5
+.Xr ort 5
 are translated into classes with a static
 .Fn format
 function that may be passed as a custom handler for corresponding
 fields.
 These fill in the
-.Xr kwebapp 5
+.Xr ort 5
 .Cm jslabel
 of the corresponding values.
 If a language is specified in the root of the HTML or XML document, it
@@ -248,7 +248,7 @@ used.
 If there is no default label, an empty string is used instead.
 .Pp
 In the event of unset bitfields, the corresponding
-.Xr kwebapp 5
+.Xr ort 5
 .Cm isunset
 value is used, and the
 .Li kwbp-unset
@@ -284,7 +284,7 @@ new kwebapp.foo(obj).fill(e, custom);
 .Ex -std
 .Sh EXAMPLES
 Given a
-.Xr kwebapp 5
+.Xr ort 5
 structure
 .Dq foo
 with a single field
@@ -328,7 +328,7 @@ new kwebapp.foo(obj).fill
 .Xr kwebapp-c-header 1 ,
 .Xr kwebapp-c-source 1 ,
 .Xr tsc 1 ,
-.Xr kwebapp 5
+.Xr ort 5
 .\" .Sh STANDARDS
 .\" .Sh HISTORY
 .\" .Sh AUTHORS

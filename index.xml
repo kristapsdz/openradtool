@@ -18,7 +18,7 @@
 						BSD.lv tools for <a href="https://learnbchs.org">BCHS</a>: 
 						<a href="https://kristaps.bsd.lv/kcgi">kcgi</a>, 
 						<a href="https://kristaps.bsd.lv/ksql">ksql</a>, 
-						<a href="https://kristaps.bsd.lv/openradtool">ort</a>
+						<a href="https://kristaps.bsd.lv/kwebapp">ort</a>
 					</div>
 				</div>
 			</section>
@@ -42,6 +42,9 @@
 			</section>
 		</header>
 		<article>
+			<nav>
+				<span>introduction</span>
+			</nav>
 			<section>
 				<div id="intro">
 					<figure>
@@ -116,263 +119,268 @@
 					<span class="nm">openradtool</span> is a <a href="https://www.bsd.lv">BSD.lv</a> project.
 				</p>
 			</section>
-			<h2>
-				<span>1.</span> validate configuration
-			</h2>
-			<code>
-				% <a href="ort.1.html">ort</a> <a href="db.txt.html">db.txt</a>
-			</code>
-			<section class="special">
-				<figure>
-					<img class="skinny" src="index-fig1.svg" />
-				</figure>
-				<div>
-					<p>
-						Consider an example <a href="ort.5.html">ort(5)</a> configuration <a
-							href="db.txt.html">db.txt</a>.
-						It defines three data objects&#8212;a <code>user</code>, <code>company</code>, and
-						<code>session</code>&#8212;with relations between the three.
-						Each <code>session</code> refers to a <code>user</code> by the <code>userid</code> field.
-						Then each <code>user</code> refers to a <code>company</code> by its <code>cid</code>.
-					</p>
-					<p>
-						The <a href="ort.1.html">ort(1)</a> utility parses and validates the configuration.
-						To <em>do</em> something with this configuration, we need to have code.
-						Most applications start by creating an API from the data configuration as described in the next section.
-						<em>Note: this validation is superfluous, as all other compilation processes will do the same.</em>
-					</p>
-				</div>
-			</section>
-			<h2 id="gen-c">
-				<span>2.</span>
-				generate back-end code
-			</h2>
-			<code>
-				<div>
-					% <a href="ort-c-header.1.html">ort-c-header</a> -jv 
-					<a href="db.txt.html">db.txt</a> &gt; <a href="db.h.html">db.h</a>
-				</div>
-				<div>
-					% <a href="ort-c-source.1.html">ort-c-source</a> -jv 
-					-h <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt; <a href="db.c.html">db.c</a>
-				</div>
-			</code>
-			<section class="special">
-				<figure>
-					<img src="index-fig2.svg" />
-				</figure>
-				<div>
-					<p>
-						This generates source and header files to be linked to sources (usually) driving a <a
-							href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> CGI script.
-						Each function and structure in the header file is documented thoroughly.
-						The source files are also documented (more sparsely) to guide developers in reading through the
-						implementation.
-					</p>
-					<p>
-						The C source file is generated for the target architecture, so it's not guaranteed to be
-						portable between operating systems.
-					</p>
-					<p>
-						You can break apart C headers and sources into the database routines, JSON export, validation,
-						and so on.
-						For smaller applications, it's generally easiest to have them in one.
-						I break apart the routines when I have several applications, e.g., a CGI script and a <a
-							href="https://man.openbsd.org/cron">cron(8)</a> job for period e-mails.
-						This allows the non-CGI applications not to link to CGI bits.
-					</p>
-				</div>
-			</section>
-			<h2>
-				<span>3.</span>
-				compile back-end code
-			</h2>
-			<code>
-				% cc -static -o test main.c <a href="db.c.html">db.c</a> -lksql -lsqlite3 -lpthread -lkcgijson -lkcgi -lz
-			</code>
+			<nav>
+				<span>usage</span>
+			</nav>
 			<section>
-				<p>
-					The <b>-static</b> is for simplicity when running CGI scripts in a file-system jail.
-				       	This is the default operation on OpenBSD web servers (see <a href="http://man.openbsd.org/httpd.8">httpd(8)</a>,
-					which I use as a reference web server).
-				</p>
-				<p>
-					The required libraries are <b>-l</b><i>ksql</i> for the database routines,
-					<b>-l</b><i>kcgijson</i> for the JSON output, and
-					<b>-l</b><i>kcgi</i> for the input validation (and a library dependency for <b>-l</b><i>kcgijson</i>).
-					The other libraries are dependencies on the former (<b>-l</b><i>sqlite3</i> and <b>-l</b><i>pthread</i>) and latter
-					(<b>-l</b><i>z</i>).
-					Obviously, I assume these are in the standard library path, though the third-party libraries will
-					probably be in <b>-L</b><i>/usr/local/lib</i>, with headers in <b>-I</b><i>/usr/local/include</i>.
-				</p>
-				<p>
-					On some machines, you may additionally need <b>-l</b><i>crypt</i> (for password hashing) and
-					<b>-l</b><i>m</i> (for <b>-l</b><i>kcgijson</i>).
-				</p>
-			</section>
-			<h2 id="gen-sql">
-				<span>4.</span>
-				generate and initialise database
-			</h2>
-			<code>
-				<div>
-					% <a href="ort-sql.1.html">ort-sql</a>
-					<a href="db.txt.html">db.txt</a> &gt; <a href="db.sql.html">db.sql</a>
-				</div>
-				<div>
-					% sqlite3 db.db &lt; <a href="db.sql.html">db.sql</a>
-				</div>
-			</code>
-			<section class="special">
-				<figure>
-					<img src="index-fig3.svg" />
-				</figure>
-				<div>
+				<h2>
+					<span>1.</span> validate configuration
+				</h2>
+				<code>
+					% <a href="ort.1.html">ort</a> <a href="db.txt.html">db.txt</a>
+				</code>
+				<section class="special">
+					<figure>
+						<img class="skinny" src="index-fig1.svg" />
+					</figure>
+					<div>
+						<p>
+							Consider an example <a href="ort.5.html">ort(5)</a> configuration <a
+								href="db.txt.html">db.txt</a>.
+							It defines three data objects&#8212;a <code>user</code>, <code>company</code>, and
+							<code>session</code>&#8212;with relations between the three.
+							Each <code>session</code> refers to a <code>user</code> by the <code>userid</code> field.
+							Then each <code>user</code> refers to a <code>company</code> by its <code>cid</code>.
+						</p>
+						<p>
+							The <a href="ort.1.html">ort(1)</a> utility parses and validates the configuration.
+							To <em>do</em> something with this configuration, we need to have code.
+							Most applications start by creating an API from the data configuration as described in the next section.
+							<em>Note: this validation is superfluous, as all other compilation processes will do the same.</em>
+						</p>
+					</div>
+				</section>
+				<h2 id="gen-c">
+					<span>2.</span>
+					generate back-end code
+				</h2>
+				<code>
+					<div>
+						% <a href="ort-c-header.1.html">ort-c-header</a> -jv 
+						<a href="db.txt.html">db.txt</a> &gt; <a href="db.h.html">db.h</a>
+					</div>
+					<div>
+						% <a href="ort-c-source.1.html">ort-c-source</a> -jv 
+						-h <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt; <a href="db.c.html">db.c</a>
+					</div>
+				</code>
+				<section class="special">
+					<figure>
+						<img src="index-fig2.svg" />
+					</figure>
+					<div>
+						<p>
+							This generates source and header files to be linked to sources (usually) driving a <a
+								href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> CGI script.
+							Each function and structure in the header file is documented thoroughly.
+							The source files are also documented (more sparsely) to guide developers in reading through the
+							implementation.
+						</p>
+						<p>
+							The C source file is generated for the target architecture, so it's not guaranteed to be
+							portable between operating systems.
+						</p>
+						<p>
+							You can break apart C headers and sources into the database routines, JSON export, validation,
+							and so on.
+							For smaller applications, it's generally easiest to have them in one.
+							I break apart the routines when I have several applications, e.g., a CGI script and a <a
+								href="https://man.openbsd.org/cron">cron(8)</a> job for period e-mails.
+							This allows the non-CGI applications not to link to CGI bits.
+						</p>
+					</div>
+				</section>
+				<h2>
+					<span>3.</span>
+					compile back-end code
+				</h2>
+				<code>
+					% cc -static -o test main.c <a href="db.c.html">db.c</a> -lksql -lsqlite3 -lpthread -lkcgijson -lkcgi -lz
+				</code>
+				<section>
 					<p>
-						That some object fields, like the <code>user</code> structure inside of the section, are not
-						part of the SQL.
-						Rather, they are generated within <a href="db.c.html">db.c</a> using the foreign keys.
-						But for the most part, all structure items map into database columns.
+						The <b>-static</b> is for simplicity when running CGI scripts in a file-system jail.
+						This is the default operation on OpenBSD web servers (see <a href="http://man.openbsd.org/httpd.8">httpd(8)</a>,
+						which I use as a reference web server).
 					</p>
 					<p>
-						The SQL schema file is thoroughly documented.
-						I suggest using <a href="https://kristaps.bsd.lv/sqliteconvert/">sqliteconvert</a> if you'd like to
-						browse the SQL documentation for any non-trivial application.
-					</p>
-				</div>
-			</section>
-			<h2 id="gen-sqldiff">
-				<span>5.</span>
-				update database
-			</h2>
-			<code>
-				<div>
-					% <a href="ort-sqldiff.1.html">ort-sqldiff</a>
-					<a href="db.old.txt.html">db.old.txt</a> <a href="db.txt.html">db.txt</a> &gt; <a href="db.update.sql.html">db.update.sql</a>
-				</div>
-				<div>
-					% sqlite3 db.db &lt; <a href="db.sql.html">db.update.sql</a>
-				</div>
-			</code>
-			<section class="special">
-				<figure>
-					<img src="index-fig3.svg" />
-				</figure>
-				<div>
-					<p>
-						A feature I use a lot in <span class="nm">ort</span> is to track differences in the database schema
-						by using <a href="ort-sqldiff.1.html">ort-sqldiff(1)</a>.
-						This allows me to double-check that upgrades to my database won't be incompatible.
-						It also generates the correct invocations without having me fat-finger mistakes in the upgraded database.
+						The required libraries are <b>-l</b><i>ksql</i> for the database routines,
+						<b>-l</b><i>kcgijson</i> for the JSON output, and
+						<b>-l</b><i>kcgi</i> for the input validation (and a library dependency for <b>-l</b><i>kcgijson</i>).
+						The other libraries are dependencies on the former (<b>-l</b><i>sqlite3</i> and <b>-l</b><i>pthread</i>) and latter
+						(<b>-l</b><i>z</i>).
+						Obviously, I assume these are in the standard library path, though the third-party libraries will
+						probably be in <b>-L</b><i>/usr/local/lib</i>, with headers in <b>-I</b><i>/usr/local/include</i>.
 					</p>
 					<p>
-						Update scripts should always be perused for correctness.
-						They currently don't handle default values, so columns not accepting <code>null</code> will not
-						pass through the database application.
+						On some machines, you may additionally need <b>-l</b><i>crypt</i> (for password hashing) and
+						<b>-l</b><i>m</i> (for <b>-l</b><i>kcgijson</i>).
 					</p>
-				</div>
-			</section>
-			<h2 id="gen-js">
-				<span>6.</span>
-				generate javascript front-end
-			</h2>
-			<code>
-				<div>
-					% <a href="ort-javascript.1.html">ort-javascript</a>
-					<a href="db.txt.html">db.txt</a> &gt; <a href="db.js.html">db.js</a>
-				</div>
-				<div>
-					% <a href="ort-javascript.1.html">ort-javascript</a> -t
-					<a href="db.txt.html">db.txt</a> &gt; <a href="db.ts.html">db.ts</a>
-				</div>
-			</code>
-			<section class="special">
-				<figure>
-					<img src="index-fig5.svg" />
-				</figure>
-				<div>
+				</section>
+				<h2 id="gen-sql">
+					<span>4.</span>
+					generate and initialise database
+				</h2>
+				<code>
+					<div>
+						% <a href="ort-sql.1.html">ort-sql</a>
+						<a href="db.txt.html">db.txt</a> &gt; <a href="db.sql.html">db.sql</a>
+					</div>
+					<div>
+						% sqlite3 db.db &lt; <a href="db.sql.html">db.sql</a>
+					</div>
+				</code>
+				<section class="special">
+					<figure>
+						<img src="index-fig3.svg" />
+					</figure>
+					<div>
+						<p>
+							That some object fields, like the <code>user</code> structure inside of the section, are not
+							part of the SQL.
+							Rather, they are generated within <a href="db.c.html">db.c</a> using the foreign keys.
+							But for the most part, all structure items map into database columns.
+						</p>
+						<p>
+							The SQL schema file is thoroughly documented.
+							I suggest using <a href="https://kristaps.bsd.lv/sqliteconvert/">sqliteconvert</a> if you'd like to
+							browse the SQL documentation for any non-trivial application.
+						</p>
+					</div>
+				</section>
+				<h2 id="gen-sqldiff">
+					<span>5.</span>
+					update database
+				</h2>
+				<code>
+					<div>
+						% <a href="ort-sqldiff.1.html">ort-sqldiff</a>
+						<a href="db.old.txt.html">db.old.txt</a> <a href="db.txt.html">db.txt</a> &gt; <a href="db.update.sql.html">db.update.sql</a>
+					</div>
+					<div>
+						% sqlite3 db.db &lt; <a href="db.sql.html">db.update.sql</a>
+					</div>
+				</code>
+				<section class="special">
+					<figure>
+						<img src="index-fig3.svg" />
+					</figure>
+					<div>
+						<p>
+							A feature I use a lot in <span class="nm">ort</span> is to track differences in the database schema
+							by using <a href="ort-sqldiff.1.html">ort-sqldiff(1)</a>.
+							This allows me to double-check that upgrades to my database won't be incompatible.
+							It also generates the correct invocations without having me fat-finger mistakes in the upgraded database.
+						</p>
+						<p>
+							Update scripts should always be perused for correctness.
+							They currently don't handle default values, so columns not accepting <code>null</code> will not
+							pass through the database application.
+						</p>
+					</div>
+				</section>
+				<h2 id="gen-js">
+					<span>6.</span>
+					generate javascript front-end
+				</h2>
+				<code>
+					<div>
+						% <a href="ort-javascript.1.html">ort-javascript</a>
+						<a href="db.txt.html">db.txt</a> &gt; <a href="db.js.html">db.js</a>
+					</div>
+					<div>
+						% <a href="ort-javascript.1.html">ort-javascript</a> -t
+						<a href="db.txt.html">db.txt</a> &gt; <a href="db.ts.html">db.ts</a>
+					</div>
+				</code>
+				<section class="special">
+					<figure>
+						<img src="index-fig5.svg" />
+					</figure>
+					<div>
+						<p>
+							The last part of the toolchain is to handle the JSON-export output in the browser itself.
+							The <a href="ort-javascript.1.html">ort-javascript(1)</a> tool will also generate
+							JavaScript or TypeScript files to assist in filling in data for your front-end web application
+							code.
+						</p>
+						<p>
+							Both are the same, and provide an easy interface for replacing elements (noted by class names)
+							in your HTML DOM tree with data.
+							All of this is documented using <a href="https://usejsdoc.org">jsdoc</a> notation.
+							For example, consider the following:
+						</p>
+						<article data-sblg-permlink="0" data-sblg-article="1"></article>
+						<p>
+							A JavaScript file may invoke <code>new ort.user(res).fill<wbr />(document.getElementById<wbr />('foobar'))</code>, where
+							<code>res</code> is the JSON object parsed from an AJAX call to the CGI script.
+							This will recursively replace text (classes ending with <code>-text</code>), fill in input
+							values, and allow for extensive customisation.
+						</p>
+					</div>
+				</section>
+				<h2 id="gen-xliff">
+					<span>7.</span>
+					translate javascript labels
+				</h2>
+				<code>
+					<div>
+						% <a href="ort-xliff.1.html">ort-xliff</a>
+						<a href="db.txt.html">db.txt</a> &gt; <a href="db.fr.xml.html">db.fr.xml</a>
+					</div>
+					<div>
+						% <a href="ort-xliff.1.html">ort-xliff</a> -j
+						<a href="db.txt.html">db.txt</a> <a href="db.fr.xml.html">db.fr.xml</a> &gt; <a href="db.trans.txt.html">db.trans.txt</a>
+					</div>
+				</code>
+				<section class="special">
+					<figure>
+						<img src="index-fig6.svg" />
+					</figure>
+					<div>
+						<p>
+							The <a href="ort-javascript.1.html">ort-javascript(1)</a> tool is capable of filling in
+							labels of exported enumeration and bitfield values.
+							For example, if an exported field is of the <code>enum foo</code> type, and the enumeration's
+							items have <code>jslabel</code> tags, integral enumeration values can be programmatically
+							converted to the labels by invoking the <code>ort.foo.format()</code> method as a custom
+							callback.
+						</p>
+						<p>
+							These strings may be translated by using the <a href="ort-xliff.1.html">ort-xliff(1)</a>
+							utility, which extracts translatable strings into the industry-standard <a
+								href="http://docs.oasis-open.org/xliff/v1.2/os/xliff-core.html">XLIFF 1.2</a> format.
+							The translation files may then be merged back into the configuration file, with the output piped
+							into <a href="ort-javascript.1.html">ort-javascript(1)</a>, for a full translation sequence.
+						</p>
+					</div>
+				</section>
+				<h2 id="gen-audit">
+					<span>8.</span>
+					audit role-based access
+				</h2>
+				<code>
+					% <a href="ort-audit.1.html">ort-audit</a>
+					<a href="audit-example.txt.html">audit-example.txt</a> user
+				</code>
+				<section>
 					<p>
-						The last part of the toolchain is to handle the JSON-export output in the browser itself.
-						The <a href="ort-javascript.1.html">ort-javascript(1)</a> tool will also generate
-						JavaScript or TypeScript files to assist in filling in data for your front-end web application
-						code.
+						We can audit <a href="https://learnbchs.org/rbac.html">role-based access control</a> access with <a
+							href="ort-audit.1.html">ort-audit(1)</a>, <a
+							href="ort-audit-json.1.html">ort-audit-json(1)</a>, and <a
+							href="ort-audit-gv.1.html">ort-audit-gv(1)</a>.
+						By passing a role defined in the configuration to <a href="ort-audit.1.html">ort-audit(1)</a>,
+						we're able to see the full availability of data and operations available to the role.
 					</p>
 					<p>
-						Both are the same, and provide an easy interface for replacing elements (noted by class names)
-						in your HTML DOM tree with data.
-						All of this is documented using <a href="https://usejsdoc.org">jsdoc</a> notation.
-						For example, consider the following:
+						In the example role-backed <a href="audit-example.txt.html">audit-example.txt</a> with roles
+						<code>user</code> and <code>admin</code>, for example, we can fully audit for the <code>user</code> role
+						as seen in the exemplar <a href="audit.html">audit.html</a>.
+						We create with <a href="ort-audit-json.1.html">ort-audit-json(1)</a>.
+						This visualisation breaks down access by structures (the foundational objects of <a
+							href="ort.5.html">ort(5)</a>) and then grouped by operation.
 					</p>
-					<article data-sblg-permlink="0" data-sblg-article="1"></article>
-					<p>
-						A JavaScript file may invoke <code>new ort.user(res).fill<wbr />(document.getElementById<wbr />('foobar'))</code>, where
-						<code>res</code> is the JSON object parsed from an AJAX call to the CGI script.
-						This will recursively replace text (classes ending with <code>-text</code>), fill in input
-						values, and allow for extensive customisation.
-					</p>
-				</div>
-			</section>
-			<h2 id="gen-xliff">
-				<span>7.</span>
-				translate javascript labels
-			</h2>
-			<code>
-				<div>
-					% <a href="ort-xliff.1.html">ort-xliff</a>
-					<a href="db.txt.html">db.txt</a> &gt; <a href="db.fr.xml.html">db.fr.xml</a>
-				</div>
-				<div>
-					% <a href="ort-xliff.1.html">ort-xliff</a> -j
-					<a href="db.txt.html">db.txt</a> <a href="db.fr.xml.html">db.fr.xml</a> &gt; <a href="db.trans.txt.html">db.trans.txt</a>
-				</div>
-			</code>
-			<section class="special">
-				<figure>
-					<img src="index-fig6.svg" />
-				</figure>
-				<div>
-					<p>
-						The <a href="ort-javascript.1.html">ort-javascript(1)</a> tool is capable of filling in
-						labels of exported enumeration and bitfield values.
-						For example, if an exported field is of the <code>enum foo</code> type, and the enumeration's
-						items have <code>jslabel</code> tags, integral enumeration values can be programmatically
-						converted to the labels by invoking the <code>ort.foo.format()</code> method as a custom
-						callback.
-					</p>
-					<p>
-						These strings may be translated by using the <a href="ort-xliff.1.html">ort-xliff(1)</a>
-						utility, which extracts translatable strings into the industry-standard <a
-							href="http://docs.oasis-open.org/xliff/v1.2/os/xliff-core.html">XLIFF 1.2</a> format.
-						The translation files may then be merged back into the configuration file, with the output piped
-						into <a href="ort-javascript.1.html">ort-javascript(1)</a>, for a full translation sequence.
-					</p>
-				</div>
-			</section>
-			<h2 id="gen-audit">
-				<span>8.</span>
-				audit role-based access
-			</h2>
-			<code>
-				% <a href="ort-audit.1.html">ort-audit</a>
-				<a href="audit-example.txt.html">audit-example.txt</a> user
-			</code>
-			<section>
-				<p>
-					We can audit <a href="https://learnbchs.org/rbac.html">role-based access control</a> access with <a
-						href="ort-audit.1.html">ort-audit(1)</a>, <a
-						href="ort-audit-json.1.html">ort-audit-json(1)</a>, and <a
-						href="ort-audit-gv.1.html">ort-audit-gv(1)</a>.
-					By passing a role defined in the configuration to <a href="ort-audit.1.html">ort-audit(1)</a>,
-					we're able to see the full availability of data and operations available to the role.
-				</p>
-				<p>
-					In the example role-backed <a href="audit-example.txt.html">audit-example.txt</a> with roles
-					<code>user</code> and <code>admin</code>, for example, we can fully audit for the <code>user</code> role
-					as seen in the exemplar <a href="audit.html">audit.html</a>.
-					We create with <a href="ort-audit-json.1.html">ort-audit-json(1)</a>.
-					This visualisation breaks down access by structures (the foundational objects of <a
-						href="ort.5.html">ort(5)</a>) and then grouped by operation.
-				</p>
+				</section>
 			</section>
 		</article>
 		<footer>

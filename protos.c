@@ -64,7 +64,7 @@ static	const char *const optypes[OPTYPE__MAX] = {
 
 /*
  * Generate the convenience "open" function.
- * If "priv" is non-zero, return a kwbp instead of ksql.
+ * If "priv" is non-zero, return a ort instead of ksql.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
  */
@@ -73,7 +73,7 @@ print_func_db_open(int priv, int decl)
 {
 
 	printf("struct %s *%sdb_open(const char *file)%s\n",
-		priv ? "kwbp" : "ksql",
+		priv ? "ort" : "ksql",
 		decl ? "" : "\n", decl ? ";" : "");
 }
 
@@ -81,7 +81,7 @@ void
 print_func_db_role(int decl)
 {
 
-	printf("void%sdb_role(struct kwbp *ctx, enum kwbp_role r)%s\n",
+	printf("void%sdb_role(struct ort *ctx, enum ort_role r)%s\n",
 		decl ? " " : "\n", 
 		decl ? ";" : "");
 }
@@ -90,7 +90,7 @@ void
 print_func_db_role_current(int decl)
 {
 
-	printf("enum kwbp_role%sdb_role_current(struct kwbp *ctx)%s\n",
+	printf("enum ort_role%sdb_role_current(struct ort *ctx)%s\n",
 		decl ? " " : "\n", 
 		decl ? ";" : "");
 }
@@ -99,7 +99,7 @@ void
 print_func_db_role_stored(int decl)
 {
 
-	printf("enum kwbp_role%sdb_role_stored(struct kwbp_store *s)%s\n",
+	printf("enum ort_role%sdb_role_stored(struct ort_store *s)%s\n",
 		decl ? " " : "\n", 
 		decl ? ";" : "");
 }
@@ -109,7 +109,7 @@ print_func_db_trans_rollback(int priv, int decl)
 {
 
 	printf("void%sdb_trans_rollback(struct %s *p, size_t id)%s\n",
-		decl ? " " : "\n", priv ? "kwbp" : "ksql",
+		decl ? " " : "\n", priv ? "ort" : "ksql",
 		decl ? ";" : "");
 }
 
@@ -118,7 +118,7 @@ print_func_db_trans_commit(int priv, int decl)
 {
 
 	printf("void%sdb_trans_commit(struct %s *p, size_t id)%s\n",
-		decl ? " " : "\n", priv ? "kwbp" : "ksql",
+		decl ? " " : "\n", priv ? "ort" : "ksql",
 		decl ? ";" : "");
 }
 
@@ -127,13 +127,13 @@ print_func_db_trans_open(int priv, int decl)
 {
 
 	printf("void%sdb_trans_open(struct %s *p, size_t id, int mode)%s\n",
-		decl ? " " : "\n", priv ? "kwbp" : "ksql",
+		decl ? " " : "\n", priv ? "ort" : "ksql",
 		decl ? ";" : "");
 }
 
 /*
  * Generate the convenience "close" function.
- * If "priv" is non-zero, accept a kwbp instead of ksql.
+ * If "priv" is non-zero, accept a ort instead of ksql.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
  */
@@ -142,7 +142,7 @@ print_func_db_close(int priv, int decl)
 {
 
 	printf("void%sdb_close(struct %s *p)%s\n",
-		decl ? " " : "\n", priv ? "kwbp" : "ksql",
+		decl ? " " : "\n", priv ? "ort" : "ksql",
 		decl ? ";" : "");
 }
 
@@ -222,7 +222,7 @@ print_name_db_update(const struct update *u)
  * Generate the "update" function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
- * If "priv" is non-zero, accept a kwbp instead of ksql.
+ * If "priv" is non-zero, accept a ort instead of ksql.
  */
 void
 print_func_db_update(const struct update *u, int priv, int decl)
@@ -239,7 +239,7 @@ print_func_db_update(const struct update *u, int priv, int decl)
 	col += print_name_db_update(u);
 
 	if (priv)
-		col += printf("(struct kwbp *ctx");
+		col += printf("(struct ort *ctx");
 	else
 		col += printf("(struct ksql *db");
 
@@ -293,7 +293,7 @@ print_name_db_search(const struct search *s)
  * The format of the declaration depends upon the search type.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
- * If "priv" is non-zero, accept a kwbp instead of ksql.
+ * If "priv" is non-zero, accept a ort instead of ksql.
  * FIXME: line wrapping.
  */
 void
@@ -325,7 +325,7 @@ print_func_db_search(const struct search *s, int priv, int decl)
 	col += print_name_db_search(s);
 
 	if (priv)
-		col += printf("(struct kwbp *ctx");
+		col += printf("(struct ort *ctx");
 	else
 		col += printf("(struct ksql *db");
 
@@ -356,7 +356,7 @@ print_name_db_insert(const struct strct *p)
  * Generate the "insert" function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
- * If "priv" is non-zero, accept a kwbp instead of ksql.
+ * If "priv" is non-zero, accept a ort instead of ksql.
  */
 void
 print_func_db_insert(const struct strct *p, int priv, int decl)
@@ -369,7 +369,7 @@ print_func_db_insert(const struct strct *p, int priv, int decl)
 	col += print_name_db_insert(p);
 
 	if (priv)
-		col += printf("(struct kwbp *ctx");
+		col += printf("(struct ort *ctx");
 	else
 		col += printf("(struct ksql *db");
 
@@ -445,7 +445,7 @@ print_func_db_fill(const struct strct *p, int priv, int decl)
 	       priv ? "static " : "",
 	       decl ? " " : "\n",
 	       p->name, 
-	       priv ? "struct kwbp *ctx, " : "",
+	       priv ? "struct ort *ctx, " : "",
 	       p->name,
 	       decl ? ";\n" : "");
 }

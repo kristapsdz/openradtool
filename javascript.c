@@ -1446,7 +1446,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t\t\tname += '-label';\n"
 		       "\t\t\tif (null === v) {\n"
 		       "\t\t\t\t_classaddcl(e, name, "
-		         "\'kwbp-null\', false);\n"
+		         "\'ort-null\', false);\n"
 		       "\t\t\t\t_replcllang(e, name, ");
 		gen_labels(cfg, &bf->labels_null);
 		printf(");\n"
@@ -1454,7 +1454,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		       "\t\t\t}\n"
 		       "\t\t\tif (0 === v) {\n"
 		       "\t\t\t\t_classaddcl(e, name, "
-		     	"\'kwbp-unset\', false);\n"
+		     	"\'ort-unset\', false);\n"
 		       "\t\t\t\t_replcllang(e, name, ");
 		gen_labels(cfg, &bf->labels_unset);
 		puts(");\n"

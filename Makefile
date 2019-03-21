@@ -150,15 +150,15 @@ ort-audit-json: audit.o libort.a
 ort-xliff: xliff.o libort.a
 	$(CC) -o $@ xliff.o libort.a $(LDFLAGS) -lexpat
 
-www: $(IMAGES) $(HTMLS) kwebapp.tar.gz kwebapp.tar.gz.sha512 atom.xml
+www: $(IMAGES) $(HTMLS) ort.tar.gz ort.tar.gz.sha512 atom.xml
 
 installwww: www
 	mkdir -p $(WWWDIR)
 	mkdir -p $(WWWDIR)/snapshots
 	$(INSTALL_DATA) *.html *.css *.js $(IMAGES) atom.xml $(WWWDIR)
-	$(INSTALL_DATA) kwebapp.tar.gz kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots
-	$(INSTALL_DATA) kwebapp.tar.gz $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz
-	$(INSTALL_DATA) kwebapp.tar.gz.sha512 $(WWWDIR)/snapshots/kwebapp-$(VERSION).tar.gz.sha512
+	$(INSTALL_DATA) ort.tar.gz ort.tar.gz.sha512 $(WWWDIR)/snapshots
+	$(INSTALL_DATA) ort.tar.gz $(WWWDIR)/snapshots/ort-$(VERSION).tar.gz
+	$(INSTALL_DATA) ort.tar.gz.sha512 $(WWWDIR)/snapshots/ort-$(VERSION).tar.gz.sha512
 
 version.h: Makefile
 	( echo "#define VERSION \"$(VERSION)\"" ; \
@@ -198,13 +198,13 @@ uninstall:
 		rm -f $(DESTDIR)$(BINDIR)/$$f ; \
 	done
 
-kwebapp.tar.gz.sha512: kwebapp.tar.gz
-	sha512 kwebapp.tar.gz >$@
+ort.tar.gz.sha512: ort.tar.gz
+	sha512 ort.tar.gz >$@
 
-kwebapp.tar.gz: $(DOTAR) $(DOTAREXEC)
-	mkdir -p .dist/kwebapp-$(VERSION)/
-	install -m 0444 $(DOTAR) .dist/kwebapp-$(VERSION)
-	install -m 0555 $(DOTAREXEC) .dist/kwebapp-$(VERSION)
+ort.tar.gz: $(DOTAR) $(DOTAREXEC)
+	mkdir -p .dist/ort-$(VERSION)/
+	install -m 0444 $(DOTAR) .dist/ort-$(VERSION)
+	install -m 0555 $(DOTAREXEC) .dist/ort-$(VERSION)
 	( cd .dist/ && tar zcf ../$@ ./ )
 	rm -rf .dist/
 
@@ -333,13 +333,13 @@ TODO.xml: TODO.md
 	  lowdown -Thtml TODO.md ; \
 	  echo "</article>" ; ) >$@
 
-atom.xml: versions.xml
+atom.xml: versions.xml atom-template.xml
 	sblg -s date -a versions.xml >$@
 
 clean:
 	rm -f $(BINS) version.h paths.h $(LIBOBJS) libort.a test test.o
 	rm -f db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db db.trans.txt
-	rm -f kwebapp.tar.gz kwebapp.tar.gz.sha512
+	rm -f ort.tar.gz ort.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml
 	rm -f db.txt.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
 	rm -f source.o header.o javascript.o sql.o audit.o main.o xliff.o

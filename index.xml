@@ -93,7 +93,7 @@
 							This must be driven by your front-end code.
 						</div>
 						<div>
-							<a href="kwebapp-javascript.1.html">kwebapp-javascript(1)</a>
+							<a href="ort-javascript.1.html">ort-javascript(1)</a>
 						</div>
 					</div>
 					<div class="topicbox">
@@ -325,11 +325,11 @@
 			</h2>
 			<code>
 				<div>
-					% <a href="kwebapp-javascript.1.html">kwebapp-javascript</a>
+					% <a href="ort-javascript.1.html">ort-javascript</a>
 					<a href="db.txt.html">db.txt</a> &gt; <a href="db.js.html">db.js</a>
 				</div>
 				<div>
-					% <a href="kwebapp-javascript.1.html">kwebapp-javascript</a> -t
+					% <a href="ort-javascript.1.html">ort-javascript</a> -t
 					<a href="db.txt.html">db.txt</a> &gt; <a href="db.ts.html">db.ts</a>
 				</div>
 			</code>
@@ -340,7 +340,7 @@
 				<div>
 					<p>
 						The last part of the toolchain is to handle the JSON-export output in the browser itself.
-						The <a href="kwebapp-javascript.1.html">kwebapp-javascript(1)</a> tool will also generate
+						The <a href="ort-javascript.1.html">ort-javascript(1)</a> tool will also generate
 						JavaScript or TypeScript files to assist in filling in data for your front-end web application
 						code.
 					</p>
@@ -378,7 +378,7 @@
 				</figure>
 				<div>
 					<p>
-						The <a href="kwebapp-javascript.1.html">kwebapp-javascript(1)</a> tool is capable of filling in
+						The <a href="ort-javascript.1.html">ort-javascript(1)</a> tool is capable of filling in
 						labels of exported enumeration and bitfield values.
 						For example, if an exported field is of the <code>enum foo</code> type, and the enumeration's
 						items have <code>jslabel</code> tags, integral enumeration values can be programmatically
@@ -390,7 +390,7 @@
 						utility, which extracts translatable strings into the industry-standard <a
 							href="http://docs.oasis-open.org/xliff/v1.2/os/xliff-core.html">XLIFF 1.2</a> format.
 						The translation files may then be merged back into the configuration file, with the output piped
-						into <a href="kwebapp-javascript.1.html">kwebapp-javascript(1)</a>, for a full translation sequence.
+						into <a href="ort-javascript.1.html">ort-javascript(1)</a>, for a full translation sequence.
 					</p>
 				</div>
 			</section>

@@ -23,7 +23,7 @@ OBJS		 = audit.o \
 		   xliff.o
 HTMLS		 = archive.html \
 		   index.html \
-		   kwebapp.1.html \
+		   ort.1.html \
 		   kwebapp-audit.1.html \
 		   kwebapp-audit-gv.1.html \
 		   kwebapp-audit-json.1.html \
@@ -35,7 +35,7 @@ HTMLS		 = archive.html \
 		   kwebapp-xliff.1.html \
 		   ort.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
-MAN1S		 = kwebapp.1 \
+MAN1S		 = ort.1 \
 		   kwebapp-audit.1 \
 		   kwebapp-audit-gv.1 \
 		   kwebapp-audit-json.1 \
@@ -89,7 +89,7 @@ IHTMLS		 = audit-example.txt.html \
 		   db.ts.html \
 		   db.trans.txt.html \
 		   test.c.html
-BINS		 = kwebapp \
+BINS		 = ort \
 		   kwebapp-audit \
 		   kwebapp-audit-gv \
 		   kwebapp-audit-json \
@@ -110,14 +110,14 @@ IMAGES		 = index.svg \
 # FreeBSD's make doesn't support CPPFLAGS.
 # CFLAGS += $(CPPFLAGS)
 
-all: kwebapp $(BINS)
+all: $(BINS)
 
 afl::
 	$(MAKE) clean
 	$(MAKE) all CC=afl-gcc
 	cp $(BINS) afl
 
-kwebapp: main.o libort.a
+ort: main.o libort.a
 	$(CC) -o $@ main.o libort.a
 
 libort.a: $(LIBOBJS)

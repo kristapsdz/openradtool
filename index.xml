@@ -83,7 +83,7 @@
 						</div>
 						<div>
 							<a href="kwebapp-c-source.1.html">kwebapp-c-source(1)</a>, 
-							<a href="kwebapp-c-header.1.html">kwebapp-c-header(1)</a>
+							<a href="ort-c-header.1.html">ort-c-header(1)</a>
 						</div>
 					</div>
 					<div class="topicbox">
@@ -200,7 +200,7 @@
 			</h2>
 			<code>
 				<div>
-					% <a href="kwebapp-c-header.1.html">kwebapp-c-header</a> -jv 
+					% <a href="ort-c-header.1.html">ort-c-header</a> -jv 
 					<a href="db.txt.html">db.txt</a> &gt; <a href="db.h.html">db.h</a>
 				</div>
 				<div>

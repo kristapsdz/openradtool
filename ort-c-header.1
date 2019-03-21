@@ -15,13 +15,13 @@
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .Dd $Mdocdate$
-.Dt KWEBAPP-C-HEADER 1
+.Dt ORT-C-HEADER 1
 .Os
 .Sh NAME
-.Nm kwebapp-c-header
-.Nd define web application C API
+.Nm ort-c-header
+.Nd generate ort C API
 .Sh SYNOPSIS
-.Nm kwebapp-c-header
+.Nm ort-c-header
 .Op Fl jJsv
 .Op Fl g Ar guard
 .Op Fl N Ar db
@@ -33,7 +33,7 @@ utility accepts a
 .Xr ort 5
 .Ar config
 .Pq defaulting to standard input
-and produces a C API describing the configuration.
+and generates a C API describing the configuration.
 The configuration may be broken apart into several files.
 These declarations is usually defined by the output of
 .Xr kwebapp-c-source 1 .
@@ -716,15 +716,15 @@ Let
 .Pa foo.kwbp
 be the configuration file.
 .Bd -literal
-kwebapp-c-header -jvs foo.kwbp > db.h
+ort-c-header -jvs foo.kwbp > db.h
 kwebapp-c-source -jvs foo.kwbp > db.c
 .Ed
 .Pp
 Breaking up into two header and source files: one for basic database
 functions, the other for JSON output.
 .Bd -literal
-kwebapp-c-header -s foo.kwbp > db.h
-kwebapp-c-header -s -g JSON_H -j -Nbd foo.kwbp > json.h
+ort-c-header -s foo.kwbp > db.h
+ort-c-header -s -g JSON_H -j -Nbd foo.kwbp > json.h
 kwebapp-c-source -s -h db.h > db.c
 kwebapp-c-source -s -j -Nb -Ibj -h db.h,json.h > json.c
 .Ed

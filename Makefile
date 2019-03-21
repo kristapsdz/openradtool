@@ -27,7 +27,7 @@ HTMLS		 = archive.html \
 		   ort-audit.1.html \
 		   ort-audit-gv.1.html \
 		   ort-audit-json.1.html \
-		   kwebapp-c-header.1.html \
+		   ort-c-header.1.html \
 		   kwebapp-c-source.1.html \
 		   kwebapp-javascript.1.html \
 		   kwebapp-sql.1.html \
@@ -39,7 +39,7 @@ MAN1S		 = ort.1 \
 		   ort-audit.1 \
 		   ort-audit-gv.1 \
 		   ort-audit-json.1 \
-		   kwebapp-c-header.1 \
+		   ort-c-header.1 \
 		   kwebapp-c-source.1 \
 		   kwebapp-javascript.1 \
 		   kwebapp-sql.1 \
@@ -93,7 +93,7 @@ BINS		 = ort \
 		   ort-audit \
 		   ort-audit-gv \
 		   ort-audit-json \
-		   kwebapp-c-header \
+		   ort-c-header \
 		   kwebapp-c-source \
 		   kwebapp-javascript \
 		   kwebapp-sql \
@@ -126,7 +126,7 @@ libort.a: $(LIBOBJS)
 kwebapp-c-source: source.o libort.a
 	$(CC) -o $@ source.o libort.a
 
-kwebapp-c-header: header.o libort.a
+ort-c-header: header.o libort.a
 	$(CC) -o $@ header.o libort.a
 
 kwebapp-javascript: javascript.o libort.a
@@ -223,8 +223,8 @@ test.o: test.c db.h
 db.c: kwebapp-c-source db.txt
 	./kwebapp-c-source -vsjJ db.txt >$@
 
-db.h: kwebapp-c-header db.txt
-	./kwebapp-c-header -vsjJ db.txt >$@
+db.h: ort-c-header db.txt
+	./ort-c-header -vsjJ db.txt >$@
 
 db.sql: kwebapp-sql db.txt
 	./kwebapp-sql db.txt >$@

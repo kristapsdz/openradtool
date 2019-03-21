@@ -167,9 +167,9 @@ version.h: Makefile
 header.o source.o: version.h
 
 paths.h: Makefile
-	( echo "#define PATH_GENSALT \"$(SHAREDIR)/kwebapp/gensalt.c\"" ; \
-	  echo "#define PATH_B64_NTOP \"$(SHAREDIR)/kwebapp/b64_ntop.c\"" ; \
-	  echo "#define PATH_JSMN \"$(SHAREDIR)/kwebapp/jsmn.c\"" ; ) >$@
+	( echo "#define PATH_GENSALT \"$(SHAREDIR)/ort/gensalt.c\"" ; \
+	  echo "#define PATH_B64_NTOP \"$(SHAREDIR)/ort/b64_ntop.c\"" ; \
+	  echo "#define PATH_JSMN \"$(SHAREDIR)/ort/jsmn.c\"" ; ) >$@
 
 source.o: paths.h
 
@@ -177,11 +177,11 @@ install: all
 	mkdir -p $(DESTDIR)$(BINDIR)
 	mkdir -p $(DESTDIR)$(MANDIR)/man1
 	mkdir -p $(DESTDIR)$(MANDIR)/man5
-	mkdir -p $(DESTDIR)$(SHAREDIR)/kwebapp
+	mkdir -p $(DESTDIR)$(SHAREDIR)/ort
 	$(INSTALL_MAN) $(MAN1S) $(DESTDIR)$(MANDIR)/man1
 	$(INSTALL_MAN) ort.5 $(DESTDIR)$(MANDIR)/man5
-	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/kwebapp
-	$(INSTALL_DATA) b64_ntop.c jsmn.c gensalt.c $(DESTDIR)$(SHAREDIR)/kwebapp
+	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/ort
+	$(INSTALL_DATA) b64_ntop.c jsmn.c gensalt.c $(DESTDIR)$(SHAREDIR)/ort
 	$(INSTALL_PROGRAM) $(BINS) $(DESTDIR)$(BINDIR)
 
 uninstall:
@@ -190,9 +190,9 @@ uninstall:
 		rm -f $(DESTDIR)$(MANDIR)/man1/$$f ; \
 	done
 	rm -f $(DESTDIR)$(MANDIR)/man5/ort.5
-	rm -f $(DESTDIR)$(SHAREDIR)/kwebapp/audit.{html,css,js}
-	rm -f $(DESTDIR)$(SHAREDIR)/kwebapp/{b64_ntop,jsmn,gensalt}.c
-	rmdir $(DESTDIR)$(SHAREDIR)/kwebapp
+	rm -f $(DESTDIR)$(SHAREDIR)/ort/audit.{html,css,js}
+	rm -f $(DESTDIR)$(SHAREDIR)/ort/{b64_ntop,jsmn,gensalt}.c
+	rmdir $(DESTDIR)$(SHAREDIR)/ort
 	@for f in $(BINS); do \
 		echo rm -f $(DESTDIR)$(BINDIR)/$$f ; \
 		rm -f $(DESTDIR)$(BINDIR)/$$f ; \

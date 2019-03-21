@@ -25,7 +25,7 @@ b, strong				{ font-weight: 500; }
 					  padding: 2rem;
 					  border-radius: 1rem;
 					  margin-left: 1rem; }
-#intro .intro				{ font-size: 160%; 
+#intro .intro				{ font-size: 150%; 
 					  margin: 0; }
 #outro .nm, #intro .nm			{ font-weight: 500;
 					  font-style: normal; }
@@ -60,6 +60,7 @@ b, strong				{ font-weight: 500; }
 					  font-size: 16pt; }
 #header .intro				{ font-size: xx-large; 
 					  margin: 1rem 0; }
+#header nav				{ font-size: 90%; }
 #header nav a				{ color: #666; 
 					  display: inline-block;
 					  font-variant: small-caps;
@@ -74,8 +75,9 @@ h1					{ display: inline-block;
 h2					{ font-size: 140%; 
 					  font-variant: small-caps;
 					  text-align: center;
-					  margin: 4rem 0 0 0;
+					  margin: 2rem 0 0 0;
 					  font-weight: 500; }
+section + h2				{ margin-top: 3rem; }
 h2 span					{ font-size: 70%;
 					  font-weight: 400; }
 h3					{ font-weight: 500; 
@@ -85,15 +87,15 @@ h3					{ font-weight: 500;
 					  border-bottom: thin solid rgba(7, 170, 187, 0.3);
 					  font-size: inherit; }
 h2 + code				{ display: block; 
-					  margin: 1em 25% 2em 25%;
+					  margin: 1em 0;
 					  background-color: #fff;
 					  padding: 1em;
 					  padding-left: 2em;
 					  text-indent: -2.2ex;
 					  border-radius: 1rem;
-					  border: thin solid #ddd; }
+					  border: thin solid #eee; }
 figure					{ text-align: center; 
-					  margin: 2em 0; }
+					  margin: 1em 0 0 0; }
 figcaption				{ color: #888; 
 					  font-size: smaller; }
 footer					{ text-align: center;
@@ -101,6 +103,18 @@ footer					{ text-align: center;
 					  padding: 48pt 0;
 					  font-size: smaller; }
 .file, .nm				{ font-style: italic; }
+article > nav				{ border-top: thin solid #ddd; 
+					  padding-left: 10%; }
+article > nav > span			{ background-color: #eee; 
+					  padding: 0.2em 2em;
+					  border: thin solid #ddd;
+					  border-top: none;
+					  font-size: smaller;
+					  color: #888;
+					  font-weight: 500;
+					  border-bottom-left-radius: 4pt;
+					  border-bottom-right-radius: 4pt;
+					  display: inline-block; }
 article > section			{ width: 50%;
 					  margin-left: auto;
 					  margin-right: auto; }
@@ -141,7 +155,6 @@ nav[data-sblg-nav] li + li		{ margin-top: 2em; }
  h2					{ font-size: inherit; }
  #breadcrumbs > div:nth-child(2) > div	{ padding: 8pt 4pt; 
 	 				  font-size: 12pt; }
- h2 + code				{ margin: 1em 2% 2em 2%; }
  section.special 			{ display: block; }
  section.special img			{ max-width: 200px; }
  section.special > :first-child 	{ padding-right: 0; }

@@ -964,7 +964,7 @@ main(int argc, char *argv[])
 
 	if (0 == strcmp(getprogname(), "ort-audit-gv"))
 		op = OP_AUDIT_GV;
-	else if (0 == strcmp(getprogname(), "kwebapp-audit-json"))
+	else if (0 == strcmp(getprogname(), "ort-audit-json"))
 		op = OP_AUDIT_JSON;
 
 	if (-1 != getopt(argc, argv, ""))

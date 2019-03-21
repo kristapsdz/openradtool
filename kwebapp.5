@@ -449,15 +449,15 @@ This does not work with
 .Cm null
 structures; and moreover, disallows searching by fields of type
 .Cm password .
-.It Cm group Ar term ["," term]*
-Groups results by the given columns.
-This collapses all rows with the same value for the given column into a
-single row.
-It is usually used with the
-.Cm max
-or
-.Cm min
-keyword.
+.\" .It Cm group Ar term ["," term]*
+.\" Groups results by the given columns.
+.\" This collapses all rows with the same value for the given column into a
+.\" single row.
+.\" It is usually used with the
+.\" .Cm max
+.\" or
+.\" .Cm min
+.\" keyword.
 .It Cm limit Ar limitval ["," offsetval]?
 A value >0 that limits the number of returned results.
 By default, there is no limit.
@@ -467,13 +467,13 @@ singleton result statement as a way to limit non-unique results to a
 single result.
 If followed by a comma, the next term is used to offset the query.
 This is usually used to page through results.
-.It Cm max | min Ar term ["," term]*
-Return the maximum or minimum value instead of the value itself.
-This is known as an
-.Qq aggregation function
-and is usually used with the
-.Cm group
-keyword.
+.\" .It Cm max | min Ar term ["," term]*
+.\" Return the maximum or minimum value instead of the value itself.
+.\" This is known as an
+.\" .Qq aggregation function
+.\" and is usually used with the
+.\" .Cm group
+.\" keyword.
 .It Cm name Ar searchname
 A unique identifier used in the C API for the search function.
 .It Cm order Ar term [type]? ["," term [type]?]*

@@ -301,7 +301,7 @@ jsmn_init(jsmn_parser *parser)
 }
 
 /*
- * The remainder here are written for kwebapp.
+ * The remainder here are written for ort.
  */
 
 int 

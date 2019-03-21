@@ -48,7 +48,7 @@ syntax.
 .El
 .Pp
 Both output formats consist of a set of classes within the
-.Qq kwebapp
+.Qq ort
 namespace describing structures, enumerations, and bitfields.
 The method for acquiring the JSON is not managed by
 .Nm ,
@@ -171,7 +171,7 @@ with a field
 consisting of a UNIX epoch:
 .Bd -literal -offset indent
 var custom = { 'client-dob': formatDate };
-new kwebapp.client(obj).fillInner(document.body, custom);
+new ort.client(obj).fillInner(document.body, custom);
 .Ed
 .Pp
 And letting a formatting function be:
@@ -194,7 +194,7 @@ structures.
 The keys for these are simply the structure name.
 .Bd -literal -offset indent
 var custom = { 'client': formatClient };
-new kwebapp.client(obj).fillInner(document.body, custom);
+new ort.client(obj).fillInner(document.body, custom);
 .Ed
 .Pp
 The callback will then be provided the full client object.
@@ -228,7 +228,7 @@ function formatDate(e: HTMLElement,
 The dictionary object is defined as follows:
 .Bd -literal -offset indent
 let custom: DataCallbacks = { 'client-dob': formatDate };
-new kwebapp.client(obj).fillInner(document.body, custom);
+new ort.client(obj).fillInner(document.body, custom);
 .Ed
 .Ss Enumeration and Bitfield Labels
 Enumerations and bitfields in
@@ -268,9 +268,9 @@ provide a custom callback.
 var obj = JSON.parse(response);
 var e = document.getElementById('foo');
 var custom = {
-  'foo-val': kwebapp.someenum.format
+  'foo-val': ort.someenum.format
 };
-new kwebapp.foo(obj).fill(e, custom);
+new ort.foo(obj).fill(e, custom);
 .Ed
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
@@ -294,7 +294,7 @@ and an AJAX response
 an example invocation may be as follows:
 .Bd -literal -offset indent
 var obj = JSON.parse(response);
-new kwebapp.foo(obj).fill
+new ort.foo(obj).fill
   (document.getElementById('foo'));
 .Ed
 .Pp
@@ -314,9 +314,9 @@ the JSON parse returns the
 .Dq foo
 JSON object.
 .Bd -literal -offset indent
-let obj: kwebapp.fooData =
-  <kwebapp.fooData>JSON.parse(response);
-new kwebapp.foo(obj).fill
+let obj: ort.fooData =
+  <ort.fooData>JSON.parse(response);
+new ort.foo(obj).fill
   (document.getElementById('foo'));
 .Ed
 .\" .Sh DIAGNOSTICS

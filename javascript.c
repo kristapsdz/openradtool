@@ -433,7 +433,7 @@ gen_javascript(const struct config *cfg, int tsc)
 	const struct bitidx *bi;
 	const struct enm    *e;
 	const struct eitem  *ei;
-	const char	    *ns = "kwebapp";
+	const char	    *ns = "ort";
 	char		    *obj, *objarray, *type, *typearray;
 
 	/*
@@ -909,8 +909,8 @@ gen_javascript(const struct config *cfg, int tsc)
 		TAILQ_FOREACH(s, &cfg->sq, entries) 
 			printf("\texport type DCbStruct%s = "
 				"(e: HTMLElement, name: string, "
-				 "val: kwebapp.%sData|null) => void;\n", 
-				 s->name, s->name);
+				 "val: %s.%sData|null) => void;\n", 
+				 s->name, ns, s->name);
 		puts("\n"
 		     "\texport interface DataCallbacks\n"
 		     "\t{");

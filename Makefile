@@ -4,7 +4,7 @@ include Makefile.configure
 
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 7
-VERSION_BUILD	 = 1
+VERSION_BUILD	 = 2
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = comments.o \
 		   compats.o \
@@ -54,7 +54,6 @@ DOTAR		 = audit.c \
 		   comments.c \
 		   compats.c \
 		   config.c \
-		   configure \
 		   extern.h \
 		   gensalt.c \
 		   header.c \
@@ -205,9 +204,9 @@ openradtool.tar.gz.sha512: openradtool.tar.gz
 	sha512 openradtool.tar.gz >$@
 
 openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
-	mkdir -p .dist/ort-$(VERSION)/
-	install -m 0444 $(DOTAR) .dist/ort-$(VERSION)
-	install -m 0555 $(DOTAREXEC) .dist/ort-$(VERSION)
+	mkdir -p .dist/openradtool-$(VERSION)/
+	install -m 0444 $(DOTAR) .dist/openradtool-$(VERSION)
+	install -m 0555 $(DOTAREXEC) .dist/openradtool-$(VERSION)
 	( cd .dist/ && tar zcf ../$@ ./ )
 	rm -rf .dist/
 

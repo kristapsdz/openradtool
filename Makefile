@@ -4,7 +4,7 @@ include Makefile.configure
 
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 7
-VERSION_BUILD	 = 0
+VERSION_BUILD	 = 1
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = comments.o \
 		   compats.o \
@@ -54,6 +54,7 @@ DOTAR		 = audit.c \
 		   comments.c \
 		   compats.c \
 		   config.c \
+		   configure \
 		   extern.h \
 		   gensalt.c \
 		   header.c \
@@ -159,8 +160,8 @@ installwww: www
 	mkdir -p $(WWWDIR)/snapshots
 	$(INSTALL_DATA) *.html *.css *.js $(IMAGES) atom.xml $(WWWDIR)
 	$(INSTALL_DATA) openradtool.tar.gz openradtool.tar.gz.sha512 $(WWWDIR)/snapshots
-	$(INSTALL_DATA) openradtool.tar.gz $(WWWDIR)/snapshots/ort-$(VERSION).tar.gz
-	$(INSTALL_DATA) openradtool.tar.gz.sha512 $(WWWDIR)/snapshots/ort-$(VERSION).tar.gz.sha512
+	$(INSTALL_DATA) openradtool.tar.gz $(WWWDIR)/snapshots/openradtool-$(VERSION).tar.gz
+	$(INSTALL_DATA) openradtool.tar.gz.sha512 $(WWWDIR)/snapshots/openradtool-$(VERSION).tar.gz.sha512
 
 version.h: Makefile
 	( echo "#define VERSION \"$(VERSION)\"" ; \

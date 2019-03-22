@@ -19,21 +19,28 @@ b, strong				{ font-weight: 500; }
 					  display: flex;
 					  margin-top: 2rem; }
 #intro > div				{ flex: 1; 
-					  background-color: #fff; 
+					  margin-left: 1rem; }
+p.explain .nm, #intro .nm		{ font-weight: 500;
+					  font-style: normal; }
+p.explain				{ font-size: 120%; 
+					  text-align: center; }
+#intro ~ p.explain			{ margin-top: 3em; }
+p.explain.left				{ text-align: left; 
+					  color: #000; }
+.window					{ background-color: #fff; 
 					  color: #666;
 					  border: thin solid #eee;
+					  text-align: left;
 					  padding: 2rem;
-					  border-radius: 1rem;
-					  margin-left: 1rem; }
-#intro .intro				{ font-size: 150%; 
+					  border-radius: 1rem; }
+.window .intro				{ font-size: 150%; 
 					  margin: 0; }
-#outro .nm, #intro .nm			{ font-weight: 500;
-					  font-style: normal; }
-#outro					{ font-size: 120%; 
-					  margin-top: 3em;
-					  text-align: center; }
+.window .subintro			{ font-size: 130%; 
+					  margin: 0; }
 #topicboxes				{ border-left: thin solid #eee; 
 					  width: 80%;
+					  padding-top: 1em;
+					  padding-bottom: 1em;
 					  padding-left: 9pt; 
 					  margin: 2em auto; }
 #topicboxes li 				{ padding-left: 0.5rem; }
@@ -48,13 +55,12 @@ b, strong				{ font-weight: 500; }
 					  vertical-align: top;
 					  font-size: 13pt;
 					  color: #eee; }
-#breadcrumbs > div > div		{ border-bottom-right-radius: 8pt; 
+#breadcrumbs > div > div		{ border-bottom-right-radius: 4pt; 
 					  background-color: #07889b;
-					  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
-					  border: thin solid rgba(255, 255, 255, 0.8);
+					  box-shadow: 0 0 4px #888;
 					  border-top: none;
 					  padding: 10pt 32pt;
-					  border-bottom-left-radius: 8pt; }
+					  border-bottom-left-radius: 4pt; }
 #archive #header			{ margin-top: 24pt; }
 #header					{ margin-top: 6rem; 
 					  font-size: 16pt; }
@@ -75,7 +81,7 @@ h1					{ display: inline-block;
 h2					{ font-size: 140%; 
 					  font-variant: small-caps;
 					  text-align: center;
-					  margin: 2rem 0 0 0;
+					  margin: 3rem 0 0 0;
 					  font-weight: 500; }
 section + h2				{ margin-top: 3rem; }
 h2 span					{ font-size: 70%;
@@ -103,8 +109,10 @@ footer					{ text-align: center;
 					  padding: 48pt 0;
 					  font-size: smaller; }
 .file, .nm				{ font-style: italic; }
+article > section + nav			{ margin-top: 3rem; }
 article > nav				{ border-top: thin solid #ddd; 
-					  padding-left: 10%; }
+					  margin-bottom: 3rem;
+					  text-align: center; }
 article > nav > span			{ background-color: #eee; 
 					  padding: 0.2em 2em;
 					  border: thin solid #ddd;
@@ -118,10 +126,8 @@ article > nav > span			{ background-color: #eee;
 article > section			{ width: 50%;
 					  margin-left: auto;
 					  margin-right: auto; }
-section.special 			{ display: flex; 
-					  color: #222; }
-section.special > :last-child		{ flex: 1; }
-section.special > :first-child 		{ padding-right: 2em; }
+#usage-box section			{ color: #222; }
+img					{ max-width: 100%; }
 article[data-sblg-article]		{ width: 100%; }
 code, pre.hl				{ font-family: monospace; 
 					  font-size: smaller; }
@@ -155,8 +161,4 @@ nav[data-sblg-nav] li + li		{ margin-top: 2em; }
  h2					{ font-size: inherit; }
  #breadcrumbs > div:nth-child(2) > div	{ padding: 8pt 4pt; 
 	 				  font-size: 12pt; }
- section.special 			{ display: block; }
- section.special img			{ max-width: 200px; }
- section.special > :first-child 	{ padding-right: 0; }
- img.skinny				{ max-width: 100px; }
 }

@@ -143,10 +143,17 @@ nav[data-sblg-nav] time			{ opacity: 0.5;
 #archive nav[data-sblg-nav] time	{ display: inline; }
 nav[data-sblg-nav] time i		{ font-size: smaller; }
 
-nav[data-sblg-nav] li			{ color: #666; }
+nav[data-sblg-nav] li			{ color: #666; 
+					  background-color: #fff;
+					  padding: 1em;
+					  border-radius: 1rem;
+					  border: thin solid #eee; }
 nav[data-sblg-nav] li + li		{ margin-top: 2em; }
 #archive nav[data-sblg-nav] ul > li:first-child	
-					{ color: #000; }
+					{ color: #000; 
+					  margin-top: 3em;
+					  margin-bottom: 3em;
+					  font-size: 110%; }
 #archive nav[data-sblg-nav] li > div:first-child	
 					{ font-weight: 500; }
 .blue					{ color: blue; }
@@ -161,4 +168,6 @@ nav[data-sblg-nav] li + li		{ margin-top: 2em; }
  h2					{ font-size: inherit; }
  #breadcrumbs > div:nth-child(2) > div	{ padding: 8pt 4pt; 
 	 				  font-size: 12pt; }
+ #archive nav[data-sblg-nav] ul > li:first-child	
+					{ font-size: 100%; }
 }

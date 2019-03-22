@@ -3,7 +3,7 @@
 	<head>
 		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 		<meta charset="utf-8" /> 
-		<title>openRADtool | ort versions</title>
+		<title>openradtool | application source generator</title>
 		<link rel="alternate" href="atom.xml" type="application/atom+xml" title="openradtool version feed" />
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Alegreya+Sans:400,400italic,500" />
@@ -44,7 +44,10 @@
 		<article>
 			<section id="archive">
 				<p>
-					Full release notes.
+					This consists of all releases of <span class="nm">openradtool</span> (n&#x00e9;e <span
+						class="nm">kwebapp</span>).
+					The <a href="atom.xml">Atom feed</a> or <a href="https://github.com/kristapsdz/openradtool">GitHub</a>
+					may also be used to keep track of new versions programmatically.
 				</p>
 				<nav data-sblg-nav="1" data-sblg-navtag="version" data-sblg-navcontent="1">
 					<div>

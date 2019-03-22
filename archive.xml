@@ -18,7 +18,7 @@
 						BSD.lv tools for BCHS: 
 						<a href="https://kristaps.bsd.lv/kcgi">kcgi</a>, 
 						<a href="https://kristaps.bsd.lv/ksql">ksql</a>, 
-						<a href="https://kristaps.bsd.lv/ort">ort</a>
+						<a href="https://kristaps.bsd.lv/openradtool">ort</a>
 					</div>
 				</div>
 			</section>
@@ -33,8 +33,8 @@
 					</span>
 				</div>
 				<nav>
-					<a href="https://github.com/kristapsdz/ort">github</a>
-					<a href="snapshots/ort.tar.gz">source</a>
+					<a href="https://github.com/kristapsdz/openradtool">github</a>
+					<a href="snapshots/openradtool.tar.gz">source</a>
 					<a href="snapshots">archive</a>
 					<a href="archive.html">releases</a>
 					<a href="atom.xml"><i class="fa fa-rss"></i></a>

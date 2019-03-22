@@ -34,7 +34,7 @@ HTMLS		 = archive.html \
 		   ort-sqldiff.1.html \
 		   ort-xliff.1.html \
 		   ort.5.html
-WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/kwebapp
+WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/ort
 MAN1S		 = ort.1 \
 		   ort-audit.1 \
 		   ort-audit-gv.1 \
@@ -105,6 +105,7 @@ IMAGES		 = index.svg \
 		   index-fig1.svg \
 		   index-fig2.svg \
 		   index-fig3.svg \
+		   index-fig4.svg \
 		   index-fig5.svg \
 		   index-fig6.svg
 

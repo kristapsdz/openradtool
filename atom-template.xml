@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 	<title>openradtool version feed</title>
-	<link href="https://kristaps.bsd.lv/kwebapp/atom.xml" rel="self" />
-	<link href="https://kristaps.bsd.lv/kwebapp" />
+	<link href="https://kristaps.bsd.lv/ort/atom.xml" rel="self" />
+	<link href="https://kristaps.bsd.lv/ort" />
 	<id data-sblg-id="1" />
 	<updated data-sblg-updated="1" />
 	<entry data-sblg-entry="1" data-sblg-altlink="0" data-sblg-forall="1" />

@@ -4,7 +4,7 @@ digraph {
 	rankdir="LR";
 
 	cfg[label="ort(5)"];
-	bin[label="ort-sql(1)"];
+	bin[label="ort-sqldiff(1)"];
 	sql[label="SQL"];
 	sqlite1[label="sqlite3(1)"];
 

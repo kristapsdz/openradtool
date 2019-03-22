@@ -1,26 +1,29 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- vim: set tw=100: -->
 <articles>
-	<!-- article data-sblg-article="1" data-sblg-tags="version">
+	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
-			<h3>0.6.14</h3>
+			<h3>0.7.0</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2019-03-15">2019-03-15</time>
+			<time datetime="2019-03-22">2019-03-22</time>
 		</header>
 		<aside>
 			<p>
-				Add aggregation functions <code>min</code> and <code>max</code>,
-				which operate on queries.
-				These are usually used with the new <code>group</code>, which groups
-				one or more non-aggregated columns.
+				Rename <q>kwebapp</q> to <q>openradtool</q>!
+				This means that all binaries prefixed with <code>kwebapp-</code> 
+				are now prefixed with the simpler <code>ort-</code>.
+				Also, the JavaScript/TypeScript namespace is <code>ort</code>
+				instead of <code>kwebapp</code> and code produced by the C API
+				with roles uses <code>struct ort</code> and <code>enum 
+					ort_role</code> instead of the earlier <code>kwbp</code>.
 			</p>
 			<p>
-				While doing so, clean up a lot of documentation, especially in
-				<a href="kwebapp.5.html">kwebapp(5)</a>, and also simplify several
-				data structures.
+				While here, clean up a lot of documentation, especially in
+				<a href="ort.5.html">ort(5)</a>, and also simplify several data
+				structures.
 			</p>
 		</aside>
-	</article -->
+	</article>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
 			<h3>0.6.13</h3>

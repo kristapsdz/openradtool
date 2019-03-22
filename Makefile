@@ -34,7 +34,7 @@ HTMLS		 = archive.html \
 		   ort-sqldiff.1.html \
 		   ort-xliff.1.html \
 		   ort.5.html
-WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/ort
+WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/openradtool
 MAN1S		 = ort.1 \
 		   ort-audit.1 \
 		   ort-audit-gv.1 \
@@ -152,15 +152,15 @@ ort-audit-json: audit.o libort.a
 ort-xliff: xliff.o libort.a
 	$(CC) -o $@ xliff.o libort.a $(LDFLAGS) -lexpat
 
-www: $(IMAGES) $(HTMLS) ort.tar.gz ort.tar.gz.sha512 atom.xml
+www: $(IMAGES) $(HTMLS) openradtool.tar.gz openradtool.tar.gz.sha512 atom.xml
 
 installwww: www
 	mkdir -p $(WWWDIR)
 	mkdir -p $(WWWDIR)/snapshots
 	$(INSTALL_DATA) *.html *.css *.js $(IMAGES) atom.xml $(WWWDIR)
-	$(INSTALL_DATA) ort.tar.gz ort.tar.gz.sha512 $(WWWDIR)/snapshots
-	$(INSTALL_DATA) ort.tar.gz $(WWWDIR)/snapshots/ort-$(VERSION).tar.gz
-	$(INSTALL_DATA) ort.tar.gz.sha512 $(WWWDIR)/snapshots/ort-$(VERSION).tar.gz.sha512
+	$(INSTALL_DATA) openradtool.tar.gz openradtool.tar.gz.sha512 $(WWWDIR)/snapshots
+	$(INSTALL_DATA) openradtool.tar.gz $(WWWDIR)/snapshots/ort-$(VERSION).tar.gz
+	$(INSTALL_DATA) openradtool.tar.gz.sha512 $(WWWDIR)/snapshots/ort-$(VERSION).tar.gz.sha512
 
 version.h: Makefile
 	( echo "#define VERSION \"$(VERSION)\"" ; \
@@ -169,9 +169,9 @@ version.h: Makefile
 header.o source.o: version.h
 
 paths.h: Makefile
-	( echo "#define PATH_GENSALT \"$(SHAREDIR)/ort/gensalt.c\"" ; \
-	  echo "#define PATH_B64_NTOP \"$(SHAREDIR)/ort/b64_ntop.c\"" ; \
-	  echo "#define PATH_JSMN \"$(SHAREDIR)/ort/jsmn.c\"" ; ) >$@
+	( echo "#define PATH_GENSALT \"$(SHAREDIR)/openradtool/gensalt.c\"" ; \
+	  echo "#define PATH_B64_NTOP \"$(SHAREDIR)/openradtool/b64_ntop.c\"" ; \
+	  echo "#define PATH_JSMN \"$(SHAREDIR)/openradtool/jsmn.c\"" ; ) >$@
 
 source.o: paths.h
 
@@ -179,11 +179,11 @@ install: all
 	mkdir -p $(DESTDIR)$(BINDIR)
 	mkdir -p $(DESTDIR)$(MANDIR)/man1
 	mkdir -p $(DESTDIR)$(MANDIR)/man5
-	mkdir -p $(DESTDIR)$(SHAREDIR)/ort
+	mkdir -p $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_MAN) $(MAN1S) $(DESTDIR)$(MANDIR)/man1
 	$(INSTALL_MAN) ort.5 $(DESTDIR)$(MANDIR)/man5
-	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/ort
-	$(INSTALL_DATA) b64_ntop.c jsmn.c gensalt.c $(DESTDIR)$(SHAREDIR)/ort
+	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/openradtool
+	$(INSTALL_DATA) b64_ntop.c jsmn.c gensalt.c $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_PROGRAM) $(BINS) $(DESTDIR)$(BINDIR)
 
 uninstall:
@@ -192,18 +192,18 @@ uninstall:
 		rm -f $(DESTDIR)$(MANDIR)/man1/$$f ; \
 	done
 	rm -f $(DESTDIR)$(MANDIR)/man5/ort.5
-	rm -f $(DESTDIR)$(SHAREDIR)/ort/audit.{html,css,js}
-	rm -f $(DESTDIR)$(SHAREDIR)/ort/{b64_ntop,jsmn,gensalt}.c
-	rmdir $(DESTDIR)$(SHAREDIR)/ort
+	rm -f $(DESTDIR)$(SHAREDIR)/openradtool/audit.{html,css,js}
+	rm -f $(DESTDIR)$(SHAREDIR)/openradtool/{b64_ntop,jsmn,gensalt}.c
+	rmdir $(DESTDIR)$(SHAREDIR)/openradtool
 	@for f in $(BINS); do \
 		echo rm -f $(DESTDIR)$(BINDIR)/$$f ; \
 		rm -f $(DESTDIR)$(BINDIR)/$$f ; \
 	done
 
-ort.tar.gz.sha512: ort.tar.gz
-	sha512 ort.tar.gz >$@
+openradtool.tar.gz.sha512: openradtool.tar.gz
+	sha512 openradtool.tar.gz >$@
 
-ort.tar.gz: $(DOTAR) $(DOTAREXEC)
+openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/ort-$(VERSION)/
 	install -m 0444 $(DOTAR) .dist/ort-$(VERSION)
 	install -m 0555 $(DOTAREXEC) .dist/ort-$(VERSION)
@@ -341,7 +341,7 @@ atom.xml: versions.xml atom-template.xml
 clean:
 	rm -f $(BINS) version.h paths.h $(LIBOBJS) libort.a test test.o
 	rm -f db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db db.trans.txt
-	rm -f ort.tar.gz ort.tar.gz.sha512
+	rm -f openradtool.tar.gz openradtool.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml
 	rm -f db.txt.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
 	rm -f source.o header.o javascript.o sql.o audit.o main.o xliff.o

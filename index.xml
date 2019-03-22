@@ -18,7 +18,7 @@
 						BSD.lv tools for <a href="https://learnbchs.org">BCHS</a>: 
 						<a href="https://kristaps.bsd.lv/kcgi">kcgi</a>, 
 						<a href="https://kristaps.bsd.lv/ksql">ksql</a>, 
-						<a href="https://kristaps.bsd.lv/ort">ort</a>
+						<a href="https://kristaps.bsd.lv/openradtool">ort</a>
 					</div>
 				</div>
 			</section>
@@ -33,8 +33,8 @@
 					</span>
 				</div>
 				<nav>
-					<a href="https://github.com/kristapsdz/ort">github</a>
-					<a href="snapshots/ort.tar.gz">source</a>
+					<a href="https://github.com/kristapsdz/openradtool">github</a>
+					<a href="snapshots/openradtool.tar.gz">source</a>
 					<a href="snapshots">archive</a>
 					<a href="archive.html">releases</a>
 					<a href="atom.xml"><i class="fa fa-rss"></i></a>
@@ -115,7 +115,7 @@
 					</li>
 				</ul>
 				<p class="explain">
-					See the <a href="https://github.com/kristapsdz/ort">GitHub</a> repository for installation and issue
+					See the <a href="https://github.com/kristapsdz/openradtool">GitHub</a> repository for installation and issue
 					tracking.
 					<span class="nm">openradtool</span> is a <a href="https://www.bsd.lv">BSD.lv</a> project, n&#x00e9;e
 					<span class="nm">kwebapp</span>.
@@ -246,7 +246,7 @@
 						</p>
 						<p>
 							The SQL schema file is thoroughly documented.
-							Use <a href="https://kristaps.bsd.lv/sqliteconvert/">sqliteconvert</a> or similar tool
+							Use <a href="https://kristaps.bsd.lv/sqliteconvert">sqliteconvert</a> or similar tool
 							to browse the SQL documentation for any non-trivial application.
 						</p>
 					</div>

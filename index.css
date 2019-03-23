@@ -102,6 +102,7 @@ h2 + code				{ display: block;
 					  border: thin solid #eee; }
 figure					{ text-align: center; 
 					  margin: 1em 0 0 0; }
+figure.show-only-small			{ display: none; }
 figcaption				{ color: #888; 
 					  font-size: smaller; }
 footer					{ text-align: center;
@@ -162,7 +163,7 @@ nav[data-sblg-nav] li + li		{ margin-top: 2em; }
  #header				{ font-size: 13pt; }
  #header .intro				{ font-size: 120%; }
  #intro					{ display: block; }
- #intro > div				{ flex: 1; }
+ #intro > div				{ margin-left: 0; }
  #intro .intro				{ font-size: 120%; }
  article > section			{ width: 96%; }
  h2					{ font-size: inherit; }
@@ -170,4 +171,6 @@ nav[data-sblg-nav] li + li		{ margin-top: 2em; }
 	 				  font-size: 12pt; }
  #archive nav[data-sblg-nav] ul > li:first-child	
 					{ font-size: 100%; }
+ figure.show-only-big			{ display: none; }
+ figure.show-only-small			{ display: block; }
 }

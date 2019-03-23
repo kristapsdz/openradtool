@@ -1,0 +1,12 @@
+digraph {
+	edge [arrowsize="0.5";];
+	bgcolor="transparent";
+	rankdir="LR";
+
+	cfg[label="ort(5)"];
+	bin[label="ort(1)"];
+	out[label="output"];
+
+	cfg -> bin;
+	bin -> out[style="dotted"];
+}

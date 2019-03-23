@@ -107,7 +107,8 @@ IMAGES		 = index.svg \
 		   index-fig3.svg \
 		   index-fig4.svg \
 		   index-fig5.svg \
-		   index-fig6.svg
+		   index-fig6.svg \
+		   index-fig7.svg
 
 # FreeBSD's make doesn't support CPPFLAGS.
 # CFLAGS += $(CPPFLAGS)

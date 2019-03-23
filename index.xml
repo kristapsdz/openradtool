@@ -47,8 +47,11 @@
 			</nav>
 			<section>
 				<div id="intro">
-					<figure>
-						<img class="skinny" src="index-fig0.svg" />
+					<figure class="show-only-small">
+						<img src="index-fig7.svg" alt="ort(5) to output" />
+					</figure>
+					<figure class="show-only-big">
+						<img src="index-fig0.svg" alt="ort(5) to output" />
 					</figure>
 					<div class="window">
 						<p class="intro">
@@ -133,7 +136,7 @@
 					These files are in turn compiled or bundled into your application.
 				</p>
 				<figure>
-					<img src="index.svg" />
+					<img src="index.svg" alt="ort(5) productions" />
 				</figure>
 				<h2>
 					<span>1.</span> validate configuration
@@ -143,7 +146,7 @@
 				</code>
 				<section>
 					<figure>
-						<img src="index-fig1.svg" />
+						<img src="index-fig1.svg" alt="ort(1) functionality" />
 					</figure>
 					<p>
 						Consider an example <a href="ort.5.html">ort(5)</a> configuration <a
@@ -177,7 +180,7 @@
 				</code>
 				<section>
 					<figure>
-						<img src="index-fig2.svg" />
+						<img src="index-fig2.svg" alt="ort-c-header(1) and ort-c-source(1) functionality" />
 					</figure>
 					<p>
 						Generate source and header files to be linked to sources (usually, but not necessarily) driving
@@ -235,7 +238,7 @@
 				</code>
 				<section>
 					<figure>
-						<img src="index-fig3.svg" />
+						<img src="index-fig3.svg" alt="ort-sql(1) functionality" />
 					</figure>
 					<div>
 						<p>
@@ -265,7 +268,7 @@
 				</code>
 				<section>
 					<figure>
-						<img src="index-fig4.svg" />
+						<img src="index-fig4.svg" alt="ort-sqldiff(1) functionality" />
 					</figure>
 					<p>
 						Database upgrades are a pain: <a href="ort-sqldiff.1.html">ort-sqldiff(1)</a> programmatically
@@ -293,7 +296,7 @@
 				</code>
 				<section>
 					<figure>
-						<img src="index-fig5.svg" />
+						<img src="index-fig5.svg" alt="ort-javascript(1) functionality" />
 					</figure>
 					<p>
 						The last part of the toolchain is to handle the JSON-export output in the browser itself.
@@ -330,7 +333,7 @@
 				</code>
 				<section>
 					<figure>
-						<img src="index-fig6.svg" />
+						<img src="index-fig6.svg" alt="ort-xliff(1) functionality" />
 					</figure>
 					<p>
 						The <a href="ort-javascript.1.html">ort-javascript(1)</a> tool is capable of filling in labels

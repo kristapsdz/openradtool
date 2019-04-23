@@ -798,12 +798,12 @@ ort_write_file(FILE *f, const struct config *cfg)
 		if ( ! parse_write_roles(&w, cfg))
 			goto out;
 
-	TAILQ_FOREACH(s, &cfg->sq, entries)
-		parse_write_strct(&w, s);
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		parse_write_enm(&w, cfg, e);
 	TAILQ_FOREACH(b, &cfg->bq, entries)
 		parse_write_bitf(&w, cfg, b);
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		parse_write_strct(&w, s);
 
 	rc = 1;
 out:
@@ -824,12 +824,12 @@ ort_write_buf(const struct config *cfg)
 	if (CFG_HAS_ROLES & cfg->flags)
 		if ( ! parse_write_roles(&w, cfg))
 			goto out;
-	TAILQ_FOREACH(s, &cfg->sq, entries)
-		parse_write_strct(&w, s);
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		parse_write_enm(&w, cfg, e);
 	TAILQ_FOREACH(b, &cfg->bq, entries)
 		parse_write_bitf(&w, cfg, b);
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		parse_write_strct(&w, s);
 
 	return w.buf.buf;
 out:

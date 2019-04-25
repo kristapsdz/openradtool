@@ -72,6 +72,8 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	"INTEGER", /* FTYPE_BITFIELD */
 };
 
+/* Forward declarations to get __attribute__ bits. */
+
 static void gen_warnx(const struct pos *, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
 static void diff_warnx(const struct pos *,
@@ -129,11 +131,15 @@ diff_warnx(const struct pos *posold,
 		buf);
 }
 
+/*
+ * Generate all PRAGMA prologue statements and sets "prol" if they've
+ * been emitted or not.
+ */
 static void
 gen_prologue(int *prol)
 {
 
-	if (1 == *prol)
+	if (*prol == 1)
 		return;
 	puts("PRAGMA foreign_keys=ON;\n");
 	*prol = 1;
@@ -165,7 +171,7 @@ static void
 gen_fkeys(const struct field *f, int *first)
 {
 
-	if (FTYPE_STRUCT == f->type || NULL == f->ref)
+	if (f->type == FTYPE_STRUCT || f->ref == NULL)
 		return;
 
 	printf("%s\n\tFOREIGN KEY(%s) REFERENCES %s(%s)",
@@ -189,13 +195,13 @@ static void
 gen_field(const struct field *f, int *first, int comments)
 {
 
-	if (FTYPE_STRUCT == f->type)
+	if (f->type == FTYPE_STRUCT)
 		return;
 
 	printf("%s\n", *first ? "" : ",");
 	if (comments)
 		print_commentt(1, COMMENT_SQL, f->doc);
-	if (FTYPE_EPOCH == f->type || FTYPE_DATE == f->type)
+	if (f->type == FTYPE_EPOCH || f->type == FTYPE_DATE)
 		print_commentt(1, COMMENT_SQL, 
 			"(Stored as a UNIX epoch value.)");
 	printf("\t%s %s", f->name, ftypes[f->type]);
@@ -203,21 +209,22 @@ gen_field(const struct field *f, int *first, int comments)
 		printf(" PRIMARY KEY");
 	if (FIELD_UNIQUE & f->flags)
 		printf(" UNIQUE");
-	if ( ! (FIELD_ROWID & f->flags) &&
-	     ! (FIELD_NULL & f->flags))
+	if (!(FIELD_ROWID & f->flags) &&
+	    !(FIELD_NULL & f->flags))
 		printf(" NOT NULL");
 	*first = 0;
 }
 
 /*
- * Generate a table and all of its components.
+ * Generate a table and all of its components: fields, foreign keys, and
+ * unique statements.
  */
 static void
 gen_struct(const struct strct *p, int comments)
 {
-	const struct field *f;
-	const struct unique *n;
-	int	 first = 1;
+	const struct field 	*f;
+	const struct unique 	*n;
+	int	 		 first = 1;
 
 	if (comments)
 		print_commentt(0, COMMENT_SQL, p->doc);
@@ -327,7 +334,7 @@ gen_diff_field(const struct field *f, const struct field *df)
 		rc = 0;
 	}
 
-	return(rc);
+	return rc;
 }
 
 /*
@@ -491,12 +498,89 @@ gen_diff_uniques_old(const struct strct *s, const struct strct *ds)
 }
 
 /*
+ * See gen_diff_enums().
+ * Same but for the bitfield types.
+ */
+static size_t
+gen_diff_bits(const struct config *cfg,
+	const struct config *dcfg, int destruct)
+{
+	const struct bitf *b, *db;
+	const struct bitidx *bi, *dbi;
+	size_t	 errors = 0;
+
+	TAILQ_FOREACH(b, &cfg->bq, entries) {
+		TAILQ_FOREACH(db, &dcfg->bq, entries)
+			if (strcasecmp(b->name, db->name) == 0)
+				break;
+		if (db == NULL) {
+			gen_warnx(&b->pos, "new bitfield");
+			continue;
+		}
+		
+		/* Compare current to old bit indexes. */
+
+		TAILQ_FOREACH(bi, &b->bq, entries) {
+			TAILQ_FOREACH(dbi, &db->bq, entries)
+				if (strcasecmp(bi->name, dbi->name) == 0)
+					break;
+			if (dbi != NULL && bi->value != dbi->value) {
+				diff_errx(&bi->pos, &dbi->pos,
+					"item has changed value");
+				errors++;
+			} else if (dbi == NULL)
+				gen_warnx(&bi->pos, "new item");
+		}
+
+		/* 
+		 * Compare existence of old to current indexes. 
+		 * This constitutes a deletion if the item is lost, so
+		 * only report it as an error if we're not letting
+		 * through deletions.
+		 */
+
+		TAILQ_FOREACH(dbi, &db->bq, entries) {
+			TAILQ_FOREACH(bi, &b->bq, entries)
+				if (strcasecmp(bi->name, dbi->name) == 0)
+					break;
+			if (bi != NULL)
+				continue;
+			gen_warnx(&dbi->pos, "lost old item");
+			if (!destruct)
+				errors++;
+		}
+	}
+
+	/*
+	 * Now we've compared bitfields that are new or already exist
+	 * between the two, so make sure we didn't lose any.
+	 * Report it as an error only if we're not allowing deletions.
+	 */
+
+	TAILQ_FOREACH(db, &dcfg->bq, entries) {
+		TAILQ_FOREACH(b, &cfg->bq, entries)
+			if (strcasecmp(b->name, db->name) == 0)
+				break;
+		if (b != NULL)
+			continue;
+		gen_warnx(&db->pos, "lost old bitfield");
+		if (!destruct)
+			errors++;
+	}
+
+	return errors;
+}
+
+/*
  * Compare the enumeration objects in both files.
  * This does the usual check of new <-> old, then old -> new.
  * Returns the number of errors.
+ * If "destruct" is non-zero, allow dropped enumerations and enumeration
+ * items.
  */
 static size_t
-gen_diff_enums(const struct config *cfg, const struct config *dcfg)
+gen_diff_enums(const struct config *cfg,
+	const struct config *dcfg, int destruct)
 {
 	const struct enm *e, *de;
 	const struct eitem *ei, *dei;
@@ -509,9 +593,9 @@ gen_diff_enums(const struct config *cfg, const struct config *dcfg)
 
 	TAILQ_FOREACH(e, &cfg->eq, entries) {
 		TAILQ_FOREACH(de, &dcfg->eq, entries)
-			if (0 == strcasecmp(e->name, de->name))
+			if (strcasecmp(e->name, de->name) == 0)
 				break;
-		if (NULL == de) {
+		if (de == NULL) {
 			gen_warnx(&e->pos, "new enumeration");
 			continue;
 		}
@@ -520,48 +604,53 @@ gen_diff_enums(const struct config *cfg, const struct config *dcfg)
 
 		TAILQ_FOREACH(ei, &e->eq, entries) {
 			TAILQ_FOREACH(dei, &de->eq, entries)
-				if (0 == strcasecmp
-				    (ei->name, dei->name))
+				if (strcasecmp(ei->name, dei->name) == 0)
 					break;
-			if (NULL != dei && 
-			    ei->value != dei->value) {
+			if (dei != NULL && ei->value != dei->value) {
 				diff_errx(&ei->pos, &dei->pos,
 					"item has changed value");
 				errors++;
-			} else if (NULL == dei)
+			} else if (dei == NULL)
 				gen_warnx(&ei->pos, "new item");
 		}
 
-		/* Compare old to current entries. */
+		/* 
+		 * Compare existence of old to current entries. 
+		 * This constitutes a deletion if the item is lost, so
+		 * only report it as an error if we're not letting
+		 * through deletions.
+		 */
 
 		TAILQ_FOREACH(dei, &de->eq, entries) {
 			TAILQ_FOREACH(ei, &e->eq, entries)
-				if (0 == strcasecmp
-				    (ei->name, dei->name))
+				if (strcasecmp(ei->name, dei->name) == 0)
 					break;
-			if (NULL != ei)
+			if (ei != NULL)
 				continue;
 			gen_warnx(&dei->pos, "lost old item");
-			errors++;
+			if (!destruct)
+				errors++;
 		}
 	}
 
 	/*
 	 * Now we've compared enumerations that are new or already exist
 	 * between the two, so make sure we didn't lose any.
+	 * Report it as an error only if we're not allowing deletions.
 	 */
 
 	TAILQ_FOREACH(de, &dcfg->eq, entries) {
 		TAILQ_FOREACH(e, &cfg->eq, entries)
-			if (0 == strcasecmp(e->name, de->name))
+			if (strcasecmp(e->name, de->name) == 0)
 				break;
-		if (NULL != e) 
+		if (e != NULL)
 			continue;
 		gen_warnx(&de->pos, "lost old enumeration");
-		errors++;
+		if (!destruct)
+			errors++;
 	}
 
-	return(errors);
+	return errors;
 }
 
 /*
@@ -580,7 +669,8 @@ gen_diff(const struct config *cfg,
 	size_t	 errors = 0;
 	int	 rc, prol = 0;
 
-	errors += gen_diff_enums(cfg, dcfg);
+	errors += gen_diff_enums(cfg, dcfg, destruct);
+	errors += gen_diff_bits(cfg, dcfg, destruct);
 
 	/*
 	 * Start by looking through all structures in the new queue and
@@ -592,9 +682,9 @@ gen_diff(const struct config *cfg,
 
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
 		TAILQ_FOREACH(ds, &dcfg->sq, entries)
-			if (0 == strcasecmp(s->name, ds->name))
+			if (strcasecmp(s->name, ds->name) == 0)
 				break;
-		if (NULL == ds) {
+		if (ds == NULL) {
 			gen_prologue(&prol);
 			gen_struct(s, 0);
 		}
@@ -660,7 +750,7 @@ gen_diff(const struct config *cfg,
 			errors += ! gen_diff_uniques_old(s, ds);
 		}
 
-	return(errors ? 0 : 1);
+	return errors ? 0 : 1;
 }
 
 int

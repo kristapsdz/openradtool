@@ -169,14 +169,11 @@
 					<span>2.</span> generate back-end code
 				</h2>
 				<code>
-					<div>
-						% <a href="ort-c-header.1.html">ort-c-header</a> -jv 
-						<a href="db.txt.html">db.txt</a> &gt; <a href="db.h.html">db.h</a>
-					</div>
-					<div>
-						% <a href="ort-c-source.1.html">ort-c-source</a> -jv 
-						-h <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt; <a href="db.c.html">db.c</a>
-					</div>
+					% <a href="ort-c-header.1.html">ort-c-header</a> -jv 
+					<a href="db.txt.html">db.txt</a> &gt; <a href="db.h.html">db.h</a>
+					<br />
+					% <a href="ort-c-source.1.html">ort-c-source</a> -jv 
+					-h <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt; <a href="db.c.html">db.c</a>
 				</code>
 				<section>
 					<figure>
@@ -228,13 +225,9 @@
 					<span>4.</span> generate and initialise database
 				</h2>
 				<code>
-					<div>
-						% <a href="ort-sql.1.html">ort-sql</a>
-						<a href="db.txt.html">db.txt</a> &gt; <a href="db.sql.html">db.sql</a>
-					</div>
-					<div>
-						% sqlite3 db.db &lt; <a href="db.sql.html">db.sql</a>
-					</div>
+					% <a href="ort-sql.1.html">ort-sql</a> <a href="db.txt.html">db.txt</a> &gt; <a href="db.sql.html">db.sql</a>
+					<br />
+					% sqlite3 db.db &lt; <a href="db.sql.html">db.sql</a>
 				</code>
 				<section>
 					<figure>
@@ -258,13 +251,10 @@
 					<span>5.</span> update database
 				</h2>
 				<code>
-					<div>
-						% <a href="ort-sqldiff.1.html">ort-sqldiff</a>
-						<a href="db.old.txt.html">db.old.txt</a> <a href="db.txt.html">db.txt</a> &gt; <a href="db.update.sql.html">db.update.sql</a>
-					</div>
-					<div>
-						% sqlite3 db.db &lt; <a href="db.sql.html">db.update.sql</a>
-					</div>
+					% <a href="ort-sqldiff.1.html">ort-sqldiff</a>
+					<a href="db.old.txt.html">db.old.txt</a> <a href="db.txt.html">db.txt</a> &gt; <a href="db.update.sql.html">db.update.sql</a>
+					<br />
+					% sqlite3 db.db &lt; <a href="db.sql.html">db.update.sql</a>
 				</code>
 				<section>
 					<figure>
@@ -285,14 +275,11 @@
 					<span>6.</span> generate javascript front-end
 				</h2>
 				<code>
-					<div>
-						% <a href="ort-javascript.1.html">ort-javascript</a>
-						<a href="db.txt.html">db.txt</a> &gt; <a href="db.js.html">db.js</a>
-					</div>
-					<div>
-						% <a href="ort-javascript.1.html">ort-javascript</a> -t
-						<a href="db.txt.html">db.txt</a> &gt; <a href="db.ts.html">db.ts</a>
-					</div>
+					% <a href="ort-javascript.1.html">ort-javascript</a>
+					<a href="db.txt.html">db.txt</a> &gt; <a href="db.js.html">db.js</a>
+					<br />
+					% <a href="ort-javascript.1.html">ort-javascript</a> -t
+					<a href="db.txt.html">db.txt</a> &gt; <a href="db.ts.html">db.ts</a>
 				</code>
 				<section>
 					<figure>
@@ -322,14 +309,11 @@
 					<span>7.</span> translate javascript labels
 				</h2>
 				<code>
-					<div>
-						% <a href="ort-xliff.1.html">ort-xliff</a>
-						<a href="db.txt.html">db.txt</a> &gt; <a href="db.fr.xml.html">db.fr.xml</a>
-					</div>
-					<div>
-						% <a href="ort-xliff.1.html">ort-xliff</a> -j
-						<a href="db.txt.html">db.txt</a> <a href="db.fr.xml.html">db.fr.xml</a> &gt; <a href="db.trans.txt.html">db.trans.txt</a>
-					</div>
+					% <a href="ort-xliff.1.html">ort-xliff</a>
+					<a href="db.txt.html">db.txt</a> &gt; <a href="db.fr.xml.html">db.fr.xml</a>
+					<br />
+					% <a href="ort-xliff.1.html">ort-xliff</a> -j
+					<a href="db.txt.html">db.txt</a> <a href="db.fr.xml.html">db.fr.xml</a> &gt; <a href="db.trans.txt.html">db.trans.txt</a>
 				</code>
 				<section>
 					<figure>

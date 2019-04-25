@@ -96,8 +96,6 @@ h2 + code				{ display: block;
 					  margin: 1em 0;
 					  background-color: #fff;
 					  padding: 1em;
-					  padding-left: 2em;
-					  text-indent: -2.2ex;
 					  border-radius: 1rem;
 					  border: thin solid #eee; }
 figure					{ text-align: center; 

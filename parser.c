@@ -1578,7 +1578,7 @@ parse_config_aggr_terms(struct parse *p,
 	struct aggr	*aggr;
 
 	if (NULL != srch->aggr) {
-		parse_errx(p, "group constraint duplicate");
+		parse_errx(p, "grouprow constraint duplicate");
 		return;
 	} else if (TOK_IDENT != p->lasttype) {
 		parse_errx(p, "expected aggregate identifier");
@@ -1642,10 +1642,10 @@ parse_config_group_terms(struct parse *p, struct search *srch)
 	struct group	*grp;
 
 	if (NULL != srch->group) {
-		parse_errx(p, "duplicate group identifier");
+		parse_errx(p, "duplicate grouprow identifier");
 		return;
 	} else if (TOK_IDENT != p->lasttype) {
-		parse_errx(p, "expected group identifier");
+		parse_errx(p, "expected grouprow identifier");
 		return;
 	} else if (NULL == (grp = calloc(1, sizeof(struct group)))) {
 		parse_err(p);
@@ -1860,8 +1860,8 @@ parse_config_search_terms(struct parse *p, struct search *srch)
  *   [ "name" name |
  *     "comment" quoted_string |
  *     "distinct" distinct_struct |
- *     "min"|"max" aggr_fields ]* |
- *     "group" group_fields |
+ *     "minrow"|"maxrow" aggr_fields ]* |
+ *     "grouprow" group_fields |
  *     "order" order_fields ]* ";"
  */
 static void
@@ -1927,12 +1927,12 @@ parse_config_search_params(struct parse *p, struct search *s)
 				s->offset = p->last.integer;
 				parse_next(p);
 			}
-		} else if (0 == strcasecmp("min", p->last.string)) {
+		} else if (0 == strcasecmp("minrow", p->last.string)) {
 			parse_next(p);
-			parse_config_aggr_terms(p, AGGR_MIN, s);
-		} else if (0 == strcasecmp("max", p->last.string)) {
+			parse_config_aggr_terms(p, AGGR_MINROW, s);
+		} else if (0 == strcasecmp("maxrow", p->last.string)) {
 			parse_next(p);
-			parse_config_aggr_terms(p, AGGR_MAX, s);
+			parse_config_aggr_terms(p, AGGR_MAXROW, s);
 		} else if (0 == strcasecmp("order", p->last.string)) {
 			parse_next(p);
 			parse_config_order_terms(p, s);
@@ -1940,7 +1940,7 @@ parse_config_search_params(struct parse *p, struct search *s)
 				parse_next(p);
 				parse_config_order_terms(p, s);
 			}
-		} else if (0 == strcasecmp("group", p->last.string)) {
+		} else if (0 == strcasecmp("grouprow", p->last.string)) {
 			parse_next(p);
 			parse_config_group_terms(p, s);
 		} else if (0 == strcasecmp("distinct", p->last.string)) {

@@ -391,19 +391,19 @@ struct	ord {
 };
 
 /*
- * Possible aggregate functions defined by SQL in a group.
+ * Possible row-wide aggregation functions.
  */
 enum	aggrtype {
-	AGGR_MAX, /* maximum of all values */
-	AGGR_MIN /* minimum of all values */
+	AGGR_MAXROW, /* row with maximum of all values */
+	AGGR_MINROW /* row with minimum of all values */
 };
 
 /*
- * A grouping reference.
+ * A row grouping reference.
  * This will resolve to a native field in a structure for which query
  * commands will be generated.
  * It may not be equal to any aggregate functions within the same
- * structure, so we can't do SELECT MAX(foo) ... GROUP BY foo.
+ * structure.
  */
 struct	group {
 	struct srefq	   grq; /* queue of group fields */

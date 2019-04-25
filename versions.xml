@@ -3,6 +3,21 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.7.3</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2019-04-25">2019-04-25</time>
+		</header>
+		<aside>
+			<p>
+				Clarify the functionality of <b>-d</b> mode in <a
+					href="ort-sqldiff.1.html">ort-sqldiff(1)</a>.
+				Also make it work with bitfields and expand its operation for
+				enumerations so as not to raise false positives during an upgrade.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.7.2</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2019-03-22">2019-03-22</time>

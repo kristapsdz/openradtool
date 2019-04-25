@@ -43,7 +43,9 @@ and produces an SQL schema describing the configuration.
 Its arguments are as follows:
 .Bl -tag -width Ds
 .It Fl d
-Apply some destructive changes to the database.
+Apply and allow some destructive changes.
+See
+.Sx Delete mode .
 .El
 .Pp
 The new configuration is preceded by 
@@ -66,9 +68,8 @@ SQL commands to update the configuration
 .Ar oldconfig
 to the new configuration
 .Ar config .
-If
-.Fl d
-was specified,
+In
+.Sx Delete mode ,
 .Cm DROP TABLE
 SQL commands are also emitted.
 (Dropped columns are noted, but not actually dropped.
@@ -78,9 +79,6 @@ This is a limitation of
 The configuration files are considered incompatible if they contain
 destructive differences: dropped objects (structures or fields) or
 different fields (types, references, attributes).
-If
-.Fl d
-was specified, dropped objects are not considered errors.
 .Pp
 If fields are added to a structure (columns to a table), the
 .Cm default
@@ -107,6 +105,23 @@ twice.
 .Pp
 The SQL generated is designed for
 .Xr sqlite3 1 .
+.Ss Delete mode
+When
+.Fl d
+has been specified,
+.Nm
+destructive changes are allowed.
+These consist of the following:
+.Bl -bullet
+.It
+dropped enumerations and bitfields
+.It
+dropped enumeration and bitfield items
+.It
+dropped tables
+.It
+dropped table columns
+.El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

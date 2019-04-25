@@ -726,8 +726,7 @@ gen_diff(const struct config *cfg,
 			gen_warnx(&ds->pos, "table was dropped");
 			errors++;
 		} else
-			errors += gen_diff_fields_old
-				(s, ds, destruct);
+			errors += gen_diff_fields_old(s, ds, destruct);
 	}
 
 	/*
@@ -747,7 +746,7 @@ gen_diff(const struct config *cfg,
 		TAILQ_FOREACH(s, &cfg->sq, entries) {
 			if (strcasecmp(s->name, ds->name))
 				continue;
-			errors += ! gen_diff_uniques_old(s, ds);
+			errors += !gen_diff_uniques_old(s, ds);
 		}
 
 	return errors ? 0 : 1;

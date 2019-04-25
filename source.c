@@ -2364,7 +2364,7 @@ gen_stmt(const struct strct *p)
 				NULL == s->group->alias ?
 				ff->parent->name : 
 				s->group->alias->alias, f->name, 
-				AGGR_MAX == s->aggr->op ?  "<" : ">",
+				AGGR_MAXROW == s->aggr->op ?  "<" : ">",
 				f->name);
 		}
 

@@ -3,6 +3,26 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.7.4</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2019-05-07">2019-05-07</time>
+		</header>
+		<aside>
+			<p>
+				When using concatenation (the <code>concat</code> operator) for a
+				field with possibly-<code>null</code> values, wrap the field with a
+				<code>COALESCE</code> statement.
+				This prevents the foo = empty || yourval expression, which evaluates
+				into another empty instead of the desired <code>yourval</code>.
+			</p>
+			<p>
+				Make code and documentation consistent for <code>update</code>
+				generated function.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.7.3</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2019-04-25">2019-04-25</time>

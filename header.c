@@ -263,8 +263,8 @@ gen_func_update(const struct config *cfg, const struct update *up)
 				ref->name, optypes[ref->op]);
 
 	print_commentt(0, COMMENT_C_FRAG_CLOSE,
-		"Returns zero on failure, non-zero on "
-		"constraint errors.");
+		"Returns zero on constraint violation, <0 on "
+		"error, >0 on success");
 	print_func_db_update(up, CFG_HAS_ROLES & cfg->flags, 1);
 	puts("");
 }

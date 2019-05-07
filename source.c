@@ -1504,7 +1504,7 @@ gen_func_update(const struct config *cfg,
 	}
 	puts("\tc = ksql_stmt_cstep(stmt);\n"
 	     "\tksql_stmt_free(stmt);\n"
-	     "\treturn(KSQL_CONSTRAINT != c);\n"
+	     "\treturn(KSQL_DONE == c ? 1 : (KSQL_CONSTRAINT == c ? 0 : -1));\n"
 	     "}\n"
 	     "");
 }

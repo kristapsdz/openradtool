@@ -2500,8 +2500,21 @@ gen_stmt(const struct strct *p)
 					ur->name, ur->name);
 				break;
 			case MODTYPE_CONCAT:
-				printf("%s = %s || ?", 
-					ur->name, ur->name);
+				printf("%s = ", ur->name);
+
+				/*
+				 * If we concatenate a NULL with a
+				 * non-NULL, we'll always get a NULL
+				 * value, which isn't what we want.
+				 * This will wrap possibly-null values
+				 * so that they're always strings.
+				 */
+
+				if ((ur->field->flags & FIELD_NULL))
+					printf("COALESCE(%s,'')", ur->name);
+				else
+					printf("%s", ur->name);
+				printf(" || ?");
 				break;
 			default:
 				printf("%s = ?", ur->name);

@@ -435,6 +435,7 @@ gen_javascript(const struct config *cfg, int tsc)
 	const struct eitem  *ei;
 	const char	    *ns = "ort";
 	char		    *obj, *objarray, *type, *typearray;
+	int64_t		     maxvalue;
 
 	/*
 	 * Begin with the methods we'll use throughout the file.
@@ -1379,6 +1380,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			NULL == bf->doc ? "" : "<br/>\n",
 			bf->name, ns);
 		gen_class_static(tsc, bf->name);
+		maxvalue = -INT64_MAX;
 		TAILQ_FOREACH(bi, &bf->bq, entries) {
 			print_commentv(2, COMMENT_JS,
 				"%s%s"
@@ -1410,7 +1412,25 @@ gen_javascript(const struct config *cfg, int tsc)
 				       "\t\t%s.BITF_%s = %u;\n",
 					bf->name, bi->name, bi->value,
 					bf->name, bi->name, 1U << bi->value);
+			if (bi->value > maxvalue)
+				maxvalue = bi->value;
 		}
+
+		/* Now the maximum enumeration value. */
+
+		print_commentv(2, COMMENT_JS,
+			"One larger than the largest enumeration index.\n"
+			"@memberof %s.%s#\n"
+			"@readonly\n"
+			"@const {number} BITI__MAX",
+			ns, bf->name);
+		if (tsc)
+			printf("\t\tstatic readonly "
+				"BITI__MAX: number = %" PRId64 ";\n", 
+				maxvalue + 1);
+		else
+			printf("\t\t%s.BITI__MAX = %" PRId64 ";\n",
+				bf->name, maxvalue + 1);
 
 		warn_label(cfg, &bf->labels_unset, &bf->pos,
 			bf->name, NULL, "bits isunset");

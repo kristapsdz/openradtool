@@ -101,6 +101,7 @@ static void
 gen_bitfield(const struct bitf *b)
 {
 	const struct bitidx *bi;
+	int64_t		     maxvalue = -INT64_MAX;
 
 	print_commentt(0, COMMENT_C_FRAG_OPEN, b->doc);
 	print_commentt(0, COMMENT_C_FRAG_CLOSE,
@@ -114,10 +115,13 @@ gen_bitfield(const struct bitf *b)
 			print_commentt(1, COMMENT_C, bi->doc);
 		printf("\tBITI_%s_%s = %" PRId64 ",\n",
 			b->cname, bi->name, bi->value);
-		printf("\tBITF_%s_%s = (1U << %" PRId64 ")%s\n",
-			b->cname, bi->name, bi->value, 
-			TAILQ_NEXT(bi, entries) ? "," : "");
+		printf("\tBITF_%s_%s = (1U << %" PRId64 "),\n",
+			b->cname, bi->name, bi->value);
+		if (bi->value > maxvalue)
+			maxvalue = bi->value;
 	}
+	printf("\tBITI_%s__MAX = %" PRId64 ",\n",
+		b->cname, maxvalue + 1);
 	puts("};\n"
 	     "");
 

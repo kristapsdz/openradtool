@@ -3,6 +3,23 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.7.5</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2019-07-01">2019-07-01</time>
+		</header>
+		<aside>
+			<p>
+				Add boundary values for enumerations.
+				In the C interface, this is <code>BITI_xxx__MAX</code>, where
+				<code>xxx</code> is the name of the enumeration.
+				For Java or TypeScript, this is <code>BITI__MAX</code> on the
+				enumeration's object.
+				Also fix a line termination bug.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.7.4</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2019-05-07">2019-05-07</time>

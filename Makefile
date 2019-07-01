@@ -323,7 +323,7 @@ db.trans.txt.html: db.trans.txt
 	highlight -s whitengrey -I -l --src-lang=c db.trans.txt | sed 's!ISO-8859-1!UTF-8!g' >$@
 
 highlight.css:
-	highlight --print-style -s whitengrey
+	highlight --print-style -s whitengrey -O xhtml --stdout >$@
 
 index.html: index.xml $(XMLS) $(IHTMLS) highlight.css
 	sblg -s cmdline -t index.xml -o- $(XMLS) >$@

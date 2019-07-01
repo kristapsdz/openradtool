@@ -11,7 +11,7 @@ struct user {
   field hash password comment "hashed password";
   field id int rowid comment "unique identifier";
   search id: comment "search by user identifier";
-  search email,password: name creds comment "lookup by credentials";
+  search email,hash: name creds comment "lookup by credentials";
   comment "a system user";
 };
 

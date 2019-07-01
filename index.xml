@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta charset="utf-8" /> 
 		<title>openradtool | application source generator</title>
 		<link rel="alternate" href="atom.xml" type="application/atom+xml" title="openradtool version feed" />
@@ -27,7 +27,8 @@
 					<h1 itemprop="name">openradtool</h1> 
 					<span>&#8212; 
 						<span itemprop="description">application source generator</span> 
-						<nav data-sblg-nav="1" data-sblg-navsort="date" data-sblg-navtag="version" data-sblg-navsz="1" data-sblg-navxml="1">
+						<nav data-sblg-nav="1" data-sblg-navsort="date" data-sblg-navtag="version" 
+						 data-sblg-navsz="1" data-sblg-navxml="1">
 							${sblg-titletext}
 						</nav>
 					</span>
@@ -252,7 +253,8 @@
 				</h2>
 				<code>
 					% <a href="ort-sqldiff.1.html">ort-sqldiff</a>
-					<a href="db.old.txt.html">db.old.txt</a> <a href="db.txt.html">db.txt</a> &gt; <a href="db.update.sql.html">db.update.sql</a>
+					<a href="db.old.txt.html">db.old.txt</a> <a href="db.txt.html">db.txt</a> &gt; 
+					<a href="db.update.sql.html">db.update.sql</a>
 					<br />
 					% sqlite3 db.db &lt; <a href="db.sql.html">db.update.sql</a>
 				</code>
@@ -313,7 +315,8 @@
 					<a href="db.txt.html">db.txt</a> &gt; <a href="db.fr.xml.html">db.fr.xml</a>
 					<br />
 					% <a href="ort-xliff.1.html">ort-xliff</a> -j
-					<a href="db.txt.html">db.txt</a> <a href="db.fr.xml.html">db.fr.xml</a> &gt; <a href="db.trans.txt.html">db.trans.txt</a>
+					<a href="db.txt.html">db.txt</a> <a href="db.fr.xml.html">db.fr.xml</a> &gt; 
+					<a href="db.trans.txt.html">db.trans.txt</a>
 				</code>
 				<section>
 					<figure>

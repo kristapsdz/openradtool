@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 	<head>
-		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta charset="utf-8" /> 
 		<title>openradtool | application source generator</title>
 		<link rel="alternate" href="atom.xml" type="application/atom+xml" title="openradtool version feed" />
@@ -24,10 +24,11 @@
 			</section>
 			<section id="header">
 				<div>
-					<h1 itemprop="name">openradtool</h1> 
+					<h1 itemprop="name"><a href="index.html">openradtool</a></h1> 
 					<span>&#8212; 
 						<span>application source generator</span>
-						<nav data-sblg-nav="1" data-sblg-navsort="date" data-sblg-navtag="version" data-sblg-navsz="1" data-sblg-navxml="1">
+						<nav data-sblg-nav="1" data-sblg-navsort="date" data-sblg-navtag="version" 
+						 data-sblg-navsz="1" data-sblg-navxml="1">
 							${sblg-titletext}
 						</nav>
 					</span>

@@ -590,14 +590,15 @@ void
 print_define_schema(const struct strct *p)
 {
 	const struct field *f;
+	const char *s = "";
 
-	printf("#define DB_SCHEMA_%s(_x) \\\n", p->cname);
+	printf("#define DB_SCHEMA_%s(_x) \\", p->cname);
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_STRUCT == f->type)
 			continue;
+		puts(s);
 		printf("\t#_x \".%s\"", f->name);
-		if (TAILQ_NEXT(f, entries))
-			puts(" \",\" \\");
+		s = " \",\" \\";
 	}
 	puts("");
 }

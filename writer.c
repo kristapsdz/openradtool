@@ -35,6 +35,7 @@
 #include "extern.h"
 
 static	const char *const stypes[] = {
+	"count", /* STYPE_COUNT */
 	"search", /* STYPE_SEARCH */
 	"list", /* STYPE_LIST */
 	"iterate", /* STYPE_ITERATE */

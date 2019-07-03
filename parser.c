@@ -1869,16 +1869,16 @@ parse_config_search_params(struct parse *p, struct search *s)
 {
 	struct search	*ss;
 
-	if (TOK_SEMICOLON == parse_next(p))
+	if (parse_next(p) == TOK_SEMICOLON)
 		return;
 
-	while ( ! PARSE_STOP(p)) {
-		if (TOK_IDENT != p->lasttype) {
+	while (!PARSE_STOP(p)) {
+		if (p->lasttype != TOK_IDENT) {
 			parse_errx(p, "expected query parameter name");
 			break;
 		}
-		if (0 == strcasecmp("name", p->last.string)) {
-			if (TOK_IDENT != parse_next(p)) {
+		if (strcasecmp("name", p->last.string) == 0) {
+			if (parse_next(p) != TOK_IDENT) {
 				parse_errx(p, "expected query name");
 				break;
 			}
@@ -1886,7 +1886,7 @@ parse_config_search_params(struct parse *p, struct search *s)
 			/* Disallow duplicate names. */
 
 			TAILQ_FOREACH(ss, &s->parent->sq, entries) {
-				if (NULL == ss->name ||
+				if (ss->name  == NULL ||
 				    strcasecmp(ss->name, p->last.string))
 					continue;
 				if (s->type != ss->type)
@@ -1897,17 +1897,17 @@ parse_config_search_params(struct parse *p, struct search *s)
 
 			free(s->name);
 			s->name = strdup(p->last.string);
-			if (NULL == s->name) {
+			if (s->name == NULL) {
 				parse_err(p);
 				return;
 			}
 			parse_next(p);
-		} else if (0 == strcasecmp("comment", p->last.string)) {
-			if ( ! parse_comment(p, &s->doc))
+		} else if (strcasecmp("comment", p->last.string) == 0) {
+			if (!parse_comment(p, &s->doc))
 				break;
 			parse_next(p);
-		} else if (0 == strcasecmp("limit", p->last.string)) {
-			if (TOK_INTEGER != parse_next(p)) {
+		} else if (strcasecmp("limit", p->last.string) == 0) {
+			if (parse_next(p) != TOK_INTEGER) {
 				parse_errx(p, "expected limit value");
 				break;
 			} else if (p->last.integer <= 0) {
@@ -1916,8 +1916,8 @@ parse_config_search_params(struct parse *p, struct search *s)
 			}
 			s->limit = p->last.integer;
 			parse_next(p);
-			if (TOK_COMMA == p->lasttype) {
-				if (TOK_INTEGER != parse_next(p)) {
+			if (p->lasttype == TOK_COMMA) {
+				if (parse_next(p) != TOK_INTEGER) {
 					parse_errx(p, "expected offset value");
 					break;
 				} else if (p->last.integer <= 0) {
@@ -1927,23 +1927,23 @@ parse_config_search_params(struct parse *p, struct search *s)
 				s->offset = p->last.integer;
 				parse_next(p);
 			}
-		} else if (0 == strcasecmp("minrow", p->last.string)) {
+		} else if (strcasecmp("minrow", p->last.string) == 0) {
 			parse_next(p);
 			parse_config_aggr_terms(p, AGGR_MINROW, s);
-		} else if (0 == strcasecmp("maxrow", p->last.string)) {
+		} else if (strcasecmp("maxrow", p->last.string) == 0) {
 			parse_next(p);
 			parse_config_aggr_terms(p, AGGR_MAXROW, s);
-		} else if (0 == strcasecmp("order", p->last.string)) {
+		} else if (strcasecmp("order", p->last.string) == 0) {
 			parse_next(p);
 			parse_config_order_terms(p, s);
 			while (TOK_COMMA == p->lasttype) {
 				parse_next(p);
 				parse_config_order_terms(p, s);
 			}
-		} else if (0 == strcasecmp("grouprow", p->last.string)) {
+		} else if (strcasecmp("grouprow", p->last.string) == 0) {
 			parse_next(p);
 			parse_config_group_terms(p, s);
-		} else if (0 == strcasecmp("distinct", p->last.string)) {
+		} else if (strcasecmp("distinct", p->last.string) == 0) {
 			if (NULL != s->dst) {
 				parse_errx(p, "distinct already set");
 				return;
@@ -1954,11 +1954,9 @@ parse_config_search_params(struct parse *p, struct search *s)
 			parse_errx(p, "unknown search parameter");
 			break;
 		}
-		if (TOK_SEMICOLON == p->lasttype)
+		if (p->lasttype == TOK_SEMICOLON)
 			break;
 	}
-
-	assert(TOK_SEMICOLON == p->lasttype || PARSE_STOP(p));
 }
 
 /*
@@ -2251,7 +2249,7 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 {
 	struct search	*srch;
 
-	if (NULL == (srch = calloc(1, sizeof(struct search)))) {
+	if ((srch = calloc(1, sizeof(struct search))) == NULL) {
 		parse_err(p);
 		return;
 	}
@@ -2262,9 +2260,9 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 	TAILQ_INIT(&srch->ordq);
 	TAILQ_INSERT_TAIL(&s->sq, srch, entries);
 
-	if (STYPE_LIST == stype)
+	if (stype == STYPE_LIST)
 		s->flags |= STRCT_HAS_QUEUE;
-	else if (STYPE_ITERATE == stype)
+	else if (stype == STYPE_ITERATE)
 		s->flags |= STRCT_HAS_ITERATOR;
 
 	/*
@@ -2274,26 +2272,24 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 	 * of info), or error.
 	 */
 
-	if (TOK_IDENT == parse_next(p)) {
+	if (parse_next(p) == TOK_IDENT) {
 		parse_config_search_terms(p, srch);
 		/* Now for remaining terms... */
-		while (TOK_COMMA == p->lasttype) {
+		while (p->lasttype == TOK_COMMA) {
 			parse_next(p);
 			parse_config_search_terms(p, srch);
 		}
 	} else {
-		if (TOK_SEMICOLON == p->lasttype || PARSE_STOP(p))
+		if (p->lasttype == TOK_SEMICOLON || PARSE_STOP(p))
 			return;
-		if (TOK_COLON != p->lasttype) {
+		if (p->lasttype != TOK_COLON) {
 			parse_errx(p, "expected field identifier");
 			return;
 		}
 	}
 
-	if (TOK_COLON == p->lasttype)
+	if (p->lasttype == TOK_COLON)
 		parse_config_search_params(p, srch);
-
-	assert(TOK_SEMICOLON == p->lasttype || PARSE_STOP(p));
 }
 
 /*
@@ -2670,7 +2666,7 @@ cleanup:
  * 
  *  "{" 
  *    ["field" ident FIELD]+ 
- *    [["iterate" | "search" | "list" ] search_fields]*
+ *    [["iterate"|"search"|"list"|"count"] search_fields]*
  *    ["update" update_fields]*
  *    ["delete" delete_fields]*
  *    ["insert"]*
@@ -2685,7 +2681,7 @@ parse_struct_data(struct parse *p, struct strct *s)
 	struct field	*fd;
 	struct pos	 pos;
 
-	if (TOK_LBRACE != parse_next(p)) {
+	if (parse_next(p) != TOK_LBRACE) {
 		parse_errx(p, "expected left brace");
 		return;
 	}
@@ -2708,6 +2704,9 @@ parse_struct_data(struct parse *p, struct strct *s)
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "search")) {
 			parse_config_search(p, s, STYPE_SEARCH);
+			continue;
+		} else if (0 == strcasecmp(p->last.string, "count")) {
+			parse_config_search(p, s, STYPE_COUNT);
 			continue;
 		} else if (0 == strcasecmp(p->last.string, "list")) {
 			parse_config_search(p, s, STYPE_LIST);

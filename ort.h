@@ -439,6 +439,7 @@ struct	aggr {
  * the same "struct search", without different semantics.
  */
 enum	stype {
+	STYPE_COUNT, /* single counting response */
 	STYPE_SEARCH, /* singular response */
 	STYPE_LIST, /* queue of responses */
 	STYPE_ITERATE, /* iterator of responses */

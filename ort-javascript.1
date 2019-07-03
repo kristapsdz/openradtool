@@ -1,6 +1,6 @@
 .\"	$OpenBSD$
 .\"
-.\" Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
+.\" Copyright (c) 2017--2019 Kristaps Dzonsons <kristaps@bsd.lv>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -27,39 +27,37 @@
 .Sh DESCRIPTION
 The
 .Nm
-utility accepts a
+utility accepts
 .Xr ort 5
 .Ar config
-.Pq defaulting to standard input
-and creates JavaScript or TypeScript classes formatting the JSON
+files, defaulting to standard input,
+and creates JavaScript or TypeScript classes that format the JSON
 produced by
 .Xr ort-c-header 1
-and
-.Xr ort-c-source 1 .
-The configuration may be broken apart into several files.
+.Fn json_xxxx
+functions.
 Its arguments are as follows:
 .Bl -tag -width Ds
 .It Fl t
 Emits Typescript instead of JavaScript.
 .It Ar config
-Configuration file in
+Configuration files in
 .Xr ort 5
 syntax.
 .El
 .Pp
-Both output formats consist of a set of classes within the
+Output consists of a set of classes within the
 .Qq ort
 namespace describing structures, enumerations, and bitfields.
 The method for acquiring the JSON is not managed by
 .Nm ,
-but is usually provided by a CGI interfacing with
+but is usually AJAX requests to a
 .Xr ort-c-header 1
-and
-.Xr ort-c-source 1 .
+CGI interface.
 .Pp
-To use the interface, simply include the generated file as a script,
-create objects from the JSON exported by
-.Xr ort-c-source 1 ,
+To use the API, include the generated file as a script in your HTML,
+parse objects from the JSON exported by
+.Xr ort-c-header 1 ,
 and invoke the applicable object's
 .Fn fill ,
 .Fn fillByClass ,
@@ -71,15 +69,22 @@ and
 .Fn fillArrayOrShow ,
 methods with a DOM tree node.
 .Pp
-These methods operate on elements with certain classes beneath a given
-element root as follows:
+These methods fill data from the JSON into the DOM tree by operating on
+elements having specific classes.
+In the following, let
+.Qq foo
+by the name of a structure in the
+.Ar config
+and
+.Qq xxxx
+be any of its fields.
 .Bl -tag -width Ds
 .It Li foo-xxxx-bits-checked
 Sets or unsets the
 .Li checked
 attribute depending upon whether the input's
 .Li value
-attribute is covered by the object's bitmask.
+attribute (if found) is covered by the object's bitmask.
 Only applicable to bit types.
 .It Li foo-xxxx-date-text
 Replaces the contents of the element with the ISO 8601 date of the
@@ -156,7 +161,7 @@ Enumeration and bitfield classes are also generated from the input file.
 These are appended to the namespace as a series of classes
 consisting of static variables assigned the enumeration value.
 .Pp
-All output objects are fully documented in the
+All output files are fully documented in the
 .Xr jsdoc 1
 format.
 .Ss Customisation
@@ -283,41 +288,74 @@ new ort.foo(obj).fill(e, custom);
 .Sh EXIT STATUS
 .Ex -std
 .Sh EXAMPLES
-Given a
-.Xr ort 5
-structure
-.Dq foo
-with a single field
-.Dq bar
-and an AJAX response
-.Dq response ,
-an example invocation may be as follows:
-.Bd -literal -offset indent
-var obj = JSON.parse(response);
-new ort.foo(obj).fill
-  (document.getElementById('foo'));
+Start with a means to contact a CGI script producing JSON data formatted
+by the
+.Fn json_xxxx
+family of
+.Xr ort-c-header 1 .
+This does not do any error checking.
+.Bd -literal
+function init(): void
+{
+  let xmh: XMLHttpRequest = new XMLHttpRequest();
+  xmh.onreadystatechange = function(){
+    let v: string = xmh.responseText;
+    if (xmh.readyState === 4 && xmh.status === 200)
+        success(v);
+  };
+  xmh.open('GET', 'https://your-cgi-script, true);
+  xmh.send(new FormData(form));
+}
 .Ed
 .Pp
-This will fill in all classes under
-.Li e
-.Pq if found
-named
-.Li foo-bar-value ,
-.Li foo-bar-text ,
-.Li foo-has-bar ,
-.Li foo-no-bar ,
-and
-.Li foo-enum-select .
+Now define
+.Fn success
+to parse the JSON response content using the classes and methods defined
+in the output of
+.Nm .
+.Bd -literal
+function success(resp: string): void
+{
+    let obj: ort.fooData = 
+        <ort.fooData>JSON.parse(resp);
+    new ort.foo(obj).fill(document.getElementById('place'));
+}
+.Ed
 .Pp
-The TypeScript interface would instead look as follows, assuming that
-the JSON parse returns the
-.Dq foo
-JSON object.
-.Bd -literal -offset indent
-let obj: ort.fooData =
-  <ort.fooData>JSON.parse(response);
-new ort.foo(obj).fill
-  (document.getElementById('foo'));
+Lastly, use the following abbreviated HTML in which to display the
+contents of these objects.
+Let
+.Pa driver.js
+consist of the AJAX snippet and formatter and
+.Pa foo.s
+be the output of
+.Nm .
+.Bd -literal
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <title>Example</title>
+      <script src="foo.js"></script>
+      <script src="driver.js"></script>
+    </head>
+    <body>
+        <div id="place">
+            <span class="foo-xxxx-text>
+                Replaced by the "text" field.
+            </span>
+        </div>
+    </body>
+</html>
+.Ed
+.Pp
+Finally, to drive the script, cause
+.Fn init
+to be invoked when the page has loaded.
+This may be in
+.Pa driver.js
+or directly in the document header.
+.Bd -literal
+window.addEventListener('load', init);
 .Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
@@ -333,4 +371,18 @@ new ort.foo(obj).fill
 .\" .Sh HISTORY
 .\" .Sh AUTHORS
 .\" .Sh CAVEATS
-.\" .Sh BUGS
+.Sh BUGS
+This most significant issue with JavaScript and
+.Nm
+is that of JSON/JavaScript incompatibility.
+In
+.Nm ,
+as exported in JSON, all integers are signed and 64 bits.
+JavaScript (and of course TypeScript) encode integers as double
+precision floats, which leave than 64 bits of precision.
+Therefore, it's very possible to transmit valid numbers and have them be
+truncated by JavaScript interpreters.
+.Pp
+There is as yet no simple way to protect against this.
+While some aspects (like enumeration values) may be limited to 32 bits,
+raw data emitted by the system is prone to truncation.

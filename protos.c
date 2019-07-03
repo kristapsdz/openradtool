@@ -32,6 +32,13 @@
 #include "ort.h"
 #include "extern.h"
 
+static	const char *const stypes[STYPE__MAX] = {
+	"count", /* STYPE_COUNT */
+	"get", /* STYPE_SEARCH */
+	"list", /* STYPE_LIST */
+	"iterate", /* STYPE_ITERATE */
+};
+
 static	const char *const ftypes[FTYPE__MAX] = {
 	"int64_t ", /* FTYPE_BIT */
 	"time_t ", /* FTYPE_DATE */
@@ -147,45 +154,44 @@ print_func_db_close(int priv, int decl)
 }
 
 /*
- * Print the variables in a function declaration.
+ * Print the variables in a function declaration, breaking the line at
+ * 72 characters to indent 5 spaces.
  * The "col" is the current position in the output line.
  * Returns the current position in the output line.
  */
-static int
+static size_t
 print_var(size_t pos, size_t col, 
 	const struct field *f, unsigned int flags)
 {
+	int	rc;
 
 	putchar(',');
-	if (col >= 72) {
-		printf("\n\t");
-		col = 0;
-	} else {
-		putchar(' ');
-		col++;
-	}
+	col++;
 
-	/* Handle enumeration first. */
+	if (col >= 72)
+		col = (rc = printf("\n     ")) > 0 ? rc : 0;
+	else
+		col += (rc = printf(" ")) > 0 ? rc : 0;
 
 	if (FTYPE_ENUM == f->type) {
-		col += printf("enum %s %sv%zu", f->eref->ename,
-			FIELD_NULL & flags ? "*" : "", pos);
-		return(col);
+		rc = printf("enum %s %sv%zu", f->eref->ename,
+			(flags & FIELD_NULL) ? "*" : "", pos);
+		col += rc > 0 ? rc : 0;
+		return col;
 	}
-
-	/* 
-	 * We don't have structures, so assert.
-	 * Then print blob size followed by data.
-	 */
 
 	assert(NULL != ftypes[f->type]);
 
-	if (FTYPE_BLOB == f->type)
-		col += printf("size_t v%zu_sz, ", pos);
-	col += printf("%s%sv%zu", ftypes[f->type], 
-		FIELD_NULL & flags ?  "*" : "", pos);
+	if (FTYPE_BLOB == f->type) {
+		rc = printf("size_t v%zu_sz, ", pos);
+		col += rc > 0 ? rc : 0;
+	}
 
-	return(col);
+	rc = printf("%s%sv%zu", ftypes[f->type], 
+		(flags & FIELD_NULL) ?  "*" : "", pos);
+	col += rc > 0 ? rc : 0;
+
+	return col;
 }
 
 size_t
@@ -256,36 +262,35 @@ print_func_db_update(const struct update *u, int priv, int decl)
 	printf(")%s", decl ? ";\n" : "");
 }
 
+/*
+ * Print just the name of a search function for "s".
+ * Returns the number of characters printed.
+ */
 size_t
 print_name_db_search(const struct search *s)
 {
 	const struct sent *sent;
 	const struct sref *sr;
-	int	 col = 0;
+	size_t		   sz = 0;
+	int	 	   rc;
 
-	/* 
-	 * If we have a "distinct" clause, we use that to generate
-	 * responses, not the structure itself.
-	 */
+	rc = printf("db_%s_%s", s->parent->name, stypes[s->type]);
+	sz += rc > 0 ? rc : 0;
 
-	if (STYPE_SEARCH == s->type)
-		col += printf("db_%s_get", s->parent->name);
-	else if (STYPE_LIST == s->type)
-		col += printf("db_%s_list", s->parent->name);
-	else
-		col += printf("db_%s_iterate", s->parent->name);
-
-	if (NULL == s->name && ! TAILQ_EMPTY(&s->sntq)) {
-		col += printf("_by");
+	if (s->name == NULL && !TAILQ_EMPTY(&s->sntq)) {
+		sz += (rc = printf("_by")) > 0 ? rc : 0;
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
-			TAILQ_FOREACH(sr, &sent->srq, entries)
-				col += printf("_%s", sr->name);
-			col += printf("_%s", optypes[sent->op]);
+			TAILQ_FOREACH(sr, &sent->srq, entries) {
+				rc = printf("_%s", sr->name);
+				sz += rc > 0 ? rc : 0;
+			}
+			rc = printf("_%s", optypes[sent->op]);
+			sz += rc > 0 ? rc : 0;
 		}
-	} else if (NULL != s->name)
-		col += printf("_%s", s->name);
+	} else if (s->name != NULL)
+		sz += (rc = printf("_%s", s->name)) > 0 ? rc : 0;
 
-	return(col);
+	return sz;
 }
 
 /*
@@ -294,7 +299,6 @@ print_name_db_search(const struct search *s)
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
  * If "priv" is non-zero, accept a ort instead of ksql.
- * FIXME: line wrapping.
  */
 void
 print_func_db_search(const struct search *s, int priv, int decl)
@@ -302,54 +306,72 @@ print_func_db_search(const struct search *s, int priv, int decl)
 	const struct sent *sent;
 	const struct sref *sr;
 	const struct strct *retstr;
-	size_t	 pos = 1;
-	int	 col = 0;
+	size_t	 	    pos = 1, col = 0;
+	int	 	    rc;
 
 	/* 
 	 * If we have a "distinct" clause, we use that to generate
 	 * responses, not the structure itself.
 	 */
 
-	retstr = NULL != s->dst ? 
-		s->dst->strct : s->parent;
+	retstr = s->dst != NULL ? s->dst->strct : s->parent;
 
-	if (STYPE_SEARCH == s->type)
-		col += printf("struct %s *%s", 
-			retstr->name, decl ? "" : "\n");
-	else if (STYPE_LIST == s->type)
-		col += printf("struct %s_q *%s",
-			retstr->name, decl ? "" : "\n");
+	/* Start with return value. */
+
+	if (s->type == STYPE_SEARCH)
+		rc = printf("struct %s *", retstr->name);
+	else if (s->type == STYPE_LIST)
+		rc = printf("struct %s_q *", retstr->name);
+	else if (s->type == STYPE_ITERATE)
+		rc = printf("void");
 	else
-		col += printf("void%s", decl ? " " : "\n");
+		rc = printf("uint64_t");
 
-	col += print_name_db_search(s);
+	col += rc > 0 ? rc : 0;
+	if (decl) {
+		printf("\n");
+		col = 0;
+	} else
+		col += (rc = printf(" ")) > 0 ? rc : 0;
+
+	/* Now function name. */
+
+	if ((col += print_name_db_search(s)) >= 72) {
+		puts("");
+		col = (rc = printf("    ") > 0) ? rc : 0;
+	}
+
+	/* Arguments starting with database pointer. */
 
 	if (priv)
-		col += printf("(struct ort *ctx");
+		col += (rc = printf("(struct ort *ctx")) > 0 ? rc : 0;
 	else
-		col += printf("(struct ksql *db");
+		col += (rc = printf("(struct ksql *db")) > 0 ? rc : 0;
 
-	if (STYPE_ITERATE == s->type)
-		col += printf(", %s_cb cb, void *arg", 
-			retstr->name);
-
-	/* Don't accept input for unary operation. */
-
-	TAILQ_FOREACH(sent, &s->sntq, entries) {
-		if (OPTYPE_ISUNARY(sent->op))
-			continue;
-		sr = TAILQ_LAST(&sent->srq, srefq);
-		col = print_var(pos++, col, sr->field, 0);
+	if (s->type == STYPE_ITERATE) {
+		rc = printf(", %s_cb cb, void *arg", retstr->name);
+		col += rc > 0 ? rc : 0;
 	}
+
+	TAILQ_FOREACH(sent, &s->sntq, entries)
+		if (!OPTYPE_ISUNARY(sent->op)) {
+			sr = TAILQ_LAST(&sent->srq, srefq);
+			col = print_var(pos++, col, sr->field, 0);
+		}
 
 	printf(")%s", decl ? ";\n" : "");
 }
 
+/*
+ * Print just the name of a insert function for "p".
+ * Returns the number of characters printed.
+ */
 size_t
 print_name_db_insert(const struct strct *p)
 {
+	int	 rc;
 
-	return(printf("db_%s_insert", p->name));
+	return (rc = printf("db_%s_insert", p->name)) > 0 ? rc : 0;
 }
 
 /*
@@ -362,20 +384,33 @@ void
 print_func_db_insert(const struct strct *p, int priv, int decl)
 {
 	const struct field *f;
-	size_t	 pos = 1;
-	int	 col = 0;
+	size_t	 	    pos = 1, col = 0;
+	int		    rc;
 
-	col += printf("int64_t%s", decl ? " " : "\n");
-	col += print_name_db_insert(p);
+	/* Start with return value. */
+
+	if (decl)
+		printf("int64_t\n");
+	else
+		col += (rc = printf("int64_t ")) > 0 ? rc : 0;
+
+	/* Now function name. */
+
+	if ((col += print_name_db_insert(p)) >= 72) {
+		puts("");
+		col = (rc = printf("    ") > 0) ? rc : 0;
+	}
+
+	/* Arguments starting with database pointer. */
 
 	if (priv)
-		col += printf("(struct ort *ctx");
+		col += (rc = printf("(struct ort *ctx")) > 0 ? rc : 0;
 	else
-		col += printf("(struct ksql *db");
+		col += (rc = printf("(struct ksql *db")) > 0 ? rc : 0;
 
 	TAILQ_FOREACH(f, &p->fq, entries)
-		if ( ! (FTYPE_STRUCT == f->type ||
-		        FIELD_ROWID & f->flags))
+		if (!(f->type == FTYPE_STRUCT || 
+		      (f->flags & FIELD_ROWID)))
 			col = print_var(pos++, col, f, f->flags);
 
 	printf(")%s", decl ? ";\n" : "");

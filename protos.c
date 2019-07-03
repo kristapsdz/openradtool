@@ -39,6 +39,11 @@ static	const char *const stypes[STYPE__MAX] = {
 	"iterate", /* STYPE_ITERATE */
 };
 
+static	const char *const utypes[UP__MAX] = {
+	"update", /* UP_MODIFY */
+	"delete", /* UP_DELETE */
+};
+
 static	const char *const ftypes[FTYPE__MAX] = {
 	"int64_t ", /* FTYPE_BIT */
 	"time_t ", /* FTYPE_DATE */
@@ -194,34 +199,43 @@ print_var(size_t pos, size_t col,
 	return col;
 }
 
+/*
+ * Print just the name of an update function "u".
+ * Returns the number of characters printed.
+ */
 size_t
 print_name_db_update(const struct update *u)
 {
 	const struct uref *ur;
-	int	 col = 0;
+	size_t	 	   col = 0;
+	int		   rc;
 
-	if (UP_MODIFY == u->type)
-		col += printf("db_%s_update", u->parent->name);
-	else
-		col += printf("db_%s_delete", u->parent->name);
+	rc = printf("db_%s_%s", u->parent->name, utypes[u->type]);
+	col = rc > 0 ? rc : 0;
 
-	if (NULL == u->name && UP_MODIFY == u->type) {
-		if ( ! (UPDATE_ALL & u->flags))
-			TAILQ_FOREACH(ur, &u->mrq, entries)
-				col += printf("_%s", ur->name);
-		col += printf("_by");
-		TAILQ_FOREACH(ur, &u->crq, entries)
-			col += printf("_%s_%s", 
+	if (u->name == NULL && u->type == UP_MODIFY) {
+		if (!(u->flags & UPDATE_ALL))
+			TAILQ_FOREACH(ur, &u->mrq, entries) {
+				rc = printf("_%s", ur->name);
+				col += rc > 0 ? rc : 0;
+			}
+		col += (rc = printf("_by")) > 0 ? rc : 0;
+		TAILQ_FOREACH(ur, &u->crq, entries) {
+			rc = printf("_%s_%s", 
 				ur->name, optypes[ur->op]);
-	} else if (NULL == u->name) {
-		col += printf("_by");
-		TAILQ_FOREACH(ur, &u->crq, entries)
-			col += printf("_%s_%s", 
+			col += rc > 0 ? rc : 0;
+		}
+	} else if (u->name == NULL) {
+		col += (rc = printf("_by")) > 0 ? rc : 0;
+		TAILQ_FOREACH(ur, &u->crq, entries) {
+			rc = printf("_%s_%s", 
 				ur->name, optypes[ur->op]);
+			col += rc > 0 ? rc : 0;
+		}
 	} else 
-		col += printf("_%s", u->name);
+		col += (rc = printf("_%s", u->name)) > 0 ? rc : 0;
 
-	return(col);
+	return col;
 }
 
 /*
@@ -234,29 +248,36 @@ void
 print_func_db_update(const struct update *u, int priv, int decl)
 {
 	const struct uref *ur;
-	size_t	 pos = 1;
-	int	 col = 0;
+	size_t	 	   pos = 1, col = 0;
+	int	 	   rc;
 
-	if (UP_MODIFY == u->type)
-		col += printf("int%s", decl ? " " : "\n");
+	/* Start with return value. */
+
+	if (!decl) 
+		printf("int\n");
 	else
-		col += printf("int%s", decl ? " " : "\n");
+		col = (rc = printf("int ")) > 0 ? rc : 0;
 
-	col += print_name_db_update(u);
+	/* Now function name. */
+
+	if ((col += print_name_db_update(u)) >= 72) {
+		puts("");
+		col = (rc = printf("    ") > 0) ? rc : 0;
+	}
+
+	/* Arguments starting with database pointer. */
 
 	if (priv)
-		col += printf("(struct ort *ctx");
+		col += (rc = printf("(struct ort *ctx")) > 0 ? rc : 0;
 	else
-		col += printf("(struct ksql *db");
+		col += (rc = printf("(struct ksql *db")) > 0 ? rc : 0;
 
 	TAILQ_FOREACH(ur, &u->mrq, entries)
 		col = print_var(pos++, col, 
 			ur->field, ur->field->flags);
 
-	/* Don't accept input for unary operation. */
-
 	TAILQ_FOREACH(ur, &u->crq, entries)
-		if ( ! OPTYPE_ISUNARY(ur->op))
+		if (!OPTYPE_ISUNARY(ur->op))
 			col = print_var(pos++, col, ur->field, 0);
 
 	printf(")%s", decl ? ";\n" : "");
@@ -328,10 +349,10 @@ print_func_db_search(const struct search *s, int priv, int decl)
 		rc = printf("uint64_t");
 
 	col += rc > 0 ? rc : 0;
-	if (decl) {
+	if (!decl) {
 		printf("\n");
 		col = 0;
-	} else
+	} else if (s->type != STYPE_SEARCH && s->type != STYPE_LIST)
 		col += (rc = printf(" ")) > 0 ? rc : 0;
 
 	/* Now function name. */
@@ -389,7 +410,7 @@ print_func_db_insert(const struct strct *p, int priv, int decl)
 
 	/* Start with return value. */
 
-	if (decl)
+	if (!decl)
 		printf("int64_t\n");
 	else
 		col += (rc = printf("int64_t ")) > 0 ? rc : 0;

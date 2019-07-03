@@ -767,7 +767,7 @@ ort_strct_alloc(struct config *cfg,
 }
 
 /*
- * Free all resources from the queue of structures.
+ * Free all configuration resources.
  * Does nothing if "q" is empty or NULL.
  */
 void

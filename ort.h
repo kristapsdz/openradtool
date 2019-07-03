@@ -537,8 +537,9 @@ struct	unique {
  * Type of modifier.
  */
 enum	upt {
-	UP_MODIFY, /* generate an "update" entry */
-	UP_DELETE /* generate a "delete" entry */
+	UP_MODIFY = 0, /* generate an "update" entry */
+	UP_DELETE, /* generate a "delete" entry */
+	UP__MAX
 };
 
 /*

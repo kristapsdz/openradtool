@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017--2018 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017--2019 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -337,7 +337,7 @@ parse_warnx(struct parse *p, const char *fmt, ...)
 	pos.line = p->line;
 	pos.column = p->column;
 
-	if (NULL != fmt) {
+	if (fmt != NULL) {
 		va_start(ap, fmt);
 		ort_config_msgv(p->cfg, MSGTYPE_WARN, 
 			channel, 0, &pos, fmt, ap);
@@ -374,7 +374,7 @@ parse_errx(struct parse *p, const char *fmt, ...)
 	pos.line = p->line;
 	pos.column = p->column;
 
-	if (NULL != fmt) {
+	if (fmt != NULL) {
 		va_start(ap, fmt);
 		ort_config_msgv(p->cfg, MSGTYPE_ERROR, 
 			channel, 0, &pos, fmt, ap);
@@ -400,7 +400,7 @@ buf_push(struct parse *p, char c)
 
 	if (p->bufsz + 1 >= p->bufmax) {
 		pp = realloc(p->buf, p->bufmax + inc);
-		if (NULL == pp) {
+		if (pp == NULL) {
 			parse_err(p);
 			return 0;
 		}
@@ -421,8 +421,8 @@ check_badidents(struct parse *p, const char *s)
 {
 	const char *const *cp;
 
-	for (cp = badidents; NULL != *cp; cp++)
-		if (0 == strcasecmp(*cp, s)) {
+	for (cp = badidents; *cp != NULL; cp++)
+		if (strcasecmp(*cp, s) == 0) {
 			parse_errx(p, "illegal identifier");
 			return(0);
 		}
@@ -3254,6 +3254,10 @@ ort_parse_r(struct parse *p)
 	return 1;
 }
 
+/*
+ * Parse file "f", augmenting the configuration already in "cfg".
+ * Returns zero on failure, non-zero on success.
+ */
 int
 ort_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 {
@@ -3263,16 +3267,16 @@ ort_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 
 	pp = reallocarray(cfg->fnames, 
 		cfg->fnamesz + 1, sizeof(char *));
-	if (NULL == pp) {
+	if (pp == NULL) {
 		ort_config_msg(cfg, MSGTYPE_FATAL, 
 			channel, errno, NULL, NULL);
 		return 0;
 	}
+
 	cfg->fnames = pp;
 	cfg->fnamesz++;
-
 	cfg->fnames[cfg->fnamesz - 1] = strdup(fname);
-	if (NULL == cfg->fnames[cfg->fnamesz - 1]) {
+	if (cfg->fnames[cfg->fnamesz - 1] == NULL) {
 		ort_config_msg(cfg, MSGTYPE_FATAL, 
 			channel, errno, NULL, NULL);
 		return 0;
@@ -3290,6 +3294,11 @@ ort_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 	return rc;
 }
 
+/*
+ * Parse and link a non-NUL terminated buffer "buf" of length" len" into
+ * a configuration.
+ * Returns NULL on error.
+ */
 struct config *
 ort_parse_buf(const char *buf, size_t len)
 {
@@ -3298,13 +3307,12 @@ ort_parse_buf(const char *buf, size_t len)
 	struct config	*cfg;
 	void		*pp;
 
-	if (NULL == (cfg = ort_config_alloc()))
+	if ((cfg = ort_config_alloc()) == NULL)
 		return NULL;
 
 	pp = reallocarray(cfg->fnames, 
 		 cfg->fnamesz + 1, sizeof(char *));
-
-	if (NULL == pp) {
+	if (pp == NULL) {
 		ort_config_msg(cfg, MSGTYPE_FATAL, 
 			channel, errno, NULL, NULL);
 		ort_config_free(cfg);
@@ -3313,9 +3321,8 @@ ort_parse_buf(const char *buf, size_t len)
 
 	cfg->fnames = pp;
 	cfg->fnamesz++;
-
 	cfg->fnames[cfg->fnamesz - 1] = strdup("<buffer>");
-	if (NULL == cfg->fnames[cfg->fnamesz - 1]) {
+	if (cfg->fnames[cfg->fnamesz - 1] == NULL) {
 		ort_config_msg(cfg, MSGTYPE_FATAL, 
 			channel, errno, NULL, NULL);
 		ort_config_free(cfg);
@@ -3330,27 +3337,28 @@ ort_parse_buf(const char *buf, size_t len)
 	p.inbuf.len = len;
 	p.type = PARSETYPE_BUF;
 	p.cfg = cfg;
-
 	rc = ort_parse_r(&p);
 	free(p.buf);
 
-	if (0 == rc || 0 == ort_parse_close(cfg)) {
+	if (!rc || !ort_parse_close(cfg)) {
 		ort_config_free(cfg);
 		return NULL;
 	}
 	return cfg;
 }
 
+/*
+ * Parse and link a standalone file "f" into a configuration.
+ * Returns NULL on error.
+ */
 struct config *
 ort_parse_file(FILE *f, const char *fname)
 {
 	struct config	*cfg;
 
-	if (NULL == (cfg = ort_config_alloc()))
-		return NULL;
-
-	if (0 == ort_parse_file_r(cfg, f, fname) ||
-	    0 == ort_parse_close(cfg)) {
+	if ((cfg = ort_config_alloc()) == NULL ||
+	    !ort_parse_file_r(cfg, f, fname) ||
+	    !ort_parse_close(cfg)) {
 		ort_config_free(cfg);
 		return NULL;
 	}

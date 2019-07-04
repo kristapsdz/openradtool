@@ -2686,89 +2686,75 @@ parse_struct_data(struct parse *p, struct strct *s)
 		return;
 	}
 
-	while ( ! PARSE_STOP(p)) {
-		if (TOK_RBRACE == parse_next(p))
+	while (!PARSE_STOP(p)) {
+		if (parse_next(p) == TOK_RBRACE)
 			break;
-		if (TOK_IDENT != p->lasttype) {
+		if (p->lasttype != TOK_IDENT) {
 			parse_errx(p, "expected struct data type");
 			return;
 		}
-
-		if (0 == strcasecmp(p->last.string, "comment")) {
-			if ( ! parse_comment(p, &s->doc))
+		if (strcasecmp(p->last.string, "comment") == 0) {
+			if (!parse_comment(p, &s->doc))
 				return;
-			if (TOK_SEMICOLON != parse_next(p)) {
+			if (parse_next(p) != TOK_SEMICOLON) {
 				parse_errx(p, "expected end of comment");
 				return;
 			}
-			continue;
-		} else if (0 == strcasecmp(p->last.string, "search")) {
+		} else if (strcasecmp(p->last.string, "search") == 0) {
 			parse_config_search(p, s, STYPE_SEARCH);
-			continue;
-		} else if (0 == strcasecmp(p->last.string, "count")) {
+		} else if (strcasecmp(p->last.string, "count") == 0) {
 			parse_config_search(p, s, STYPE_COUNT);
-			continue;
-		} else if (0 == strcasecmp(p->last.string, "list")) {
+		} else if (strcasecmp(p->last.string, "list") == 0) {
 			parse_config_search(p, s, STYPE_LIST);
-			continue;
-		} else if (0 == strcasecmp(p->last.string, "iterate")) {
+		} else if (strcasecmp(p->last.string, "iterate") == 0) {
 			parse_config_search(p, s, STYPE_ITERATE);
-			continue;
-		} else if (0 == strcasecmp(p->last.string, "update")) {
+		} else if (strcasecmp(p->last.string, "update") == 0) {
 			parse_config_update(p, s, UP_MODIFY);
-			continue;
-		} else if (0 == strcasecmp(p->last.string, "delete")) {
+		} else if (strcasecmp(p->last.string, "delete") == 0) {
 			parse_config_update(p, s, UP_DELETE);
-			continue;
-		} else if (0 == strcasecmp(p->last.string, "insert")) {
-			if (NULL != s->ins) {
+		} else if (strcasecmp(p->last.string, "insert") == 0) {
+			if (s->ins != NULL) {
 				parse_errx(p, "insert already defined");
 				return;
 			}
 			s->ins = calloc(1, sizeof(struct insert));
-			if (NULL == s->ins) {
+			if (s->ins == NULL) {
 				parse_err(p);
 				return;
 			}
 			s->ins->parent = s;
 			parse_point(p, &s->ins->pos);
-			if (TOK_SEMICOLON != parse_next(p)) {
+			if (parse_next(p) != TOK_SEMICOLON) {
 				parse_errx(p, "expected semicolon");
 				return;
 			}
-			continue;
-		} else if (0 == strcasecmp(p->last.string, "unique")) {
+		} else if (strcasecmp(p->last.string, "unique") == 0) {
 			parse_config_unique(p, s);
-			continue;
-		} else if (0 == strcasecmp(p->last.string, "roles")) {
+		} else if (strcasecmp(p->last.string, "roles") == 0) {
 			parse_config_roles(p, s);
-			continue;
-		} else if (strcasecmp(p->last.string, "field")) {
-			parse_errx(p, "unknown struct data type: %s",
-				p->last.string);
+		} else if (strcasecmp(p->last.string, "field") == 0) {
+			if (parse_next(p) != TOK_IDENT) {
+				parse_errx(p, "expected field name");
+				return;
+			} 
+			parse_point(p, &pos);
+			fd = ort_field_alloc(p->cfg,
+				s, &pos, p->last.string);
+			if (fd == NULL)
+				return;
+			parse_field(p, fd);
+		} else {
+			parse_errx(p, "unknown struct data "
+				"type: %s", p->last.string);
 			return;
 		}
-
-		/* Now we have a new field: validate and parse. */
-
-		if (TOK_IDENT != parse_next(p)) {
-			parse_errx(p, "expected field name");
-			return;
-		} 
-		
-		parse_point(p, &pos);
-		fd = ort_field_alloc(p->cfg, s, &pos, p->last.string);
-		if (NULL == fd)
-			return;
-		parse_field(p, fd);
 	}
 
 	if (PARSE_STOP(p))
 		return;
-
-	if (TOK_SEMICOLON != parse_next(p)) 
+	if (parse_next(p) != TOK_SEMICOLON) 
 		parse_errx(p, "expected semicolon");
-	else if (TAILQ_EMPTY(&s->fq))
+	if (TAILQ_EMPTY(&s->fq))
 		parse_errx(p, "no fields in struct");
 }
 

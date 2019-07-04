@@ -652,6 +652,8 @@ __BEGIN_DECLS
 
 struct config	*ort_config_alloc(void);
 void		 ort_config_free(struct config *);
+void		 ort_config_free_distinct(struct dstnct *);
+void		 ort_config_free_aggr(struct aggr *);
 void		 ort_config_msgv(struct config *, enum msgtype, 
 			const char *, int, const struct pos *, 
 			const char *, va_list);

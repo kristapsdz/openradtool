@@ -552,7 +552,7 @@ uref_alloc(struct parse *p, const char *name,
 
 /*
  * Allocate a search reference and add it to the parent queue.
- * Returns the created pointer or NULL.
+ * Returns zero on allocation failure, non-zero on success.
  */
 static int
 sref_alloc(struct parse *p, const char *name, struct srefq *q)
@@ -986,7 +986,7 @@ parse_comment(struct parse *p, char **doc)
 		parse_errx(p, "expected quoted string");
 		return 0;
 	} else if (NULL != *doc) {
-		parse_warnx(p, "replaces prior comment");
+		parse_warnx(p, "redeclaring comment");
 		free(*doc);
 	}
 
@@ -1508,7 +1508,13 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 	size_t		 sz = 0, nsz;
 	void		*pp;
 
-	if (NULL == (d = calloc(1, sizeof(struct dstnct)))) {
+	if (srch->dst != NULL) {
+		parse_warnx(p, "redeclaring distinct");
+		ort_config_free_distinct(srch->dst);
+		srch->dst = NULL;
+	} 
+
+	if ((d = calloc(1, sizeof(struct dstnct))) == NULL) {
 		parse_err(p);
 		return;
 	}
@@ -1518,22 +1524,22 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 	parse_point(p, &d->pos);
 	TAILQ_INIT(&d->drefq);
 
-	if (TOK_PERIOD == p->lasttype) {
+	if (p->lasttype == TOK_PERIOD) {
 		parse_next(p);
 		return;
 	}
 
-	while ( ! PARSE_STOP(p)) {
-		if (TOK_IDENT != p->lasttype) {
+	while (!PARSE_STOP(p)) {
+		if (p->lasttype != TOK_IDENT) {
 			parse_errx(p, "expected distinct field");
 			return;
 		}
-		if (NULL == (df = calloc(1, sizeof(struct dref)))) {
+		if ((df = calloc(1, sizeof(struct dref))) == NULL) {
 			parse_err(p);
 			return;
 		}
 		TAILQ_INSERT_TAIL(&d->drefq, df, entries);
-		if (NULL == (df->name = strdup(p->last.string))) {
+		if ((df->name = strdup(p->last.string)) == NULL) {
 			parse_err(p);
 			return;
 		}
@@ -1545,21 +1551,20 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 		 * we need the full stop in there as well.
 		 */
 
-		nsz = sz + strlen(df->name) + 
-			(0 == sz ? 0 : 1) + 1;
-		if (NULL == (pp = realloc(d->cname, nsz))) {
+		nsz = sz + strlen(df->name) + (0 == sz ? 0 : 1) + 1;
+		if ((pp = realloc(d->cname, nsz)) == NULL) {
 			parse_err(p);
 			return;
 		}
 		d->cname = pp;
-		if (0 == sz) 
+		if (sz == 0) 
 			d->cname[0] = '\0';
 		else
 			strlcat(d->cname, ".", nsz);
 		strlcat(d->cname, df->name, nsz);
 		sz = nsz;
 
-		if (TOK_PERIOD != parse_next(p)) 
+		if (parse_next(p) != TOK_PERIOD) 
 			break;
 		parse_next(p);
 	}
@@ -1578,12 +1583,15 @@ parse_config_aggr_terms(struct parse *p,
 	struct aggr	*aggr;
 
 	if (NULL != srch->aggr) {
-		parse_errx(p, "grouprow constraint duplicate");
-		return;
-	} else if (TOK_IDENT != p->lasttype) {
+		parse_errx(p, "redeclaring aggregate term");
+		ort_config_free_aggr(srch->aggr);
+		srch->aggr = NULL;
+	}
+
+	if (TOK_IDENT != p->lasttype) {
 		parse_errx(p, "expected aggregate identifier");
 		return;
-	} else if (NULL == (aggr = calloc(1, sizeof(struct aggr)))) {
+	} else if ((aggr = calloc(1, sizeof(struct aggr))) == NULL) {
 		parse_err(p);
 		return;
 	}
@@ -1594,19 +1602,19 @@ parse_config_aggr_terms(struct parse *p,
 	parse_point(p, &aggr->pos);
 	TAILQ_INIT(&aggr->arq);
 
-	if ( ! sref_alloc(p, p->last.string, &aggr->arq))
+	if (!sref_alloc(p, p->last.string, &aggr->arq))
 		return;
 
 	for (;;) {
 		if (PARSE_STOP(p))
 			return;
 		parse_next(p);
-		if (TOK_SEMICOLON == p->lasttype ||
-		    TOK_IDENT == p->lasttype)
+		if (p->lasttype == TOK_SEMICOLON ||
+		    p->lasttype == TOK_IDENT)
 			break;
-		if (TOK_PERIOD != p->lasttype)
+		if (p->lasttype != TOK_PERIOD)
 			parse_errx(p, "expected field separator");
-		else if (TOK_IDENT != parse_next(p))
+		else if (parse_next(p) != TOK_IDENT)
 			parse_errx(p, "expected field identifier");
 		else if (sref_alloc(p, p->last.string, &aggr->arq))
 			continue;
@@ -1616,14 +1624,14 @@ parse_config_aggr_terms(struct parse *p,
 	/* Canonical names. */
 
 	TAILQ_FOREACH(af, &aggr->arq, entries)
-		if ( ! ref_append(&aggr->fname, af->name)) {
+		if (!ref_append(&aggr->fname, af->name)) {
 			parse_err(p);
 			return;
 		}
 	TAILQ_FOREACH(af, &aggr->arq, entries) {
-		if (NULL == TAILQ_NEXT(af, entries))
+		if (TAILQ_NEXT(af, entries) == NULL)
 			break;
-		if ( ! ref_append(&aggr->name, af->name)) {
+		if (!ref_append(&aggr->name, af->name)) {
 			parse_err(p);
 			return;
 		}
@@ -1780,20 +1788,20 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 	struct sref	*sf;
 	struct sent	*sent;
 
-	if (TOK_IDENT != p->lasttype) {
+	if (p->lasttype != TOK_IDENT) {
 		parse_errx(p, "expected field identifier");
 		return;
 	}
 
-	if (NULL == (sent = sent_alloc(p, srch)))
+	if ((sent = sent_alloc(p, srch)) == NULL)
 		return;
-	if ( ! sref_alloc(p, p->last.string, &sent->srq))
+	if (!sref_alloc(p, p->last.string, &sent->srq))
 		return;
 
-	while ( ! PARSE_STOP(p)) {
-		if (TOK_COMMA == parse_next(p) ||
-		    TOK_SEMICOLON == p->lasttype ||
-		    TOK_COLON == p->lasttype)
+	while (!PARSE_STOP(p)) {
+		if (parse_next(p) == TOK_COMMA ||
+		    p->lasttype == TOK_SEMICOLON ||
+		    p->lasttype == TOK_COLON)
 			break;
 
 		/* 
@@ -1801,19 +1809,19 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 		 * After the operator, we'll have no more fields.
 		 */
 
-		if (TOK_IDENT == p->lasttype) {
+		if (p->lasttype == TOK_IDENT) {
 			for (sent->op = 0; 
-			     OPTYPE__MAX != sent->op; sent->op++)
-				if (0 == strcasecmp(p->last.string, 
-				    optypes[sent->op]))
+			     sent->op != OPTYPE__MAX; sent->op++)
+				if (strcasecmp(p->last.string, 
+				    optypes[sent->op]) == 0)
 					break;
-			if (OPTYPE__MAX == sent->op) {
+			if (sent->op == OPTYPE__MAX) {
 				parse_errx(p, "unknown operator");
 				return;
 			}
-			if (TOK_COMMA == parse_next(p) ||
-			    TOK_SEMICOLON == p->lasttype ||
-			    TOK_COLON == p->lasttype)
+			if (parse_next(p) == TOK_COMMA ||
+			    p->lasttype == TOK_SEMICOLON ||
+			    p->lasttype == TOK_COLON)
 				break;
 			parse_errx(p, "expected field separator");
 			return;
@@ -1821,9 +1829,9 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 
 		/* Next in field chain... */
 
-		if (TOK_PERIOD != p->lasttype)
+		if (p->lasttype != TOK_PERIOD)
 			parse_errx(p, "expected field separator");
-		else if (TOK_IDENT != parse_next(p))
+		else if (parse_next(p) != TOK_IDENT)
 			parse_errx(p, "expected field identifier");
 		else if (sref_alloc(p, p->last.string, &sent->srq))
 			continue;
@@ -1840,18 +1848,53 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 	 */
 
 	TAILQ_FOREACH(sf, &sent->srq, entries)
-		if ( ! ref_append(&sent->fname, sf->name)) {
+		if (!ref_append(&sent->fname, sf->name)) {
 			parse_err(p);
 			return;
 		}
 	TAILQ_FOREACH(sf, &sent->srq, entries) {
-		if (NULL == TAILQ_NEXT(sf, entries))
+		if (TAILQ_NEXT(sf, entries) == NULL)
 			break;
-		if ( ! ref_append(&sent->name, sf->name)) {
+		if (!ref_append(&sent->name, sf->name)) {
 			parse_err(p);
 			return;
 		}
 	}
+}
+
+/*
+ * Parse the limit/offset parameters, where the first integer is the
+ * limit, the second is the offset.
+ *
+ *   integer [ "," integer ]
+ */
+static void
+parse_config_limit_params(struct parse *p, struct search *s)
+{
+	if (p->lasttype != TOK_INTEGER) {
+		parse_errx(p, "expected limit value");
+		return;
+	} else if (p->last.integer <= 0) {
+		parse_errx(p, "expected limit >0");
+		return;
+	} else if (s->limit)
+		parse_warnx(p, "redeclaring limit");
+
+	s->limit = p->last.integer;
+	if (parse_next(p) != TOK_COMMA)
+		return;
+
+	if (parse_next(p) != TOK_INTEGER) {
+		parse_errx(p, "expected offset value");
+		return;
+	} else if (p->last.integer <= 0) {
+		parse_errx(p, "expected offset >0");
+		return;
+	} else if (s->offset)
+		parse_warnx(p, "redeclaring offset");
+
+	s->offset = p->last.integer;
+	parse_next(p);
 }
 
 /*
@@ -1882,19 +1925,16 @@ parse_config_search_params(struct parse *p, struct search *s)
 				parse_errx(p, "expected query name");
 				break;
 			}
-
-			/* Disallow duplicate names. */
-
 			TAILQ_FOREACH(ss, &s->parent->sq, entries) {
-				if (ss->name  == NULL ||
+				if (s->type != ss->type ||
+				    ss->name == NULL ||
 				    strcasecmp(ss->name, p->last.string))
-					continue;
-				if (s->type != ss->type)
 					continue;
 				parse_errx(p, "duplicate query name");
 				break;
 			}
-
+			if (s->name != NULL)
+				parse_warnx(p, "redeclaring name");
 			free(s->name);
 			s->name = strdup(p->last.string);
 			if (s->name == NULL) {
@@ -1907,26 +1947,8 @@ parse_config_search_params(struct parse *p, struct search *s)
 				break;
 			parse_next(p);
 		} else if (strcasecmp("limit", p->last.string) == 0) {
-			if (parse_next(p) != TOK_INTEGER) {
-				parse_errx(p, "expected limit value");
-				break;
-			} else if (p->last.integer <= 0) {
-				parse_errx(p, "expected limit >0");
-				break;
-			}
-			s->limit = p->last.integer;
 			parse_next(p);
-			if (p->lasttype == TOK_COMMA) {
-				if (parse_next(p) != TOK_INTEGER) {
-					parse_errx(p, "expected offset value");
-					break;
-				} else if (p->last.integer <= 0) {
-					parse_errx(p, "expected offset >0");
-					break;
-				}
-				s->offset = p->last.integer;
-				parse_next(p);
-			}
+			parse_config_limit_params(p, s);
 		} else if (strcasecmp("minrow", p->last.string) == 0) {
 			parse_next(p);
 			parse_config_aggr_terms(p, AGGR_MINROW, s);
@@ -1936,7 +1958,7 @@ parse_config_search_params(struct parse *p, struct search *s)
 		} else if (strcasecmp("order", p->last.string) == 0) {
 			parse_next(p);
 			parse_config_order_terms(p, s);
-			while (TOK_COMMA == p->lasttype) {
+			while (p->lasttype == TOK_COMMA) {
 				parse_next(p);
 				parse_config_order_terms(p, s);
 			}
@@ -1944,10 +1966,6 @@ parse_config_search_params(struct parse *p, struct search *s)
 			parse_next(p);
 			parse_config_group_terms(p, s);
 		} else if (strcasecmp("distinct", p->last.string) == 0) {
-			if (NULL != s->dst) {
-				parse_errx(p, "distinct already set");
-				return;
-			}
 			parse_next(p);
 			parse_config_distinct_term(p, s);
 		} else {
@@ -2253,6 +2271,7 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 		parse_err(p);
 		return;
 	}
+
 	srch->parent = s;
 	srch->type = stype;
 	parse_point(p, &srch->pos);
@@ -2274,7 +2293,6 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 
 	if (parse_next(p) == TOK_IDENT) {
 		parse_config_search_terms(p, srch);
-		/* Now for remaining terms... */
 		while (p->lasttype == TOK_COMMA) {
 			parse_next(p);
 			parse_config_search_terms(p, srch);

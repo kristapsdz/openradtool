@@ -254,15 +254,15 @@ parse_free_sref(struct sref *p)
  * Free the aggregate and its pointer.
  * Passing a NULL pointer is a noop.
  */
-static void
-parse_free_aggr(struct aggr *aggr)
+void
+ort_config_free_aggr(struct aggr *aggr)
 {
 	struct sref	*ref;
 
-	if (NULL == aggr)
+	if (aggr == NULL)
 		return;
 
-	while (NULL != (ref = TAILQ_FIRST(&aggr->arq))) {
+	while ((ref = TAILQ_FIRST(&aggr->arq)) != NULL) {
 		TAILQ_REMOVE(&aggr->arq, ref, entries);
 		parse_free_sref(ref);
 	}
@@ -315,6 +315,27 @@ parse_free_ordq(struct ordq *q)
 }
 
 /*
+ * Free a distinct series.
+ * Does nothing if "p" is NULL.
+ */
+void
+ort_config_free_distinct(struct dstnct *p)
+{
+	struct dref	*d;
+
+	if (p == NULL)
+		return;
+
+	while (NULL != (d = TAILQ_FIRST(&p->drefq))) {
+		TAILQ_REMOVE(&p->drefq, d, entries);
+		free(d->name);
+		free(d);
+	}
+	free(p->cname);
+	free(p);
+}
+
+/*
  * Free a search series.
  * Does nothing if "p" is NULL.
  */
@@ -323,22 +344,12 @@ parse_free_search(struct search *p)
 {
 	struct sref	*s;
 	struct sent	*sent;
-	struct dref	*d;
 
 	if (NULL == p)
 		return;
 
-	if (NULL != p->dst) {
-		while (NULL != (d = TAILQ_FIRST(&p->dst->drefq))) {
-			TAILQ_REMOVE(&p->dst->drefq, d, entries);
-			free(d->name);
-			free(d);
-		}
-		free(p->dst->cname);
-		free(p->dst);
-	}
-
-	parse_free_aggr(p->aggr);
+	ort_config_free_distinct(p->dst);
+	ort_config_free_aggr(p->aggr);
 	parse_free_ordq(&p->ordq);
 	parse_free_group(p->group);
 

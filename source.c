@@ -320,15 +320,12 @@ static void
 gen_strct_func_iter(const struct config *cfg,
 	const struct search *s, size_t num)
 {
-	const struct sent *sent;
-	const struct sref *sr;
+	const struct sent  *sent;
+	const struct sref  *sr;
 	const struct strct *retstr;
-	size_t	 pos;
+	size_t	 	    pos;
 
-	assert(STYPE_ITERATE == s->type);
-
-	retstr = NULL != s->dst ? 
-		s->dst->strct : s->parent;
+	retstr = NULL != s->dst ? s->dst->strct : s->parent;
 
 	print_func_db_search(s, CFG_HAS_ROLES & cfg->flags, 0);
 	printf("\n"
@@ -996,6 +993,52 @@ gen_func_close(const struct config *cfg)
 	             "\tksql_free(p);");
 
 	puts("}\n"
+	     "");
+}
+
+/*
+ * Print out a counting/search function for an STYPE_COUNT.
+ */
+static void
+gen_strct_func_count(const struct config *cfg,
+	const struct search *s, size_t num)
+{
+	const struct sent  *sent;
+	const struct sref  *sr;
+	const struct strct *retstr;
+	size_t	 	    pos;
+
+	retstr = NULL != s->dst ? s->dst->strct : s->parent;
+
+	print_func_db_search(s, CFG_HAS_ROLES & cfg->flags, 0);
+	puts("\n"
+	     "{\n"
+	     "\tstruct ksqlstmt *stmt;\n"
+	     "\tint64_t val;");
+	if (CFG_HAS_ROLES & cfg->flags)
+		puts("\tstruct ksql *db = ctx->db;");
+
+	puts("");
+
+	gen_print_stmt_alloc(cfg, 1,
+		"STMT_%s_BY_SEARCH_%zu", 
+		s->parent->cname, num);
+
+	pos = 1;
+	TAILQ_FOREACH(sent, &s->sntq, entries) 
+		if (OPTYPE_ISBINARY(sent->op)) {
+			sr = TAILQ_LAST(&sent->srq, srefq);
+			gen_bindfunc(sr->field->type, pos++, 0);
+		}
+
+	puts("\tif (KSQL_ROW != ksql_stmt_step(stmt))\n"
+	     "\t\texit(EXIT_FAILURE);\n"
+	     "\tc = ksql_result_int(stmt, &val, 0);\n"
+	     "\tif (c != KSQL_OK)\n"
+	     "\t\texit(EXIT_FAILURE)\n"
+	     "\tksql_stmt_free(stmt);\n"
+	     "\treturn (uint64_t)tval;\n"
+	     "}\n"
 	     "");
 }
 
@@ -2107,10 +2150,12 @@ gen_funcs(const struct config *cfg, const struct strct *p,
 
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
-		if (STYPE_SEARCH == s->type)
+		if (s->type == STYPE_SEARCH)
 			gen_strct_func_srch(cfg, s, pos++);
-		else if (STYPE_LIST == s->type)
+		else if (s->type == STYPE_LIST)
 			gen_strct_func_list(cfg, s, pos++);
+		else if (s->type == STYPE_COUNT)
+			gen_strct_func_count(cfg, s, pos++);
 		else
 			gen_strct_func_iter(cfg, s, pos++);
 
@@ -2269,14 +2314,14 @@ static void
 gen_stmt(const struct strct *p)
 {
 	const struct search *s;
-	const struct sent *sent;
-	const struct sref *sr;
-	const struct field *f, *ff;
+	const struct sent   *sent;
+	const struct sref   *sr;
+	const struct field  *f, *ff;
 	const struct update *up;
-	const struct uref *ur;
-	const struct ord *ord;
-	int	 first, hastrail;
-	size_t	 pos, rc;
+	const struct uref   *ur;
+	const struct ord    *ord;
+	int		     first, hastrail, needquot;
+	size_t		     pos, rc;
 
 	/* 
 	 * We have a special query just for our unique fields.
@@ -2315,13 +2360,33 @@ gen_stmt(const struct strct *p)
 		printf("\t/* STMT_%s_BY_SEARCH_%zu */\n"
 		       "\t\"SELECT ", p->cname, pos++);
 
+		/* 
+		 * Juggle around the possibilities of...
+		 *   select count(*)
+		 *   select count(distinct --gen_stmt_schema-- )
+		 *   select --gen_stmt_schema--
+		 */
+
+		needquot = 0;
+		if (s->type == STYPE_COUNT)
+			printf("COUNT(");
 		if (s->dst) {
 			printf("DISTINCT ");
-			gen_stmt_schema(p, 1,
-				s->dst->strct, 
-				s->dst->cname);
-		} else
+			gen_stmt_schema(p, 1, 
+				s->dst->strct, s->dst->cname);
+			needquot = 1;
+		} else if (s->type != STYPE_COUNT) {
 			gen_stmt_schema(p, 1, p, NULL);
+			needquot = 1;
+		} else
+			printf("*");
+
+		if (needquot)
+			putchar('"');
+		if (s->type == STYPE_COUNT)
+			putchar(')');
+
+		printf(" FROM %s", p->name);
 
 		/* 
 		 * Whether anything is coming after the "FROM" clause,
@@ -2330,13 +2395,12 @@ gen_stmt(const struct strct *p)
 		 */
 
 		hastrail = 
-			(NULL != s->aggr && NULL != s->group) ||
-			(! TAILQ_EMPTY(&s->sntq)) ||
-			(! TAILQ_EMPTY(&s->ordq)) ||
-			(STYPE_SEARCH != s->type && s->limit > 0) ||
-			(STYPE_SEARCH != s->type && s->offset > 0);
-
-		printf("\" FROM %s", p->name);
+			(s->aggr != NULL && s->group != NULL) ||
+			(!TAILQ_EMPTY(&s->sntq)) ||
+			(!TAILQ_EMPTY(&s->ordq)) ||
+			(s->type != STYPE_SEARCH && s->limit > 0) ||
+			(s->type != STYPE_SEARCH && s->offset > 0);
+		
 		rc = 0;
 		gen_stmt_joins(p, p, NULL, &rc);
 

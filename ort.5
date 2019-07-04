@@ -1,6 +1,6 @@
 .\"	$Id$
 .\"
-.\" Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
+.\" Copyright (c) 2017--2019 Kristaps Dzonsons <kristaps@bsd.lv>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -21,15 +21,14 @@
 .Nm ort
 .Nd syntax for ort configuration
 .Sh DESCRIPTION
-The
+An
 .Nm
-configuration is used by the
-.Xr ort 1
-family to define an application's data types; the data itself; how
-the data is created, modified, and deleted; and how the data is queried.
+configuration is a human-readable data model format.
+It defines an application's data types, modifiers (creation,
+modification, deletion), queries, and access control.
 .Pp
-Configurations usually have one or more structures, zero or more
-enumerations and bitfields (types), and possibly a role definition.
+Configurations have one or more structures, zero or more user-defined
+types (enumerations, bitfields), and zero or more access control roles.
 .Bd -literal -offset indent
 config :== [ enum | bitfield | struct ]+ [ roles ]?
 roles :== "roles" "{"
@@ -37,6 +36,7 @@ roles :== "roles" "{"
 "};"
 struct :== "struct" structname "{"
   [ "comment" string_literal ";" ]?
+  [ "count" searchdata ";" ]*
   [ "delete" deletedata ";" ]*
   [ "field" fielddata ";" ]+
   [ "insert" ";" ]*
@@ -59,27 +59,29 @@ bitfield :== "bits" bitsname "{"
 "};"
 .Ed
 .Pp
-Structures describe data structures and operations on the data (queries,
-insertions, updates, deletions).
-The data is arranged in fields describing data types, validation
-constraints, and so on.
+Structures describe a class of data, such as a user, animal, product,
+etc.
+They consist of data and actions on that data: querying, creating,
+modifying, deleting.
+The data is specified in fields defining type, validation constraints,
+relations to other structures' data, and so on.
 .Pp
-Types consist of enumerations and bit-fields.
+Data types may be native (integers, strings, references) or user-defined
+enumerations or bit-fields.
 Enumerations define fixed constants used in data field definitions.
 Bit-fields are similar, except that they describe bits set within an
 single value.
-Both are used only for validation and for formatting output data.
 .Pp
-Lastly, roles stipulate the use of role-based access control on data
-operations.
+Roles define access control on data content and operations.
 .Pp
-Collectively, these are called a configuration's
-.Dq objects .
+Structures, user-defined types, and roles are collectively called a
+configuration's
+.Qq objects .
 .Sh SYNTAX
 In
 .Nm ,
-white-space serves only to separate tokens: it is discarded
-except as found within quoted literals.
+white-space separates tokens: it is discarded except as found within
+quoted literals.
 Thus, the following are identical except for the name:
 .Bd -literal -offset indent
 struct foo {
@@ -146,6 +148,7 @@ curly braces.
 .Bd -literal -offset indent
 "struct" structname "{"
   [ "comment" string_literal ";" ]?
+  [ "count" searchdata ";" ]*
   [ "delete" deletedata ";" ]*
   [ "field" fielddata ";" ]+
   [ "insert" ";" ]?
@@ -173,6 +176,7 @@ zero or more
 .Cm unique
 statements that create unique constraints on multiple fields;
 and zero or more
+.Cm count ,
 .Cm list ,
 .Cm iterate ,
 or
@@ -367,18 +371,18 @@ Query data with the
 .Cm search
 keyword to return an individual row (i.e., on a unique column or with a
 .Cm limit
-of one), the
+of one),
+.Cm count
+for the number of returned rows,
 .Cm list
-keyword for retrieving multiple results in an array, or the
+for retrieving multiple results in an array, or
 .Cm iterate
-keyword for iterating over each result as it's returned.
+for iterating over each result as it's returned.
 .Pp
-Queries are always by field and may be followed by parameters:
+Queries usually specify fields and may be followed by parameters:
 .Bd -literal -offset indent
 "struct" name "{"
-  [ "search" [term ["," term]*]? [":" [parms]* ]? ";" ]*
-  [ "list" [term ["," term]*]? [":" [parms]* ]? ";" ]*
-  [ "iterate" [term ["," term]*]? [":" [parms]* ]? ";" ]*
+  [ query [term ["," term]*]? [":" [parms]* ]? ";" ]*
 "};"
 .Ed
 .Pp

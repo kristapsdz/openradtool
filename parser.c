@@ -109,6 +109,7 @@ struct	parse {
 
 static	const char *const rolemapts[ROLEMAP__MAX] = {
 	"all", /* ROLEMAP_ALL */
+	"count", /* ROLEMAP_COUNT */
 	"delete", /* ROLEMAP_DELETE */
 	"insert", /* ROLEMAP_INSERT */
 	"iterate", /* ROLEMAP_ITERATE */
@@ -2567,25 +2568,25 @@ parse_config_roles(struct parse *p, struct strct *s)
 	 * the "cleanup" label, which cleans up the "rq" queue.
 	 */
 
-	if (TOK_IDENT != parse_next(p)) {
+	if (parse_next(p) != TOK_IDENT) {
 		parse_errx(p, "expected role name");
 		return;
-	} else if (0 == strcasecmp("none", p->last.string)) {
+	} else if (strcasecmp("none", p->last.string) == 0) {
 		parse_errx(p, "cannot assign \"none\" role");
 		return;
 	} 
 	
-	if ( ! roleset_alloc(p, &rq, p->last.string, NULL))
+	if (!roleset_alloc(p, &rq, p->last.string, NULL))
 		goto cleanup;
 
-	while ( ! PARSE_STOP(p) && TOK_LBRACE != parse_next(p)) {
-		if (TOK_COMMA != p->lasttype) {
+	while (!PARSE_STOP(p) && parse_next(p) != TOK_LBRACE) {
+		if (p->lasttype != TOK_COMMA) {
 			parse_errx(p, "expected comma");
 			goto cleanup;
-		} else if (TOK_IDENT != parse_next(p)) {
+		} else if (parse_next(p) != TOK_IDENT) {
 			parse_errx(p, "expected role name");
 			goto cleanup;
-		} else if (0 == strcasecmp(p->last.string, "none")) {
+		} else if (strcasecmp(p->last.string, "none") == 0) {
 			parse_errx(p, "cannot assign \"none\" role");
 			goto cleanup;
 		}
@@ -2595,13 +2596,13 @@ parse_config_roles(struct parse *p, struct strct *s)
 			parse_errx(p, "duplicate role name");
 			goto cleanup;
 		}
-		if ( ! roleset_alloc(p, &rq, p->last.string, NULL))
+		if (!roleset_alloc(p, &rq, p->last.string, NULL))
 			goto cleanup;
 	}
 
 	/* If something bad has happened, clean up. */
 
-	if (PARSE_STOP(p) || TOK_LBRACE != p->lasttype)
+	if (PARSE_STOP(p) || p->lasttype != TOK_LBRACE)
 		goto cleanup;
 
 	/* 
@@ -2613,16 +2614,16 @@ parse_config_roles(struct parse *p, struct strct *s)
 	 * different constraint types.
 	 */
 
-	while ( ! PARSE_STOP(p) && TOK_RBRACE != parse_next(p)) {
-		if (TOK_IDENT != p->lasttype) {
+	while (!PARSE_STOP(p) && parse_next(p) != TOK_RBRACE) {
+		if (p->lasttype != TOK_IDENT) {
 			parse_errx(p, "expected role constraint type");
 			goto cleanup;
 		}
 		for (type = 0; type < ROLEMAP__MAX; type++) 
-			if (0 == strcasecmp
-			    (p->last.string, rolemapts[type]))
+			if (strcasecmp
+			    (p->last.string, rolemapts[type]) == 0)
 				break;
-		if (ROLEMAP__MAX == type) {
+		if (type == ROLEMAP__MAX) {
 			parse_errx(p, "unknown role constraint type");
 			goto cleanup;
 		}
@@ -2631,26 +2632,26 @@ parse_config_roles(struct parse *p, struct strct *s)
 
 		/* Some constraints are named; some aren't. */
 
-		if (TOK_IDENT == p->lasttype) {
-			if (ROLEMAP_INSERT == type ||
-			    ROLEMAP_ALL == type) {
+		if (p->lasttype == TOK_IDENT) {
+			if (type == ROLEMAP_INSERT || 
+			    type == ROLEMAP_ALL) {
 				parse_errx(p, "unexpected "
 					"role constraint name");
 				goto cleanup;
 			}
-			if ( ! roleset_assign(p, s, 
+			if (!roleset_assign(p, s, 
 			    &rq, type, p->last.string))
 				goto cleanup;
 			parse_next(p);
-		} else if (TOK_SEMICOLON == p->lasttype) {
-			if (ROLEMAP_INSERT != type &&
-			    ROLEMAP_NOEXPORT != type &&
-			    ROLEMAP_ALL != type) {
+		} else if (p->lasttype == TOK_SEMICOLON) {
+			if (type != ROLEMAP_INSERT &&
+			    type != ROLEMAP_NOEXPORT &&
+			    type != ROLEMAP_ALL) {
 				parse_errx(p, "expected "
 					"role constraint name");
 				goto cleanup;
 			}
-			if ( ! roleset_assign(p, s, &rq, type, NULL))
+			if (!roleset_assign(p, s, &rq, type, NULL))
 				goto cleanup;
 		} else {
 			parse_errx(p, "expected role constraint "
@@ -2658,18 +2659,18 @@ parse_config_roles(struct parse *p, struct strct *s)
 			goto cleanup;
 		} 
 
-		if (TOK_SEMICOLON != p->lasttype) {
+		if (p->lasttype != TOK_SEMICOLON) {
 			parse_errx(p, "expected semicolon");
 			goto cleanup;
 		}
 	}
 
-	if ( ! PARSE_STOP(p) && TOK_RBRACE == p->lasttype)
-		if (TOK_SEMICOLON != parse_next(p))
+	if (!PARSE_STOP(p) && p->lasttype == TOK_RBRACE)
+		if (parse_next(p) != TOK_SEMICOLON)
 			parse_errx(p, "expected semicolon");
 
 cleanup:
-	while (NULL != (rs = TAILQ_FIRST(&rq))) {
+	while ((rs = TAILQ_FIRST(&rq)) != NULL) {
 		TAILQ_REMOVE(&rq, rs, entries);
 		free(rs->name);
 		free(rs);

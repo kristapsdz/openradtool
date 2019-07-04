@@ -100,6 +100,7 @@ static	const char *const optypes[OPTYPE__MAX] = {
 
 static	const char *const rolemapts[ROLEMAP__MAX] = {
 	"all", /* ROLEMAP_ALL */
+	"count", /* ROLEMAP_COUNT */
 	"delete", /* ROLEMAP_DELETE */
 	"insert", /* ROLEMAP_INSERT */
 	"iterate", /* ROLEMAP_ITERATE */
@@ -523,18 +524,19 @@ static int
 parse_write_rolemap(struct writer *w, const struct rolemap *p)
 {
 	const struct roleset *r;
-	size_t	 nf = 0;
+	size_t	 	      nf = 0;
 
-	if ( ! wputs(w, "\troles"))
+	if (!wputs(w, "\troles"))
 		return 0;
 
 	TAILQ_FOREACH(r, &p->setq, entries)
-		if ( ! wprint(w, "%s %s", nf++ ? "," : "", r->name))
+		if (!wprint(w, "%s %s", nf++ ? "," : "", r->name))
 			return 0;
-	if ( ! wprint(w, " { %s", rolemapts[p->type]))
+
+	if (!wprint(w, " { %s", rolemapts[p->type]))
 		return 0;
-	if (NULL != p->name)
-		if ( ! wprint(w, " %s", p->name))
+	if (p->name != NULL)
+		if (!wprint(w, " %s", p->name))
 			return 0;
 
 	return wputs(w, "; };\n");

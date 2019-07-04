@@ -313,6 +313,7 @@ enum	modtype {
  */
 enum	rolemapt {
 	ROLEMAP_ALL = 0, /* all */
+	ROLEMAP_COUNT, /* count */
 	ROLEMAP_DELETE, /* delete */
 	ROLEMAP_INSERT, /* insert */
 	ROLEMAP_ITERATE, /* iterate */

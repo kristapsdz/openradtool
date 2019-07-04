@@ -279,34 +279,35 @@ gen_func_update(const struct config *cfg, const struct update *up)
 static void
 gen_func_search(const struct config *cfg, const struct search *s)
 {
-	const struct sent *sent;
-	const struct sref *sr;
-	const struct strct *retstr;
-	size_t	 pos = 1;
+	const struct sent  *sent;
+	const struct sref  *sr;
+	const struct strct *rc;
+	size_t	 	    pos = 1;
 
-	retstr = NULL != s->dst ?
-		s->dst->strct : s->parent;
+	rc = NULL != s->dst ? s->dst->strct : s->parent;
 
-	if (NULL != s->doc)
+	if (s->doc != NULL)
 		print_commentt(0, COMMENT_C_FRAG_OPEN, s->doc);
-	else if (STYPE_SEARCH == s->type)
+	else if (s->type == STYPE_SEARCH)
 		print_commentv(0, COMMENT_C_FRAG_OPEN,
-			"Search for a specific %s.", 
-			retstr->name);
-	else if (STYPE_LIST == s->type)
+			"Search for a specific %s.", rc->name);
+	else if (s->type == STYPE_LIST)
 		print_commentv(0, COMMENT_C_FRAG_OPEN,
-			"Search for a set of %s.", 
-			retstr->name);
+			"Search for a set of %s.", rc->name);
+	else if (s->type == STYPE_COUNT)
+		print_commentv(0, COMMENT_C_FRAG_OPEN,
+			"Count results of a search in %s.", rc->name);
 	else
 		print_commentv(0, COMMENT_C_FRAG_OPEN,
-			"Iterate over search results in %s.", 
-			retstr->name);
+			"Iterate over results in %s.", rc->name);
 
-	if (NULL != s->dst) {
+	if (s->dst != NULL) {
 		print_commentv(0, COMMENT_C_FRAG,
 			"This %s distinct query results.",
-			STYPE_ITERATE == s->type ?
-			"iterates over" : "returns");
+			s->type == STYPE_ITERATE ?
+			"iterates over" : 
+			s->type == STYPE_COUNT ? 
+			"counts" : "returns");
 		if (s->dst->strct != s->parent) 
 			print_commentv(0, COMMENT_C_FRAG,
 				"The results are limited "
@@ -315,14 +316,14 @@ gen_func_search(const struct config *cfg, const struct search *s)
 				s->parent->name);
 	}
 
-	if (STYPE_ITERATE == s->type)
+	if (s->type == STYPE_ITERATE)
 		print_commentt(0, COMMENT_C_FRAG,
 			"This callback function is called during an "
 			"implicit transaction: thus, it should not "
 			"invoke any database modifications or risk "
 			"deadlock.");
 
-	if (STRCT_HAS_NULLREFS & retstr->flags) 
+	if ((rc->flags & STRCT_HAS_NULLREFS))
 		print_commentt(0, COMMENT_C_FRAG,
 			"This search involves nested null structure "
 			"linking, which involves multiple database "
@@ -334,15 +335,15 @@ gen_func_search(const struct config *cfg, const struct search *s)
 
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
 		sr = TAILQ_LAST(&sent->srq, srefq);
-		if (OPTYPE_NOTNULL == sent->op)
+		if (sent->op == OPTYPE_NOTNULL)
 			print_commentv(0, COMMENT_C_FRAG,
 				"\t%s (not an argument: "
 				"checked not null)", sent->fname);
-		else if (OPTYPE_ISNULL == sent->op)
+		else if (sent->op == OPTYPE_ISNULL)
 			print_commentv(0, COMMENT_C_FRAG,
 				"\t%s (not an argument: "
 				"checked is null)", sent->fname);
-		else if (FTYPE_PASSWORD == sr->field->type)
+		else if (sr->field->type == FTYPE_PASSWORD)
 			print_commentv(0, COMMENT_C_FRAG,
 				"\tv%zu: %s (pre-hashed password)", 
 				pos++, sent->fname);
@@ -352,22 +353,25 @@ gen_func_search(const struct config *cfg, const struct search *s)
 				sent->fname, optypes[sent->op]);
 	}
 
-	if (STYPE_SEARCH == s->type)
+	if (s->type == STYPE_SEARCH)
 		print_commentv(0, COMMENT_C_FRAG_CLOSE,
 			"Returns a pointer or NULL on fail.\n"
 			"Free the pointer with db_%s_free().",
-			retstr->name);
-	else if (STYPE_LIST == s->type)
+			rc->name);
+	else if (s->type == STYPE_LIST)
 		print_commentv(0, COMMENT_C_FRAG_CLOSE,
 			"Always returns a queue pointer.\n"
 			"Free this with db_%s_freeq().",
-			retstr->name);
+			rc->name);
+	else if (s->type == STYPE_COUNT)
+		print_commentt(0, COMMENT_C_FRAG_CLOSE,
+			"Returns the count of results.");
 	else
 		print_commentv(0, COMMENT_C_FRAG_CLOSE,
 			"Invokes the given callback with "
 			"retrieved data.");
 
-	print_func_db_search(s, CFG_HAS_ROLES & cfg->flags, 1);
+	print_func_db_search(s, (cfg->flags & CFG_HAS_ROLES), 1);
 	puts("");
 }
 

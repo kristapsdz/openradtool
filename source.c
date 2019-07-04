@@ -1013,6 +1013,7 @@ gen_strct_func_count(const struct config *cfg,
 	print_func_db_search(s, CFG_HAS_ROLES & cfg->flags, 0);
 	puts("\n"
 	     "{\n"
+	     "\tenum ksqlc c;\n"
 	     "\tstruct ksqlstmt *stmt;\n"
 	     "\tint64_t val;");
 	if (CFG_HAS_ROLES & cfg->flags)
@@ -1035,9 +1036,9 @@ gen_strct_func_count(const struct config *cfg,
 	     "\t\texit(EXIT_FAILURE);\n"
 	     "\tc = ksql_result_int(stmt, &val, 0);\n"
 	     "\tif (c != KSQL_OK)\n"
-	     "\t\texit(EXIT_FAILURE)\n"
+	     "\t\texit(EXIT_FAILURE);\n"
 	     "\tksql_stmt_free(stmt);\n"
-	     "\treturn (uint64_t)tval;\n"
+	     "\treturn (uint64_t)val;\n"
 	     "}\n"
 	     "");
 }

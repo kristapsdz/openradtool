@@ -34,14 +34,14 @@
 #include "ort.h"
 #include "extern.h"
 
-static	const char *const stypes[] = {
+static	const char *const stypes[STYPE__MAX] = {
 	"count", /* STYPE_COUNT */
 	"search", /* STYPE_SEARCH */
 	"list", /* STYPE_LIST */
 	"iterate", /* STYPE_ITERATE */
 };
 
-static	const char *const upts[] = {
+static	const char *const upts[UP__MAX] = {
 	"update", /* UP_MODIFY */
 	"delete", /* UP_DELETE */
 };

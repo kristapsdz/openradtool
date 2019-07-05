@@ -2512,30 +2512,35 @@ gen_stmt(const struct strct *p)
 		puts("\",");
 	}
 
-	/* 
-	 * Insertion of a new record.
-	 * TODO: DEFAULT_VALUES.
-	 */
+	/* Insertion of a new record. */
 
-	printf("\t/* STMT_%s_INSERT */\n"
-	       "\t\"INSERT INTO %s ", p->cname, p->name);
+	printf("\t/* STMT_%s_INSERT */\n", p->cname);
+	col = printf("\t\"INSERT INTO %s ", p->name);
 	first = 1;
+
 	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT == f->type ||
-		    FIELD_ROWID & f->flags)
+		if (f->type == FTYPE_STRUCT ||
+		    (f->flags & FIELD_ROWID))
 			continue;
-		if (first)
-			putchar('(');
-		printf("%s%s", first ? "" : ",", f->name);
+		if (col >= 72) {
+			printf("%s\"\n\t\t\"%s", 
+				first ? "" : ",",
+				first ? "(" : " ");
+			col = 16;
+		} else
+			putchar(first ? '(' : ',');
+		col += 1 + printf("%s", f->name);
 		first = 0;
 	}
 
-	if (0 == first) {
-		printf(") VALUES (");
+	if (first == 0) {
+		if ((col += printf(") ")) >= 72)
+			printf("\"\n\t\t\"");
+		printf("VALUES (");
 		first = 1;
 		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (FTYPE_STRUCT == f->type ||
-			    FIELD_ROWID & f->flags)
+			if (f->type == FTYPE_STRUCT ||
+			    (f->flags & FIELD_ROWID))
 				continue;
 			printf("%s?", first ? "" : ",");
 			first = 0;

@@ -765,7 +765,6 @@ main(int argc, char *argv[])
 	if (pledge("stdio rpath", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
-	/* Handle being called as ort-sql and -sqldiff. */
 
 	if (strcmp(getprogname(), "ort-sql") == 0) {
 		if (getopt(argc, argv, "") != -1)
@@ -821,6 +820,11 @@ main(int argc, char *argv[])
 
 		if (0 == confsz && 2 == argc)
 			confsz = dconfsz = confst = 1;
+
+		/* Need at least one configuration. */
+
+		if (confsz + dconfsz == 0)
+			goto usage;
 
 		confs = calloc(confsz, sizeof(FILE *));
 		dconfs = calloc(dconfsz, sizeof(FILE *));

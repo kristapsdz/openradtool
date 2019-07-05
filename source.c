@@ -2205,16 +2205,23 @@ gen_enum(const struct strct *p)
  * This will specify the schema of the top-level structure (pname is
  * NULL), then generate aliased schemas for all of the recursive
  * structures.
+ * It breaks lines depending upon the output position in "col".
  * See gen_stmt_joins().
  */
 static void
 gen_stmt_schema(const struct strct *orig, int first,
-	const struct strct *p, const char *pname)
+	const struct strct *p, const char *pname, size_t *col)
 {
 	const struct field *f;
 	const struct alias *a = NULL;
-	int	 c;
-	char	*name = NULL;
+	int	 	    c;
+	char		   *name = NULL;
+
+	*col += printf("\"%s ", !first ? ",\"" : "");
+	if (!first && *col >= 72) {
+		printf("\n\t\t");
+		*col = 16;
+	}
 
 	/* 
 	 * If applicable, looks up our alias and emit it as the alias
@@ -2222,16 +2229,14 @@ gen_stmt_schema(const struct strct *orig, int first,
 	 * Otherwise, use the table name itself.
 	 */
 
-	printf("\"%s ", 0 == first ? ",\"" : "");
-
-	if (NULL != pname) {
+	if (pname != NULL) {
 		TAILQ_FOREACH(a, &orig->aq, entries)
-			if (0 == strcasecmp(a->name, pname))
+			if (strcasecmp(a->name, pname) == 0)
 				break;
-		assert(NULL != a);
-		printf("DB_SCHEMA_%s(%s) ", p->cname, a->alias);
+		assert(a != NULL);
+		*col += printf("DB_SCHEMA_%s(%s) ", p->cname, a->alias);
 	} else
-		printf("DB_SCHEMA_%s(%s) ", p->cname, p->name);
+		*col += printf("DB_SCHEMA_%s(%s) ", p->cname, p->name);
 
 	/*
 	 * Recursive step.
@@ -2241,20 +2246,18 @@ gen_stmt_schema(const struct strct *orig, int first,
 	 */
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT != f->type ||
-		    FIELD_NULL & f->ref->source->flags)
+		if (f->type != FTYPE_STRUCT ||
+		    (f->ref->source->flags & FIELD_NULL))
 			continue;
 
-		if (NULL != pname) {
-			c = asprintf(&name, 
-				"%s.%s", pname, f->name);
+		if (pname != NULL) {
+			c = asprintf(&name, "%s.%s", pname, f->name);
 			if (c < 0)
 				err(EXIT_FAILURE, NULL);
-		} else if (NULL == (name = strdup(f->name)))
-			err(EXIT_FAILURE, NULL);
-
+		} else if ((name = strdup(f->name)) == NULL)
+			err(EXIT_FAILURE, "strdup");
 		gen_stmt_schema(orig, 0,
-			f->ref->target->parent, name);
+			f->ref->target->parent, name, col);
 		free(name);
 	}
 }
@@ -2322,7 +2325,7 @@ gen_stmt(const struct strct *p)
 	const struct uref   *ur;
 	const struct ord    *ord;
 	int		     first, hastrail, needquot;
-	size_t		     pos, rc;
+	size_t		     pos, rc, col;
 
 	/* 
 	 * We have a special query just for our unique fields.
@@ -2337,9 +2340,9 @@ gen_stmt(const struct strct *p)
 		if (FIELD_ROWID & f->flags ||
 		    FIELD_UNIQUE & f->flags) {
 			printf("\t/* STMT_%s_BY_UNIQUE_%s */\n"
-			       "\t\"SELECT ",
-				p->cname, f->name);
-			gen_stmt_schema(p, 1, p, NULL);
+			       "\t\"SELECT ", p->cname, f->name);
+			col = 16;
+			gen_stmt_schema(p, 1, p, NULL, &col);
 			printf("\" FROM %s", p->name);
 			rc = 0;
 			gen_stmt_joins(p, p, NULL, &rc);
@@ -2360,6 +2363,8 @@ gen_stmt(const struct strct *p)
 	TAILQ_FOREACH(s, &p->sq, entries) {
 		printf("\t/* STMT_%s_BY_SEARCH_%zu */\n"
 		       "\t\"SELECT ", p->cname, pos++);
+		col = 16;
+		needquot = 0;
 
 		/* 
 		 * Juggle around the possibilities of...
@@ -2368,16 +2373,15 @@ gen_stmt(const struct strct *p)
 		 *   select --gen_stmt_schema--
 		 */
 
-		needquot = 0;
 		if (s->type == STYPE_COUNT)
-			printf("COUNT(");
+			col += printf("COUNT(");
 		if (s->dst) {
-			printf("DISTINCT ");
-			gen_stmt_schema(p, 1, 
-				s->dst->strct, s->dst->cname);
+			col += printf("DISTINCT ");
+			gen_stmt_schema(p, 1, s->dst->strct, 
+				s->dst->cname, &col);
 			needquot = 1;
 		} else if (s->type != STYPE_COUNT) {
-			gen_stmt_schema(p, 1, p, NULL);
+			gen_stmt_schema(p, 1, p, NULL, &col);
 			needquot = 1;
 		} else
 			printf("*");

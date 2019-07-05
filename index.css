@@ -49,7 +49,6 @@ p.explain.left				{ text-align: left;
 					  color: #555;
 					  font-size: 130%; }
 #topicboxes .contents			{ opacity: 0.9; }
-#archive > header			{ padding-bottom: 24pt; }
 #breadcrumbs > *			{ display: inline-block; 
 					  vertical-align: top;
 					  font-size: 13pt;
@@ -60,7 +59,6 @@ p.explain.left				{ text-align: left;
 					  border-top: none;
 					  padding: 10pt 32pt;
 					  border-bottom-left-radius: 4pt; }
-#archive #header			{ margin-top: 24pt; }
 #header					{ margin-top: 6rem; 
 					  font-size: 16pt; }
 #header .intro				{ font-size: xx-large; 
@@ -77,6 +75,7 @@ h1					{ display: inline-block;
 					  font-size: inherit;
 					  margin: 0;
 					  font-weight: 500; }
+h1 a					{ color: #555; }
 h2					{ font-size: 140%; 
 					  font-variant: small-caps;
 					  text-align: center;

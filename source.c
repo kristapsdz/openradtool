@@ -2534,15 +2534,25 @@ gen_stmt(const struct strct *p)
 	}
 
 	if (first == 0) {
-		if ((col += printf(") ")) >= 72)
+		if ((col += printf(") ")) >= 72) {
 			printf("\"\n\t\t\"");
-		printf("VALUES (");
+			col = 17;
+		}
+		col += printf("VALUES ");
 		first = 1;
 		TAILQ_FOREACH(f, &p->fq, entries) {
 			if (f->type == FTYPE_STRUCT ||
 			    (f->flags & FIELD_ROWID))
 				continue;
-			printf("%s?", first ? "" : ",");
+			if (col >= 72) {
+				printf("%s\"\n\t\t\"%s", 
+					first ? "" : ",",
+					first ? "(" : " ");
+				col = 16;
+			} else
+				putchar(first ? '(' : ',');
+			putchar('?');
+			col += 2;
 			first = 0;
 		}
 		puts(")\",");

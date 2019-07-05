@@ -10,12 +10,12 @@
 		<link rel="stylesheet" href="highlight.css" />
 		<link rel="stylesheet" href="index.css" />
 	</head>
-	<body lang="en" id="archive">
+	<body id="archive">
 		<header>
 			<section id="breadcrumbs">
 				<div>
 					<div>
-						BSD.lv tools for BCHS: 
+						BSD.lv tools for <a href="https://learnbchs.org">BCHS</a>: 
 						<a href="https://kristaps.bsd.lv/kcgi">kcgi</a>, 
 						<a href="https://kristaps.bsd.lv/ksql">ksql</a>, 
 						<a href="https://kristaps.bsd.lv/openradtool">ort</a>
@@ -23,7 +23,7 @@
 				</div>
 			</section>
 			<section id="header">
-				<div>
+				<div class="intro">
 					<h1 itemprop="name"><a href="index.html">openradtool</a></h1> 
 					<span>&#8212; 
 						<span>application source generator</span>

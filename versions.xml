@@ -3,6 +3,23 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.7.6</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2019-07-05">2019-07-05</time>
+		</header>
+		<aside>
+			<p>
+				Add the <code>count</code> query type and its associated C API
+				functions.
+				This is essentiallythe <code>COUNT</code> SQL command.
+				It has its own role entry like the other query types.
+				Clean up whitespace and line breaking in the C API output, while
+				here.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.7.5</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2019-07-01">2019-07-01</time>

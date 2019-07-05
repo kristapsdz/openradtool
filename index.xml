@@ -58,14 +58,14 @@
 						<p class="intro">
 							<span class="nm">openradtool</span> (<q class="nm">ort</q>) is an <a
 								href="https://opensource.org/licenses/ISC">open source</a> RAD tool generating
-							front-end code (JavaScript, TypeScript) and back-end code (SQL, C) for your application,
-							leaving you to develop your <q>middle-tier</q> business and presentation logic.
+							front-end code (JavaScript, TypeScript) and back-end code (SQL, C) from a
+							straightforward data model configuration.
 						</p>
 						<p>
-							The system consists of a set of source generators, each accepting a single <a
-								href="ort.5.html">ort(5)</a> configuration file that describes your data and how
-							it is accessed, modified, created, deleted.  The generated sources have a strong focus
-							on security, documentation, and auditability.
+							The system consists of a set of source generators or analytical tools, each accepting a
+							<a href="ort.5.html">ort(5)</a> configuration that describes your data and how it is
+							accessed, modified, created, deleted.  Generated sources have a strong focus on
+							security, documentation, and auditability.
 						</p>
 					</div>
 				</div>
@@ -163,7 +163,7 @@
 						section.
 					</p>
 					<p>
-						<em>Note: this validation is superfluous, as all other tools validate during parse.</em>
+						<em>This validation is superfluous, as all other tools validate during parse.</em>
 					</p>
 				</section>
 				<h2 id="gen-c">

@@ -722,7 +722,7 @@ gen_diff(const struct config *cfg,
 				break;
 		if (NULL == s && destruct) {
 			printf("DROP TABLE %s;\n", ds->name);
-		} else if (NULL == s) {
+		} else if (s == NULL) {
 			gen_warnx(&ds->pos, "table was dropped");
 			errors++;
 		} else
@@ -740,7 +740,7 @@ gen_diff(const struct config *cfg,
 		TAILQ_FOREACH(ds, &dcfg->sq, entries) {
 			if (strcasecmp(s->name, ds->name))
 				continue;
-			errors += ! gen_diff_uniques_new(s, ds);
+			errors += !gen_diff_uniques_new(s, ds);
 		}
 	TAILQ_FOREACH(ds, &dcfg->sq, entries) 
 		TAILQ_FOREACH(s, &cfg->sq, entries) {
@@ -762,13 +762,13 @@ main(int argc, char *argv[])
 			  confst = 0;
 
 #if HAVE_PLEDGE
-	if (-1 == pledge("stdio rpath", NULL))
+	if (pledge("stdio rpath", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 	/* Handle being called as ort-sql and -sqldiff. */
 
-	if (0 == strcmp(getprogname(), "ort-sql")) {
-		if (-1 != getopt(argc, argv, ""))
+	if (strcmp(getprogname(), "ort-sql") == 0) {
+		if (getopt(argc, argv, "") != -1)
 			goto usage;
 
 		argc -= optind;
@@ -776,18 +776,19 @@ main(int argc, char *argv[])
 
 		confsz = (size_t)argc;
 		confs = calloc(confsz, sizeof(FILE *));
-		if (NULL == confs)
-			err(EXIT_FAILURE, NULL);
+		if (confs == NULL)
+			err(EXIT_FAILURE, "calloc");
+
 		for (i = 0; i < confsz; i++) {
 			confs[i] = fopen(argv[i], "r");
-			if (NULL == confs[i]) {
+			if (confs[i] == NULL) {
 				warn("%s", argv[i]);
 				goto out;
 			}
 		}
-	} else if (0 == strcmp(getprogname(), "ort-sqldiff")) {
+	} else if (strcmp(getprogname(), "ort-sqldiff") == 0) {
 		diff = 1;
-		while (-1 != (c = getopt(argc, argv, "d")))
+		while ((c = getopt(argc, argv, "d")) != -1)
 			switch (c) {
 			case 'd':
 				destruct = 1;
@@ -802,7 +803,7 @@ main(int argc, char *argv[])
 		/* Read up until "-f" (or argc) for old configs. */
 
 		for (dconfsz = 0; dconfsz < (size_t)argc; dconfsz++)
-			if (0 == strcmp(argv[dconfsz], "-f"))
+			if (strcmp(argv[dconfsz], "-f") == 0)
 				break;
 		
 		/* If we have >2 w/o -f, error (which old/new?). */
@@ -823,8 +824,8 @@ main(int argc, char *argv[])
 
 		confs = calloc(confsz, sizeof(FILE *));
 		dconfs = calloc(dconfsz, sizeof(FILE *));
-		if (NULL == confs || NULL == dconfs)
-			err(EXIT_FAILURE, NULL);
+		if (confs == NULL || dconfs == NULL)
+			err(EXIT_FAILURE, "calloc");
 
 		for (i = 0; i < dconfsz; i++) {
 			dconfs[i] = fopen(argv[i], "r");
@@ -833,11 +834,11 @@ main(int argc, char *argv[])
 				goto out;
 			}
 		}
-		if (i < (size_t)argc && 0 == strcmp(argv[i], "-f"))
+		if (i < (size_t)argc && strcmp(argv[i], "-f") == 0)
 			i++;
 		for (j = 0; i < (size_t)argc; j++, i++) {
 			confs[j] = fopen(argv[i], "r");
-			if (NULL == confs[j]) {
+			if (confs[j] == NULL) {
 				warn("%s", argv[i]);
 				goto out;
 			}
@@ -845,7 +846,7 @@ main(int argc, char *argv[])
 	}
 
 #if HAVE_PLEDGE
-	if (-1 == pledge("stdio", NULL))
+	if (pledge("stdio", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 
@@ -854,28 +855,33 @@ main(int argc, char *argv[])
 	cfg = ort_config_alloc();
 	dcfg = ort_config_alloc();
 
+	/* Parse the input files themselves. */
+
 	for (i = 0; i < confsz; i++)
-		if ( ! ort_parse_file_r(cfg, confs[i], argv[confst + i]))
+		if (!ort_parse_file_r(cfg, confs[i], argv[confst + i]))
 			goto out;
-
-	if (0 == confsz &&
-	    ! ort_parse_file_r(cfg, stdin, "<stdin>"))
-			goto out;
-
 	for (i = 0; i < dconfsz; i++)
-		if ( ! ort_parse_file_r(dcfg, dconfs[i], argv[i]))
+		if (!ort_parse_file_r(dcfg, dconfs[i], argv[i]))
 			goto out;
 
-	if (0 == dconfsz && diff &&
-	    ! ort_parse_file_r(dcfg, stdin, "<stdin>"))
-			goto out;
+	/* If we don't have input, parse from stdin. */
 
-	if ( ! ort_parse_close(cfg))
+	if (confsz == 0 && !ort_parse_file_r(cfg, stdin, "<stdin>"))
 		goto out;
-	if (diff && ! ort_parse_close(dcfg))
+	if (dconfsz == 0 && diff &&
+	    !ort_parse_file_r(dcfg, stdin, "<stdin>"))
 		goto out;
 
-	if ( ! diff) {
+	/* Linker. */
+
+	if (!ort_parse_close(cfg))
+		goto out;
+	if (diff && !ort_parse_close(dcfg))
+		goto out;
+	
+	/* Generate output. */
+
+	if (!diff) {
 		gen_sql(&cfg->sq);
 		rc = 1;
 	} else 
@@ -883,10 +889,14 @@ main(int argc, char *argv[])
 
 out:
 	for (i = 0; i < confsz; i++)
-		if (NULL != confs[i] && EOF == fclose(confs[i]))
+		if (confs[i] != NULL && 
+		    confs[i] != stdin &&
+		    fclose(confs[i]) == EOF)
 			warn("%s", argv[confst + i]);
 	for (i = 0; i < dconfsz; i++)
-		if (NULL != dconfs[i] && EOF == fclose(dconfs[i]))
+		if (dconfs[i] != NULL && 
+		    dconfs[i] != stdin &&
+		    fclose(dconfs[i]) == EOF)
 			warn("%s", argv[i]);
 	free(confs);
 	free(dconfs);
@@ -896,15 +906,14 @@ out:
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 
 usage:
-	if ( ! diff) {
+	if (!diff) {
 		fprintf(stderr, 
-			"usage: %s [config...]\n",
-			getprogname());
+			"usage: %s [config...]\n", getprogname());
 		return EXIT_FAILURE;
 	}
 
 	fprintf(stderr, 
-		"usage: %s [-d] oldconfig [config]\n"
+		"usage: %s [-d] oldconfig [config...]\n"
 		"       %s [-d] [oldconfig...] -f [config...]\n",
 		getprogname(), getprogname());
 	return EXIT_FAILURE;

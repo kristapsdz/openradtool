@@ -186,7 +186,7 @@ gen_struct(const struct config *cfg, const struct strct *p)
 	if (STRCT_HAS_QUEUE & p->flags)
 		printf("\tTAILQ_ENTRY(%s) _entries;\n", p->name);
 
-	if (CFG_HAS_ROLES & cfg->flags) {
+	if (!TAILQ_EMPTY(&cfg->rq)) {
 		print_commentt(1, COMMENT_C,
 			"Private data used for role analysis.");
 		puts("\tstruct ort_store *priv_store;");
@@ -269,7 +269,7 @@ gen_func_update(const struct config *cfg, const struct update *up)
 	print_commentt(0, COMMENT_C_FRAG_CLOSE,
 		"Returns zero on constraint violation, <0 on "
 		"error, >0 on success");
-	print_func_db_update(up, CFG_HAS_ROLES & cfg->flags, 1);
+	print_func_db_update(up, !TAILQ_EMPTY(&cfg->rq), 1);
 	puts("");
 }
 
@@ -371,7 +371,7 @@ gen_func_search(const struct config *cfg, const struct search *s)
 			"Invokes the given callback with "
 			"retrieved data.");
 
-	print_func_db_search(s, (cfg->flags & CFG_HAS_ROLES), 1);
+	print_func_db_search(s, !TAILQ_EMPTY(&cfg->rq), 1);
 	puts("");
 }
 
@@ -405,7 +405,7 @@ gen_funcs_dbin(const struct config *cfg, const struct strct *p)
 	 * expose if we have roles defined.
 	 */
 
-	if ( ! (CFG_HAS_ROLES & cfg->flags)) {
+	if (TAILQ_EMPTY(&cfg->rq)) {
 		print_commentv(0, COMMENT_C, 
 		       "Fill in a %s from an open statement \"stmt\".\n"
 		       "This starts grabbing results from \"pos\", "
@@ -443,7 +443,7 @@ gen_funcs_dbin(const struct config *cfg, const struct strct *p)
 		print_commentt(0, COMMENT_C_FRAG_CLOSE,
 			"Returns the new row's identifier on "
 			"success or <0 otherwise.");
-		print_func_db_insert(p, CFG_HAS_ROLES & cfg->flags, 1);
+		print_func_db_insert(p, !TAILQ_EMPTY(&cfg->rq), 1);
 		puts("");
 	}
 
@@ -593,15 +593,15 @@ gen_func_trans(const struct config *cfg)
 		"If \"mode\" is <0, the transaction starts in a "
 		"write-pending, where no other locks can be held "
 		"at the same time.");
-	print_func_db_trans_open(CFG_HAS_ROLES & cfg->flags, 1);
+	print_func_db_trans_open(!TAILQ_EMPTY(&cfg->rq), 1);
 	puts("");
 	print_commentt(0, COMMENT_C,
 		"Roll-back an open transaction.");
-	print_func_db_trans_rollback(CFG_HAS_ROLES & cfg->flags, 1);
+	print_func_db_trans_rollback(!TAILQ_EMPTY(&cfg->rq), 1);
 	puts("");
 	print_commentt(0, COMMENT_C,
 		"Commit an open transaction.");
-	print_func_db_trans_commit(CFG_HAS_ROLES & cfg->flags, 1);
+	print_func_db_trans_commit(!TAILQ_EMPTY(&cfg->rq), 1);
 	puts("");
 }
 
@@ -630,7 +630,7 @@ gen_func_open(const struct config *cfg, int splitproc)
 			"Note: if you're using a sandbox, you must "
 			"accommodate for the SQLite database within "
 			"process memory.");
-	if (CFG_HAS_ROLES & cfg->flags)
+	if (!TAILQ_EMPTY(&cfg->rq))
 		print_commentt(0, COMMENT_C_FRAG,
 			"Returns an opaque pointer or NULL on "
 			"memory exhaustion.");
@@ -642,7 +642,7 @@ gen_func_open(const struct config *cfg, int splitproc)
 		"The returned pointer must be closed with "
 		"db_close().");
 
-	print_func_db_open(CFG_HAS_ROLES & cfg->flags, 1);
+	print_func_db_open(!TAILQ_EMPTY(&cfg->rq), 1);
 	puts("");
 }
 
@@ -685,7 +685,7 @@ gen_func_close(const struct config *cfg)
 	print_commentt(0, COMMENT_C,
 		"Close the context opened by db_open().\n"
 		"Has no effect if \"p\" is NULL.");
-	print_func_db_close(CFG_HAS_ROLES & cfg->flags, 1);
+	print_func_db_close(!TAILQ_EMPTY(&cfg->rq), 1);
 	puts("");
 }
 
@@ -780,7 +780,7 @@ gen_c_header(const struct config *cfg, const char *guard, int json,
 			gen_struct(cfg, p);
 	}
 
-	if (dbin && ! (CFG_HAS_ROLES & cfg->flags)) {
+	if (dbin && TAILQ_EMPTY(&cfg->rq)) {
 		print_commentt(0, COMMENT_C,
 			"Define our table columns.\n"
 			"Use these when creating your own SQL "
@@ -869,7 +869,7 @@ gen_c_header(const struct config *cfg, const char *guard, int json,
 		gen_func_open(cfg, splitproc);
 		gen_func_trans(cfg);
 		gen_func_close(cfg);
-		if (CFG_HAS_ROLES & cfg->flags)
+		if (!TAILQ_EMPTY(&cfg->rq))
 			gen_func_roles(cfg);
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			gen_funcs_dbin(cfg, p);

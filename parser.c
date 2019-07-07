@@ -22,9 +22,6 @@
 
 #include <assert.h>
 #include <ctype.h>
-#if HAVE_ERR
-# include <err.h>
-#endif
 #include <errno.h>
 #include <inttypes.h>
 #include <stdarg.h>
@@ -117,166 +114,6 @@ static	const char *const rolemapts[ROLEMAP__MAX] = {
 	"search", /* ROLEMAP_SEARCH */
 	"update", /* ROLEMAP_UPDATE */
 	"noexport", /* ROLEMAP_NOEXPORT */
-};
-
-/*
- * Disallowed field names.
- * The SQL ones are from https://sqlite.org/lang_keywords.html.
- * FIXME: think about this more carefully, as in SQL, there are many
- * things that we can put into string literals.
- * FIXME: this is in config.c now. 
- */
-static	const char *const badidents[] = {
-	/* Things not allowed in C. */
-	"auto",
-	"break",
-	"case",
-	"char",
-	"const",
-	"continue",
-	"default",
-	"do",
-	"double",
-	"enum",
-	"extern",
-	"float",
-	"goto",
-	"long",
-	"register",
-	"short",
-	"signed",
-	"static",
-	"struct",
-	"typedef",
-	"union",
-	"unsigned",
-	"void",
-	"volatile",
-	/* Things not allowed in SQLite. */
-	"ABORT",
-	"ACTION",
-	"ADD",
-	"AFTER",
-	"ALL",
-	"ALTER",
-	"ANALYZE",
-	"AND",
-	"AS",
-	"ASC",
-	"ATTACH",
-	"AUTOINCREMENT",
-	"BEFORE",
-	"BEGIN",
-	"BETWEEN",
-	"BY",
-	"CASCADE",
-	"CASE",
-	"CAST",
-	"CHECK",
-	"COLLATE",
-	"COLUMN",
-	"COMMIT",
-	"CONFLICT",
-	"CONSTRAINT",
-	"CREATE",
-	"CROSS",
-	"CURRENT_DATE",
-	"CURRENT_TIME",
-	"CURRENT_TIMESTAMP",
-	"DATABASE",
-	"DEFAULT",
-	"DEFERRABLE",
-	"DEFERRED",
-	"DELETE",
-	"DESC",
-	"DETACH",
-	"DISTINCT",
-	"DROP",
-	"EACH",
-	"ELSE",
-	"END",
-	"ESCAPE",
-	"EXCEPT",
-	"EXCLUSIVE",
-	"EXISTS",
-	"EXPLAIN",
-	"FAIL",
-	"FOR",
-	"FOREIGN",
-	"FROM",
-	"FULL",
-	"GLOB",
-	"GROUP",
-	"HAVING",
-	"IF",
-	"IGNORE",
-	"IMMEDIATE",
-	"IN",
-	"INDEX",
-	"INDEXED",
-	"INITIALLY",
-	"INNER",
-	"INSERT",
-	"INSTEAD",
-	"INTERSECT",
-	"INTO",
-	"IS",
-	"ISNULL",
-	"JOIN",
-	"KEY",
-	"LEFT",
-	"LIKE",
-	"LIMIT",
-	"MATCH",
-	"NATURAL",
-	"NOT",
-	"NOTNULL",
-	"NULL",
-	"OF",
-	"OFFSET",
-	"ON",
-	"OR",
-	"ORDER",
-	"OUTER",
-	"PLAN",
-	"PRAGMA",
-	"PRIMARY",
-	"QUERY",
-	"RAISE",
-	"RECURSIVE",
-	"REFERENCES",
-	"REGEXP",
-	"REINDEX",
-	"RELEASE",
-	"RENAME",
-	"REPLACE",
-	"RESTRICT",
-	"RIGHT",
-	"ROLLBACK",
-	"ROW",
-	"SAVEPOINT",
-	"SELECT",
-	"SET",
-	"TABLE",
-	"TEMP",
-	"TEMPORARY",
-	"THEN",
-	"TO",
-	"TRANSACTION",
-	"TRIGGER",
-	"UNION",
-	"UNIQUE",
-	"UPDATE",
-	"USING",
-	"VACUUM",
-	"VALUES",
-	"VIEW",
-	"VIRTUAL",
-	"WHEN",
-	"WHERE",
-	"WITH",
-	"WITHOUT",
-	NULL
 };
 
 static	const char *const modtypes[MODTYPE__MAX] = {
@@ -413,22 +250,18 @@ buf_push(struct parse *p, char c)
 }
 
 /*
- * Iterate through the list of reserved keywords and return non-zero if
- * the current string (case insensitively) matches, zero otherwise.
- * FIXME: this is in config.c now. 
+ * Call through to ort_check_ident with position.
  */
 static int
 check_badidents(struct parse *p, const char *s)
 {
-	const char *const *cp;
+	struct pos	 pos;
 
-	for (cp = badidents; *cp != NULL; cp++)
-		if (strcasecmp(*cp, s) == 0) {
-			parse_errx(p, "illegal identifier");
-			return(0);
-		}
+	pos.fname = p->fname;
+	pos.line = p->line;
+	pos.column = p->column;
 
-	return(1);
+	return ort_check_ident(p->cfg, &pos, s);
 }
 
 /* FIXME: this is in config.c now. */
@@ -2406,7 +2239,7 @@ parse_enum_data(struct parse *p, struct enm *e)
 		if (TOK_IDENT != parse_next(p)) {
 			parse_errx(p, "expected enum item name");
 			return;
-		} else if ( ! check_badidents(p, p->last.string))
+		} else if (!check_badidents(p, p->last.string))
 			return;
 
 		if (0 == strcasecmp(p->last.string, "format")) {
@@ -2898,7 +2731,7 @@ parse_bitidx(struct parse *p, struct bitf *b)
 		if (TOK_IDENT != parse_next(p)) {
 			parse_errx(p, "expected item name");
 			return;
-		} else if ( ! check_badidents(p, p->last.string))
+		} else if (!check_badidents(p, p->last.string))
 			return;
 
 		TAILQ_FOREACH(bi, &b->bq, entries) {
@@ -2949,8 +2782,8 @@ parse_bitfield(struct parse *p)
 	 * Duplicates are for both structures and enumerations.
 	 */
 
-	if ( ! check_dupetoplevel(p, p->last.string) ||
-	     ! check_badidents(p, p->last.string))
+	if (!check_dupetoplevel(p, p->last.string) ||
+	    !check_badidents(p, p->last.string))
 		return;
 
 	if (NULL == (b = calloc(1, sizeof(struct bitf)))) {
@@ -2990,8 +2823,8 @@ parse_enum(struct parse *p)
 	 * Duplicates are for both structures and enumerations.
 	 */
 
-	if ( ! check_dupetoplevel(p, p->last.string) ||
-	     ! check_badidents(p, p->last.string))
+	if (!check_dupetoplevel(p, p->last.string) ||
+	    !check_badidents(p, p->last.string))
 		return;
 
 	if (NULL == (e = calloc(1, sizeof(struct enm)))) {
@@ -3089,10 +2922,10 @@ parse_role(struct parse *p, struct role *parent)
 	    0 == strcasecmp(p->last.string, "all")) {
 		parse_errx(p, "reserved role name");
 		return;
-	} else if ( ! check_rolename(&p->cfg->rq, p->last.string)) {
+	} else if (!check_rolename(&p->cfg->rq, p->last.string)) {
 		parse_errx(p, "duplicate role name");
 		return;
-	} else if ( ! check_badidents(p, p->last.string))
+	} else if (!check_badidents(p, p->last.string))
 		return;
 
 	if (NULL == (r = role_alloc(p, p->last.string, parent)))

@@ -856,8 +856,9 @@ main(int argc, char *argv[])
 
 	assert(confsz + dconfsz > 0 || ! diff);
 
-	cfg = ort_config_alloc();
-	dcfg = ort_config_alloc();
+	if ((cfg = ort_config_alloc()) == NULL ||
+	    (dcfg = ort_config_alloc()) == NULL)
+		goto out;
 
 	/* Parse the input files themselves. */
 

@@ -927,7 +927,8 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	cfg = ort_config_alloc();
+	if ((cfg = ort_config_alloc()) == NULL)
+		goto out;
 
 	for (i = 0; i < confsz; i++)
 		if ( ! ort_parse_file_r(cfg, confs[i], argv[i]))

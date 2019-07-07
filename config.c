@@ -22,9 +22,6 @@
 
 #include <assert.h>
 #include <ctype.h>
-#if HAVE_ERR
-# include <err.h>
-#endif
 #include <errno.h>
 #include <inttypes.h>
 #include <stdarg.h>
@@ -199,6 +196,25 @@ static	const char *const badidents[] = {
 	"WITHOUT",
 	NULL
 };
+
+/*
+ * See if the given "name" is a reserved identifier.
+ */
+int
+ort_check_ident(struct config *cfg,
+	const struct pos *pos, const char *name)
+{
+	const char *const *cp;
+
+	for (cp = badidents; NULL != *cp; cp++)
+		if (strcasecmp(*cp, name) == 0) {
+			ort_config_msg(cfg, MSGTYPE_ERROR, __func__,
+				0, pos, "reserved identifier");
+			return 0;
+		}
+
+	return 1;
+}
 
 /*
  * Free a field entity.
@@ -868,13 +884,21 @@ ort_config_free(struct config *cfg)
 	free(cfg);
 }
 
+/*
+ * Allocate a config object or return NULL on failure.
+ * The allocated object, on success, is loaded with a single default
+ * language and that's it.
+ */
 struct config *
 ort_config_alloc(void)
 {
 	struct config	*cfg;
 
-	if (NULL == (cfg = calloc(1, sizeof(struct config))))
-		err(EXIT_FAILURE, NULL);
+	if ((cfg = calloc(1, sizeof(struct config))) == NULL) {
+		ort_config_msg(NULL, MSGTYPE_FATAL, 
+			"config", errno, NULL, NULL);
+		return NULL;
+	}
 
 	TAILQ_INIT(&cfg->sq);
 	TAILQ_INIT(&cfg->eq);
@@ -886,17 +910,33 @@ ort_config_alloc(void)
 	 * This must always exist.
 	 */
 
-	cfg->langs = calloc(1, sizeof(char *));
-	if (NULL == cfg->langs)
-		err(EXIT_FAILURE, NULL);
-	cfg->langs[0] = strdup("");
-	if (NULL == cfg->langs[0])
-		err(EXIT_FAILURE, NULL);
+	if ((cfg->langs = calloc(1, sizeof(char *))) == NULL) {
+		ort_config_msg(NULL, MSGTYPE_FATAL, 
+			"config", errno, NULL, NULL);
+		free(cfg);
+		return NULL;
+	} else if ((cfg->langs[0] = strdup("")) == NULL) {
+		ort_config_msg(NULL, MSGTYPE_FATAL, 
+			"config", errno, NULL, NULL);
+		free(cfg->langs);
+		free(cfg);
+		return NULL;
+	}
 	cfg->langsz = 1;
-
 	return cfg;
 }
 
+/*
+ * Internal logging function: logs to stderr and (optionally) queues
+ * message.
+ * This accepts an optionally-NULL "msg" at optionally-NULL "pos" with
+ * errno "er" or zero (only recognised on MSGTYPE_FATAL).
+ * The "chan" value may not be NULL.
+ * If "cfg" is not NULL, this enqueues the message into the "msgs" array
+ * for that configuration.
+ * The "msg" pointer will be freed if "cfg" is NULL, as otherwise its
+ * ownership is transferred to the "msgs" array.
+ */
 static void
 ort_config_log(struct config *cfg, enum msgtype type, 
 	const char *chan, int er, const struct pos *pos, char *msg)
@@ -904,52 +944,53 @@ ort_config_log(struct config *cfg, enum msgtype type,
 	void		*pp;
 	struct msg	*m;
 
-	pp = reallocarray(cfg->msgs, 
-		cfg->msgsz + 1, sizeof(struct msg));
-
-	/* Well, shit. */
-	if (NULL == pp) {
-		free(msg);
-		return;
-	}
-
-	cfg->msgs = pp;
-	m = &cfg->msgs[cfg->msgsz++];
-	memset(m, 0, sizeof(struct msg));
-
-	m->type = type;
-	m->er = er;
-	if (NULL != pos)
-		m->pos = *pos;
-	if (NULL != msg)
+	if (cfg != NULL) {
+		pp = reallocarray(cfg->msgs, 
+			cfg->msgsz + 1, sizeof(struct msg));
+		/* Well, shit. */
+		if (NULL == pp) {
+			free(msg);
+			return;
+		}
+		cfg->msgs = pp;
+		m = &cfg->msgs[cfg->msgsz++];
+		memset(m, 0, sizeof(struct msg));
+		m->type = type;
+		m->er = er;
 		m->buf = msg;
+		if (pos != NULL)
+			m->pos = *pos;
+	}
 
 	/* Now we also print the message to stderr. */
 
-	if (NULL != pos && NULL != pos->fname && pos->line > 0)
+	if (pos != NULL && pos->fname != NULL && pos->line > 0)
 		fprintf(stderr, "%s:%zu:%zu: %s %s: ", 
 			pos->fname, pos->line, pos->column, 
-			chan, msgtypes[m->type]);
-	else if (NULL != pos && NULL != pos->fname)
+			chan, msgtypes[type]);
+	else if (pos != NULL && pos->fname != NULL)
 		fprintf(stderr, "%s: %s %s: ", 
-			pos->fname, chan, msgtypes[m->type]);
+			pos->fname, chan, msgtypes[type]);
 	else 
-		fprintf(stderr, "%s %s: ", chan, msgtypes[m->type]);
+		fprintf(stderr, "%s %s: ", chan, msgtypes[type]);
 
-	if (NULL != m->buf)
-		fputs(m->buf, stderr);
+	if (msg != NULL)
+		fputs(msg, stderr);
 
-	if (MSGTYPE_FATAL == m->type)
-		fprintf(stderr, "%s%s", NULL != m->buf ? 
-			": " : "", strerror(m->er)); 
+	if (type == MSGTYPE_FATAL)
+		fprintf(stderr, "%s%s", 
+			msg != NULL ? ": " : "", strerror(er)); 
 
 	fputc('\n', stderr);
+
+	if (cfg == NULL)
+		free(msg);
 }
 
 /*
  * Generic message formatting (va_list version).
- * Puts all messages into the message array and prints them to stderr as
- * well.
+ * Puts all messages into the message array (if "cfg" isn't NULL) and
+ * prints them to stderr as well.
  * On memory exhaustion, does nothing.
  */
 void
@@ -959,15 +1000,15 @@ ort_config_msgv(struct config *cfg, enum msgtype type,
 {
 	char	*buf = NULL;
 
-	if (NULL != fmt && vasprintf(&buf, fmt, ap) < 0)
+	if (fmt != NULL && vasprintf(&buf, fmt, ap) == -1)
 		return;
 	ort_config_log(cfg, type, chan, er, pos, buf);
 }
 
 /*
  * Generic message formatting.
- * Puts all messages into the message array and prints them to stderr as
- * well.
+ * Puts all messages into the message array if ("cfg" isn't NULL) and
+ * prints them to stderr as well.
  * On memory exhaustion, does nothing.
  */
 void
@@ -977,7 +1018,7 @@ ort_config_msg(struct config *cfg, enum msgtype type,
 {
 	va_list	 ap;
 
-	if (NULL == fmt) {
+	if (fmt == NULL) {
 		ort_config_log(cfg, type, chan, er, pos, NULL);
 		return;
 	}

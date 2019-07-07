@@ -198,7 +198,7 @@ gen_print_stmt_alloc(const struct config *cfg,
 		err(EXIT_FAILURE, NULL);
 	va_end(ap);
 
-	if (CFG_HAS_ROLES & cfg->flags)
+	if (!TAILQ_EMPTY(&cfg->rq))
 		printf("%.*sksql_stmt_alloc(db, &stmt, "
 			"NULL, %s);\n", tabsz, tabs, buf);
 	else
@@ -327,12 +327,12 @@ gen_strct_func_iter(const struct config *cfg,
 
 	retstr = NULL != s->dst ? s->dst->strct : s->parent;
 
-	print_func_db_search(s, CFG_HAS_ROLES & cfg->flags, 0);
+	print_func_db_search(s, !TAILQ_EMPTY(&cfg->rq), 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
 	       "\tstruct %s p;\n", retstr->name);
-	if (CFG_HAS_ROLES & cfg->flags)
+	if (!TAILQ_EMPTY(&cfg->rq))
 		puts("\tstruct ksql *db = ctx->db;");
 
 	puts("");
@@ -351,12 +351,11 @@ gen_strct_func_iter(const struct config *cfg,
 	printf("\twhile (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
 	       "\t\tdb_%s_fill_r(%s&p, stmt, NULL);\n",
 	       retstr->name,
-	       CFG_HAS_ROLES & cfg->flags ? "ctx, " : "");
+	       (!TAILQ_EMPTY(&cfg->rq)) ? "ctx, " : "");
 	if (STRCT_HAS_NULLREFS & retstr->flags)
 	       printf("\t\tdb_%s_reffind(%s&p, db);\n", 
 		     retstr->name,
-		     CFG_HAS_ROLES & cfg->flags ? 
-		     "ctx, " : "");
+		     (!TAILQ_EMPTY(&cfg->rq)) ? "ctx, " : "");
 
 	/*
 	 * If we have any hashes, we're going to need to do the hash
@@ -410,14 +409,14 @@ gen_strct_func_list(const struct config *cfg,
 	retstr = NULL != s->dst ? 
 		s->dst->strct : s->parent;
 
-	print_func_db_search(s, CFG_HAS_ROLES & cfg->flags, 0);
+	print_func_db_search(s, !TAILQ_EMPTY(&cfg->rq), 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
 	       "\tstruct %s_q *q;\n"
 	       "\tstruct %s *p;\n",
 	       retstr->name, retstr->name);
-	if (CFG_HAS_ROLES & cfg->flags)
+	if (!TAILQ_EMPTY(&cfg->rq))
 		puts("\tstruct ksql *db = ctx->db;");
 
 	puts("");
@@ -455,11 +454,11 @@ gen_strct_func_list(const struct config *cfg,
 	       "\t\t}\n"
 	       "\t\tdb_%s_fill_r(%sp, stmt, NULL);\n",
 	       retstr->name, retstr->name,
-	       CFG_HAS_ROLES & cfg->flags ? "ctx, " : "");
+	       (!TAILQ_EMPTY(&cfg->rq)) ? "ctx, " : "");
 	if (STRCT_HAS_NULLREFS & retstr->flags)
 	       printf("\t\tdb_%s_reffind(%sp, db);\n",
 		      retstr->name,
-		      CFG_HAS_ROLES & cfg->flags ? 
+		      (!TAILQ_EMPTY(&cfg->rq)) ? 
 		      "ctx, " : "");
 
 	pos = 1;
@@ -747,13 +746,13 @@ gen_func_open(const struct config *cfg, int splitproc)
 	const struct strct *p;
 	size_t	i, shown;
 
-	print_func_db_open(CFG_HAS_ROLES & cfg->flags, 0);
+	print_func_db_open(!TAILQ_EMPTY(&cfg->rq), 0);
 
 	puts("{\n"
 	     "\tstruct ksqlcfg cfg;\n"
 	     "\tstruct ksql *db;");
 
-	if (CFG_HAS_ROLES & cfg->flags) {
+	if (!TAILQ_EMPTY(&cfg->rq)) {
 		/*
 		 * We need an complete count of all roles except the
 		 * "all" role, which cannot be entered or processed.
@@ -822,7 +821,7 @@ gen_func_open(const struct config *cfg, int splitproc)
 	else
 		puts("\tdb = ksql_alloc(&cfg);");
 
-	if (CFG_HAS_ROLES & cfg->flags)
+	if (!TAILQ_EMPTY(&cfg->rq))
 		puts("\tif (NULL == db) {\n"
 		     "\t\tfree(ctx);\n"
 		     "\t\treturn(NULL);\n"
@@ -834,7 +833,7 @@ gen_func_open(const struct config *cfg, int splitproc)
 
 	puts("\tksql_open(db, file);");
 
-	if (CFG_HAS_ROLES & cfg->flags) {
+	if (!TAILQ_EMPTY(&cfg->rq)) {
 		puts("\tctx->role = ROLE_default;\n"
 		     "\treturn(ctx);");
 	} else
@@ -927,7 +926,7 @@ static void
 gen_func_trans(const struct config *cfg)
 {
 
-	if (CFG_HAS_ROLES & cfg->flags) {
+	if (!TAILQ_EMPTY(&cfg->rq)) {
 		print_func_db_trans_open(1, 0);
 		puts("{\n"
 		     "\tif (mode < 0)\n"
@@ -980,11 +979,11 @@ static void
 gen_func_close(const struct config *cfg)
 {
 
-	print_func_db_close(CFG_HAS_ROLES & cfg->flags, 0);
+	print_func_db_close(!TAILQ_EMPTY(&cfg->rq), 0);
 	puts("{\n"
 	     "\tif (NULL == p)\n"
 	     "\t\treturn;");
-	if (CFG_HAS_ROLES & cfg->flags) {
+	if (!TAILQ_EMPTY(&cfg->rq)) {
 		puts("\tksql_close(p->db);\n"
 	             "\tksql_free(p->db);\n"
 		     "\tfree(p);");
@@ -1010,13 +1009,13 @@ gen_strct_func_count(const struct config *cfg,
 
 	retstr = NULL != s->dst ? s->dst->strct : s->parent;
 
-	print_func_db_search(s, CFG_HAS_ROLES & cfg->flags, 0);
+	print_func_db_search(s, !TAILQ_EMPTY(&cfg->rq), 0);
 	puts("\n"
 	     "{\n"
 	     "\tenum ksqlc c;\n"
 	     "\tstruct ksqlstmt *stmt;\n"
 	     "\tint64_t val;");
-	if (CFG_HAS_ROLES & cfg->flags)
+	if (!TAILQ_EMPTY(&cfg->rq))
 		puts("\tstruct ksql *db = ctx->db;");
 
 	puts("");
@@ -1061,13 +1060,13 @@ gen_strct_func_srch(const struct config *cfg,
 	retstr = NULL != s->dst ? 
 		s->dst->strct : s->parent;
 
-	print_func_db_search(s, CFG_HAS_ROLES & cfg->flags, 0);
+	print_func_db_search(s, !TAILQ_EMPTY(&cfg->rq), 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct ksqlstmt *stmt;\n"
 	       "\tstruct %s *p = NULL;\n",
 	       retstr->name);
-	if (CFG_HAS_ROLES & cfg->flags)
+	if (!TAILQ_EMPTY(&cfg->rq))
 		puts("\tstruct ksql *db = ctx->db;");
 
 	puts("");
@@ -1091,12 +1090,11 @@ gen_strct_func_srch(const struct config *cfg,
 	       "\t\t}\n"
 	       "\t\tdb_%s_fill_r(%sp, stmt, NULL);\n",
 	       retstr->name, retstr->name,
-	       CFG_HAS_ROLES & cfg->flags ? "ctx, " : "");
+	       (!TAILQ_EMPTY(&cfg->rq)) ? "ctx, " : "");
 	if (STRCT_HAS_NULLREFS & retstr->flags)
 	       printf("\t\tdb_%s_reffind(%sp, db);\n",
 		      retstr->name,
-	 	      CFG_HAS_ROLES & cfg->flags ?
-		      "ctx, " : "");
+	 	      (!TAILQ_EMPTY(&cfg->rq)) ? "ctx, " : "");
 
 	/*
 	 * If we have any hashes, we're going to need to do the hash
@@ -1171,13 +1169,13 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 	if (NULL == p->ins)
 		return;
 
-	print_func_db_insert(p, CFG_HAS_ROLES & cfg->flags, 0);
+	print_func_db_insert(p, !TAILQ_EMPTY(&cfg->rq), 0);
 
 	puts("\n"
 	     "{\n"
 	     "\tstruct ksqlstmt *stmt;\n"
 	     "\tint64_t id = -1;");
-	if (CFG_HAS_ROLES & cfg->flags)
+	if (!TAILQ_EMPTY(&cfg->rq))
 		puts("\tstruct ksql *db = ctx->db;");
 
 	/* We need temporary space for hash generation. */
@@ -1265,7 +1263,7 @@ gen_func_unfill(const struct config *cfg, const struct strct *p)
 {
 	const struct field *f;
 
-	print_func_db_unfill(p, CFG_HAS_ROLES & cfg->flags, 0);
+	print_func_db_unfill(p, !TAILQ_EMPTY(&cfg->rq), 0);
 	puts("\n"
 	     "{\n"
 	     "\tif (NULL == p)\n"
@@ -1281,7 +1279,7 @@ gen_func_unfill(const struct config *cfg, const struct strct *p)
 		default:
 			break;
 		}
-	if (CFG_HAS_ROLES & cfg->flags)
+	if (!TAILQ_EMPTY(&cfg->rq))
 		puts("\tfree(p->priv_store);");
 	puts("}\n"
 	     "");
@@ -1342,8 +1340,7 @@ gen_func_reffind(const struct config *cfg, const struct strct *p)
 
 	printf("static void\n"
 	       "db_%s_reffind(%sstruct %s *p, struct ksql *db)\n"
-	       "{\n", p->name, 
-	       CFG_HAS_ROLES & cfg->flags ? 
+	       "{\n", p->name, (!TAILQ_EMPTY(&cfg->rq)) ? 
 	       "struct ort *ctx, " : "", p->name);
 	if (NULL != f)
 		puts("\tstruct ksqlstmt *stmt;\n"
@@ -1366,7 +1363,7 @@ gen_func_reffind(const struct config *cfg, const struct strct *p)
 			       "\t\tassert(KSQL_ROW == c);\n"
 			       "\t\tdb_%s_fill_r(%s&p->%s, stmt, NULL);\n",
 			       f->ref->target->parent->name,
-			       CFG_HAS_ROLES & cfg->flags ?
+			       (!TAILQ_EMPTY(&cfg->rq)) ?
 			       "ctx, " : "", f->name);
 			printf("\t\tp->has_%s = 1;\n",
 				f->name);
@@ -1378,7 +1375,7 @@ gen_func_reffind(const struct config *cfg, const struct strct *p)
 			continue;
 		printf("\tdb_%s_reffind(%s&p->%s, db);\n", 
 			f->ref->target->parent->name, 
-			CFG_HAS_ROLES & cfg->flags ? 
+			(!TAILQ_EMPTY(&cfg->rq)) ? 
 			"ctx, " : "", f->name);
 	}
 
@@ -1403,19 +1400,16 @@ gen_func_fill_r(const struct config *cfg, const struct strct *p)
 	       "\tif (NULL == pos)\n"
 	       "\t\tpos = &i;\n"
 	       "\tdb_%s_fill(%sp, stmt, pos);\n",
-	       p->name, 
-	       CFG_HAS_ROLES & cfg->flags ?
-	       "struct ort *ctx, " : "",
-	       p->name, p->name,
-	       CFG_HAS_ROLES & cfg->flags ?
-	       "ctx, " : "");
+	       p->name, (!TAILQ_EMPTY(&cfg->rq)) ?
+	       "struct ort *ctx, " : "", p->name, p->name,
+	       (!TAILQ_EMPTY(&cfg->rq)) ? "ctx, " : "");
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if (FTYPE_STRUCT == f->type &&
 		    ! (FIELD_NULL & f->ref->source->flags))
 			printf("\tdb_%s_fill_r(%s&p->%s, "
 				"stmt, pos);\n", 
 				f->ref->tstrct, 
-				CFG_HAS_ROLES & cfg->flags ?
+				(!TAILQ_EMPTY(&cfg->rq)) ?
 				"ctx, " : "", f->name);
 	puts("}\n"
 	     "");
@@ -1437,7 +1431,7 @@ gen_func_fill(const struct config *cfg, const struct strct *p)
 			needbool = 1;
 	}
 
-	print_func_db_fill(p, CFG_HAS_ROLES & cfg->flags, 0);
+	print_func_db_fill(p, !TAILQ_EMPTY(&cfg->rq), 0);
 	puts("\n"
 	     "{\n"
 	     "\tsize_t i = 0;\n"
@@ -1452,7 +1446,7 @@ gen_func_fill(const struct config *cfg, const struct strct *p)
 	     "\tmemset(p, 0, sizeof(*p));");
 	TAILQ_FOREACH(f, &p->fq, entries)
 		gen_strct_fill_field(f);
-	if (CFG_HAS_ROLES & cfg->flags) {
+	if (!TAILQ_EMPTY(&cfg->rq)) {
 		puts("\tp->priv_store = malloc"
 		      "(sizeof(struct ort_store));\n"
 		     "\tif (NULL == p->priv_store) {\n"
@@ -1475,12 +1469,12 @@ gen_func_update(const struct config *cfg,
 	const struct uref *ref;
 	size_t	 pos, npos;
 
-	print_func_db_update(up, CFG_HAS_ROLES & cfg->flags, 0);
+	print_func_db_update(up, !TAILQ_EMPTY(&cfg->rq), 0);
 	puts("\n"
 	     "{\n"
 	     "\tstruct ksqlstmt *stmt;\n"
 	     "\tenum ksqlc c;");
-	if (CFG_HAS_ROLES & cfg->flags)
+	if (!TAILQ_EMPTY(&cfg->rq))
 		puts("\tstruct ksql *db = ctx->db;");
 
 	/* Create hash buffer for modifying hashes. */
@@ -2808,7 +2802,7 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 		     "};\n"
 		     "");
 
-		if (CFG_HAS_ROLES & cfg->flags) {
+		if (!TAILQ_EMPTY(&cfg->rq)) {
 			print_commentt(0, COMMENT_C,
 				"Definition of our opaque \"ort\", "
 				"which contains role information.");
@@ -2883,7 +2877,7 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 		gen_func_trans(cfg);
 		gen_func_open(cfg, splitproc);
 		gen_func_close(cfg);
-		if (CFG_HAS_ROLES & cfg->flags)
+		if (!TAILQ_EMPTY(&cfg->rq))
 			gen_func_roles(cfg);
 	}
 

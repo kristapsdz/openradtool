@@ -797,7 +797,7 @@ ort_write_file(FILE *f, const struct config *cfg)
 	w.type = WTYPE_FILE;
 	w.f = f;
 
-	if (CFG_HAS_ROLES & cfg->flags)
+	if (!TAILQ_EMPTY(&cfg->rq))
 		if ( ! parse_write_roles(&w, cfg))
 			goto out;
 
@@ -824,7 +824,7 @@ ort_write_buf(const struct config *cfg)
 	memset(&w, 0, sizeof(struct writer));
 	w.type = WTYPE_BUF;
 
-	if (CFG_HAS_ROLES & cfg->flags)
+	if (!TAILQ_EMPTY(&cfg->rq))
 		if ( ! parse_write_roles(&w, cfg))
 			goto out;
 	TAILQ_FOREACH(e, &cfg->eq, entries)

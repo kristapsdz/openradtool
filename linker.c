@@ -1508,7 +1508,7 @@ ort_parse_close(struct config *cfg)
 	 * Otherwise, they're unreachable.
 	 */
 
-	if (CFG_HAS_ROLES & cfg->flags)
+	if (!TAILQ_EMPTY(&cfg->rq))
 		TAILQ_FOREACH(p, &cfg->sq, entries) {
 			TAILQ_FOREACH(srch, &p->sq, entries) {
 				if (srch->rolemap)

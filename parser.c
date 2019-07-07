@@ -3138,11 +3138,15 @@ parse_roles(struct parse *p)
 {
 	struct role	*r;
 
-	if (CFG_HAS_ROLES & p->cfg->flags) {
+	/*
+	 * FIXME: if we're doing this again, just start as if we were
+	 * passing in under the "all" role again.
+	 */
+
+	if (!TAILQ_EMPTY(&p->cfg->rq)) {
 		parse_errx(p, "roles already specified");
 		return;
 	} 
-	p->cfg->flags |= CFG_HAS_ROLES;
 
 	/*
 	 * Start by allocating the reserved roles.

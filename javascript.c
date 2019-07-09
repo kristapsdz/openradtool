@@ -224,7 +224,7 @@ gen_jsdoc_field(const char *ns, const struct field *f)
 	}
 
 	if (FTYPE_DATE == f->type ||
-	    FTYPE_EPOCH == f->type)
+	    FTYPE_EPOCH == f->type) {
 		print_commentv(2, COMMENT_JS_FRAG,
 			"<li>%s-%s-date-value: set the element's "
 			"<code>value</code> to the ISO-8601 date "
@@ -232,6 +232,12 @@ gen_jsdoc_field(const char *ns, const struct field *f)
 			f->parent->name, f->name, 
 			FIELD_NULL & f->flags ? 
 			" (if non-null)" : "");
+		print_commentv(2, COMMENT_JS_FRAG,
+			"<li>%s-%s-date-text: like "
+			"%s-%s-date-value, but replacing contents",
+			f->parent->name, f->name, 
+			f->parent->name, f->name);
+	}
 
 	if (FTYPE_BIT == f->type ||
 	    FTYPE_BITFIELD == f->type)

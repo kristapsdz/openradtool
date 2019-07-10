@@ -1,6 +1,6 @@
 .\"	$OpenBSD$
 .\"
-.\" Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+.\" Copyright (c) 2017--2019 Kristaps Dzonsons <kristaps@bsd.lv>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -67,6 +67,7 @@ Disable production of output, which may currently only be
 to suppresses the database input implementations.
 .It Fl s
 Use split-process mode for the database.
+.Em This will be mandatory in future releases.
 .El
 .Pp
 The complexity of
@@ -138,18 +139,18 @@ bundles in all non-portable functions.
 In the simplest case, put all C sources and headers (for validation,
 database routines, and JSON output) into one pair of files.
 Let
-.Pa foo.kwbp
+.Pa foo.ort
 be the configuration file.
 .Bd -literal
-ort-c-header -jvs foo.kwbp > db.h
-ort-c-source -jvs foo.kwbp > db.c
+ort-c-header -jvs foo.ort > db.h
+ort-c-source -jvs foo.ort > db.c
 .Ed
 .Pp
 Breaking up into two header and source files: one for basic database
 functions, the other for JSON output.
 .Bd -literal
-ort-c-header -s foo.kwbp > db.h
-ort-c-header -s -g JSON_H -j -Nbd foo.kwbp > json.h
+ort-c-header -s foo.ort > db.h
+ort-c-header -s -g JSON_H -j -Nbd foo.ort > json.h
 ort-c-source -s -h db.h > db.c
 ort-c-source -s -j -Nd -Idj -h db.h,json.h > json.c
 .Ed
@@ -161,7 +162,7 @@ file is created without structure or database information using
 .Pa json.c
 needs to include both database and JSON headers (in name,
 .Fl h ,
-and in the headers those stipulated in source, 
+and in the headers those stipulated in source,
 .Fl I )
 also while inhibiting database routine creation with
 .Fl N .

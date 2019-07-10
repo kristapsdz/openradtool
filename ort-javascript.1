@@ -49,31 +49,114 @@ syntax.
 Output consists of a set of classes within the
 .Qq ort
 namespace describing structures, enumerations, and bitfields.
-The method for acquiring the JSON is not managed by
-.Nm ,
-but is usually AJAX requests to a
-.Xr ort-c-header 1
-CGI interface.
+These classes include methods to fill data from the JSON into a DOM tree
+by operating on elements having specific classes.
 .Pp
-To use the API, include the generated file as a script in your HTML,
-parse objects from the JSON exported by
-.Xr ort-c-header 1 ,
-and invoke the applicable object's
-.Fn fill ,
-.Fn fillByClass ,
-.Fn fillInner ,
-.Fn fillInnerByClass ,
-.Fn fillArray ,
-.Fn fillArrayOrHide ,
-and
-.Fn fillArrayOrShow ,
-methods with a DOM tree node.
+All output files are fully documented in the jsdoc format.
+.Ss Constructors
+Each structure has a constructor to which one passes a single object of
+the given type or an array.
+For any given structure
+.Qq foo ,
+the interface for the structure is called
+.Qq fooData .
+The array may be zero-length, but the object may not be
+.Dv null .
+.Ss Class Methods
+The following methods are generated for each structure.
+.Bl -tag -width Ds
+.It Fn fillInner "e" "[custom]"
+Fill labelled elements within (but not including) element
+.Fa e ,
+with optional call-backs
+.Fa custom .
+If
+.Fa e
+is
+.Dv null ,
+does nothing.
+.It Fn fillInnerByClass "e" "className" "[custom]"
+Convenience method for invoking
+.Fn fillInner
+over all descendents of element
+.Fa e
+having class
+.Fa className .
+If
+.Fa e
+is
+.Dv null ,
+does nothing.
+The
+.Qq inner
+applies to bot"
+.Fa e
+and the matched descendents.
+.It Fn fill "e" "[custom]"
+Fill labelled elements within (including) element
+.Fa e ,
+with optional call-backs
+.Fa custom .
+If
+.Fa e
+is
+.Dv null ,
+does nothing.
+.It Fn fillByClass "e" "className" "[custom]"
+Convenience method for invoking
+.Fn fill
+over all descendents of (and including) element
+.Fa e
+having class
+.Fa className .
+If
+.Fa e
+is
+.Dv null ,
+does nothing.
+.It Fn fillArray "e" "[custom]"
+First hides (appends the
+.Qq hide
+class)
+.Fa e ,
+then invokes
+.Fn fill
+repeatedly over the objects (or standalone object) passed at
+construction time by removing, then subsequently cloning and appending,
+the first element of
+.Fa e .
+The
+.Fn fill
+function is passed the new element's root and
+.Fa custom .
+If
+.Fa e
+is
+.Dv null
+or empty, does nothing except keeping
+.Fa e
+marked as hidden.
+.It Fn fillArrayOrShow "e" "toshow" "[custom]"
+Convenience method around
+.Fa fillArray ,
+showing (remove the
+.Qq hide
+class)
+.Fa toshow
+if the object or objects at construction are non-empty.
+.It Fn fillArrayOrHide "e" "tohide" "[custom]"
+Convenience method around
+.Fa fillArray ,
+hiding (append the
+.Qq hide
+class)
+.Fa tohide
+if the object or objects at construction are empty.
+.El
 .Pp
-These methods fill data from the JSON into the DOM tree by operating on
-elements having specific classes.
-In the following, let
+Applicable element labels (class names) are as follows, letting
 .Qq foo
-by the name of a structure in the
+be the name of a structure in the
 .Ar config
 and
 .Qq xxxx
@@ -134,36 +217,83 @@ class if the object is null, otherwise remove the
 .Dq hide
 class.
 .El
+.Ss Static Members
+Each enumeration class contains static members with the numeric value of
+its items.
 .Pp
-The
-.Fn fillInner
+Each bitfield class contains two static members per item: one for the
+bit index, one for the generated bit mask.
+The former is prefixed
+.Li BITI_ ,
+the latter with
+.Li BITF_ .
+Thus an item
+.Qq foo
+creates numeric static members
+.Va BITI_foo
 and
-.Fn fillInnerByClass
-methods may be used to exclude the passed-in root element, while
-.Fn fill
-and
-.Fn fillByClass
-include this element.
+.Va BITF_foo .
+There is always a
+.Va BITI__MAX
+that is one greater than the largest item's value.
+.Ss Static Methods
+Each enumeration corresponds to a class with field values and formatting
+static methods.
+These take advantage of the
+.Cm jslabel
+enumeration label described in
+.Xr ort 5 .
+.Bl -tag -width Ds
+.It Fn format "e" "name" "value"
+Fills in all elements (not inclusive) descending from
+.Fa e
+having class
+.Fa name Ns "-label"
+with the configuration label corresponding to the enumeration value
+.Fa value .
+It
+.Fa value
+is
+.Dv null
+or not a valid enumeration value, the empty string is filled in.
+.El
 .Pp
-The
-.Fn fillArray ,
-.Fn fillArrayOrHide ,
-and
-.Fn fillArrayOrShow
-methods invoke
-.Fn fill
-repeatedly over an array of objects by removing, then subsequently
-cloning and appending, the first element of the give DOM root.
-The show and hide variants perform additional labour, usually to show a
-message that elements have not or (more rarely) have been found.
+If a language is specified in the root of the HTML or XML document with
+the
+.Qq lang
+attribute, it is first matched a label for that language.
+If there is no language, or none for that label, the default label is
+used.
+If there is no default label, an empty string is used instead.
 .Pp
-Enumeration and bitfield classes are also generated from the input file.
-These are appended to the namespace as a series of classes
-consisting of static variables assigned the enumeration value.
-.Pp
-All output files are fully documented in the
-.Xr jsdoc 1
-format.
+Bit-fields behave similarly and have the same member.
+.Bl -tag -width Ds
+.It Fn format "e" "name" "value"
+Fills in all elements (not inclusive) descending from
+.Fa e
+having class
+.Fa name Ns "-label"
+with all configuration labels with corresponding bits set in
+.Fa value .
+It
+.Fa value
+is
+.Dv null ,
+the
+.Qq ort-null
+class is added and the
+.Cm isnull
+label is used.
+If not specified, an empty string is used.
+If
+.Fa value
+is zero, the
+.Qq ort-unset
+class is added and the
+.Cm isunset
+label is used.
+If not specified, an empty string is used.
+.El
 .Ss Customisation
 All functions accept an optional argument for providing custom per-field
 or per-structure callbacks.
@@ -235,34 +365,6 @@ The dictionary object is defined as follows:
 let custom: DataCallbacks = { 'client-dob': formatDate };
 new ort.client(obj).fillInner(document.body, custom);
 .Ed
-.Ss Enumeration and Bitfield Labels
-Enumerations and bitfields in
-.Xr ort 5
-are translated into classes with a static
-.Fn format
-function that may be passed as a custom handler for corresponding
-fields.
-These fill in the
-.Xr ort 5
-.Cm jslabel
-of the corresponding values.
-If a language is specified in the root of the HTML or XML document, it
-is first matched to the language of the label.
-If there is no language, or none for that label, the default label is
-used.
-If there is no default label, an empty string is used instead.
-.Pp
-In the event of unset bitfields, the corresponding
-.Xr ort 5
-.Cm isunset
-value is used, and the
-.Li kwbp-unset
-class set on the element.
-For null values,
-.Cm isnull
-is used and
-.Li kwbp-null
-set on the element.
 .Pp
 For example, to fill in the label of an enumeration
 .Li enum someenum
@@ -316,7 +418,7 @@ in the output of
 .Bd -literal
 function success(resp: string): void
 {
-    let obj: ort.fooData = 
+    let obj: ort.fooData =
         <ort.fooData>JSON.parse(resp);
     new ort.foo(obj).fill(document.getElementById('place'));
 }
@@ -362,10 +464,8 @@ window.addEventListener('load', init);
 .\" .Sh ERRORS
 .\" For sections 2, 3, 4, and 9 errno settings only.
 .Sh SEE ALSO
-.Xr jsdoc 1 ,
 .Xr ort-c-header 1 ,
 .Xr ort-c-source 1 ,
-.Xr tsc 1 ,
 .Xr ort 5
 .\" .Sh STANDARDS
 .\" .Sh HISTORY

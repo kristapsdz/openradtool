@@ -1,6 +1,6 @@
 .\"	$OpenBSD$
 .\"
-.\" Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+.\" Copyright (c) 2017--2019 Kristaps Dzonsons <kristaps@bsd.lv>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -29,7 +29,7 @@
 .Sh DESCRIPTION
 The
 .Nm
-utility accepts a
+utility accepts an
 .Xr ort 5
 .Ar config
 .Pq defaulting to standard input
@@ -40,19 +40,19 @@ These declarations is usually defined by the output of
 Its arguments are as follows:
 .Bl -tag -width Ds
 .It Fl j
-Output JSON output declarations as documented in
-.Sx JSON export .
+Output
+.Sx JSON export
+function declarations.
 .It Fl J
-Like
-.Fl j ,
-but for
+Output
 .Sx JSON import
-functions.
+function declarations.
 .It Fl v
-Output data validators declarations as documented in
-.Sx Data validation .
+Output
+.Sx Data validation
+function and variable declarations.
 .It Fl g Ar guard
-Guard for header re-inclusion.
+Preprocessor guard for header re-inclusion.
 Defaults to
 .Ar DB_H .
 This is not sanity-checked.
@@ -69,9 +69,11 @@ declarations, while
 .Ar d
 suppresses the
 .Sx Database input .
+This flag is used when creating multiple header files.
 .It Fl s
 Use split-process mode for the database.
 This only changes generated documentation.
+.Em This will be mandatory in future releases.
 .El
 .Pp
 By default, the
@@ -79,22 +81,12 @@ By default, the
 and
 .Sx Data structures
 declarations are output.
-.Pp
-All C code produced by
-.Nm
-conforms with the
-.Xr style 9
-manual of
-.Ox .
-.Pp
-If you're linking to the header file, different output options require
-different pre-inclusion needs.
 .Ss Data structures
 The basis of the C API is a series of enumerations, structures, and
 preprocessor macros that describe the data.
-To include output files for data structures, you'll need:
+To include output files for data structures, specify:
 .Bd -literal -offset indent
-#include <sys/queue.h> /* iff you have lists */
+#include <sys/queue.h> /* iff the config has lists */
 #include <stdint.h>
 .Ed
 .Pp
@@ -108,7 +100,7 @@ roles {
 .Ed
 .Pp
 Each of these are produced as an enumeration (always called
-.Vt enum kwbp_role ) ,
+.Vt enum ort_role ) ,
 with the extra
 .Va ROLE_none
 and
@@ -118,7 +110,7 @@ See the
 .Sx Database input
 section for details on role management.
 .Bd -literal -offset indent
-enum kwbp_role {
+enum ort_role {
   ROLE_user,
   ROLE_none,
   ROLE_default
@@ -228,7 +220,7 @@ is produced in its output.
 If roles are defined, each structure has a variable
 .Va priv_store
 of an opaque pointer type
-.Vt "struct kwbp_store" .
+.Vt "struct ort_store" .
 This is used to keep track of the role in which the query function was
 invoked.
 .
@@ -247,18 +239,20 @@ You'll need the following inclusions:
 #include <ksql.h>
 .Ed
 .Pp
-If you're using roles, you do not need any inclusions.
+If the configuration specifies roles, inclusions not are necessary.
 .Pp
-There are two functions that work with opening and closing the
-database.
-When roles are not defined, these may be overridden.
+There are two functions,
+.Fn db_open
+and
+.Fn db_close ,
+that open and close the database, respectively.
 There are also several transaction functions and, if applicable, a
 function for managing roles.
 .Pp
 In the following documentation,
 .Qq TYPE
 is defined as
-.Vt "struct kwbp"
+.Vt "struct ort"
 if roles are defined or
 .Vt "struct ksql"
 otherwise.
@@ -299,7 +293,7 @@ Roll-back a transaction opened by
 .Fn db_trans_open
 with unique transaction identifier
 .Fa id .
-.It Li void db_role(struct kwbp *ctx, enum kwbp_role r)
+.It Li void db_role(struct ort *ctx, enum ort_role r)
 If roles are enabled, move from the current role to
 .Fa r .
 If the role is the same as the current role, this does nothing.
@@ -311,13 +305,13 @@ or entering
 .Dv ROLE_none .
 This does not return failure: on role violation, it invokes
 .Xr abort 2 .
-.It Li enum kwbp_role db_role_current(struct kwbp *ctx)
+.It Li enum ort_role db_role_current(struct ort *ctx)
 Get the currently-assigned role.
 If
 .Fn db_role
 hasn't yet been called, this will be
 .Dv ROLE_default .
-.It Li enum kwbp_role db_role_stored(struct kwbp_store *ctx)
+.It Li enum ort_role db_role_stored(struct ort_store *ctx)
 Get the role assigned to an object at the time of its creation.
 .El
 .Pp
@@ -338,7 +332,7 @@ be the name of the exemplar structure.
 Again,
 .Qq TYPE
 is defined as
-.Vt "struct kwbp"
+.Vt "struct ort"
 if roles are defined or
 .Vt "struct ksql"
 otherwise.
@@ -713,18 +707,18 @@ is the field name.
 In the simplest case, put all C sources and headers (for validation,
 database routines, and JSON output) into one pair of files.
 Let
-.Pa foo.kwbp
+.Pa foo.ort
 be the configuration file.
 .Bd -literal
-ort-c-header -jvs foo.kwbp > db.h
-ort-c-source -jvs foo.kwbp > db.c
+ort-c-header -jvs foo.ort > db.h
+ort-c-source -jvs foo.ort > db.c
 .Ed
 .Pp
 Breaking up into two header and source files: one for basic database
 functions, the other for JSON output.
 .Bd -literal
-ort-c-header -s foo.kwbp > db.h
-ort-c-header -s -g JSON_H -j -Nbd foo.kwbp > json.h
+ort-c-header -s foo.ort > db.h
+ort-c-header -s -g JSON_H -j -Nbd foo.ort > json.h
 ort-c-source -s -h db.h > db.c
 ort-c-source -s -j -Nb -Ibj -h db.h,json.h > json.c
 .Ed

@@ -45,6 +45,12 @@ enum	external {
 	EX__MAX
 };
 
+static	const char *const externals[EX__MAX] = {
+	PATH_GENSALT, /* EX_GENSALT */
+	PATH_B64_NTOP, /* EX_B64_NTOP */
+	PATH_JSMN /* EX_JSMN */
+};
+
 /*
  * SQL operators.
  * Some of these binary, some of these are unary.
@@ -2896,35 +2902,35 @@ main(int argc, char *argv[])
 			  splitproc = 0, dbin = 1, rc = 0;
 	FILE		**confs = NULL;
 	size_t		  i, confsz;
-	int		  exs[EX__MAX] = { -1, -1 };
+	int		  exs[EX__MAX];
 
 #if HAVE_PLEDGE
-	if (-1 == pledge("stdio rpath", NULL))
+	if (pledge("stdio rpath", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "h:I:jJN:sv")))
+	while ((c = getopt(argc, argv, "h:I:jJN:sv")) != -1)
 		switch (c) {
-		case ('h'):
+		case 'h':
 			header = optarg;
 			break;
-		case ('I'):
+		case 'I':
 			incls = optarg;
 			break;
-		case ('j'):
+		case 'j':
 			json = 1;
 			break;
-		case ('J'):
+		case 'J':
 			jsonparse = 1;
 			break;
-		case ('N'):
-			if (NULL != strchr(optarg, 'd'))
+		case 'N':
+			if (strchr(optarg, 'd') != NULL)
 				dbin = 0;
 			break;
-		case ('s'):
+		case 's':
 			splitproc = 1;
 			break;
-		case ('v'):
+		case 'v':
 			valids = 1;
 			break;
 		default:
@@ -2938,36 +2944,24 @@ main(int argc, char *argv[])
 	/* Read in all of our files now so we can repledge. */
 
 	if (confsz > 0) {
-		confs = calloc(confsz, sizeof(FILE *));
-		if (NULL == confs)
+		if ((confs = calloc(confsz, sizeof(FILE *))) == NULL)
 			err(EXIT_FAILURE, NULL);
-		for (i = 0; i < confsz; i++) {
-			confs[i] = fopen(argv[i], "r");
-			if (NULL == confs[i]) {
-				warn("%s", argv[i]);
-				goto out;
-			}
-		}
+		for (i = 0; i < confsz; i++)
+			if ((confs[i] = fopen(argv[i], "r")) == NULL)
+				err(EXIT_FAILURE, "%s", argv[i]);
 	}
 
 	/* 
 	 * Open all of the source files we might optionally embed in the
 	 * output source code.
-	 * FIXME: for security, compute MD5 hash and crosscheck. 
 	 */
 
-	exs[EX_GENSALT] = open(PATH_GENSALT, O_RDONLY, 0);
-	if (-1 == exs[EX_GENSALT])
-		err(EXIT_FAILURE, "%s", PATH_GENSALT);
-	exs[EX_B64_NTOP] = open(PATH_B64_NTOP, O_RDONLY, 0);
-	if (-1 == exs[EX_B64_NTOP])
-		err(EXIT_FAILURE, "%s", PATH_B64_NTOP);
-	exs[EX_JSMN] = open(PATH_JSMN, O_RDONLY, 0);
-	if (-1 == exs[EX_JSMN])
-		err(EXIT_FAILURE, "%s", PATH_JSMN);
+	for (i = 0; i < EX__MAX; i++)
+		if ((exs[i] = open(externals[i], O_RDONLY, 0)) == -1)
+			err(EXIT_FAILURE, "%s", externals[i]);
 
 #if HAVE_PLEDGE
-	if (-1 == pledge("stdio", NULL))
+	if (pledge("stdio", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 
@@ -2975,24 +2969,24 @@ main(int argc, char *argv[])
 		goto out;
 
 	for (i = 0; i < confsz; i++)
-		if ( ! ort_parse_file_r(cfg, confs[i], argv[i]))
+		if (!ort_parse_file_r(cfg, confs[i], argv[i]))
 			goto out;
 
-	if (0 == confsz && 
-	    ! ort_parse_file_r(cfg, stdin, "<stdin>"))
+	if (confsz == 0 && 
+	    !ort_parse_file_r(cfg, stdin, "<stdin>"))
 		goto out;
 
-	if (0 != (rc = ort_parse_close(cfg)))
+	if ((rc = ort_parse_close(cfg)))
 		rc = gen_c_source(cfg, json, jsonparse, valids, 
 			splitproc, dbin, header, incls, exs);
 
 out:
 	for (i = 0; i < EX__MAX; i++)
-		if (-1 != exs[i])
-			close(exs[i]);
+		if (close(exs[i]) == -1)
+			warn("%s: close", externals[i]);
 	for (i = 0; i < confsz; i++)
-		if (NULL != confs[i] && EOF == fclose(confs[i]))
-			warn("%s", argv[i]);
+		if (fclose(confs[i]) == EOF)
+			warn("%s: close", argv[i]);
 	free(confs);
 	ort_config_free(cfg);
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;

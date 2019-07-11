@@ -156,7 +156,7 @@ gen_print_checkpass(int ptr, size_t pos, const char *name)
 	const char	*s = ptr ? "->" : ".";
 
 #ifdef __OpenBSD__
-	printf("(crypt_checkpass(v%zu, p%s%s) < 0)", pos, s, name);
+	printf("(crypt_checkpass(v%zu, p%s%s) == -1)", pos, s, name);
 #else
 	printf("(strcmp(crypt(v%zu, p%s%s), p%s%s))", 
 		pos, s, name, s, name);
@@ -249,7 +249,7 @@ gen_strct_fill_field(const struct field *f)
 	if (FIELD_NULL & f->flags)
 		print_src(1, 
 			"c = ksql_result_isnull(stmt, &hasval, *pos);\n"
-			"if (KSQL_OK != c)\n"
+			"if (c != KSQL_OK)\n"
 			"\texit(EXIT_FAILURE);\n"
 			"p->has_%s = !hasval;",
 			f->name);
@@ -271,20 +271,20 @@ gen_strct_fill_field(const struct field *f)
 		print_src(indent,
 			"c = %s(stmt, "
 			 "&p->%s, &p->%s_sz, (*pos)++);\n"
-			"if (KSQL_OK != c)\n"
+			"if (c != KSQL_OK)\n"
 		        "\texit(EXIT_FAILURE);",
 			coltypes[f->type], f->name, f->name);
 	else if (FTYPE_ENUM == f->type)
 		print_src(indent,
 			"c = %s(stmt, &tmpint, (*pos)++);\n"
-			"if (KSQL_OK != c)\n"
+			"if (c != KSQL_OK)\n"
 		        "\texit(EXIT_FAILURE);\n"
 			"p->%s = tmpint;",
 			coltypes[f->type], f->name);
 	else
 		print_src(indent,
 			"c = %s(stmt, &p->%s, (*pos)++);\n"
-			"if (KSQL_OK != c)\n"
+			"if (c != KSQL_OK)\n"
 		        "\texit(EXIT_FAILURE);",
 			coltypes[f->type], f->name);
 
@@ -348,7 +348,7 @@ gen_strct_func_iter(const struct config *cfg,
 			gen_bindfunc(sr->field->type, pos++, 0);
 		}
 
-	printf("\twhile (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
+	printf("\twhile (ksql_stmt_step(stmt) == KSQL_ROW) {\n"
 	       "\t\tdb_%s_fill_r(%s&p, stmt, NULL);\n",
 	       retstr->name,
 	       (!TAILQ_EMPTY(&cfg->rq)) ? "ctx, " : "");
@@ -422,7 +422,7 @@ gen_strct_func_list(const struct config *cfg,
 	puts("");
 
 	printf("\tq = malloc(sizeof(struct %s_q));\n"
-	       "\tif (NULL == q) {\n"
+	       "\tif (q == NULL) {\n"
 	       "\t\tperror(NULL);\n"
 	       "\t\texit(EXIT_FAILURE);\n"
 	       "\t}\n"
@@ -446,9 +446,9 @@ gen_strct_func_list(const struct config *cfg,
 			gen_bindfunc(sr->field->type, pos++, 0);
 		}
 
-	printf("\twhile (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
+	printf("\twhile (ksql_stmt_step(stmt) == KSQL_ROW) {\n"
 	       "\t\tp = malloc(sizeof(struct %s));\n"
-	       "\t\tif (NULL == p) {\n"
+	       "\t\tif (p == NULL) {\n"
 	       "\t\t\tperror(NULL);\n"
 	       "\t\t\texit(EXIT_FAILURE);\n"
 	       "\t\t}\n"
@@ -484,7 +484,7 @@ gen_strct_func_list(const struct config *cfg,
 	puts("\t\tTAILQ_INSERT_TAIL(q, p, _entries);\n"
 	     "\t}\n"
 	     "\tksql_stmt_free(stmt);\n"
-	     "\treturn(q);\n"
+	     "\treturn q;\n"
 	     "}\n"
 	     "");
 }
@@ -769,8 +769,8 @@ gen_func_open(const struct config *cfg, int splitproc)
 		       "\n"
 		       "\tmemset(roles, 0, sizeof(roles));\n"
 		       "\tctx = malloc(sizeof(struct ort));\n"
-		       "\tif (NULL == ctx)\n"
-		       "\t\treturn(NULL);\n"
+		       "\tif (ctx == NULL)\n"
+		       "\t\treturn NULL;\n"
 		       "\n", i);
 		print_commentt(1, COMMENT_C,
 			"Initialise our roles and statements: "
@@ -822,22 +822,22 @@ gen_func_open(const struct config *cfg, int splitproc)
 		puts("\tdb = ksql_alloc(&cfg);");
 
 	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tif (NULL == db) {\n"
+		puts("\tif (db == NULL) {\n"
 		     "\t\tfree(ctx);\n"
-		     "\t\treturn(NULL);\n"
+		     "\t\treturn NULL;\n"
 		     "\t}\n"
 		     "\tctx->db = db;");
 	else
-		puts("\tif (NULL == db)\n"
-		     "\t\treturn(NULL);");
+		puts("\tif (db == NULL)\n"
+		     "\t\treturn NULL;");
 
 	puts("\tksql_open(db, file);");
 
 	if (!TAILQ_EMPTY(&cfg->rq)) {
 		puts("\tctx->role = ROLE_default;\n"
-		     "\treturn(ctx);");
+		     "\treturn ctx;");
 	} else
-		puts("\treturn(db);");
+		puts("\treturn db;");
 
 	puts("}\n"
 	     "");
@@ -899,7 +899,7 @@ gen_func_roles(const struct config *cfg)
 	     "\tksql_role(ctx->db, r);\n"
 	     "\tif (r == ctx->role)\n"
 	     "\t\treturn;\n"
-	     "\tif (ROLE_none == ctx->role)\n"
+	     "\tif (ctx->role == ROLE_none)\n"
 	     "\t\tabort();\n"
 	     "\n"
 	     "\tswitch (ctx->role) {\n"
@@ -914,11 +914,11 @@ gen_func_roles(const struct config *cfg)
 	     "}\n");
 	print_func_db_role_current(0);
 	puts("{\n"
-	     "\treturn(ctx->role);\n"
+	     "\treturn ctx->role;\n"
 	     "}\n");
 	print_func_db_role_stored(0);
 	puts("{\n"
-	     "\treturn(s->role);\n"
+	     "\treturn s->role;\n"
 	     "}\n");
 }
 
@@ -981,7 +981,7 @@ gen_func_close(const struct config *cfg)
 
 	print_func_db_close(!TAILQ_EMPTY(&cfg->rq), 0);
 	puts("{\n"
-	     "\tif (NULL == p)\n"
+	     "\tif (p == NULL)\n"
 	     "\t\treturn;");
 	if (!TAILQ_EMPTY(&cfg->rq)) {
 		puts("\tksql_close(p->db);\n"
@@ -1031,10 +1031,10 @@ gen_strct_func_count(const struct config *cfg,
 			gen_bindfunc(sr->field->type, pos++, 0);
 		}
 
-	puts("\tif (KSQL_ROW != ksql_stmt_step(stmt))\n"
+	puts("\tif (ksql_stmt_step(stmt) != KSQL_ROW)\n"
 	     "\t\texit(EXIT_FAILURE);\n"
 	     "\tc = ksql_result_int(stmt, &val, 0);\n"
-	     "\tif (c != KSQL_OK)\n"
+	     "\tif (KSQL_OK != c)\n"
 	     "\t\texit(EXIT_FAILURE);\n"
 	     "\tksql_stmt_free(stmt);\n"
 	     "\treturn (uint64_t)val;\n"
@@ -1082,9 +1082,9 @@ gen_strct_func_srch(const struct config *cfg,
 			gen_bindfunc(sr->field->type, pos++, 0);
 		}
 
-	printf("\tif (KSQL_ROW == ksql_stmt_step(stmt)) {\n"
+	printf("\tif (ksql_stmt_step(stmt) == KSQL_ROW) {\n"
 	       "\t\tp = malloc(sizeof(struct %s));\n"
-	       "\t\tif (NULL == p) {\n"
+	       "\t\tif (p == NULL) {\n"
 	       "\t\t\tperror(NULL);\n"
 	       "\t\t\texit(EXIT_FAILURE);\n"
 	       "\t\t}\n"
@@ -1112,7 +1112,7 @@ gen_strct_func_srch(const struct config *cfg,
 			pos++;
 			continue;
 		}
-		printf("\t\tif (NULL != p && ");
+		printf("\t\tif (p != NULL && ");
 		gen_print_checkpass(1, pos, sent->fname);
 		printf(") {\n"
 		       "\t\t\tdb_%s_free(p);\n"
@@ -1145,9 +1145,9 @@ gen_func_freeq(const struct strct *p)
 	printf("\n"
 	       "{\n"
 	       "\tstruct %s *p;\n\n"
-	       "\tif (NULL == q)\n"
+	       "\tif (q == NULL)\n"
 	       "\t\treturn;\n"
-	       "\twhile (NULL != (p = TAILQ_FIRST(q))) {\n"
+	       "\twhile ((p = TAILQ_FIRST(q)) != NULL) {\n"
 	       "\t\tTAILQ_REMOVE(q, p, _entries);\n"
 	       "\t\tdb_%s_free(p);\n"
 	       "\t}\n\n"
@@ -1193,7 +1193,7 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_PASSWORD == f->type) {
 			if (FIELD_NULL & f->flags)
-				printf("\tif (NULL != v%zu)\n"
+				printf("\tif (v%zu != NULL)\n"
 				       "\t", npos);
 			gen_print_newpass(FIELD_NULL & f->flags,
 				pos, npos);
@@ -1216,7 +1216,7 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 			continue;
 		assert(FTYPE_STRUCT != f->type);
 		if (FIELD_NULL & f->flags)
-			printf("\tif (NULL == v%zu)\n"
+			printf("\tif (v%zu == NULL)\n"
 			       "\t\tksql_bind_null(stmt, %zu);\n"
 			       "\telse\n"
 			       "\t", npos, npos - 1);
@@ -1230,10 +1230,10 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 			gen_bindfunc(f->type, 
 				npos++, FIELD_NULL & f->flags);
 	}
-	puts("\tif (KSQL_DONE == ksql_stmt_cstep(stmt))\n"
+	puts("\tif (ksql_stmt_cstep(stmt) == KSQL_DONE)\n"
 	     "\t\tksql_lastid(db, &id);\n"
 	     "\tksql_stmt_free(stmt);\n"
-	     "\treturn(id);\n"
+	     "\treturn id;\n"
 	     "}\n"
 	     "");
 }
@@ -1266,7 +1266,7 @@ gen_func_unfill(const struct config *cfg, const struct strct *p)
 	print_func_db_unfill(p, !TAILQ_EMPTY(&cfg->rq), 0);
 	puts("\n"
 	     "{\n"
-	     "\tif (NULL == p)\n"
+	     "\tif (p == NULL)\n"
 	     "\t\treturn;");
 	TAILQ_FOREACH(f, &p->fq, entries)
 		switch(f->type) {
@@ -1296,7 +1296,7 @@ gen_func_unfill_r(const struct strct *p)
 	printf("static void\n"
 	       "db_%s_unfill_r(struct %s *p)\n"
 	       "{\n"
-	       "\tif (NULL == p)\n"
+	       "\tif (p == NULL)\n"
 	       "\t\treturn;\n"
 	       "\n"
 	       "\tdb_%s_unfill(p);\n",
@@ -1360,7 +1360,7 @@ gen_func_reffind(const struct config *cfg, const struct strct *p)
 			printf("\t\tksql_bind_int(stmt, 0, p->%s);\n",
 			       f->ref->source->name);
 			printf("\t\tc = ksql_stmt_step(stmt);\n"
-			       "\t\tassert(KSQL_ROW == c);\n"
+			       "\t\tassert(c == KSQL_ROW);\n"
 			       "\t\tdb_%s_fill_r(%s&p->%s, stmt, NULL);\n",
 			       f->ref->target->parent->name,
 			       (!TAILQ_EMPTY(&cfg->rq)) ?
@@ -1397,7 +1397,7 @@ gen_func_fill_r(const struct config *cfg, const struct strct *p)
 	       "{\n"
 	       "\tsize_t i = 0;\n"
 	       "\n"
-	       "\tif (NULL == pos)\n"
+	       "\tif (pos == NULL)\n"
 	       "\t\tpos = &i;\n"
 	       "\tdb_%s_fill(%sp, stmt, pos);\n",
 	       p->name, (!TAILQ_EMPTY(&cfg->rq)) ?
@@ -1441,7 +1441,7 @@ gen_func_fill(const struct config *cfg, const struct strct *p)
 	if (needbool)
 		puts("\tint hasval;");
 	puts("\n"
-	     "\tif (NULL == pos)\n"
+	     "\tif (pos == NULL)\n"
 	     "\t\tpos = &i;\n"
 	     "\tmemset(p, 0, sizeof(*p));");
 	TAILQ_FOREACH(f, &p->fq, entries)
@@ -1449,7 +1449,7 @@ gen_func_fill(const struct config *cfg, const struct strct *p)
 	if (!TAILQ_EMPTY(&cfg->rq)) {
 		puts("\tp->priv_store = malloc"
 		      "(sizeof(struct ort_store));\n"
-		     "\tif (NULL == p->priv_store) {\n"
+		     "\tif (p->priv_store == NULL) {\n"
 		     "\t\tperror(NULL);\n"
 		     "\t\texit(EXIT_FAILURE);\n"
 		     "\t}\n"
@@ -1492,7 +1492,7 @@ gen_func_update(const struct config *cfg,
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
 		if (FTYPE_PASSWORD == ref->field->type) {
 			if (FIELD_NULL & ref->field->flags)
-				printf("if (NULL != v%zu)\n"
+				printf("if (v%zu != NULL)\n"
 				       "\t", npos);
 			gen_print_newpass(FIELD_NULL & 
 				ref->field->flags, pos, npos);
@@ -1517,7 +1517,7 @@ gen_func_update(const struct config *cfg,
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
 		assert(FTYPE_STRUCT != ref->field->type);
 		if (FIELD_NULL & ref->field->flags)
-			printf("\tif (NULL == v%zu)\n"
+			printf("\tif (v%zu == NULL)\n"
 			       "\t\tksql_bind_null(stmt, %zu);\n"
 			       "\telse\n"
 			       "\t", npos, npos - 1);
@@ -1600,7 +1600,7 @@ gen_func_valids(const struct strct *p)
 		print_func_valid(f, 0);
 		puts("{");
 		if (NULL != validtypes[f->type])
-			printf("\tif ( ! %s(p))\n"
+			printf("\tif (!%s(p))\n"
 			       "\t\treturn 0;\n",
 			       validtypes[f->type]);
 
@@ -1713,7 +1713,7 @@ gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 		if (FIELD_NULL & f->flags) {
 			if ( ! hassp && ! *sp)
 				puts("");
-			printf("%sif ( ! p->has_%s)\n"
+			printf("%sif (!p->has_%s)\n"
 			       "%s\tkjson_putnullp(r, \"%s\");\n"
 			       "%selse\n"
 			       "%s\t", tabs, f->name, tabs, 
@@ -1878,7 +1878,7 @@ gen_func_json_parse(const struct strct *p)
 		case FTYPE_DATE:
 		case FTYPE_EPOCH:
 		case FTYPE_INT:
-			printf("\t\t\tif ( ! jsmn_parse_int("
+			printf("\t\t\tif (!jsmn_parse_int("
 				"buf + t[j+1].start,\n"
 			       "\t\t\t    t[j+1].end - t[j+1].start, "
 			        "&p->%s))\n"
@@ -1887,7 +1887,7 @@ gen_func_json_parse(const struct strct *p)
 			       f->name);
 			break;
 		case FTYPE_ENUM:
-			printf("\t\t\tif ( ! jsmn_parse_int("
+			printf("\t\t\tif (!jsmn_parse_int("
 				"buf + t[j+1].start,\n"
 			       "\t\t\t    t[j+1].end - t[j+1].start, "
 			        "&tmpint))\n"
@@ -1897,7 +1897,7 @@ gen_func_json_parse(const struct strct *p)
 			       f->name);
 			break;
 		case FTYPE_REAL:
-			printf("\t\t\tif ( ! jsmn_parse_real("
+			printf("\t\t\tif (!jsmn_parse_real("
 				"buf + t[j+1].start,\n"
 			       "\t\t\t    t[j+1].end - t[j+1].start, "
 			        "&p->%s))\n"
@@ -1909,11 +1909,11 @@ gen_func_json_parse(const struct strct *p)
 			printf("\t\t\ttmpbuf = strndup\n"
 			       "\t\t\t\t(buf + t[j+1].start,\n"
 			       "\t\t\t\t t[j+1].end - t[j+1].start);\n"
-			       "\t\t\tif (NULL == tmpbuf)\n"
+			       "\t\t\tif (tmpbuf == NULL)\n"
 			       "\t\t\t\treturn -1;\n"
 			       "\t\t\tp->%s = malloc((t[j+1].end - "
 			       	"t[j+1].start) + 1);\n"
-			       "\t\t\tif (NULL == p->%s) {\n"
+			       "\t\t\tif (p->%s == NULL) {\n"
 			       "\t\t\t\tfree(tmpbuf);\n"
 			       "\t\t\t\treturn -1;\n"
 			       "\t\t\t}\n"
@@ -1932,7 +1932,7 @@ gen_func_json_parse(const struct strct *p)
 			printf("\t\t\tp->%s = strndup\n"
 			       "\t\t\t\t(buf + t[j+1].start,\n"
 			       "\t\t\t\t t[j+1].end - t[j+1].start);\n"
-			       "\t\t\tif (NULL == p->%s)\n"
+			       "\t\t\tif (p->%s == NULL)\n"
 			       "\t\t\t\treturn -1;\n"
 			       "\t\t\tj++;\n",
 			       f->name, f->name);
@@ -1968,7 +1968,7 @@ gen_func_json_parse(const struct strct *p)
 	print_func_json_clear(p, 0);
 	puts("\n"
 	     "{\n"
-	     "\tif (NULL == p)\n"
+	     "\tif (p == NULL)\n"
 	     "\t\treturn;");
 	TAILQ_FOREACH(f, &p->fq, entries)
 		switch(f->type) {
@@ -2015,7 +2015,7 @@ gen_func_json_parse(const struct strct *p)
 	       "\t\treturn 0;\n"
 	       "\n"
 	       "\t*sz = t[0].size;\n"
-	       "\tif (NULL == (*p = calloc(*sz, sizeof(struct %s))))\n"
+	       "\tif ((*p = calloc(*sz, sizeof(struct %s))) == NULL)\n"
 	       "\t\treturn -1;\n"
 	       "\n"
 	       "\tfor (i = j = 0; i < *sz; i++) {\n"
@@ -2072,7 +2072,7 @@ gen_func_json_data(const struct strct *p)
 		pos++;
 		printf("\tsz = (p->%s_sz + 2) / 3 * 4 + 1;\n"
 		       "\tbuf%zu = malloc(sz);\n"
-		       "\tif (NULL == buf%zu) {\n"
+		       "\tif (buf%zu == NULL) {\n"
 		       "\t\tperror(NULL);\n"
 		       "\t\texit(EXIT_FAILURE);\n"
 		       "\t}\n", f->name, pos, pos);

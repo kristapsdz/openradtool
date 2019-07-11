@@ -1,6 +1,6 @@
 .\"	$OpenBSD$
 .\"
-.\" Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
+.\" Copyright (c) 2017--2019 Kristaps Dzonsons <kristaps@bsd.lv>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -32,15 +32,80 @@ utility accepts a
 .Pq defaulting to standard input
 and produces an SQL schema describing the configuration.
 The configuration may be broken apart into several files.
-.Pp
-The schema consists of a series of
-.Cm CREATE TABLE
-SQL commands representing the objects in
-.Ar config .
-These encapsulate the foreign keys and all other required SQL
-attributes.
 The SQL generated is designed for
 .Xr sqlite3 1 .
+.Ss SQL Commands
+Output always begins with
+.Cm PRAGMA foreign_keys=ON
+regardless of whether the configuration has any references.
+.Pp
+The schema begins of a series of
+.Cm CREATE TABLE
+SQL commands for each
+.Cm struct
+object in
+.Ar config .
+The name of the table inherits from the structure name.
+.Pp
+Each
+.Cm field
+within each
+.Cm struct
+is mapped into a representative SQL type except the
+.Cm struct ,
+which is a virtual type.
+The name of the column inherits from the field name.
+.Bl -column "ort type" "SQL type"
+.It Cm bit Ta Cm INTEGER
+.It Cm bitfield Ta Cm INTEGER
+.It Cm blob Ta Cm BLOB
+.It Cm date Ta Cm INTEGER
+.It Cm email Ta Cm TEXT
+.It Cm enum Ta Cm INTEGER
+.It Cm epoch Ta Cm INTEGER
+.It Cm int Ta Cm INTEGER
+.It Cm password Ta Cm TEXT
+.It Cm real Ta Cm REAL
+.It Cm text Ta Cm TEXT
+.El
+.Pp
+Furthermore, types may have the following attributes.
+.Bl -column "ort type" "SQL type"
+.It Cm actdel Ta Cm ON DELETE
+.It Cm actup Ta Cm ON UPDATE
+.It Cm default Ta Cm DEFAULT()
+.It Cm rowid Ta Cm PRIMARY KEY
+.It Cm unique Ta Cm UNIQUE
+.El
+.Pp
+If
+.Cm null
+is not specified, the SQL column is marked as
+.Cm NOT NULL .
+The
+.Cm default
+attribute is type-specific.
+.Pp
+Reference types may contain the
+.Cm actup
+and
+.Cm actdel
+attributes map as follows:
+.Bl -column "ort type" "SQL type"
+.It Cm cascade Ta Cm CASCADE
+.It Cm default Ta Cm DEFAULT
+.It Cm nullify Ta Cm NULLIFY
+.It Cm restrict Ta Cm RESTRICT
+.El
+.Pp
+These are assigned as
+.Cm FOREIGN KEY(xxx) REFERENCE yyy(zzz)
+followed by the update or delete clause, if applicable.
+.Pp
+Lastly, any
+.Cm unique
+statement on the structure is rendered as the SQL
+.Cm UNIQUE(xxx, ...) .
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

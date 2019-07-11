@@ -326,7 +326,7 @@ jsmn_parse_real(const char *buf, size_t sz, double *ret)
 	memcpy(tmp, buf, sz);
 	tmp[sz] = '\0';
 
-	if ((rc = sscanf(tmp, "%lf", ret)) < 0)
+	if ((rc = sscanf(tmp, "%lf", ret)) == -1)
 		return -1;
 
 	return 1 == rc;
@@ -344,7 +344,7 @@ jsmn_parse_int(const char *buf, size_t sz, int64_t *ret)
 	memcpy(tmp, buf, sz);
 	tmp[sz] = '\0';
 
-	if ((rc = sscanf(tmp, "%" SCNd64, ret)) < 0)
+	if ((rc = sscanf(tmp, "%" SCNd64, ret)) == -1)
 		return -1;
 
 	return 1 == rc;

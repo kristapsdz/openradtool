@@ -143,49 +143,60 @@ print_commentt(size_t tabs, enum cmtt type, const char *cp)
 {
 	size_t	maxcol, i;
 
-	if (tabs >= 4)
-		maxcol = 40;
-	else
-		maxcol = MAXCOLS - (tabs * 4);
+	maxcol = (tabs >= 4) ? 40 : MAXCOLS - (tabs * 4);
 
-	if (COMMENT_C == type && NULL != cp &&
-	    tabs >= 1 && NULL == strchr(cp, '\n') && 
-	    strlen(cp) < maxcol) {
+	/*
+	 * If we're a C comment and are sufficiently small, then print
+	 * us on a one-line comment block.
+	 * FIXME: make sure the comment doesn't have the end-of-comment
+	 * marker itself.
+	 */
+
+	if (type == COMMENT_C && cp != NULL && tabs >= 1 && 
+	    strchr(cp, '\n') == NULL && strlen(cp) < maxcol) {
 		for (i = 0; i < tabs; i++) 
 			putchar('\t');
 		printf("/* %s */\n", cp);
 		return;
 	}
 
-	if (COMMENT_JS == type && NULL != cp &&
-	    2 == tabs && NULL == strchr(cp, '\n') && 
-	    strlen(cp) < maxcol) {
+	/*
+	 * If we're a two-tab JavaScript comment, emit the whole
+	 * production on one line.
+	 * FIXME: make sure the comment doesn't have the end-of-comment
+	 * marker itself.
+	 */
+
+	if (type == COMMENT_JS && cp != NULL && tabs == 2 && 
+	    strchr(cp, '\n') == NULL && strlen(cp) < maxcol) {
 		printf("\t\t/** %s */\n", cp);
 		return;
 	}
 
+	/* Multi-line (or sufficiently long) comment. */
+
 	switch (type) {
-	case (COMMENT_C):
+	case COMMENT_C:
 		print_comment(cp, tabs, "/*", " * ", " */");
 		break;
-	case (COMMENT_JS):
+	case COMMENT_JS:
 		print_comment(cp, tabs, "/**", " * ", " */");
 		break;
-	case (COMMENT_C_FRAG_CLOSE):
-	case (COMMENT_JS_FRAG_CLOSE):
+	case COMMENT_C_FRAG_CLOSE:
+	case COMMENT_JS_FRAG_CLOSE:
 		print_comment(cp, tabs, NULL, " * ", " */");
 		break;
-	case (COMMENT_C_FRAG_OPEN):
+	case COMMENT_C_FRAG_OPEN:
 		print_comment(cp, tabs, "/*", " * ", NULL);
 		break;
-	case (COMMENT_JS_FRAG_OPEN):
+	case COMMENT_JS_FRAG_OPEN:
 		print_comment(cp, tabs, "/**", " * ", NULL);
 		break;
-	case (COMMENT_C_FRAG):
-	case (COMMENT_JS_FRAG):
+	case COMMENT_C_FRAG:
+	case COMMENT_JS_FRAG:
 		print_comment(cp, tabs, NULL, " * ", NULL);
 		break;
-	default:
+	case COMMENT_SQL:
 		print_comment(cp, tabs, NULL, "-- ", NULL);
 		break;
 	}
@@ -193,16 +204,17 @@ print_commentt(size_t tabs, enum cmtt type, const char *cp)
 
 /*
  * Print comments with varargs.
+ * See print_commentt().
  */
 void
 print_commentv(size_t tabs, enum cmtt type, const char *fmt, ...)
 {
-	va_list		 ap;
-	char		*cp;
+	va_list	 ap;
+	char	*cp;
 
 	va_start(ap, fmt);
-	if (-1 == vasprintf(&cp, fmt, ap))
-		err(EXIT_FAILURE, NULL);
+	if (vasprintf(&cp, fmt, ap) == -1)
+		err(EXIT_FAILURE, "vasprintf");
 	va_end(ap);
 	print_commentt(tabs, type, cp);
 	free(cp);

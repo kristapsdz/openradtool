@@ -39,6 +39,8 @@
  * Generate a (possibly) multi-line comment with "tabs" number of
  * preceding tab spaces.
  * This uses the standard comment syntax as seen in this comment itself.
+ * FIXME: make sure that text we're ommitting doesn't clobber the
+ * comment epilogue, like having star-slash in the text of a C comment.
  */
 static void
 print_comment(const char *doc, size_t tabs, 

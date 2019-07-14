@@ -266,7 +266,7 @@ gen_js_field(const struct field *f)
 			err(EXIT_FAILURE, NULL);
 	}
 
-	printf("\t\t\t_fillfield(e, '%s', '%s', custom, o.%s, "
+	printf("\t\t\t_fillField(e, '%s', '%s', custom, o.%s, "
 		"inc, %s, %s, %s);\n",
 		f->parent->name, f->name, f->name,
 		FIELD_NULL & f->flags ? "true" : "false",
@@ -447,7 +447,6 @@ gen_javascript(const struct config *cfg, int tsc)
 	 * Begin with the methods we'll use throughout the file.
 	 * All of these are scoped locally to the namespace, but not
 	 * exposed outside of it.
-	 * They're not documented in the file.
 	 */
 
 	print_commentv(0, COMMENT_JS,
@@ -455,28 +454,48 @@ gen_javascript(const struct config *cfg, int tsc)
 		"@namespace");
 	gen_namespace(tsc, ns);
 
-	if (tsc)
+	if (tsc) {
+		print_commentv(1, COMMENT_JS,
+			"Labels (\"jslabel\" in ort(5)) may have "
+			"multiple languages.\n"
+			"This maps a language name to a translated "
+			"string.\n"
+			"@private\n"
+			"@interface %s.langmap", ns);
 		puts("\tinterface langmap { [lang: string]: string };\n"
 		     "");
+	}
 
-	gen_proto(tsc, "string", "_strlang",
-		"vals", "langmap", NULL);
-	gen_vars(tsc, 2, "lang", "string|null", NULL);
-	puts("\t\tlang = document.documentElement.lang;\n"
-	     "\t\tif (null !== lang && lang in vals)\n"
-	     "\t\t\treturn vals[lang];\n"
-	     "\t\telse if ('_default' in vals)\n"
-	     "\t\t\treturn vals['_default'];\n"
-	     "\t\telse\n"
-	     "\t\t\treturn '';\n"
-	     "\t}\n"
-	     "");
-
+	print_commentv(1, COMMENT_JS,
+		"Used exclusively by enumerations and bitfields "
+		"to do language replacement conditional upon the "
+		"label (<i>jslabel</i> in the configuration).\n"
+		"Like {@link %s._replcl} with inclusion set to "
+		"false.\n"
+		"@param {HTMLElement} e - The root of the "
+		"DOM tree in which we query for elements to fill "
+		"into.\n"
+		"@param {String} name - The class name we search "
+		"for within the root (not inclusive).\n"
+		"@param {langmap} vals - All translations of the "
+		"value.\n"
+		"@private\n"
+		"@function _replcllang\n"
+		"@memberof %s", ns, ns);
 	gen_proto(tsc, "void", "_replcllang",
 		"e", "HTMLElement|null",
 		"name", "string",
 		"vals", "langmap", NULL);
-	puts("\t\t_replcl(e, name, _strlang(vals), false);\n"
+	gen_vars(tsc, 2, "val", "string",
+		"lang", "string|null", NULL);
+	puts("\t\tlang = document.documentElement.lang;\n"
+	     "\t\tif (null !== lang && lang in vals)\n"
+	     "\t\t\tval = vals[lang];\n"
+	     "\t\telse if ('_default' in vals)\n"
+	     "\t\t\tval = vals['_default'];\n"
+	     "\t\telse\n"
+	     "\t\t\tval = '';\n"
+	     "\t\t_replcl(e, name, val, false);\n"
 	     "\t}\n"
 	     "");
 
@@ -747,9 +766,9 @@ gen_javascript(const struct config *cfg, int tsc)
 		"structure interface, this is the allocated class "
 		"of that interface.\n"
 		"@private\n"
-		"@function _fillfield\n"
+		"@function _fillField\n"
 		"@memberof %s", ns, ns);
-	gen_proto(tsc, "void", "_fillfield",
+	gen_proto(tsc, "void", "_fillField",
 		"e", "HTMLElement",
 		"strct", "string",
 		"name", "string",
@@ -1620,11 +1639,11 @@ main(int argc, char *argv[])
 	size_t		  i, confsz;
 
 #if HAVE_PLEDGE
-	if (-1 == pledge("stdio rpath", NULL))
+	if (pledge("stdio rpath", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "t")))
+	while ((c = getopt(argc, argv, "t")) != -1)
 		switch (c) {
 		case ('t'):
 			typescript = 1;
@@ -1632,6 +1651,7 @@ main(int argc, char *argv[])
 		default:
 			goto usage;
 		}
+
 	argc -= optind;
 	argv += optind;
 	confsz = (size_t)argc;
@@ -1639,20 +1659,17 @@ main(int argc, char *argv[])
 	/* Read in all of our files now so we can repledge. */
 
 	if (confsz > 0) {
-		confs = calloc(confsz, sizeof(FILE *));
-		if (NULL == confs)
-			err(EXIT_FAILURE, NULL);
+		if ((confs = calloc(confsz, sizeof(FILE *))) == NULL)
+			err(EXIT_FAILURE, "calloc");
 		for (i = 0; i < confsz; i++) {
 			confs[i] = fopen(argv[i], "r");
-			if (NULL == confs[i]) {
-				warn("%s", argv[i]);
-				goto out;
-			}
+			if (confs[i] == NULL)
+				err(EXIT_FAILURE, "%s: open", argv[i]);
 		}
 	}
 
 #if HAVE_PLEDGE
-	if (-1 == pledge("stdio", NULL))
+	if (pledge("stdio", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 
@@ -1660,20 +1677,20 @@ main(int argc, char *argv[])
 		goto out;
 
 	for (i = 0; i < confsz; i++)
-		if ( ! ort_parse_file_r(cfg, confs[i], argv[i]))
+		if (!ort_parse_file_r(cfg, confs[i], argv[i]))
 			goto out;
 
-	if (0 == confsz && 
-	    ! ort_parse_file_r(cfg, stdin, "<stdin>"))
+	if (confsz == 0 && !ort_parse_file_r(cfg, stdin, "<stdin>"))
 		goto out;
 
-	if (0 != (rc = ort_parse_close(cfg)))
+	if ((rc = ort_parse_close(cfg)))
 		gen_javascript(cfg, typescript);
 
 out:
 	for (i = 0; i < confsz; i++)
-		if (NULL != confs[i] && EOF == fclose(confs[i]))
+		if (fclose(confs[i]) == EOF)
 			warn("%s", argv[i]);
+
 	free(confs);
 	ort_config_free(cfg);
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;

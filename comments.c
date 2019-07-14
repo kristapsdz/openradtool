@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017, 2019 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -21,6 +21,7 @@
 #endif
 
 #include <assert.h>
+#include <ctype.h>
 #if HAVE_ERR
 # include <err.h>
 #endif
@@ -38,7 +39,6 @@
  * Generate a (possibly) multi-line comment with "tabs" number of
  * preceding tab spaces.
  * This uses the standard comment syntax as seen in this comment itself.
- * FIXME: don't allow comment-end string.
  */
 static void
 print_comment(const char *doc, size_t tabs, 
@@ -48,33 +48,38 @@ print_comment(const char *doc, size_t tabs,
 	size_t		 i, curcol, maxcol;
 	char		 last = '\0';
 
-	assert(NULL != in);
+	assert(in != NULL);
 
-	if (tabs >= 4)
-		maxcol = 40;
-	else
-		maxcol = MAXCOLS - (tabs * 4);
+	/*
+	 * Maximum number of columns we show is MAXCOLS (utter maximum)
+	 * less the number of tabs prior, which we'll match to 4 spaces.
+	 */
 
-	if (NULL != pre) {
+	maxcol = (tabs >= 4) ? 40 : MAXCOLS - (tabs * 4);
+
+	/* Emit the starting clause. */
+
+	if (pre != NULL) {
 		for (i = 0; i < tabs; i++)
 			putchar('\t');
 		puts(pre);
 	}
 
-	if (NULL != doc) {
+	/* Emit the documentation matter. */
+
+	if (doc != NULL) {
 		for (i = 0; i < tabs; i++)
 			putchar('\t');
 		printf("%s", in);
 
-		curcol = 0;
-		for (cp = doc; '\0' != *cp; cp++) {
+		for (curcol = 0, cp = doc; *cp != '\0'; cp++) {
 			/*
 			 * Newline check.
 			 * If we're at a newline, then emit the leading
 			 * in-comment marker.
 			 */
 
-			if ('\n' == *cp) {
+			if (*cp == '\n') {
 				putchar('\n');
 				for (i = 0; i < tabs; i++)
 					putchar('\t');
@@ -86,7 +91,7 @@ print_comment(const char *doc, size_t tabs,
 
 			/* Escaped quotation marks. */
 
-			if ('\\' == *cp && '"' == cp[1])
+			if (*cp  == '\\' && cp[1] == '"')
 				cp++;
 
 			/*
@@ -96,11 +101,10 @@ print_comment(const char *doc, size_t tabs,
 			 * a newline, then emit a newline.
 			 */
 
-			if ((' ' == last || '\t' == last) && 
-			    (' ' != *cp && '\t' != *cp)) {
-				for (cpp = cp; '\0' != *cpp; cpp++)
-					if (' ' == *cpp || 
-					    '\t' == *cpp)
+			if (isspace((unsigned char)last) &&
+			    !isspace((unsigned char)*cp)) {
+				for (cpp = cp; *cpp != '\0'; cpp++)
+					if (isspace((unsigned char)*cpp))
 						break;
 				if (curcol + (cpp - cp) > maxcol) {
 					putchar('\n');
@@ -118,11 +122,13 @@ print_comment(const char *doc, size_t tabs,
 
 		/* Newline-terminate. */
 
-		if ('\n' != last)
+		if (last != '\n')
 			putchar('\n');
 	}
 
-	if (NULL != post) {
+	/* Epilogue material. */
+
+	if (post != NULL) {
 		for (i = 0; i < tabs; i++)
 			putchar('\t');
 		puts(post);

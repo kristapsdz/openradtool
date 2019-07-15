@@ -467,6 +467,27 @@ gen_javascript(const struct config *cfg, int tsc)
 	}
 
 	print_commentv(1, COMMENT_JS,
+		"Convenience function to resolve a set of "
+		"translated strings into a single one depending "
+		"upon the current language.\n"
+		"@param {langmap} vals - All translations of "
+		"a given word.\n"
+		"@private\n"
+		"@function _strlang\n"
+		"@memberof %s", ns);
+	gen_proto(tsc, "string", "_strlang", "vals", "langmap", NULL);
+	gen_vars(tsc, 2, "lang", "string|null", NULL);
+	puts("\t\tlang = document.documentElement.lang;\n"
+	     "\t\tif (null !== lang && lang in vals)\n"
+	     "\t\t\treturn vals[lang];\n"
+	     "\t\telse if ('_default' in vals)\n"
+	     "\t\t\treturn vals['_default'];\n"
+	     "\t\telse\n"
+	     "\t\t\treturn '';\n"
+	     "\t}\n"
+	     "");
+
+	print_commentv(1, COMMENT_JS,
 		"Used exclusively by enumerations and bitfields "
 		"to do language replacement conditional upon the "
 		"label (<i>jslabel</i> in the configuration).\n"
@@ -486,16 +507,7 @@ gen_javascript(const struct config *cfg, int tsc)
 		"e", "HTMLElement|null",
 		"name", "string",
 		"vals", "langmap", NULL);
-	gen_vars(tsc, 2, "val", "string",
-		"lang", "string|null", NULL);
-	puts("\t\tlang = document.documentElement.lang;\n"
-	     "\t\tif (null !== lang && lang in vals)\n"
-	     "\t\t\tval = vals[lang];\n"
-	     "\t\telse if ('_default' in vals)\n"
-	     "\t\t\tval = vals['_default'];\n"
-	     "\t\telse\n"
-	     "\t\t\tval = '';\n"
-	     "\t\t_replcl(e, name, val, false);\n"
+	puts("\t\t_replcl(e, name, _strlang(vals), false);\n"
 	     "\t}\n"
 	     "");
 
@@ -939,7 +951,8 @@ gen_javascript(const struct config *cfg, int tsc)
 				 s->name, ns, s->name);
 		puts("\n"
 		     "\texport interface DataCallbacks\n"
-		     "\t{");
+		     "\t{\n"
+		     "\t\t[key: string]: any;");
 		TAILQ_FOREACH(s, &cfg->sq, entries) {
 			printf("\t\t'%s'?: DCbStruct%s|DCbStruct%s[];\n",
 				s->name, s->name, s->name);

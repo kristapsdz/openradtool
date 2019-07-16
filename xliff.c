@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2018 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2018--2019 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -843,11 +843,11 @@ main(int argc, char *argv[])
 	size_t		  confsz = 0, i, j, xmlsz = 0, xmlstart = 0;
 
 #if HAVE_PLEDGE
-	if (-1 == pledge("stdio rpath", NULL))
+	if (pledge("stdio rpath", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "cju")))
+	while ((c = getopt(argc, argv, "cju")) != -1)
 		switch (c) {
 		case 'c':
 			copy = 1;
@@ -865,15 +865,16 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	if (OP_JOIN == op || OP_UPDATE == op) {
+	if (op == OP_JOIN || op == OP_UPDATE) {
 		for (confsz = 0; confsz < (size_t)argc; confsz++)
-			if (0 == strcmp(argv[confsz], "-x"))
+			if (strcmp(argv[confsz], "-x") == 0)
 				break;
 
 		/* If we have >2 w/o -x, error (which conf/xml?). */
 
 		if (confsz == (size_t)argc && argc > 2)
 			goto usage;
+
 		if ((i = confsz) < (size_t)argc)
 			i++;
 
@@ -882,48 +883,40 @@ main(int argc, char *argv[])
 
 		/* If we have 2 w/o -f, it's old-new. */
 
-		if (0 == xmlsz && 2 == argc)
+		if (xmlsz == 0 && argc == 2)
 			xmlsz = confsz = xmlstart = 1;
+
+		if (OP_UPDATE == op && xmlsz > 1)
+			goto usage;
 
 		xmls = calloc(xmlsz, sizeof(int));
 		confs = calloc(confsz, sizeof(FILE *));
 		if (NULL == xmls || NULL == confs)
 			err(EXIT_FAILURE, NULL);
 
-		for (i = 0; i < confsz; i++) {
-			confs[i] = fopen(argv[i], "r");
-			if (NULL == confs[i]) {
-				warn("%s", argv[i]);
-				goto out;
-			}
-		}
+		for (i = 0; i < confsz; i++)
+			if ((confs[i] = fopen(argv[i], "r")) == NULL)
+				err(EXIT_FAILURE, "%s", argv[i]);
 		if (i < (size_t)argc && 0 == strcmp(argv[i], "-x"))
 			i++;
 		for (j = 0; i < (size_t)argc; j++, i++) {
-			xmls[j] = open(argv[i], O_RDONLY, 0);
-			if (-1 == xmls[j]) {
-				warn("%s", argv[i]);
-				goto out;
-			}
+			assert(j < xmlsz);
+			if ((xmls[j] = open(argv[i], O_RDONLY, 0)) == -1)
+				err(EXIT_FAILURE, "%s", argv[i]);
 		}
-		if (OP_UPDATE == op && xmlsz > 1)
-			goto usage;
 	} else {
 		confsz = (size_t)argc;
 		confs = calloc(confsz, sizeof(FILE *));
 		if (NULL == confs)
 			err(EXIT_FAILURE, NULL);
-		for (i = 0; i < confsz; i++) {
-			confs[i] = fopen(argv[i], "r");
-			if (NULL == confs[i]) {
-				warn("%s", argv[i]);
-				goto out;
-			}
-		}
+
+		for (i = 0; i < confsz; i++)
+			if ((confs[i] = fopen(argv[i], "r")) == NULL)
+				err(EXIT_FAILURE, "%s", argv[i]);
 	}
 
 #if HAVE_PLEDGE
-	if (-1 == pledge("stdio", NULL))
+	if (pledge("stdio", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 
@@ -931,36 +924,37 @@ main(int argc, char *argv[])
 		goto out;
 
 	for (i = 0; i < confsz; i++)
-		if ( ! ort_parse_file_r(cfg, confs[i], argv[i]))
+		if (!ort_parse_file_r(cfg, confs[i], argv[i]))
 			goto out;
-
-	if (0 == confsz &&
-	    ! ort_parse_file_r(cfg, stdin, "<stdin>"))
-			goto out;
-
-	if ( ! ort_parse_close(cfg))
+	if (confsz == 0 && !ort_parse_file_r(cfg, stdin, "<stdin>"))
+		goto out;
+	if (!ort_parse_close(cfg))
 		goto out;
 
-	rc = OP_EXTRACT == op ? 
-		xliff_extract(cfg, copy) :
-	    OP_JOIN == op ?
-		xliff_join_fds(cfg, copy, xmls, xmlsz, 
-			(const char **)&argv[xmlstart + i]) :
-		xliff_update(cfg, copy, xmls, xmlsz, 
+	switch (op) {
+	case OP_EXTRACT:
+		rc = xliff_extract(cfg, copy);
+		break;
+	case OP_JOIN:
+		rc = xliff_join_fds(cfg, copy, xmls, xmlsz, 
 			(const char **)&argv[xmlstart + i]);
-
+		break;
+	case OP_UPDATE:
+		rc = xliff_update(cfg, copy, xmls, xmlsz, 
+			(const char **)&argv[xmlstart + i]);
+		break;
+	}
 out:
 	for (i = 0; i < xmlsz; i++)
-		if (-1 != xmls[i] && -1 == close(xmls[i]))
+		if (close(xmls[i]) == -1)
 			warn("%s", argv[xmlstart + i]);
 	for (i = 0; i < confsz; i++)
-		if (NULL != confs[i] && EOF == fclose(confs[i]))
+		if (fclose(confs[i]) == EOF)
 			warn("%s", argv[i]);
 
 	free(confs);
 	free(xmls);
 	ort_config_free(cfg);
-
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 

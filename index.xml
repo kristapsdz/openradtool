@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" prefix="og: http://ogp.me/ns#">
 	<head>
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta charset="utf-8" /> 
@@ -9,6 +9,11 @@
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Alegreya+Sans:400,400italic,500" />
 		<link rel="stylesheet" href="highlight.css" />
 		<link rel="stylesheet" href="index.css" />
+		<meta property="og:title" content="openradtool: application source generator" />
+		<meta property="og:url" content="https://kristaps.bsd.lv/openradtool/index.html" />
+		<meta property="og:type" content="website" />
+		<meta property="og:description" content="An open source rapid application development utility." />
+		<meta name="description" content="An open source rapid application development utility." />
 	</head>
 	<body itemscope="itemscope" itemtype="http://schema.org/SoftwareApplication">
 		<header>

@@ -53,13 +53,93 @@ These classes include methods to fill data from the JSON into a DOM tree
 by operating on elements having specific classes.
 .Pp
 All output files are fully documented in the jsdoc format.
+.Ss Modules
+All data produced by
+.Nm
+is contained within a namespace or module (depending upon whether
+.Fl t
+is specified) called
+.Ar ort .
+For TypeScript output, data is namespaced.
+For example, let
+.Qq foo
+be a
+.Cm struct
+defined in the configuration.
+.Bd -literal
+namespace ort {
+  export interface DataCallbacks { ... }
+  export interface fooData { ... }
+  export class foo { }
+}
+.Ed
+.Pp
+For JavaScript, data uses the module pattern.
+.Bd -literal
+var ort;
+(function(ort) {
+  var foo = (function() { ... }());
+  ort.foo = foo;
+})(ort || (ort = {}));
+.Ed
+.Ss Interfaces
+The concept of an interface is only applicable to
+.Fl t
+output.
+Each
+.Cm struct
+in the configuration is rendered as a TypeScript interface suffixed
+.Qq Data ,
+for example,
+.Qq fooData
+for a structure named
+.Qq foo .
+Each native field is mapped to a native type:
+.Cm string
+or
+.Cm number .
+Ror references, the type is the referenced interface type.
+.Bd -literal
+namespace ort {
+  export interface fooData {
+    sometext: string;
+    somenumber: number;
+    areference: barData;
+  }
+}
+.Ed
+.Pp
+In addition to this, a
+.Qq DataCallbacks
+interface may be used for
+.Sx Customisation
+and contains callback functions for each field for formatting purposes.
+.Pp
+In JavaScript output, which has no interfaces, the programmer must
+ensure that the variables are properly constructed.
 .Ss Constructors
+Structures are output as classes containing formatting methods.
+(Enumerations and bitfields have static classes.)
+They are named as found in the configuration.
 Each structure has a constructor to which one passes a single object of
-the given type or an array.
-For any given structure
-.Qq foo ,
-the interface for the structure is called
-.Qq fooData .
+the given interface type or an array.
+For TypeScript, this is the
+.Qq fooData
+interface.
+In this example, let
+.Fa parseData
+create the required interfaces.
+.Bd -literal
+let input: ort.fooData = parseData();
+let foo: ort.foo = new ort.foo(input);
+.Ed
+.Pp
+For JavaScript, this is a simple dictionary.
+.Bd -literal
+var input = parseData();
+var foo = new ort.foo(input);
+.Ed
+.Pp
 The array may be zero-length, but the object may not be
 .Dv null .
 .Ss Class Methods

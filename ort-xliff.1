@@ -49,16 +49,13 @@
 .Sh DESCRIPTION
 The
 .Nm
-utility extracts, merges, and updates translatable strings from and into
-a
+utility accepts
 .Xr ort 5
-configuration.
-The configuration may be broken apart into several files.
+.Ar config
+files, defaulting to standard input,
+and extracts, merges, and updates translatable strings.
 The translated strings are used only by
 .Xr ort-javascript 1 .
-By default,
-.Nm
-extracts all translatable labels.
 The arguments are as follows:
 .Bl -tag -width Ds
 .It Fl c
@@ -86,6 +83,10 @@ A
 configuration file.
 There may be multiple files in a single configuration.
 .El
+.Pp
+By default,
+.Nm
+outputs all translatable labels onto standard output.
 .Pp
 When invoked with
 .Fl j

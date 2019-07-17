@@ -35,11 +35,11 @@ The
 .Nm
 utility accepts
 .Xr ort 5
-configurations
 .Ar config
 and
 .Ar oldconfig
-and produces an SQL schema describing the configuration.
+files, the latter defaulting to standard input,
+and produces SQL commands updating the old to new schema.
 Its arguments are as follows:
 .Bl -tag -width Ds
 .It Fl d

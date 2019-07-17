@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017--2019 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -73,7 +73,7 @@ gen_label_text(const char *cp)
 {
 	unsigned char	 c;
 
-	while ('\0' != (c = *cp++))
+	while ((c = *cp++) != '\0')
 		switch (c) {
 		case '\'':
 			printf("\\\'");
@@ -108,12 +108,12 @@ gen_labels(const struct config *cfg, const struct labelq *q)
 		TAILQ_FOREACH(l, q, entries) 
 			if (l->lang == i)
 				break;
-		if (NULL != l) {
+		if (l != NULL) {
 			printf("%s: \'", i == 0 ? 
 				"_default" : cfg->langs[i]);
 			gen_label_text(l->label);
 			putchar('\'');
-		} else if (i > 0 && NULL != def) {
+		} else if (i > 0 && def != NULL) {
 			printf("%s: \'", i == 0 ? 
 				"_default" : cfg->langs[i]);
 			gen_label_text(def);
@@ -141,24 +141,24 @@ warn_label(const struct config *cfg, const struct labelq *q,
 		if (l->lang == 0)
 			break;
 
-	if ( ! (hasdef = NULL != l)) 
+	if (!(hasdef = (l != NULL)))
 		fprintf(stderr, "%s:%zu: %s%s%s: "
 			"%s jslabel not defined\n",
 			p->fname, p->line, name,
-			NULL != sub ? "." : "", 
-			NULL != sub ? sub : "", type);
+			sub != NULL ? "." : "", 
+			sub != NULL ? sub : "", type);
 
 	for (i = 1; i < cfg->langsz; i++) {
 		TAILQ_FOREACH(l, q, entries)
 			if (l->lang == i)
 				break;
-		if (NULL != l)
+		if (l != NULL)
 			continue;
 		fprintf(stderr, "%s:%zu: %s%s%s: %s "
 			"jslabel.%s not defined: %s\n",
 			p->fname, p->line, name,
-			NULL != sub ? "." : "", 
-			NULL != sub ? sub : "",
+			sub != NULL ? "." : "", 
+			sub != NULL ? sub : "",
 			type, cfg->langs[i],
 			hasdef ? "using default" :
 			"using empty string");
@@ -169,10 +169,10 @@ static void
 gen_jsdoc_field(const char *ns, const struct field *f)
 {
 
-	if (FIELD_NOEXPORT & f->flags || FTYPE_BLOB == f->type)
+	if ((f->flags & FIELD_NOEXPORT) || f->type == FTYPE_BLOB)
 		return;
 
-	if (FIELD_NULL & f->flags) {
+	if ((f->flags & FIELD_NULL)) {
 		print_commentv(2, COMMENT_JS_FRAG,
 			"<li>%s-has-%s: <code>hide</code> class "
 			"removed if <i>%s</i> not null, otherwise "
@@ -185,13 +185,13 @@ gen_jsdoc_field(const char *ns, const struct field *f)
 			f->parent->name, f->name, f->name);
 	} 
 
-	if (FTYPE_STRUCT == f->type) {
+	if (f->type == FTYPE_STRUCT) {
 		print_commentv(2, COMMENT_JS_FRAG,
 			"<li>%s-%s-obj: invoke {@link "
 			"%s.%s#fillInner} with %s data%s</li>",
 			f->parent->name, f->name, 
 			ns, f->ref->tstrct, f->name,
-			FIELD_NULL & f->flags ? 
+			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
 	} else {
 		print_commentv(2, COMMENT_JS_FRAG,
@@ -200,37 +200,37 @@ gen_jsdoc_field(const char *ns, const struct field *f)
 			"<code>&lt;option&gt;</code> values "
 			"matching <i>%s</i> under the element%s</li>",
 			f->parent->name, f->name, f->name,
-			FIELD_NULL & f->flags ? 
+			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
 			"<li>%s-%s-value-checked: sets the "
 			"<code>checked</code> attribute under "
 			"the element matching the input%s</li>",
 			f->parent->name, f->name, 
-			FIELD_NULL & f->flags ? 
+			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
 			"<li>%s-%s-text: replace contents "
 			"with <i>%s</i> data%s</li>",
 			f->parent->name, f->name, f->name,
-			FIELD_NULL & f->flags ? 
+			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
 			"<li>%s-%s-value: replace <code>value</code> "
 			"attribute with <i>%s</i> data%s</li>",
 			f->parent->name, f->name, f->name,
-			FIELD_NULL & f->flags ? 
+			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
 	}
 
-	if (FTYPE_DATE == f->type ||
-	    FTYPE_EPOCH == f->type) {
+	if (f->type == FTYPE_DATE ||
+	    f->type == FTYPE_EPOCH) {
 		print_commentv(2, COMMENT_JS_FRAG,
 			"<li>%s-%s-date-value: set the element's "
 			"<code>value</code> to the ISO-8601 date "
 			"format of the data%s</li>",
 			f->parent->name, f->name, 
-			FIELD_NULL & f->flags ? 
+			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
 			"<li>%s-%s-date-text: like "
@@ -239,15 +239,15 @@ gen_jsdoc_field(const char *ns, const struct field *f)
 			f->parent->name, f->name);
 	}
 
-	if (FTYPE_BIT == f->type ||
-	    FTYPE_BITFIELD == f->type)
+	if (f->type == FTYPE_BIT ||
+	    f->type == FTYPE_BITFIELD)
 		print_commentv(2, COMMENT_JS_FRAG,
 			"<li>%s-%s-bits-checked: set the "
 			"<code>checked</code> attribute when "
 			"the element's <code>value</code> is "
 			"covered by the data bitmask%s</li>",
 			f->parent->name, f->name, 
-			FIELD_NULL & f->flags ? 
+			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
 }
 
@@ -257,28 +257,28 @@ gen_js_field(const struct field *f)
 	char	*buf = NULL;
 	int	 rc;
 
-	if (FIELD_NOEXPORT & f->flags || FTYPE_BLOB == f->type)
+	if ((f->flags & FIELD_NOEXPORT) || f->type == FTYPE_BLOB)
 		return;
-	if (FTYPE_STRUCT == f->type) {
+	if (f->type == FTYPE_STRUCT) {
 		rc = asprintf(&buf, "new %s(o.%s)", 
 			f->ref->tstrct, f->name);
-		if (rc < 0)
-			err(EXIT_FAILURE, NULL);
+		if (rc == -1)
+			err(EXIT_FAILURE, "asprintf");
 	}
 
 	printf("\t\t\t_fillField(e, '%s', '%s', custom, o.%s, "
 		"inc, %s, %s, %s);\n",
 		f->parent->name, f->name, f->name,
-		FIELD_NULL & f->flags ? "true" : "false",
-		FTYPE_BLOB == f->type ? "true" : "false",
-		NULL == buf ? "null" : buf);
+		(f->flags & FIELD_NULL) ? "true" : "false",
+		f->type == FTYPE_BLOB ? "true" : "false",
+		buf == NULL ? "null" : buf);
 	free(buf);
 
-	if (FTYPE_BIT == f->type || FTYPE_BITFIELD == f->type)
+	if (f->type == FTYPE_BIT || f->type == FTYPE_BITFIELD)
 		printf("\t\t\t_fillBitsChecked"
 			"(e, '%s', '%s', o.%s, inc);\n",
 			f->parent->name, f->name, f->name);
-	if (FTYPE_DATE == f->type || FTYPE_EPOCH == f->type)
+	if (f->type == FTYPE_DATE || f->type == FTYPE_EPOCH)
 		printf("\t\t\t_fillDateValue"
 			"(e, '%s', '%s', o.%s, inc);\n",
 			f->parent->name, f->name, f->name);
@@ -298,9 +298,9 @@ gen_vars(int tsc, size_t tabs, ...)
 	const char	*name, *type;
 
 	va_start(ap, tabs);
-	while (NULL != (name = va_arg(ap, char *))) {
+	while ((name = va_arg(ap, char *)) != NULL) {
 		type = va_arg(ap, char *);
-		assert(NULL != type);
+		assert(type != NULL);
 		for (i = 0; i < tabs; i++)
 			putchar('\t');
 		if (tsc) 
@@ -329,15 +329,16 @@ gen_class_proto(int tsc, int priv, const char *cls,
 		printf("\t\t%s%s(", priv ? "private " : "", func);
 	else
 		printf("\t\t%s.prototype.%s = function(", cls, func);
+
 	va_start(ap, func);
-	while (NULL != (name = va_arg(ap, char *))) {
+	while ((name = va_arg(ap, char *)) != NULL) {
 		sz = strlen(name);
-		if ( ! tsc && sz && '?' == name[sz - 1])
+		if (!tsc && sz && name[sz - 1] == '?')
 			sz--;
-		if (0 == first)
+		if (first == 0)
 			printf(", ");
 		type = va_arg(ap, char *);
-		assert(NULL != type);
+		assert(type != NULL);
 		printf("%.*s", (int)sz, name);
 		if (tsc)
 			printf(": %s", type);
@@ -352,18 +353,24 @@ gen_class_proto(int tsc, int priv, const char *cls,
 	     "\t\t{");
 }
 
+/*
+ * Generate the method declaration for the enumeration or bitfield
+ * format() with "tsc" set if we're TypeScript and "cls" being the
+ * encompassing class for regular JavaScript.
+ * These both use the same syntax.
+ */
 static void
-gen_func_static(int tsc, const char *cls, const char *name)
+gen_func_static(int tsc, const char *cls)
 {
 
 	if (tsc)
-		printf("\t\tstatic %s(e: HTMLElement, "
-			"name: string, "
+		printf("\t\tstatic format(e: HTMLElement, "
+			"name: string|null, "
 			"v: number|null): void\n"
-		      "\t\t{\n", name);
+		      "\t\t{\n");
 	else
-		printf("\t\t%s.%s = function(e, name, v)\n"
-		       "\t\t{\n", cls, name);
+		printf("\t\t%s.format = function(e, name, v)\n"
+		       "\t\t{\n", cls);
 }
 
 static void
@@ -430,6 +437,10 @@ gen_proto(int tsc, const char *ret, const char *func, ...)
 	     "\t{");
 }
 
+/*
+ * Main driver function.
+ * This emits the top-level structure.
+ */
 static void
 gen_javascript(const struct config *cfg, int tsc)
 {
@@ -488,18 +499,15 @@ gen_javascript(const struct config *cfg, int tsc)
 	     "");
 
 	print_commentv(1, COMMENT_JS,
-		"Used exclusively by enumerations and bitfields "
-		"to do language replacement conditional upon the "
-		"label (<i>jslabel</i> in the configuration).\n"
-		"Like {@link %s._replcl} with inclusion set to "
-		"false.\n"
-		"@param {HTMLElement} e - The root of the "
-		"DOM tree in which we query for elements to fill "
-		"into.\n"
-		"@param {String} name - The class name we search "
-		"for within the root (not inclusive).\n"
-		"@param {langmap} vals - All translations of the "
-		"value.\n"
+		"Used exclusively by enumerations and bitfields to do "
+		"language replacement conditional upon the label "
+		"(<i>jslabel</i> in the configuration).\n"
+		"Like {@link %s._replcl} with inclusion set to false.\n"
+		"@param {HTMLElement} e - The root of the DOM tree in "
+		"which we query for elements to fill into.\n"
+		"@param {String} name - The class name we search for "
+		"within the root (not inclusive).\n"
+		"@param {langmap} vals - All possible translations.\n"
 		"@private\n"
 		"@function _replcllang\n"
 		"@memberof %s", ns, ns);
@@ -508,6 +516,24 @@ gen_javascript(const struct config *cfg, int tsc)
 		"name", "string",
 		"vals", "langmap", NULL);
 	puts("\t\t_replcl(e, name, _strlang(vals), false);\n"
+	     "\t}\n"
+	     "");
+
+	print_commentv(1, COMMENT_JS,
+		"Used exclusively by enumerations and bitfields to do "
+		"language replacement conditional upon the label "
+		"(<i>jslabel</i> in the configuration).\n"
+		"Like {@link %s._repl}.\n"
+		"@param {HTMLElement} e - The root of the DOM tree in "
+		"which we query for elements to fill into.\n"
+		"@param {langmap} vals - All possible translations.\n"
+		"@private\n"
+		"@function _repllang\n"
+		"@memberof %s", ns, ns);
+	gen_proto(tsc, "void", "_repllang",
+		"e", "HTMLElement|null",
+		"vals", "langmap", NULL);
+	puts("\t\t_repl(e, _strlang(vals));\n"
 	     "\t}\n"
 	     "");
 
@@ -1491,29 +1517,45 @@ gen_javascript(const struct config *cfg, int tsc)
 			"@static\n"
 			"@function format\n"
 			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {String} name - The class name root.\n"
+			"@param {String|null} name - If non-null, "
+			"data is written to elements under the root "
+			"with the given class name. "
+			"Otherwise, data is written directly into "
+			"the DOM element.\n"
 			"@param {Number} v - The bitfield.\n"
 			"@memberof %s.%s#",
 			ns, bf->name, bf->name, ns, bf->name);
-		gen_func_static(tsc, bf->name, "format");
+		gen_func_static(tsc, bf->name);
 		gen_vars(tsc, 3, 
 			"i", "number",
-			"str", "string", NULL);
-		printf("\t\t\tstr = '';\n"
+			"s", "string", NULL);
+		printf("\t\t\ts = '';\n"
 		       "\t\t\ti = 0;\n"
-		       "\t\t\tname += '-label';\n"
-		       "\t\t\tif (null === v) {\n"
+		       "\t\t\tif (name !== null)\n"
+		       "\t\t\t\tname += '-label';\n"
+		       "\t\t\tif (v === null && name !== null) {\n"
 		       "\t\t\t\t_classaddcl(e, name, "
-		         "\'ort-null\', false);\n"
+		       	"\'ort-null\', false);\n"
 		       "\t\t\t\t_replcllang(e, name, ");
 		gen_labels(cfg, &bf->labels_null);
 		printf(");\n"
 		       "\t\t\t\treturn;\n"
-		       "\t\t\t}\n"
-		       "\t\t\tif (0 === v) {\n"
+		       "\t\t\t} else if (v === null) {\n"
+		       "\t\t\t\t_classadd(e, \'ort-null\');\n"
+		       "\t\t\t\t_repllang(e, ");
+		gen_labels(cfg, &bf->labels_null);
+		printf(");\n"
+		       "\t\t\t\treturn;\n"
+		       "\t\t\t} else if (v === 0 && name !== null) {\n"
 		       "\t\t\t\t_classaddcl(e, name, "
 		     	"\'ort-unset\', false);\n"
 		       "\t\t\t\t_replcllang(e, name, ");
+		gen_labels(cfg, &bf->labels_unset);
+		printf(");\n"
+		       "\t\t\t\treturn;\n"
+		       "\t\t\t} else if (v === 0) {\n"
+		       "\t\t\t\t_classadd(e, \'ort-unset\');\n"
+		       "\t\t\t\t_repllang(e, ");
 		gen_labels(cfg, &bf->labels_unset);
 		puts(");\n"
 		     "\t\t\t\treturn;\n"
@@ -1521,18 +1563,24 @@ gen_javascript(const struct config *cfg, int tsc)
 		TAILQ_FOREACH(bi, &bf->bq, entries) {
 			warn_label(cfg, &bi->labels, &bi->pos,
 				bf->name, bi->name, "item");
-			printf("\t\t\tif (%s.BITF_%s & v)\n"
-		       	       "\t\t\t\tstr += "
-			        "(i++ > 0 ? ', ' : '') + _strlang(",
+			printf("\t\t\tif ((v & %s.BITF_%s))\n"
+		       	       "\t\t\t\ts += (i++ > 0 ? ', ' : '') +\n"
+			       "\t\t\t\t  _strlang(", 
 			       bf->name, bi->name);
 			gen_labels(cfg, &bi->labels);
 			puts(");");
 		}
-		printf("\t\t\tif (0 === str.length) {\n"
+		printf("\t\t\tif (s.length === 0 && name !== null) {\n"
 		       "\t\t\t\t_replcl(e, name, \'unknown\', false);\n"
 		       "\t\t\t\treturn;\n"
+		       "\t\t\t} else if (s.length === 0) { \n"
+		       "\t\t\t\t_repl(e, \'unknown\');\n"
+		       "\t\t\t\treturn;\n"
 		       "\t\t\t}\n"
-		       "\t\t\t_replcl(e, name, str, false);\n"
+		       "\t\t\tif (name !== null)\n"
+		       "\t\t\t\t_replcl(e, name, s, false);\n"
+		       "\t\t\telse\n"
+		       "\t\t\t\t_repl(e, s);\n"
 		       "\t\t}%s\n",
 		       tsc ? "" : ";");
 		if ( ! tsc) 
@@ -1594,15 +1642,25 @@ gen_javascript(const struct config *cfg, int tsc)
 			"@static\n"
 			"@function format\n"
 			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {String} name - The class name root.\n"
+			"@param {String|null} name - If non-null, "
+			"data is written to elements under the root "
+			"with the given class name. "
+			"Otherwise, data is written directly into "
+			"the DOM element.\n"
 			"@param {Number} v - The enumeration value.\n"
 			"@memberof %s.%s#",
 			ns, e->name, e->name, ns, e->name);
-		gen_func_static(tsc, e->name, "format");
-		printf("\t\t\tname += '-label';\n"
-		       "\t\t\tif (null === v) {\n"
+		gen_func_static(tsc, e->name);
+		gen_vars(tsc, 3, "s", "string", NULL);
+		printf("\t\t\tif (name !== null)\n"
+		       "\t\t\t\tname += '-label';\n"
+		       "\t\t\tif (v === null && name !== null) {\n"
 		       "\t\t\t\t_replcl(e, name, \'not given\', false);\n"
 		       "\t\t\t\t_classaddcl(e, name, \'noanswer\', false);\n"
+		       "\t\t\t\treturn;\n"
+		       "\t\t\t} else if (v === null) {\n"
+		       "\t\t\t\t_repl(e, \'not given\');\n"
+		       "\t\t\t\t_classadd(e, \'noanswer\');\n"
 		       "\t\t\t\treturn;\n"
 		       "\t\t\t}\n"
 		       "\t\t\tswitch(v) {\n");
@@ -1610,7 +1668,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			warn_label(cfg, &ei->labels, &ei->pos,
 				e->name, ei->name, "item");
 			printf("\t\t\tcase %s.%s:\n"
-			       "\t\t\t\t_replcllang(e, name, ",
+			       "\t\t\t\ts = _strlang(",
 			       e->name, ei->name);
 			gen_labels(cfg, &ei->labels);
 			puts(");\n"
@@ -1619,9 +1677,13 @@ gen_javascript(const struct config *cfg, int tsc)
 		printf("\t\t\tdefault:\n"
 		       "\t\t\t\tconsole.log(\'%s.format: "
 		         "unknown value: ' + v);\n"
-		       "\t\t\t\t_replcl(e, name, \'\', false);\n"
+		       "\t\t\t\ts = '';\n"
 		       "\t\t\t\tbreak;\n"
 		       "\t\t\t}\n"
+		       "\t\t\tif (name !== null)\n"
+		       "\t\t\t\t_replcl(e, name, s, false);\n"
+		       "\t\t\telse\n"
+		       "\t\t\t\t_repl(e, s);\n"
 		       "\t\t}%s\n",
 		       e->name, tsc ? "" : ";");
 		if ( ! tsc) 

@@ -865,6 +865,12 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
+	/*
+	 * Open all of our files prior to the pledge(2), failing
+	 * immediately if any open fails.
+	 * This makes cleanup easier.
+	 */
+
 	if (op == OP_JOIN || op == OP_UPDATE) {
 		for (confsz = 0; confsz < (size_t)argc; confsz++)
 			if (strcmp(argv[confsz], "-x") == 0)
@@ -881,7 +887,10 @@ main(int argc, char *argv[])
 		xmlstart = i;
 		xmlsz = argc - i;
 
-		/* If we have 2 w/o -f, it's old-new. */
+		if (confsz == 0 && xmlsz == 0)
+			goto usage;
+
+		/* If we have 2 w/o -x, it's old-new. */
 
 		if (xmlsz == 0 && argc == 2)
 			xmlsz = confsz = xmlstart = 1;
@@ -889,10 +898,12 @@ main(int argc, char *argv[])
 		if (OP_UPDATE == op && xmlsz > 1)
 			goto usage;
 
-		xmls = calloc(xmlsz, sizeof(int));
-		confs = calloc(confsz, sizeof(FILE *));
-		if (NULL == xmls || NULL == confs)
-			err(EXIT_FAILURE, NULL);
+		if (xmlsz > 0 &&
+		    (xmls = calloc(xmlsz, sizeof(int))) == NULL)
+			err(EXIT_FAILURE, "calloc");
+		if (confsz > 0 &&
+		    (confs = calloc(confsz, sizeof(FILE *))) == NULL)
+			err(EXIT_FAILURE, "calloc");
 
 		for (i = 0; i < confsz; i++)
 			if ((confs[i] = fopen(argv[i], "r")) == NULL)
@@ -901,15 +912,15 @@ main(int argc, char *argv[])
 			i++;
 		for (j = 0; i < (size_t)argc; j++, i++) {
 			assert(j < xmlsz);
-			if ((xmls[j] = open(argv[i], O_RDONLY, 0)) == -1)
+			xmls[j] = open(argv[i], O_RDONLY, 0);
+			if (xmls[j] == -1)
 				err(EXIT_FAILURE, "%s", argv[i]);
 		}
 	} else {
 		confsz = (size_t)argc;
-		confs = calloc(confsz, sizeof(FILE *));
-		if (NULL == confs)
-			err(EXIT_FAILURE, NULL);
-
+		if (confsz > 0 &&
+		    (confs = calloc(confsz, sizeof(FILE *))) == NULL)
+			err(EXIT_FAILURE, "calloc");
 		for (i = 0; i < confsz; i++)
 			if ((confs[i] = fopen(argv[i], "r")) == NULL)
 				err(EXIT_FAILURE, "%s", argv[i]);
@@ -919,6 +930,8 @@ main(int argc, char *argv[])
 	if (pledge("stdio", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
+
+	/* Create a configuration, parse, link. */
 
 	if ((cfg = ort_config_alloc()) == NULL)
 		goto out;
@@ -930,6 +943,8 @@ main(int argc, char *argv[])
 		goto out;
 	if (!ort_parse_close(cfg))
 		goto out;
+
+	/* Operate on the XLIFF/configuration file(s). */
 
 	switch (op) {
 	case OP_EXTRACT:

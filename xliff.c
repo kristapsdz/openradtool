@@ -665,6 +665,12 @@ xliff_join_xliff(struct config *cfg, int copy,
 	return 1;
 }
 
+/*
+ * Parse XLIFF files with existing translations and update them (using a
+ * single file) with new labels in "cfg".
+ * Returns zero on XLIFF parse failure or update failure, non-zero on
+ * success.
+ */
 static int
 xliff_update(struct config *cfg, int copy, 
 	const int *xmls, size_t xmlsz, const char **argv)
@@ -680,10 +686,8 @@ xliff_update(struct config *cfg, int copy,
 
 	assert(xmlsz < 2);
 
-	if (NULL == (p = XML_ParserCreate(NULL))) {
-		warn("XML_ParserCreate");
-		return 0;
-	}
+	if ((p = XML_ParserCreate(NULL)) == NULL)
+		err(EXIT_FAILURE, "XML_ParserCreate");
 
 	x = xmlsz ?
 		xliff_read(xmls[0], argv[0], p) :
@@ -691,19 +695,19 @@ xliff_update(struct config *cfg, int copy,
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		TAILQ_FOREACH(ei, &e->eq, entries)
-			if ( ! xliff_update_unit
+			if (!xliff_update_unit
 			    (&ei->labels, NULL, x, &ei->pos))
 				goto out;
 
 	TAILQ_FOREACH(b, &cfg->bq, entries) {
 		TAILQ_FOREACH(bi, &b->bq, entries)
-			if ( ! xliff_update_unit
+			if (!xliff_update_unit
 			    (&bi->labels, NULL, x, &bi->pos))
 				goto out;
-		if ( ! xliff_update_unit
+		if (!xliff_update_unit
 		    (&b->labels_unset, "isunset", x, &b->pos))
 			goto out;
-		if ( ! xliff_update_unit
+		if (!xliff_update_unit
 		    (&b->labels_null, "isnull", x, &b->pos))
 			goto out;
 	}
@@ -717,14 +721,14 @@ xliff_update(struct config *cfg, int copy,
 	       x->trglang, getprogname());
 
 	for (i = 0; i < x->usz; i++)
-		if (NULL == x->u[i].target && copy)
+		if (x->u[i].target == NULL && copy)
 			printf("\t\t\t<trans-unit id=\"%s\">\n"
 			       "\t\t\t\t<source>%s</source>\n"
 			       "\t\t\t\t<target>%s</target>\n"
 			       "\t\t\t</trans-unit>\n",
 			       x->u[i].name, x->u[i].source,
 			       x->u[i].source);
-		else if (NULL == x->u[i].target)
+		else if (x->u[i].target == NULL)
 			printf("\t\t\t<trans-unit id=\"%s\">\n"
 			       "\t\t\t\t<source>%s</source>\n"
 			       "\t\t\t</trans-unit>\n",
@@ -741,8 +745,6 @@ xliff_update(struct config *cfg, int copy,
 	     "\t</file>\n"
 	     "</xliff>");
 
-	return 1;
-
 	rc = 1;
 out:
 	xparse_xliff_free(x);
@@ -751,9 +753,8 @@ out:
 }
 
 /*
- * Parse an XLIFF file with open descriptor "xml", which may be
- * STDIN_FILENO (and thus not mmap-able), and merge the translations
- * with labels in "cfg".
+ * Parse an XLIFF file with open descriptor "xml" and merge the
+ * translations with labels in "cfg".
  * Returns zero on XLIFF parse failure or merge failure, non-zero on
  * success.
  */
@@ -764,31 +765,28 @@ xliff_join(struct config *cfg, int copy,
 	struct xliffset	*x;
 	size_t		 i;
 
-	if (NULL == (x = xliff_read(xml, fn, p)))
+	if ((x = xliff_read(xml, fn, p)) == NULL)
 		return 0;
 
-	assert(NULL != x->trglang);
+	assert(x->trglang != NULL);
 	for (i = 0; i < cfg->langsz; i++)
-		if (0 == strcmp(cfg->langs[i], x->trglang))
+		if (strcmp(cfg->langs[i], x->trglang) == 0)
 			break;
 
 	if (i == cfg->langsz) {
-		cfg->langs = reallocarray
-			(cfg->langs,
-			 cfg->langsz + 1,
-			 sizeof(char *));
-		if (NULL == cfg->langs)
-			err(EXIT_FAILURE, NULL);
-		cfg->langs[cfg->langsz] =
-			strdup(x->trglang);
-		if (NULL == cfg->langs[cfg->langsz])
-			err(EXIT_FAILURE, NULL);
+		cfg->langs = reallocarray(cfg->langs,
+			 cfg->langsz + 1, sizeof(char *));
+		if (cfg->langs == NULL)
+			err(EXIT_FAILURE, "reallocarray");
+		cfg->langs[cfg->langsz] = strdup(x->trglang);
+		if (cfg->langs[cfg->langsz] == NULL)
+			err(EXIT_FAILURE, "strdup");
 		cfg->langsz++;
 	} else
 		fprintf(stderr, "%s: language \"%s\" is "
 			"already noted\n", fn, x->trglang);
 
-	if ( ! xliff_join_xliff(cfg, copy, i, x)) {
+	if (!xliff_join_xliff(cfg, copy, i, x)) {
 		xparse_xliff_free(x);
 		return 0;
 	}
@@ -812,21 +810,18 @@ xliff_join_fds(struct config *cfg, int copy,
 	size_t		 i;
 	XML_Parser	 p;
 
-	if (NULL == (p = XML_ParserCreate(NULL))) {
-		warn("XML_ParserCreate");
-		return 0;
-	}
+	if ((p = XML_ParserCreate(NULL)) == NULL)
+		err(EXIT_FAILURE, "XML_ParserCreate");
 
 	for (i = 0; rc && i < xmlsz; i++) 
 		rc = xliff_join(cfg, copy, xmls[i], argv[i], p);
-	if (0 == xmlsz)
+	if (xmlsz == 0)
 		rc = xliff_join(cfg, copy, STDIN_FILENO, "<stdin>", p);
 
 	XML_ParserFree(p);
 
 	if (rc)
 		ort_write_file(stdout, cfg);
-
 	return rc;
 }
 

@@ -774,17 +774,13 @@ main(int argc, char *argv[])
 		argv += optind;
 
 		confsz = (size_t)argc;
-		confs = calloc(confsz, sizeof(FILE *));
-		if (confs == NULL)
+		if (confsz > 0 &&
+		    (confs = calloc(confsz, sizeof(FILE *))) == NULL)
 			err(EXIT_FAILURE, "calloc");
 
-		for (i = 0; i < confsz; i++) {
-			confs[i] = fopen(argv[i], "r");
-			if (confs[i] == NULL) {
-				warn("%s", argv[i]);
-				goto out;
-			}
-		}
+		for (i = 0; i < confsz; i++)
+			if ((confs[i] = fopen(argv[i], "r")) == NULL)
+				err(EXIT_FAILURE, "%s", argv[i]);
 	} else if (strcmp(getprogname(), "ort-sqldiff") == 0) {
 		diff = 1;
 		while ((c = getopt(argc, argv, "d")) != -1)
@@ -826,26 +822,22 @@ main(int argc, char *argv[])
 		if (confsz + dconfsz == 0)
 			goto usage;
 
-		confs = calloc(confsz, sizeof(FILE *));
-		dconfs = calloc(dconfsz, sizeof(FILE *));
-		if (confs == NULL || dconfs == NULL)
+		if (confsz > 0 &&
+		    (confs = calloc(confsz, sizeof(FILE *))) == NULL)
+			err(EXIT_FAILURE, "calloc");
+		if (dconfsz > 0 &&
+		    (dconfs = calloc(dconfsz, sizeof(FILE *))) == NULL)
 			err(EXIT_FAILURE, "calloc");
 
-		for (i = 0; i < dconfsz; i++) {
-			dconfs[i] = fopen(argv[i], "r");
-			if (NULL == dconfs[i]) {
-				warn("%s", argv[i]);
-				goto out;
-			}
-		}
+		for (i = 0; i < dconfsz; i++)
+			if ((dconfs[i] = fopen(argv[i], "r")) == NULL)
+				err(EXIT_FAILURE, "%s", argv[i]);
 		if (i < (size_t)argc && strcmp(argv[i], "-f") == 0)
 			i++;
 		for (j = 0; i < (size_t)argc; j++, i++) {
-			confs[j] = fopen(argv[i], "r");
-			if (confs[j] == NULL) {
-				warn("%s", argv[i]);
-				goto out;
-			}
+			assert(j < confsz);
+			if ((confs[j] = fopen(argv[i], "r")) == NULL)
+				err(EXIT_FAILURE, "%s", argv[i]);
 		}
 	}
 
@@ -894,14 +886,10 @@ main(int argc, char *argv[])
 
 out:
 	for (i = 0; i < confsz; i++)
-		if (confs[i] != NULL && 
-		    confs[i] != stdin &&
-		    fclose(confs[i]) == EOF)
+		if (fclose(confs[i]) == EOF)
 			warn("%s", argv[confst + i]);
 	for (i = 0; i < dconfsz; i++)
-		if (dconfs[i] != NULL && 
-		    dconfs[i] != stdin &&
-		    fclose(dconfs[i]) == EOF)
+		if (fclose(dconfs[i]) == EOF)
 			warn("%s", argv[i]);
 	free(confs);
 	free(dconfs);

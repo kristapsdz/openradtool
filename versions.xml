@@ -3,6 +3,27 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.7.8</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2019-07-17">2019-07-17</time>
+		</header>
+		<aside>
+			<p>
+				Allow the <code>format</code> function of 
+				<a href="ort-javascript.1.html">ort-javascript(1)</a>
+				accept a <code>null</code> class name parameter, which switches into
+				element-replacement mode.
+				While here, improve the 
+				<a href="https://man.openbsd.org/style.9">style(9)</a> of the
+				generated code and add some extra documentation.
+				Also continue to add more content to the
+				<a href="ort-javascript.1.html">ort-javascript(1)</a>
+				manpage regarding namespacing and class construction.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.7.7</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2019-07-16">2019-07-16</time>

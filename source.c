@@ -1010,10 +1010,7 @@ gen_strct_func_count(const struct config *cfg,
 {
 	const struct sent  *sent;
 	const struct sref  *sr;
-	const struct strct *retstr;
 	size_t	 	    pos;
-
-	retstr = NULL != s->dst ? s->dst->strct : s->parent;
 
 	print_func_db_search(s, !TAILQ_EMPTY(&cfg->rq), 0);
 	puts("\n"

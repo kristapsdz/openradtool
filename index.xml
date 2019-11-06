@@ -22,7 +22,7 @@
 					<div>
 						BSD.lv tools for <a href="https://learnbchs.org">BCHS</a>: 
 						<a href="https://kristaps.bsd.lv/kcgi">kcgi</a>, 
-						<a href="https://kristaps.bsd.lv/ksql">ksql</a>, 
+						<a href="https://kristaps.bsd.lv/sqlbox">sqlbox</a>, 
 						<a href="https://kristaps.bsd.lv/openradtool">ort</a>
 					</div>
 				</div>
@@ -205,7 +205,7 @@
 					<span>3.</span> compile back-end code
 				</h2>
 				<code>
-					% cc -static -o test main.c <a href="db.c.html">db.c</a> -lksql -lsqlite3 -lpthread -lkcgijson -lkcgi -lz
+					% cc -static -o test main.c <a href="db.c.html">db.c</a> -lsqlbox -lsqlite3 -lpthread -lkcgijson -lkcgi -lz
 				</code>
 				<section>
 					<p>
@@ -215,7 +215,7 @@
 						It usually isn't necessary for non-CGI applications.
 					</p>
 					<p>
-						The required libraries are <b>-l</b><i>ksql</i> for the database routines,
+						The required libraries are <b>-l</b><i>sqlbox</i> for the database routines,
 						<b>-l</b><i>kcgijson</i> for the JSON output, and <b>-l</b><i>kcgi</i> for the input validation.
 						The other libraries are dependencies on the former (<b>-l</b><i>sqlite3</i> and
 						<b>-l</b><i>pthread</i>) and latter (<b>-l</b><i>z</i>).  

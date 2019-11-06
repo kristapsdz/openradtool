@@ -10,7 +10,7 @@ There's nothing in **ort** that's specific to C or SQLite.  This is
 simply what I currently use as output.
 
 The generated files currently use
-[ksql(3)](https://kristaps.bsd.lv/ksql) to wrap around SQLite and
+[sqlbox(3)](https://kristaps.bsd.lv/sqlbox) to wrap around SQLite and
 (optionally) [kcgi(3)](https://kristaps.bsd.lv/kcgi) for JSON or
 validation output.
 

@@ -10,16 +10,16 @@ digraph {
 	bin2[label="ort-c-source(1)"];
 
 	kcgi[label="kcgi(3)"];
-	ksql[label="ksql(3)"];
+	sqlbox[label="sqlbox(3)"];
 	sqlite[label="sqlite3(3)"];
 	src[label="C"];
 
 	cfg -> bin1 -> src;
 	cfg -> bin2 -> src;
 
-	{ rank=same; ksql; kcgi; sqlite; }
+	{ rank=same; sqlbox; kcgi; sqlite; }
 
-	src -> ksql[dir="both"; style="dotted"];
+	src -> sqlbox[dir="both"; style="dotted"];
 	src -> kcgi[dir="both"; style="dotted"];
-	ksql -> sqlite[dir="both"; style="dotted"];
+	sqlbox -> sqlite[dir="both"; style="dotted"];
 }

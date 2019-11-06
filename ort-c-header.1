@@ -88,8 +88,9 @@ To include output files for data structures, specify:
 .Ed
 .Pp
 Output begins with the definition of roles.
-The usage of roles in the input triggers several changes in output:
-these will be noted.
+This only happens if roles are specified in
+.Ar config ,
+such as:
 .Bd -literal -offset indent
 roles {
   role user;
@@ -157,7 +158,7 @@ enum foo {
 };
 .Ed
 .Pp
-Structures are the foundational data strutcure of the API.
+Structures are the foundational data structure of the API.
 They are named as defined in the configuration and consist of variables
 mapped to
 .Cm field
@@ -230,10 +231,10 @@ These functions invoke
 for handling the database itself, so the
 .Fl l Ns Ar sqlbox
 library is required for linking.
-You'll need the following inclusions:
+Depending on your operating system, you may need the following inclusion before
+including the header file.
 .Bd -literal -offset indent
-#include <stdint.h> /* sqlbox(3) */
-#include <sqlbox.h>
+#include <stdint.h> /* int64_t... */
 .Ed
 .Pp
 If the configuration specifies roles, inclusions not are necessary.
@@ -245,34 +246,26 @@ and
 that open and close the database, respectively.
 There are also several transaction functions and, if applicable, a
 function for managing roles.
-.Pp
-In the following documentation,
-.Qq TYPE
-is defined as
-.Vt "struct ort"
-if roles are defined or
-.Vt "struct sqlbox"
-otherwise.
 .Bl -tag -width Ds
-.It Li TYPE *db_open(const char *file)
+.It Li struct ort *db_open(const char *file)
 Open a database named
 .Fa file
-and return a pointer to TYPE.
+and return a pointer.
 Returns
 .Dv NULL
 on failure to allocate, open, or configure the database.
-.It Li void db_close(TYPE *p)
+.It Li void db_close(struct ort *p)
 Closes a database opened by
 .Fn db_open .
 Passing
 .Dv NULL
 is a noop.
-.It Li void db_trans_commit(TYPE *p, size_t id)
+.It Li void db_trans_commit(struct ort *p, size_t id)
 Commit a transaction opened by
 .Fn db_trans_open
 with unique transaction identifier
 .Fa id .
-.It Li void db_trans_open(TYPE *p, size_t id, int mode)
+.It Li void db_trans_open(struct ort *p, size_t id, int mode)
 Open a transaction with a unique identifier
 .Fa id .
 The identifier prevents recursive transactions and allows for
@@ -285,7 +278,7 @@ locks (no writes allowed, reads allowed) on queries and unshared locks
 If >0, the transaction immediately enters unshared lock mode.
 If <0, the transaction locks exclusively, preventing all other
 access.
-.It Li void db_trans_rollback(TYPE *p, size_t id)
+.It Li void db_trans_rollback(struct ort *p, size_t id)
 Roll-back a transaction opened by
 .Fn db_trans_open
 with unique transaction identifier
@@ -303,13 +296,14 @@ or entering
 This does not return failure: on role violation, it invokes
 .Xr abort 2 .
 .It Li enum ort_role db_role_current(struct ort *ctx)
-Get the currently-assigned role.
+If roles are enabled, get the currently-assigned role.
 If
 .Fn db_role
 hasn't yet been called, this will be
 .Dv ROLE_default .
 .It Li enum ort_role db_role_stored(struct ort_store *ctx)
-Get the role assigned to an object at the time of its creation.
+If roles are enabled, get the role assigned to an object at the time of its
+creation.
 .El
 .Pp
 Each structure has a number of operations for operating on the
@@ -326,15 +320,8 @@ statements in the configuration.
 Let
 .Qq foo
 be the name of the exemplar structure.
-Again,
-.Qq TYPE
-is defined as
-.Vt "struct ort"
-if roles are defined or
-.Vt "struct sqlbox"
-otherwise.
 .Bl -tag -width Ds
-.It Li int db_foo_delete_xxxx(TYPE *p, ARGS)
+.It Li int db_foo_delete_xxxx(struct ort *p, ARGS)
 Run the named
 .Cm delete
 function
@@ -344,7 +331,7 @@ the fields that constrain which rows are deleted.
 Parameters are only specified for operations for binary-operator
 constraints, i.e., those not checking for null status.
 Returns non-zero on success, zero on constraint failure.
-.It Li int db_foo_delete_by_yy_op(TYPE *p, ARGS)
+.It Li int db_foo_delete_by_yy_op(struct ort *p, ARGS)
 Like
 .Fn db_foo_delete_xxxx ,
 but using an un-named
@@ -362,7 +349,7 @@ this is a noop.
 Frees a queue (and its members) created by a listing function.
 This function is produced only if there are listing statements on a
 given structure.
-.It Li struct foo *db_foo_get_xxxx(TYPE *p, ARGS)
+.It Li struct foo *db_foo_get_xxxx(struct ort *p, ARGS)
 The
 .Cm search
 statement named
@@ -385,7 +372,7 @@ in the nested structure
 .Qq yy
 with operation
 .Qq op2 .
-.It Li int64_t db_foo_insert(TYPE *p, ARGS)
+.It Li int64_t db_foo_insert(struct ort *p, ARGS)
 Insert a row and return its
 .Ft int64_t
 identifier or
@@ -403,9 +390,9 @@ pointers.
 This function is only generated if the
 .Cm insert
 statement is specified for the given structure.
-.It Li void db_foo_iterate(TYPE *p, foo_cb cb, void *arg, ARGS)
+.It Li void db_foo_iterate(struct ort *p, foo_cb cb, void *arg, ARGS)
 Iterate over all rows.
-.It Li void db_foo_iterate_xxxx(TYPE *p, foo_cb cb, void *arg, ARGS)
+.It Li void db_foo_iterate_xxxx(struct ort *p, foo_cb cb, void *arg, ARGS)
 Like
 .Fn db_foo_get_xxxx ,
 but invoking a function callback
@@ -413,21 +400,21 @@ but invoking a function callback
 passed
 .Fa arg
 within the active query for each retrieved result.
-.It Li void db_foo_iterate_by__xxxx_op1__yy_zz_op2(TYPE *p, foo_cb cb, void *arg, ARGS)
+.It Li void db_foo_iterate_by__xxxx_op1__yy_zz_op2(struct ort *p, foo_cb cb, void *arg, ARGS)
 Like
 .Fn db_foo_get_by__xxxx_op1__yy_zz_op2 ,
 but invoking a function callback for the retrieved results.
-.It Li struct foo_q *db_foo_list(TYPE *p)
+.It Li struct foo_q *db_foo_list(struct ort *p)
 Allocate and fill a queue of all rows.
-.It Li struct foo_q *db_foo_list_xxxx(TYPE *p, ARGS)
+.It Li struct foo_q *db_foo_list_xxxx(struct ort *p, ARGS)
 Like
 .Fn db_foo_get_xxxx ,
 but producing a queue of responses.
-.It Li struct foo_q *db_foo_list_by__xxxx_op1__yy_zz_op2(TYPE *p, ARGS)
+.It Li struct foo_q *db_foo_list_by__xxxx_op1__yy_zz_op2(struct ort *p, ARGS)
 Like
 .Fn db_foo_get_by__xxxx_op1__yy_zz_op2 ,
 but producing a queue of responses.
-.It Li int db_foo_update_xxxx(TYPE *p, ARGS)
+.It Li int db_foo_update_xxxx(struct ort *p, ARGS)
 Run the named update function
 .Qq xxxx .
 The update functions are specified with
@@ -444,7 +431,7 @@ pointers.
 Update fields are only specified for operations for binary-operator
 constraints, i.e., those not checking for null status.
 Returns non-zero on success, zero on constraint failure.
-.It Li int db_foo_update_xx_by_yy_op(TYPE *p, ARGS)
+.It Li int db_foo_update_xx_by_yy_op(struct ort *p, ARGS)
 Like
 .Fn db_foo_update_xxxx ,
 but using an un-named update statement modifying
@@ -453,50 +440,11 @@ constrained by
 .Qq yy
 with operation
 .Qq op .
-.It Li void db_foo_update_by_yy_op(TYPE *p, ARGS)
+.It Li void db_foo_update_by_yy_op(struct ort *p, ARGS)
 Like
 .Fn db_foo_update_xx_by_yy_op ,
 but for when no modify fields were specified, meaning that all fields
 (but structures and row identifiers) are to be modified.
-.El
-.Pp
-If no roles are defined, several low-level functions declaration and
-macros are produced as well.
-This assists callers who provide their own database functions as enabled
-by
-.Xr sqlbox 3 .
-.Bl -tag -width Ds
-.It Dv DB_SCHEMA_XXX(name)
-The string version of the SQL schema of structure
-.Dq xxx .
-This macro accepts a single argument
-.Fa name
-that is prepended to each column name to facilitate aliases.
-.It Li void db_foo_fill(struct foo *p, const struct sqlbox_parmset *set, size_t *pos)
-Zero and fill in a pointer
-.Fa p
-from an open database statement
-.Fa stmt
-starting with result set column
-.Fa pos ,
-which if
-.Dv NULL
-is assumed to be column zero.
-The
-.Fa pos
-is set to the column after extracting information.
-This fills all nested structures as well.
-.It Li void db_foo_unfill(struct foo *p)
-Release resources
-.Fa p
-filled from a database query
-.Fn db_foo_fill .
-This frees all nested structures as well.
-If
-.Fa p
-is
-.Dv NULL ,
-this is a noop.
 .El
 .Ss JSON export
 These functions invoke

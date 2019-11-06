@@ -28,7 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ksql.h>
+#include <sqlbox.h>
 #include <kcgi.h>
 #include <kcgijson.h>
 
@@ -37,7 +37,7 @@
 int
 main(void)
 {
-	struct ksql	*sql;
+	struct sqlbox	*sql;
 	int64_t		 cid, uid, nuid, val = 1;
 	struct user	*u, *u2, *u3;
 	const char	*buf = "hello there";

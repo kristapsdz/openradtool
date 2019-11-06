@@ -613,23 +613,15 @@ gen_func_trans(const struct config *cfg)
  * documentation for db_close to be symmetric.
  */
 static void
-gen_func_open(const struct config *cfg, int splitproc)
+gen_func_open(const struct config *cfg)
 {
 
 	print_commentt(0, COMMENT_C_FRAG_OPEN,
-		"Allocate and open the database in \"file\". "
-		"This opens the database in \"safe exit\" mode "
-		"(see ksql(3)).");
-	if (splitproc)
-		print_commentt(0, COMMENT_C_FRAG,
-			"Note: the database has been opened in a "
-			"child process, so the application may be "
-			"sandboxed liberally.");
-	else
-		print_commentt(0, COMMENT_C_FRAG,
-			"Note: if you're using a sandbox, you must "
-			"accommodate for the SQLite database within "
-			"process memory.");
+		"Allocate and open the database in \"file\".");
+	print_commentt(0, COMMENT_C_FRAG,
+		"Note: the database has been opened in a "
+		"child process, so the application may be "
+		"sandboxed liberally.");
 	if (!TAILQ_EMPTY(&cfg->rq))
 		print_commentt(0, COMMENT_C_FRAG,
 			"Returns an opaque pointer or NULL on "
@@ -727,7 +719,7 @@ gen_role(const struct role *r, int *nf)
 
 /*
  * Generate the C header file.
- * For "splitproc", note that db_open uses ksql_alloc_child.
+ * FIXME: "splitproc" is currently ignored.
  */
 static void
 gen_c_header(const struct config *cfg, const char *guard, int json, 
@@ -866,7 +858,7 @@ gen_c_header(const struct config *cfg, const char *guard, int json,
 	     "");
 
 	if (dbin) {
-		gen_func_open(cfg, splitproc);
+		gen_func_open(cfg);
 		gen_func_trans(cfg);
 		gen_func_close(cfg);
 		if (!TAILQ_EMPTY(&cfg->rq))

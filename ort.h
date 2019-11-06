@@ -638,7 +638,7 @@ struct	config {
 	struct strctq	  sq; /* all structures */
 	struct enmq	  eq; /* all enumerations */
 	struct bitfq	  bq; /* all bitfields */
-	struct roleq	  rq; /* all roles */
+	struct roleq	  rq; /* all roles (this is a tree) */
 	char		**langs; /* known label langs */
 	size_t		  langsz; /* number of langs */
 	char		**fnames; /* filenames referenced */

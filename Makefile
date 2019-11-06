@@ -212,7 +212,7 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	rm -rf .dist/
 
 test: test.o db.o db.db
-	$(CC) -o $@ test.o db.o $(LDFLAGS) -lksql -lsqlite3 -lpthread -lkcgijson -lkcgi -lz $(LDADD)
+	$(CC) -o $@ test.o db.o $(LDFLAGS) -lsqlbox -lsqlite3 -lpthread -lkcgijson -lkcgi -lz $(LDADD)
 
 audit-out.js: ort-audit-json audit-example.txt
 	./ort-audit-json user audit-example.txt >$@

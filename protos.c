@@ -76,7 +76,7 @@ static	const char *const optypes[OPTYPE__MAX] = {
 
 /*
  * Generate the convenience "open" function.
- * If "priv" is non-zero, return a ort instead of ksql.
+ * If "priv" is non-zero, return a ort instead of sqlbox.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
  */
@@ -85,7 +85,7 @@ print_func_db_open(int priv, int decl)
 {
 
 	printf("struct %s *%sdb_open(const char *file)%s\n",
-		priv ? "ort" : "ksql",
+		priv ? "ort" : "sqlbox",
 		decl ? "" : "\n", decl ? ";" : "");
 }
 
@@ -120,32 +120,32 @@ void
 print_func_db_trans_rollback(int priv, int decl)
 {
 
-	printf("void%sdb_trans_rollback(struct %s *p, size_t id)%s\n",
-		decl ? " " : "\n", priv ? "ort" : "ksql",
-		decl ? ";" : "");
+	printf("void%sdb_trans_rollback(struct %s *%s, size_t id)%s\n",
+		decl ? " " : "\n", priv ? "ort" : "sqlbox",
+		priv ? "ctx" : "db", decl ? ";" : "");
 }
 
 void
 print_func_db_trans_commit(int priv, int decl)
 {
 
-	printf("void%sdb_trans_commit(struct %s *p, size_t id)%s\n",
-		decl ? " " : "\n", priv ? "ort" : "ksql",
-		decl ? ";" : "");
+	printf("void%sdb_trans_commit(struct %s *%s, size_t id)%s\n",
+		decl ? " " : "\n", priv ? "ort" : "sqlbox",
+		priv ? "ctx" : "db", decl ? ";" : "");
 }
 
 void
 print_func_db_trans_open(int priv, int decl)
 {
 
-	printf("void%sdb_trans_open(struct %s *p, size_t id, int mode)%s\n",
-		decl ? " " : "\n", priv ? "ort" : "ksql",
-		decl ? ";" : "");
+	printf("void%sdb_trans_open(struct %s *%s, size_t id, int mode)%s\n",
+		decl ? " " : "\n", priv ? "ort" : "sqlbox", 
+		priv ? "ctx" : "db", decl ? ";" : "");
 }
 
 /*
  * Generate the convenience "close" function.
- * If "priv" is non-zero, accept a ort instead of ksql.
+ * If "priv" is non-zero, accept a ort instead of sqlbox.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
  */
@@ -154,7 +154,7 @@ print_func_db_close(int priv, int decl)
 {
 
 	printf("void%sdb_close(struct %s *p)%s\n",
-		decl ? " " : "\n", priv ? "ort" : "ksql",
+		decl ? " " : "\n", priv ? "ort" : "sqlbox",
 		decl ? ";" : "");
 }
 
@@ -242,7 +242,7 @@ print_name_db_update(const struct update *u)
  * Generate the "update" function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
- * If "priv" is non-zero, accept a ort instead of ksql.
+ * If "priv" is non-zero, accept a ort instead of sqlbox.
  */
 void
 print_func_db_update(const struct update *u, int priv, int decl)
@@ -270,7 +270,7 @@ print_func_db_update(const struct update *u, int priv, int decl)
 	if (priv)
 		col += (rc = printf("(struct ort *ctx")) > 0 ? rc : 0;
 	else
-		col += (rc = printf("(struct ksql *db")) > 0 ? rc : 0;
+		col += (rc = printf("(struct sqlbox *db")) > 0 ? rc : 0;
 
 	TAILQ_FOREACH(ur, &u->mrq, entries)
 		col = print_var(pos++, col, 
@@ -319,7 +319,7 @@ print_name_db_search(const struct search *s)
  * The format of the declaration depends upon the search type.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
- * If "priv" is non-zero, accept a ort instead of ksql.
+ * If "priv" is non-zero, accept a ort instead of sqlbox.
  */
 void
 print_func_db_search(const struct search *s, int priv, int decl)
@@ -367,7 +367,7 @@ print_func_db_search(const struct search *s, int priv, int decl)
 	if (priv)
 		col += (rc = printf("(struct ort *ctx")) > 0 ? rc : 0;
 	else
-		col += (rc = printf("(struct ksql *db")) > 0 ? rc : 0;
+		col += (rc = printf("(struct sqlbox *db")) > 0 ? rc : 0;
 
 	if (s->type == STYPE_ITERATE) {
 		rc = printf(", %s_cb cb, void *arg", retstr->name);
@@ -399,7 +399,7 @@ print_name_db_insert(const struct strct *p)
  * Generate the "insert" function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
- * If "priv" is non-zero, accept a ort instead of ksql.
+ * If "priv" is non-zero, accept a ort instead of sqlbox.
  */
 void
 print_func_db_insert(const struct strct *p, int priv, int decl)
@@ -427,7 +427,7 @@ print_func_db_insert(const struct strct *p, int priv, int decl)
 	if (priv)
 		col += (rc = printf("(struct ort *ctx")) > 0 ? rc : 0;
 	else
-		col += (rc = printf("(struct ksql *db")) > 0 ? rc : 0;
+		col += (rc = printf("(struct sqlbox *db")) > 0 ? rc : 0;
 
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if (!(f->type == FTYPE_STRUCT || 
@@ -497,7 +497,7 @@ print_func_db_fill(const struct strct *p, int priv, int decl)
 	if (priv && decl)
 		return;
 	printf("%svoid%sdb_%s_fill(%sstruct %s *p, "
-	       "struct ksqlstmt *stmt, size_t *pos)%s",
+	       "const struct sqlbox_parmset *set, size_t *pos)%s",
 	       priv ? "static " : "",
 	       decl ? " " : "\n",
 	       p->name, 

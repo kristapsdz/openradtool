@@ -1185,7 +1185,7 @@ resolve_roleset_cover(struct config *cfg, struct strct *p)
 				rt = ROLEMAP_SEARCH;
 			else if (STYPE_COUNT == s->type)
 				rt = ROLEMAP_COUNT;
-			assert(rt != STYPE__MAX);
+			assert(rt != ROLEMAP__MAX);
 			rc = resolve_roleset_coverset(cfg, 
 				rs, &s->rolemap, rt, s->name, p);
 			if (rc < 0)

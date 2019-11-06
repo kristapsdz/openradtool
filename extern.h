@@ -40,7 +40,6 @@ void		 print_commentv(size_t, enum cmtt, const char *, ...)
 
 void		 print_src(size_t, const char *, ...);
 
-void		 print_define_schema(const struct strct *);
 void		 print_func_db_close(int);
 void		 print_func_db_role(int);
 void		 print_func_db_role_current(int);

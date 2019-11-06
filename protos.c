@@ -579,26 +579,3 @@ print_func_json_iterate(const struct strct *p, int decl)
 		decl ? " " : "\n", p->name, 
 		p->name, decl ? ";" : "");
 }
-
-/*
- * Generate the schema for a given table.
- * This macro accepts a single parameter that's given to all of the
- * members so that a later SELECT can use INNER JOIN xxx AS yyy and have
- * multiple joins on the same table.
- */
-void
-print_define_schema(const struct strct *p)
-{
-	const struct field *f;
-	const char *s = "";
-
-	printf("#define DB_SCHEMA_%s(_x) \\", p->cname);
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT == f->type)
-			continue;
-		puts(s);
-		printf("\t#_x \".%s\"", f->name);
-		s = " \",\" \\";
-	}
-	puts("");
-}

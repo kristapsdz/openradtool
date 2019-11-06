@@ -742,21 +742,6 @@ gen_c_header(const struct config *cfg, const char *guard, int json,
 			gen_struct(cfg, p);
 	}
 
-	if (dbin && TAILQ_EMPTY(&cfg->rq)) {
-		print_commentt(0, COMMENT_C,
-			"Define our table columns.\n"
-			"Use these when creating your own SQL "
-			"statements, combined with the db_xxxx_fill "
-			"functions.\n"
-			"Each macro must be given a unique "
-			"alias name.\n"
-			"This allows for doing multiple inner joins "
-			"on the same table.");
-		TAILQ_FOREACH(p, &cfg->sq, entries)
-			print_define_schema(p);
-		puts("");
-	}
-
 	if (valids) {
 		print_commentt(0, COMMENT_C,
 			"All of the fields we validate.\n"

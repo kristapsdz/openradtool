@@ -2738,6 +2738,29 @@ genfile(const char *file, int fd)
 }
 
 /*
+ * Generate the schema for a given table.
+ * This macro accepts a single parameter that's given to all of the
+ * members so that a later SELECT can use INNER JOIN xxx AS yyy and have
+ * multiple joins on the same table.
+ */
+static void
+gen_define_schema(const struct strct *p)
+{
+	const struct field *f;
+	const char *s = "";
+
+	printf("#define DB_SCHEMA_%s(_x) \\", p->cname);
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (FTYPE_STRUCT == f->type)
+			continue;
+		puts(s);
+		printf("\t#_x \".%s\"", f->name);
+		s = " \",\" \\";
+	}
+	puts("");
+}
+
+/*
  * Generate the C source file from "cfg"s structure objects.
  * Returns TRUE on success, FALSE on failure (memory allocation failure
  * or failure to open a template file).
@@ -2898,16 +2921,14 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 
 		puts("};\n");
 
-		if (!TAILQ_EMPTY(&cfg->rq)) {
-			print_commentt(0, COMMENT_C,
-				"Define our table columns.\n"
-				"Since we're using roles, this is "
-				"all internal to the source and not "
-				"exported.");
-			TAILQ_FOREACH(p, &cfg->sq, entries)
-				print_define_schema(p);
-			puts("");
-		}
+		print_commentt(0, COMMENT_C,
+			"Define our table columns.\n"
+			"Since we're using roles, this is "
+			"all internal to the source and not "
+			"exported.");
+		TAILQ_FOREACH(p, &cfg->sq, entries)
+			gen_define_schema(p);
+		puts("");
 
 		print_commentt(0, COMMENT_C,
 			"Our full set of SQL statements.\n"

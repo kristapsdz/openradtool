@@ -719,11 +719,10 @@ gen_role(const struct role *r, int *nf)
 
 /*
  * Generate the C header file.
- * FIXME: "splitproc" is currently ignored.
  */
 static void
 gen_c_header(const struct config *cfg, const char *guard, int json, 
-	int jsonparse, int valids, int splitproc, int dbin, int dstruct)
+	int jsonparse, int valids, int dbin, int dstruct)
 {
 	const struct strct *p;
 	const struct enm *e;
@@ -917,7 +916,7 @@ main(int argc, char *argv[])
 	const char	 *guard = "DB_H";
 	struct config	 *cfg = NULL;
 	int		  c, json = 0, valids = 0, rc = 0,
-			  splitproc = 0, dbin = 1, dstruct = 1,
+			  dbin = 1, dstruct = 1,
 			  jsonparse = 0;
 	FILE		**confs = NULL;
 	size_t		  i, confsz;
@@ -945,7 +944,7 @@ main(int argc, char *argv[])
 				dbin = 0;
 			break;
 		case ('s'):
-			splitproc = 1;
+			/* Ignore. */
 			break;
 		case ('v'):
 			valids = 1;
@@ -990,7 +989,7 @@ main(int argc, char *argv[])
 
 	if (0 != (rc = ort_parse_close(cfg)))
 		gen_c_header(cfg, guard, json, jsonparse,
-			valids, splitproc, dbin, dstruct);
+			valids, dbin, dstruct);
 
 out:
 	for (i = 0; i < confsz; i++)

@@ -3,6 +3,29 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.8.0</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2019-11-06">2019-11-06</time>
+		</header>
+		<aside>
+			<p>
+				Some considerable changes, foremost in now using
+				<a href="https://kristaps.bsd.lv/sqlbox">sqlbox</a> instead of 
+				<a href="https://kristaps.bsd.lv/ksql">ksql</a> for the database
+				access library.
+				This is due to the performance benefits and simpler API.
+			</p>
+			<p>
+				Make <b>-s</b> the default for
+				<a href="ort-c-source.1.html">ort-c-source(1)</a> and
+				<a href="ort-c-header.1.html">ort-c-header(1)</a>.
+				The underlying database access library only supports split-process
+				mode.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.7.8</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2019-07-17">2019-07-17</time>

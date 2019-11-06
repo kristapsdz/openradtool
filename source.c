@@ -385,8 +385,10 @@ gen_strct_func_iter(const struct config *cfg,
 
 	/* Emit parameter binding. */
 
-	puts("\n"
-	     "\tmemset(parms, 0, sizeof(parms));");
+	puts("");
+	if (parms > 0)
+		puts("\tmemset(parms, 0, sizeof(parms));");
+
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries)
 		if (OPTYPE_ISBINARY(sent->op)) {
@@ -487,6 +489,9 @@ gen_strct_func_list(const struct config *cfg,
 		printf("\tstruct sqlbox_parm parms[%zu];\n", parms);
 
 	puts("");
+	if (parms > 0)
+		puts("\tmemset(parms, 0, sizeof(parms));");
+
 	printf("\tq = malloc(sizeof(struct %s_q));\n"
 	       "\tif (q == NULL) {\n"
 	       "\t\tperror(NULL);\n"
@@ -741,11 +746,10 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 /*
  * Generate database opening.
  * We don't use the generic invocation, as we want foreign keys.
- * XXX: "splitproc" is not used and should be removed.
  * Returns TRUE on success, FALSE on memory allocation failure.
  */
 static int
-gen_func_open(const struct config *cfg, int splitproc)
+gen_func_open(const struct config *cfg)
 {
 	const struct role 	*r;
 	const struct strct 	*p;
@@ -1099,6 +1103,9 @@ gen_strct_func_srch(const struct config *cfg,
 	/* Emit parameter binding. */
 
 	puts("");
+	if (parms > 0)
+		puts("\tmemset(parms, 0, sizeof(parms));");
+
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
 		if (OPTYPE_ISBINARY(sent->op)) {
@@ -1396,7 +1403,7 @@ gen_func_reffind(const struct config *cfg, const struct strct *p)
 	       "{\n", p->name, (!TAILQ_EMPTY(&cfg->rq)) ? 
 	       "struct ort *ctx, " : "", p->name);
 	if (f != NULL)
-		puts("\tstruct sqlbox_parmset *res;\n"
+		puts("\tconst struct sqlbox_parmset *res;\n"
 		     "\tstruct sqlbox_parm parm;");
 
 	puts("");
@@ -1409,12 +1416,12 @@ gen_func_reffind(const struct config *cfg, const struct strct *p)
 			       "\t\tparm.iparm = p->%s;\n"
 			       "\t\tif (!sqlbox_prepare_bind_async\n"
 			       "\t\t    (db, 0, STMT_%s_BY_UNIQUE_%s, 1, &parm, 0))\n"
-			       "\t\t\texit(EXIT_FAILURE);"
+			       "\t\t\texit(EXIT_FAILURE);\n"
 			       "\t\tif ((res = sqlbox_step(db, 0)) == NULL)\n"
-			       "\t\t\texit(EXIT_FAILURE);"
+			       "\t\t\texit(EXIT_FAILURE);\n"
 			       "\t\tdb_%s_fill_r(%s&p->%s, res, NULL);\n"
 			       "\t\tif (!sqlbox_finalise(db, 0))\n"
-			       "\t\t\texit(EXIT_FAILURE);"
+			       "\t\t\texit(EXIT_FAILURE);\n"
 			       "\t\tp->has_%s = 1;\n"
 			       "\t}\n",
 			       f->ref->source->name,
@@ -2737,10 +2744,12 @@ genfile(const char *file, int fd)
 
 /*
  * Generate the C source file from "cfg"s structure objects.
+ * Returns TRUE on success, FALSE on failure (memory allocation failure
+ * or failure to open a template file).
  */
 static int
 gen_c_source(const struct config *cfg, int json, int jsonparse,
-	int valids, int splitproc, int dbin, const char *header, 
+	int valids, int dbin, const char *header, 
 	const char *incls, const int *exs)
 {
 	const struct strct *p;
@@ -2755,7 +2764,7 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 	int		 need_b64 = 1;
 #endif
 
-	if (NULL == incls)
+	if (incls == NULL)
 		incls = "";
 
 	print_commentv(0, COMMENT_C, 
@@ -2939,7 +2948,7 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 
 	if (dbin) {
 		gen_func_trans(cfg);
-		if (!gen_func_open(cfg, splitproc))
+		if (!gen_func_open(cfg))
 			return 0;
 		gen_func_close(cfg);
 		if (!TAILQ_EMPTY(&cfg->rq))
@@ -2958,7 +2967,7 @@ main(int argc, char *argv[])
 	const char	 *header = NULL, *incls = NULL;
 	struct config	 *cfg = NULL;
 	int		  c, json = 0, jsonparse = 0, valids = 0,
-			  splitproc = 0, dbin = 1, rc = 0;
+			  dbin = 1, rc = 0;
 	FILE		**confs = NULL;
 	size_t		  i, confsz;
 	int		  exs[EX__MAX];
@@ -2987,7 +2996,7 @@ main(int argc, char *argv[])
 				dbin = 0;
 			break;
 		case 's':
-			splitproc = 1;
+			/* Ignore. */
 			break;
 		case 'v':
 			valids = 1;
@@ -3036,8 +3045,8 @@ main(int argc, char *argv[])
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
-		rc = gen_c_source(cfg, json, jsonparse, valids, 
-			splitproc, dbin, header, incls, exs);
+		rc = gen_c_source(cfg, json, jsonparse, 
+			valids, dbin, header, incls, exs);
 
 out:
 	for (i = 0; i < EX__MAX; i++)

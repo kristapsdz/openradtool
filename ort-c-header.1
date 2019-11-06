@@ -22,7 +22,7 @@
 .Nd generate ort C API
 .Sh SYNOPSIS
 .Nm ort-c-header
-.Op Fl jJsv
+.Op Fl jJv
 .Op Fl g Ar guard
 .Op Fl N Ar db
 .Op Ar config...
@@ -70,9 +70,7 @@ suppresses the
 .Sx Database input .
 This flag is used when creating multiple header files.
 .It Fl s
-Use split-process mode for the database.
-This only changes generated documentation.
-.Em This will be mandatory in future releases.
+This flag is retained only for backward compatibility.
 .El
 .Pp
 By default, the
@@ -228,14 +226,14 @@ Input functions define how the structures described in
 .Sx Data structures
 are pulled from the database.
 These functions invoke
-.Xr ksql 3
+.Xr sqlbox 3
 for handling the database itself, so the
-.Fl l Ns Ar ksql
+.Fl l Ns Ar sqlbox
 library is required for linking.
 You'll need the following inclusions:
 .Bd -literal -offset indent
-#include <stdint.h> /* ksql(3) */
-#include <ksql.h>
+#include <stdint.h> /* sqlbox(3) */
+#include <sqlbox.h>
 .Ed
 .Pp
 If the configuration specifies roles, inclusions not are necessary.
@@ -253,7 +251,7 @@ In the following documentation,
 is defined as
 .Vt "struct ort"
 if roles are defined or
-.Vt "struct ksql"
+.Vt "struct sqlbox"
 otherwise.
 .Bl -tag -width Ds
 .It Li TYPE *db_open(const char *file)
@@ -333,7 +331,7 @@ Again,
 is defined as
 .Vt "struct ort"
 if roles are defined or
-.Vt "struct ksql"
+.Vt "struct sqlbox"
 otherwise.
 .Bl -tag -width Ds
 .It Li int db_foo_delete_xxxx(TYPE *p, ARGS)
@@ -466,7 +464,7 @@ If no roles are defined, several low-level functions declaration and
 macros are produced as well.
 This assists callers who provide their own database functions as enabled
 by
-.Xr ksql 3 .
+.Xr sqlbox 3 .
 .Bl -tag -width Ds
 .It Dv DB_SCHEMA_XXX(name)
 The string version of the SQL schema of structure
@@ -474,7 +472,7 @@ The string version of the SQL schema of structure
 This macro accepts a single argument
 .Fa name
 that is prepended to each column name to facilitate aliases.
-.It Li void db_foo_fill(struct foo *p, struct ksqlstmt *stmt, size_t *pos)
+.It Li void db_foo_fill(struct foo *p, const struct sqlbox_parmset *set, size_t *pos)
 Zero and fill in a pointer
 .Fa p
 from an open database statement
@@ -709,17 +707,17 @@ Let
 .Pa foo.ort
 be the configuration file.
 .Bd -literal
-ort-c-header -jvs foo.ort > db.h
-ort-c-source -jvs foo.ort > db.c
+ort-c-header -jv foo.ort > db.h
+ort-c-source -jv foo.ort > db.c
 .Ed
 .Pp
 Breaking up into two header and source files: one for basic database
 functions, the other for JSON output.
 .Bd -literal
-ort-c-header -s foo.ort > db.h
-ort-c-header -s -g JSON_H -j -Nbd foo.ort > json.h
-ort-c-source -s -h db.h > db.c
-ort-c-source -s -j -Nb -Ibj -h db.h,json.h > json.c
+ort-c-header foo.ort > db.h
+ort-c-header -g JSON_H -j -Nbd foo.ort > json.h
+ort-c-source -h db.h > db.c
+ort-c-source -j -Nb -Ibj -h db.h,json.h > json.c
 .Ed
 .Pp
 In this more complicated snippet, the
@@ -741,7 +739,7 @@ also while inhibiting database routine creation with
 .Xr ort-c-source 1 ,
 .Xr kcgi 3 ,
 .Xr kcgijson 3 ,
-.Xr ksql 3 ,
+.Xr sqlbox 3 ,
 .Xr ort 5
 .\" .Sh STANDARDS
 .\" .Sh HISTORY

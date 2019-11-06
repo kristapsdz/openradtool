@@ -269,7 +269,7 @@ gen_func_update(const struct config *cfg, const struct update *up)
 	print_commentt(0, COMMENT_C_FRAG_CLOSE,
 		"Returns zero on constraint violation, <0 on "
 		"error, >0 on success");
-	print_func_db_update(up, !TAILQ_EMPTY(&cfg->rq), 1);
+	print_func_db_update(up, 1);
 	puts("");
 }
 
@@ -371,7 +371,7 @@ gen_func_search(const struct config *cfg, const struct search *s)
 			"Invokes the given callback with "
 			"retrieved data.");
 
-	print_func_db_search(s, !TAILQ_EMPTY(&cfg->rq), 1);
+	print_func_db_search(s, 1);
 	puts("");
 }
 
@@ -400,27 +400,6 @@ gen_funcs_dbin(const struct config *cfg, const struct strct *p)
 		puts("");
 	}
 
-	/*
-	 * The fill routine is part of the low-level API that we don't
-	 * expose if we have roles defined.
-	 */
-
-	if (TAILQ_EMPTY(&cfg->rq)) {
-		print_commentv(0, COMMENT_C, 
-		       "Fill in a %s from an open statement \"stmt\".\n"
-		       "This starts grabbing results from \"pos\", "
-		       "which may be NULL to start from zero.\n"
-		       "This follows DB_SCHEMA_%s's order for columns.",
-		       p->name, p->cname);
-		print_func_db_fill(p, 0, 1);
-		print_commentt(0, COMMENT_C,
-		       "Free resources from \"p\" and all nested objects.\n"
-		       "Does not free the \"p\" pointer itself.\n"
-		       "Has no effect if \"p\" is NULL.");
-		print_func_db_unfill(p, 0, 1);
-		puts("");
-	}
-
 	if (NULL != p->ins) {
 		print_commentt(0, COMMENT_C_FRAG_OPEN,
 			"Insert a new row into the database.\n"
@@ -443,7 +422,7 @@ gen_funcs_dbin(const struct config *cfg, const struct strct *p)
 		print_commentt(0, COMMENT_C_FRAG_CLOSE,
 			"Returns the new row's identifier on "
 			"success or <0 otherwise.");
-		print_func_db_insert(p, !TAILQ_EMPTY(&cfg->rq), 1);
+		print_func_db_insert(p, 1);
 		puts("");
 	}
 
@@ -593,15 +572,15 @@ gen_func_trans(const struct config *cfg)
 		"If \"mode\" is <0, the transaction starts in a "
 		"write-pending, where no other locks can be held "
 		"at the same time.");
-	print_func_db_trans_open(!TAILQ_EMPTY(&cfg->rq), 1);
+	print_func_db_trans_open(1);
 	puts("");
 	print_commentt(0, COMMENT_C,
 		"Roll-back an open transaction.");
-	print_func_db_trans_rollback(!TAILQ_EMPTY(&cfg->rq), 1);
+	print_func_db_trans_rollback(1);
 	puts("");
 	print_commentt(0, COMMENT_C,
 		"Commit an open transaction.");
-	print_func_db_trans_commit(!TAILQ_EMPTY(&cfg->rq), 1);
+	print_func_db_trans_commit(1);
 	puts("");
 }
 
@@ -616,25 +595,17 @@ static void
 gen_func_open(const struct config *cfg)
 {
 
-	print_commentt(0, COMMENT_C_FRAG_OPEN,
-		"Allocate and open the database in \"file\".");
-	print_commentt(0, COMMENT_C_FRAG,
+	print_commentt(0, COMMENT_C,
+		"Allocate and open the database in \"file\".\n"
 		"Note: the database has been opened in a "
 		"child process, so the application may be "
-		"sandboxed liberally.");
-	if (!TAILQ_EMPTY(&cfg->rq))
-		print_commentt(0, COMMENT_C_FRAG,
-			"Returns an opaque pointer or NULL on "
-			"memory exhaustion.");
-	else
-		print_commentt(0, COMMENT_C_FRAG,
-			"Returns a pointer to the database or "
-			"NULL on memory exhaustion.");
-	print_commentt(0, COMMENT_C_FRAG_CLOSE,
+		"sandboxed liberally.\n"
+		"Returns an opaque pointer or NULL on "
+		"memory exhaustion.\n"
 		"The returned pointer must be closed with "
 		"db_close().");
 
-	print_func_db_open(!TAILQ_EMPTY(&cfg->rq), 1);
+	print_func_db_open(1);
 	puts("");
 }
 
@@ -677,7 +648,7 @@ gen_func_close(const struct config *cfg)
 	print_commentt(0, COMMENT_C,
 		"Close the context opened by db_open().\n"
 		"Has no effect if \"p\" is NULL.");
-	print_func_db_close(!TAILQ_EMPTY(&cfg->rq), 1);
+	print_func_db_close(1);
 	puts("");
 }
 

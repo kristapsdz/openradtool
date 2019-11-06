@@ -372,14 +372,13 @@ gen_strct_func_iter(const struct config *cfg,
 
 	/* Emit top of the function w/optional static parameters. */
 
-	print_func_db_search(s, !TAILQ_EMPTY(&cfg->rq), 0);
+	print_func_db_search(s, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct %s p;\n"
-	       "\tconst struct sqlbox_parmset *res;\n",
+	       "\tconst struct sqlbox_parmset *res;\n"
+	       "\tstruct sqlbox *db = ctx->db;\n",
 	       retstr->name);
-	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tstruct sqlbox *db = ctx->db;");
 	if (parms > 0)
 		printf("\tstruct sqlbox_parm parms[%zu];\n", parms);
 
@@ -411,9 +410,8 @@ gen_strct_func_iter(const struct config *cfg,
 
 	printf("\twhile ((res = sqlbox_step(db, 0)) "
 			"!= NULL && res->psz) {\n"
-	       "\t\tdb_%s_fill_r(%s&p, res, NULL);\n",
-	       retstr->name,
-	       (!TAILQ_EMPTY(&cfg->rq)) ? "ctx, " : "");
+	       "\t\tdb_%s_fill_r(ctx, &p, res, NULL);\n",
+	       retstr->name);
 	if ((retstr->flags & STRCT_HAS_NULLREFS))
 	       printf("\t\tdb_%s_reffind(%s&p, db);\n", 
 		     retstr->name,
@@ -476,15 +474,14 @@ gen_strct_func_list(const struct config *cfg,
 
 	/* Emit top of the function w/optional static parameters. */
 
-	print_func_db_search(s, !TAILQ_EMPTY(&cfg->rq), 0);
+	print_func_db_search(s, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct %s *p;\n"
 	       "\tstruct %s_q *q;\n"
-	       "\tconst struct sqlbox_parmset *res;\n",
+	       "\tconst struct sqlbox_parmset *res;\n"
+	       "\tstruct sqlbox *db = ctx->db;\n",
 	       retstr->name, retstr->name);
-	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tstruct sqlbox *db = ctx->db;");
 	if (parms > 0)
 		printf("\tstruct sqlbox_parm parms[%zu];\n", parms);
 
@@ -530,9 +527,8 @@ gen_strct_func_list(const struct config *cfg,
 	       "\t\t\tperror(NULL);\n"
 	       "\t\t\texit(EXIT_FAILURE);\n"
 	       "\t\t}\n"
-	       "\t\tdb_%s_fill_r(%sp, res, NULL);\n",
-	       retstr->name, retstr->name,
-	       (!TAILQ_EMPTY(&cfg->rq)) ? "ctx, " : "");
+	       "\t\tdb_%s_fill_r(ctx, p, res, NULL);\n",
+	       retstr->name, retstr->name);
 	if (STRCT_HAS_NULLREFS & retstr->flags)
 	       printf("\t\tdb_%s_reffind(%sp, db);\n",
 		      retstr->name,
@@ -756,10 +752,11 @@ gen_func_open(const struct config *cfg)
 	size_t			 i;
 	int			 c;
 
-	print_func_db_open(!TAILQ_EMPTY(&cfg->rq), 0);
+	print_func_db_open(0);
 
 	puts("{\n"
 	     "\tsize_t i;\n"
+	     "\tstruct ort *ctx = NULL;\n"
 	     "\tstruct sqlbox_cfg cfg;\n"
 	     "\tstruct sqlbox *db = NULL;\n"
 	     "\tstruct sqlbox_pstmt pstmts[STMT__MAX];\n"
@@ -768,8 +765,7 @@ gen_func_open(const struct config *cfg)
 	     "\t\t  .mode = SQLBOX_SRC_RW }\n"
 	     "\t};");
 	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tstruct sqlbox_role_hier *hier = NULL;\n"
-		     "\tstruct ort *ctx = NULL;");
+		puts("\tstruct sqlbox_role_hier *hier = NULL;");
 	puts("\n"
 	     "\tmemset(&cfg, 0, sizeof(struct sqlbox_cfg));\n"
 	     "\tcfg.srcs.srcs = srcs;\n"
@@ -778,7 +774,11 @@ gen_func_open(const struct config *cfg)
 	     "\tcfg.stmts.stmtsz = STMT__MAX;\n"
 	     "\n"
 	     "\tfor (i = 0; i < STMT__MAX; i++)\n"
-	     "\t\tpstmts[i].stmt = (char *)stmts[i];\n");
+	     "\t\tpstmts[i].stmt = (char *)stmts[i];\n"
+	     "\n"
+	     "\tctx = malloc(sizeof(struct ort));\n"
+	     "\tif (ctx == NULL)\n"
+	     "\t\tgoto err;\n");
 
 	if (!TAILQ_EMPTY(&cfg->rq)) {
 		/*
@@ -793,10 +793,6 @@ gen_func_open(const struct config *cfg)
 		assert(i > 0);
 		printf("\thier = sqlbox_role_hier_alloc(%zu);\n"
 		       "\tif (hier == NULL)\n"
-		       "\t\tgoto err;\n"
-		       "\n"
-		       "\tctx = malloc(sizeof(struct ort));\n"
-		       "\tif (ctx == NULL)\n"
 		       "\t\tgoto err;\n"
 		       "\n", i);
 
@@ -823,38 +819,39 @@ gen_func_open(const struct config *cfg)
 			else if (c > 0)
 				puts("");
 		}
-		printf("\tif (!sqlbox_role_hier_gen(hier, &cfg.roles, ROLE_default))\n"
+		printf("\tif (!sqlbox_role_hier_gen"
+			"(hier, &cfg.roles, ROLE_default))\n"
 		       "\t\tgoto err;\n\n");
 	}
 
 	puts("\tif ((db = sqlbox_alloc(&cfg)) == NULL)\n"
-	     "\t\tgoto err;");
-	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tctx->db = db;\n"
-		     "\tctx->role = ROLE_default;");
-
-	puts("");
+	     "\t\tgoto err;\n"
+	     "\tctx->db = db;");
 
 	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tsqlbox_role_hier_gen_free(&cfg.roles);\n"
+	        puts("\tctx->role = ROLE_default;\n"
+		     "\n"
+		     "\tsqlbox_role_hier_gen_free(&cfg.roles);\n"
 		     "\tsqlbox_role_hier_free(hier);\n"
 		     "\thier = NULL;\n");
+	else
+		puts("");
 
 	print_commentv(1, COMMENT_C, 
 		"Now actually open the database.\n"
 		"If this succeeds, then we're good to go.");
 
-	printf("\n"
-	       "\tif (sqlbox_open_async(db, 0))\n"
-	       "\t\treturn %s;\n",
-	       TAILQ_EMPTY(&cfg->rq) ? "db" : "ctx");
+	puts("\n"
+	     "\tif (sqlbox_open_async(db, 0))\n"
+	     "\t\treturn ctx;\n"
+	     "err:");
 
-	puts("err:");
 	if (!TAILQ_EMPTY(&cfg->rq))
 		puts("\tsqlbox_role_hier_gen_free(&cfg.roles);\n"
-	     	     "\tsqlbox_role_hier_free(hier);\n"
-		     "\tfree(ctx);");
+	     	     "\tsqlbox_role_hier_free(hier);");
+
 	puts("\tsqlbox_free(db);\n"
+	     "\tfree(ctx);\n"
 	     "\treturn NULL;\n"
 	     "}\n"
 	     "");
@@ -945,11 +942,11 @@ static void
 gen_func_trans(const struct config *cfg)
 {
 
-	print_func_db_trans_open(!TAILQ_EMPTY(&cfg->rq), 0);
-	puts("{");
-	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tstruct sqlbox *db = ctx->db;");
-	puts("\tint c;\n"
+	print_func_db_trans_open(0);
+	puts("{\n"
+	     "\tstruct sqlbox *db = ctx->db;\n"
+	     "\tint c;\n"
+	     "\n"
 	     "\tif (mode < 0)\n"
 	     "\t\tc = sqlbox_trans_exclusive(db, 0, id);\n"
 	     "\telse if (mode > 0)\n"
@@ -960,19 +957,19 @@ gen_func_trans(const struct config *cfg)
 	     "\t\texit(EXIT_FAILURE);\n"
 	     "}\n"
 	     "");
-	print_func_db_trans_rollback(!TAILQ_EMPTY(&cfg->rq), 0);
-	puts("{");
-	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tstruct sqlbox *db = ctx->db;");
-	puts("\tif (!sqlbox_trans_rollback(db, 0, id))\n"
+	print_func_db_trans_rollback(0);
+	puts("{\n"
+	     "\tstruct sqlbox *db = ctx->db;\n"
+	     "\n"
+	     "\tif (!sqlbox_trans_rollback(db, 0, id))\n"
 	     "\t\texit(EXIT_FAILURE);\n"
 	     "}\n"
 	     "");
-	print_func_db_trans_commit(!TAILQ_EMPTY(&cfg->rq), 0);
-	puts("{");
-	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tstruct sqlbox *db = ctx->db;");
-	puts("\tif (!sqlbox_trans_commit(db, 0, id))\n"
+	print_func_db_trans_commit(0);
+	puts("{\n"
+	     "\tstruct sqlbox *db = ctx->db;\n"
+	     "\n"
+	     "\tif (!sqlbox_trans_commit(db, 0, id))\n"
 	     "\t\texit(EXIT_FAILURE);\n"
 	     "}\n"
 	     "");
@@ -986,21 +983,15 @@ static void
 gen_func_close(const struct config *cfg)
 {
 
-	print_func_db_close(!TAILQ_EMPTY(&cfg->rq), 0);
+	print_func_db_close(0);
 	puts("{\n"
 	     "\tif (p == NULL)\n"
-	     "\t\treturn;");
-	if (!TAILQ_EMPTY(&cfg->rq)) {
-		puts("\tif (!sqlbox_close(p->db, 0))\n"
-		     "\t\texit(EXIT_FAILURE);\n"
-	             "\tsqlbox_free(p->db);\n"
-		     "\tfree(p);");
-	} else 
-		puts("\tif (!sqlbox_close(p, 0))\n"
-		     "\t\texit(EXIT_FAILURE);\n"
-	             "\tsqlbox_free(p);");
-
-	puts("}\n"
+	     "\t\treturn;\n"
+	     "\tif (!sqlbox_close(p->db, 0))\n"
+	     "\t\texit(EXIT_FAILURE);\n"
+             "\tsqlbox_free(p->db);\n"
+	     "\tfree(p);\n"
+	     "}\n"
 	     "");
 }
 
@@ -1023,13 +1014,12 @@ gen_strct_func_count(const struct config *cfg,
 			parms += count_bindfunc(sr->field->type);
 		}
 
-	print_func_db_search(s, !TAILQ_EMPTY(&cfg->rq), 0);
+	print_func_db_search(s, 0);
 	puts("\n"
 	     "{\n"
 	     "\tconst struct sqlbox_parmset *res;\n"
-	     "\tint64_t val;");
-	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tstruct sqlbox *db = ctx->db;");
+	     "\tint64_t val;\n"
+	     "\tstruct sqlbox *db = ctx->db;");
 	if (parms > 0)
 		printf("\tstruct sqlbox_parm parms[%zu];\n", parms);
 
@@ -1089,14 +1079,13 @@ gen_strct_func_srch(const struct config *cfg,
 			parms += count_bindfunc(sr->field->type);
 		}
 
-	print_func_db_search(s, !TAILQ_EMPTY(&cfg->rq), 0);
+	print_func_db_search(s, 0);
 	printf("\n"
 	       "{\n"
 	       "\tstruct %s *p = NULL;\n"
-	       "\tconst struct sqlbox_parmset *res;\n",
+	       "\tconst struct sqlbox_parmset *res;\n"
+	       "\tstruct sqlbox *db = ctx->db;\n",
 	       retstr->name);
-	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tstruct sqlbox *db = ctx->db;");
 	if (parms > 0)
 		printf("\tstruct sqlbox_parm parms[%zu];\n", parms);
 
@@ -1128,9 +1117,8 @@ gen_strct_func_srch(const struct config *cfg,
 	       "\t\t\tperror(NULL);\n"
 	       "\t\t\texit(EXIT_FAILURE);\n"
 	       "\t\t}\n"
-	       "\t\tdb_%s_fill_r(%sp, res, NULL);\n",
-	       retstr->name, retstr->name,
-	       (!TAILQ_EMPTY(&cfg->rq)) ? "ctx, " : "");
+	       "\t\tdb_%s_fill_r(ctx, p, res, NULL);\n",
+	       retstr->name, retstr->name);
 	if (STRCT_HAS_NULLREFS & retstr->flags)
 	       printf("\t\tdb_%s_reffind(%sp, db);\n",
 		      retstr->name,
@@ -1216,13 +1204,12 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 		    !(f->flags & FIELD_ROWID))
 			parms++;
 
-	print_func_db_insert(p, !TAILQ_EMPTY(&cfg->rq), 0);
+	print_func_db_insert(p, 0);
 	puts("\n"
 	     "{\n"
 	     "\tint rc;\n"
-	     "\tint64_t id = -1;");
-	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tstruct sqlbox *db = ctx->db;");
+	     "\tint64_t id = -1;\n"
+	     "\tstruct sqlbox *db = ctx->db;");
 	if (parms > 0)
 		printf("\tstruct sqlbox_parm parms[%zu];\n", parms);
 
@@ -1324,9 +1311,15 @@ gen_func_unfill(const struct config *cfg, const struct strct *p)
 {
 	const struct field *f;
 
-	print_func_db_unfill(p, !TAILQ_EMPTY(&cfg->rq), 0);
-	puts("\n"
-	     "{\n"
+	print_commentt(0, COMMENT_C,
+	       "Free resources from \"p\" and all nested objects.\n"
+	       "Does not free the \"p\" pointer itself.\n"
+	       "Has no effect if \"p\" is NULL.");
+
+	printf("static void\n"
+	       "db_%s_unfill(struct %s *p)\n",
+	       p->name, p->name);
+	puts("{\n"
 	     "\tif (p == NULL)\n"
 	     "\t\treturn;");
 	TAILQ_FOREACH(f, &p->fq, entries)
@@ -1419,7 +1412,7 @@ gen_func_reffind(const struct config *cfg, const struct strct *p)
 			       "\t\t\texit(EXIT_FAILURE);\n"
 			       "\t\tif ((res = sqlbox_step(db, 0)) == NULL)\n"
 			       "\t\t\texit(EXIT_FAILURE);\n"
-			       "\t\tdb_%s_fill_r(%s&p->%s, res, NULL);\n"
+			       "\t\tdb_%s_fill_r(ctx, &p->%s, res, NULL);\n"
 			       "\t\tif (!sqlbox_finalise(db, 0))\n"
 			       "\t\t\texit(EXIT_FAILURE);\n"
 			       "\t\tp->has_%s = 1;\n"
@@ -1429,9 +1422,7 @@ gen_func_reffind(const struct config *cfg, const struct strct *p)
 			       f->ref->target->parent->cname,
 			       f->ref->target->name,
 			       f->ref->target->parent->name,
-			       (!TAILQ_EMPTY(&cfg->rq)) ?
-			       "ctx, " : "", f->name,
-			       f->name);
+			       f->name, f->name);
 		if (!(f->ref->target->parent->flags & 
 		    STRCT_HAS_NULLREFS))
 			continue;
@@ -1444,7 +1435,9 @@ gen_func_reffind(const struct config *cfg, const struct strct *p)
 }
 
 /*
- * Generate the "fill" function.
+ * Generate the recursive "fill" function.
+ * This simply calls to the underlying "fill" function for all
+ * strutcures in the object.
  */
 static void
 gen_func_fill_r(const struct config *cfg, const struct strct *p)
@@ -1452,26 +1445,22 @@ gen_func_fill_r(const struct config *cfg, const struct strct *p)
 	const struct field *f;
 
 	printf("static void\n"
-	       "db_%s_fill_r(%sstruct %s *p,\n"
+	       "db_%s_fill_r(struct ort *ctx, struct %s *p,\n"
 	       "\tconst struct sqlbox_parmset *res, size_t *pos)\n"
 	       "{\n"
 	       "\tsize_t i = 0;\n"
 	       "\n"
 	       "\tif (pos == NULL)\n"
 	       "\t\tpos = &i;\n"
-	       "\tdb_%s_fill(%sp, res, pos);\n",
-	       p->name, (!TAILQ_EMPTY(&cfg->rq)) ?
-	       "struct ort *ctx, " : "", p->name, p->name,
-	       (!TAILQ_EMPTY(&cfg->rq)) ? "ctx, " : "");
+	       "\tdb_%s_fill(ctx, p, res, pos);\n",
+	       p->name, p->name, p->name);
 
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if (f->type == FTYPE_STRUCT &&
 		    !(f->ref->source->flags & FIELD_NULL))
-			printf("\tdb_%s_fill_r(%s&p->%s, "
+			printf("\tdb_%s_fill_r(ctx, &p->%s, "
 				"res, pos);\n", 
-				f->ref->tstrct, 
-				(!TAILQ_EMPTY(&cfg->rq)) ?
-				"ctx, " : "", f->name);
+				f->ref->tstrct, f->name);
 	puts("}\n");
 }
 
@@ -1481,17 +1470,24 @@ gen_func_fill_r(const struct config *cfg, const struct strct *p)
 static void
 gen_func_fill(const struct config *cfg, const struct strct *p)
 {
-	const struct field *f;
-	int	 needint = 0;
+	const struct field	*f;
+	int	 		 needint = 0;
 
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_ENUM == f->type)
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (f->type == FTYPE_ENUM)
 			needint = 1;
-	}
 
-	print_func_db_fill(p, !TAILQ_EMPTY(&cfg->rq), 0);
-	puts("\n"
-	     "{\n"
+	print_commentv(0, COMMENT_C, 
+	       "Fill in a %s from an open statement \"stmt\".\n"
+	       "This starts grabbing results from \"pos\", "
+	       "which may be NULL to start from zero.\n"
+	       "This follows DB_SCHEMA_%s's order for columns.",
+	       p->name, p->cname);
+	printf("static void\n"
+	       "db_%s_fill(struct ort *ctx, struct %s *p, "
+		"const struct sqlbox_parmset *set, size_t *pos)\n",
+	       p->name, p->name);
+	puts("{\n"
 	     "\tsize_t i = 0;");
 	if (needint)
 		puts("\tint64_t tmpint;");
@@ -1538,12 +1534,11 @@ gen_func_update(const struct config *cfg,
 
 	/* Emit function prologue. */
 
-	print_func_db_update(up, !TAILQ_EMPTY(&cfg->rq), 0);
+	print_func_db_update(up, 0);
 	puts("\n"
 	     "{\n"
-	     "\tenum sqlbox_code c;");
-	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tstruct sqlbox *db = ctx->db;");
+	     "\tenum sqlbox_code c;\n"
+	     "\tstruct sqlbox *db = ctx->db;");
 	if (parms > 0)
 		printf("\tstruct sqlbox_parm parms[%zu];\n", parms);
 
@@ -2875,19 +2870,19 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 		     "};\n"
 		     "");
 
+		print_commentt(0, COMMENT_C,
+			"Definition of our opaque \"ort\", "
+			"which contains role information.");
+		puts("struct\tort {");
+		print_commentt(1, COMMENT_C,
+			"Hidden database connection");
+		puts("\tstruct sqlbox *db;");
+
 		if (!TAILQ_EMPTY(&cfg->rq)) {
-			print_commentt(0, COMMENT_C,
-				"Definition of our opaque \"ort\", "
-				"which contains role information.");
-			puts("struct\tort {");
-			print_commentt(1, COMMENT_C,
-				"Hidden database connection");
-			puts("\tstruct sqlbox *db;");
 			print_commentt(1, COMMENT_C,
 				"Current RBAC role.");
 			puts("\tenum ort_role role;\n"
 			     "};\n");
-
 			print_commentt(0, COMMENT_C,
 				"A saved role state attached to "
 				"generated objects.\n"
@@ -2898,9 +2893,12 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 			puts("struct\tort_store {");
 			print_commentt(1, COMMENT_C,
 				"Role at the time of acquisition.");
-			puts("\tenum ort_role role;\n"
-			     "};\n");
+			puts("\tenum ort_role role;");
+		}
 
+		puts("};\n");
+
+		if (!TAILQ_EMPTY(&cfg->rq)) {
 			print_commentt(0, COMMENT_C,
 				"Define our table columns.\n"
 				"Since we're using roles, this is "

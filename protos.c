@@ -76,16 +76,14 @@ static	const char *const optypes[OPTYPE__MAX] = {
 
 /*
  * Generate the convenience "open" function.
- * If "priv" is non-zero, return a ort instead of sqlbox.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
  */
 void
-print_func_db_open(int priv, int decl)
+print_func_db_open(int decl)
 {
 
-	printf("struct %s *%sdb_open(const char *file)%s\n",
-		priv ? "ort" : "sqlbox",
+	printf("struct ort *%sdb_open(const char *file)%s\n",
 		decl ? "" : "\n", decl ? ";" : "");
 }
 
@@ -117,45 +115,43 @@ print_func_db_role_stored(int decl)
 }
 
 void
-print_func_db_trans_rollback(int priv, int decl)
+print_func_db_trans_rollback(int decl)
 {
 
-	printf("void%sdb_trans_rollback(struct %s *%s, size_t id)%s\n",
-		decl ? " " : "\n", priv ? "ort" : "sqlbox",
-		priv ? "ctx" : "db", decl ? ";" : "");
+	printf("void%sdb_trans_rollback"
+		"(struct ort *ctx, size_t id)%s\n",
+		decl ? " " : "\n", decl ? ";" : "");
 }
 
 void
-print_func_db_trans_commit(int priv, int decl)
+print_func_db_trans_commit(int decl)
 {
 
-	printf("void%sdb_trans_commit(struct %s *%s, size_t id)%s\n",
-		decl ? " " : "\n", priv ? "ort" : "sqlbox",
-		priv ? "ctx" : "db", decl ? ";" : "");
+	printf("void%sdb_trans_commit"
+		"(struct ort *ctx, size_t id)%s\n",
+		decl ? " " : "\n", decl ? ";" : "");
 }
 
 void
-print_func_db_trans_open(int priv, int decl)
+print_func_db_trans_open(int decl)
 {
 
-	printf("void%sdb_trans_open(struct %s *%s, size_t id, int mode)%s\n",
-		decl ? " " : "\n", priv ? "ort" : "sqlbox", 
-		priv ? "ctx" : "db", decl ? ";" : "");
+	printf("void%sdb_trans_open"
+		"(struct ort *ctx, size_t id, int mode)%s\n",
+		decl ? " " : "\n", decl ? ";" : "");
 }
 
 /*
  * Generate the convenience "close" function.
- * If "priv" is non-zero, accept a ort instead of sqlbox.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
  */
 void
-print_func_db_close(int priv, int decl)
+print_func_db_close(int decl)
 {
 
-	printf("void%sdb_close(struct %s *p)%s\n",
-		decl ? " " : "\n", priv ? "ort" : "sqlbox",
-		decl ? ";" : "");
+	printf("void%sdb_close(struct ort *p)%s\n",
+		decl ? " " : "\n", decl ? ";" : "");
 }
 
 /*
@@ -242,10 +238,9 @@ print_name_db_update(const struct update *u)
  * Generate the "update" function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
- * If "priv" is non-zero, accept a ort instead of sqlbox.
  */
 void
-print_func_db_update(const struct update *u, int priv, int decl)
+print_func_db_update(const struct update *u, int decl)
 {
 	const struct uref *ur;
 	size_t	 	   pos = 1, col = 0;
@@ -267,10 +262,7 @@ print_func_db_update(const struct update *u, int priv, int decl)
 
 	/* Arguments starting with database pointer. */
 
-	if (priv)
-		col += (rc = printf("(struct ort *ctx")) > 0 ? rc : 0;
-	else
-		col += (rc = printf("(struct sqlbox *db")) > 0 ? rc : 0;
+	col += (rc = printf("(struct ort *ctx")) > 0 ? rc : 0;
 
 	TAILQ_FOREACH(ur, &u->mrq, entries)
 		col = print_var(pos++, col, 
@@ -319,10 +311,9 @@ print_name_db_search(const struct search *s)
  * The format of the declaration depends upon the search type.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
- * If "priv" is non-zero, accept a ort instead of sqlbox.
  */
 void
-print_func_db_search(const struct search *s, int priv, int decl)
+print_func_db_search(const struct search *s, int decl)
 {
 	const struct sent *sent;
 	const struct sref *sr;
@@ -364,10 +355,7 @@ print_func_db_search(const struct search *s, int priv, int decl)
 
 	/* Arguments starting with database pointer. */
 
-	if (priv)
-		col += (rc = printf("(struct ort *ctx")) > 0 ? rc : 0;
-	else
-		col += (rc = printf("(struct sqlbox *db")) > 0 ? rc : 0;
+	col += (rc = printf("(struct ort *ctx")) > 0 ? rc : 0;
 
 	if (s->type == STYPE_ITERATE) {
 		rc = printf(", %s_cb cb, void *arg", retstr->name);
@@ -399,10 +387,9 @@ print_name_db_insert(const struct strct *p)
  * Generate the "insert" function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
- * If "priv" is non-zero, accept a ort instead of sqlbox.
  */
 void
-print_func_db_insert(const struct strct *p, int priv, int decl)
+print_func_db_insert(const struct strct *p, int decl)
 {
 	const struct field *f;
 	size_t	 	    pos = 1, col = 0;
@@ -424,10 +411,7 @@ print_func_db_insert(const struct strct *p, int priv, int decl)
 
 	/* Arguments starting with database pointer. */
 
-	if (priv)
-		col += (rc = printf("(struct ort *ctx")) > 0 ? rc : 0;
-	else
-		col += (rc = printf("(struct sqlbox *db")) > 0 ? rc : 0;
+	col += (rc = printf("(struct ort *ctx")) > 0 ? rc : 0;
 
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if (!(f->type == FTYPE_STRUCT || 
@@ -453,23 +437,6 @@ print_func_db_freeq(const struct strct *p, int decl)
 }
 
 /*
- * Generate the "unfill" function for a given structure.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line.
- */
-void
-print_func_db_unfill(const struct strct *p, int priv, int decl)
-{
-
-	if (priv && decl)
-		return;
-	printf("%svoid%sdb_%s_unfill(struct %s *p)%s",
-	       priv ? "static " : "",
-	       decl ? " " : "\n", p->name, p->name,
-	       decl ? ";\n" : "");
-}
-
-/*
  * Generate the "free" function for a given structure.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
@@ -480,29 +447,6 @@ print_func_db_free(const struct strct *p, int decl)
 
 	printf("void%sdb_%s_free(struct %s *p)%s",
 	       decl ? " " : "\n", p->name, p->name,
-	       decl ? ";\n" : "");
-}
-
-/*
- * Generate the "fill" function for a given structure.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line.
- * If "priv" is declared, then we're running in roles mode and should
- * only produce the prototype for the definition.
- */
-void
-print_func_db_fill(const struct strct *p, int priv, int decl)
-{
-
-	if (priv && decl)
-		return;
-	printf("%svoid%sdb_%s_fill(%sstruct %s *p, "
-	       "const struct sqlbox_parmset *set, size_t *pos)%s",
-	       priv ? "static " : "",
-	       decl ? " " : "\n",
-	       p->name, 
-	       priv ? "struct ort *ctx, " : "",
-	       p->name,
 	       decl ? ";\n" : "");
 }
 

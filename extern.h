@@ -41,21 +41,19 @@ void		 print_commentv(size_t, enum cmtt, const char *, ...)
 void		 print_src(size_t, const char *, ...);
 
 void		 print_define_schema(const struct strct *);
-void		 print_func_db_close(int, int);
+void		 print_func_db_close(int);
 void		 print_func_db_role(int);
 void		 print_func_db_role_current(int);
 void		 print_func_db_role_stored(int);
-void		 print_func_db_open(int, int);
-void		 print_func_db_insert(const struct strct *, int, int);
-void		 print_func_db_fill(const struct strct *, int, int);
+void		 print_func_db_open(int);
+void		 print_func_db_insert(const struct strct *, int);
 void		 print_func_db_free(const struct strct *, int);
 void		 print_func_db_freeq(const struct strct *, int);
-void		 print_func_db_search(const struct search *, int, int);
-void		 print_func_db_trans_commit(int, int);
-void		 print_func_db_trans_open(int, int);
-void		 print_func_db_trans_rollback(int, int);
-void		 print_func_db_unfill(const struct strct *, int, int);
-void		 print_func_db_update(const struct update *, int, int);
+void		 print_func_db_search(const struct search *, int);
+void		 print_func_db_trans_commit(int);
+void		 print_func_db_trans_open(int);
+void		 print_func_db_trans_rollback(int);
+void		 print_func_db_update(const struct update *, int);
 
 size_t		 print_name_db_insert(const struct strct *);
 size_t		 print_name_db_search(const struct search *);

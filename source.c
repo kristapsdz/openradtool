@@ -655,14 +655,13 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 	 */
 
 	TAILQ_FOREACH(f, &p->fq, entries)
-		if (f->flags & (FIELD_UNIQUE | FIELD_ROWID)) {
+		if ((f->flags & (FIELD_ROWID|FIELD_UNIQUE))) {
 			if (asprintf(&buf, "STMT_%s_BY_UNIQUE_%s",
 			    p->cname, f->name) < 0)
 				return -1;
 			gen_func_role_stmts_all(cfg, buf);
 			shown++;
 			free(buf);
-			break;
 		}
 
 	/* Start with all query types. */
@@ -802,6 +801,8 @@ gen_func_open(const struct config *cfg)
 		     "\tif (!sqlbox_role_hier_sink(hier, ROLE_none))\n"
 		     "\t\tgoto err;\n"
 		     "\tif (!sqlbox_role_hier_start(hier, ROLE_default))\n"
+		     "\t\tgoto err;\n"
+		     "\tif (!sqlbox_role_hier_src(hier, ROLE_default, 0))\n"
 		     "\t\tgoto err;");
 
 		TAILQ_FOREACH(r, &cfg->rq, entries)
@@ -2240,8 +2241,7 @@ gen_enum(const struct strct *p)
 	size_t	 pos;
 
 	TAILQ_FOREACH(f, &p->fq, entries)
-		if (FIELD_UNIQUE & f->flags ||
-		    FIELD_ROWID & f->flags)
+		if ((f->flags & (FIELD_UNIQUE|FIELD_ROWID)))
 			printf("\tSTMT_%s_BY_UNIQUE_%s,\n", 
 				p->cname, f->name);
 
@@ -2397,8 +2397,7 @@ gen_stmt(const struct strct *p)
 	 */
 
 	TAILQ_FOREACH(f, &p->fq, entries) 
-		if (FIELD_ROWID & f->flags ||
-		    FIELD_UNIQUE & f->flags) {
+		if ((f->flags & (FIELD_ROWID|FIELD_UNIQUE))) {
 			printf("\t/* STMT_%s_BY_UNIQUE_%s */\n"
 			       "\t\"SELECT ", p->cname, f->name);
 			col = 16;

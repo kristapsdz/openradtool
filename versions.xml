@@ -9,18 +9,34 @@
 		</header>
 		<aside>
 			<p>
-				Some considerable changes, foremost in now using
+				Some considerable changes, so I'm bumping the minor number. 
+				First is using
 				<a href="https://kristaps.bsd.lv/sqlbox">sqlbox</a> instead of 
 				<a href="https://kristaps.bsd.lv/ksql">ksql</a> for the database
 				access library.
 				This is due to the performance benefits and simpler API.
+				The library also mandates safe operation instead of making it
+				optional, so (for example) all database operations must be specified
+				in advance.
+				Specifically, it will no longer accept SQL not passed at start.
 			</p>
 			<p>
-				Make <b>-s</b> the default for
+				Second, make <b>-s</b> the default for
 				<a href="ort-c-source.1.html">ort-c-source(1)</a> and
 				<a href="ort-c-header.1.html">ort-c-header(1)</a>.
 				The underlying database access library only supports split-process
-				mode.
+				mode, versus <a href="https://kristaps.bsd.lv/ksql">ksql</a> which
+				also had an <q>unsafe</q> mode.
+			</p>
+			<p>
+				Third, and most significantly, require using
+				<code>struct ort</code> instead of having direct access to
+				<code>struct sqlbox</code> (was <code>struct ksql</code>).
+				This mirrors the situation of roles being enabled.
+				If you have code that did not use roles <i>and</i> directly used the
+				<code>struct ksql</code> to interface with the database via custom
+				strings, the code will not to be re-written to use safer
+				conventions.
 			</p>
 		</aside>
 	</article>

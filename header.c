@@ -596,6 +596,20 @@ gen_func_open(const struct config *cfg)
 {
 
 	print_commentt(0, COMMENT_C,
+		"Forward declaration of opaque pointer.");
+	puts("struct ort;\n");
+
+	print_commentt(0, COMMENT_C,
+		"Set the address (IP or hostname) and identifier "
+		"of the user operating the request.\n"
+		"If these are not known, they should default to a "
+		"hyphen mark or NULL, which will be passed as "
+		"a hyphen mark.\n"
+		"This is used by the underlying database when "
+		"logging errors and warnings.");
+	print_func_db_set_ident(1);
+
+	print_commentt(0, COMMENT_C,
 		"Allocate and open the database in \"file\".\n"
 		"Note: the database has been opened in a "
 		"child process, so the application may be "
@@ -604,7 +618,6 @@ gen_func_open(const struct config *cfg)
 		"memory exhaustion.\n"
 		"The returned pointer must be closed with "
 		"db_close().");
-
 	print_func_db_open(1);
 	puts("");
 }

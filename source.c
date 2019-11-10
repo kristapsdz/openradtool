@@ -751,8 +751,30 @@ gen_func_open(const struct config *cfg)
 	size_t			 i;
 	int			 c;
 
-	print_func_db_open(0);
+	print_func_db_set_ident(0);
+	puts("{\n"
+	     "\n"
+	     "\tif (!sqlbox_msg_set_dat(ort->db, ident, strlen(ident) + 1))\n"
+	     "\t\texit(EXIT_FAILURE);\n"
+	     "}\n"
+	     "\n"
+	     "static void\n"
+	     "db_log(const char *msg, void *arg)\n"
+	     "{\n"
+	     "\tconst char *ident = arg;\n"
+	     "\tstruct tm tm;\n"
+	     "\ttime_t t = time(NULL);\n"
+	     "\tchar date[64];\n"
+	     "\n"
+	     "\tgmtime_r(&t, &tm);\n"
+	     "\tstrftime(date, sizeof(date), \"%a, %d %b %Y %T GMT\", &tm);\n"
+	     "\tif (ident == NULL)\n"
+	     "\t\tfprintf(stderr, \"[%s] ERROR %s\\n\", date, msg);\n"
+	     "\telse\n"
+	     "\t\tfprintf(stderr, \"%s [%s] ERROR %s\\n\", ident, date, msg);\n"
+	     "}\n");
 
+	print_func_db_open(0);
 	puts("{\n"
 	     "\tsize_t i;\n"
 	     "\tstruct ort *ctx = NULL;\n"
@@ -767,6 +789,7 @@ gen_func_open(const struct config *cfg)
 		puts("\tstruct sqlbox_role_hier *hier = NULL;");
 	puts("\n"
 	     "\tmemset(&cfg, 0, sizeof(struct sqlbox_cfg));\n"
+	     "\tcfg.msg.func = db_log;\n"
 	     "\tcfg.srcs.srcs = srcs;\n"
 	     "\tcfg.srcs.srcsz = 1;\n"
 	     "\tcfg.stmts.stmts = pstmts;\n"
@@ -796,6 +819,13 @@ gen_func_open(const struct config *cfg)
 		       "\n", i);
 
 		print_commentt(1, COMMENT_C, "Assign roles.");
+
+		/* 
+		 * FIXME: the default role should only be able to open
+		 * the database once.
+		 * With this, it's able to do so multiple times and
+		 * that's not a permission it needs.
+		 */
 
 		puts("\n"
 		     "\tif (!sqlbox_role_hier_sink(hier, ROLE_none))\n"
@@ -988,8 +1018,6 @@ gen_func_close(const struct config *cfg)
 	puts("{\n"
 	     "\tif (p == NULL)\n"
 	     "\t\treturn;\n"
-	     "\tif (!sqlbox_close(p->db, 0))\n"
-	     "\t\texit(EXIT_FAILURE);\n"
              "\tsqlbox_free(p->db);\n"
 	     "\tfree(p);\n"
 	     "}\n"
@@ -2837,10 +2865,10 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 		puts("#include <stdarg.h>");
 
 	puts("#include <stdio.h>\n"
-	     "#include <stdint.h>\n" /* int64_t */
+	     "#include <stdint.h> /* int64_t */\n"
 	     "#include <stdlib.h>\n"
 	     "#include <string.h>\n"
-	     "#include <time.h>\n" /* Linux with _XOPEN_SOURCE */
+	     "#include <time.h> /* _XOPEN_SOURCE and gmtime_r()*/\n"
 	     "#include <unistd.h>\n"
 	     "");
 

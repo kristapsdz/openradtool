@@ -75,7 +75,11 @@ static	const char *const optypes[OPTYPE__MAX] = {
 };
 
 /*
- * Generate the convenience "open" function.
+ * Generate the db_open() function declaration.
+ * This initialises the "struct ort", which is the centre of the entire
+ * process.
+ * It will manage allocating the database, setting roles, logging
+ * callbacks, and so on.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
  */
@@ -87,13 +91,32 @@ print_func_db_open(int decl)
 		decl ? "" : "\n", decl ? ";" : "");
 }
 
+/*
+ * Generate the db_set_ident() function declaration, which is used to
+ * set identifying information.
+ * If this is NOT a declaration ("decl"), then print a newline after the
+ * return type; otherwise, have it on one line.
+ */
+void
+print_func_db_set_ident(int decl)
+{
+
+	printf("void%sdb_set_ident(struct ort *ort, const char *ident)%s\n",
+		decl ? " " : "\n", decl ? ";" : "");
+}
+
+/*
+ * Generate the db_role() function declaration, which we use to change
+ * the role both in the database process and ourselves.
+ * If this is NOT a declaration ("decl"), then print a newline after the
+ * return type; otherwise, have it on one line.
+ */
 void
 print_func_db_role(int decl)
 {
 
 	printf("void%sdb_role(struct ort *ctx, enum ort_role r)%s\n",
-		decl ? " " : "\n", 
-		decl ? ";" : "");
+		decl ? " " : "\n", decl ? ";" : "");
 }
 
 void

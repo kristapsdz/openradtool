@@ -49,6 +49,7 @@ void		 print_func_db_insert(const struct strct *, int);
 void		 print_func_db_free(const struct strct *, int);
 void		 print_func_db_freeq(const struct strct *, int);
 void		 print_func_db_search(const struct search *, int);
+void		 print_func_db_set_ident(int);
 void		 print_func_db_trans_commit(int);
 void		 print_func_db_trans_open(int);
 void		 print_func_db_trans_rollback(int);

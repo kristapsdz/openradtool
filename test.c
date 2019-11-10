@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017, 2019 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -28,9 +28,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <kcgi.h>
-#include <kcgijson.h>
-
 #include "db.h"
 
 int
@@ -46,21 +43,23 @@ main(void)
 	 * It must already have been installed with a schema.
 	 */
 
-	if (NULL == (sql = db_open("db.db")))
-		errx(EXIT_FAILURE, "db.db");
+	if ((sql = db_open("db.db")) == NULL)
+		errx(EXIT_FAILURE, "db.db: db_open");
 	
 	/* Insert our initial company record. */
 
 	if ((cid = db_company_insert(sql, "foo bar", &val)) < 0)
-		errx(EXIT_FAILURE, "db_company_insert");
+		errx(EXIT_FAILURE, "db.db: db_company_insert");
 
 	/* Now insert our initial user. */
 
 	uid = db_user_insert(sql, cid, SEX_male,
 		"password", "foo@foo.com", strlen(buf), 
 		(const void **)&buf, "foo bar");
-	if (uid < 0)
-		errx(EXIT_FAILURE, "db_user_insert");
+	if (uid < 0) {
+		warnx("are you re-running the test?");
+		errx(EXIT_FAILURE, "db.db: db_user_insert (duplicate)");
+	}
 
 	/*
 	 * Try to insert a user with the same e-mail.
@@ -70,32 +69,34 @@ main(void)
 	nuid = db_user_insert(sql, cid, SEX_male,
 		"password", "foo@foo.com", 0, NULL, "foo bar");
 	if (nuid >= 0)
-		errx(EXIT_FAILURE, "db_user_insert (duplicate)");
+		errx(EXIT_FAILURE, "db.db: db_user_insert should fail");
 
 	/* Now fetch the entry by its unique id. */
 
-	if (NULL == (u = db_user_get_by_uid_eq(sql, uid)))
-		errx(EXIT_FAILURE, "db_user_get_by_uid_eq");
+	if ((u = db_user_get_by_uid_eq(sql, uid)) == NULL)
+		errx(EXIT_FAILURE, "db.db: db_user_get_by_uid_eq");
 
 	/* Print it... */
 
 	warnx("company name: %s", u->company.name);
 	warnx("company id: %" PRId64, u->company.id);
-	warnx("company has null: %s", u->company.has_somenum ? "no" : "yes");
 	if (u->company.has_somenum)
 		warnx("company somenum: %" PRId64, u->company.somenum);
-	warnx("cid: %" PRId64, u->cid);
-	warnx("hash: %s", u->hash);
-	warnx("email: %s", u->email);
-	warnx("name: %s", u->name);
-	warnx("image size: %zu", u->image_sz);
-	warnx("uid: %" PRId64, u->uid);
+	if (u->company.has_somenum)
+		warnx("company has unset somenum");
+	warnx("user cid: %" PRId64, u->cid);
+	warnx("user hash: %s", u->hash);
+	warnx("user email: %s", u->email);
+	warnx("user name: %s", u->name);
+	warnx("user image size: %zu B", u->image_sz);
+	warnx("user uid: %" PRId64, u->uid);
 
 	/* Look up the same user by e-mail/password. */
 
 	u2 = db_user_get_creds(sql, "foo@foo.com", "password");
-	if (NULL == u2 || u2->uid != u->uid)
-		errx(EXIT_FAILURE, "db_user_get_creds");
+
+	if (u2 == NULL || u2->uid != u->uid)
+		errx(EXIT_FAILURE, "db.db: db_user_get_creds");
 
 	/* 
 	 * Now try looking them up with the wrong password. 
@@ -103,8 +104,8 @@ main(void)
 	 */
 
 	u3 = db_user_get_creds(sql, "foo@foo.com", "password2");
-	if (NULL != u3)
-		errx(EXIT_FAILURE, "db_user_get_creds");
+	if (u3 != NULL)
+		errx(EXIT_FAILURE, "db.db: db_user_get_creds");
 
 	db_user_free(u);
 	db_user_free(u2);
@@ -112,8 +113,8 @@ main(void)
 
 	/* Change the user's password. */
 
-	if ( ! db_user_update_hash_by_uid_eq(sql, "password2", uid))
-		errx(EXIT_FAILURE, "db_user_update_hash_by_uid_eq");
+	if (!db_user_update_hash_by_uid_eq(sql, "password2", uid))
+		errx(EXIT_FAILURE, "db.db: db_user_update_hash_by_uid_eq");
 
 	/* 
 	 * Now do the same dance, checking for the changed password.
@@ -121,11 +122,11 @@ main(void)
 	 */
 
 	u2 = db_user_get_creds(sql, "foo@foo.com", "password");
-	if (NULL != u2)
+	if (u2 != NULL)
 		errx(EXIT_FAILURE, "db_user_get_creds");
 
 	u3 = db_user_get_creds(sql, "foo@foo.com", "password2");
-	if (NULL == u3)
+	if (u3 == NULL)
 		errx(EXIT_FAILURE, "db_user_get_creds");
 
 	db_user_free(u2);

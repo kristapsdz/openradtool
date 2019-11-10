@@ -3,8 +3,8 @@
 include Makefile.configure
 
 VERSION_MAJOR	 = 0
-VERSION_MINOR	 = 7
-VERSION_BUILD	 = 8
+VERSION_MINOR	 = 8
+VERSION_BUILD	 = 0
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = comments.o \
 		   compats.o \
@@ -212,7 +212,7 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	rm -rf .dist/
 
 test: test.o db.o db.db
-	$(CC) -o $@ test.o db.o $(LDFLAGS) -lsqlbox -lsqlite3 -lpthread -lkcgijson -lkcgi -lz $(LDADD)
+	$(CC) -o $@ test.o db.o $(LDFLAGS) -lsqlbox -lsqlite3 -lpthread $(LDADD)
 
 audit-out.js: ort-audit-json audit-example.txt
 	./ort-audit-json user audit-example.txt >$@
@@ -224,10 +224,10 @@ test.o: test.c db.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c test.c
 
 db.c: ort-c-source db.txt
-	./ort-c-source -vsjJ db.txt >$@
+	./ort-c-source db.txt >$@
 
 db.h: ort-c-header db.txt
-	./ort-c-header -vsjJ db.txt >$@
+	./ort-c-header db.txt >$@
 
 db.sql: ort-sql db.txt
 	./ort-sql db.txt >$@

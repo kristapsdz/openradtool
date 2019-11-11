@@ -598,27 +598,50 @@ gen_func_open(const struct config *cfg)
 	print_commentt(0, COMMENT_C,
 		"Forward declaration of opaque pointer.");
 	puts("struct ort;\n");
-
 	print_commentt(0, COMMENT_C,
-		"Set the address (IP or hostname) and identifier "
-		"of the user operating the request.\n"
-		"If these are not known, they should default to a "
-		"hyphen mark or NULL, which will be passed as "
-		"a hyphen mark.\n"
-		"This is used by the underlying database when "
-		"logging errors and warnings.");
-	print_func_db_set_ident(1);
-
+		"Set the argument given to the logging function "
+		"specified to db_open_logging().\n"
+		"Has no effect if no logging function has been "
+		"set.\n"
+		"The buffer is copied into a child process, so "
+		"serialised objects may not have any pointers "
+		"in the current address space or they will fail "
+		"(at best).\n"
+		"Set length to zero to unset the logging function "
+		"callback argument.");
+	print_func_db_set_logging(1);
+	puts("");
 	print_commentt(0, COMMENT_C,
 		"Allocate and open the database in \"file\".\n"
-		"Note: the database has been opened in a "
-		"child process, so the application may be "
-		"sandboxed liberally.\n"
 		"Returns an opaque pointer or NULL on "
 		"memory exhaustion.\n"
 		"The returned pointer must be closed with "
-		"db_close().");
+		"db_close().\n"
+		"See db_open_logging() for the equivalent "
+		"function that accepts logging callbacks.\n"
+		"This function starts a child with fork(), "
+		"the child of which opens the database, so "
+		"a constraint environment (e.g., with pledge) "
+		"must take this into account.\n"
+		"Subsequent this function, all database "
+		"operations take place over IPC.");
 	print_func_db_open(1);
+	puts("");
+	print_commentt(0, COMMENT_C,
+		"Like db_open() but accepts a function for "
+		"logging.\n"
+		"If both are provided, the \"long\" form overrides "
+		"the \"short\" form.\n"
+		"The logging function is run both in a child "
+		"and parent process, so it must not have side "
+		"effects.\n"
+		"The optional pointer is passed to the long "
+		"form logging function and is inherited by the "
+		"child process as-is, without being copied "
+		"by value.\n"
+		"See db_logging_data() to set the pointer "
+		"after initialisation.");
+	print_func_db_open_logging(1);
 	puts("");
 }
 

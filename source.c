@@ -751,30 +751,18 @@ gen_func_open(const struct config *cfg)
 	size_t			 i;
 	int			 c;
 
-	print_func_db_set_ident(0);
+	print_func_db_set_logging(0);
 	puts("{\n"
 	     "\n"
-	     "\tif (!sqlbox_msg_set_dat(ort->db, ident, strlen(ident) + 1))\n"
+	     "\tif (!sqlbox_msg_set_dat(ort->db, arg, sz))\n"
 	     "\t\texit(EXIT_FAILURE);\n"
-	     "}\n"
-	     "\n"
-	     "static void\n"
-	     "db_log(const char *msg, void *arg)\n"
-	     "{\n"
-	     "\tconst char *ident = arg;\n"
-	     "\tstruct tm tm;\n"
-	     "\ttime_t t = time(NULL);\n"
-	     "\tchar date[64];\n"
-	     "\n"
-	     "\tgmtime_r(&t, &tm);\n"
-	     "\tstrftime(date, sizeof(date), \"%a, %d %b %Y %T GMT\", &tm);\n"
-	     "\tif (ident == NULL)\n"
-	     "\t\tfprintf(stderr, \"[%s] ERROR %s\\n\", date, msg);\n"
-	     "\telse\n"
-	     "\t\tfprintf(stderr, \"%s [%s] ERROR %s\\n\", ident, date, msg);\n"
 	     "}\n");
-
 	print_func_db_open(0);
+	puts("{\n"
+	     "\n"
+	     "\treturn db_open_logging(file, NULL, NULL, NULL);\n"
+	     "}\n");
+	print_func_db_open_logging(0);
 	puts("{\n"
 	     "\tsize_t i;\n"
 	     "\tstruct ort *ctx = NULL;\n"
@@ -789,7 +777,9 @@ gen_func_open(const struct config *cfg)
 		puts("\tstruct sqlbox_role_hier *hier = NULL;");
 	puts("\n"
 	     "\tmemset(&cfg, 0, sizeof(struct sqlbox_cfg));\n"
-	     "\tcfg.msg.func = db_log;\n"
+	     "\tcfg.msg.func = log;\n"
+	     "\tcfg.msg.func_short = log_short;\n"
+	     "\tcfg.msg.dat = log_arg;\n"
 	     "\tcfg.srcs.srcs = srcs;\n"
 	     "\tcfg.srcs.srcsz = 1;\n"
 	     "\tcfg.stmts.stmts = pstmts;\n"

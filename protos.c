@@ -92,16 +92,30 @@ print_func_db_open(int decl)
 }
 
 /*
- * Generate the db_set_ident() function declaration, which is used to
- * set identifying information.
+ * Like print_func_db_open() but also with logging functions.
+ */
+void
+print_func_db_open_logging(int decl)
+{
+
+	printf("struct ort *%sdb_open_logging(const char *file,\n"
+	       "\tvoid (*log)(const char *, void *),\n"
+	       "\tvoid (*log_short)(const char *, ...), void *log_arg)%s\n",
+		decl ? "" : "\n", decl ? ";" : "");
+}
+
+/*
+ * Generate the db_logging_data() function declaration, which is used to
+ * set logging callback data.
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line.
  */
 void
-print_func_db_set_ident(int decl)
+print_func_db_set_logging(int decl)
 {
 
-	printf("void%sdb_set_ident(struct ort *ort, const char *ident)%s\n",
+	printf("void%sdb_logging_data(struct ort *ort, "
+		"const void *arg, size_t sz)%s\n",
 		decl ? " " : "\n", decl ? ";" : "");
 }
 

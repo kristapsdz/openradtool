@@ -43,7 +43,7 @@ main(void)
 	 * It must already have been installed with a schema.
 	 */
 
-	if ((sql = db_open("db.db")) == NULL)
+	if ((sql = db_open_logging("db.db", NULL, warnx, NULL)) == NULL)
 		errx(EXIT_FAILURE, "db.db: db_open");
 	
 	/* Insert our initial company record. */

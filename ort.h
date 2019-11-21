@@ -649,19 +649,8 @@ struct	config {
 
 __BEGIN_DECLS
 
-int		 ort_check_ident(struct config *,
-			const struct pos *, const char *);
-
 struct config	*ort_config_alloc(void);
 void		 ort_config_free(struct config *);
-void		 ort_config_free_distinct(struct dstnct *);
-void		 ort_config_free_aggr(struct aggr *);
-void		 ort_config_msgv(struct config *, enum msgtype, 
-			const char *, int, const struct pos *, 
-			const char *, va_list);
-void		 ort_config_msg(struct config *, enum msgtype, 
-			const char *, int, const struct pos *, 
-			const char *, ...);
 
 int		 ort_parse_close(struct config *);
 int		 ort_parse_file_r(struct config *, FILE *, const char *);
@@ -671,17 +660,6 @@ struct config	*ort_parse_buf(const char *, size_t);
 
 char		*ort_write_buf(const struct config *);
 int		 ort_write_file(FILE *, const struct config *);
-
-struct strct	*ort_strct_alloc(struct config *, 
-			const struct pos *, const char *);
-struct field	*ort_field_alloc(struct config *, struct strct *, 
-			const struct pos *, const char *);
-int		 ort_field_set_ref_struct(struct config *, 
-			const struct pos *, struct field *, 
-			const char *);
-int		 ort_field_set_ref_foreign(struct config *, 
-			const struct pos *, struct field *, 
-			const char *, const char *);
 
 __END_DECLS
 

@@ -34,6 +34,27 @@ enum	cmtt {
 
 __BEGIN_DECLS
 
+int		 ort_check_ident(struct config *,
+			const struct pos *, const char *);
+void		 ort_config_free_distinct(struct dstnct *);
+void		 ort_config_free_aggr(struct aggr *);
+void		 ort_config_msgv(struct config *, enum msgtype, 
+			const char *, int, const struct pos *, 
+			const char *, va_list);
+void		 ort_config_msg(struct config *, enum msgtype, 
+			const char *, int, const struct pos *, 
+			const char *, ...);
+struct strct	*ort_strct_alloc(struct config *, 
+			const struct pos *, const char *);
+struct field	*ort_field_alloc(struct config *, struct strct *, 
+			const struct pos *, const char *);
+int		 ort_field_set_ref_struct(struct config *, 
+			const struct pos *, struct field *, 
+			const char *);
+int		 ort_field_set_ref_foreign(struct config *, 
+			const struct pos *, struct field *, 
+			const char *, const char *);
+
 void		 print_commentt(size_t, enum cmtt, const char *);
 void		 print_commentv(size_t, enum cmtt, const char *, ...)
 			__attribute__((format(printf, 3, 4)));

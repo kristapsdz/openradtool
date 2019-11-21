@@ -298,6 +298,77 @@ check_dupetoplevel(struct parse *p, const char *name)
 }
 
 /*
+ * For a given field "f", mark it being a "struct" and point it to the
+ * local field (in the same struct) "name".
+ * Return zero on memory allocation failure or if the reference is
+ * already set, non-zero otherwise.
+ */
+static int
+fref_alloc_local(struct parse *p, struct field *f, const char *name)
+{
+
+	if (f->ref != NULL) {
+		parse_errx(p, "reference already set");
+		return 0;
+	}
+	
+	if ((f->ref = calloc(1, sizeof(struct ref))) == NULL ||
+	    (f->ref->sfield = strdup(name)) == NULL) {
+		parse_err(p);
+		free(f->ref);
+		f->ref = NULL;
+		return 0;
+	}
+
+	f->ref->parent = f;
+	f->type = FTYPE_STRUCT;
+	return 1;
+}
+
+/*
+ * For a given field "f", mark it being a "struct" and point it to the
+ * remote field (in a different struct) "name".
+ * This checks if the remote field is the same as the local.
+ * Return zero on memory allocation failure or if the reference is
+ * already set, non-zero otherwise.
+ */
+static int
+fref_alloc_remote(struct parse *p, struct field *f, 
+	const char *sname, const char *fname)
+{
+
+	if (strcasecmp(sname, f->parent->name) == 0) {
+		parse_warnx(p, "using remote "
+			"syntax for local reference");
+		return fref_alloc_local(p, f, fname);
+	} else if (f->ref != NULL) {
+		parse_errx(p, "reference already set");
+		return 0;
+	} 
+
+	assert(f->name != NULL);
+
+	if ((f->ref = calloc(1, sizeof(struct ref))) != NULL &&
+	    (f->ref->sfield = strdup(f->name)) != NULL &&
+	    (f->ref->tfield = strdup(fname)) != NULL &&
+	    (f->ref->tstrct = strdup(sname)) != NULL) {
+		f->ref->parent = f;
+		return 1;
+	}
+
+	parse_err(p);
+
+	if (f->ref != NULL)  {
+		free(f->ref->sfield);
+		free(f->ref->tfield);
+		free(f->ref->tstrct);
+		free(f->ref);
+		f->ref = NULL;
+	}
+	return 0;
+}
+
+/*
  * Appends a reference "v" to "p".
  * If "p" is NULL, this will simply duplicate "p".
  * Else, "p" += "." "v".
@@ -1186,8 +1257,7 @@ parse_field_enum(struct parse *p, struct field *fd)
 static void
 parse_field(struct parse *p, struct field *fd)
 {
-	struct pos	 pos;
-	char		*sn;
+	char	*sn;
 
 	if (TOK_SEMICOLON == parse_next(p))
 		return;
@@ -1195,7 +1265,6 @@ parse_field(struct parse *p, struct field *fd)
 	/* Check if this is a reference. */
 
 	if (TOK_COLON == p->lasttype) {
-		parse_point(p, &pos);
 		if (TOK_IDENT != parse_next(p)) {
 			parse_errx(p, "expected target struct");
 			return;
@@ -1212,8 +1281,7 @@ parse_field(struct parse *p, struct field *fd)
 			return;
 		} 
 
-		if ( ! ort_field_set_ref_foreign
-		    (p->cfg, &pos, fd, sn, p->last.string)) {
+		if (!fref_alloc_remote(p, fd, sn, p->last.string)) {
 			free(sn);
 			return;
 		}
@@ -1315,13 +1383,11 @@ parse_field(struct parse *p, struct field *fd)
 	 * running the link phase.
 	 */
 
-	parse_point(p, &pos);
 	if (TOK_IDENT != parse_next(p)) {
 		parse_errx(p, "expected source field");
 		return;
 	} 
-	if ( ! ort_field_set_ref_struct
-	    (p->cfg, &pos, fd, p->last.string))
+	if (!fref_alloc_local(p, fd, p->last.string))
 		return;
 
 	parse_config_field_info(p, fd);

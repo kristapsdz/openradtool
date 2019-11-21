@@ -298,6 +298,52 @@ check_dupetoplevel(struct parse *p, const char *name)
 }
 
 /*
+ * Allocate and initialise a struct named "name", returning the new
+ * structure or NULL on memory allocation failure or bad name.
+ */
+static struct strct *
+strct_alloc(struct parse *p, const char *name)
+{
+	struct strct	*s;
+	char		*caps;
+
+	/* Check reserved identifiers and dupe names. */
+
+	if (!check_badidents(p, name)) {
+		parse_errx(p, "reserved identifier");
+		return NULL;
+	} else if (!check_dupetoplevel(p, name))
+		return NULL;
+
+	if ((s = calloc(1, sizeof(struct strct))) == NULL ||
+	    (s->name = strdup(name)) == NULL ||
+	    (s->cname = strdup(s->name)) == NULL) {
+		parse_err(p);
+		if (NULL != s) {
+			free(s->name);
+			free(s->cname);
+			free(s);
+		}
+		return NULL;
+	}
+
+	for (caps = s->cname; *caps != '\0'; caps++)
+		*caps = toupper((unsigned char)*caps);
+
+	s->cfg = p->cfg;
+	parse_point(p, &s->pos);
+	TAILQ_INSERT_TAIL(&p->cfg->sq, s, entries);
+	TAILQ_INIT(&s->fq);
+	TAILQ_INIT(&s->sq);
+	TAILQ_INIT(&s->aq);
+	TAILQ_INIT(&s->uq);
+	TAILQ_INIT(&s->nq);
+	TAILQ_INIT(&s->dq);
+	TAILQ_INIT(&s->rq);
+	return s;
+}
+
+/*
  * For a given field "f", mark it being a "struct" and point it to the
  * local field (in the same struct) "name".
  * Return zero on memory allocation failure or if the reference is
@@ -3094,8 +3140,7 @@ parse_struct(struct parse *p)
 	struct pos	 pos;
 
 	parse_point(p, &pos);
-	s = ort_strct_alloc(p->cfg, &pos, p->last.string);
-	if (NULL == s)
+	if ((s = strct_alloc(p, p->last.string)) == NULL)
 		return;
 	parse_struct_data(p, s);
 }

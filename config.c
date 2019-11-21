@@ -669,61 +669,6 @@ ort_field_alloc(struct config *cfg, struct strct *s,
 	return fd;
 }
 
-struct strct *
-ort_strct_alloc(struct config *cfg, 
-	const struct pos *pos, const char *name)
-{
-	struct strct	  *s;
-	char		  *caps;
-	const char *const *cp;
-
-	/* Check reserved identifiers. */
-
-	for (cp = badidents; NULL != *cp; cp++)
-		if (0 == strcasecmp(*cp, name)) {
-			ort_config_msg(cfg, MSGTYPE_ERROR, 
-				__func__, 0, NULL, 
-				"reserved identifier");
-			return NULL;
-		}
-
-	/* Check other toplevels having same name. */
-
-	if ( ! check_dupetoplevel(cfg, pos, name))
-		return NULL;
-
-	/* Now make allocation. */
-
-	if (NULL == (s = calloc(1, sizeof(struct strct))) ||
-	    NULL == (s->name = strdup(name)) ||
-	    NULL == (s->cname = strdup(s->name))) {
-		ort_config_msg(cfg, MSGTYPE_FATAL, __func__, 
-			errno, pos, NULL);
-		if (NULL != s) {
-			free(s->name);
-			free(s->cname);
-		}
-		free(s);
-		return NULL;
-	}
-
-	for (caps = s->cname; '\0' != *caps; caps++)
-		*caps = toupper((unsigned char)*caps);
-
-	if (NULL != pos)
-		s->pos = *pos;
-	s->cfg = cfg;
-	TAILQ_INSERT_TAIL(&cfg->sq, s, entries);
-	TAILQ_INIT(&s->fq);
-	TAILQ_INIT(&s->sq);
-	TAILQ_INIT(&s->aq);
-	TAILQ_INIT(&s->uq);
-	TAILQ_INIT(&s->nq);
-	TAILQ_INIT(&s->dq);
-	TAILQ_INIT(&s->rq);
-	return s;
-}
-
 /*
  * Free all configuration resources.
  * Does nothing if "q" is empty or NULL.

@@ -34,8 +34,6 @@ enum	cmtt {
 
 __BEGIN_DECLS
 
-int		 ort_check_ident(struct config *,
-			const struct pos *, const char *);
 void		 ort_config_free_distinct(struct dstnct *);
 void		 ort_config_free_aggr(struct aggr *);
 void		 ort_config_msgv(struct config *, enum msgtype, 

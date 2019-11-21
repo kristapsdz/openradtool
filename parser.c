@@ -104,6 +104,165 @@ struct	parse {
 	};
 };
 
+/*
+ * Disallowed field names.
+ * The SQL ones are from https://sqlite.org/lang_keywords.html.
+ * FIXME: think about this more carefully, as in SQL, there are many
+ * things that we can put into string literals.
+ */
+static	const char *const badidents[] = {
+	/* Things not allowed in C. */
+	"auto",
+	"break",
+	"case",
+	"char",
+	"const",
+	"continue",
+	"default",
+	"do",
+	"double",
+	"enum",
+	"extern",
+	"float",
+	"goto",
+	"long",
+	"register",
+	"short",
+	"signed",
+	"static",
+	"struct",
+	"typedef",
+	"union",
+	"unsigned",
+	"void",
+	"volatile",
+	/* Things not allowed in SQLite. */
+	"ABORT",
+	"ACTION",
+	"ADD",
+	"AFTER",
+	"ALL",
+	"ALTER",
+	"ANALYZE",
+	"AND",
+	"AS",
+	"ASC",
+	"ATTACH",
+	"AUTOINCREMENT",
+	"BEFORE",
+	"BEGIN",
+	"BETWEEN",
+	"BY",
+	"CASCADE",
+	"CASE",
+	"CAST",
+	"CHECK",
+	"COLLATE",
+	"COLUMN",
+	"COMMIT",
+	"CONFLICT",
+	"CONSTRAINT",
+	"CREATE",
+	"CROSS",
+	"CURRENT_DATE",
+	"CURRENT_TIME",
+	"CURRENT_TIMESTAMP",
+	"DATABASE",
+	"DEFAULT",
+	"DEFERRABLE",
+	"DEFERRED",
+	"DELETE",
+	"DESC",
+	"DETACH",
+	"DISTINCT",
+	"DROP",
+	"EACH",
+	"ELSE",
+	"END",
+	"ESCAPE",
+	"EXCEPT",
+	"EXCLUSIVE",
+	"EXISTS",
+	"EXPLAIN",
+	"FAIL",
+	"FOR",
+	"FOREIGN",
+	"FROM",
+	"FULL",
+	"GLOB",
+	"GROUP",
+	"HAVING",
+	"IF",
+	"IGNORE",
+	"IMMEDIATE",
+	"IN",
+	"INDEX",
+	"INDEXED",
+	"INITIALLY",
+	"INNER",
+	"INSERT",
+	"INSTEAD",
+	"INTERSECT",
+	"INTO",
+	"IS",
+	"ISNULL",
+	"JOIN",
+	"KEY",
+	"LEFT",
+	"LIKE",
+	"LIMIT",
+	"MATCH",
+	"NATURAL",
+	"NOT",
+	"NOTNULL",
+	"NULL",
+	"OF",
+	"OFFSET",
+	"ON",
+	"OR",
+	"ORDER",
+	"OUTER",
+	"PLAN",
+	"PRAGMA",
+	"PRIMARY",
+	"QUERY",
+	"RAISE",
+	"RECURSIVE",
+	"REFERENCES",
+	"REGEXP",
+	"REINDEX",
+	"RELEASE",
+	"RENAME",
+	"REPLACE",
+	"RESTRICT",
+	"RIGHT",
+	"ROLLBACK",
+	"ROW",
+	"SAVEPOINT",
+	"SELECT",
+	"SET",
+	"TABLE",
+	"TEMP",
+	"TEMPORARY",
+	"THEN",
+	"TO",
+	"TRANSACTION",
+	"TRIGGER",
+	"UNION",
+	"UNIQUE",
+	"UPDATE",
+	"USING",
+	"VACUUM",
+	"VALUES",
+	"VIEW",
+	"VIRTUAL",
+	"WHEN",
+	"WHERE",
+	"WITH",
+	"WITHOUT",
+	NULL
+};
+
 static	const char *const rolemapts[ROLEMAP__MAX] = {
 	"all", /* ROLEMAP_ALL */
 	"count", /* ROLEMAP_COUNT */
@@ -250,18 +409,21 @@ buf_push(struct parse *p, char c)
 }
 
 /*
- * Call through to ort_check_ident with position.
+ * Check to see whether "s" is a reserved identifier or not.
+ * Returns zero if this is a reserved identifier, non-zero if it's ok
  */
 static int
 check_badidents(struct parse *p, const char *s)
 {
-	struct pos	 pos;
+	const char *const *cp;
 
-	pos.fname = p->fname;
-	pos.line = p->line;
-	pos.column = p->column;
+	for (cp = badidents; *cp != NULL; cp++)
+		if (strcasecmp(*cp, s) == 0) {
+			parse_errx(p, "reserved identifier");
+			return 0;
+		}
 
-	return ort_check_ident(p->cfg, &pos, s);
+	return 1;
 }
 
 /*

@@ -44,8 +44,6 @@ void		 ort_config_msgv(struct config *, enum msgtype,
 void		 ort_config_msg(struct config *, enum msgtype, 
 			const char *, int, const struct pos *, 
 			const char *, ...);
-struct field	*ort_field_alloc(struct config *, struct strct *, 
-			const struct pos *, const char *);
 
 void		 print_commentt(size_t, enum cmtt, const char *);
 void		 print_commentv(size_t, enum cmtt, const char *, ...)

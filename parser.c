@@ -264,7 +264,12 @@ check_badidents(struct parse *p, const char *s)
 	return ort_check_ident(p->cfg, &pos, s);
 }
 
-/* FIXME: this is in config.c now. */
+/*
+ * For all structs, enumerations, and bitfields, make sure that we don't
+ * have any of the same top-level names.
+ * That's because the C output for these will be, given "name", "struct
+ * name", "enum name", which can't be the same.
+ */
 static int
 check_dupetoplevel(struct parse *p, const char *name)
 {
@@ -295,6 +300,52 @@ check_dupetoplevel(struct parse *p, const char *name)
 		}
 	
 	return(1);
+}
+
+/*
+ * Allocate and initialise a field "name" in struct "s", returning the
+ * new field or NULL on memory allocation failure or bad name.
+ */
+static struct field *
+field_alloc(struct parse *p, struct strct *s, const char *name)
+{
+	struct field	  *fd;
+
+	/* Check reserved identifiers. */
+
+	if (!check_badidents(p, name)) {
+		parse_errx(p, "reserved identifier");
+		return NULL;
+	}
+
+	/* Check other fields in struct having same name. */
+
+	TAILQ_FOREACH(fd, &s->fq, entries) {
+		if (strcasecmp(fd->name, name))
+			continue;
+		parse_errx(p, "duplicate field name: "
+			"%s:%zu:%zu", fd->pos.fname, 
+			fd->pos.line, fd->pos.column);
+		return NULL;
+	}
+
+	/* Now the actual allocation. */
+
+	if (NULL == (fd = calloc(1, sizeof(struct field)))) {
+		parse_err(p);
+		return NULL;
+	} else if (NULL == (fd->name = strdup(name))) {
+		parse_err(p);
+		free(fd);
+		return NULL;
+	}
+
+	parse_point(p, &fd->pos);
+	fd->type = FTYPE_INT;
+	fd->parent = s;
+	TAILQ_INIT(&fd->fvq);
+	TAILQ_INSERT_TAIL(&s->fq, fd, entries);
+	return fd;
 }
 
 /*
@@ -2643,7 +2694,6 @@ static void
 parse_struct_data(struct parse *p, struct strct *s)
 {
 	struct field	*fd;
-	struct pos	 pos;
 
 	if (parse_next(p) != TOK_LBRACE) {
 		parse_errx(p, "expected left brace");
@@ -2701,9 +2751,7 @@ parse_struct_data(struct parse *p, struct strct *s)
 				parse_errx(p, "expected field name");
 				return;
 			} 
-			parse_point(p, &pos);
-			fd = ort_field_alloc(p->cfg,
-				s, &pos, p->last.string);
+			fd = field_alloc(p, s, p->last.string);
 			if (fd == NULL)
 				return;
 			parse_field(p, fd);

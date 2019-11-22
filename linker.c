@@ -649,10 +649,10 @@ resolve_aliases(struct config *cfg, struct strct *orig,
 static int
 check_searchtype(struct config *cfg, struct strct *p)
 {
-	const struct sent *sent;
-	const struct sref *sr;
-	struct search 	*srch;
-	struct dref	*dr;
+	const struct sent	*sent;
+	const struct sref	*sr;
+	struct search		*srch;
+	struct dref		*dr;
 
 	TAILQ_FOREACH(srch, &p->sq, entries) {
 		/*
@@ -663,20 +663,21 @@ check_searchtype(struct config *cfg, struct strct *p)
 		 * the case of having a single-entry table.
 		 */
 
-		if (STYPE_SEARCH == srch->type &&
+		if (srch->type == STYPE_SEARCH &&
 		    TAILQ_EMPTY(&srch->sntq)) {
 			gen_errx(cfg, &srch->pos, 
 				"unique result search "
 				"without parameters");
 			return 0;
 		}
-		if (SEARCH_IS_UNIQUE & srch->flags && 
-		    STYPE_SEARCH != srch->type) 
+		if ((srch->flags & SEARCH_IS_UNIQUE) && 
+		    srch->type != STYPE_SEARCH)
 			gen_warnx(cfg, &srch->pos, 
 				"multiple-result search "
 				"on a unique field");
-		if ( ! (SEARCH_IS_UNIQUE & srch->flags) && 
-		    STYPE_SEARCH == srch->type && 1 != srch->limit)
+		if (!(srch->flags & SEARCH_IS_UNIQUE) && 
+		    srch->type == STYPE_SEARCH && 
+		    srch->limit != 1)
 			gen_warnx(cfg, &srch->pos, 
 				"single-result search "
 				"on a non-unique field without a "
@@ -684,12 +685,12 @@ check_searchtype(struct config *cfg, struct strct *p)
 
 		TAILQ_FOREACH(sent, &srch->sntq, entries) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
-			if ((OPTYPE_NOTNULL == sent->op ||
-			     OPTYPE_ISNULL == sent->op) &&
-			    ! (FIELD_NULL & sr->field->flags))
+			if ((sent->op == OPTYPE_NOTNULL ||
+			     sent->op == OPTYPE_ISNULL) &&
+			    !(sr->field->flags & FIELD_NULL))
 				gen_warnx(cfg, &sent->pos, 
-					"null operator "
-					"on field that's never null");
+					"null operator on field "
+					"that's never null");
 
 			/* 
 			 * FIXME: we should (in theory) allow for the
@@ -697,25 +698,29 @@ check_searchtype(struct config *cfg, struct strct *p)
 			 * But for now, mandate equality.
 			 */
 
-			if (OPTYPE_EQUAL != sent->op &&
-			    FTYPE_PASSWORD == sr->field->type) {
-				gen_errx(cfg, &sent->pos, "password field "
-					"only processes equality");
+			if (sent->op != OPTYPE_EQUAL &&
+			    sent->op != OPTYPE_NEQUAL &&
+			    sr->field->type == FTYPE_PASSWORD) {
+				gen_errx(cfg, &sent->pos, 
+					"passwords only accept "
+					"equality or non-equality "
+					"operators");
 				return 0;
 			}
 
 			/* Require text types for LIKE operator. */
 
-			if (OPTYPE_LIKE == sent->op &&
-			    FTYPE_TEXT != sr->field->type &&
-			    FTYPE_EMAIL != sr->field->type) {
-				gen_errx(cfg, &sent->pos, "LIKE operator "
-					"on non-textual field.");
+			if (sent->op == OPTYPE_LIKE &&
+			    sr->field->type != FTYPE_TEXT &&
+			    sr->field->type != FTYPE_EMAIL) {
+				gen_errx(cfg, &sent->pos, 
+					"LIKE operator on non-"
+					"textual field.");
 				return 0;
 			}
 		}
 
-		if (NULL == srch->dst)
+		if (srch->dst == NULL)
 			continue;
 
 		/*
@@ -724,9 +729,9 @@ check_searchtype(struct config *cfg, struct strct *p)
 		 * with the distinction keyword.
 		 */
 
-		if (NULL != srch->dst->cname) {
+		if (srch->dst->cname != NULL) {
 			dr = TAILQ_FIRST(&srch->dst->drefq);
-			if ( ! resolve_dref(cfg, dr, p))
+			if (!resolve_dref(cfg, dr, p))
 				return 0;
 		} else {
 			srch->dst->strct = p;
@@ -743,11 +748,11 @@ check_searchtype(struct config *cfg, struct strct *p)
 			if (OPTYPE_ISUNARY(sent->op))
 				continue;
 			sr = TAILQ_LAST(&sent->srq, srefq);
-			if (FTYPE_PASSWORD != sr->field->type) 
+			if (sr->field->type != FTYPE_PASSWORD) 
 				continue;
-			gen_errx(cfg, &sent->pos, "password search "
-				"types not allowed when searching "
-				"on distinct subsets");
+			gen_errx(cfg, &sent->pos, 
+				"password queries not allowed when "
+				"searching on distinct subsets");
 			return 0;
 		}
 	}

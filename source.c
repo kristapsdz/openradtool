@@ -168,16 +168,28 @@ static	const char *const validbins[VALIDATE__MAX] = {
 	"!=", /* VALIDATE_EQ */
 };
 
+/*
+ * Emit the function for checking a password.
+ * This should be a conditional phrase that evalutes to FALSE if the
+ * password does NOT match the given type, TRUE if the password does
+ * match the given type.
+ */
 static void
-gen_print_checkpass(int ptr, size_t pos, const char *name)
+gen_print_checkpass(int ptr, size_t pos, 
+	const char *name, enum optype type)
 {
 	const char	*s = ptr ? "->" : ".";
 
+	assert(type == OPTYPE_EQUAL || type == OPTYPE_NEQUAL);
+
 #ifdef __OpenBSD__
-	printf("(crypt_checkpass(v%zu, p%s%s) == -1)", pos, s, name);
+	printf("(crypt_checkpass(v%zu, p%s%s) %c= -1)", 
+		pos, s, name, 
+		type == OPTYPE_EQUAL ? '=' : '!');
 #else
-	printf("(strcmp(crypt(v%zu, p%s%s), p%s%s))", 
-		pos, s, name, s, name);
+	printf("(strcmp(crypt(v%zu, p%s%s), p%s%s) %c= 0)", 
+		pos, s, name, s, name, 
+		type == OPTYPE_EQUAL ? '!' : '=');
 #endif
 }
 
@@ -429,7 +441,7 @@ gen_strct_func_iter(const struct config *cfg,
 			continue;
 		}
 		printf("\t\tif ");
-		gen_print_checkpass(0, pos, sent->fname);
+		gen_print_checkpass(0, pos, sent->fname, sent->op);
 		printf(" {\n"
 		       "\t\t\tdb_%s_unfill_r(&p);\n"
 		       "\t\t\tcontinue;\n"
@@ -547,7 +559,7 @@ gen_strct_func_list(const struct config *cfg,
 			continue;
 		}
 		printf("\t\tif ");
-		gen_print_checkpass(1, pos, sent->fname);
+		gen_print_checkpass(1, pos, sent->fname, sent->op);
 		printf(" {\n"
 		       "\t\t\tdb_%s_free(p);\n"
 		       "\t\t\tp = NULL;\n"
@@ -1156,7 +1168,7 @@ gen_strct_func_srch(const struct config *cfg,
 		}
 		printf("\t\tif (p != NULL &&\n"
 		       "\t\t    ");
-		gen_print_checkpass(1, pos, sent->fname);
+		gen_print_checkpass(1, pos, sent->fname, sent->op);
 		printf(") {\n"
 		       "\t\t\tdb_%s_free(p);\n"
 		       "\t\t\tp = NULL;\n"

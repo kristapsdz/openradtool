@@ -1166,8 +1166,7 @@ gen_strct_func_srch(const struct config *cfg,
 			pos++;
 			continue;
 		}
-		printf("\t\tif (p != NULL &&\n"
-		       "\t\t    ");
+		printf("\t\tif (");
 		gen_print_checkpass(1, pos, sent->fname, sent->op);
 		printf(") {\n"
 		       "\t\t\tdb_%s_free(p);\n"

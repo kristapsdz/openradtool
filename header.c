@@ -343,14 +343,13 @@ gen_func_search(const struct config *cfg, const struct search *s)
 			print_commentv(0, COMMENT_C_FRAG,
 				"\t%s (not an argument: "
 				"checked is null)", sent->fname);
-		else if (sr->field->type == FTYPE_PASSWORD)
-			print_commentv(0, COMMENT_C_FRAG,
-				"\tv%zu: %s (pre-hashed password)", 
-				pos++, sent->fname);
 		else
 			print_commentv(0, COMMENT_C_FRAG,
-				"\tv%zu: %s (%s)", pos++, 
-				sent->fname, optypes[sent->op]);
+				"\tv%zu: %s (%s%s)", pos++, 
+				sent->fname, 
+				sr->field->type == FTYPE_PASSWORD ?
+				"pre-hashed password, " : "",
+				optypes[sent->op]);
 	}
 
 	if (s->type == STYPE_SEARCH)

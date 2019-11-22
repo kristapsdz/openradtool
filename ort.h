@@ -290,11 +290,11 @@ enum	optype {
 	OPTYPE_LIKE, /* like */
 	OPTYPE_AND, /* logical (bitwise) and */
 	OPTYPE_OR, /* logical (bitwise) or */
+	OPTYPE_STREQ, /* string equality */
+	OPTYPE_STRNEQ, /* string non-equality */
 	/* Unary types... */
 	OPTYPE_ISNULL, /* nullity: x isnull */
 	OPTYPE_NOTNULL, /* non-nullity: x notnull */
-	OPTYPE_STREQ, /* string equality */
-	OPTYPE_STRNEQ, /* string non-equality */
 	OPTYPE__MAX
 };
 

@@ -3,6 +3,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.8.1</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2019-11-22">2019-11-22</time>
+		</header>
+		<aside>
+			<p>
+				Have passwords accept both <code>eq</code> and <code>neq</code>
+				search operators.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.8.0</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2019-11-06">2019-11-06</time>

@@ -45,6 +45,9 @@ static	const char *const optypes[OPTYPE__MAX] = {
 	"\"like\"", /* OPTYPE_LIKE */
 	"logical and", /* OPTYPE_AND */
 	"logical or", /* OPTYPE_OR */
+	"string equals", /* OPTYPE_STREQ */
+	"string does not equal", /* OPTYPE_STRNEQ */
+	/* Unary types... */
 	"is null", /* OPTYPE_ISNULL */
 	"is not null" /* OPTYPE_NOTNULL */
 };

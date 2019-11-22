@@ -85,17 +85,20 @@ static	const char *const vtypes[VALIDATE__MAX] = {
 };
 
 static	const char *const optypes[OPTYPE__MAX] = {
-	"eq", /* OPTYE_EQUAL */
+	"eq", /* OPTYPE_EQUAL */
 	"ge", /* OPTYPE_GE */
 	"gt", /* OPTYPE_GT */
 	"le", /* OPTYPE_LE */
 	"lt", /* OPTYPE_LT */
-	"neq", /* OPTYE_NEQUAL */
+	"neq", /* OPTYPE_NEQUAL */
 	"like", /* OPTYPE_LIKE */
 	"and", /* OPTYPE_AND */
 	"or", /* OPTYPE_OR */
-	"isnull", /* OPTYE_ISNULL */
-	"notnull", /* OPTYE_NOTNULL */
+	"streq", /* OPTYPE_STREQ */
+	"strneq", /* OPTYPE_STRNEQ */
+	/* Unary types... */
+	"isnull", /* OPTYPE_ISNULL */
+	"notnull", /* OPTYPE_NOTNULL */
 };
 
 static	const char *const rolemapts[ROLEMAP__MAX] = {

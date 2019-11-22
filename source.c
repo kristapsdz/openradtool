@@ -67,6 +67,8 @@ static	const char *const optypes[OPTYPE__MAX] = {
 	"LIKE", /* OPTYPE_LIKE */
 	"&", /* OPTYPE_AND */
 	"|", /* OPTYPE_OR */
+	"=", /* OPTYPE_STREQ */
+	"!=", /* OPTYPE_STRNEQ */
 	/* Unary types... */
 	"ISNULL", /* OPTYPE_ISNULL */
 	"NOTNULL", /* OPTYPE_NOTNULL */

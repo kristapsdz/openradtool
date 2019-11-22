@@ -293,6 +293,8 @@ enum	optype {
 	/* Unary types... */
 	OPTYPE_ISNULL, /* nullity: x isnull */
 	OPTYPE_NOTNULL, /* non-nullity: x notnull */
+	OPTYPE_STREQ, /* string equality */
+	OPTYPE_STRNEQ, /* string non-equality */
 	OPTYPE__MAX
 };
 

@@ -305,13 +305,39 @@ gen_strct_fill_field(const struct field *f)
 
 /*
  * Counts how many entries are required if later passed to gen_bindfunc().
+ * The ones we don't pass to gen_bindfunc() are passwords that are using
+ * the hashing functions.
  */
 static size_t
-count_bindfunc(enum ftype t)
+query_count_bindfuncs(enum ftype t, enum optype type)
 {
 
-	assert(FTYPE_STRUCT != t);
-	return FTYPE_PASSWORD != t;
+	assert(t != FTYPE_STRUCT);
+	return !(t == FTYPE_PASSWORD && 
+		type != OPTYPE_STREQ && type != OPTYPE_STRNEQ);
+
+}
+
+/*
+ * Generate the binding for a field of type "t" at field "pos" with a
+ * tab offset of "tabs", using query_count_bindfuncs() to see if we
+ * should skip the binding.
+ * Returns zero if we did not print a binding 1 otherwise.
+ */
+static size_t
+query_gen_bindfunc(enum ftype t, size_t pos, enum optype type)
+{
+
+	assert(t != FTYPE_STRUCT);
+	if (!query_count_bindfuncs(t, type))
+		return 0;
+	printf("\tparms[%zu].%s = v%zu;\n", 
+		pos - 1, bindvars[t], pos);
+	printf("\tparms[%zu].type = %s;\n", 
+		pos - 1, bindtypes[t]);
+	if (t == FTYPE_BLOB)
+		printf("\tparms[%zu].sz = v%zu_sz;\n", pos - 1, pos);
+	return 1;
 }
 
 /*
@@ -381,7 +407,8 @@ gen_strct_func_iter(const struct config *cfg,
 	TAILQ_FOREACH(sent, &s->sntq, entries)
 		if (OPTYPE_ISBINARY(sent->op)) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
-			parms += count_bindfunc(sr->field->type);
+			parms += query_count_bindfuncs
+				(sr->field->type, sent->op);
 		}
 
 	/* Emit top of the function w/optional static parameters. */
@@ -406,8 +433,8 @@ gen_strct_func_iter(const struct config *cfg,
 	TAILQ_FOREACH(sent, &s->sntq, entries)
 		if (OPTYPE_ISBINARY(sent->op)) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
-			pos += gen_bindfunc
-				(sr->field->type, pos, 0, 1);
+			pos += query_gen_bindfunc
+				(sr->field->type, pos, sent->op);
 		}
 
 	/* Stipulate multiple returned entries. */
@@ -431,14 +458,16 @@ gen_strct_func_iter(const struct config *cfg,
 		     retstr->name,
 		     (!TAILQ_EMPTY(&cfg->rq)) ? "ctx, " : "");
 
-	/* Check hashes after collecting from db. */
+	/* Conditional post-query password check. */
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
 		if (OPTYPE_ISUNARY(sent->op))
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
-		if (sr->field->type != FTYPE_PASSWORD) {
+		if (sr->field->type != FTYPE_PASSWORD ||
+		    sent->op == OPTYPE_STREQ ||
+		    sent->op == OPTYPE_STRNEQ) {
 			pos++;
 			continue;
 		}
@@ -483,7 +512,8 @@ gen_strct_func_list(const struct config *cfg,
 	TAILQ_FOREACH(sent, &s->sntq, entries)
 		if (OPTYPE_ISBINARY(sent->op)) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
-			parms += count_bindfunc(sr->field->type);
+			parms += query_count_bindfuncs
+				(sr->field->type, sent->op);
 		}
 
 	/* Emit top of the function w/optional static parameters. */
@@ -517,8 +547,8 @@ gen_strct_func_list(const struct config *cfg,
 	TAILQ_FOREACH(sent, &s->sntq, entries)
 		if (OPTYPE_ISBINARY(sent->op)) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
-			pos += gen_bindfunc
-				(sr->field->type, pos, 0, 1);
+			pos += query_gen_bindfunc
+				(sr->field->type, pos, sent->op);
 		}
 	if (pos > 1)
 		puts("");
@@ -549,14 +579,16 @@ gen_strct_func_list(const struct config *cfg,
 		      (!TAILQ_EMPTY(&cfg->rq)) ? 
 		      "ctx, " : "");
 
-	/* Check hashes after collecting from db. */
+	/* Conditional post-query password check. */
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
 		if (OPTYPE_ISUNARY(sent->op))
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
-		if (sr->field->type != FTYPE_PASSWORD) {
+		if (sr->field->type != FTYPE_PASSWORD ||
+		    sent->op == OPTYPE_STREQ ||
+		    sent->op == OPTYPE_STRNEQ) {
 			pos++;
 			continue;
 		}
@@ -1044,7 +1076,8 @@ gen_strct_func_count(const struct config *cfg,
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
 		if (OPTYPE_ISBINARY(sent->op)) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
-			parms += count_bindfunc(sr->field->type);
+			parms += query_count_bindfuncs
+				(sr->field->type, sent->op);
 		}
 
 	print_func_db_search(s, 0);
@@ -1063,8 +1096,8 @@ gen_strct_func_count(const struct config *cfg,
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
 		if (OPTYPE_ISBINARY(sent->op)) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
-			pos += gen_bindfunc
-				(sr->field->type, pos, 0, 1);
+			pos += query_gen_bindfunc
+				(sr->field->type, pos, sent->op);
 		}
 
 	/* A single returned entry. */
@@ -1109,7 +1142,8 @@ gen_strct_func_srch(const struct config *cfg,
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
 		if (OPTYPE_ISBINARY(sent->op)) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
-			parms += count_bindfunc(sr->field->type);
+			parms += query_count_bindfuncs
+				(sr->field->type, sent->op);
 		}
 
 	print_func_db_search(s, 0);
@@ -1132,8 +1166,8 @@ gen_strct_func_srch(const struct config *cfg,
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
 		if (OPTYPE_ISBINARY(sent->op)) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
-			pos += gen_bindfunc
-				(sr->field->type, pos, 0, 1);
+			pos += query_gen_bindfunc
+				(sr->field->type, pos, sent->op);
 		}
 
 	puts("");
@@ -1157,20 +1191,22 @@ gen_strct_func_srch(const struct config *cfg,
 		      retstr->name,
 	 	      (!TAILQ_EMPTY(&cfg->rq)) ? "ctx, " : "");
 
-	/* Check hashes after collecting from db. */
+	/* Conditional post-query password check. */
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
 		if (OPTYPE_ISUNARY(sent->op))
 			continue;
 		sr = TAILQ_LAST(&sent->srq, srefq);
-		if (sr->field->type != FTYPE_PASSWORD) {
+		if (sr->field->type != FTYPE_PASSWORD ||
+		    sent->op == OPTYPE_STREQ ||
+		    sent->op == OPTYPE_STRNEQ) {
 			pos++;
 			continue;
 		}
-		printf("\t\tif (");
+		printf("\t\tif ");
 		gen_print_checkpass(1, pos, sent->fname, sent->op);
-		printf(") {\n"
+		printf(" {\n"
 		       "\t\t\tdb_%s_free(p);\n"
 		       "\t\t\tp = NULL;\n"
 		       "\t\t}\n", 
@@ -2404,6 +2440,8 @@ gen_stmt_joins(const struct strct *orig, const struct strct *p,
 
 /*
  * Fill in the statements noted in gen_enum().
+ * This function is an important one because we're going to create the
+ * raw SQL that's passed into sqlbox.
  */
 static void
 gen_stmt(const struct strct *p)
@@ -2561,25 +2599,27 @@ gen_stmt(const struct strct *p)
 
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
-			if (FTYPE_PASSWORD == sr->field->type)
+			if (sr->field->type == FTYPE_PASSWORD &&
+			    sent->op != OPTYPE_STREQ &&
+			    sent->op != OPTYPE_STRNEQ)
 				continue;
-			if ( ! first)
+			if (!first)
 				printf(" AND");
 			first = 0;
 			if (OPTYPE_ISUNARY(sent->op))
 				printf(" %s.%s %s",
-					NULL == sent->alias ?
+					sent->alias == NULL ?
 					p->name : sent->alias->alias,
 					sr->name, optypes[sent->op]);
 			else
 				printf(" %s.%s %s ?", 
-					NULL == sent->alias ?
+					sent->alias == NULL ?
 					p->name : sent->alias->alias,
 					sr->name, optypes[sent->op]);
 		}
 
 		first = 1;
-		if ( ! TAILQ_EMPTY(&s->ordq))
+		if (!TAILQ_EMPTY(&s->ordq))
 			printf(" ORDER BY ");
 		TAILQ_FOREACH(ord, &s->ordq, entries) {
 			sr = TAILQ_LAST(&ord->orq, srefq);

@@ -700,6 +700,8 @@ check_searchtype(struct config *cfg, struct strct *p)
 
 			if (sent->op != OPTYPE_EQUAL &&
 			    sent->op != OPTYPE_NEQUAL &&
+			    sent->op != OPTYPE_STREQ &&
+			    sent->op != OPTYPE_STRNEQ &&
 			    sr->field->type == FTYPE_PASSWORD) {
 				gen_errx(cfg, &sent->pos, 
 					"passwords only accept "

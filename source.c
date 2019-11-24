@@ -2288,15 +2288,17 @@ gen_funcs(const struct config *cfg, const struct strct *p,
 }
 
 /*
- * Generate a set of statements that will be used for this structure.
+ * Generate a set of statements as an enumeration that will be used for
+ * this structure.
+ * Does not print the opening "enum xxx {" parts or trailing.
  */
 static void
 gen_enum(const struct strct *p)
 {
-	const struct search *s;
-	const struct update *u;
-	const struct field *f;
-	size_t	 pos;
+	const struct search	*s;
+	const struct update	*u;
+	const struct field	*f;
+	size_t			 pos;
 
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if ((f->flags & (FIELD_UNIQUE|FIELD_ROWID)))
@@ -2307,11 +2309,13 @@ gen_enum(const struct strct *p)
 	TAILQ_FOREACH(s, &p->sq, entries)
 		printf("\tSTMT_%s_BY_SEARCH_%zu,\n", p->cname, pos++);
 
-	printf("\tSTMT_%s_INSERT,\n", p->cname);
+	if (p->ins != NULL)
+		printf("\tSTMT_%s_INSERT,\n", p->cname);
 
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
 		printf("\tSTMT_%s_UPDATE_%zu,\n", p->cname, pos++);
+
 	pos = 0;
 	TAILQ_FOREACH(u, &p->dq, entries)
 		printf("\tSTMT_%s_DELETE_%zu,\n", p->cname, pos++);
@@ -2635,31 +2639,10 @@ gen_stmt(const struct strct *p)
 
 	/* Insertion of a new record. */
 
-	printf("\t/* STMT_%s_INSERT */\n", p->cname);
-	col = printf("\t\"INSERT INTO %s ", p->name);
-	first = 1;
+	if (p->ins != NULL) {
+		printf("\t/* STMT_%s_INSERT */\n", p->cname);
+		col = printf("\t\"INSERT INTO %s ", p->name);
 
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->type == FTYPE_STRUCT ||
-		    (f->flags & FIELD_ROWID))
-			continue;
-		if (col >= 72) {
-			printf("%s\"\n\t\t\"%s", 
-				first ? "" : ",",
-				first ? "(" : " ");
-			col = 16;
-		} else
-			putchar(first ? '(' : ',');
-		col += 1 + printf("%s", f->name);
-		first = 0;
-	}
-
-	if (first == 0) {
-		if ((col += printf(") ")) >= 72) {
-			printf("\"\n\t\t\"");
-			col = 17;
-		}
-		col += printf("VALUES ");
 		first = 1;
 		TAILQ_FOREACH(f, &p->fq, entries) {
 			if (f->type == FTYPE_STRUCT ||
@@ -2672,13 +2655,36 @@ gen_stmt(const struct strct *p)
 				col = 16;
 			} else
 				putchar(first ? '(' : ',');
-			putchar('?');
-			col += 2;
+			col += 1 + printf("%s", f->name);
 			first = 0;
 		}
-		puts(")\",");
-	} else
-		puts("DEFAULT VALUES\",");
+
+		if (first == 0) {
+			if ((col += printf(") ")) >= 72) {
+				printf("\"\n\t\t\"");
+				col = 17;
+			}
+			col += printf("VALUES ");
+			first = 1;
+			TAILQ_FOREACH(f, &p->fq, entries) {
+				if (f->type == FTYPE_STRUCT ||
+				    (f->flags & FIELD_ROWID))
+					continue;
+				if (col >= 72) {
+					printf("%s\"\n\t\t\"%s", 
+						first ? "" : ",",
+						first ? "(" : " ");
+					col = 16;
+				} else
+					putchar(first ? '(' : ',');
+				putchar('?');
+				col += 2;
+				first = 0;
+			}
+			puts(")\",");
+		} else
+			puts("DEFAULT VALUES\",");
+	}
 	
 	/* 
 	 * Custom update queries. 

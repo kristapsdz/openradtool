@@ -573,9 +573,20 @@ gen_func_trans(const struct config *cfg)
 		"starts a write-lock.\n"
 		"If \"mode\" is <0, the transaction starts in a "
 		"write-pending, where no other locks can be held "
-		"at the same time.");
+		"at the same time.\n"
+		"The DB_TRANS_OPEN_IMMEDIATE, "
+		"DB_TRANS_OPEN_DEFERRED, and "
+		"DB_TRANS_OPEN_EXCLUSIVE macros accomplish the "
+		"same but with the \"mode\" being explicit in the "
+		"name and not needing to be specified.");
 	print_func_db_trans_open(1);
 	puts("");
+	puts("#define DB_TRANS_OPEN_IMMEDIATE(_ctx, _id) \\\n"
+		"\tdb_trans_open((_ctx), (_id), 1)\n"
+	     "#define DB_TRANS_OPEN_DEFERRED(_ctx, _id)\\\n"
+	     	"\tdb_trans_open((_ctx), (_id), 0)\n"
+	     "#define DB_TRANS_OPEN_EXCLUSIVE(_ctx, _id)\\\n"
+	        "\tdb_trans_open((_ctx), (_id), -1)\n");
 	print_commentt(0, COMMENT_C,
 		"Roll-back an open transaction.");
 	print_func_db_trans_rollback(1);

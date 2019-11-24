@@ -47,10 +47,11 @@ static	const char *const upts[UP__MAX] = {
 };
 
 static	const char *const modtypes[MODTYPE__MAX] = {
-	"set", /* MODTYPE_SET */
-	"inc", /* MODTYPE_INC */
-	"dec", /* MODTYPE_DEC */
 	"concat", /* MODTYPE_CONCAT */
+	"dec", /* MODTYPE_DEC */
+	"inc", /* MODTYPE_INC */
+	"set", /* MODTYPE_SET */
+	"strset", /* MODTYPE_STRSET */
 };
 
 static	const char *const ftypes[FTYPE__MAX] = {

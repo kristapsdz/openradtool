@@ -390,6 +390,7 @@ resolve_uref_modifier(struct config *cfg, struct uref *ref)
 			"modification on non-textual field");
 		return 0;
 	case MODTYPE_SET:
+	case MODTYPE_STRSET:
 		/* Can be done with anything. */
 		break;
 	case MODTYPE_INC:

@@ -301,11 +301,16 @@ enum	optype {
 #define	OPTYPE_ISBINARY(_x) ((_x) < OPTYPE_ISNULL)
 #define	OPTYPE_ISUNARY(_x) ((_x) >= OPTYPE_ISNULL)
 
+/*
+ * Modification types for updating.
+ * This defines "how" we update a column.
+ */
 enum	modtype {
-	MODTYPE_SET = 0, /* direct set (default) */
-	MODTYPE_INC, /* x = x + ? */
+	MODTYPE_CONCAT = 0, /* x = x || ? */
 	MODTYPE_DEC, /* x = x - ? */
-	MODTYPE_CONCAT, /* x = x || ? */
+	MODTYPE_INC, /* x = x + ? */
+	MODTYPE_SET, /* direct set (default) */
+	MODTYPE_STRSET, /* set but for passwords too */
 	MODTYPE__MAX
 };
 

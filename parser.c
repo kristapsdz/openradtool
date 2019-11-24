@@ -276,10 +276,11 @@ static	const char *const rolemapts[ROLEMAP__MAX] = {
 };
 
 static	const char *const modtypes[MODTYPE__MAX] = {
-	"set", /* MODTYPE_SET */
-	"inc", /* MODTYPE_INC */
-	"dec", /* MODTYPE_DEC */
 	"concat", /* MODTYPE_CONCAT */
+	"dec", /* MODTYPE_DEC */
+	"inc", /* MODTYPE_INC */
+	"set", /* MODTYPE_SET */
+	"strset", /* MODTYPE_STRSET */
 };
 
 static	const char *const optypes[OPTYPE__MAX] = {
@@ -707,6 +708,8 @@ uref_alloc(struct parse *p, const char *name,
 	}
 
 	ref->parent = up;
+	ref->op = OPTYPE_EQUAL;
+	ref->mod = MODTYPE_SET;
 	parse_point(p, &ref->pos);
 	TAILQ_INSERT_TAIL(q, ref, entries);
 	return ref;
@@ -749,6 +752,7 @@ sent_alloc(struct parse *p, struct search *up)
 		return NULL;
 	}
 
+	sent->op = OPTYPE_EQUAL;
 	sent->parent = up;
 	parse_point(p, &sent->pos);
 	TAILQ_INIT(&sent->srq);

@@ -1606,13 +1606,15 @@ gen_func_update(const struct config *cfg,
 
 	pos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries)
-		if (ref->field->type == FTYPE_PASSWORD)
+		if (ref->field->type == FTYPE_PASSWORD &&
+		    ref->mod != MODTYPE_STRSET)
 			printf("\tchar hash%zu[64];\n", pos++);
 
 	puts("");
 	npos = pos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
-		if (ref->field->type == FTYPE_PASSWORD) {
+		if (ref->field->type == FTYPE_PASSWORD &&
+		    ref->mod != MODTYPE_STRSET) {
 			if ((ref->field->flags & FIELD_NULL))
 				printf("if (v%zu != NULL)\n"
 				       "\t", npos);
@@ -1640,13 +1642,14 @@ gen_func_update(const struct config *cfg,
 			       "\t", npos, npos - 1);
 			tabs++;
 		}
-		if (ref->field->type == FTYPE_PASSWORD)
+		if (ref->field->type == FTYPE_PASSWORD &&
+		    ref->mod != MODTYPE_STRSET)
 			update_gen_bindhash(npos, pos++, tabs);
 		else
 			update_gen_bindfunc
 				(ref->field->type, npos,
 				 (ref->field->flags & FIELD_NULL), 
-				 tabs, OPTYPE_EQUAL /* XXX */);
+				 tabs, OPTYPE_STREQ /* XXX */);
 		if ((ref->field->flags & FIELD_NULL))
 			puts("\t}");
 		npos++;

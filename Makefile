@@ -165,6 +165,22 @@ installwww: www
 	$(INSTALL_DATA) openradtool.tar.gz $(WWWDIR)/snapshots/openradtool-$(VERSION).tar.gz
 	$(INSTALL_DATA) openradtool.tar.gz.sha512 $(WWWDIR)/snapshots/openradtool-$(VERSION).tar.gz.sha512
 
+distcheck: openradtool.tar.gz.sha512 openradtool.tar.gz
+	mandoc -Tlint -Wwarning $(MAN1S)
+	newest=`grep "<h3>" versions.xml | head -n1 | sed 's![ 	]*!!g'` ; \
+	       [ "$$newest" == "<h3>$(VERSION)</h3>" ] || \
+		{ echo "Version $(VERSION) not newest in versions.xml" 1>&2 ; exit 1 ; }
+	rm -rf .distcheck
+	sha512 -C openradtool.tar.gz.sha512 openradtool.tar.gz
+	mkdir -p .distcheck
+	tar -zvxpf openradtool.tar.gz -C .distcheck
+	( cd .distcheck/openradtool-$(VERSION) && ./configure PREFIX=prefix \
+		CPPFLAGS="$(CPPFLAGS)" LDFLAGS="$(LDFLAGS)" LDADD="$(LDADD)" )
+	( cd .distcheck/openradtool-$(VERSION) && make )
+	( cd .distcheck/openradtool-$(VERSION) && make install )
+	( cd .distcheck/openradtool-$(VERSION)/prefix && find . -type f )
+	rm -rf .distcheck
+
 version.h: Makefile
 	( echo "#define VERSION \"$(VERSION)\"" ; \
 	  echo "#define VSTAMP `echo $$((($(VERSION_BUILD)+1)+($(VERSION_MINOR)+1)*100+($(VERSION_MAJOR)+1)*10000))`" ; ) >$@

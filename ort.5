@@ -409,11 +409,17 @@ Logical AND
 and logical OR
 .Pq \&| ,
 respectively.
-.It Cm eq , neq
+.It Cm eq , neq , streq , strneq
 Equality or non-equality binary operator.
 The
 .Cm eq
 operator is the default.
+The
+.Cm streq
+and
+.Cm strneq
+variants operate the same except for on passwords, where they compare directly
+to the password hash instead of the password value.
 .It Cm lt , gt
 Less than or greater than binary operators.
 For text, the comparison is lexical; otherwise, it is by value.
@@ -434,9 +440,11 @@ Unary operator to check whether the field is null or not null.
 The
 .Cm password
 field does not accept any operators but
-.Cm eq
+.Cm eq ,
+.Cm neq ,
+.Cm streq ,
 and
-.Cm neq .
+.Cm strneq .
 .Pp
 The search parameters are a series of key-value pairs.
 In each of these, terms are all in dotted-notation and may represent
@@ -555,7 +563,7 @@ These begin with the
 or
 .Cm insert
 keyword.
-By default, there are no update, delete, or insert functions defined.
+By default, there are no update, delete, or insert operations defined.
 The syntax is as follows:
 .Bd -literal -offset indent
 "struct" name "{"
@@ -569,30 +577,24 @@ Both
 .Cm mflds
 and
 .Cm cflds
-are a sequence of comma-separated native-type fields in the current
+are sequences of comma-separated native-type fields in the current
 structure followed by operators.
 The former refers to the fields that will be modified; the latter refers
-to fields that will act as constraints.
+to fields that will act as constraints to which data is modified.
 .Pp
 The
 .Cm delete
-statement obviously does not accept fields to modify
-.Pq Cm mflds .
-If the
+statement does not accept fields to modify.
+If
 .Cm update
-statement does not have
-.Cm mflds ,
-it's taken to mean that all fields will be modified using the default
-modifier.
+does not have fields to modify, all fields will be modified using the
+default modifier.
+Lastly,
+.Cm insert
+accepts no fields at all: all fields (except for row identifiers) are
+included in the insert operations.
 .Pp
-Fields of type
-.Cm password
-are not allowed as
-.Cm cflds
-since they are not stored directly as comparable strings, but hashed
-with a unique salt.
-.Pp
-Each field type has its own operators.
+Fields have the following operators:
 .Bd -literal -offset indent
 mflds :== mfld [modify_operator]?
 cflds :== cfld [constraint_operator]?
@@ -600,23 +602,29 @@ cflds :== cfld [constraint_operator]?
 .Pp
 The fields in
 .Cm mflds
-accept an optional modifier that modifies the existing field instead
-of setting it externally.
+accept an optional modifier operation:
 .Bl -tag -width Ds -offset indent
 .It Cm concat
 String concatenate the current field by a given value (x = x || ?).
-.It Cm inc
-Increment the current field by a given value (x = x + ?).
 .It Cm dec
 Decrement the current field by a given value (x = x - ?).
+.It Cm inc
+Increment the current field by a given value (x = x + ?).
 .It Cm set
 Default behaviour of setting to a value (x = ?).
 .El
 .Pp
-The
+The fields in
 .Cm cflds
-accept an optional operator type as described for
+accept an optional operator type as described in
 .Sx Queries .
+Fields of type
+.Cm password
+are limited to the
+.Cm streq
+and
+.Cm strneq
+operators.
 .Pp
 The
 .Cm parms

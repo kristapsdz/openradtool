@@ -598,11 +598,7 @@ fref_alloc_remote(struct parse *p, struct field *f,
 	const char *sname, const char *fname)
 {
 
-	if (strcasecmp(sname, f->parent->name) == 0) {
-		parse_warnx(p, "using remote "
-			"syntax for local reference");
-		return fref_alloc_local(p, f, fname);
-	} else if (f->ref != NULL) {
+	if (f->ref != NULL) {
 		parse_errx(p, "reference already set");
 		return 0;
 	} 

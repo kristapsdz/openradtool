@@ -390,26 +390,37 @@ parse_write_field(struct writer *w, const struct field *p)
 static int
 parse_write_modify(struct writer *w, const struct update *p)
 {
-	const struct uref *u;
-	size_t	 nf;
+	const struct uref	*u;
+	size_t			 nf;
 
-	if ( ! wprint(w, "\t%s", upts[p->type]))
+	/* Start with the type of data modification. */
+
+	if (!wprint(w, "\t%s", upts[p->type]))
 		return 0;
 
-	if (UP_MODIFY == p->type) {
+	/* 
+	 * Now the fields being modified ("update" only).
+	 * UPDATE_ALL uses the simplified notation.
+	 */
+
+	if (p->type == UP_MODIFY && (p->flags & UPDATE_ALL)) {
+		if (!wputc(w, ':'))
+			return 0;
+	} else if (p->type == UP_MODIFY) {
 		nf = 0;
 		TAILQ_FOREACH(u, &p->mrq, entries) {
-			if ( ! wprint(w, "%s %s", 
+			if (!wprint(w, "%s %s", 
 			    nf++ ? "," : "", u->name))
 				return 0;
-			if (MODTYPE_SET != u->mod)
-				if ( ! wprint(w, " %s", 
-				    modtypes[u->mod]))
+			if (u->mod != MODTYPE_SET)
+				if (!wprint(w, " %s", modtypes[u->mod]))
 					return 0;
 		}
-		if ( ! wputc(w, ':'))
+		if (!wputc(w, ':'))
 			return 0;
 	}
+
+	/* Now the constraints. */
 
 	nf = 0;
 	TAILQ_FOREACH(u, &p->crq, entries) {
@@ -421,15 +432,16 @@ parse_write_modify(struct writer *w, const struct update *p)
 				return 0;
 	}
 
-	if ( ! wputc(w, ':'))
-		return 0;
+	/* Trailing data (optional). */
 
-	if (NULL != p->name)
-		if ( ! wprint(w, " name %s", p->name))
+	if (p->name != NULL || p->doc != NULL) {
+		if (!wputc(w, ':'))
 			return 0;
-
-	if ( ! parse_write_comment(w, p->doc, 2))
-		return 0;
+		if (p->name != NULL && !wprint(w, " name %s", p->name))
+			return 0;
+		if (!parse_write_comment(w, p->doc, 2))
+			return 0;
+	}
 
 	return wputs(w, ";\n");
 }

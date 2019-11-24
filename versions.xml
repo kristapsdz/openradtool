@@ -12,6 +12,27 @@
 				Have passwords accept both <code>eq</code> and <code>neq</code>
 				search operators.
 			</p>
+			<p>
+				Following the database library switch in release 0.8.0, update
+				functions no longer return &lt;0 on error, as error conditions in
+				the database trigger program exit.  The precise return value is now
+				zero on failure, non-zero on success; however, for backwards
+				compatibility, &lt;0 shall not be returned so these code-paths are
+				not followed.
+			</p>
+			<p>
+				Add <code>streq</code> and <code>strneq</code> search operators and
+				update constraints for passwords.
+				(For non-passwords, these are equivalent to <code>eq</code> and
+				<code>neq</code>.)
+				These operate on the raw hash instead of the password.
+			</p>
+			<p>
+				For C source, don't generate <code>INSERT</code> SQL if it's not
+				going to be used.
+				This has no impact on running code, but reduces generated code size
+				ever so slightly.
+			</p>
 		</aside>
 	</article>
 	<article data-sblg-article="1" data-sblg-tags="version">

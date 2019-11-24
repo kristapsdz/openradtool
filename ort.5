@@ -610,8 +610,11 @@ String concatenate the current field by a given value (x = x || ?).
 Decrement the current field by a given value (x = x - ?).
 .It Cm inc
 Increment the current field by a given value (x = x + ?).
-.It Cm set
+.It Cm set , strset
 Default behaviour of setting to a value (x = ?).
+If the field is a password,
+.Cm strset
+sets to the raw value instead of hashing beforehand.
 .El
 .Pp
 The fields in

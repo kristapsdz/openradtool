@@ -312,11 +312,11 @@ annotate(struct ref *ref, size_t height, size_t colour)
 
 /*
  * Resolve a specific update reference by looking it up in our parent
- * structure.
+ * structure and make sure that its constraints are valid for passwords.
  * Return zero on failure, non-zero on success.
  */
 static int
-resolve_uref(struct config *cfg, struct uref *ref, int crq)
+resolve_uref_constraint(struct config *cfg, struct uref *ref)
 {
 	struct field	*f;
 
@@ -324,19 +324,92 @@ resolve_uref(struct config *cfg, struct uref *ref, int crq)
 	assert(NULL != ref->parent);
 
 	TAILQ_FOREACH(f, &ref->parent->parent->fq, entries)
-		if (0 == strcasecmp(f->name, ref->name))
+		if (strcasecmp(f->name, ref->name) == 0)
 			break;
 
-	if (NULL == (ref->field = f))
-		gen_errx(cfg, &ref->pos, "term not found");
-	else if (FTYPE_STRUCT == f->type)
-		gen_errx(cfg, &ref->pos, "term is a struct");
-	else if (crq && FTYPE_PASSWORD == f->type)
-		gen_errx(cfg, &ref->pos, "term is a password");
-	else
-		return(1);
+	if ((ref->field = f) == NULL) {
+		gen_errx(cfg, &ref->pos, 
+			"constraint field not found");
+		return 0;
+	} else if (f->type == FTYPE_STRUCT) {
+		gen_errx(cfg, &ref->pos, 
+			"constraint field may not be a struct");
+		return 0;
+	}
 
-	return(0);
+	if (f->type == FTYPE_PASSWORD &&
+	    ref->op != OPTYPE_STREQ &&
+	    ref->op != OPTYPE_STRNEQ) {
+		gen_errx(cfg, &ref->pos, 
+			"constraint field may not be a "
+			"password in hashing mode");
+		return 0;
+	}
+
+	return 1;
+}
+
+/*
+ * Resolve a specific update reference by looking it up in our parent
+ * structure and make sure it's an appropriate type.
+ * Then make sure that our modification type is appropriate to the
+ * field.
+ * That is, non-numeric types with numeric operations (e.g., increment)
+ * and non-textual types with text operations (e.g., concatenate).
+ * Return zero on failure, non-zero on success.
+ */
+static int
+resolve_uref_modifier(struct config *cfg, struct uref *ref)
+{
+	struct field	*f;
+
+	assert(ref->field == NULL);
+	assert(ref->parent != NULL);
+
+	TAILQ_FOREACH(f, &ref->parent->parent->fq, entries)
+		if (strcasecmp(f->name, ref->name) == 0)
+			break;
+
+	if ((ref->field = f) == NULL) {
+		gen_errx(cfg, &ref->pos, 
+			"modifier field not found");
+		return 0;
+	} else if (f->type == FTYPE_STRUCT) {
+		gen_errx(cfg, &ref->pos, 
+			"modifier field may not be a struct");
+		return 0;
+	}
+
+	switch (ref->mod) {
+	case MODTYPE_CONCAT:
+		if (ref->field->type == FTYPE_BLOB ||
+		    ref->field->type == FTYPE_TEXT ||
+		    ref->field->type == FTYPE_EMAIL)
+			break;
+		gen_errx(cfg, &ref->pos, "concatenate "
+			"modification on non-textual field");
+		return 0;
+	case MODTYPE_SET:
+		/* Can be done with anything. */
+		break;
+	case MODTYPE_INC:
+	case MODTYPE_DEC:
+		if (ref->field->type == FTYPE_BIT ||
+		    ref->field->type == FTYPE_BITFIELD ||
+		    ref->field->type == FTYPE_DATE ||
+		    ref->field->type == FTYPE_ENUM ||
+		    ref->field->type == FTYPE_EPOCH ||
+		    ref->field->type == FTYPE_INT ||
+		    ref->field->type == FTYPE_REAL)
+			break;
+		gen_errx(cfg, &ref->pos, "increment or decrement "
+			"modification on non-numeric field");
+		return 0;
+	default:
+		abort();
+	}
+
+	return 1;
 }
 
 /*
@@ -368,50 +441,9 @@ check_updatetype(struct config *cfg, struct update *up)
 }
 
 /*
- * Make sure that our modification type is appropriate to the field.
- * That is, non-numeric types with numeric operations (e.g., increment)
- * and non-textual types with text operations (e.g., concatenate).
- * Returns zero on failure, non-zero on success.
- */
-static int
-check_modtype(struct config *cfg, const struct uref *ref)
-{
-
-	switch (ref->mod) {
-	case MODTYPE_CONCAT:
-		if (FTYPE_BLOB == ref->field->type ||
-		    FTYPE_TEXT == ref->field->type ||
-		    FTYPE_EMAIL == ref->field->type)
-			break;
-		gen_errx(cfg, &ref->pos, "concatenate "
-			"modification on non-textual field");
-		return 0;
-	case MODTYPE_SET:
-		/* Can be done with anything. */
-		break;
-	case MODTYPE_INC:
-	case MODTYPE_DEC:
-		if (FTYPE_BIT == ref->field->type ||
-		    FTYPE_BITFIELD == ref->field->type ||
-		    FTYPE_DATE == ref->field->type ||
-		    FTYPE_ENUM == ref->field->type ||
-		    FTYPE_EPOCH == ref->field->type ||
-		    FTYPE_INT == ref->field->type ||
-		    FTYPE_REAL == ref->field->type)
-			break;
-		gen_errx(cfg, &ref->pos, "increment or decrement "
-			"modification on non-numeric field");
-		return 0;
-	default:
-		abort();
-	}
-
-	return 1;
-}
-
-/*
- * Resolve all of the fields managed by struct update.
- * These are all local to the current structure.
+ * Resolve all of the fields managed by struct update (update or delete)
+ * and make sure that the constraint and modifier fields are applicable.
+ * Both constraints and modifiers must be local to the structure.
  * (This is a constraint of SQL.)
  * Return zero on failure (fatal), non-zero on success.
  */
@@ -426,12 +458,12 @@ resolve_update(struct config *cfg, struct update *up)
 	 * to update, that means we want to update all of them.
 	 */
 
-	if (UP_MODIFY == up->type && TAILQ_EMPTY(&up->mrq)) {
+	if (up->type == UP_MODIFY && TAILQ_EMPTY(&up->mrq)) {
 		up->flags |= UPDATE_ALL;
 		TAILQ_FOREACH(f, &up->parent->fq, entries) {
-			if (FIELD_ROWID & f->flags)
+			if ((f->flags & FIELD_ROWID))
 				continue;
-			if (FTYPE_STRUCT == f->type)
+			if (f->type == FTYPE_STRUCT)
 				continue;
 			ref = calloc(1, sizeof(struct uref));
 			if (NULL == ref) {
@@ -449,16 +481,13 @@ resolve_update(struct config *cfg, struct update *up)
 		}
 	}
 
-	/* Will always be empty for UP_DELETE. */
-
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
-		if ( ! resolve_uref(cfg, ref, 0))
-			return 0;
-		if ( ! check_modtype(cfg, ref))
+		assert(up->type == UP_MODIFY);
+		if (!resolve_uref_modifier(cfg, ref))
 			return 0;
 	}
 	TAILQ_FOREACH(ref, &up->crq, entries)
-		if ( ! resolve_uref(cfg, ref, 1))
+		if (!resolve_uref_constraint(cfg, ref))
 			return 0;
 
 	return 1;

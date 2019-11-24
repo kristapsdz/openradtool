@@ -304,9 +304,10 @@ gen_strct_fill_field(const struct field *f)
 }
 
 /*
- * Counts how many entries are required if later passed to gen_bindfunc().
- * The ones we don't pass to gen_bindfunc() are passwords that are using
- * the hashing functions.
+ * Counts how many entries are required if later passed to
+ * query_gen_bindfunc().
+ * The ones we don't pass to query_gen_bindfunc() are passwords that are
+ * using the hashing functions.
  */
 static size_t
 query_count_bindfuncs(enum ftype t, enum optype type)
@@ -325,39 +326,13 @@ query_count_bindfuncs(enum ftype t, enum optype type)
  * Returns zero if we did not print a binding 1 otherwise.
  */
 static size_t
-query_gen_bindfunc(enum ftype t, size_t pos, enum optype type)
-{
-
-	assert(t != FTYPE_STRUCT);
-	if (!query_count_bindfuncs(t, type))
-		return 0;
-	printf("\tparms[%zu].%s = v%zu;\n", 
-		pos - 1, bindvars[t], pos);
-	printf("\tparms[%zu].type = %s;\n", 
-		pos - 1, bindtypes[t]);
-	if (t == FTYPE_BLOB)
-		printf("\tparms[%zu].sz = v%zu_sz;\n", pos - 1, pos);
-	return 1;
-}
-
-/*
- * Generate the binding for a field of type "t" at field "pos" with a
- * tab offset of "tabs".
- * This does not accept structures and skips over password fields: since
- * this is used for queries, we check the password after.
- * Set "ptr" to be non-zero if this is passed in as a pointer.
- * Returns zero if we did not print a binding (i.e., is a password), 1
- * otherwise.
- */
-static size_t
-gen_bindfunc(enum ftype t, size_t pos, int ptr, size_t tabs)
+update_gen_bindfunc(enum ftype t, size_t pos,
+	int ptr, size_t tabs, enum optype type)
 {
 	size_t	 i;
 
-	assert(t != FTYPE_STRUCT);
-	if (t == FTYPE_PASSWORD)
+	if (!query_count_bindfuncs(t, type))
 		return 0;
-
 	for (i = 0; i < tabs; i++)
 		putchar('\t');
 	printf("parms[%zu].%s = %sv%zu;\n", 
@@ -366,7 +341,7 @@ gen_bindfunc(enum ftype t, size_t pos, int ptr, size_t tabs)
 		putchar('\t');
 	printf("parms[%zu].type = %s;\n", 
 		pos - 1, bindtypes[t]);
-	if (FTYPE_BLOB == t) {
+	if (t == FTYPE_BLOB) {
 		for (i = 0; i < tabs; i++)
 			putchar('\t');
 		printf("parms[%zu].sz = v%zu_sz;\n", pos - 1, pos);
@@ -374,8 +349,24 @@ gen_bindfunc(enum ftype t, size_t pos, int ptr, size_t tabs)
 	return 1;
 }
 
+/*
+ * Like update_gen_bindfunc() but with a fixed number of tabs and never
+ * being a pointer.
+ */
+static size_t
+query_gen_bindfunc(enum ftype t, size_t pos, enum optype type)
+{
+
+	return update_gen_bindfunc(t, pos, 0, 1, type);
+}
+
+/*
+ * Like update_gen_bindfunc() but only for hashed passwords.
+ * Accepts an additional "hpos", which is the index of the current
+ * "hash" variable as emitted.
+ */
 static void
-gen_bindfunchash(size_t pos, size_t hpos, size_t tabs)
+update_gen_bindhash(size_t pos, size_t hpos, size_t tabs)
 {
 	size_t	 i;
 
@@ -1281,15 +1272,12 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 	if (parms > 0)
 		printf("\tstruct sqlbox_parm parms[%zu];\n", parms);
 
-	/* We need temporary space for hash generation. */
+	/* Start by generating password hashes. */
 
 	pos = 1;
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if (f->type == FTYPE_PASSWORD)
 			printf("\tchar hash%zu[64];\n", pos++);
-
-	/* Actually generate hashes, if necessary. */
-
 	puts("");
 	pos = npos = 1;
 	TAILQ_FOREACH(f, &p->fq, entries) {
@@ -1325,12 +1313,12 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 			       "\t} else {\n", npos, npos - 1);
 			tabs++;
 		}
-		if (f->type == FTYPE_PASSWORD) {
-			gen_bindfunchash(npos, pos, tabs);
-			pos++;
-		} else
-			gen_bindfunc(f->type, npos, 
-				(f->flags & FIELD_NULL), tabs);
+		if (f->type == FTYPE_PASSWORD)
+			update_gen_bindhash(npos, pos++, tabs);
+		else
+			update_gen_bindfunc(f->type, npos, 
+				(f->flags & FIELD_NULL), 
+				tabs, OPTYPE_EQUAL /* XXX */);
 		if ((f->flags & FIELD_NULL))
 			puts("\t}");
 		npos++;
@@ -1595,7 +1583,6 @@ gen_func_update(const struct config *cfg,
 	}
 	TAILQ_FOREACH(ref, &up->crq, entries) {
 		assert(ref->field->type != FTYPE_STRUCT);
-		assert(ref->field->type != FTYPE_PASSWORD);
 		if (!OPTYPE_ISUNARY(ref->op))
 			parms++;
 	}
@@ -1610,14 +1597,17 @@ gen_func_update(const struct config *cfg,
 	if (parms > 0)
 		printf("\tstruct sqlbox_parm parms[%zu];\n", parms);
 
-	/* Create hash buffer for modifying hashes. */
+	/* 
+	 * Handle case of hashing first.
+	 * If setting a password, we need to hash it.
+	 * Create a temporary buffer into which we're going to hash the
+	 * password.
+	 */
 
 	pos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries)
-		if (FTYPE_PASSWORD == ref->field->type)
+		if (ref->field->type == FTYPE_PASSWORD)
 			printf("\tchar hash%zu[64];\n", pos++);
-
-	/* Create hash from password. */
 
 	puts("");
 	npos = pos = 1;
@@ -1636,7 +1626,7 @@ gen_func_update(const struct config *cfg,
 	if (pos > 1)
 		puts("");
 
-	/* Bind parameters. */
+	/* Bind parameters with special attention on hashing. */
 
 	puts("\tmemset(parms, 0, sizeof(parms));");
 	npos = pos = 1;
@@ -1650,22 +1640,23 @@ gen_func_update(const struct config *cfg,
 			       "\t", npos, npos - 1);
 			tabs++;
 		}
-		if (FTYPE_PASSWORD == ref->field->type)
-			gen_bindfunchash(npos, pos++, tabs);
+		if (ref->field->type == FTYPE_PASSWORD)
+			update_gen_bindhash(npos, pos++, tabs);
 		else
-			gen_bindfunc(ref->field->type, npos,
-				(ref->field->flags & FIELD_NULL), 
-				tabs);
+			update_gen_bindfunc
+				(ref->field->type, npos,
+				 (ref->field->flags & FIELD_NULL), 
+				 tabs, OPTYPE_EQUAL /* XXX */);
 		if ((ref->field->flags & FIELD_NULL))
 			puts("\t}");
 		npos++;
 	}
 	TAILQ_FOREACH(ref, &up->crq, entries) {
-		assert(FTYPE_STRUCT != ref->field->type);
-		assert(FTYPE_PASSWORD != ref->field->type);
+		assert(ref->field->type != FTYPE_STRUCT);
 		if (OPTYPE_ISUNARY(ref->op))
 			continue;
-		npos += gen_bindfunc(ref->field->type, npos, 0, 1);
+		npos += update_gen_bindfunc
+			(ref->field->type, npos, 0, 1, ref->op);
 	}
 
 	printf("\n"

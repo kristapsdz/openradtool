@@ -559,7 +559,7 @@ struct	update {
 	struct strct	   *parent; /* up-reference */
 	struct rolemap	   *rolemap; /* roles assigned to function */
 	unsigned int	    flags;
-#define	UPDATE_ALL	    0x01 /* UP_MODIFY for all fields */
+#define	UPDATE_ALL	    0x01 /* UP_MODIFY for all w/"set" */
 	TAILQ_ENTRY(update) entries;
 };
 

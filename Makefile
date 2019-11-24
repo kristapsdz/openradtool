@@ -1,4 +1,5 @@
 .SUFFIXES: .dot .svg .1 .1.html .5 .5.html
+.PHONY: tests
 
 include Makefile.configure
 
@@ -109,6 +110,7 @@ IMAGES		 = index.svg \
 		   index-fig5.svg \
 		   index-fig6.svg \
 		   index-fig7.svg
+DIFFARGS	 = -I '^[/ ]\*.*' -I '^\# define KWBP_.*' -w
 
 # FreeBSD's make doesn't support CPPFLAGS.
 # CFLAGS += $(CPPFLAGS)
@@ -349,3 +351,59 @@ clean:
 
 distclean: clean
 	rm -f config.h config.log Makefile.configure
+
+tests: all
+	@tmp=`mktemp` ; \
+	for f in regress/*.c ; do \
+		bf=`basename $$f .c`.ort ; \
+		echo "ort-c-source regress/$$bf... " ; \
+		set +e ; \
+		./ort-c-source regress/$$bf > $$tmp ; \
+		if [ $$? -ne 0 ] ; then \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		diff $(DIFFARGS) $$tmp $$f >/dev/null 2>&1 ; \
+		if [ $$? -ne 0 ] ; then \
+			diff $(DIFFARGS) -u $$tmp $$f ; \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		set -e ; \
+	done ; \
+	for f in regress/*.h ; do \
+		bf=`basename $$f .h`.ort ; \
+		echo "ort-c-header regress/$$bf... " ; \
+		set +e ; \
+		./ort-c-header regress/$$bf > $$tmp ; \
+		if [ $$? -ne 0 ] ; then \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		diff $(DIFFARGS) $$tmp $$f >/dev/null 2>&1 ; \
+		if [ $$? -ne 0 ] ; then \
+			diff $(DIFFARGS) -u $$tmp $$f ; \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		set -e ; \
+	done ; \
+	for f in regress/*.orf ; do \
+		bf=`basename $$f .orf`.ort ; \
+		echo "ort regress/$$bf... " ; \
+		set +e ; \
+		./ort regress/$$bf > $$tmp ; \
+		if [ $$? -ne 0 ] ; then \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		diff -I '^$$' -w $$tmp $$f >/dev/null 2>&1 ; \
+		if [ $$? -ne 0 ] ; then \
+			diff -i '^$$' -w -u $$tmp $$f ; \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		set -e ; \
+	done ; \
+	rm $$tmp
+

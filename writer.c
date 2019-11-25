@@ -385,7 +385,7 @@ parse_write_field(struct writer *w, const struct field *p)
 }
 
 /*
- * Write a structure modifier.
+ * Write a structure modifier according to ort(5).
  * Returns zero on failure (memory), non-zero otherwise.
  */
 static int
@@ -410,24 +410,28 @@ parse_write_modify(struct writer *w, const struct update *p)
 			if (!wprint(w, "%s %s", 
 			    nf++ ? "," : "", u->name))
 				return 0;
-			if (u->mod != MODTYPE_SET)
-				if (!wprint(w, " %s", modtypes[u->mod]))
-					return 0;
+			if (u->mod != MODTYPE_SET &&
+			    !wprint(w, " %s", modtypes[u->mod]))
+				return 0;
 		}
 	}
 
-	/* Now the constraints. */
+	if (TAILQ_EMPTY(&p->crq) &&
+	    p->name == NULL && p->doc == NULL)
+		return wputs(w, ";\n");
 
-	if (!TAILQ_EMPTY(&p->crq) && !wputc(w, ':'))
+	if (p->type == UP_MODIFY && !wputc(w, ':'))
 		return 0;
+
+	/* Now the constraints. */
 
 	nf = 0;
 	TAILQ_FOREACH(u, &p->crq, entries) {
 		if (!wprint(w, "%s %s", nf++ ? "," : "", u->name))
 			return 0;
-		if (u->op != OPTYPE_EQUAL)
-			if (!wprint(w, " %s", optypes[u->op]))
-				return 0;
+		if (u->op != OPTYPE_EQUAL &&
+		    !wprint(w, " %s", optypes[u->op]))
+			return 0;
 	}
 
 	/* Trailing data (optional). */
@@ -435,7 +439,8 @@ parse_write_modify(struct writer *w, const struct update *p)
 	if (p->name != NULL || p->doc != NULL) {
 		if (!wputc(w, ':'))
 			return 0;
-		if (p->name != NULL && !wprint(w, " name %s", p->name))
+		if (p->name != NULL && 
+		    !wprint(w, " name %s", p->name))
 			return 0;
 		if (!parse_write_comment(w, p->doc, 2))
 			return 0;

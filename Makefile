@@ -5,7 +5,7 @@ include Makefile.configure
 
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 8
-VERSION_BUILD	 = 2
+VERSION_BUILD	 = 3
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = comments.o \
 		   compats.o \
@@ -357,6 +357,8 @@ TODO.xml: TODO.md
 atom.xml: versions.xml atom-template.xml
 	sblg -s date -a versions.xml >$@
 
+# Remove what is built by "all" and "www".
+
 clean:
 	rm -f $(BINS) version.h paths.h $(LIBOBJS) libort.a test test.o
 	rm -f db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db db.trans.txt
@@ -365,24 +367,52 @@ clean:
 	rm -f db.txt.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
 	rm -f source.o header.o javascript.o sql.o audit.o main.o xliff.o
 
+# Remove both what can be built and what's built by ./configure.
+
 distclean: clean
 	rm -f config.h config.log Makefile.configure
 
+# The tests go over each type of file in "regress".
+# Each test has a configuration (.ort) and a type to cross-check: a C
+# file (.c), header file (.h), or configuration (.orf).
+# First, make sure the .ort generates a similar C, header, or config.
+# Second, create a configuration from the configuration and try again,
+# making sure that it's the same.
+
 tests: all
 	@tmp=`mktemp` ; \
+	tmp2=`mktemp` ; \
 	for f in regress/*.c ; do \
 		bf=`basename $$f .c`.ort ; \
-		echo "ort-c-source regress/$$bf... " ; \
+		bff=`basename $$f .c`.orf ; \
 		set +e ; \
+		echo "ort-c-source regress/$$bf... " ; \
 		./ort-c-source regress/$$bf > $$tmp ; \
 		if [ $$? -ne 0 ] ; then \
-			rm $$tmp ; \
+			rm $$tmp $$tmp2 ; \
 			exit 1 ; \
 		fi ; \
 		diff $(DIFFARGS) $$tmp $$f >/dev/null 2>&1 ; \
 		if [ $$? -ne 0 ] ; then \
 			diff $(DIFFARGS) -u $$tmp $$f ; \
-			rm $$tmp ; \
+			rm $$tmp $$tmp2 ; \
+			exit 1 ; \
+		fi ; \
+		echo "ort-c-source (cross-check...)" ; \
+		./ort regress/$$bf > $$tmp2 ; \
+		if [ $$? -ne 0 ] ; then \
+			rm $$tmp $$tmp2 ; \
+			exit 1 ; \
+		fi ; \
+		./ort-c-source $$tmp2 > $$tmp ; \
+		if [ $$? -ne 0 ] ; then \
+			rm $$tmp $$tmp2 ; \
+			exit 1 ; \
+		fi ; \
+		diff $(DIFFARGS) $$tmp $$f >/dev/null 2>&1 ; \
+		if [ $$? -ne 0 ] ; then \
+			diff $(DIFFARGS) -u $$tmp $$f ; \
+			rm $$tmp $$tmp2 ; \
 			exit 1 ; \
 		fi ; \
 		set -e ; \
@@ -393,13 +423,30 @@ tests: all
 		set +e ; \
 		./ort-c-header regress/$$bf > $$tmp ; \
 		if [ $$? -ne 0 ] ; then \
-			rm $$tmp ; \
+			rm $$tmp $$tmp2 ; \
 			exit 1 ; \
 		fi ; \
 		diff $(DIFFARGS) $$tmp $$f >/dev/null 2>&1 ; \
 		if [ $$? -ne 0 ] ; then \
 			diff $(DIFFARGS) -u $$tmp $$f ; \
-			rm $$tmp ; \
+			rm $$tmp $$tmp2 ; \
+			exit 1 ; \
+		fi ; \
+		echo "ort-c-header (cross-check...)" ; \
+		./ort regress/$$bf > $$tmp2 ; \
+		if [ $$? -ne 0 ] ; then \
+			rm $$tmp $$tmp2 ; \
+			exit 1 ; \
+		fi ; \
+		./ort-c-header $$tmp2 > $$tmp ; \
+		if [ $$? -ne 0 ] ; then \
+			rm $$tmp $$tmp2 ; \
+			exit 1 ; \
+		fi ; \
+		diff $(DIFFARGS) $$tmp $$f >/dev/null 2>&1 ; \
+		if [ $$? -ne 0 ] ; then \
+			diff $(DIFFARGS) -u $$tmp $$f ; \
+			rm $$tmp $$tmp2 ; \
 			exit 1 ; \
 		fi ; \
 		set -e ; \
@@ -410,16 +457,33 @@ tests: all
 		set +e ; \
 		./ort regress/$$bf > $$tmp ; \
 		if [ $$? -ne 0 ] ; then \
-			rm $$tmp ; \
+			rm $$tmp $$tmp2 ; \
 			exit 1 ; \
 		fi ; \
 		diff -I '^$$' -w $$tmp $$f >/dev/null 2>&1 ; \
 		if [ $$? -ne 0 ] ; then \
 			diff -i '^$$' -w -u $$tmp $$f ; \
-			rm $$tmp ; \
+			rm $$tmp $$tmp2 ; \
+			exit 1 ; \
+		fi ; \
+		echo "ort (cross-check...)" ; \
+		./ort regress/$$bf > $$tmp2 ; \
+		if [ $$? -ne 0 ] ; then \
+			rm $$tmp $$tmp2 ; \
+			exit 1 ; \
+		fi ; \
+		./ort $$tmp2 > $$tmp ; \
+		if [ $$? -ne 0 ] ; then \
+			rm $$tmp $$tmp2 ; \
+			exit 1 ; \
+		fi ; \
+		diff -I '^$$' -w $$tmp $$f >/dev/null 2>&1 ; \
+		if [ $$? -ne 0 ] ; then \
+			diff -i '^$$' -w -u $$tmp $$f ; \
+			rm $$tmp $$tmp2 ; \
 			exit 1 ; \
 		fi ; \
 		set -e ; \
 	done ; \
-	rm $$tmp
+	rm $$tmp $$tmp2
 

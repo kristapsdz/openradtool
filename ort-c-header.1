@@ -440,11 +440,10 @@ constrained by
 .Qq yy
 with operation
 .Qq op .
-.It Li void db_foo_update_by_yy_op(struct ort *p, ARGS)
-Like
-.Fn db_foo_update_xx_by_yy_op ,
-but for when no modify fields were specified, meaning that all fields
-(but structures and row identifiers) are to be modified.
+Either or both modifier and constraints may be empty, in which case they
+(and the preceding
+.Qq by
+in the case of constraints) are omitted.
 .El
 .Ss JSON export
 These functions invoke

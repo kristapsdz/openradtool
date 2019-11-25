@@ -236,6 +236,14 @@ print_var(size_t pos, size_t col,
 
 /*
  * Print just the name of an update function "u".
+ * The forms emitted are:
+ *   - db_STRUCT_update_NAME
+ *   - db_STRUCT_update_XXX_by_YYY
+ *   - db_STRUCT_update_by_YYY
+ *   - db_STRUCT_update_XXX
+ *   - db_STRUCT_update
+ * The last invocation occurs in the situation of just "update;" in the
+ * configuration file.
  * Returns the number of characters printed.
  */
 size_t
@@ -254,18 +262,22 @@ print_name_db_update(const struct update *u)
 				rc = printf("_%s", ur->name);
 				col += rc > 0 ? rc : 0;
 			}
-		col += (rc = printf("_by")) > 0 ? rc : 0;
-		TAILQ_FOREACH(ur, &u->crq, entries) {
-			rc = printf("_%s_%s", 
-				ur->name, optypes[ur->op]);
-			col += rc > 0 ? rc : 0;
+		if (!TAILQ_EMPTY(&u->crq)) {
+			col += (rc = printf("_by")) > 0 ? rc : 0;
+			TAILQ_FOREACH(ur, &u->crq, entries) {
+				rc = printf("_%s_%s", 
+					ur->name, optypes[ur->op]);
+				col += rc > 0 ? rc : 0;
+			}
 		}
 	} else if (u->name == NULL) {
-		col += (rc = printf("_by")) > 0 ? rc : 0;
-		TAILQ_FOREACH(ur, &u->crq, entries) {
-			rc = printf("_%s_%s", 
-				ur->name, optypes[ur->op]);
-			col += rc > 0 ? rc : 0;
+		if (!TAILQ_EMPTY(&u->crq)) {
+			col += (rc = printf("_by")) > 0 ? rc : 0;
+			TAILQ_FOREACH(ur, &u->crq, entries) {
+				rc = printf("_%s_%s", 
+					ur->name, optypes[ur->op]);
+				col += rc > 0 ? rc : 0;
+			}
 		}
 	} else 
 		col += (rc = printf("_%s", u->name)) > 0 ? rc : 0;

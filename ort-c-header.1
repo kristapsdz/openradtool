@@ -400,9 +400,9 @@ but invoking a function callback
 passed
 .Fa arg
 within the active query for each retrieved result.
-.It Li void db_foo_iterate_by__xxxx_op1__yy_zz_op2(struct ort *p, foo_cb cb, void *arg, ARGS)
+.It Li void db_foo_iterate_by_xxxx_op1_yy_zz_op2(struct ort *p, foo_cb cb, void *arg, ARGS)
 Like
-.Fn db_foo_get_by__xxxx_op1__yy_zz_op2 ,
+.Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
 but invoking a function callback for the retrieved results.
 .It Li struct foo_q *db_foo_list(struct ort *p)
 Allocate and fill a queue of all rows.
@@ -410,9 +410,9 @@ Allocate and fill a queue of all rows.
 Like
 .Fn db_foo_get_xxxx ,
 but producing a queue of responses.
-.It Li struct foo_q *db_foo_list_by__xxxx_op1__yy_zz_op2(struct ort *p, ARGS)
+.It Li struct foo_q *db_foo_list_by_xxxx_op1_yy_zz_op2(struct ort *p, ARGS)
 Like
-.Fn db_foo_get_by__xxxx_op1__yy_zz_op2 ,
+.Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
 but producing a queue of responses.
 .It Li int db_foo_update_xxxx(struct ort *p, ARGS)
 Run the named update function

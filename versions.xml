@@ -3,6 +3,32 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.8.3</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2019-11-24">2019-11-24</time>
+		</header>
+		<aside>
+			<p>
+				<strong>Possibly API-breaking changes</strong>: update functions
+				declared without constraints no longer emit a superfluous
+				<code>by</code> in the generated function names.  That is,
+				<code>update [xxx];</code> will no longer append a hanging
+				<code>_by</code> to the function name.
+			</p>
+			<p>
+				Anonymous update functions (i.e., without a <code>name</code>) now
+				have their modification type emitted in the function name.
+				This is to prevent name collisions from, e.g., 
+				<code>update foo inc</code> and <code>update foo dec</code>.
+			</p>
+			<p>
+				Have the <code>strset</code> keyword for update modifiers set the
+				raw password value instead of hashing.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.8.2</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2019-11-24">2019-11-24</time>
@@ -43,8 +69,7 @@
 		</header>
 		<aside>
 			<p>
-				Some considerable changes, so I'm bumping the minor number. 
-				First is using
+				<code>Possibly API-breaking changes</strong>: now using
 				<a href="https://kristaps.bsd.lv/sqlbox">sqlbox</a> instead of 
 				<a href="https://kristaps.bsd.lv/ksql">ksql</a> for the database
 				access library.

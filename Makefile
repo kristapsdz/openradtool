@@ -165,6 +165,11 @@ installwww: www
 	$(INSTALL_DATA) openradtool.tar.gz $(WWWDIR)/snapshots/openradtool-$(VERSION).tar.gz
 	$(INSTALL_DATA) openradtool.tar.gz.sha512 $(WWWDIR)/snapshots/openradtool-$(VERSION).tar.gz.sha512
 
+# Something to run before doing a release: just makes sure that we have
+# the given version documented and that make and make install works
+# when run on the distributed tarball.
+# Also checks that our manpages are nice.
+
 distcheck: openradtool.tar.gz.sha512 openradtool.tar.gz
 	mandoc -Tlint -Wwarning $(MAN1S)
 	newest=`grep "<h3>" versions.xml | head -n1 | sed 's![ 	]*!!g'` ; \

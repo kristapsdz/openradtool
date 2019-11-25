@@ -431,19 +431,22 @@ pointers.
 Update fields are only specified for operations for binary-operator
 constraints, i.e., those not checking for null status.
 Returns non-zero on success, zero on constraint failure.
-.It Li int db_foo_update_xx_by_yy_op(struct ort *p, ARGS)
+.It Li int db_foo_update_xx_mod_by_yy_op(struct ort *p, ARGS)
 Like
 .Fn db_foo_update_xxxx ,
 but using an un-named update statement modifying
 .Qq xx
+with modifier
+.Qq mod
 constrained by
 .Qq yy
 with operation
 .Qq op .
-Either or both modifier and constraints may be empty, in which case they
-(and the preceding
+Either or both modifiers and constraints may be empty.
+If modifiers are empty, all fields are modified by setting.
+If constraints are empty, they and the preceding
 .Qq by
-in the case of constraints) are omitted.
+are omitted.
 .El
 .Ss JSON export
 These functions invoke

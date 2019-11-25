@@ -59,6 +59,14 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	"int64_t ", /* FTYPE_BITFIELD */
 };
 
+static	const char *const modtypes[MODTYPE__MAX] = {
+	"cat", /* MODTYPE_CONCAT */
+	"dec", /* MODTYPE_DEC */
+	"inc", /* MODTYPE_INC */
+	"set", /* MODTYPE_SET */
+	"strset", /* MODTYPE_STRSET */
+};
+
 static	const char *const optypes[OPTYPE__MAX] = {
 	"eq", /* OPTYPE_EQUAL */
 	"ge", /* OPTYPE_GE */
@@ -259,7 +267,8 @@ print_name_db_update(const struct update *u)
 	if (u->name == NULL && u->type == UP_MODIFY) {
 		if (!(u->flags & UPDATE_ALL))
 			TAILQ_FOREACH(ur, &u->mrq, entries) {
-				rc = printf("_%s", ur->name);
+				rc = printf("_%s_%s", 
+					ur->name, modtypes[ur->mod]);
 				col += rc > 0 ? rc : 0;
 			}
 		if (!TAILQ_EMPTY(&u->crq)) {

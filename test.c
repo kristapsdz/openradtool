@@ -113,7 +113,7 @@ main(void)
 
 	/* Change the user's password. */
 
-	if (!db_user_update_hash_by_uid_eq(sql, "password2", uid))
+	if (!db_user_update_hash_set_by_uid_eq(sql, "password2", uid))
 		errx(EXIT_FAILURE, "db.db: db_user_update_hash_by_uid_eq");
 
 	/* 

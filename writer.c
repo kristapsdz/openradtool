@@ -404,10 +404,7 @@ parse_write_modify(struct writer *w, const struct update *p)
 	 * UPDATE_ALL uses the simplified notation.
 	 */
 
-	if (p->type == UP_MODIFY && (p->flags & UPDATE_ALL)) {
-		if (!wputc(w, ':'))
-			return 0;
-	} else if (p->type == UP_MODIFY) {
+	if (p->type == UP_MODIFY && !(p->flags & UPDATE_ALL)) {
 		nf = 0;
 		TAILQ_FOREACH(u, &p->mrq, entries) {
 			if (!wprint(w, "%s %s", 
@@ -417,19 +414,19 @@ parse_write_modify(struct writer *w, const struct update *p)
 				if (!wprint(w, " %s", modtypes[u->mod]))
 					return 0;
 		}
-		if (!wputc(w, ':'))
-			return 0;
 	}
 
 	/* Now the constraints. */
 
+	if (!TAILQ_EMPTY(&p->crq) && !wputc(w, ':'))
+		return 0;
+
 	nf = 0;
 	TAILQ_FOREACH(u, &p->crq, entries) {
-		if ( ! wprint(w, "%s %s", 
-		    nf++ ? "," : "", u->name))
+		if (!wprint(w, "%s %s", nf++ ? "," : "", u->name))
 			return 0;
-		if (OPTYPE_EQUAL != u->op)
-			if ( ! wprint(w, " %s", optypes[u->op]))
+		if (u->op != OPTYPE_EQUAL)
+			if (!wprint(w, " %s", optypes[u->op]))
 				return 0;
 	}
 

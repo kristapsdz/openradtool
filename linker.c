@@ -472,6 +472,8 @@ resolve_update(struct config *cfg, struct update *up)
 				return 0;
 			}
 			TAILQ_INSERT_TAIL(&up->mrq, ref, entries);
+			ref->mod = MODTYPE_SET;
+			ref->op = OPTYPE_EQUAL;
 			ref->name = strdup(f->name);
 			if (NULL == ref->name) {
 				gen_err(cfg, &up->pos);

@@ -3,7 +3,7 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
-			<h3>0.8.4</h3>
+			<h3>0.8.5</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2020-02-16">2020-02-16</time>
 		</header>
@@ -24,6 +24,10 @@
 			<p>
 				Have the <code>strset</code> keyword for update modifiers set the
 				raw password value instead of hashing.
+			</p>
+			<p>
+				Bring up to date with latest 
+				<a href="https://github.com/kristapsdz/oconfigure">oconfigure</a>.
 			</p>
 		</aside>
 	</article>

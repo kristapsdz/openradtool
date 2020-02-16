@@ -48,7 +48,6 @@ p.explain.left				{ text-align: left;
 					  font-weight: 500;
 					  color: #555;
 					  font-size: 130%; }
-#topicboxes .contents			{ opacity: 0.9; }
 #breadcrumbs > *			{ display: inline-block; 
 					  vertical-align: top;
 					  font-size: 13pt;

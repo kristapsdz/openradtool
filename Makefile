@@ -274,10 +274,10 @@ db.db: db.sql
 $(LIBOBJS) $(OBJS): config.h extern.h ort.h
 
 .5.5.html:
-	mandoc -Thtml -Ostyle=mandoc.css $< >$@
+	mandoc -Ostyle=https://bsd.lv/css/mandoc.css -Thtml $< >$@
 
 .1.1.html:
-	mandoc -Thtml -Ostyle=mandoc.css $< >$@
+	mandoc -Ostyle=https://bsd.lv/css/mandoc.css -Thtml $< >$@
 
 .dot.svg:
 	dot -Tsvg $< > tmp-$@

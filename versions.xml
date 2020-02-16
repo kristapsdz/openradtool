@@ -3,9 +3,9 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
-			<h3>0.8.3</h3>
+			<h3>0.8.4</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2019-11-24">2019-11-24</time>
+			<time datetime="2020-02-16">2020-02-16</time>
 		</header>
 		<aside>
 			<p>
@@ -69,7 +69,7 @@
 		</header>
 		<aside>
 			<p>
-				<code>Possibly API-breaking changes</strong>: now using
+				<strong>Possibly API-breaking changes</strong>: now using
 				<a href="https://kristaps.bsd.lv/sqlbox">sqlbox</a> instead of 
 				<a href="https://kristaps.bsd.lv/ksql">ksql</a> for the database
 				access library.

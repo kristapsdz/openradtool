@@ -205,7 +205,7 @@
 					<span>3.</span> compile back-end code
 				</h2>
 				<code>
-					% cc -static -o test main.c <a href="db.c.html">db.c</a> -lsqlbox -lsqlite3 -lpthread -lkcgijson -lkcgi -lz
+					% cc -static `pkg-config --cflags sqlbox kcgi-json` -o test main.c <a href="db.c.html">db.c</a> `pkg-config --libs sqlbox kcgi-json`
 				</code>
 				<section>
 					<p>

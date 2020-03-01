@@ -205,26 +205,19 @@
 					<span>3.</span> compile back-end code
 				</h2>
 				<code>
-					% cc -static `pkg-config --cflags sqlbox kcgi-json` -o test main.c <a href="db.c.html">db.c</a> `pkg-config --libs sqlbox kcgi-json`
+					% cc -static `pkg-config --cflags sqlbox kcgi-json` -o test main.c <a href="db.c.html">db.c</a> `pkg-config --libs --static sqlbox kcgi-json`
 				</code>
 				<section>
 					<p>
-						The <b>-static</b> is for simplicity when running CGI scripts in a file-system jail
-						This is the default operation on <a href="https://man.openbsd.org/chroot.2">chroot(2)</a>'s web
+						This uses the <a href="https://man.openbsd.org/pkg-config">pkg-config</a> system to set compiler
+						and linker flags.  The <b>-static</b> and <b>--static</b> are for running CGI scripts in a
+						file-system jail.
+						This is the default operation on <a href="https://man.openbsd.org/chroot.2">chroot(2)</a>ed web
 						servers such as OpenBSD's <a href="http://man.openbsd.org/httpd.8">httpd(8)</a>.
-						It usually isn't necessary for non-CGI applications.
+						These aren't necessary for non-jailed CGI applications.
 					</p>
 					<p>
-						The required libraries are <b>-l</b><i>sqlbox</i> for the database routines,
-						<b>-l</b><i>kcgijson</i> for the JSON output, and <b>-l</b><i>kcgi</i> for the input validation.
-						The other libraries are dependencies on the former (<b>-l</b><i>sqlite3</i> and
-						<b>-l</b><i>pthread</i>) and latter (<b>-l</b><i>z</i>).  
-						The third-party libraries may be in <b>-L</b><i>/usr/local/lib</i>, with headers in
-						<b>-I</b><i>/usr/local/include</i>.
-					</p>
-					<p>
-						Some operating systems additionally need <b>-l</b><i>crypt</i> (for password hashing) and
-						<b>-l</b><i>m</i> (for <b>-l</b><i>kcgijson</i>).
+						Some operating systems (Linux) may also need <b>-l</b><i>crypt</i> for password hashing.
 					</p>
 				</section>
 				<h2 id="gen-sql">

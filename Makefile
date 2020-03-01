@@ -153,7 +153,10 @@ ort-audit-json: audit.o libort.a
 	$(CC) -o $@ audit.o libort.a
 
 ort-xliff: xliff.o libort.a
-	$(CC) -o $@ xliff.o libort.a $(LDFLAGS) -lexpat
+	$(CC) -o $@ xliff.o libort.a `pkg-config --libs expat`
+
+xliff.o: xliff.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) `pkg-config --cflags expat` -o $@ -c $<
 
 www: $(IMAGES) $(HTMLS) openradtool.tar.gz openradtool.tar.gz.sha512 atom.xml
 
@@ -179,8 +182,7 @@ distcheck: openradtool.tar.gz.sha512 openradtool.tar.gz
 	sha512 -C openradtool.tar.gz.sha512 openradtool.tar.gz
 	mkdir -p .distcheck
 	tar -zvxpf openradtool.tar.gz -C .distcheck
-	( cd .distcheck/openradtool-$(VERSION) && ./configure PREFIX=prefix \
-		CPPFLAGS="$(CPPFLAGS)" LDFLAGS="$(LDFLAGS)" LDADD="$(LDADD)" )
+	( cd .distcheck/openradtool-$(VERSION) && ./configure PREFIX=prefix )
 	( cd .distcheck/openradtool-$(VERSION) && make )
 	( cd .distcheck/openradtool-$(VERSION) && make install )
 	( cd .distcheck/openradtool-$(VERSION)/prefix && find . -type f )
@@ -235,16 +237,16 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	rm -rf .dist/
 
 test: test.o db.o db.db
-	$(CC) -o $@ test.o db.o $(LDFLAGS) -lsqlbox -lsqlite3 -lpthread $(LDADD)
+	$(CC) -o $@ test.o db.o `pkg-config --libs sqlbox`
 
 audit-out.js: ort-audit-json audit-example.txt
 	./ort-audit-json user audit-example.txt >$@
 
 db.o: db.c db.h
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c db.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) `pkg-config --cflags sqlbox` -o $@ -c db.c
 
 test.o: test.c db.h
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c test.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) `pkg-config --cflags sqlbox` -o $@ -c test.c
 
 db.c: ort-c-source db.txt
 	./ort-c-source db.txt >$@
@@ -384,7 +386,7 @@ distclean: clean
 # Second, create a configuration from the configuration and try again,
 # making sure that it's the same.
 
-tests: all
+regress: all
 	@tmp=`mktemp` ; \
 	tmp2=`mktemp` ; \
 	for f in regress/*.c ; do \

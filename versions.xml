@@ -5,15 +5,13 @@
 		<header>
 			<h3>0.8.6</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2020-03-01">2020-03-01</time>
+			<time datetime="2020-03-05">2020-03-05</time>
 		</header>
 		<aside>
 			<p>
-				ONGOING.
-			</p>
-			<p>
 				Use <a href="https://man.openbsd.org/pkg-config">pkg-config</a> in
 				all examples, for simplicity.
+				Update <a href="https://github.com/kristapsdz/oconfigure">oconfigure</a>.
 			</p>
 		</aside>
 	</article>

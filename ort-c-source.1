@@ -26,6 +26,7 @@
 .Op Fl h Ar header[,header...]
 .Op Fl I Ar djv
 .Op Fl N Ar d
+.Op Fl S Ar sharedir
 .Op Ar config...
 .Sh DESCRIPTION
 The
@@ -66,6 +67,9 @@ Disable production of output, which may currently only be
 to suppresses the database input implementations.
 .It Fl s
 This flag is retained only for backward compatibility.
+.It Fl S Ar sharedir
+Directory containing external source files used for compatibility.
+The default is to use the install-time directory.
 .El
 .Pp
 The complexity of

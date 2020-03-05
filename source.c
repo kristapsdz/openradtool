@@ -19,6 +19,7 @@
 #if HAVE_SYS_QUEUE
 # include <sys/queue.h>
 #endif
+# include <sys/param.h>
 
 #include <assert.h>
 #include <ctype.h>
@@ -46,9 +47,9 @@ enum	external {
 };
 
 static	const char *const externals[EX__MAX] = {
-	PATH_GENSALT, /* EX_GENSALT */
-	PATH_B64_NTOP, /* EX_B64_NTOP */
-	PATH_JSMN /* EX_JSMN */
+	FILE_GENSALT, /* EX_GENSALT */
+	FILE_B64_NTOP, /* EX_B64_NTOP */
+	FILE_JSMN /* EX_JSMN */
 };
 
 /*
@@ -2944,12 +2945,12 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 	puts("");
 
 #ifndef __OpenBSD__
-	if ( ! genfile(PATH_GENSALT, exs[EX_GENSALT]))
+	if ( ! genfile(FILE_GENSALT, exs[EX_GENSALT]))
 		return 0;
 #endif
-	if (need_b64 && ! genfile(PATH_B64_NTOP, exs[EX_B64_NTOP]))
+	if (need_b64 && ! genfile(FILE_B64_NTOP, exs[EX_B64_NTOP]))
 		return 0;
-	if (jsonparse && ! genfile(PATH_JSMN, exs[EX_JSMN]))
+	if (jsonparse && ! genfile(FILE_JSMN, exs[EX_JSMN]))
 		return 0;
 
 	if (dbin) {
@@ -3053,20 +3054,22 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 int
 main(int argc, char *argv[])
 {
-	const char	 *header = NULL, *incls = NULL;
+	const char	 *header = NULL, *incls = NULL, 
+	     		 *sharedir = SHAREDIR;
 	struct config	 *cfg = NULL;
 	int		  c, json = 0, jsonparse = 0, valids = 0,
 			  dbin = 1, rc = 0;
 	FILE		**confs = NULL;
 	size_t		  i, confsz;
-	int		  exs[EX__MAX];
+	int		  exs[EX__MAX], sz;
+	char		  buf[MAXPATHLEN];
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while ((c = getopt(argc, argv, "h:I:jJN:sv")) != -1)
+	while ((c = getopt(argc, argv, "h:I:jJN:sS:v")) != -1)
 		switch (c) {
 		case 'h':
 			header = optarg;
@@ -3086,6 +3089,9 @@ main(int argc, char *argv[])
 			break;
 		case 's':
 			/* Ignore. */
+			break;
+		case 'S':
+			sharedir = optarg;
 			break;
 		case 'v':
 			valids = 1;
@@ -3113,9 +3119,15 @@ main(int argc, char *argv[])
 	 * output source code.
 	 */
 
-	for (i = 0; i < EX__MAX; i++)
-		if ((exs[i] = open(externals[i], O_RDONLY, 0)) == -1)
-			err(EXIT_FAILURE, "%s", externals[i]);
+	for (i = 0; i < EX__MAX; i++) {
+		sz = snprintf(buf, sizeof(buf), 
+			"%s/%s", sharedir, externals[i]);
+		if (sz < 0 || (size_t)sz >= sizeof(buf))
+			errx(EXIT_FAILURE, "%s/%s: too long",
+				sharedir, externals[i]);
+		if ((exs[i] = open(buf, O_RDONLY, 0)) == -1)
+			err(EXIT_FAILURE, "%s/%s", sharedir, externals[i]);
+	}
 
 #if HAVE_PLEDGE
 	if (pledge("stdio", NULL) == -1)

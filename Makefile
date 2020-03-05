@@ -174,18 +174,19 @@ installwww: www
 # Also checks that our manpages are nice.
 
 distcheck: openradtool.tar.gz.sha512 openradtool.tar.gz
-	mandoc -Tlint -Wwarning $(MAN1S)
+	mandoc -Tlint -Werror $(MAN1S)
 	newest=`grep "<h3>" versions.xml | head -n1 | sed 's![ 	]*!!g'` ; \
-	       [ "$$newest" == "<h3>$(VERSION)</h3>" ] || \
+	       [ "$$newest" = "<h3>$(VERSION)</h3>" ] || \
 		{ echo "Version $(VERSION) not newest in versions.xml" 1>&2 ; exit 1 ; }
 	rm -rf .distcheck
-	sha512 -C openradtool.tar.gz.sha512 openradtool.tar.gz
+	[ "`openssl dgst -sha512 -hex openradtool.tar.gz`" = "`cat openradtool.tar.gz.sha512`" ] || \
+ 		{ echo "Checksum does not match." 1>&2 ; exit 1 ; }
 	mkdir -p .distcheck
 	tar -zvxpf openradtool.tar.gz -C .distcheck
 	( cd .distcheck/openradtool-$(VERSION) && ./configure PREFIX=prefix )
 	( cd .distcheck/openradtool-$(VERSION) && make )
+	( cd .distcheck/openradtool-$(VERSION) && make regress )
 	( cd .distcheck/openradtool-$(VERSION) && make install )
-	( cd .distcheck/openradtool-$(VERSION)/prefix && find . -type f )
 	rm -rf .distcheck
 
 version.h: Makefile
@@ -195,9 +196,10 @@ version.h: Makefile
 header.o source.o: version.h
 
 paths.h: Makefile
-	( echo "#define PATH_GENSALT \"$(SHAREDIR)/openradtool/gensalt.c\"" ; \
-	  echo "#define PATH_B64_NTOP \"$(SHAREDIR)/openradtool/b64_ntop.c\"" ; \
-	  echo "#define PATH_JSMN \"$(SHAREDIR)/openradtool/jsmn.c\"" ; ) >$@
+	( echo "#define SHAREDIR \"$(SHAREDIR)/openradtool\"" ; \
+	  echo "#define FILE_GENSALT \"gensalt.c\"" ; \
+	  echo "#define FILE_B64_NTOP \"b64_ntop.c\"" ; \
+	  echo "#define FILE_JSMN \"jsmn.c\"" ; ) >$@
 
 source.o: paths.h
 
@@ -227,11 +229,13 @@ uninstall:
 	done
 
 openradtool.tar.gz.sha512: openradtool.tar.gz
-	sha512 openradtool.tar.gz >$@
+	openssl dgst -sha512 -hex openradtool.tar.gz >$@
 
 openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/openradtool-$(VERSION)/
+	mkdir -p .dist/openradtool-$(VERSION)/regress
 	install -m 0444 $(DOTAR) .dist/openradtool-$(VERSION)
+	install -m 0444 regress/*.[ch] regress/*.or[ft] .dist/openradtool-$(VERSION)/regress
 	install -m 0555 $(DOTAREXEC) .dist/openradtool-$(VERSION)
 	( cd .dist/ && tar zcf ../$@ ./ )
 	rm -rf .dist/
@@ -393,8 +397,8 @@ regress: all
 		bf=`basename $$f .c`.ort ; \
 		bff=`basename $$f .c`.orf ; \
 		set +e ; \
-		echo "ort-c-source regress/$$bf... " ; \
-		./ort-c-source regress/$$bf > $$tmp ; \
+		echo "ort-c-source -S. regress/$$bf... " ; \
+		./ort-c-source -S. regress/$$bf > $$tmp ; \
 		if [ $$? -ne 0 ] ; then \
 			rm $$tmp $$tmp2 ; \
 			exit 1 ; \
@@ -411,7 +415,7 @@ regress: all
 			rm $$tmp $$tmp2 ; \
 			exit 1 ; \
 		fi ; \
-		./ort-c-source $$tmp2 > $$tmp ; \
+		./ort-c-source -S. $$tmp2 > $$tmp ; \
 		if [ $$? -ne 0 ] ; then \
 			rm $$tmp $$tmp2 ; \
 			exit 1 ; \

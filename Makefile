@@ -12,6 +12,8 @@ LIBOBJS		 = comments.o \
 		   config.o \
 		   linker.o \
 		   parser.o \
+		   parser_bitfield.o \
+		   parser_enum.o \
 		   printer.o \
 		   protos.o \
 		   writer.o
@@ -194,6 +196,8 @@ version.h: Makefile
 	  echo "#define VSTAMP `echo $$((($(VERSION_BUILD)+1)+($(VERSION_MINOR)+1)*100+($(VERSION_MAJOR)+1)*10000))`" ; ) >$@
 
 header.o source.o: version.h
+	
+parser.o parser_bitfield.o parser_enum.o: parser.h
 
 paths.h: Makefile
 	( echo "#define SHAREDIR \"$(SHAREDIR)/openradtool\"" ; \
@@ -377,6 +381,7 @@ clean:
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml
 	rm -f db.txt.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
 	rm -f source.o header.o javascript.o sql.o audit.o main.o xliff.o
+	rm -rf regress/share
 
 # Remove both what can be built and what's built by ./configure.
 
@@ -396,12 +401,16 @@ regress:
 xxregress: all
 	@tmp=`mktemp` ; \
 	tmp2=`mktemp` ; \
+	mkdir -p regress/share ; \
+	touch regress/share/gensalt.c ; \
+	touch regress/share/b64_ntop.c ; \
+	touch regress/share/jsmn.c ; \
 	for f in regress/*.c ; do \
 		bf=`basename $$f .c`.ort ; \
 		bff=`basename $$f .c`.orf ; \
 		set +e ; \
-		echo "ort-c-source -S. regress/$$bf... " ; \
-		./ort-c-source -S. regress/$$bf > $$tmp ; \
+		echo "ort-c-source -Sregress/share regress/$$bf... " ; \
+		./ort-c-source -Sregress/share regress/$$bf > $$tmp ; \
 		if [ $$? -ne 0 ] ; then \
 			rm $$tmp $$tmp2 ; \
 			exit 1 ; \
@@ -418,7 +427,7 @@ xxregress: all
 			rm $$tmp $$tmp2 ; \
 			exit 1 ; \
 		fi ; \
-		./ort-c-source -S. $$tmp2 > $$tmp ; \
+		./ort-c-source -Sregress/share $$tmp2 > $$tmp ; \
 		if [ $$? -ne 0 ] ; then \
 			rm $$tmp $$tmp2 ; \
 			exit 1 ; \
@@ -499,5 +508,6 @@ xxregress: all
 		fi ; \
 		set -e ; \
 	done ; \
+	rm -rf regress/share ; \
 	rm $$tmp $$tmp2
 

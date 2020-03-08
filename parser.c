@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017--2019 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017--2020 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -32,77 +32,7 @@
 
 #include "ort.h"
 #include "extern.h"
-
-/*
- * These are our lexical tokens parsed from input.
- */
-enum	tok {
-	TOK_NONE, /* special case: just starting */
-	TOK_COLON, /* : */
-	TOK_COMMA, /* ; */
-	TOK_DECIMAL, /* decimal-valued number */
-	TOK_EOF, /* end of file! */
-	TOK_ERR, /* error! */
-	TOK_IDENT, /* alphanumeric (starting with alpha) */
-	TOK_INTEGER, /* integer */
-	TOK_LBRACE, /* { */
-	TOK_LITERAL, /* "text" */
-	TOK_PERIOD, /* } */
-	TOK_RBRACE, /* } */
-	TOK_SEMICOLON /* ; */
-};
-
-/*
- * Shorthand for checking whether we should stop parsing (we're at the
- * end of file or have an error).
- */
-#define	PARSE_STOP(_p) \
-	(TOK_ERR == (_p)->lasttype || TOK_EOF == (_p)->lasttype)
-
-struct	parsefile {
-	FILE		*f;
-};
-
-/*
- * Used for parsing from a buffer (PARSETYPE_BUF) instead of a file.
- */
-struct	parsebuf {
-	const char	*buf; /* the (possibly binary) buffer */
-	size_t		 len; /* length of the buffer */
-	size_t		 pos; /* position during the parse */
-};
-
-enum	parsetype {
-	PARSETYPE_BUF, /* a character buffer */
-	PARSETYPE_FILE /* a FILE stream */
-};
-
-/*
- * The current parse.
- * If we have multiple files to parse, we must reinitialise this
- * structure (including freeing resources, for now limited to "buf"), as
- * it only pertains to the current one.
- */
-struct	parse {
-	union {
-		const char *string; /* last parsed string */
-		int64_t integer; /* ...integer */
-		double decimal; /* ...double */
-	} last;
-	enum tok	 lasttype; /* last parse type */
-	char		*buf; /* buffer for storing up reads */
-	size_t		 bufsz; /* length of buffer */
-	size_t		 bufmax; /* maximum buffer size */
-	size_t		 line; /* current line (from 1) */
-	size_t		 column; /* current column (from 1) */
-	const char	*fname; /* current filename */
-	struct config	*cfg; /* current configuration */
-	enum parsetype	 type; /* how we're getting input */
-	union {
-		struct parsebuf inbuf; /* from a buffer */
-		struct parsefile infile; /* ...file */
-	};
-};
+#include "parser.h"
 
 /*
  * Disallowed field names.
@@ -310,15 +240,10 @@ static	const char *const vtypes[VALIDATE__MAX] = {
 
 static	const char *const channel = "parser";
 
-static enum tok parse_errx(struct parse *, const char *, ...)
-	__attribute__((format(printf, 2, 3)));
-static void parse_warnx(struct parse *p, const char *, ...)
-	__attribute__((format(printf, 2, 3)));
-
 /*
  * Copy the current parse point into a saved position buffer.
  */
-static void
+void
 parse_point(const struct parse *p, struct pos *pp)
 {
 
@@ -327,7 +252,7 @@ parse_point(const struct parse *p, struct pos *pp)
 	pp->column = p->column;
 }
 
-static void
+void
 parse_warnx(struct parse *p, const char *fmt, ...)
 {
 	va_list	 	 ap;
@@ -347,7 +272,7 @@ parse_warnx(struct parse *p, const char *fmt, ...)
 			channel, 0, &pos, NULL);
 }
 
-static enum tok
+enum tok
 parse_err(struct parse *p)
 {
 	int	 	 er = errno;
@@ -364,7 +289,7 @@ parse_err(struct parse *p)
 	return p->lasttype;
 }
 
-static enum tok
+enum tok
 parse_errx(struct parse *p, const char *fmt, ...)
 {
 	va_list	 	 ap;
@@ -415,8 +340,8 @@ buf_push(struct parse *p, char c)
  * Check to see whether "s" is a reserved identifier or not.
  * Returns zero if this is a reserved identifier, non-zero if it's ok
  */
-static int
-check_badidents(struct parse *p, const char *s)
+int
+parse_check_badidents(struct parse *p, const char *s)
 {
 	const char *const *cp;
 
@@ -435,8 +360,8 @@ check_badidents(struct parse *p, const char *s)
  * That's because the C output for these will be, given "name", "struct
  * name", "enum name", which can't be the same.
  */
-static int
-check_dupetoplevel(struct parse *p, const char *name)
+int
+parse_check_dupetoplevel(struct parse *p, const char *name)
 {
 	const struct enm *e;
 	const struct bitf *b;
@@ -478,7 +403,7 @@ field_alloc(struct parse *p, struct strct *s, const char *name)
 
 	/* Check reserved identifiers. */
 
-	if (!check_badidents(p, name)) {
+	if (!parse_check_badidents(p, name)) {
 		parse_errx(p, "reserved identifier");
 		return NULL;
 	}
@@ -525,10 +450,10 @@ strct_alloc(struct parse *p, const char *name)
 
 	/* Check reserved identifiers and dupe names. */
 
-	if (!check_badidents(p, name)) {
+	if (!parse_check_badidents(p, name)) {
 		parse_errx(p, "reserved identifier");
 		return NULL;
-	} else if (!check_dupetoplevel(p, name))
+	} else if (!parse_check_dupetoplevel(p, name))
 		return NULL;
 
 	if ((s = calloc(1, sizeof(struct strct))) == NULL ||
@@ -868,7 +793,7 @@ parse_read_err(struct parse *p)
  * doesn't do anything.
  * Otherwise, lasttype will be set to the last token type.
  */
-static enum tok
+enum tok
 parse_next(struct parse *p)
 {
 	int		 c, last, hasdot, minus = 0;
@@ -1043,7 +968,7 @@ again:
  * If this is the case, emit a warning.
  * Return zero on failure, non-zero on success.
  */
-static int
+int
 parse_label(struct parse *p, struct labelq *q)
 {
 	size_t	 	 lang = 0;
@@ -1144,7 +1069,7 @@ parse_label(struct parse *p, struct labelq *q)
  * comments.
  * If this is the case, emit a warning.
  */
-static int
+int
 parse_comment(struct parse *p, char **doc)
 {
 
@@ -2467,138 +2392,6 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 		parse_config_search_params(p, srch);
 }
 
-/*
- * Parse an enumeration item whose value may be defined or automatically
- * assigned at link time.  Its syntax is:
- *
- *  "item" ident [value]? ["comment" quoted_string]? ";"
- *
- * The identifier has already been parsed: this starts at the value.
- * Both the identifier and the value (if provided) must be unique within
- * the parent enumeration.
- */
-static void
-parse_enum_item(struct parse *p, struct eitem *ei)
-{
-	struct eitem	*eei;
-	const char	*next;
-
-	if (parse_next(p) == TOK_INTEGER) {
-		ei->value = p->last.integer;
-		TAILQ_FOREACH(eei, &ei->parent->eq, entries) {
-			if (ei == eei || (eei->flags & EITEM_AUTO) ||
-			    ei->value != eei->value) 
-				continue;
-			parse_errx(p, "duplicate enum item value");
-			return;
-		}
-		parse_next(p);
-	} else
-		ei->flags |= EITEM_AUTO;
-
-	while (!PARSE_STOP(p) && p->lasttype == TOK_IDENT) {
-		next = p->last.string;
-		if (strcasecmp(next, "comment") == 0) {
-			if (!parse_comment(p, &ei->doc))
-				return;
-			parse_next(p);
-		} else if (strcasecmp(next, "jslabel") == 0) {
-			parse_label(p, &ei->labels);
-			parse_next(p);
-		} else
-			parse_errx(p, "unknown enum item attribute");
-	}
-
-	if (!PARSE_STOP(p) && p->lasttype != TOK_SEMICOLON)
-		parse_errx(p, "expected semicolon");
-}
-
-/*
- * Read an individual enumeration.
- * This opens and closes the enumeration, then reads all of the enum
- * data within.
- * Its syntax is:
- * 
- *  "{" 
- *    ["item" ident ITEM]+ 
- *    ["comment" quoted_string]?
- *  "};"
- */
-static void
-parse_enum_data(struct parse *p, struct enm *e)
-{
-	struct eitem	*ei;
-
-	if (parse_next(p) != TOK_LBRACE) {
-		parse_errx(p, "expected left brace");
-		return;
-	}
-
-	while (!PARSE_STOP(p)) {
-		if (parse_next(p) == TOK_RBRACE)
-			break;
-		if (p->lasttype != TOK_IDENT) {
-			parse_errx(p, "expected enum attribute");
-			return;
-		}
-
-		if (strcasecmp(p->last.string, "comment") == 0) {
-			if (!parse_comment(p, &e->doc))
-				return;
-			if (parse_next(p) != TOK_SEMICOLON) {
-				parse_errx(p, "expected semicolon");
-				return;
-			}
-			continue;
-		} else if (strcasecmp(p->last.string, "item")) {
-			parse_errx(p, "unknown enum attribute");
-			return;
-		}
-
-		/* Now we have a new item: validate and parse it. */
-
-		if (parse_next(p) != TOK_IDENT) {
-			parse_errx(p, "expected enum item name");
-			return;
-		} else if (!check_badidents(p, p->last.string))
-			return;
-
-		if (strcasecmp(p->last.string, "format") == 0) {
-			parse_errx(p, "cannot use reserved name");
-			return;
-		}
-
-		TAILQ_FOREACH(ei, &e->eq, entries) {
-			if (strcasecmp(ei->name, p->last.string))
-				continue;
-			parse_errx(p, "duplicate enum item name");
-			return;
-		}
-
-		if ((ei = calloc(1, sizeof(struct eitem))) == NULL) {
-			parse_err(p);
-			return;
-		}
-		TAILQ_INIT(&ei->labels);
-		TAILQ_INSERT_TAIL(&e->eq, ei, entries);
-		parse_point(p, &ei->pos);
-		ei->parent = e;
-		if ((ei->name = strdup(p->last.string)) == NULL) {
-			parse_err(p);
-			return;
-		}
-		parse_enum_item(p, ei);
-	}
-
-	if (PARSE_STOP(p))
-		return;
-
-	if (parse_next(p) != TOK_SEMICOLON)
-		parse_errx(p, "expected semicolon");
-	else if (TAILQ_EMPTY(&e->eq))
-		parse_errx(p, "no items in enum");
-}
-
 static int
 roleset_alloc(struct parse *p, struct rolesetq *rq, 
 	const char *name, struct rolemap *parent)
@@ -2929,267 +2722,6 @@ parse_struct_data(struct parse *p, struct strct *s)
 }
 
 /*
- * Parse a bitfield item with syntax:
- *
- *  NUMBER ["comment" quoted_string]? ";"
- */
-static void
-parse_bitidx_item(struct parse *p, struct bitidx *bi)
-{
-	struct bitidx	*bbi;
-
-	if (TOK_INTEGER != parse_next(p)) {
-		parse_errx(p, "expected item value");
-		return;
-	}
-
-	bi->value = p->last.integer;
-	if (bi->value < 0 || bi->value >= 64) {
-		parse_errx(p, "bit index out of range");
-		return;
-	} else if (bi->value >= 32)
-		parse_warnx(p, "bit index will not work with "
-			"JavaScript applications (32-bit)");
-
-	TAILQ_FOREACH(bbi, &bi->parent->bq, entries) 
-		if (bi != bbi && bi->value == bbi->value) {
-			parse_errx(p, "duplicate item value");
-			return;
-		}
-
-	while ( ! PARSE_STOP(p) && TOK_IDENT == parse_next(p))
-		if (0 == strcasecmp(p->last.string, "comment"))
-			parse_comment(p, &bi->doc);
-		else if (0 == strcasecmp(p->last.string, "jslabel"))
-			parse_label(p, &bi->labels);
-		else
-			parse_errx(p, "unknown item data type");
-
-	if ( ! PARSE_STOP(p) && TOK_SEMICOLON != p->lasttype)
-		parse_errx(p, "expected semicolon");
-}
-
-/*
- * Parse semicolon-terminated labels of special phrase.
- * Return zero on failure, non-zero on success.
- */
-static int
-parse_bitidx_label(struct parse *p, struct labelq *q)
-{
-
-	for (;;) {
-		if (TOK_SEMICOLON == parse_next(p))
-			return 1;
-		if (TOK_IDENT != p->lasttype ||
-		    strcasecmp(p->last.string, "jslabel")) {
-			parse_errx(p, "expected \"jslabel\"");
-			return 0;
-		} 
-		if ( ! parse_label(p, q))
-			return 0;
-	}
-}
-
-/*
- * Parse a full bitfield index.
- * Its syntax is:
- *
- *  "{" 
- *    ["item" ident ITEM]+ 
- *    ["comment" quoted_string]?
- *  "};"
- *
- *  The "ITEM" clause is handled by parse_bididx_item.
- */
-static void
-parse_bitidx(struct parse *p, struct bitf *b)
-{
-	struct bitidx	*bi;
-
-	if (TOK_LBRACE != parse_next(p)) {
-		parse_errx(p, "expected left brace");
-		return;
-	}
-
-	while ( ! PARSE_STOP(p)) {
-		if (TOK_RBRACE == parse_next(p))
-			break;
-		if (TOK_IDENT != p->lasttype) {
-			parse_errx(p, "expected bitfield data type");
-			return;
-		}
-
-		if (0 == strcasecmp(p->last.string, "comment")) {
-			if ( ! parse_comment(p, &b->doc))
-				return;
-			if (TOK_SEMICOLON != parse_next(p)) {
-				parse_errx(p, "expected end of comment");
-				return;
-			}
-			continue;
-		} else if (0 == strcasecmp(p->last.string, "isunset") ||
-		  	   0 == strcasecmp(p->last.string, "unset")) {
-			if (0 == strcasecmp(p->last.string, "unset"))
-				parse_warnx(p, "\"unset\" is "
-					"deprecated: use \"isunset\"");
-			if ( ! parse_bitidx_label(p, &b->labels_unset))
-				return;
-			continue;
-		} else if (0 == strcasecmp(p->last.string, "isnull")) {
-			if ( ! parse_bitidx_label(p, &b->labels_null))
-				return;
-			continue;
-		} else if (strcasecmp(p->last.string, "item")) {
-			parse_errx(p, "unknown bitfield data type");
-			return;
-		}
-
-		/* Now we have a new item: validate and parse it. */
-
-		if (TOK_IDENT != parse_next(p)) {
-			parse_errx(p, "expected item name");
-			return;
-		} else if (!check_badidents(p, p->last.string))
-			return;
-
-		TAILQ_FOREACH(bi, &b->bq, entries) {
-			if (strcasecmp(bi->name, p->last.string))
-				continue;
-			parse_errx(p, "duplicate item name");
-			return;
-		}
-
-		if (NULL == (bi = calloc(1, sizeof(struct bitidx)))) {
-			parse_err(p);
-			return;
-		}
-		TAILQ_INIT(&bi->labels);
-		parse_point(p, &bi->pos);
-		TAILQ_INSERT_TAIL(&b->bq, bi, entries);
-		bi->parent = b;
-		if (NULL == (bi->name = strdup(p->last.string))) {
-			parse_err(p);
-			return;
-		}
-		parse_bitidx_item(p, bi);
-	}
-
-	if (PARSE_STOP(p))
-		return;
-
-	if (TOK_SEMICOLON != parse_next(p))
-		parse_errx(p, "expected semicolon");
-	else if (TAILQ_EMPTY(&b->bq))
-		parse_errx(p, "no items in bitfield");
-}
-
-/*
- * Parse a "bitf", which is a named set of bit indices.
- * Its syntax is:
- *
- *  "bitf" name "{" ... "};"
- */
-static void
-parse_bitfield(struct parse *p)
-{
-	struct bitf	*b;
-	char		*caps;
-
-	/* 
-	 * Disallow duplicate and bad names.
-	 * Duplicates are for both structures and enumerations.
-	 */
-
-	if (!check_dupetoplevel(p, p->last.string) ||
-	    !check_badidents(p, p->last.string))
-		return;
-
-	if (NULL == (b = calloc(1, sizeof(struct bitf)))) {
-		parse_err(p);
-		return;
-	}
-	TAILQ_INIT(&b->labels_unset);
-	TAILQ_INIT(&b->labels_null);
-	parse_point(p, &b->pos);
-	TAILQ_INSERT_TAIL(&p->cfg->bq, b, entries);
-	TAILQ_INIT(&b->bq);
-	if (NULL == (b->name = strdup(p->last.string))) {
-		parse_err(p);
-		return;
-	}
-	if (NULL == (b->cname = strdup(b->name))) {
-		parse_err(p);
-		return;
-	}
-	for (caps = b->cname; '\0' != *caps; caps++)
-		*caps = toupper((int)*caps);
-
-	parse_bitidx(p, b);
-}
-
-/*
- * Verify and allocate an enum, then start parsing it.
- */
-static void
-parse_enum(struct parse *p)
-{
-	struct enm	*e;
-	struct eitem	*ei;
-	char		*caps;
-	int		 foundauto = 0;
-	int64_t		 maxv = INT64_MIN;
-
-	/* 
-	 * Disallow duplicate and bad names.
-	 * Duplicates are for both structures and enumerations.
-	 */
-
-	if (!check_dupetoplevel(p, p->last.string) ||
-	    !check_badidents(p, p->last.string))
-		return;
-
-	if ((e = calloc(1, sizeof(struct enm))) == NULL) {
-		parse_err(p);
-		return;
-	}
-
-	parse_point(p, &e->pos);
-	TAILQ_INSERT_TAIL(&p->cfg->eq, e, entries);
-	TAILQ_INIT(&e->eq);
-
-	if ((e->name = strdup(p->last.string)) == NULL) {
-		parse_err(p);
-		return;
-	}
-	if ((e->cname = strdup(e->name)) == NULL) {
-		parse_err(p);
-		return;
-	}
-
-	for (caps = e->cname; *caps != '\0'; caps++)
-		*caps = toupper((int)*caps);
-
-	parse_enum_data(p, e);
-
-	/* Get the sup(max) bount below at zero. */
-
-	TAILQ_FOREACH(ei, &e->eq, entries)
-		if (!(ei->flags & EITEM_AUTO) && ei->value > maxv) {
-			maxv = ei->value;
-			foundauto = 1;
-		}
-
-	/* Auto-assign values, if not given. */
-
-	if (foundauto) {
-		maxv = maxv < 0 ? 0 : maxv + 1;
-		TAILQ_FOREACH(ei, &e->eq, entries)
-			if (ei->flags & EITEM_AUTO)
-				ei->value = maxv++;
-	}
-}
-
-/*
  * Return zero if the name already exists, non-zero otherwise.
  * This is a recursive function.
  */
@@ -3266,7 +2798,7 @@ parse_role(struct parse *p, struct role *parent)
 	} else if (!check_rolename(&p->cfg->rq, p->last.string)) {
 		parse_errx(p, "duplicate role name");
 		return;
-	} else if (!check_badidents(p, p->last.string))
+	} else if (!parse_check_badidents(p, p->last.string))
 		return;
 
 	if (NULL == (r = role_alloc(p, p->last.string, parent)))

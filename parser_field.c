@@ -210,6 +210,11 @@ parse_field_info(struct parse *p, struct field *fd)
 		}
 
 		if (strcasecmp(p->last.string, "rowid") == 0) {
+			if (fd->parent->rowid != NULL) {
+				parse_errx(p, "multiple rowids");
+				break;
+			}
+
 			/*
 			 * This must be on an integer type, must not be
 			 * on a foreign key reference, must not have its

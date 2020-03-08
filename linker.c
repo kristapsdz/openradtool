@@ -96,26 +96,6 @@ gen_errx(struct config *cfg,
 }
 
 /*
- * Check that a given row identifier is valid.
- * The rules are that only one row identifier can exist on a structure
- * and that it must happen on a native type.
- * Return non-zero on success, zero on failure.
- */
-static int
-checkrowid(struct config *cfg, const struct field *f, int hasrowid)
-{
-
-	if (hasrowid)
-		gen_errx(cfg, &f->pos, "multiple rowids");
-	else if (FTYPE_STRUCT == f->type)
-		gen_errx(cfg, &f->pos, "rowid on non-native type");
-	else
-		return(1);
-
-	return(0);
-}
-
-/*
  * Check the source field (case insensitive).
  * This applies to all reference types, "struct" and otherwise.
  * Return zero on failure, non-zero on success.
@@ -1468,22 +1448,12 @@ ort_parse_close(struct config *cfg)
 	struct unique	 *n;
 	struct rolemap	 *rm;
 	struct search	 *srch;
-	size_t		  colour = 1, sz = 0, i, hasrowid = 0;
+	size_t		  colour = 1, sz = 0, i;
 	ssize_t		  rc;
 
 	if (TAILQ_EMPTY(&cfg->sq)) {
 		gen_errx(cfg, NULL, "no structures in configuration");
 		return 0;
-	}
-
-	/* Check for row identifier validity. */
-
-	TAILQ_FOREACH(p, &cfg->sq, entries) {
-		hasrowid = 0;
-		TAILQ_FOREACH(f, &p->fq, entries)
-			if (FIELD_ROWID & f->flags &&
-			    ! checkrowid(cfg, f, hasrowid++))
-				return 0;
 	}
 
 	/* 

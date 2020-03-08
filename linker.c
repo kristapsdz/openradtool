@@ -1451,24 +1451,6 @@ check_reffind(struct config *cfg, const struct strct *p)
 	return 0;
 }
 
-static void
-resolve_enum_auto(struct config *cfg, struct enm *en)
-{
-	struct eitem	*ei;
-	int64_t		 v = INT64_MIN;
-
-	TAILQ_FOREACH(ei, &en->eq, entries)
-		if ( ! (EITEM_AUTO & ei->flags))
-			if (ei->value > v)
-				v = ei->value;
-
-	v = v < 0 ? 0 : v + 1;
-
-	TAILQ_FOREACH(ei, &en->eq, entries)
-		if (EITEM_AUTO & ei->flags)
-			ei->value = v++;
-}
-
 /*
  * This is the "linking" phase where a fully-parsed configuration file
  * has its components linked together and checked for correctness.
@@ -1486,7 +1468,6 @@ ort_parse_close(struct config *cfg)
 	struct unique	 *n;
 	struct rolemap	 *rm;
 	struct search	 *srch;
-	struct enm	 *en;
 	size_t		  colour = 1, sz = 0, i, hasrowid = 0;
 	ssize_t		  rc;
 
@@ -1494,10 +1475,6 @@ ort_parse_close(struct config *cfg)
 		gen_errx(cfg, NULL, "no structures in configuration");
 		return 0;
 	}
-
-	TAILQ_FOREACH(en, &cfg->eq, entries)
-		if (ENM_AUTO & en->flags)
-			resolve_enum_auto(cfg, en);
 
 	/* Check for row identifier validity. */
 

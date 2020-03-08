@@ -2487,35 +2487,33 @@ parse_enum_item(struct parse *p, struct eitem *ei)
 	struct eitem	*eei;
 	const char	*next;
 
-	if (TOK_INTEGER == parse_next(p)) {
+	if (parse_next(p) == TOK_INTEGER) {
 		ei->value = p->last.integer;
 		TAILQ_FOREACH(eei, &ei->parent->eq, entries) {
-			if (ei == eei || (EITEM_AUTO & eei->flags) ||
+			if (ei == eei || (eei->flags & EITEM_AUTO) ||
 			    ei->value != eei->value) 
 				continue;
 			parse_errx(p, "duplicate enum item value");
 			return;
 		}
 		parse_next(p);
-	} else {
+	} else
 		ei->flags |= EITEM_AUTO;
-		ei->parent->flags |= ENM_AUTO;
-	}
 
-	while ( ! PARSE_STOP(p) && TOK_IDENT == p->lasttype) {
+	while (!PARSE_STOP(p) && p->lasttype == TOK_IDENT) {
 		next = p->last.string;
-		if (0 == strcasecmp(next, "comment")) {
-			if ( ! parse_comment(p, &ei->doc))
+		if (strcasecmp(next, "comment") == 0) {
+			if (!parse_comment(p, &ei->doc))
 				return;
 			parse_next(p);
-		} else if (0 == strcasecmp(next, "jslabel")) {
+		} else if (strcasecmp(next, "jslabel") == 0) {
 			parse_label(p, &ei->labels);
 			parse_next(p);
 		} else
 			parse_errx(p, "unknown enum item attribute");
 	}
 
-	if ( ! PARSE_STOP(p) && TOK_SEMICOLON != p->lasttype)
+	if (!PARSE_STOP(p) && p->lasttype != TOK_SEMICOLON)
 		parse_errx(p, "expected semicolon");
 }
 
@@ -2535,23 +2533,23 @@ parse_enum_data(struct parse *p, struct enm *e)
 {
 	struct eitem	*ei;
 
-	if (TOK_LBRACE != parse_next(p)) {
+	if (parse_next(p) != TOK_LBRACE) {
 		parse_errx(p, "expected left brace");
 		return;
 	}
 
-	while ( ! PARSE_STOP(p)) {
-		if (TOK_RBRACE == parse_next(p))
+	while (!PARSE_STOP(p)) {
+		if (parse_next(p) == TOK_RBRACE)
 			break;
-		if (TOK_IDENT != p->lasttype) {
+		if (p->lasttype != TOK_IDENT) {
 			parse_errx(p, "expected enum attribute");
 			return;
 		}
 
-		if (0 == strcasecmp(p->last.string, "comment")) {
-			if ( ! parse_comment(p, &e->doc))
+		if (strcasecmp(p->last.string, "comment") == 0) {
+			if (!parse_comment(p, &e->doc))
 				return;
-			if (TOK_SEMICOLON != parse_next(p)) {
+			if (parse_next(p) != TOK_SEMICOLON) {
 				parse_errx(p, "expected semicolon");
 				return;
 			}
@@ -2563,13 +2561,13 @@ parse_enum_data(struct parse *p, struct enm *e)
 
 		/* Now we have a new item: validate and parse it. */
 
-		if (TOK_IDENT != parse_next(p)) {
+		if (parse_next(p) != TOK_IDENT) {
 			parse_errx(p, "expected enum item name");
 			return;
 		} else if (!check_badidents(p, p->last.string))
 			return;
 
-		if (0 == strcasecmp(p->last.string, "format")) {
+		if (strcasecmp(p->last.string, "format") == 0) {
 			parse_errx(p, "cannot use reserved name");
 			return;
 		}
@@ -2581,7 +2579,7 @@ parse_enum_data(struct parse *p, struct enm *e)
 			return;
 		}
 
-		if (NULL == (ei = calloc(1, sizeof(struct eitem)))) {
+		if ((ei = calloc(1, sizeof(struct eitem))) == NULL) {
 			parse_err(p);
 			return;
 		}
@@ -2589,7 +2587,7 @@ parse_enum_data(struct parse *p, struct enm *e)
 		TAILQ_INSERT_TAIL(&e->eq, ei, entries);
 		parse_point(p, &ei->pos);
 		ei->parent = e;
-		if (NULL == (ei->name = strdup(p->last.string))) {
+		if ((ei->name = strdup(p->last.string)) == NULL) {
 			parse_err(p);
 			return;
 		}
@@ -2599,7 +2597,7 @@ parse_enum_data(struct parse *p, struct enm *e)
 	if (PARSE_STOP(p))
 		return;
 
-	if (TOK_SEMICOLON != parse_next(p))
+	if (parse_next(p) != TOK_SEMICOLON)
 		parse_errx(p, "expected semicolon");
 	else if (TAILQ_EMPTY(&e->eq))
 		parse_errx(p, "no items in enum");
@@ -3140,7 +3138,10 @@ static void
 parse_enum(struct parse *p)
 {
 	struct enm	*e;
+	struct eitem	*ei;
 	char		*caps;
+	int		 foundauto = 0;
+	int64_t		 maxv = INT64_MIN;
 
 	/* 
 	 * Disallow duplicate and bad names.
@@ -3151,25 +3152,45 @@ parse_enum(struct parse *p)
 	    !check_badidents(p, p->last.string))
 		return;
 
-	if (NULL == (e = calloc(1, sizeof(struct enm)))) {
+	if ((e = calloc(1, sizeof(struct enm))) == NULL) {
 		parse_err(p);
 		return;
 	}
+
 	parse_point(p, &e->pos);
 	TAILQ_INSERT_TAIL(&p->cfg->eq, e, entries);
 	TAILQ_INIT(&e->eq);
-	if (NULL == (e->name = strdup(p->last.string))) {
+
+	if ((e->name = strdup(p->last.string)) == NULL) {
 		parse_err(p);
 		return;
 	}
-	if (NULL == (e->cname = strdup(e->name))) {
+	if ((e->cname = strdup(e->name)) == NULL) {
 		parse_err(p);
 		return;
 	}
-	for (caps = e->cname; '\0' != *caps; caps++)
+
+	for (caps = e->cname; *caps != '\0'; caps++)
 		*caps = toupper((int)*caps);
 
 	parse_enum_data(p, e);
+
+	/* Get the sup(max) bount below at zero. */
+
+	TAILQ_FOREACH(ei, &e->eq, entries)
+		if (!(ei->flags & EITEM_AUTO) && ei->value > maxv) {
+			maxv = ei->value;
+			foundauto = 1;
+		}
+
+	/* Auto-assign values, if not given. */
+
+	if (foundauto) {
+		maxv = maxv < 0 ? 0 : maxv + 1;
+		TAILQ_FOREACH(ei, &e->eq, entries)
+			if (ei->flags & EITEM_AUTO)
+				ei->value = maxv++;
+	}
 }
 
 /*

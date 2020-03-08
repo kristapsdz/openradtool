@@ -719,7 +719,7 @@ parse_write_enm(struct writer *w,
 	TAILQ_FOREACH(e, &p->eq, entries) {
 		if ( ! wprint(w, "\titem %s", e->name))
 			return 0;
-		if ( ! (ENM_AUTO & e->flags))
+		if ( ! (EITEM_AUTO & e->flags))
 			if ( ! wprint(w, " %" PRId64, e->value))
 				return 0;
 		TAILQ_FOREACH(l, &e->labels, entries)

@@ -152,8 +152,6 @@ struct	enm {
 	char		*doc; /* documentation */
 	struct pos	 pos; /* parse point */
 	struct eitemq	 eq; /* items in enumeration */
-	unsigned int	 flags;
-#define	ENM_AUTO	 0x01 /* has auto-numbering */
 	TAILQ_ENTRY(enm) entries;
 };
 

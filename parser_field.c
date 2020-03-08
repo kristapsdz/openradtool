@@ -197,7 +197,7 @@ parse_action(struct parse *p, enum upact *act)
  * This will continue processing until the semicolon is reached.
  */
 static void
-parse_config_field_info(struct parse *p, struct field *fd)
+parse_field_info(struct parse *p, struct field *fd)
 {
 	struct tm	 tm;
 
@@ -486,6 +486,53 @@ parse_field_struct(struct parse *p, struct field *fd)
 }
 
 /*
+ * Allocate and initialise a field "name" in struct "s", returning the
+ * new field or NULL on memory allocation failure or bad name.
+ */
+static struct field *
+field_alloc(struct parse *p, struct strct *s, const char *name)
+{
+	struct field	  *fd;
+
+	/* Check reserved identifiers. */
+
+	if (!parse_check_badidents(p, name)) {
+		parse_errx(p, "reserved identifier");
+		return NULL;
+	}
+
+	/* Check other fields in struct having same name. */
+
+	TAILQ_FOREACH(fd, &s->fq, entries) {
+		if (strcasecmp(fd->name, name))
+			continue;
+		parse_errx(p, "duplicate field name: "
+			"%s:%zu:%zu", fd->pos.fname, 
+			fd->pos.line, fd->pos.column);
+		return NULL;
+	}
+
+	/* Now the actual allocation. */
+
+	if (NULL == (fd = calloc(1, sizeof(struct field)))) {
+		parse_err(p);
+		return NULL;
+	} else if (NULL == (fd->name = strdup(name))) {
+		parse_err(p);
+		free(fd);
+		return NULL;
+	}
+
+	parse_point(p, &fd->pos);
+	fd->type = FTYPE_INT;
+	fd->parent = s;
+	TAILQ_INIT(&fd->fvq);
+	TAILQ_INSERT_TAIL(&s->fq, fd, entries);
+	return fd;
+}
+
+
+/*
  * Read an individual field declaration with syntax
  *
  *   [:refstruct.reffield] TYPE TYPEINFO
@@ -496,12 +543,19 @@ parse_field_struct(struct parse *p, struct field *fd)
  * A "struct" type triggers a local key reference: it must point to a
  * local foreign key field.
  * The TYPEINFO depends upon the type and is processed by
- * parse_config_field_info(), which must always be run.
+ * parse_field_info(), which must always be run.
  */
 void
-parse_field(struct parse *p, struct field *fd)
+parse_field(struct parse *p, struct strct *s)
 {
-	size_t	 i;
+	size_t	 	 i;
+	struct field	*fd;
+
+	if (parse_next(p) != TOK_IDENT) {
+		parse_errx(p, "expected field name");
+		return;
+	} 
+	fd = field_alloc(p, s, p->last.string);
 
 	if (parse_next(p) == TOK_SEMICOLON)
 		return;
@@ -548,7 +602,7 @@ parse_field(struct parse *p, struct field *fd)
 			parse_field_struct(p, fd);
 		else if (fd->type == FTYPE_BLOB)
 			fd->parent->flags |= STRCT_HAS_BLOB;
-		parse_config_field_info(p, fd);
+		parse_field_info(p, fd);
 		return;
 	case FTYPE__MAX:
 		break;

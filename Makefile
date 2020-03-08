@@ -16,6 +16,7 @@ LIBOBJS		 = comments.o \
 		   parser_enum.o \
 		   parser_field.o \
 		   parser_roles.o \
+		   parser_struct.o \
 		   printer.o \
 		   protos.o \
 		   writer.o

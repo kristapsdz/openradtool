@@ -14,6 +14,7 @@ LIBOBJS		 = comments.o \
 		   parser.o \
 		   parser_bitfield.o \
 		   parser_enum.o \
+		   parser_field.o \
 		   parser_roles.o \
 		   printer.o \
 		   protos.o \
@@ -198,7 +199,7 @@ version.h: Makefile
 
 header.o source.o: version.h
 	
-parser.o parser_bitfield.o parser_enum.o parser_roles.o: parser.h
+parser.o parser_bitfield.o parser_enum.o parser_roles.o parser_field.o: parser.h
 
 paths.h: Makefile
 	( echo "#define SHAREDIR \"$(SHAREDIR)/openradtool\"" ; \

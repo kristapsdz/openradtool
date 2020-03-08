@@ -106,6 +106,7 @@ void		parse_warnx(struct parse *, const char *, ...)
 
 void		parse_bitfield(struct parse *);
 void		parse_enum(struct parse *);
+void		parse_field(struct parse *, struct field *);
 void		parse_roles(struct parse *);
 
 #endif /* !PARSER_H */

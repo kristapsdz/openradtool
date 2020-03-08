@@ -156,8 +156,8 @@ parse_free_ordq(struct ordq *q)
  * Free a distinct series.
  * Does nothing if "p" is NULL.
  */
-void
-ort_config_free_distinct(struct dstnct *p)
+static void
+parse_free_distinct(struct dstnct *p)
 {
 	struct dref	*d;
 
@@ -186,7 +186,7 @@ parse_free_search(struct search *p)
 	if (NULL == p)
 		return;
 
-	ort_config_free_distinct(p->dst);
+	parse_free_distinct(p->dst);
 	parse_free_aggr(p->aggr);
 	parse_free_ordq(&p->ordq);
 	parse_free_group(p->group);

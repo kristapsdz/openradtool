@@ -1670,10 +1670,9 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 	void		*pp;
 
 	if (srch->dst != NULL) {
-		parse_warnx(p, "redeclaring distinct");
-		ort_config_free_distinct(srch->dst);
-		srch->dst = NULL;
-	} 
+		parse_errx(p, "redeclaring distinct");
+		return;
+	}
 
 	if ((d = calloc(1, sizeof(struct dstnct))) == NULL) {
 		parse_err(p);

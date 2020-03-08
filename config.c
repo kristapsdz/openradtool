@@ -92,8 +92,8 @@ parse_free_sref(struct sref *p)
  * Free the aggregate and its pointer.
  * Passing a NULL pointer is a noop.
  */
-void
-ort_config_free_aggr(struct aggr *aggr)
+static void
+parse_free_aggr(struct aggr *aggr)
 {
 	struct sref	*ref;
 
@@ -187,7 +187,7 @@ parse_free_search(struct search *p)
 		return;
 
 	ort_config_free_distinct(p->dst);
-	ort_config_free_aggr(p->aggr);
+	parse_free_aggr(p->aggr);
 	parse_free_ordq(&p->ordq);
 	parse_free_group(p->group);
 

@@ -1743,13 +1743,10 @@ parse_config_aggr_terms(struct parse *p,
 	struct sref	*af;
 	struct aggr	*aggr;
 
-	if (NULL != srch->aggr) {
+	if (srch->aggr != NULL) {
 		parse_errx(p, "redeclaring aggregate term");
-		ort_config_free_aggr(srch->aggr);
-		srch->aggr = NULL;
-	}
-
-	if (TOK_IDENT != p->lasttype) {
+		return;
+	} else if (p->lasttype != TOK_IDENT) {
 		parse_errx(p, "expected aggregate identifier");
 		return;
 	} else if ((aggr = calloc(1, sizeof(struct aggr))) == NULL) {

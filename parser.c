@@ -619,8 +619,7 @@ again:
 }
 
 /*
- * Parse the quoted_string part following "jslabel".
- * Its syntax is:
+ * Parse the quoted_string part following "jslabel":
  *
  *   jslabel ["." language] string_literal
  *
@@ -734,15 +733,15 @@ int
 parse_comment(struct parse *p, char **doc)
 {
 
-	if (TOK_LITERAL != parse_next(p)) {
+	if (parse_next(p) != TOK_LITERAL) {
 		parse_errx(p, "expected quoted string");
 		return 0;
-	} else if (NULL != *doc) {
+	} else if (*doc != NULL) {
 		parse_warnx(p, "redeclaring comment");
 		free(*doc);
 	}
 
-	if (NULL == (*doc = strdup(p->last.string))) {
+	if ((*doc = strdup(p->last.string)) == NULL) {
 		parse_err(p);
 		return 0;
 	}
@@ -751,61 +750,45 @@ parse_comment(struct parse *p, char **doc)
 }
 
 /*
- * Top-level parse.
- * Read until we reach an identifier for a structure.
- * Once we reach one, parse for that structure.
- * Then continue until we've read all structures.
- * Its syntax is:
+ * Re-entrant top-level parse with syntax:
  *
- *  [ "struct" ident STRUCT | "enum" ident ENUM ]+
- *
- * Where STRUCT is defined in parse_struct_data and ident is a unique,
- * alphanumeric (starting with alpha), non-reserved string.
+ *  [ "struct" ident STRUCT | 
+ *    "enum" ident ENUM |
+ *    "bitfield" ident BITFIELD |
+ *    "roles" ident ROLESET ]*
  *
  * Returns zero on failure, non-zero otherwise.
+ * This doesn't guarantee that anything has actually been parsed: this
+ * must be done after invoking parse_root() for as many input blocks as
+ * possible.
  */
 static int
-ort_parse_r(struct parse *p)
+parse_root(struct parse *p)
 {
 
 	for (;;) {
-		if (TOK_ERR == parse_next(p))
+		if (parse_next(p) == TOK_ERR)
 			return 0;
-		else if (TOK_EOF == p->lasttype)
+		else if (p->lasttype == TOK_EOF)
 			break;
 
 		/* Our top-level identifier. */
 
-		if (TOK_IDENT != p->lasttype) {
+		if (p->lasttype != TOK_IDENT) {
 			parse_errx(p, "expected top-level type");
 			continue;
 		}
 
-		/* Parse whether we're struct, enum, or roles. */
-
-		if (0 == strcasecmp(p->last.string, "roles")) {
+		if (strcasecmp(p->last.string, "roles") == 0)
 			parse_roles(p);
-			continue;
-		} else if (0 == strcasecmp(p->last.string, "struct")) {
-			if (TOK_IDENT == parse_next(p)) {
-				parse_struct(p);
-				continue;
-			}
-			parse_errx(p, "expected struct name");
-		} else if (0 == strcasecmp(p->last.string, "enum")) {
-			if (TOK_IDENT == parse_next(p)) {
-				parse_enum(p);
-				continue;
-			}
-			parse_errx(p, "expected enum name");
-		} else if (0 == strcasecmp(p->last.string, "bits") ||
-		           0 == strcasecmp(p->last.string, "bitfield")) {
-			if (TOK_IDENT == parse_next(p)) {
-				parse_bitfield(p);
-				continue;
-			}
-			parse_errx(p, "expected bitfield name");
-		} else
+		else if (strcasecmp(p->last.string, "struct") == 0)
+			parse_struct(p);
+		else if (strcasecmp(p->last.string, "enum") == 0)
+			parse_enum(p);
+		else if (strcasecmp(p->last.string, "bits") == 0 ||
+		         strcasecmp(p->last.string, "bitfield") == 0)
+			parse_bitfield(p);
+		else
 			parse_errx(p, "unknown top-level type");
 	}
 
@@ -847,7 +830,7 @@ ort_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 	p.infile.f = f;
 	p.type = PARSETYPE_FILE;
 	p.cfg = cfg;
-	rc = ort_parse_r(&p);
+	rc = parse_root(&p);
 	free(p.buf);
 	return rc;
 }
@@ -895,7 +878,7 @@ ort_parse_buf(const char *buf, size_t len)
 	p.inbuf.len = len;
 	p.type = PARSETYPE_BUF;
 	p.cfg = cfg;
-	rc = ort_parse_r(&p);
+	rc = parse_root(&p);
 	free(p.buf);
 
 	if (!rc || !ort_parse_close(cfg)) {

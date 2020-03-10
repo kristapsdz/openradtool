@@ -176,6 +176,11 @@ parse_enum(struct parse *p)
 	int		 foundauto = 0;
 	int64_t		 maxv = INT64_MIN;
 
+	if (parse_next(p) != TOK_IDENT) {
+		parse_errx(p, "expected enum name");
+		return;
+	}
+
 	/* Disallow top-level duplicate names and bad names. */
 
 	if (!parse_check_dupetoplevel(p, p->last.string) ||

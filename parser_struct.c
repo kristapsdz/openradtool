@@ -1393,6 +1393,10 @@ parse_struct(struct parse *p)
 	struct strct	*s;
 	struct pos	 pos;
 
+	if (parse_next(p) != TOK_IDENT) {
+		parse_errx(p, "expected struct name");
+		return;
+	}
 	parse_point(p, &pos);
 	if ((s = strct_alloc(p, p->last.string)) == NULL)
 		return;

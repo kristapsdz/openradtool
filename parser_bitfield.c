@@ -199,6 +199,11 @@ parse_bitfield(struct parse *p)
 	struct bitf	*b;
 	char		*caps;
 
+	if (parse_next(p) != TOK_IDENT) {
+		parse_errx(p, "expected bitfield name");
+		return;
+	}
+
 	/* 
 	 * Disallow duplicate and bad names.
 	 * Duplicates are for both structures and enumerations.

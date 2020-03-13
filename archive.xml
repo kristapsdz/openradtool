@@ -7,6 +7,7 @@
 		<link rel="alternate" href="atom.xml" type="application/atom+xml" title="openradtool version feed" />
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Alegreya+Sans:400,400italic,500" />
+		<link rel="stylesheet" href="https://www.bsd.lv/css/style.css" />
 		<link rel="stylesheet" href="highlight.css" />
 		<link rel="stylesheet" href="index.css" />
 	</head>
@@ -38,15 +39,19 @@
 					<a href="snapshots/openradtool.tar.gz">source</a>
 					<a href="snapshots">archive</a>
 					<a href="archive.html">releases</a>
-					<a href="atom.xml"><i class="fa fa-rss"></i></a>
+					<a href="https://kristaps.bsd.lv/cgi-bin/minci.cgi/index.html?project-name=openradtool">builds</a>
+					<a href="atom.xml">feed</a>
 				</nav>
 			</section>
 		</header>
 		<article>
-			<section id="archive">
+			<nav>
+				<span>releases&#8230;</span>
+			</nav>
+			<section class="text">
 				<p>
-					This consists of all releases of <span class="nm">openradtool</span> (n&#x00e9;e <span
-						class="nm">kwebapp</span>).
+					This is a log of all <span class="nm">openradtool</span> (n&#x00e9;e <span
+						class="nm">kwebapp</span>) releases.
 					The <a href="atom.xml">Atom feed</a> or <a href="https://github.com/kristapsdz/openradtool">GitHub</a>
 					may also be used to keep track of new versions programmatically.
 				</p>

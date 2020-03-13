@@ -5,8 +5,8 @@
 		<meta charset="utf-8" /> 
 		<title>openradtool | application source generator</title>
 		<link rel="alternate" href="atom.xml" type="application/atom+xml" title="openradtool version feed" />
-		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Alegreya+Sans:400,400italic,500" />
+		<link rel="stylesheet" href="https://www.bsd.lv/css/style.css" />
 		<link rel="stylesheet" href="highlight.css" />
 		<link rel="stylesheet" href="index.css" />
 		<meta property="og:title" content="openradtool: application source generator" />
@@ -43,7 +43,8 @@
 					<a href="snapshots/openradtool.tar.gz">source</a>
 					<a href="snapshots">archive</a>
 					<a href="archive.html">releases</a>
-					<a href="atom.xml"><i class="fa fa-rss"></i></a>
+					<a href="https://kristaps.bsd.lv/cgi-bin/minci.cgi/index.html?project-name=openradtool">builds</a>
+					<a href="atom.xml">feed</a>
 				</nav>
 			</section>
 		</header>
@@ -51,31 +52,26 @@
 			<nav>
 				<span>introduction&#8230;</span>
 			</nav>
-			<section>
+			<section class="text">
 				<div id="intro">
-					<figure class="show-only-small">
+					<figure>
 						<img src="index-fig7.svg" alt="ort(5) to output" />
 					</figure>
-					<figure class="show-only-big">
-						<img src="index-fig0.svg" alt="ort(5) to output" />
-					</figure>
-					<div class="window">
-						<p class="intro">
-							<span class="nm">openradtool</span> (<q class="nm">ort</q>) is an <a
-								href="https://opensource.org/licenses/ISC">open source</a> RAD tool generating
-							front-end code (JavaScript, TypeScript) and back-end code (SQL, C) from a
-							straightforward data model configuration.
-						</p>
-						<p>
-							The system consists of a set of source generators or analytical tools, each accepting a
-							<a href="ort.5.html">ort(5)</a> configuration that describes your data and how it is
-							accessed, modified, created, deleted.  Generated sources have a strong focus on
-							security, documentation, and auditability.
-						</p>
-					</div>
+					<p class="intro">
+						<span class="nm">openradtool</span> (<q class="nm">ort</q>) is an <a
+							href="https://opensource.org/licenses/ISC">open source</a> RAD tool generating
+						front-end code (JavaScript, TypeScript) and back-end code (SQL, C) from a
+						straightforward data model configuration.
+					</p>
 				</div>
-				<p class="explain">
-					<span class="nm">ort</span> tools manage or generate the following application components.
+				<p>
+					The system consists of a set of source generators or analytical tools, each accepting a
+					<a href="ort.5.html">ort(5)</a> configuration that describes your data and how it is
+					accessed, modified, created, deleted.  Generated sources have a strong focus on
+					security, documentation, and auditability.
+				</p>
+				<p>
+					The tools manage or generate the following application components.
 				</p>
 				<ul id="topicboxes">
 					<li>
@@ -123,7 +119,7 @@
 						</span>
 					</li>
 				</ul>
-				<p class="explain">
+				<p>
 					See the <a href="https://github.com/kristapsdz/openradtool">GitHub</a> repository for installation and issue
 					tracking.
 					<span class="nm">openradtool</span> is a <a href="https://www.bsd.lv">BSD.lv</a> project, n&#x00e9;e
@@ -133,8 +129,8 @@
 			<nav id="usage">
 				<span>usage&#8230;</span>
 			</nav>
-			<section id="usage-box">
-				<p class="explain left">
+			<section id="usage-box" class="text">
+				<p class="explain">
 					<span class="nm">ort</span> tools are designed to be operated by <a
 						href="https://man.openbsd.org/make.1">make(1)</a>: sources go in, results come out.
 					During development, Makefiles continuously keep C sources, TypeScript, translations, and so on up to

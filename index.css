@@ -1,7 +1,6 @@
 body					{ font-family: "Alegreya Sans", sans-serif; 
 					  color: #444;
 					  margin: 0;
-					  background-color: #fbfbfb; 
 					  font-weight: 400;
 				 	  font-size: 14pt; }
 a					{ color: #07889b;
@@ -10,44 +9,23 @@ body > header				{ width: 100%;
 					  padding-bottom: 32pt;
 					  background-color: #f0f0f0;
 					  color: #444;
-					  font-size: 0;
-					  margin-bottom: 2.2em;
 					  text-align: center; }
 body > header a				{ text-decoration: underline; }
 b, strong				{ font-weight: 500; }
-#intro					{ align-items: center;
-					  display: flex;
-					  margin-top: 2rem; }
-#intro > div				{ flex: 1; 
-					  margin-left: 1rem; }
 p					{ line-height: 1.3em; }
-p.explain .nm, #intro .nm		{ font-weight: 500;
-					  font-style: normal; }
-p.explain				{ text-align: center; }
-#intro ~ p.explain			{ margin-top: 3em; }
-p.explain.left				{ text-align: left; 
-					  color: #000; }
-.window					{ background-color: #fff; 
-					  color: #666;
-					  border: thin solid #eee;
-					  text-align: left;
-					  padding: 2rem;
-					  border-radius: 1rem; }
-.window .intro				{ font-size: 130%; 
-				  	  line-height: 1.2em;
-					  margin: 0; }
+p.explain				{ color: #000; }
+#intro p				{ font-size: 130%; 
+				  	  line-height: 1.3em;
+					  color: #000;
+					  margin-bottom: 3rem; }
 #topicboxes				{ border-left: thin solid #eee; 
-					  width: 80%;
-					  padding-top: 1em;
-					  padding-bottom: 1em;
-					  padding-left: 9pt; 
-					  margin: 2em auto; }
+				 	  margin-left: 4pt;
+					  padding-left: 1rem; }
 #topicboxes li 				{ padding-left: 0.5rem; }
 #topicboxes li + li			{ margin-top: 1.5em; }
 #topicboxes .topic			{ display: block; 
 					  font-weight: 500;
-					  color: #555;
-					  font-size: 130%; }
+					  color: #000; }
 #breadcrumbs > *			{ display: inline-block; 
 					  vertical-align: top;
 					  font-size: 13pt;
@@ -58,8 +36,7 @@ p.explain.left				{ text-align: left;
 					  border-top: none;
 					  padding: 10pt 32pt;
 					  border-bottom-left-radius: 4pt; }
-#header					{ margin-top: 6rem; 
-					  font-size: 16pt; }
+#header					{ margin-top: 6rem; }
 #header .intro				{ font-size: xx-large; 
 					  margin: 1rem 0; }
 #header nav				{ font-size: 90%; }
@@ -91,13 +68,13 @@ h3					{ font-weight: 500;
 					  font-size: inherit; }
 h2 + code				{ display: block; 
 					  margin: 1em 0;
-					  background-color: #fff;
-					  padding: 1em;
+					  background-color: #f0f0f0;
+					  color: #000;
+					  padding: 1rem;
 					  border-radius: 1rem;
-					  border: thin solid #eee; }
+					  border: thin solid #ddd; }
 figure					{ text-align: center; 
-					  margin: 1em 0 0 0; }
-figure.show-only-small			{ display: none; }
+					  margin: 1rem 0 0 0; }
 figcaption				{ color: #888; 
 					  font-size: smaller; }
 footer					{ text-align: center;
@@ -119,52 +96,27 @@ article > nav > span			{ background-color: #eee;
 					  border-bottom-left-radius: 4pt;
 					  border-bottom-right-radius: 4pt;
 					  display: inline-block; }
-article > section			{ max-width: 98%;
-					  width: 66rem;
-					  margin-left: auto;
-					  margin-right: auto; }
-#usage-box section			{ color: #222; }
 img					{ max-width: 100%; }
 article[data-sblg-article]		{ width: 100%; }
 code, pre.hl				{ font-family: monospace; 
 					  font-size: smaller; }
 pre.hl					{ overflow: hidden; }
 .hl .lin				{ color: #aaa; }
-nav[data-sblg-nav] ul			{ list-style-type: none; 
+#archive nav[data-sblg-nav] ul		{ list-style-type: none; 
 					  padding: 0; }
-.archive				{ opacity: 0.6;
-					  margin-top: 2em; }
-nav[data-sblg-nav] time			{ opacity: 0.5; 
-					  padding-top: 6pt;
-					  display: block; }
 #archive nav[data-sblg-nav] time	{ display: inline; }
-nav[data-sblg-nav] time i		{ font-size: smaller; }
-
-nav[data-sblg-nav] li			{ color: #666; 
-					  background-color: #fff;
-					  padding: 1em;
-					  border-radius: 1rem;
-					  border: thin solid #eee; }
-nav[data-sblg-nav] li + li		{ margin-top: 2em; }
+#archive nav[data-sblg-nav] li		{ opacity: 0.5;
+					  margin-top: 2rem; }
 #archive nav[data-sblg-nav] ul > li:first-child	
-					{ color: #000; 
-					  margin-top: 3em;
-					  margin-bottom: 3em; }
+					{ opacity: 1.0;  }
 #archive nav[data-sblg-nav] li > div:first-child	
 					{ font-weight: 500; }
 .blue					{ color: blue; }
 
 @media only screen and (max-width: 1024px), only screen and (max-device-width: 1024px) {
- #header				{ font-size: 13pt; }
  #header .intro				{ font-size: 120%; }
- #intro					{ display: block; }
- #intro > div				{ margin-left: 0; }
  #intro .intro				{ font-size: 120%; }
  h2					{ font-size: inherit; }
  #breadcrumbs > div:nth-child(2) > div	{ padding: 8pt 4pt; 
 	 				  font-size: 12pt; }
- #archive nav[data-sblg-nav] ul > li:first-child	
-					{ font-size: 100%; }
- figure.show-only-big			{ display: none; }
- figure.show-only-small			{ display: block; }
 }

@@ -72,6 +72,12 @@ DOTAR		 = audit.c \
 		   Makefile \
 		   main.c \
 		   parser.c \
+		   parser.h \
+		   parser_bitfield.c \
+		   parser_enum.c \
+		   parser_field.c \
+		   parser_roles.c \
+		   parser_struct.c \
 		   printer.c \
 		   protos.c \
 		   source.c \

@@ -199,9 +199,9 @@ distcheck: openradtool.tar.gz.sha512 openradtool.tar.gz
 	mkdir -p .distcheck
 	tar -zvxpf openradtool.tar.gz -C .distcheck
 	( cd .distcheck/openradtool-$(VERSION) && ./configure PREFIX=prefix )
-	( cd .distcheck/openradtool-$(VERSION) && make )
-	( cd .distcheck/openradtool-$(VERSION) && make regress )
-	( cd .distcheck/openradtool-$(VERSION) && make install )
+	( cd .distcheck/openradtool-$(VERSION) && $(MAKE) )
+	( cd .distcheck/openradtool-$(VERSION) && $(MAKE) regress )
+	( cd .distcheck/openradtool-$(VERSION) && $(MAKE) install )
 	rm -rf .distcheck
 
 version.h: Makefile

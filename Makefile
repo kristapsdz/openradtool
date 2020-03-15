@@ -1,5 +1,5 @@
 .SUFFIXES: .dot .svg .1 .1.html .5 .5.html
-.PHONY: tests
+.PHONY: regress
 
 include Makefile.configure
 

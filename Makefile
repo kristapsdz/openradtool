@@ -190,14 +190,14 @@ installwww: www
 
 distcheck: openradtool.tar.gz.sha512 openradtool.tar.gz
 	mandoc -Tlint -Werror $(MAN1S)
-	newest=`grep "<h3>" versions.xml | head -n1 | sed 's![ 	]*!!g'` ; \
+	newest=`grep "<h3>" versions.xml | head -1 | sed 's![ 	]*!!g'` ; \
 	       [ "$$newest" = "<h3>$(VERSION)</h3>" ] || \
 		{ echo "Version $(VERSION) not newest in versions.xml" 1>&2 ; exit 1 ; }
 	rm -rf .distcheck
 	[ "`openssl dgst -sha512 -hex openradtool.tar.gz`" = "`cat openradtool.tar.gz.sha512`" ] || \
  		{ echo "Checksum does not match." 1>&2 ; exit 1 ; }
 	mkdir -p .distcheck
-	tar -zvxpf openradtool.tar.gz -C .distcheck
+	( cd .distcheck && tar -zvxpf ../openradtool.tar.gz )
 	( cd .distcheck/openradtool-$(VERSION) && ./configure PREFIX=prefix )
 	( cd .distcheck/openradtool-$(VERSION) && $(MAKE) )
 	( cd .distcheck/openradtool-$(VERSION) && $(MAKE) regress )

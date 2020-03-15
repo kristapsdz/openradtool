@@ -135,9 +135,11 @@ main(void)
 int main(void)
 {
 	MD5_CTX ctx;
+	char result[MD5_DIGEST_STRING_LENGTH];
 
 	MD5Init(&ctx);
 	MD5Update(&ctx, "abcd", 4);
+	MD5End(&ctx, result);
 
 	return 0;
 }
@@ -179,6 +181,33 @@ int main(void)
 	return 0;
 }
 #endif /* TEST_MEMSET_S */
+#if TEST_MKFIFOAT
+#include <sys/stat.h>
+#include <fcntl.h>
+
+int main(void) {
+	mkfifoat(AT_FDCWD, "this/path/should/not/exist", 0600);
+	return 0;
+}
+#endif /* TEST_MKFIFOAT */
+#if TEST_MKNODAT
+#include <sys/stat.h>
+#include <fcntl.h>
+
+int main(void) {
+	mknodat(AT_FDCWD, "this/path/should/not/exist", S_IFIFO | 0600, 0);
+	return 0;
+}
+#endif /* TEST_MKNODAT */
+#if TEST_OSBYTEORDER_H
+#include <libkern/OSByteOrder.h>
+
+int
+main(void)
+{
+	return !OSSwapHostToLittleInt32(23);
+}
+#endif /* TEST_OSBYTEORDER_H */
 #if TEST_PATH_MAX
 /*
  * POSIX allows PATH_MAX to not be defined, see
@@ -393,6 +422,24 @@ main(void)
 	return 0;
 }
 #endif /* TEST_STRTONUM */
+#if TEST_SYS_BYTEORDER_H
+#include <sys/byteorder.h>
+
+int
+main(void)
+{
+	return !LE_32(23);
+}
+#endif /* TEST_SYS_BYTEORDER_H */
+#if TEST_SYS_ENDIAN_H
+#include <sys/endian.h>
+
+int
+main(void)
+{
+	return !htole32(23);
+}
+#endif /* TEST_SYS_ENDIAN_H */
 #if TEST_SYS_QUEUE
 #include <sys/queue.h>
 #include <stddef.h>

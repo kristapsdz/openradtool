@@ -16,6 +16,10 @@
  */
 #include "config.h"
 
+#if !HAVE_EXPAT
+# error expat required for build
+#endif
+
 #if HAVE_SYS_QUEUE
 # include <sys/queue.h>
 #endif

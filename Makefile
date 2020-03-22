@@ -122,10 +122,10 @@ IMAGES		 = index.svg \
 		   index-fig6.svg \
 		   index-fig7.svg
 DIFFARGS	 = -I '^[/ ]\*.*' -I '^\# define KWBP_.*' -w
+
+# Only needed for test, not built by default.
 LIBS_SQLBOX	!= pkg-config --libs sqlbox 2>/dev/null || echo "-lsqlbox -lsqlite3"
 CFLAGS_SQLBOX	!= pkg-config --cflags sqlbox 2>/dev/null || echo ""
-LIBS_EXPAT	!= pkg-config --libs expat 2>/dev/null || echo "-lexpat"
-CFLAGS_EXPAT	!= pkg-config --cflags expat 2>/dev/null || echo ""
 
 # FreeBSD's make doesn't support CPPFLAGS.
 # CFLAGS += $(CPPFLAGS)
@@ -168,10 +168,7 @@ ort-audit-json: audit.o libort.a
 	$(CC) -o $@ audit.o libort.a $(LDFLAGS) $(LDADD)
 
 ort-xliff: xliff.o libort.a
-	$(CC) -o $@ xliff.o libort.a $(LDFLAGS) $(LIBS_EXPAT) $(LDADD)
-
-xliff.o: xliff.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(CFLAGS_EXPAT) -o $@ -c $<
+	$(CC) -o $@ xliff.o libort.a $(LDFLAGS) $(LDADD_EXPAT) $(LDADD)
 
 www: $(IMAGES) $(HTMLS) openradtool.tar.gz openradtool.tar.gz.sha512 atom.xml
 

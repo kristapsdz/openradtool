@@ -345,7 +345,7 @@ db.c.html: db.c
 	highlight -s whitengrey -I -l --src-lang=c db.c >$@
 
 db.ort.html: db.ort
-	highlight -s whitengrey -I -l --src-lang=f db.ort >$@
+	highlight -s whitengrey -I -l --src-lang=conf db.ort >$@
 
 audit-example.ort.html: audit-example.ort
 	highlight -s whitengrey -I -l --src-lang=conf audit-example.ort >$@

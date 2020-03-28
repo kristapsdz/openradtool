@@ -9,8 +9,8 @@
 		</header>
 		<aside>
 			<p>
-				Enable portability in the generated source code for a large number
-				of systems.
+				Enable and verify portability in the generated source code for a
+				large number of systems.
 				This made possible by the latest version of
 				<a href="https://github.com/kristapsdz/oconfigure">oconfigure</a>.
 			</p>

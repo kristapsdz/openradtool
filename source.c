@@ -2862,11 +2862,13 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 		"%s " VERSION ".\n"
 		"DO NOT EDIT!", getprogname());
 
-	puts("#ifndef _GNU_SOURCE\n"
-	     " #define _GNU_SOURCE /* strndup */\n"
-	     "#endif\n"
-	     "#ifndef _XOPEN_SOURCE\n"
-	     "# define _XOPEN_SOURCE /* crypt */\n"
+	puts("#ifndef __OpenBSD__\n"
+	     "# ifndef _GNU_SOURCE\n"
+	     "#  define _GNU_SOURCE /* strndup */\n"
+	     "# endif\n"
+	     "# ifndef _XOPEN_SOURCE\n"
+	     "#  define _XOPEN_SOURCE /* crypt */\n"
+	     "# endif\n"
 	     "#endif\n"
 	     "");
 

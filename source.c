@@ -272,7 +272,9 @@ gen_strct_fill_field(const struct field *f)
 		        "\texit(EXIT_FAILURE);",
 			coltypes[f->type], f->name, f->name);
 		break;
+	case FTYPE_DATE:
 	case FTYPE_ENUM:
+	case FTYPE_EPOCH:
 		print_src(indent,
 			"if (%s(&set->ps[(*pos)++], &tmpint) == -1)\n"
 		        "\texit(EXIT_FAILURE);\n"
@@ -281,8 +283,6 @@ gen_strct_fill_field(const struct field *f)
 		break;
 	case FTYPE_BIT:
 	case FTYPE_BITFIELD:
-	case FTYPE_DATE:
-	case FTYPE_EPOCH:
 	case FTYPE_INT:
 	case FTYPE_REAL:
 		print_src(indent,
@@ -1530,8 +1530,16 @@ gen_func_fill(const struct config *cfg, const struct strct *p)
 	const struct field	*f;
 	int	 		 needint = 0;
 
+	/*
+	 * Determine if we need to cast into a temporary 64-bit integer.
+	 * This applies to enums, which can be any integer size, and
+	 * epochs which may be 32 bits on some willy wonka systems.
+	 */
+
 	TAILQ_FOREACH(f, &p->fq, entries)
-		if (f->type == FTYPE_ENUM)
+		if (f->type == FTYPE_ENUM || 
+		    f->type == FTYPE_DATE ||
+		    f->type == FTYPE_EPOCH)
 			needint = 1;
 
 	print_commentv(0, COMMENT_C, 
@@ -3001,11 +3009,12 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 
 		puts("};\n");
 
-		print_commentt(0, COMMENT_C,
-			"Define our table columns.\n"
-			"Since we're using roles, this is "
-			"all internal to the source and not "
-			"exported.");
+		print_commentt(0, COMMENT_C, 
+			"Table columns.\n"
+			"The macro accepts a table name because "
+			"we use AS statements a lot.\n"
+			"This is because tables can appear multiple "
+			"times in a single query and need aliasing.");
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			gen_define_schema(p);
 		puts("");
@@ -3042,7 +3051,9 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 	/* Define our functions. */
 
 	print_commentt(0, COMMENT_C,
-		"Finally, all of the functions we'll use.");
+		"Finally, all of the functions we'll use.\n"
+		"All of the non-static functions are documented "
+		"in the associated header file.");
 	puts("");
 
 	if (dbin) {

@@ -99,7 +99,7 @@ IHTMLS		 = audit-example.ort.html \
 		   db.update.sql.html \
 		   db.js.html \
 		   db.ts.html \
-		   db.trans.txt.html \
+		   db.trans.ort.html \
 		   test.c.html
 BINS		 = ort \
 		   ort-audit \
@@ -290,7 +290,7 @@ db.ts: ort-javascript db.ort
 db.update.sql: ort-sqldiff db.old.ort db.ort
 	./ort-sqldiff db.old.ort db.ort >$@
 
-db.trans.txt: ort-xliff db.ort db.fr.xml
+db.trans.ort: ort-xliff db.ort db.fr.xml
 	./ort-xliff -j db.ort db.fr.xml >$@
 
 db.db: db.sql
@@ -368,8 +368,8 @@ db.ts.html: db.ts
 db.update.sql.html: db.update.sql
 	highlight -s whitengrey -I -l --src-lang=sql db.update.sql >$@
 
-db.trans.txt.html: db.trans.txt
-	highlight -s whitengrey -I -l --src-lang=c db.trans.txt | sed 's!ISO-8859-1!UTF-8!g' >$@
+db.trans.ort.html: db.trans.ort
+	highlight -s whitengrey -I -l --src-lang=conf db.trans.ort | sed 's!ISO-8859-1!UTF-8!g' >$@
 
 highlight.css:
 	highlight --print-style -s whitengrey -O xhtml --stdout >$@
@@ -392,7 +392,7 @@ atom.xml: versions.xml atom-template.xml
 
 clean:
 	rm -f $(BINS) version.h paths.h $(LIBOBJS) libort.a test test.o
-	rm -f db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db db.trans.txt
+	rm -f db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db db.trans.ort
 	rm -f openradtool.tar.gz openradtool.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml
 	rm -f db.ort.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml

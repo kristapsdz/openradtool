@@ -2864,7 +2864,7 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 
 #if defined(__linux__)
 	puts("#define _GNU_SOURCE\n"
-	     "#define _BSD_SOURCE");
+	     "#define _DEFAULT_SOURCE");
 #endif
 #if defined(__sun)
 	puts("#ifndef _XOPEN_SOURCE\n"

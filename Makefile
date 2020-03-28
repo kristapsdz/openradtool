@@ -261,7 +261,7 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	rm -rf .dist/
 
 test: test.o db.o db.db
-	$(CC) -o $@ test.o db.o $(LIBS_SQLBOX)
+	$(CC) -o $@ test.o db.o $(LIBS_SQLBOX) $(LDADD_CRYPT)
 
 audit-out.js: ort-audit-json audit-example.txt
 	./ort-audit-json user audit-example.txt >$@
@@ -411,8 +411,8 @@ distclean: clean
 # Second, create a configuration from the configuration and try again,
 # making sure that it's the same.
 
-regress:
-	# Do nothing for now.
+regress: test
+	# Do nothing.
 
 xxregress: all
 	@tmp=`mktemp` ; \

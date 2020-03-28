@@ -15,6 +15,7 @@ struct company {
   # "Insert" allows us to insert into the table.
   list somenum isnull;
   insert;
+  delete;
   comment "Controlling organisation.";
 };
 
@@ -73,6 +74,7 @@ struct user {
   update hash: uid;
   update email: uid;
   insert;
+  delete;
   comment "A regular user.";
 };
 

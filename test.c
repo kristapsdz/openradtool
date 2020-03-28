@@ -45,6 +45,11 @@ main(void)
 
 	if ((sql = db_open_logging("db.db", NULL, warnx, NULL)) == NULL)
 		errx(EXIT_FAILURE, "db.db: db_open");
+
+	/* Clear out initial users and companies. */
+
+	db_user_delete(sql);
+	db_company_delete(sql);
 	
 	/* Insert our initial company record. */
 

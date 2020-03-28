@@ -90,7 +90,7 @@ XMLS		 = test.xml.xml \
 		   versions.xml
 IHTMLS		 = audit-example.txt.html \
 		   audit-out.js \
-		   db.txt.html \
+		   db.ort.html \
 		   db.fr.xml.html \
 		   db.h.html \
 		   db.c.html \
@@ -272,26 +272,26 @@ db.o: db.c db.h
 test.o: test.c db.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(CFLAGS_SQLBOX) -o $@ -c test.c
 
-db.c: ort-c-source db.txt
-	./ort-c-source -S. db.txt >$@
+db.c: ort-c-source db.ort
+	./ort-c-source -S. db.ort >$@
 
-db.h: ort-c-header db.txt
-	./ort-c-header db.txt >$@
+db.h: ort-c-header db.ort
+	./ort-c-header db.ort >$@
 
-db.sql: ort-sql db.txt
-	./ort-sql db.txt >$@
+db.sql: ort-sql db.ort
+	./ort-sql db.ort >$@
 
-db.js: ort-javascript db.txt
-	./ort-javascript db.txt >$@
+db.js: ort-javascript db.ort
+	./ort-javascript db.ort >$@
 
-db.ts: ort-javascript db.txt
-	./ort-javascript -t db.txt >$@
+db.ts: ort-javascript db.ort
+	./ort-javascript -t db.ort >$@
 
-db.update.sql: ort-sqldiff db.old.txt db.txt
-	./ort-sqldiff db.old.txt db.txt >$@
+db.update.sql: ort-sqldiff db.old.txt db.ort
+	./ort-sqldiff db.old.txt db.ort >$@
 
-db.trans.txt: ort-xliff db.txt db.fr.xml
-	./ort-xliff -j db.txt db.fr.xml >$@
+db.trans.txt: ort-xliff db.ort db.fr.xml
+	./ort-xliff -j db.ort db.fr.xml >$@
 
 db.db: db.sql
 	rm -f $@
@@ -310,9 +310,9 @@ $(LIBOBJS) $(OBJS): config.h extern.h ort.h
 	xsltproc --novalid notugly.xsl tmp-$@ >$@
 	rm tmp-$@
 
-db.txt.xml: db.txt
+db.ort.xml: db.ort
 	( echo "<article data-sblg-article=\"1\">" ; \
-	  highlight -l --enclose-pre --src-lang=conf -f db.txt ; \
+	  highlight -l --enclose-pre --src-lang=conf -f db.ort ; \
 	  echo "</article>" ; ) >$@
 
 db.fr.xml.html: db.fr.xml
@@ -344,8 +344,8 @@ test.xml.xml: test.xml
 db.c.html: db.c
 	highlight -s whitengrey -I -l --src-lang=c db.c >$@
 
-db.txt.html: db.txt
-	highlight -s whitengrey -I -l --src-lang=c db.txt >$@
+db.ort.html: db.ort
+	highlight -s whitengrey -I -l --src-lang=conf db.ort >$@
 
 audit-example.txt.html: audit-example.txt
 	highlight -s whitengrey -I -l --src-lang=c audit-example.txt >$@
@@ -395,7 +395,7 @@ clean:
 	rm -f db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db db.trans.txt
 	rm -f openradtool.tar.gz openradtool.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml
-	rm -f db.txt.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
+	rm -f db.ort.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
 	rm -f source.o header.o javascript.o sql.o audit.o main.o xliff.o
 	rm -rf regress/share
 

@@ -149,7 +149,7 @@
 					<span>1.</span> validate configuration
 				</h2>
 				<code>
-					% <a href="ort.1.html">ort</a> <a href="db.txt.html">db.txt</a>
+					% <a href="ort.1.html">ort</a> <a href="db.ort.html">db.ort</a>
 				</code>
 				<section>
 					<figure>
@@ -157,7 +157,7 @@
 					</figure>
 					<p>
 						Consider an example <a href="ort.5.html">ort(5)</a> configuration <a
-							href="db.txt.html">db.txt</a>.  It defines three data objects&#8212;a <code>user</code>,
+							href="db.ort.html">db.ort</a>.  It defines three data objects&#8212;a <code>user</code>,
 						<code>company</code>, and <code>session</code>&#8212;with relations between the three.
 						Each <code>session</code> refers to a <code>user</code> by the <code>userid</code> field.
 						Then each <code>user</code> refers to a <code>company</code> by its <code>cid</code>.
@@ -177,10 +177,10 @@
 				</h2>
 				<code>
 					% <a href="ort-c-header.1.html">ort-c-header</a> -jv 
-					<a href="db.txt.html">db.txt</a> &gt; <a href="db.h.html">db.h</a>
+					<a href="db.ort.html">db.ort</a> &gt; <a href="db.h.html">db.h</a>
 					<br />
 					% <a href="ort-c-source.1.html">ort-c-source</a> -jv 
-					-h <a href="db.h.html">db.h</a> <a href="db.txt.html">db.txt</a> &gt; <a href="db.c.html">db.c</a>
+					-h <a href="db.h.html">db.h</a> <a href="db.ort.html">db.ort</a> &gt; <a href="db.c.html">db.c</a>
 				</code>
 				<section>
 					<figure>
@@ -225,7 +225,7 @@
 					<span>4.</span> generate and initialise database
 				</h2>
 				<code>
-					% <a href="ort-sql.1.html">ort-sql</a> <a href="db.txt.html">db.txt</a> &gt; <a href="db.sql.html">db.sql</a>
+					% <a href="ort-sql.1.html">ort-sql</a> <a href="db.ort.html">db.ort</a> &gt; <a href="db.sql.html">db.sql</a>
 					<br />
 					% sqlite3 db.db &lt; <a href="db.sql.html">db.sql</a>
 				</code>
@@ -252,7 +252,7 @@
 				</h2>
 				<code>
 					% <a href="ort-sqldiff.1.html">ort-sqldiff</a>
-					<a href="db.old.txt.html">db.old.txt</a> <a href="db.txt.html">db.txt</a> &gt; 
+					<a href="db.old.txt.html">db.old.txt</a> <a href="db.ort.html">db.ort</a> &gt; 
 					<a href="db.update.sql.html">db.update.sql</a>
 					<br />
 					% sqlite3 db.db &lt; <a href="db.sql.html">db.update.sql</a>
@@ -277,10 +277,10 @@
 				</h2>
 				<code>
 					% <a href="ort-javascript.1.html">ort-javascript</a>
-					<a href="db.txt.html">db.txt</a> &gt; <a href="db.js.html">db.js</a>
+					<a href="db.ort.html">db.ort</a> &gt; <a href="db.js.html">db.js</a>
 					<br />
 					% <a href="ort-javascript.1.html">ort-javascript</a> -t
-					<a href="db.txt.html">db.txt</a> &gt; <a href="db.ts.html">db.ts</a>
+					<a href="db.ort.html">db.ort</a> &gt; <a href="db.ts.html">db.ts</a>
 				</code>
 				<section>
 					<figure>
@@ -311,10 +311,10 @@
 				</h2>
 				<code>
 					% <a href="ort-xliff.1.html">ort-xliff</a>
-					<a href="db.txt.html">db.txt</a> &gt; <a href="db.fr.xml.html">db.fr.xml</a>
+					<a href="db.ort.html">db.ort</a> &gt; <a href="db.fr.xml.html">db.fr.xml</a>
 					<br />
 					% <a href="ort-xliff.1.html">ort-xliff</a> -j
-					<a href="db.txt.html">db.txt</a> <a href="db.fr.xml.html">db.fr.xml</a> &gt; 
+					<a href="db.ort.html">db.ort</a> <a href="db.fr.xml.html">db.fr.xml</a> &gt; 
 					<a href="db.trans.txt.html">db.trans.txt</a>
 				</code>
 				<section>

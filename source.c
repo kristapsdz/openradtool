@@ -2862,15 +2862,19 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 		"%s " VERSION ".\n"
 		"DO NOT EDIT!", getprogname());
 
-	puts("#ifndef __OpenBSD__\n"
-	     "# ifndef _GNU_SOURCE\n"
-	     "#  define _GNU_SOURCE /* strndup */\n"
-	     "# endif\n"
-	     "# ifndef _XOPEN_SOURCE\n"
-	     "#  define _XOPEN_SOURCE /* crypt */\n"
-	     "# endif\n"
+#if defined(__linux__)
+	puts("#define _GNU_SOURCE\n"
+	     "#define _BSD_SOURCE");
+#endif
+#if defined(__sun)
+	puts("#ifndef _XOPEN_SOURCE\n"
+	     "# define _XOPEN_SOURCE\n"
 	     "#endif\n"
-	     "");
+	     "#define _XOPEN_SOURCE_EXTENDED 1\n"
+	     "#ifndef __EXTENSIONS__\n"
+	     "# define __EXTENSIONS__\n"
+	     "#endif");
+#endif
 
 	/* Start with all headers we'll need. */
 

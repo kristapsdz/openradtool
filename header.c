@@ -777,7 +777,7 @@ gen_c_header(const struct config *cfg, const char *guard, int json,
 		puts("enum\tort_role {");
 		TAILQ_FOREACH(r, &cfg->rq, entries)
 			gen_role(r, &i);
-			puts("\n"
+		puts("\n"
 		     "};\n"
 		     "");
 	}

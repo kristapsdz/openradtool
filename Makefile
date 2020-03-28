@@ -88,7 +88,7 @@ DOTAR		 = audit.c \
 		   xliff.c
 XMLS		 = test.xml.xml \
 		   versions.xml
-IHTMLS		 = audit-example.txt.html \
+IHTMLS		 = audit-example.ort.html \
 		   audit-out.js \
 		   db.ort.html \
 		   db.fr.xml.html \
@@ -263,8 +263,8 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 test: test.o db.o db.db
 	$(CC) -o $@ test.o db.o $(LIBS_SQLBOX) $(LDADD_CRYPT)
 
-audit-out.js: ort-audit-json audit-example.txt
-	./ort-audit-json user audit-example.txt >$@
+audit-out.js: ort-audit-json audit-example.ort
+	./ort-audit-json user audit-example.ort >$@
 
 db.o: db.c db.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(CFLAGS_SQLBOX) -o $@ -c db.c
@@ -347,8 +347,8 @@ db.c.html: db.c
 db.ort.html: db.ort
 	highlight -s whitengrey -I -l --src-lang=f db.ort >$@
 
-audit-example.txt.html: audit-example.txt
-	highlight -s whitengrey -I -l --src-lang=c audit-example.txt >$@
+audit-example.ort.html: audit-example.ort
+	highlight -s whitengrey -I -l --src-lang=conf audit-example.ort >$@
 
 db.old.ort.html: db.old.ort
 	highlight -s whitengrey -I -l --src-lang=conf db.old.ort >$@

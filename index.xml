@@ -342,7 +342,7 @@
 				</h2>
 				<code>
 					% <a href="ort-audit.1.html">ort-audit</a>
-					<a href="audit-example.txt.html">audit-example.txt</a> user
+					<a href="audit-example.ort.html">audit-example.ort</a> user
 				</code>
 				<section>
 					<p>
@@ -356,7 +356,7 @@
 						and application processes.
 					</p>
 					<p>
-						In the example role-backed <a href="audit-example.txt.html">audit-example.txt</a> with roles
+						In the example role-backed <a href="audit-example.ort.html">audit-example.ort</a> with roles
 						<code>user</code> and <code>admin</code>, for example, these tools can fully audit for the
 						<code>user</code> role as seen in the exemplar <a href="audit.html">audit.html</a> created with
 						<a href="ort-audit-json.1.html">ort-audit-json(1)</a>.

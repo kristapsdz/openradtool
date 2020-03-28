@@ -1631,7 +1631,8 @@ gen_func_update(const struct config *cfg,
 
 	/* Bind parameters with special attention on hashing. */
 
-	puts("\tmemset(parms, 0, sizeof(parms));");
+	if (parms > 0)
+		puts("\tmemset(parms, 0, sizeof(parms));");
 	npos = pos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
 		tabs = 1;

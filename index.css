@@ -22,7 +22,7 @@ p.explain				{ color: #000; }
 				 	  margin-left: 4pt;
 					  padding-left: 1rem; }
 #topicboxes li 				{ padding-left: 0.5rem; }
-#topicboxes li + li			{ margin-top: 1.5em; }
+#topicboxes li + li			{ margin-top: 1rem; }
 #topicboxes .topic			{ display: block; 
 					  font-weight: 500;
 					  color: #000; }

@@ -3,6 +3,21 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.8.8</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-03-28">2020-03-28</time>
+		</header>
+		<aside>
+			<p>
+				Enable portability in the generated source code for a large number
+				of systems.
+				This made possible by the latest version of
+				<a href="https://github.com/kristapsdz/oconfigure">oconfigure</a>.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.8.7</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2020-03-15">2020-03-15</time>

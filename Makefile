@@ -273,7 +273,7 @@ test.o: test.c db.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(CFLAGS_SQLBOX) -o $@ -c test.c
 
 db.c: ort-c-source db.txt
-	./ort-c-source db.txt >$@
+	./ort-c-source -S. db.txt >$@
 
 db.h: ort-c-header db.txt
 	./ort-c-header db.txt >$@

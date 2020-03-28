@@ -252,7 +252,7 @@
 				</h2>
 				<code>
 					% <a href="ort-sqldiff.1.html">ort-sqldiff</a>
-					<a href="db.old.txt.html">db.old.txt</a> <a href="db.ort.html">db.ort</a> &gt; 
+					<a href="db.old.ort.html">db.old.ort</a> <a href="db.ort.html">db.ort</a> &gt; 
 					<a href="db.update.sql.html">db.update.sql</a>
 					<br />
 					% sqlite3 db.db &lt; <a href="db.sql.html">db.update.sql</a>

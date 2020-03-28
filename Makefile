@@ -95,7 +95,7 @@ IHTMLS		 = audit-example.txt.html \
 		   db.h.html \
 		   db.c.html \
 		   db.sql.html \
-		   db.old.txt.html \
+		   db.old.ort.html \
 		   db.update.sql.html \
 		   db.js.html \
 		   db.ts.html \
@@ -287,8 +287,8 @@ db.js: ort-javascript db.ort
 db.ts: ort-javascript db.ort
 	./ort-javascript -t db.ort >$@
 
-db.update.sql: ort-sqldiff db.old.txt db.ort
-	./ort-sqldiff db.old.txt db.ort >$@
+db.update.sql: ort-sqldiff db.old.ort db.ort
+	./ort-sqldiff db.old.ort db.ort >$@
 
 db.trans.txt: ort-xliff db.ort db.fr.xml
 	./ort-xliff -j db.ort db.fr.xml >$@
@@ -345,13 +345,13 @@ db.c.html: db.c
 	highlight -s whitengrey -I -l --src-lang=c db.c >$@
 
 db.ort.html: db.ort
-	highlight -s whitengrey -I -l --src-lang=conf db.ort >$@
+	highlight -s whitengrey -I -l --src-lang=f db.ort >$@
 
 audit-example.txt.html: audit-example.txt
 	highlight -s whitengrey -I -l --src-lang=c audit-example.txt >$@
 
-db.old.txt.html: db.old.txt
-	highlight -s whitengrey -I -l --src-lang=c db.old.txt >$@
+db.old.ort.html: db.old.ort
+	highlight -s whitengrey -I -l --src-lang=conf db.old.ort >$@
 
 db.h.html: db.h
 	highlight -s whitengrey -I -l --src-lang=c db.h >$@

@@ -411,7 +411,7 @@ distclean: clean
 # Second, create a configuration from the configuration and try again,
 # making sure that it's the same.
 
-regress: test
+regress:
 	# Do nothing.
 
 xxregress: all

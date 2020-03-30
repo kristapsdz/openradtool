@@ -1,0 +1,7 @@
+enum a_b {
+	item a 1 ;
+};
+
+struct bar {
+	field a enum a_b ;
+};

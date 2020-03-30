@@ -1,0 +1,10 @@
+
+enum foo {
+	item a ;
+	item b ;
+	item c ;
+};
+
+struct bar {
+	field a enum foo ;
+};

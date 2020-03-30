@@ -370,6 +370,8 @@ struct foo {
 There's currently no structure imposed on comments: they are interpreted
 as opaque text and passed into the frontend.
 All white-space is currently collapsed.
+.Pp
+Components may only have a single comment statement.
 .Ss Queries
 Query data with the
 .Cm search
@@ -744,7 +746,8 @@ They are defined as follows:
 "bits" bitsname "{"
   [ "comment" string_literal ";" ]?
   [ "item" name bitidx [parms]* ";" ]+
-  [ "unset" label ";" ]+
+  [ "isunset" label ";" ]+
+  [ "isnull" label ";" ]+
 "};"
 .Ed
 .Pp
@@ -753,6 +756,7 @@ For example,
 bits bitsname {
   item "bit1" 0 jslabel "Bit one";
   isunset jslabel "No bits";
+  isnull jslabel "Not given";
 };
 .Ed
 .Pp
@@ -788,11 +792,14 @@ field foo bits bitsname;
 .Pp
 The bitfield's
 .Cm comment
-is passed into the output media, and the
+is passed into the output media, the
 .Cm isunset
 statement serves to provide a label
 .Pq see Sx Labels
-for when no bits are set (i.e., the field evaluates to zero).
+for when no bits are set (i.e., the field evaluates to zero), and
+.Cm isnull
+is the same except for when no data is given, i.e., the field is
+.Cm null .
 .Ss Labels
 Labels specify how
 .Cm bits

@@ -642,43 +642,43 @@ parse_label(struct parse *p, struct labelq *q)
 	 * the label.
 	 */
 
-	if (TOK_PERIOD == parse_next(p)) {
-		if (TOK_IDENT != parse_next(p)) {
+	if (parse_next(p) == TOK_PERIOD) {
+		if (parse_next(p) != TOK_IDENT) {
 			parse_errx(p, "expected language");
 			return 0;
 		}
-		assert('\0' != p->last.string[0]);
+		assert(p->last.string[0] != '\0');
 		for ( ; lang < p->cfg->langsz; lang++) 
-			if (0 == strcmp
-			    (p->cfg->langs[lang], p->last.string))
+			if (strcmp
+			    (p->cfg->langs[lang], p->last.string) == 0)
 				break;
 		if (lang == p->cfg->langsz) {
 			pp = reallocarray
 				(p->cfg->langs,
 				 p->cfg->langsz + 1,
 				 sizeof(char *));
-			if (NULL == pp) {
+			if (pp == NULL) {
 				parse_err(p);
 				return 0;
 			}
 			p->cfg->langs = pp;
 			p->cfg->langs[p->cfg->langsz] =
 				strdup(p->last.string);
-			if (NULL == p->cfg->langs[p->cfg->langsz]) {
+			if (p->cfg->langs[p->cfg->langsz] == NULL) {
 				parse_err(p);
 				return 0;
 			}
 			p->cfg->langsz++;
 		}
 		parse_next(p);
-	} else if (TOK_LITERAL != p->lasttype) {
+	} else if (p->lasttype != TOK_LITERAL) {
 		parse_errx(p, "expected period or quoted string");
 		return 0;
 	}
 
 	/* Now for the label itself. */
 
-	if (TOK_LITERAL != p->lasttype) {
+	if (p->lasttype != TOK_LITERAL) {
 		parse_errx(p, "expected quoted string");
 		return 0;
 	}
@@ -689,8 +689,8 @@ parse_label(struct parse *p, struct labelq *q)
 	 * Should escape as \u003c.
 	 */
 
-	for (cp = p->last.string; '\0' != *cp; cp++) 
-		if ('<' == *cp) {
+	for (cp = p->last.string; *cp != '\0'; cp++) 
+		if (*cp == '<') {
 			parse_errx(p, "illegal html character");
 			return 0;
 		}
@@ -708,7 +708,7 @@ parse_label(struct parse *p, struct labelq *q)
 		}
 
 	l = calloc(1, sizeof(struct label));
-	if (NULL == l) {
+	if (l == NULL) {
 		parse_err(p);
 		return 0;
 	}
@@ -716,7 +716,7 @@ parse_label(struct parse *p, struct labelq *q)
 	parse_point(p, &l->pos);
 	l->lang = lang;
 	l->label = strdup(p->last.string);
-	if (NULL == l->label) {
+	if (l->label == NULL) {
 		parse_err(p);
 		return 0;
 	}

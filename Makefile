@@ -121,7 +121,6 @@ IMAGES		 = index.svg \
 		   index-fig5.svg \
 		   index-fig6.svg \
 		   index-fig7.svg
-DIFFARGS	 = -I '^[/ ]\*.*' -I '^\# define KWBP_.*' -w
 
 # Only needed for test, not built by default.
 LIBS_SQLBOX	!= pkg-config --libs sqlbox 2>/dev/null || echo "-lsqlbox -lsqlite3"
@@ -422,10 +421,10 @@ regress: ort
 			rm $$tmp ; \
 			exit 1 ; \
 		fi ; \
-		diff -I '^$$' -w $$tmp $$f >/dev/null 2>&1 ; \
+		diff -w $$tmp $$f >/dev/null 2>&1 ; \
 		if [ $$? -ne 0 ] ; then \
 			echo "fail (output)" ; \
-			diff -I '^$$' -w -u $$tmp $$f ; \
+			diff -wu $$tmp $$f ; \
 			rm $$tmp ; \
 			exit 1 ; \
 		fi ; \

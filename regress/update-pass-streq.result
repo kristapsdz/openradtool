@@ -2,3 +2,4 @@ struct foo {
 	field bar password;
 	update: bar streq;
 };
+

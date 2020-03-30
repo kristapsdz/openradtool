@@ -130,9 +130,6 @@ CFLAGS_SQLBOX	!= pkg-config --cflags sqlbox 2>/dev/null || echo ""
 LIBS_PKG	!= pkg-config --libs expat 2>/dev/null || echo "-lexpat"
 CFLAGS_PKG	!= pkg-config --cflags expat 2>/dev/null || echo ""
 
-# FreeBSD's make doesn't support CPPFLAGS.
-# CFLAGS += $(CPPFLAGS)
-
 all: $(BINS)
 
 afl::
@@ -255,7 +252,9 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/openradtool-$(VERSION)/
 	mkdir -p .dist/openradtool-$(VERSION)/regress
 	install -m 0444 $(DOTAR) .dist/openradtool-$(VERSION)
-	install -m 0444 regress/*.[ch] regress/*.or[ft] .dist/openradtool-$(VERSION)/regress
+	install -m 0444 regress/*.ort .dist/openradtool-$(VERSION)/regress
+	install -m 0444 regress/*.result .dist/openradtool-$(VERSION)/regress
+	install -m 0444 regress/*.nresult .dist/openradtool-$(VERSION)/regress
 	install -m 0555 $(DOTAREXEC) .dist/openradtool-$(VERSION)
 	( cd .dist/ && tar zcf ../$@ ./ )
 	rm -rf .dist/

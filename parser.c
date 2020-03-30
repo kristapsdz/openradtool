@@ -695,16 +695,12 @@ parse_label(struct parse *p, struct labelq *q)
 			return 0;
 		}
 
+	/* Disallow duplicates. */
+
 	TAILQ_FOREACH(l, q, entries)
 		if (lang == l->lang) {
-			parse_warnx(p, "replacing prior label");
-			free(l->label);
-			l->label = strdup(p->last.string);
-			if (NULL == l->label) {
-				parse_err(p);
-				return 0;
-			}
-			return 1;
+			parse_errx(p, "duplicate label");
+			return 0;
 		}
 
 	l = calloc(1, sizeof(struct label));

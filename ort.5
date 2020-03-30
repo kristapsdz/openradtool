@@ -114,7 +114,7 @@ backslash.
 .Bd -literal -offset indent
 struct ident { field id int comment "\e"Literal\e"."; };
 .Ed
-.Ss Comments
+.Ss Document Comments
 Document comments are begun by the hash mark
 .Pq Dq #
 and extend to the end of the line.
@@ -356,7 +356,10 @@ A field declaration may consist of any number of
 .Cm typeinfo
 statements.
 .Ss Comments
-A comment is a string literal describing the entire structure.
+A comment is a string literal describing most any component.
+Comments are part of the document structure and are usually passed to
+output formatters to describe a component.
+For example, a structure may be described as follows:
 .Bd -literal -offset indent
 struct foo {
   field name text;
@@ -366,6 +369,7 @@ struct foo {
 .Pp
 There's currently no structure imposed on comments: they are interpreted
 as opaque text and passed into the frontend.
+All white-space is currently collapsed.
 .Ss Queries
 Query data with the
 .Cm search

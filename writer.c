@@ -710,31 +710,36 @@ static int
 parse_write_enm(struct writer *w, 
 	const struct config *cfg, const struct enm *p)
 {
-	const struct eitem *e;
-	const struct label *l;
+	const struct eitem	*e;
+	const struct label	*l;
 
-	if ( ! wprint(w, "enum %s {\n", p->name))
+	if (!wprint(w, "enum %s {\n", p->name))
 		return 0;
 
 	TAILQ_FOREACH(e, &p->eq, entries) {
-		if ( ! wprint(w, "\titem %s", e->name))
+		if (!wprint(w, "\titem %s", e->name))
 			return 0;
-		if ( ! (EITEM_AUTO & e->flags))
-			if ( ! wprint(w, " %" PRId64, e->value))
+		if (!(e->flags & EITEM_AUTO))
+			if (!wprint(w, " %" PRId64, e->value))
 				return 0;
 		TAILQ_FOREACH(l, &e->labels, entries)
-			if ( ! parse_write_label(w, cfg, l, 2))
+			if (!parse_write_label(w, cfg, l, 2))
 				return 0;
-		if ( ! parse_write_comment(w, e->doc, 2))
+		if (!parse_write_comment(w, e->doc, 2))
 			return 0;
-		if ( ! wputs(w, ";\n"))
+		if (!wputc(w, ';'))
+			return 0;
+		if ((e->flags & EITEM_AUTO) &&
+		     !wprint(w, " # value %" PRId64, e->value))
+			return 0;
+		if (!wputc(w, '\n'))
 			return 0;
 	}
 
-	if (NULL != p->doc) {
-		if ( ! parse_write_comment(w, p->doc, 1))
+	if (p->doc != NULL) {
+		if (!parse_write_comment(w, p->doc, 1))
 			return 0;
-		if ( ! wputs(w, ";\n"))
+		if (!wputs(w, ";\n"))
 			return 0;
 	}
 

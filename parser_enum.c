@@ -93,6 +93,8 @@ static void
 parse_enum_data(struct parse *p, struct enm *e)
 {
 	struct eitem	*ei;
+	int64_t	 	 maxvalue = INT64_MIN;
+	int		 hasauto = 0;
 
 	if (parse_next(p) != TOK_LBRACE) {
 		parse_errx(p, "expected left brace");
@@ -153,6 +155,26 @@ parse_enum_data(struct parse *p, struct enm *e)
 			return;
 		}
 		parse_enum_item(p, ei);
+		if (hasauto == 0 && (ei->flags & EITEM_AUTO))
+			hasauto = 1;
+	}
+
+	/*
+	 * If we have any values to assign automatically, do so here.
+	 * First we determine the greatest current value.
+	 * If negative, start from zero.
+	 * Then increase monotonically.
+	 */
+
+	if (hasauto) {
+		TAILQ_FOREACH(ei, &e->eq, entries)
+			if (!(ei->flags & EITEM_AUTO))
+				if (ei->value > maxvalue)
+					maxvalue = ei->value;
+		maxvalue = maxvalue < 0 ? 0 : maxvalue + 1;
+		TAILQ_FOREACH(ei, &e->eq, entries)
+			if ((ei->flags & EITEM_AUTO))
+				ei->value = maxvalue++;
 	}
 
 	if (PARSE_STOP(p))

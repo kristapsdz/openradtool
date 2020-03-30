@@ -69,7 +69,7 @@
 					<a href="ort.5.html">ort(5)</a> configuration that describes your data and how it is accessed, modified,
 					created, deleted.  It runs on <a href="https://www.openbsd.org">OpenBSD</a>, 
 					<a href="https://www.netbsd.org">NetBSD</a>, <a href="https://www.freebsd.org">FreeBSD</a>, Linux (glibc 
-					on <a href="https://www.debian.org">Debian</a> and <a href="https://www.ubuntu.com">Ubuntu</a>), 
+					and musl),
 					<a href="https://www.apple.com">Mac OS X</a>, 
 					<a href="https://www.oracle.com/solaris/solaris11">Solaris</a> (SunOS), and
 					<a href="https://omniosce.org">OmniOS</a> (IllumOS).  The generated sources run on the same.

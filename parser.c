@@ -721,9 +721,7 @@ parse_label(struct parse *p, struct labelq *q)
 
 /*
  * Parse the quoted_string part following "comment".
- * Attach it to the given "doc", possibly clearing out any prior
- * comments.
- * If this is the case, emit a warning.
+ * Attach it to the given "doc".
  */
 int
 parse_comment(struct parse *p, char **doc)
@@ -733,8 +731,8 @@ parse_comment(struct parse *p, char **doc)
 		parse_errx(p, "expected quoted string");
 		return 0;
 	} else if (*doc != NULL) {
-		parse_warnx(p, "redeclaring comment");
-		free(*doc);
+		parse_errx(p, "duplicate comment");
+		return 0;
 	}
 
 	if ((*doc = strdup(p->last.string)) == NULL) {

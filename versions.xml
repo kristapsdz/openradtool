@@ -3,6 +3,18 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.8.9</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-03-30">2020-03-30</time>
+		</header>
+		<aside>
+			<p>
+				Fix where auto-valued enumerations weren't auto-value-ing.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.8.8</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2020-03-28">2020-03-28</time>

@@ -1,0 +1,11 @@
+bits foo {
+	item a 1 ;
+	item b 2 ;
+	item c 3 ;
+	isunset jslabel "No bits";
+	isunset jslabel "No bits";
+};
+
+struct bar {
+	field a bits foo ;
+};

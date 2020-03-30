@@ -411,119 +411,37 @@ distclean: clean
 # Second, create a configuration from the configuration and try again,
 # making sure that it's the same.
 
-regress:
-	# Do nothing.
-
-xxregress: all
+regress: ort
 	@tmp=`mktemp` ; \
-	tmp2=`mktemp` ; \
-	mkdir -p regress/share ; \
-	touch regress/share/gensalt.c ; \
-	touch regress/share/b64_ntop.c ; \
-	touch regress/share/jsmn.c ; \
-	for f in regress/*.c ; do \
-		bf=`basename $$f .c`.ort ; \
-		bff=`basename $$f .c`.orf ; \
+	for f in regress/*.result ; do \
+		bf=`basename $$f .result`.ort ; \
 		set +e ; \
-		echo "ort-c-source -Sregress/share regress/$$bf... " ; \
-		./ort-c-source -Sregress/share regress/$$bf > $$tmp ; \
+		printf "$$bf... " ; \
+		./ort regress/$$bf >$$tmp 2>/dev/null ; \
 		if [ $$? -ne 0 ] ; then \
-			rm $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		diff $(DIFFARGS) $$tmp $$f >/dev/null 2>&1 ; \
-		if [ $$? -ne 0 ] ; then \
-			diff $(DIFFARGS) -u $$tmp $$f ; \
-			rm $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		echo "ort-c-source (cross-check...)" ; \
-		./ort regress/$$bf > $$tmp2 ; \
-		if [ $$? -ne 0 ] ; then \
-			rm $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		./ort-c-source -Sregress/share $$tmp2 > $$tmp ; \
-		if [ $$? -ne 0 ] ; then \
-			rm $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		diff $(DIFFARGS) $$tmp $$f >/dev/null 2>&1 ; \
-		if [ $$? -ne 0 ] ; then \
-			diff $(DIFFARGS) -u $$tmp $$f ; \
-			rm $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		set -e ; \
-	done ; \
-	for f in regress/*.h ; do \
-		bf=`basename $$f .h`.ort ; \
-		echo "ort-c-header regress/$$bf... " ; \
-		set +e ; \
-		./ort-c-header regress/$$bf > $$tmp ; \
-		if [ $$? -ne 0 ] ; then \
-			rm $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		diff $(DIFFARGS) $$tmp $$f >/dev/null 2>&1 ; \
-		if [ $$? -ne 0 ] ; then \
-			diff $(DIFFARGS) -u $$tmp $$f ; \
-			rm $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		echo "ort-c-header (cross-check...)" ; \
-		./ort regress/$$bf > $$tmp2 ; \
-		if [ $$? -ne 0 ] ; then \
-			rm $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		./ort-c-header $$tmp2 > $$tmp ; \
-		if [ $$? -ne 0 ] ; then \
-			rm $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		diff $(DIFFARGS) $$tmp $$f >/dev/null 2>&1 ; \
-		if [ $$? -ne 0 ] ; then \
-			diff $(DIFFARGS) -u $$tmp $$f ; \
-			rm $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		set -e ; \
-	done ; \
-	for f in regress/*.orf ; do \
-		bf=`basename $$f .orf`.ort ; \
-		echo "ort regress/$$bf... " ; \
-		set +e ; \
-		./ort regress/$$bf > $$tmp ; \
-		if [ $$? -ne 0 ] ; then \
-			rm $$tmp $$tmp2 ; \
+			echo "fail (did not execute)" ; \
+			rm $$tmp ; \
 			exit 1 ; \
 		fi ; \
 		diff -I '^$$' -w $$tmp $$f >/dev/null 2>&1 ; \
 		if [ $$? -ne 0 ] ; then \
-			diff -i '^$$' -w -u $$tmp $$f ; \
-			rm $$tmp $$tmp2 ; \
+			echo "fail (output)" ; \
+			diff -I '^$$' -w -u $$tmp $$f ; \
+			rm $$tmp ; \
 			exit 1 ; \
 		fi ; \
-		echo "ort (cross-check...)" ; \
-		./ort regress/$$bf > $$tmp2 ; \
-		if [ $$? -ne 0 ] ; then \
-			rm $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		./ort $$tmp2 > $$tmp ; \
-		if [ $$? -ne 0 ] ; then \
-			rm $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		diff -I '^$$' -w $$tmp $$f >/dev/null 2>&1 ; \
-		if [ $$? -ne 0 ] ; then \
-			diff -i '^$$' -w -u $$tmp $$f ; \
-			rm $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
+		echo "pass" ; \
 		set -e ; \
 	done ; \
-	rm -rf regress/share ; \
-	rm $$tmp $$tmp2
-
+	rm $$tmp ; \
+	for f in regress/*.nresult ; do \
+		set +e ; \
+		printf "`basename $$f`... " ; \
+		./ort $$f >/dev/null 2>&1 ; \
+		if [ $$? -eq 0 ] ; then \
+			echo "fail (did not error out)" ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+		set -e ; \
+	done ;

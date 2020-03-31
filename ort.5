@@ -54,8 +54,8 @@ enum :== "enum" enumname "{"
 bitfield :== "bits" bitsname "{"
   [ "comment" string_literal ";" ]?
   [ "item" bitsdata ";" ]+
-  [ "isunset" label ";" ]+
-  [ "isnull" label ";" ]+
+  [ "isunset" label ";" ]?
+  [ "isnull" label ";" ]?
 "};"
 .Ed
 .Pp
@@ -746,8 +746,8 @@ They are defined as follows:
 "bits" bitsname "{"
   [ "comment" string_literal ";" ]?
   [ "item" name bitidx [parms]* ";" ]+
-  [ "isunset" label ";" ]+
-  [ "isnull" label ";" ]+
+  [ "isunset" label ";" ]?
+  [ "isnull" label ";" ]?
 "};"
 .Ed
 .Pp

@@ -3,6 +3,31 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.8.11</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-05-04">2020-05-04</time>
+		</header>
+		<aside>
+			<p>
+				When querying with a password entry, having a non-terminal password
+				field in the list of search fields would generate an incorrect
+				ordering when assigning to SQL parameters.
+				This has been fixed and the code (and documentation) cleaned up and
+				simplified.
+			</p>
+			<p>
+				Allow unary password constraint operations in update queries.
+			</p>
+			<p>
+				Fix how password <code>null</code> fields are checked for.
+				While there, consider how <code>NULL</code> values passed as the
+				password are processed.
+				Before they were not at all.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.8.10</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2020-03-30">2020-03-30</time>

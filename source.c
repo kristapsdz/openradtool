@@ -190,8 +190,8 @@ gen_print_checkpass(int ptr, size_t pos, const char *name,
 	if (f->flags & FIELD_NULL) {
 		printf("(v%zu == NULL && p%shas_%s) ||\n\t\t    "
 			"(v%zu != NULL && !p%shas_%s) ||\n\t\t    "
-			"(v%zu == NULL || ",
-			pos, s, name, pos, s, name, pos);
+			"(v%zu != NULL && p%shas_%s && ",
+			pos, s, name, pos, s, name, pos, s, name);
 #ifdef __OpenBSD__
 		printf("crypt_checkpass(v%zu, p%s%s) == -1)", 
 			pos, s, name);

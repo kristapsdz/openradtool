@@ -321,13 +321,13 @@ query_count_bindfuncs(enum ftype t, enum optype type)
 }
 
 /*
- * Generate the binding for a field of type "t" at field "pos" with a
- * tab offset of "tabs", using query_count_bindfuncs() to see if we
- * should skip the binding.
+ * Generate the binding for a field of type "t" at index "idx" referring
+ * to variable "pos" with a tab offset of "tabs", using
+ * query_count_bindfuncs() to see if we should skip the binding.
  * Returns zero if we did not print a binding 1 otherwise.
  */
 static size_t
-update_gen_bindfunc(enum ftype t, size_t pos,
+update_gen_bindfunc(enum ftype t, size_t idx, size_t pos,
 	int ptr, size_t tabs, enum optype type)
 {
 	size_t	 i;
@@ -337,15 +337,15 @@ update_gen_bindfunc(enum ftype t, size_t pos,
 	for (i = 0; i < tabs; i++)
 		putchar('\t');
 	printf("parms[%zu].%s = %sv%zu;\n", 
-		pos - 1, bindvars[t], ptr ? "*" : "", pos);
+		idx - 1, bindvars[t], ptr ? "*" : "", pos);
 	for (i = 0; i < tabs; i++)
 		putchar('\t');
 	printf("parms[%zu].type = %s;\n", 
-		pos - 1, bindtypes[t]);
+		idx - 1, bindtypes[t]);
 	if (t == FTYPE_BLOB) {
 		for (i = 0; i < tabs; i++)
 			putchar('\t');
-		printf("parms[%zu].sz = v%zu_sz;\n", pos - 1, pos);
+		printf("parms[%zu].sz = v%zu_sz;\n", idx - 1, pos);
 	}
 	return 1;
 }
@@ -355,10 +355,11 @@ update_gen_bindfunc(enum ftype t, size_t pos,
  * being a pointer.
  */
 static size_t
-query_gen_bindfunc(enum ftype t, size_t pos, enum optype type)
+query_gen_bindfunc(enum ftype t,
+	size_t idx, size_t pos, enum optype type)
 {
 
-	return update_gen_bindfunc(t, pos, 0, 1, type);
+	return update_gen_bindfunc(t, idx, pos, 0, 1, type);
 }
 
 /*
@@ -390,7 +391,7 @@ gen_strct_func_iter(const struct config *cfg,
 	const struct sent	*sent;
 	const struct sref	*sr;
 	const struct strct 	*retstr;
-	size_t			 pos, parms = 0;
+	size_t			 pos, idx, parms = 0;
 
 	retstr = s->dst != NULL ? s->dst->strct : s->parent;
 
@@ -421,12 +422,13 @@ gen_strct_func_iter(const struct config *cfg,
 	if (parms > 0)
 		puts("\tmemset(parms, 0, sizeof(parms));");
 
-	pos = 1;
+	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries)
 		if (OPTYPE_ISBINARY(sent->op)) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
 			pos += query_gen_bindfunc
-				(sr->field->type, pos, sent->op);
+				(sr->field->type, idx, pos, sent->op);
+			idx++;
 		}
 
 	/* Stipulate multiple returned entries. */
@@ -495,7 +497,7 @@ gen_strct_func_list(const struct config *cfg,
 	const struct sent	*sent;
 	const struct sref	*sr;
 	const struct strct	*retstr;
-	size_t	 		 pos, parms = 0;
+	size_t	 		 pos, parms = 0, idx;
 
 	retstr = s->dst != NULL ? s->dst->strct : s->parent;
 
@@ -535,12 +537,13 @@ gen_strct_func_list(const struct config *cfg,
 
 	/* Emit parameter binding. */
 
-	pos = 1;
+	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries)
 		if (OPTYPE_ISBINARY(sent->op)) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
-			pos += query_gen_bindfunc
-				(sr->field->type, pos, sent->op);
+			idx += query_gen_bindfunc
+				(sr->field->type, idx, pos, sent->op);
+			pos++;
 		}
 	if (pos > 1)
 		puts("");
@@ -1061,7 +1064,7 @@ gen_strct_func_count(const struct config *cfg,
 {
 	const struct sent  *sent;
 	const struct sref  *sr;
-	size_t	 	    pos, parms = 0;
+	size_t	 	    pos, parms = 0, idx;
 
 	/* Count all possible parameters to bind. */
 
@@ -1084,12 +1087,13 @@ gen_strct_func_count(const struct config *cfg,
 	/* Emit parameter binding. */
 
 	puts("");
-	pos = 1;
+	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
 		if (OPTYPE_ISBINARY(sent->op)) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
-			pos += query_gen_bindfunc
-				(sr->field->type, pos, sent->op);
+			idx += query_gen_bindfunc
+				(sr->field->type, idx, pos, sent->op);
+			pos++;
 		}
 
 	/* A single returned entry. */
@@ -1124,7 +1128,7 @@ gen_strct_func_srch(const struct config *cfg,
 	const struct sent	*sent;
 	const struct sref	*sr;
 	const struct strct	*retstr;
-	size_t			 pos, parms = 0;
+	size_t			 pos, parms = 0, idx;
 
 	retstr = s->dst != NULL ? s->dst->strct : s->parent;
 
@@ -1154,15 +1158,16 @@ gen_strct_func_srch(const struct config *cfg,
 	if (parms > 0)
 		puts("\tmemset(parms, 0, sizeof(parms));");
 
-	pos = 1;
+	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
 		if (OPTYPE_ISBINARY(sent->op)) {
 			sr = TAILQ_LAST(&sent->srq, srefq);
-			pos += query_gen_bindfunc
-				(sr->field->type, pos, sent->op);
-		}
-
+			idx += query_gen_bindfunc
+				(sr->field->type, idx, pos, sent->op);
+			pos++;
+		} 
 	puts("");
+
 	printf("\tif (!sqlbox_prepare_bind_async\n"
 	       "\t    (db, 0, STMT_%s_BY_SEARCH_%zu, %zu, %s, 0))\n"
 	       "\t	exit(EXIT_FAILURE);\n",
@@ -1252,7 +1257,7 @@ static void
 gen_func_insert(const struct config *cfg, const struct strct *p)
 {
 	const struct field	*f;
-	size_t			 pos, npos, parms = 0, tabs;
+	size_t			 hpos, idx, parms = 0, tabs, pos;
 
 	if (p->ins == NULL)
 		return;
@@ -1275,56 +1280,67 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 
 	/* Start by generating password hashes. */
 
-	pos = 1;
+	hpos = 1;
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if (f->type == FTYPE_PASSWORD)
-			printf("\tchar hash%zu[64];\n", pos++);
+			printf("\tchar hash%zu[64];\n", hpos++);
 	puts("");
-	pos = npos = 1;
+
+	hpos = idx = 1;
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (f->type == FTYPE_STRUCT ||
 		    (f->flags & FIELD_ROWID))
 			continue;
 		if (f->type != FTYPE_PASSWORD) {
-			npos++;
+			idx++;
 			continue;
 		}
 		if ((f->flags & FIELD_NULL))
-			printf("\tif (v%zu != NULL)\n\t", npos);
-		gen_print_newpass((f->flags & FIELD_NULL), pos, npos);
-		pos++;
-		npos++;
+			printf("\tif (v%zu != NULL)\n\t", idx);
+		gen_print_newpass((f->flags & FIELD_NULL), hpos, idx);
+		hpos++;
+		idx++;
 	}
-	if (pos > 1)
+	if (hpos > 1)
 		puts("");
-
 	if (parms > 0)
 		puts("\tmemset(parms, 0, sizeof(parms));");
 
-	pos = npos = 1;
+	/* 
+	 * Advance hash position (hpos), index in parameters array
+	 * (idx), and position in function arguments (pos).
+	 */
+
+	hpos = pos = idx = 1;
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (f->type == FTYPE_STRUCT ||
 		    (f->flags & FIELD_ROWID))
 			continue;
 		tabs = 1;
-		if ((f->flags & FIELD_NULL)) {
+		if (f->flags & FIELD_NULL) {
 			printf("\tif (v%zu == NULL) {\n"
 			       "\t\tparms[%zu].type = "
 					"SQLBOX_PARM_NULL;\n"
-			       "\t} else {\n", npos, npos - 1);
+			       "\t} else {\n", pos, idx - 1);
 			tabs++;
 		}
+
+		/* 
+		 * No need to check the result of update_gen_bindfunc:
+		 * we know that it will be printed.
+		 */
+
 		if (f->type == FTYPE_PASSWORD)
-			update_gen_bindhash(npos, pos++, tabs);
+			update_gen_bindhash(idx, hpos++, tabs);
 		else
-			update_gen_bindfunc(f->type, npos, 
+			update_gen_bindfunc(f->type, idx, pos,
 				(f->flags & FIELD_NULL), 
 				tabs, OPTYPE_EQUAL /* XXX */);
 		if ((f->flags & FIELD_NULL))
 			puts("\t}");
-		npos++;
+		idx++;
+		pos++;
 	}
-
 	if (parms > 0)
 		puts("");
 
@@ -1582,7 +1598,7 @@ gen_func_update(const struct config *cfg,
 	const struct update *up, size_t num)
 {
 	const struct uref	*ref;
-	size_t	 		 pos, npos, parms = 0, tabs;
+	size_t	 		 pos, idx, hpos, parms = 0, tabs;
 
 	/* Count all possible (modify & constrain) parameters. */
 
@@ -1613,35 +1629,38 @@ gen_func_update(const struct config *cfg,
 	 * password.
 	 */
 
-	pos = 1;
+	hpos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries)
 		if (ref->field->type == FTYPE_PASSWORD &&
 		    ref->mod != MODTYPE_STRSET)
-			printf("\tchar hash%zu[64];\n", pos++);
-
+			printf("\tchar hash%zu[64];\n", hpos++);
 	puts("");
-	npos = pos = 1;
+
+	idx = hpos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
 		if (ref->field->type == FTYPE_PASSWORD &&
 		    ref->mod != MODTYPE_STRSET) {
 			if ((ref->field->flags & FIELD_NULL))
-				printf("if (v%zu != NULL)\n"
-				       "\t", npos);
+				printf("\tif (v%zu != NULL)\n"
+				       "\t", idx);
 			gen_print_newpass
-				((FIELD_NULL & ref->field->flags), 
-				 pos, npos);
-			pos++;
+				((ref->field->flags & FIELD_NULL), 
+				 hpos, idx);
+			hpos++;
 		} 
-		npos++;
+		idx++;
 	}
-	if (pos > 1)
+	if (hpos > 1)
 		puts("");
-
-	/* Bind parameters with special attention on hashing. */
-
 	if (parms > 0)
 		puts("\tmemset(parms, 0, sizeof(parms));");
-	npos = pos = 1;
+
+	/*
+	 * Advance hash position (hpos), index in parameters array
+	 * (idx), and position in function arguments (pos).
+	 */
+
+	idx = pos = hpos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
 		tabs = 1;
 		if ((ref->field->flags & FIELD_NULL)) {
@@ -1649,27 +1668,41 @@ gen_func_update(const struct config *cfg,
 			       "\t\tparms[%zu].type = "
 				"SQLBOX_PARM_NULL;\n"
 			       "\telse {\n"
-			       "\t", npos, npos - 1);
+			       "\t", idx, idx - 1);
 			tabs++;
 		}
+
+		/* 
+		 * No need to check the result of update_gen_bindfunc:
+		 * we know that it will be printed.
+		 */
+
 		if (ref->field->type == FTYPE_PASSWORD &&
 		    ref->mod != MODTYPE_STRSET)
-			update_gen_bindhash(npos, pos++, tabs);
+			update_gen_bindhash(idx, hpos++, tabs);
 		else
 			update_gen_bindfunc
-				(ref->field->type, npos,
+				(ref->field->type, idx, pos,
 				 (ref->field->flags & FIELD_NULL), 
 				 tabs, OPTYPE_STREQ /* XXX */);
 		if ((ref->field->flags & FIELD_NULL))
 			puts("\t}");
-		npos++;
+		pos++;
+		idx++;
 	}
+
+	/* 
+	 * Now the constraints.
+	 * No password business here.
+	 */
+
 	TAILQ_FOREACH(ref, &up->crq, entries) {
 		assert(ref->field->type != FTYPE_STRUCT);
 		if (OPTYPE_ISUNARY(ref->op))
 			continue;
-		npos += update_gen_bindfunc
-			(ref->field->type, npos, 0, 1, ref->op);
+		idx += update_gen_bindfunc
+			(ref->field->type, idx, pos, 0, 1, ref->op);
+		pos++;
 	}
 
 	printf("\n"

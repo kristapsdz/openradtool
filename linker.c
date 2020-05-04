@@ -319,7 +319,8 @@ resolve_uref_constraint(struct config *cfg, struct uref *ref)
 
 	if (f->type == FTYPE_PASSWORD &&
 	    ref->op != OPTYPE_STREQ &&
-	    ref->op != OPTYPE_STRNEQ) {
+	    ref->op != OPTYPE_STRNEQ &&
+	    !OPTYPE_ISUNARY(ref->op)) {
 		gen_errx(cfg, &ref->pos, 
 			"constraint field may not be a "
 			"password in hashing mode");

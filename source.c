@@ -1153,7 +1153,6 @@ gen_strct_func_srch(const struct config *cfg,
 
 	/* Count all possible parameters to bind. */
 
-	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
 		if (OPTYPE_ISBINARY(sent->op)) {
 			sr = TAILQ_LAST(&sent->srq, srefq);

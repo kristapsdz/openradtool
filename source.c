@@ -178,22 +178,39 @@ static	const char *const validbins[VALIDATE__MAX] = {
  * match the given type.
  */
 static void
-gen_print_checkpass(int ptr, size_t pos, 
-	const char *name, enum optype type)
+gen_print_checkpass(int ptr, size_t pos, const char *name,
+	enum optype type, const struct field *f)
 {
 	const char	*s = ptr ? "->" : ".";
 
 	assert(type == OPTYPE_EQUAL || type == OPTYPE_NEQUAL);
 
+	printf("(%s", type == OPTYPE_NEQUAL ? "!(" : "");
+
+	if (f->flags & FIELD_NULL) {
+		printf("(v%zu == NULL && p%shas_%s) ||\n\t\t    "
+			"(v%zu != NULL && !p%shas_%s) ||\n\t\t    "
+			"(v%zu == NULL || ",
+			pos, s, name, pos, s, name, pos);
 #ifdef __OpenBSD__
-	printf("(crypt_checkpass(v%zu, p%s%s) %c= -1)", 
-		pos, s, name, 
-		type == OPTYPE_EQUAL ? '=' : '!');
+		printf("crypt_checkpass(v%zu, p%s%s) == -1)", 
+			pos, s, name);
 #else
-	printf("(strcmp(crypt(v%zu, p%s%s), p%s%s) %c= 0)", 
-		pos, s, name, s, name, 
-		type == OPTYPE_EQUAL ? '!' : '=');
+		printf("strcmp(crypt(v%zu, p%s%s), p%s%s) != 0)", 
+			pos, s, name, s, name);
 #endif
+	} else {
+		printf("v%zu == NULL || ", pos);
+#ifdef __OpenBSD__
+		printf("crypt_checkpass(v%zu, p%s%s) == -1", 
+			pos, s, name);
+#else
+		printf("strcmp(crypt(v%zu, p%s%s), p%s%s) != 0", 
+			pos, s, name, s, name);
+#endif
+	}
+
+	printf("%s)", type == OPTYPE_NEQUAL ? ")" : "");
 }
 
 static void
@@ -466,7 +483,8 @@ gen_strct_func_iter(const struct config *cfg,
 			continue;
 		}
 		printf("\t\tif ");
-		gen_print_checkpass(0, pos, sent->fname, sent->op);
+		gen_print_checkpass(0, pos,
+			sent->fname, sent->op, sr->field);
 		printf(" {\n"
 		       "\t\t\tdb_%s_unfill_r(&p);\n"
 		       "\t\t\tcontinue;\n"
@@ -588,7 +606,8 @@ gen_strct_func_list(const struct config *cfg,
 			continue;
 		}
 		printf("\t\tif ");
-		gen_print_checkpass(1, pos, sent->fname, sent->op);
+		gen_print_checkpass(1, pos,
+			sent->fname, sent->op, sr->field);
 		printf(" {\n"
 		       "\t\t\tdb_%s_free(p);\n"
 		       "\t\t\tp = NULL;\n"
@@ -1202,7 +1221,8 @@ gen_strct_func_srch(const struct config *cfg,
 			continue;
 		}
 		printf("\t\tif ");
-		gen_print_checkpass(1, pos, sent->fname, sent->op);
+		gen_print_checkpass(1, pos,
+			sent->fname, sent->op, sr->field);
 		printf(" {\n"
 		       "\t\t\tdb_%s_free(p);\n"
 		       "\t\t\tp = NULL;\n"

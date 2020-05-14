@@ -174,14 +174,6 @@ struct	bitf {
 };
 
 /*
- * The bitfield type for a field.
- */
-struct	bref {
-	struct bitf	*bitf; /* bitfield */
-	struct field	*parent; /* up-reference */
-};
-
-/*
  * Update/delete action.
  * Defaults to UPACT_NONE (no special action).
  */
@@ -202,7 +194,7 @@ struct	field {
 	char		  *name; /* column name */
 	struct ref	  *ref; /* "foreign key" ref (or null) */
 	struct enm	  *enm;  /* enumeration ref (or null) */
-	struct bref	  *bref;  /* enumeration ref (or null) */
+	struct bitf	  *bitf;  /* bitfield ref (or null) */
 	char		  *doc; /* documentation */
 	struct pos	   pos; /* parse point */
 	union {

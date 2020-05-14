@@ -282,7 +282,7 @@ parse_write_field(struct writer *w, const struct field *p)
 		if (!wprint(w, " %s", p->enm->name))
 			return 0;
 	if (p->type == FTYPE_BITFIELD)
-		if (!wprint(w, " %s", p->bref->bitf->name))
+		if (!wprint(w, " %s", p->bitf->name))
 			return 0;
 
 	/* Flags. */

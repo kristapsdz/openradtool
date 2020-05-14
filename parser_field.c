@@ -381,12 +381,6 @@ parse_field_bits(struct parse *p, struct field *fd)
 {
 	struct resolve	*r;
 
-	if ((fd->bref = calloc(1, sizeof(struct bref))) == NULL) {
-		parse_err(p);
-		return;
-	}
-	fd->bref->parent = fd;
-
 	if ((r = calloc(1, sizeof(struct resolve))) == NULL) {
 		parse_err(p);
 		return;
@@ -394,7 +388,7 @@ parse_field_bits(struct parse *p, struct field *fd)
 
 	TAILQ_INSERT_TAIL(&p->cfg->priv->rq, r, entries);
 	r->type = RESOLVE_FIELD_BITS;
-	r->field_bits.result = fd->bref;
+	r->field_bits.result = fd;
 
 	if (parse_next(p) != TOK_IDENT) {
 		parse_errx(p, "expected bitfield name");

@@ -45,7 +45,7 @@ struct	resolve {
 				char		*sfield;
 		} field_struct; /* field foo struct ->bar<- */
 		struct field_bits {
-				struct bref	*result;
+				struct field	*result;
 				char		*name;
 		} field_bits; /* field foo bits ->bar<- */
 		struct field_enum {

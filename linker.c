@@ -21,9 +21,6 @@
 #endif
 
 #include <assert.h>
-#if HAVE_ERR
-# include <err.h>
-#endif
 #include <errno.h>
 #include <inttypes.h>
 #include <stdarg.h>
@@ -63,11 +60,11 @@ gen_warnx(struct config *cfg,
 
 	if (NULL != fmt) {
 		va_start(ap, fmt);
-		ort_config_msgv(cfg, MSGTYPE_WARN, 
+		ort_msgv(cfg, MSGTYPE_WARN, 
 			channel, 0, pos, fmt, ap);
 		va_end(ap);
 	} else
-		ort_config_msg(cfg, MSGTYPE_WARN, 
+		ort_msg(cfg, MSGTYPE_WARN, 
 			channel, 0, pos, NULL);
 }
 
@@ -76,7 +73,7 @@ gen_err(struct config *cfg, const struct pos *pos)
 {
 	int	 er = errno;
 
-	ort_config_msg(cfg, MSGTYPE_FATAL, channel, er, pos, NULL);
+	ort_msg(cfg, MSGTYPE_FATAL, channel, er, pos, NULL);
 }
 
 static void
@@ -87,11 +84,11 @@ gen_errx(struct config *cfg,
 
 	if (NULL != fmt) {
 		va_start(ap, fmt);
-		ort_config_msgv(cfg, MSGTYPE_ERROR, 
+		ort_msgv(cfg, MSGTYPE_ERROR, 
 			channel, 0, pos, fmt, ap);
 		va_end(ap);
 	} else
-		ort_config_msg(cfg, MSGTYPE_ERROR, 
+		ort_msg(cfg, MSGTYPE_ERROR, 
 			channel, 0, pos, NULL);
 }
 
@@ -152,8 +149,10 @@ resolve_field_source(struct config *cfg, struct field *f)
 	f->ref->tfield = strdup(f->ref->source->ref->tfield);
 	f->ref->tstrct = strdup(f->ref->source->ref->tstrct);
 
-	if (NULL == f->ref->tfield || NULL == f->ref->tstrct) 
-		err(EXIT_FAILURE, NULL);
+	if (NULL == f->ref->tfield || NULL == f->ref->tstrct) {
+		gen_err(cfg, &f->pos);
+		return 0;
+	}
 
 	return(1);
 }

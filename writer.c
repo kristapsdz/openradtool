@@ -22,9 +22,6 @@
 
 #include <assert.h>
 #include <ctype.h>
-#if HAVE_ERR
-# include <err.h>
-#endif
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>

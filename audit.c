@@ -32,6 +32,7 @@
 
 #include "ort.h"
 #include "extern.h"
+#include "cprotos.h" /* XXX: print_name_db_search */
 
 #define	SPACE	"\t" /* Space for output indentation. */
 

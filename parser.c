@@ -218,11 +218,11 @@ parse_warnx(struct parse *p, const char *fmt, ...)
 
 	if (fmt != NULL) {
 		va_start(ap, fmt);
-		ort_config_msgv(p->cfg, MSGTYPE_WARN, 
+		ort_msgv(p->cfg, MSGTYPE_WARN, 
 			channel, 0, &pos, fmt, ap);
 		va_end(ap);
 	} else
-		ort_config_msg(p->cfg, MSGTYPE_WARN, 
+		ort_msg(p->cfg, MSGTYPE_WARN, 
 			channel, 0, &pos, NULL);
 }
 
@@ -236,7 +236,7 @@ parse_err(struct parse *p)
 	pos.line = p->line;
 	pos.column = p->column;
 
-	ort_config_msg(p->cfg, MSGTYPE_FATAL, 
+	ort_msg(p->cfg, MSGTYPE_FATAL, 
 		channel, er, &pos, NULL);
 
 	p->lasttype = TOK_ERR;
@@ -255,11 +255,11 @@ parse_errx(struct parse *p, const char *fmt, ...)
 
 	if (fmt != NULL) {
 		va_start(ap, fmt);
-		ort_config_msgv(p->cfg, MSGTYPE_ERROR, 
+		ort_msgv(p->cfg, MSGTYPE_ERROR, 
 			channel, 0, &pos, fmt, ap);
 		va_end(ap);
 	} else
-		ort_config_msg(p->cfg, MSGTYPE_ERROR, 
+		ort_msg(p->cfg, MSGTYPE_ERROR, 
 			channel, 0, &pos, NULL);
 
 	p->lasttype = TOK_ERR;
@@ -803,7 +803,7 @@ ort_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 	pp = reallocarray(cfg->fnames, 
 		cfg->fnamesz + 1, sizeof(char *));
 	if (pp == NULL) {
-		ort_config_msg(cfg, MSGTYPE_FATAL, 
+		ort_msg(cfg, MSGTYPE_FATAL, 
 			channel, errno, NULL, NULL);
 		return 0;
 	}
@@ -812,7 +812,7 @@ ort_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 	cfg->fnamesz++;
 	cfg->fnames[cfg->fnamesz - 1] = strdup(fname);
 	if (cfg->fnames[cfg->fnamesz - 1] == NULL) {
-		ort_config_msg(cfg, MSGTYPE_FATAL, 
+		ort_msg(cfg, MSGTYPE_FATAL, 
 			channel, errno, NULL, NULL);
 		return 0;
 	}
@@ -848,7 +848,7 @@ ort_parse_buf(const char *buf, size_t len)
 	pp = reallocarray(cfg->fnames, 
 		 cfg->fnamesz + 1, sizeof(char *));
 	if (pp == NULL) {
-		ort_config_msg(cfg, MSGTYPE_FATAL, 
+		ort_msg(cfg, MSGTYPE_FATAL, 
 			channel, errno, NULL, NULL);
 		ort_config_free(cfg);
 		return NULL;
@@ -858,7 +858,7 @@ ort_parse_buf(const char *buf, size_t len)
 	cfg->fnamesz++;
 	cfg->fnames[cfg->fnamesz - 1] = strdup("<buffer>");
 	if (cfg->fnames[cfg->fnamesz - 1] == NULL) {
-		ort_config_msg(cfg, MSGTYPE_FATAL, 
+		ort_msg(cfg, MSGTYPE_FATAL, 
 			channel, errno, NULL, NULL);
 		ort_config_free(cfg);
 		return NULL;

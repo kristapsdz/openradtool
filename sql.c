@@ -33,6 +33,7 @@
 
 #include "ort.h"
 #include "extern.h"
+#include "comments.h"
 
 static	const char *const realtypes[FTYPE__MAX] = {
 	"int", /* FTYPE_BIT */

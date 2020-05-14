@@ -7,19 +7,20 @@ VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 8
 VERSION_BUILD	 = 13
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
-LIBOBJS		 = comments.o \
-		   compats.o \
+LIBOBJS		 = compats.o \
 		   config.o \
 		   linker.o \
+		   log.o \
 		   parser.o \
 		   parser_bitfield.o \
 		   parser_enum.o \
 		   parser_field.o \
 		   parser_roles.o \
 		   parser_struct.o \
-		   protos.o \
 		   writer.o
 OBJS		 = audit.o \
+		   comments.o \
+		   cprotos.o \
 		   main.o \
 		   header.o \
 		   javascript.o \
@@ -59,6 +60,8 @@ DOTAR		 = audit.c \
 		   comments.c \
 		   compats.c \
 		   config.c \
+		   cprotos.c \
+		   cprotos.h \
 		   extern.h \
 		   gensalt.c \
 		   header.c \
@@ -68,6 +71,7 @@ DOTAR		 = audit.c \
 		   ort.5 \
 		   ort.h \
 		   linker.c \
+		   log.c \
 		   Makefile \
 		   main.c \
 		   parser.c \
@@ -77,8 +81,6 @@ DOTAR		 = audit.c \
 		   parser_field.c \
 		   parser_roles.c \
 		   parser_struct.c \
-		   printer.c \
-		   protos.c \
 		   source.c \
 		   sql.c \
 		   tests.c \
@@ -141,29 +143,29 @@ ort: main.o libort.a
 libort.a: $(LIBOBJS)
 	$(AR) rs $@ $(LIBOBJS)
 
-ort-c-source: source.o libort.a
-	$(CC) -o $@ source.o libort.a $(LDFLAGS) $(LDADD)
+ort-c-source: source.o cprotos.o comments.o libort.a
+	$(CC) -o $@ source.o cprotos.o comments.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-c-header: header.o libort.a
-	$(CC) -o $@ header.o libort.a $(LDFLAGS) $(LDADD)
+ort-c-header: header.o cprotos.o comments.o libort.a
+	$(CC) -o $@ header.o cprotos.o comments.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-javascript: javascript.o libort.a
-	$(CC) -o $@ javascript.o libort.a $(LDFLAGS) $(LDADD)
+ort-javascript: javascript.o comments.o libort.a
+	$(CC) -o $@ javascript.o comments.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-sql: sql.o libort.a
-	$(CC) -o $@ sql.o libort.a $(LDFLAGS) $(LDADD)
+ort-sql: sql.o comments.o libort.a
+	$(CC) -o $@ sql.o comments.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-sqldiff: sql.o libort.a
-	$(CC) -o $@ sql.o libort.a $(LDFLAGS) $(LDADD)
+ort-sqldiff: sql.o comments.o libort.a
+	$(CC) -o $@ sql.o comments.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-audit: audit.o libort.a
-	$(CC) -o $@ audit.o libort.a $(LDFLAGS) $(LDADD)
+ort-audit: audit.o cprotos.o libort.a
+	$(CC) -o $@ audit.o cprotos.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-audit-gv: audit.o libort.a
-	$(CC) -o $@ audit.o libort.a $(LDFLAGS) $(LDADD)
+ort-audit-gv: audit.o cprotos.o libort.a
+	$(CC) -o $@ audit.o cprotos.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-audit-json: audit.o libort.a
-	$(CC) -o $@ audit.o libort.a $(LDFLAGS) $(LDADD)
+ort-audit-json: audit.o cprotos.o libort.a
+	$(CC) -o $@ audit.o cprotos.o libort.a $(LDFLAGS) $(LDADD)
 
 ort-xliff: xliff.o libort.a
 	$(CC) -o $@ xliff.o libort.a $(LDFLAGS) $(LIBS_PKG) $(LDADD)
@@ -294,7 +296,7 @@ db.db: db.sql
 	rm -f $@
 	sqlite3 $@ < db.sql
 
-$(LIBOBJS) $(OBJS): config.h extern.h ort.h
+$(LIBOBJS) $(OBJS): config.h extern.h ort.h cprotos.h comments.h
 
 .5.5.html:
 	mandoc -Ostyle=https://bsd.lv/css/mandoc.css -Thtml $< >$@

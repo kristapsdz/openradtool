@@ -38,6 +38,8 @@
 #include "paths.h"
 #include "ort.h"
 #include "extern.h"
+#include "cprotos.h"
+#include "comments.h"
 
 enum	external {
 	EX_GENSALT, /* gensalt.c */

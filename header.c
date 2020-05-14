@@ -34,6 +34,8 @@
 #include "version.h"
 #include "ort.h"
 #include "extern.h"
+#include "cprotos.h"
+#include "comments.h"
 
 static	const char *const optypes[OPTYPE__MAX] = {
 	"equals", /* OPTYPE_EQUAL */

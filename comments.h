@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2020 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,14 +14,26 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef EXTERN_H
-#define EXTERN_H
+#ifndef COMMENTS_H
+#define COMMENTS_H
 
-void	 ort_msgv(struct config *, enum msgtype, 
-		const char *, int, const struct pos *, 
-		const char *, va_list);
-void	 ort_msg(struct config *, enum msgtype, 
-		const char *, int, const struct pos *, 
-		const char *, ...);
+/*
+ * Type of comment.
+ */
+enum	cmtt {
+	COMMENT_C, /* self-contained C comment */
+	COMMENT_C_FRAG, /* C w/o open or close */
+	COMMENT_C_FRAG_CLOSE, /* C w/o open */
+	COMMENT_C_FRAG_OPEN, /* C w/o close */
+	COMMENT_JS, /* self-contained jsdoc */
+	COMMENT_JS_FRAG, /* jsdoc w/o open or close */
+	COMMENT_JS_FRAG_CLOSE, /* jsdoc w/o open */
+	COMMENT_JS_FRAG_OPEN, /* jsdoc w/o close */
+	COMMENT_SQL /* self-contained SQL comment */
+};
 
-#endif /* !EXTERN_H */
+void	 print_commentt(size_t, enum cmtt, const char *);
+void	 print_commentv(size_t, enum cmtt, const char *, ...)
+		__attribute__((format(printf, 3, 4)));
+
+#endif /* !COMMENTS_H */

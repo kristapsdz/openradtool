@@ -32,6 +32,7 @@
 
 #include "ort.h"
 #include "extern.h"
+#include "comments.h"
 
 #define	MAXCOLS 70
 

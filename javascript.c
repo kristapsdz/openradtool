@@ -33,6 +33,7 @@
 
 #include "ort.h"
 #include "extern.h"
+#include "comments.h"
 
 static	const char *types[FTYPE__MAX] = {
 	"number", /* FTYPE_BIT */

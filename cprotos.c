@@ -21,9 +21,6 @@
 #endif
 
 #include <assert.h>
-#if HAVE_ERR
-# include <err.h>
-#endif
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,6 +28,7 @@
 
 #include "ort.h"
 #include "extern.h"
+#include "cprotos.h"
 
 static	const char *const stypes[STYPE__MAX] = {
 	"count", /* STYPE_COUNT */

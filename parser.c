@@ -830,59 +830,6 @@ ort_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 }
 
 /*
- * Parse and link a non-NUL terminated buffer "buf" of length" len" into
- * a configuration.
- * Returns NULL on error.
- */
-struct config *
-ort_parse_buf(const char *buf, size_t len)
-{
-	struct parse	 p;
-	int		 rc = 0;
-	struct config	*cfg;
-	void		*pp;
-
-	if ((cfg = ort_config_alloc()) == NULL)
-		return NULL;
-
-	pp = reallocarray(cfg->fnames, 
-		 cfg->fnamesz + 1, sizeof(char *));
-	if (pp == NULL) {
-		ort_msg(cfg, MSGTYPE_FATAL, 
-			channel, errno, NULL, NULL);
-		ort_config_free(cfg);
-		return NULL;
-	}
-
-	cfg->fnames = pp;
-	cfg->fnamesz++;
-	cfg->fnames[cfg->fnamesz - 1] = strdup("<buffer>");
-	if (cfg->fnames[cfg->fnamesz - 1] == NULL) {
-		ort_msg(cfg, MSGTYPE_FATAL, 
-			channel, errno, NULL, NULL);
-		ort_config_free(cfg);
-		return NULL;
-	}
-
-	memset(&p, 0, sizeof(struct parse));
-	p.column = 0;
-	p.line = 1;
-	p.fname = cfg->fnames[cfg->fnamesz - 1];
-	p.inbuf.buf = buf;
-	p.inbuf.len = len;
-	p.type = PARSETYPE_BUF;
-	p.cfg = cfg;
-	rc = parse_root(&p);
-	free(p.buf);
-
-	if (!rc || !ort_parse_close(cfg)) {
-		ort_config_free(cfg);
-		return NULL;
-	}
-	return cfg;
-}
-
-/*
  * Parse and link a standalone file "f" into a configuration.
  * Returns NULL on error.
  */

@@ -832,30 +832,3 @@ ort_write_file(FILE *f, const struct config *cfg)
 out:
 	return rc;
 }
-
-char *
-ort_write_buf(const struct config *cfg)
-{
-	const struct strct *s;
-	const struct enm   *e;
-	const struct bitf  *b;
-	struct writer	    w;
-
-	memset(&w, 0, sizeof(struct writer));
-	w.type = WTYPE_BUF;
-
-	if (!TAILQ_EMPTY(&cfg->rq))
-		if ( ! parse_write_roles(&w, cfg))
-			goto out;
-	TAILQ_FOREACH(e, &cfg->eq, entries)
-		parse_write_enm(&w, cfg, e);
-	TAILQ_FOREACH(b, &cfg->bq, entries)
-		parse_write_bitf(&w, cfg, b);
-	TAILQ_FOREACH(s, &cfg->sq, entries)
-		parse_write_strct(&w, s);
-
-	return w.buf.buf;
-out:
-	free(w.buf.buf);
-	return NULL;
-}

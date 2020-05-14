@@ -656,14 +656,9 @@ __BEGIN_DECLS
 
 struct config	*ort_config_alloc(void);
 void		 ort_config_free(struct config *);
-
 int		 ort_parse_close(struct config *);
 int		 ort_parse_file_r(struct config *, FILE *, const char *);
-
 struct config	*ort_parse_file(FILE *, const char *);
-struct config	*ort_parse_buf(const char *, size_t);
-
-char		*ort_write_buf(const struct config *);
 int		 ort_write_file(FILE *, const struct config *);
 
 __END_DECLS

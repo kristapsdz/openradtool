@@ -172,6 +172,47 @@ static	const char *const validbins[VALIDATE__MAX] = {
 };
 
 /*
+ * Print the line of source code given by "fmt" and varargs.
+ * This is indented according to "indent", which changes depending on
+ * whether there are curly braces around a newline.
+ * This is useful when printing the same text with different
+ * indentations (e.g., when being surrounded by a conditional).
+ */
+static void
+print_src(size_t indent, const char *fmt, ...)
+{
+	va_list	 ap;
+	char	*cp;
+	int	 ret;
+	size_t	 i, pos;
+
+	va_start(ap, fmt);
+	ret = vasprintf(&cp, fmt, ap);
+	va_end(ap);
+	if (-1 == ret)
+		return;
+
+	for (pos = 0; '\0' != cp[pos]; pos++) {
+		if (0 == pos || '\n' == cp[pos]) {
+			if (pos && '{' == cp[pos - 1])
+				indent++;
+			if ('}' == cp[pos + 1])
+				indent--;
+			if (pos)
+				putchar('\n');
+			for (i = 0; i < indent; i++)
+				putchar('\t');
+		} 
+
+		if ('\n' != cp[pos])
+			putchar(cp[pos]);
+	} 
+
+	putchar('\n');
+	free(cp);
+}
+
+/*
  * Emit the function for checking a password.
  * This should be a conditional phrase that evalutes to FALSE if the
  * password does NOT match the given type, TRUE if the password does

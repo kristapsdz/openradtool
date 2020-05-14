@@ -17,7 +17,6 @@ LIBOBJS		 = comments.o \
 		   parser_field.o \
 		   parser_roles.o \
 		   parser_struct.o \
-		   printer.o \
 		   protos.o \
 		   writer.o
 OBJS		 = audit.o \

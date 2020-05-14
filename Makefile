@@ -19,12 +19,12 @@ LIBOBJS		 = compats.o \
 		   parser_struct.o \
 		   writer.o
 OBJS		 = audit.o \
+		   cheader.o \
 		   comments.o \
 		   cprotos.o \
+		   csource.o \
 		   main.o \
-		   header.o \
 		   javascript.o \
-		   source.o \
 		   sql.o \
 		   xliff.o
 HTMLS		 = archive.html \
@@ -57,14 +57,15 @@ DOTAR		 = audit.c \
 		   audit.html \
 		   audit.js \
 		   b64_ntop.c \
+		   cheader.c \
 		   comments.c \
 		   compats.c \
 		   config.c \
 		   cprotos.c \
 		   cprotos.h \
+		   csource.c \
 		   extern.h \
 		   gensalt.c \
-		   header.c \
 		   javascript.c \
 		   jsmn.c \
 		   $(MAN1S) \
@@ -81,7 +82,6 @@ DOTAR		 = audit.c \
 		   parser_field.c \
 		   parser_roles.c \
 		   parser_struct.c \
-		   source.c \
 		   sql.c \
 		   tests.c \
 		   test.c \
@@ -143,11 +143,11 @@ ort: main.o libort.a
 libort.a: $(LIBOBJS)
 	$(AR) rs $@ $(LIBOBJS)
 
-ort-c-source: source.o cprotos.o comments.o libort.a
-	$(CC) -o $@ source.o cprotos.o comments.o libort.a $(LDFLAGS) $(LDADD)
+ort-c-source: csource.o cprotos.o comments.o libort.a
+	$(CC) -o $@ csource.o cprotos.o comments.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-c-header: header.o cprotos.o comments.o libort.a
-	$(CC) -o $@ header.o cprotos.o comments.o libort.a $(LDFLAGS) $(LDADD)
+ort-c-header: cheader.o cprotos.o comments.o libort.a
+	$(CC) -o $@ cheader.o cprotos.o comments.o libort.a $(LDFLAGS) $(LDADD)
 
 ort-javascript: javascript.o comments.o libort.a
 	$(CC) -o $@ javascript.o comments.o libort.a $(LDFLAGS) $(LDADD)
@@ -208,17 +208,11 @@ version.h: Makefile
 	( echo "#define VERSION \"$(VERSION)\"" ; \
 	  echo "#define VSTAMP `echo $$((($(VERSION_BUILD)+1)+($(VERSION_MINOR)+1)*100+($(VERSION_MAJOR)+1)*10000))`" ; ) >$@
 
-header.o source.o: version.h
-	
-parser.o parser_bitfield.o parser_enum.o parser_roles.o parser_field.o: parser.h
-
 paths.h: Makefile
 	( echo "#define SHAREDIR \"$(SHAREDIR)/openradtool\"" ; \
 	  echo "#define FILE_GENSALT \"gensalt.c\"" ; \
 	  echo "#define FILE_B64_NTOP \"b64_ntop.c\"" ; \
 	  echo "#define FILE_JSMN \"jsmn.c\"" ; ) >$@
-
-source.o: paths.h
 
 install: all
 	mkdir -p $(DESTDIR)$(BINDIR)
@@ -296,7 +290,9 @@ db.db: db.sql
 	rm -f $@
 	sqlite3 $@ < db.sql
 
-$(LIBOBJS) $(OBJS): config.h extern.h ort.h cprotos.h comments.h
+# These can be optimised but there's not much point.
+
+$(LIBOBJS) $(OBJS): config.h extern.h ort.h cprotos.h comments.h version.h paths.h parser.h
 
 .5.5.html:
 	mandoc -Ostyle=https://bsd.lv/css/mandoc.css -Thtml $< >$@

@@ -1,0 +1,7 @@
+bits foo {
+	item a 1 ;
+};
+
+struct bar {
+	field a bits foo ;
+};

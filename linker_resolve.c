@@ -20,9 +20,6 @@
 # include <sys/queue.h>
 #endif
 
-#include <assert.h>
-#include <errno.h>
-#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,6 +28,24 @@
 #include "ort.h"
 #include "extern.h"
 #include "linker.h"
+
+static int
+resolve_field_bits(struct config *cfg, struct field_bits *r)
+{
+	struct bitf	*b;
+
+	/* Straightforward scan. */
+
+	TAILQ_FOREACH(b, &cfg->bq, entries)
+		if (strcasecmp(b->name, r->name) == 0) {
+			r->result->bitf = b;
+			return 1;
+		}
+
+	gen_errx(cfg, &r->result->parent->pos, "unknown bitfield type");
+	return 0;
+}
+
 
 /*
  * Reslve a local key reference.
@@ -169,6 +184,12 @@ linker_resolve(struct config *cfg)
 			if (!resolve_field_foreign(cfg, &r->field_foreign))
 				fail++;
 			break;
+		case RESOLVE_FIELD_BITS:
+			if (!resolve_field_bits(cfg, &r->field_bits))
+				fail++;
+			break;
+		default:
+			abort();
 		}
 
 	/* These depend upon prior resolutions. */
@@ -179,7 +200,7 @@ linker_resolve(struct config *cfg)
 			if (!resolve_field_struct(cfg, &r->field_struct))
 				fail++;
 			break;
-		case RESOLVE_FIELD_FOREIGN:
+		default:
 			break;
 		}
 

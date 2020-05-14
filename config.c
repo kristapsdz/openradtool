@@ -51,10 +51,8 @@ parse_free_field(struct field *p)
 		free(p->eref->ename);
 		free(p->eref);
 	}
-	if (p->bref != NULL) {
-		free(p->bref->name);
+	if (p->bref != NULL)
 		free(p->bref);
-	}
 	free(p->doc);
 	free(p->name);
 	free(p);
@@ -346,6 +344,9 @@ parse_free_resolve(struct resolve *p)
 {
 
 	switch (p->type) {
+	case RESOLVE_FIELD_BITS:
+		free(p->field_bits.name);
+		break;
 	case RESOLVE_FIELD_FOREIGN:
 		free(p->field_foreign.tstrct);
 		free(p->field_foreign.tfield);

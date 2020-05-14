@@ -71,8 +71,6 @@ struct	pos {
 
 /*
  * An object reference into another table.
- * This is gathered during the syntax parse phase, then linked to an
- * actual table afterwards.
  */
 struct	ref {
 	struct field 	*target; /* target */
@@ -186,11 +184,9 @@ struct	bitf {
 };
 
 /*
- * If a field is a bitfield type, this records the name of the bitfield;
- * then, during linkage, the bitfield itself.
+ * The bitfield type for a field.
  */
 struct	bref {
-	char		*name; /* name of bitfield */
 	struct bitf	*bitf; /* bitfield (after linkage) */
 	struct field	*parent; /* up-reference */
 };

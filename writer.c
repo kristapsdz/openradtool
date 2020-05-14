@@ -263,50 +263,50 @@ parse_write_field(struct writer *w, const struct field *p)
 
 	/* Name, type, refs. */
 
-	if ( ! wprint(w, "\tfield %s", p->name))
+	if (!wprint(w, "\tfield %s", p->name))
 		return 0;
-	if (NULL != p->ref && FTYPE_STRUCT != p->type)
-		if ( ! wprint(w, ":%s.%s", 
+	if (p->ref != NULL && p->type != FTYPE_STRUCT)
+		if (!wprint(w, ":%s.%s", 
 		    p->ref->target->parent->name, 
 		    p->ref->target->name))
 			return 0;
-	if ( ! wprint(w, " %s", ftypes[p->type]))
+	if (!wprint(w, " %s", ftypes[p->type]))
 		return 0;
-	if (NULL != p->ref && FTYPE_STRUCT == p->type)
-		if ( ! wprint(w, " %s", p->ref->source->name))
+	if (p->ref != NULL && p->type == FTYPE_STRUCT)
+		if (!wprint(w, " %s", p->ref->source->name))
 			return 0;
 
-	if (FTYPE_ENUM == p->type)
-		if ( ! wprint(w, " %s", p->eref->ename))
+	if (p->type == FTYPE_ENUM)
+		if (!wprint(w, " %s", p->eref->ename))
 			return 0;
-	if (FTYPE_BITFIELD == p->type)
-		if ( ! wprint(w, " %s", p->bref->name))
+	if (p->type == FTYPE_BITFIELD)
+		if (!wprint(w, " %s", p->bref->bitf->name))
 			return 0;
 
 	/* Flags. */
 
 	fl = p->flags;
-	if (FIELD_ROWID & fl) {
-		if ( ! wputs(w, " rowid"))
+	if (fl & FIELD_ROWID) {
+		if (!wputs(w, " rowid"))
 			return 0;
 		fl &= ~FIELD_ROWID;
 	}
-	if (FIELD_UNIQUE & fl) {
-		if ( ! wputs(w, " unique"))
+	if (fl & FIELD_UNIQUE) {
+		if (!wputs(w, " unique"))
 			return 0;
 		fl &= ~FIELD_UNIQUE;
 	}
-	if (FIELD_NULL & fl) {
-		if ( ! wputs(w, " null"))
+	if (fl & FIELD_NULL) {
+		if (!wputs(w, " null"))
 			return 0;
 		fl &= ~FIELD_NULL;
 	}
-	if (FIELD_NOEXPORT & fl) {
-		if ( ! wputs(w, " noexport"))
+	if (fl & FIELD_NOEXPORT) {
+		if (!wputs(w, " noexport"))
 			return 0;
 		fl &= ~FIELD_NOEXPORT;
 	}
-	if (FIELD_HASDEF & fl) {
+	if (fl & FIELD_HASDEF) {
 		switch (p->type) {
 		case FTYPE_BIT:
 		case FTYPE_BITFIELD:
@@ -329,35 +329,35 @@ parse_write_field(struct writer *w, const struct field *p)
 			abort();
 			break;
 		}
-		if (0 == rc)
+		if (rc == 0)
 			return 0;
 		fl &= ~FIELD_HASDEF;
 	}
 
-	assert(0 == fl);
+	assert(fl == 0);
 
 	/* Validations. */
 
 	TAILQ_FOREACH(fv, &p->fvq, entries) 
 		switch (p->type) {
-		case (FTYPE_BIT):
-		case (FTYPE_DATE):
-		case (FTYPE_EPOCH):
-		case (FTYPE_INT):
-			if ( ! wprint(w, " limit %s %" PRId64, 
+		case FTYPE_BIT:
+		case FTYPE_DATE:
+		case FTYPE_EPOCH:
+		case FTYPE_INT:
+			if (!wprint(w, " limit %s %" PRId64, 
 			    vtypes[fv->type], fv->d.value.integer))
 				return 0;
 			break;
-		case (FTYPE_REAL):
-			if ( ! wprint(w, " limit %s %g",
+		case FTYPE_REAL:
+			if (!wprint(w, " limit %s %g",
 			    vtypes[fv->type], fv->d.value.decimal))
 				return 0;
 			break;
-		case (FTYPE_BLOB):
-		case (FTYPE_EMAIL):
-		case (FTYPE_TEXT):
-		case (FTYPE_PASSWORD):
-			if ( ! wprint(w, " limit %s %zu",
+		case FTYPE_BLOB:
+		case FTYPE_EMAIL:
+		case FTYPE_TEXT:
+		case FTYPE_PASSWORD:
+			if (!wprint(w, " limit %s %zu",
 			    vtypes[fv->type], fv->d.value.len))
 				return 0;
 			break;
@@ -367,16 +367,16 @@ parse_write_field(struct writer *w, const struct field *p)
 
 	/* Actions. */
 
-	if (UPACT_NONE != p->actdel) 
-		if ( ! wprint(w, " actdel %s", upacts[p->actdel]))
+	if (p->actdel != UPACT_NONE) 
+		if (!wprint(w, " actdel %s", upacts[p->actdel]))
 			return 0;
-	if (UPACT_NONE != p->actup) 
-		if ( ! wprint(w, " actup %s", upacts[p->actup]))
+	if (p->actup != UPACT_NONE) 
+		if (!wprint(w, " actup %s", upacts[p->actup]))
 			return 0;
 
 	/* Comments and close. */
 
-	if ( ! parse_write_comment(w, p->doc, 2))
+	if (!parse_write_comment(w, p->doc, 2))
 		return 0;
 
 	return wprint(w, ";\n");

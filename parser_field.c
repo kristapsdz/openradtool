@@ -374,25 +374,35 @@ parse_field_info(struct parse *p, struct field *fd)
 }
 
 /*
- * Parse information about bitfield type.
- * This just includes the bitfield name.
+ * Creates empty "bref" on field and requests RESOLVE_FIELD_BITS.
  */
 static void
-parse_field_bitfield(struct parse *p, struct field *fd)
+parse_field_bits(struct parse *p, struct field *fd)
 {
+	struct resolve	*r;
+
+	if ((fd->bref = calloc(1, sizeof(struct bref))) == NULL) {
+		parse_err(p);
+		return;
+	}
+	fd->bref->parent = fd;
+
+	if ((r = calloc(1, sizeof(struct resolve))) == NULL) {
+		parse_err(p);
+		return;
+	}
+
+	TAILQ_INSERT_TAIL(&p->cfg->priv->rq, r, entries);
+	r->type = RESOLVE_FIELD_BITS;
+	r->field_bits.result = fd->bref;
 
 	if (parse_next(p) != TOK_IDENT) {
 		parse_errx(p, "expected bitfield name");
 		return;
-	}
-
-	if ((fd->bref = calloc(1, sizeof(struct bref))) == NULL ||
-	    (fd->bref->name = strdup(p->last.string)) == NULL) {
+	} 
+	r->field_bits.name = strdup(p->last.string);
+	if (r->field_bits.name == NULL)
 		parse_err(p);
-		free(fd->bref);
-		fd->bref = NULL;
-	} else
-		fd->bref->parent = fd;
 }
 
 /*
@@ -601,7 +611,7 @@ parse_field(struct parse *p, struct strct *s)
 	case FTYPE_TEXT:
 		fd->type = ftypes[i].type;
 		if (fd->type == FTYPE_BITFIELD)
-			parse_field_bitfield(p, fd);
+			parse_field_bits(p, fd);
 		else if (fd->type == FTYPE_ENUM)
 			parse_field_enum(p, fd);
 		else if (fd->type == FTYPE_STRUCT)

@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017, 2018, 2020 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -20,10 +20,17 @@
 TAILQ_HEAD(resolveq, resolve);
 
 enum	resolvet {
+	RESOLVE_FIELD_BITS,
 	RESOLVE_FIELD_FOREIGN,
 	RESOLVE_FIELD_STRUCT
 };
 
+/*
+ * A name that points to something within the configuration.
+ * Since there's no order imposed on configuration objects (e.g., having
+ * "struct" fields before the actual foreign key), we need to do this after
+ * parsing.
+ */
 struct	resolve {
 	enum resolvet	 	type;
 	union {
@@ -31,17 +38,25 @@ struct	resolve {
 				struct ref	*result;
 				char		*tstrct;
 				char		*tfield;
-		} field_foreign;
+		} field_foreign; /* field ->foo:bar.x int<- */
 		struct field_struct {
 				struct ref	*result;
 				char		*sfield;
-		} field_struct;
+		} field_struct; /* field foo struct ->bar<- */
+		struct field_bits {
+				struct bref	*result;
+				char		*name;
+		} field_bits; /* field foo bits ->bar<- */
 	};
 	TAILQ_ENTRY(resolve)	entries;
 };
 
+/*
+ * Private information used only within the parsing and linking phase,
+ * and not exported to the final configuration.
+ */
 struct	config_private {
-	struct resolveq		 rq;
+	struct resolveq		 rq; /* resolution requests */
 };
 
 void	 ort_msgv(struct config *, enum msgtype, 

@@ -99,27 +99,6 @@ gen_errx(struct config *cfg,
 }
 
 /*
- * Resolve a bitfield.
- * This returns zero if the resolution fails, non-zero otherwise.
- * In the success case, it sets the bitfield link.
- */
-static int
-resolve_field_bitfield(struct config *cfg,
-	struct bref *ref, struct bitfq *q)
-{
-	struct bitf	*b;
-
-	TAILQ_FOREACH(b, q, entries)
-		if (0 == strcasecmp(b->name, ref->name)) {
-			ref->bitf = b;
-			return(1);
-		}
-
-	gen_errx(cfg, &ref->parent->pos, "unknown bitfield reference");
-	return(0);
-}
-
-/*
  * Resolve an enumeration.
  * This returns zero if the resolution fails, non-zero otherwise.
  * In the success case, it sets the enumeration link.
@@ -1432,9 +1411,6 @@ ort_parse_close(struct config *cfg)
 		TAILQ_FOREACH(f, &p->fq, entries) {
 			if (NULL != f->eref &&
 			    ! resolve_field_enum(cfg, f->eref, &cfg->eq))
-				return 0;
-			if (NULL != f->bref &&
-			    ! resolve_field_bitfield(cfg, f->bref, &cfg->bq))
 				return 0;
 		}
 		TAILQ_FOREACH(u, &p->uq, entries)

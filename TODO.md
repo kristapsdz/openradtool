@@ -4,3 +4,6 @@
   have this check.
 - Don't emit fill functions if they're never used.
 - Don't emit validation functions if they're the plain-old versions.
+- Add default for enumerations.
+- Allow for noexport statements for queries.
+- Allow unary isnull/notnull operations for password queries.

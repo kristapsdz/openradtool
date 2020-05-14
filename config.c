@@ -47,10 +47,6 @@ parse_free_field(struct field *p)
 	    (FTYPE_TEXT == p->type ||
 	     FTYPE_EMAIL == p->type))
 		free(p->def.string);
-	if (p->eref != NULL) {
-		free(p->eref->ename);
-		free(p->eref);
-	}
 	if (p->bref != NULL)
 		free(p->bref);
 	free(p->doc);
@@ -346,6 +342,9 @@ parse_free_resolve(struct resolve *p)
 	switch (p->type) {
 	case RESOLVE_FIELD_BITS:
 		free(p->field_bits.name);
+		break;
+	case RESOLVE_FIELD_ENUM:
+		free(p->field_enum.name);
 		break;
 	case RESOLVE_FIELD_FOREIGN:
 		free(p->field_foreign.tstrct);

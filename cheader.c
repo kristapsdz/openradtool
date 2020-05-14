@@ -95,7 +95,7 @@ gen_strct_field(const struct field *p)
 		break;
 	case (FTYPE_ENUM):
 		printf("\tenum %s %s;\n", 
-			p->eref->ename, p->name);
+			p->enm->name, p->name);
 		break;
 	default:
 		break;

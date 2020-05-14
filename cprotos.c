@@ -220,7 +220,7 @@ print_var(size_t pos, size_t col,
 		col += (rc = printf(" ")) > 0 ? rc : 0;
 
 	if (FTYPE_ENUM == f->type) {
-		rc = printf("enum %s %sv%zu", f->eref->ename,
+		rc = printf("enum %s %sv%zu", f->enm->name,
 			(flags & FIELD_NULL) ? "*" : "", pos);
 		col += rc > 0 ? rc : 0;
 		return col;

@@ -1842,7 +1842,7 @@ gen_func_valids(const struct strct *p)
 
 		if (f->type == FTYPE_ENUM) {
 			puts("\tswitch(p->parsed.i) {");
-			TAILQ_FOREACH(ei, &f->eref->enm->eq, entries)
+			TAILQ_FOREACH(ei, &f->enm->eq, entries)
 				printf("\tcase %" PRId64 ":\n",
 					ei->value);
 			puts("\t\tbreak;\n"

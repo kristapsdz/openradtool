@@ -265,19 +265,21 @@ parse_write_field(struct writer *w, const struct field *p)
 
 	if (!wprint(w, "\tfield %s", p->name))
 		return 0;
+
 	if (p->ref != NULL && p->type != FTYPE_STRUCT)
 		if (!wprint(w, ":%s.%s", 
 		    p->ref->target->parent->name, 
 		    p->ref->target->name))
 			return 0;
+
 	if (!wprint(w, " %s", ftypes[p->type]))
 		return 0;
+
 	if (p->ref != NULL && p->type == FTYPE_STRUCT)
 		if (!wprint(w, " %s", p->ref->source->name))
 			return 0;
-
 	if (p->type == FTYPE_ENUM)
-		if (!wprint(w, " %s", p->eref->ename))
+		if (!wprint(w, " %s", p->enm->name))
 			return 0;
 	if (p->type == FTYPE_BITFIELD)
 		if (!wprint(w, " %s", p->bref->bitf->name))

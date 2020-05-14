@@ -21,6 +21,7 @@ TAILQ_HEAD(resolveq, resolve);
 
 enum	resolvet {
 	RESOLVE_FIELD_BITS,
+	RESOLVE_FIELD_ENUM,
 	RESOLVE_FIELD_FOREIGN,
 	RESOLVE_FIELD_STRUCT
 };
@@ -28,8 +29,8 @@ enum	resolvet {
 /*
  * A name that points to something within the configuration.
  * Since there's no order imposed on configuration objects (e.g., having
- * "struct" fields before the actual foreign key), we need to do this after
- * parsing.
+ * "struct" fields before the actual foreign key), we need to do this
+ * after parsing.
  */
 struct	resolve {
 	enum resolvet	 	type;
@@ -47,6 +48,10 @@ struct	resolve {
 				struct bref	*result;
 				char		*name;
 		} field_bits; /* field foo bits ->bar<- */
+		struct field_enum {
+				struct field	*result;
+				char		*name;
+		} field_enum; /* field foo enum ->bar<- */
 	};
 	TAILQ_ENTRY(resolve)	entries;
 };

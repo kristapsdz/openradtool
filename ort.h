@@ -147,16 +147,6 @@ struct	enm {
 };
 
 /*
- * If a field is an enumeration type, this records the name of the
- * enumeration; then, during linkage, the enumeration itself.
- */
-struct	eref {
-	char		*ename; /* name of enumeration */
-	struct enm	*enm; /* enumeration (after linkage) */
-	struct field	*parent; /* up-reference */
-};
-
-/*
  * A single bit index within a bitfield.
  */
 struct	bitidx {
@@ -187,7 +177,7 @@ struct	bitf {
  * The bitfield type for a field.
  */
 struct	bref {
-	struct bitf	*bitf; /* bitfield (after linkage) */
+	struct bitf	*bitf; /* bitfield */
 	struct field	*parent; /* up-reference */
 };
 
@@ -211,7 +201,7 @@ enum	upact {
 struct	field {
 	char		  *name; /* column name */
 	struct ref	  *ref; /* "foreign key" ref (or null) */
-	struct eref	  *eref;  /* enumeration ref (or null) */
+	struct enm	  *enm;  /* enumeration ref (or null) */
 	struct bref	  *bref;  /* enumeration ref (or null) */
 	char		  *doc; /* documentation */
 	struct pos	   pos; /* parse point */

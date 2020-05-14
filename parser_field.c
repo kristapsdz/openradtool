@@ -406,25 +406,29 @@ parse_field_bits(struct parse *p, struct field *fd)
 }
 
 /*
- * Parse information about an enumeration type.
- * This just includes the enumeration name.
+ * Creates empty "eref" on field and requests RESOLVE_FIELD_ENUM.
  */
 static void
 parse_field_enum(struct parse *p, struct field *fd)
 {
+	struct resolve	*r;
+
+	if ((r = calloc(1, sizeof(struct resolve))) == NULL) {
+		parse_err(p);
+		return;
+	}
+
+	TAILQ_INSERT_TAIL(&p->cfg->priv->rq, r, entries);
+	r->type = RESOLVE_FIELD_ENUM;
+	r->field_enum.result = fd;
 
 	if (parse_next(p) != TOK_IDENT) {
 		parse_errx(p, "expected enum name");
 		return;
-	}
-
-	if ((fd->eref = calloc(1, sizeof(struct eref))) == NULL ||
-	    (fd->eref->ename = strdup(p->last.string)) == NULL) {
+	} 
+	r->field_enum.name = strdup(p->last.string);
+	if (r->field_enum.name == NULL)
 		parse_err(p);
-		free(fd->eref);
-		fd->eref = NULL;
-	} else
-		fd->eref->parent = fd;
 }
 
 /*

@@ -30,6 +30,23 @@
 #include "linker.h"
 
 static int
+resolve_field_enum(struct config *cfg, struct field_enum *r)
+{
+	struct enm	*e;
+
+	/* Straightforward scan. */
+
+	TAILQ_FOREACH(e, &cfg->eq, entries)
+		if (strcasecmp(e->name, r->name) == 0) {
+			r->result->enm = e;
+			return 1;
+		}
+
+	gen_errx(cfg, &r->result->parent->pos, "unknown enum type");
+	return 0;
+}
+
+static int
 resolve_field_bits(struct config *cfg, struct field_bits *r)
 {
 	struct bitf	*b;
@@ -45,7 +62,6 @@ resolve_field_bits(struct config *cfg, struct field_bits *r)
 	gen_errx(cfg, &r->result->parent->pos, "unknown bitfield type");
 	return 0;
 }
-
 
 /*
  * Reslve a local key reference.
@@ -186,6 +202,10 @@ linker_resolve(struct config *cfg)
 			break;
 		case RESOLVE_FIELD_BITS:
 			if (!resolve_field_bits(cfg, &r->field_bits))
+				fail++;
+			break;
+		case RESOLVE_FIELD_ENUM:
+			if (!resolve_field_enum(cfg, &r->field_enum))
 				fail++;
 			break;
 		default:

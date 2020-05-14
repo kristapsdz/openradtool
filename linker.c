@@ -99,27 +99,6 @@ gen_errx(struct config *cfg,
 }
 
 /*
- * Resolve an enumeration.
- * This returns zero if the resolution fails, non-zero otherwise.
- * In the success case, it sets the enumeration link.
- */
-static int
-resolve_field_enum(struct config *cfg, 
-	struct eref *ref, struct enmq *q)
-{
-	struct enm	*e;
-
-	TAILQ_FOREACH(e, q, entries)
-		if (0 == strcasecmp(e->name, ref->ename)) {
-			ref->enm = e;
-			return(1);
-		}
-
-	gen_errx(cfg, &ref->parent->pos, "unknown enum reference");
-	return(0);
-}
-
-/*
  * Recursively check for... recursion.
  * Returns zero if the reference is recursive, non-zero otherwise.
  */
@@ -1408,11 +1387,6 @@ ort_parse_close(struct config *cfg)
 	 */
 
 	TAILQ_FOREACH(p, &cfg->sq, entries) {
-		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (NULL != f->eref &&
-			    ! resolve_field_enum(cfg, f->eref, &cfg->eq))
-				return 0;
-		}
 		TAILQ_FOREACH(u, &p->uq, entries)
 			if ( ! resolve_update(cfg, u) ||
 			     ! check_updatetype(cfg, u))

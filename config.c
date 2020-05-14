@@ -32,22 +32,16 @@
 #include "ort.h"
 #include "extern.h"
 
-/*
- * Free a field entity.
- * Does nothing if "p" is NULL.
- */
 static void
 parse_free_field(struct field *p)
 {
 	struct fvalid *fv;
 
-	if (NULL == p)
-		return;
-	while (NULL != (fv = TAILQ_FIRST(&p->fvq))) {
+	while ((fv = TAILQ_FIRST(&p->fvq)) != NULL) {
 		TAILQ_REMOVE(&p->fvq, fv, entries);
 		free(fv);
 	}
-	if (NULL != p->ref) {
+	if (p->ref != NULL) {
 		free(p->ref->sfield);
 		free(p->ref->tfield);
 		free(p->ref->tstrct);
@@ -57,11 +51,11 @@ parse_free_field(struct field *p)
 	    (FTYPE_TEXT == p->type ||
 	     FTYPE_EMAIL == p->type))
 		free(p->def.string);
-	if (NULL != p->eref) {
+	if (p->eref != NULL) {
 		free(p->eref->ename);
 		free(p->eref);
 	}
-	if (NULL != p->bref) {
+	if (p->bref != NULL) {
 		free(p->bref->name);
 		free(p->bref);
 	}
@@ -70,10 +64,6 @@ parse_free_field(struct field *p)
 	free(p);
 }
 
-/*
- * Free a chain reference.
- * Must not be NULL.
- */
 static void
 parse_free_sref(struct sref *p)
 {
@@ -82,61 +72,45 @@ parse_free_sref(struct sref *p)
 	free(p);
 }
 
-/*
- * Free the aggregate and its pointer.
- * Passing a NULL pointer is a noop.
- */
 static void
-parse_free_aggr(struct aggr *aggr)
+parse_free_aggr(struct aggr *p)
 {
 	struct sref	*ref;
 
-	if (aggr == NULL)
-		return;
-
-	while ((ref = TAILQ_FIRST(&aggr->arq)) != NULL) {
-		TAILQ_REMOVE(&aggr->arq, ref, entries);
+	while ((ref = TAILQ_FIRST(&p->arq)) != NULL) {
+		TAILQ_REMOVE(&p->arq, ref, entries);
 		parse_free_sref(ref);
 	}
-	free(aggr->fname);
-	free(aggr->name);
-	free(aggr);
+
+	free(p->fname);
+	free(p->name);
+	free(p);
 }
 
-/*
- * Free the group and its pointer.
- * Passing a NULL pointer is a noop.
- */
 static void
-parse_free_group(struct group *grp)
+parse_free_group(struct group *p)
 {
 	struct sref	*ref;
 	
-	if (NULL == grp)
-		return;
-
-	while (NULL != (ref = TAILQ_FIRST(&grp->grq))) {
-		TAILQ_REMOVE(&grp->grq, ref, entries);
+	while ((ref = TAILQ_FIRST(&p->grq)) != NULL) {
+		TAILQ_REMOVE(&p->grq, ref, entries);
 		parse_free_sref(ref);
 	}
-	free(grp->fname);
-	free(grp->name);
-	free(grp);
+
+	free(p->fname);
+	free(p->name);
+	free(p);
 }
 
-/*
- * Free the order queue.
- * Does not free the "q" pointer, which may not be NULL.
- */
 static void
 parse_free_ordq(struct ordq *q)
 {
 	struct ord	*ord;
 	struct sref	*ref;
 
-	while (NULL != (ord = TAILQ_FIRST(q))) {
+	while ((ord = TAILQ_FIRST(q)) != NULL) {
 		TAILQ_REMOVE(q, ord, entries);
-		while (NULL != (ref = TAILQ_FIRST(&ord->orq))) {
+		while ((ref = TAILQ_FIRST(&ord->orq)) != NULL) {
 			TAILQ_REMOVE(&ord->orq, ref, entries);
 			parse_free_sref(ref);
 		}
@@ -146,19 +120,12 @@ parse_free_ordq(struct ordq *q)
 	}
 }
 
-/*
- * Free a distinct series.
- * Does nothing if "p" is NULL.
- */
 static void
 parse_free_distinct(struct dstnct *p)
 {
 	struct dref	*d;
 
-	if (p == NULL)
-		return;
-
-	while (NULL != (d = TAILQ_FIRST(&p->drefq))) {
+	while ((d = TAILQ_FIRST(&p->drefq)) != NULL) {
 		TAILQ_REMOVE(&p->drefq, d, entries);
 		free(d->name);
 		free(d);
@@ -167,27 +134,23 @@ parse_free_distinct(struct dstnct *p)
 	free(p);
 }
 
-/*
- * Free a search series.
- * Does nothing if "p" is NULL.
- */
 static void
 parse_free_search(struct search *p)
 {
 	struct sref	*s;
 	struct sent	*sent;
 
-	if (NULL == p)
-		return;
-
-	parse_free_distinct(p->dst);
-	parse_free_aggr(p->aggr);
+	if (p->dst != NULL)
+		parse_free_distinct(p->dst);
+	if (p->aggr != NULL)
+		parse_free_aggr(p->aggr);
 	parse_free_ordq(&p->ordq);
-	parse_free_group(p->group);
+	if (p->group != NULL)
+		parse_free_group(p->group);
 
-	while (NULL != (sent = TAILQ_FIRST(&p->sntq))) {
+	while ((sent = TAILQ_FIRST(&p->sntq)) != NULL) {
 		TAILQ_REMOVE(&p->sntq, sent, entries);
-		while (NULL != (s = TAILQ_FIRST(&sent->srq))) {
+		while ((s = TAILQ_FIRST(&sent->srq)) != NULL) {
 			TAILQ_REMOVE(&sent->srq, s, entries);
 			parse_free_sref(s);
 		}
@@ -200,47 +163,28 @@ parse_free_search(struct search *p)
 	free(p);
 }
 
-/*
- * Free a unique reference.
- * Does nothing if "p" is NULL.
- */
 static void
-parse_free_nref(struct nref *u)
+parse_free_nref(struct nref *p)
 {
 
-	if (NULL == u)
-		return;
-	free(u->name);
-	free(u);
+	free(p->name);
+	free(p);
 }
 
-/*
- * Free an update reference.
- * Does nothing if "p" is NULL.
- */
 static void
-parse_free_uref(struct uref *u)
+parse_free_uref(struct uref *p)
 {
 
-	if (NULL == u)
-		return;
-	free(u->name);
-	free(u);
+	free(p->name);
+	free(p);
 }
 
-/*
- * Free a unique series.
- * Does nothing if "p" is NULL.
- */
 static void
 parse_free_unique(struct unique *p)
 {
 	struct nref	*u;
 
-	if (NULL == p)
-		return;
-
-	while (NULL != (u = TAILQ_FIRST(&p->nq))) {
+	while ((u = TAILQ_FIRST(&p->nq)) != NULL) {
 		TAILQ_REMOVE(&p->nq, u, entries);
 		parse_free_nref(u);
 	}
@@ -249,23 +193,16 @@ parse_free_unique(struct unique *p)
 	free(p);
 }
 
-/*
- * Free an update series.
- * Does nothing if "p" is NULL.
- */
 static void
 parse_free_update(struct update *p)
 {
 	struct uref	*u;
 
-	if (NULL == p)
-		return;
-
-	while (NULL != (u = TAILQ_FIRST(&p->mrq))) {
+	while ((u = TAILQ_FIRST(&p->mrq)) != NULL) {
 		TAILQ_REMOVE(&p->mrq, u, entries);
 		parse_free_uref(u);
 	}
-	while (NULL != (u = TAILQ_FIRST(&p->crq))) {
+	while ((u = TAILQ_FIRST(&p->crq)) != NULL) {
 		TAILQ_REMOVE(&p->crq, u, entries);
 		parse_free_uref(u);
 	}
@@ -280,26 +217,19 @@ parse_free_label(struct labelq *q)
 {
 	struct label	*l;
 
-	while (NULL != (l = TAILQ_FIRST(q))) {
+	while ((l = TAILQ_FIRST(q)) != NULL) {
 		TAILQ_REMOVE(q, l, entries);
 		free(l->label);
 		free(l);
 	}
 }
 
-/*
- * Free an enumeration.
- * Does nothing if "p" is NULL.
- */
 static void
 parse_free_enum(struct enm *e)
 {
 	struct eitem	*ei;
 
-	if (NULL == e)
-		return;
-
-	while (NULL != (ei = TAILQ_FIRST(&e->eq))) {
+	while ((ei = TAILQ_FIRST(&e->eq)) != NULL) {
 		TAILQ_REMOVE(&e->eq, ei, entries);
 		parse_free_label(&ei->labels);
 		free(ei->name);
@@ -314,43 +244,36 @@ parse_free_enum(struct enm *e)
 }
 
 /*
- * Free a role (recursive function).
- * Does nothing if "r" is NULL.
+ * Recursively frees all roles within "r".
  */
 static void
 parse_free_role(struct role *r)
 {
 	struct role	*rr;
 
-	if (NULL == r)
-		return;
-	while (NULL != (rr = TAILQ_FIRST(&r->subrq))) {
+	while ((rr = TAILQ_FIRST(&r->subrq)) != NULL) {
 		TAILQ_REMOVE(&r->subrq, rr, entries);
 		parse_free_role(rr);
 	}
+
 	free(r->doc);
 	free(r->name);
 	free(r);
 }
 
-/*
- * Free a bitfield (set of bit indices).
- * Does nothing if "bf" is NULL.
- */
 static void
 parse_free_bitfield(struct bitf *bf)
 {
 	struct bitidx	*bi;
 
-	if (NULL == bf)
-		return;
-	while (NULL != (bi = TAILQ_FIRST(&bf->bq))) {
+	while ((bi = TAILQ_FIRST(&bf->bq)) != NULL) {
 		TAILQ_REMOVE(&bf->bq, bi, entries);
 		parse_free_label(&bi->labels);
 		free(bi->name);
 		free(bi->doc);
 		free(bi);
 	}
+
 	parse_free_label(&bf->labels_unset);
 	parse_free_label(&bf->labels_null);
 	free(bf->name);
@@ -359,24 +282,74 @@ parse_free_bitfield(struct bitf *bf)
 	free(bf);
 }
 
-/*
- * Free a rolemap and its rolesets.
- * Does nothing if "rm" is NULL.
- */
 static void
 parse_free_rolemap(struct rolemap *rm)
 {
 	struct roleset	*r;
 
-	if (NULL == rm)
-		return;
-	while (NULL != (r = TAILQ_FIRST(&rm->setq))) {
+	while ((r = TAILQ_FIRST(&rm->setq)) != NULL) {
 		TAILQ_REMOVE(&rm->setq, r, entries);
 		free(r->name);
 		free(r);
 	}
+
 	free(rm->name);
 	free(rm);
+}
+
+static void
+parse_free_strct(struct strct *p)
+{
+	struct field	*f;
+	struct search	*s;
+	struct alias	*a;
+	struct update	*u;
+	struct unique	*n;
+	struct rolemap	*rm;
+
+	while ((f = TAILQ_FIRST(&p->fq)) != NULL) {
+		TAILQ_REMOVE(&p->fq, f, entries);
+		parse_free_field(f);
+	}
+	while ((s = TAILQ_FIRST(&p->sq)) != NULL) {
+		TAILQ_REMOVE(&p->sq, s, entries);
+		parse_free_search(s);
+	}
+	while ((rm = TAILQ_FIRST(&p->rq)) != NULL) {
+		TAILQ_REMOVE(&p->rq, rm, entries);
+		parse_free_rolemap(rm);
+	}
+	while ((a = TAILQ_FIRST(&p->aq)) != NULL) {
+		TAILQ_REMOVE(&p->aq, a, entries);
+		free(a->name);
+		free(a->alias);
+		free(a);
+	}
+	while ((u = TAILQ_FIRST(&p->uq)) != NULL) {
+		TAILQ_REMOVE(&p->uq, u, entries);
+		parse_free_update(u);
+	}
+	while ((u = TAILQ_FIRST(&p->dq)) != NULL) {
+		TAILQ_REMOVE(&p->dq, u, entries);
+		parse_free_update(u);
+	}
+	while ((n = TAILQ_FIRST(&p->nq)) != NULL) {
+		TAILQ_REMOVE(&p->nq, n, entries);
+		parse_free_unique(n);
+	}
+
+	free(p->doc);
+	free(p->name);
+	free(p->cname);
+	free(p->ins);
+	free(p);
+}
+
+static void
+parse_free_resolve(struct resolve *p)
+{
+
+	free(p);
 }
 
 /*
@@ -387,72 +360,38 @@ void
 ort_config_free(struct config *cfg)
 {
 	struct strct	*p;
-	struct field	*f;
-	struct search	*s;
-	struct alias	*a;
-	struct update	*u;
-	struct unique	*n;
 	struct enm	*e;
 	struct role	*r;
-	struct rolemap	*rm;
 	struct bitf	*bf;
+	struct resolve	*res;
 	size_t		 i;
 
-	if (NULL == cfg)
+	if (cfg == NULL)
 		return;
 
-	while (NULL != (e = TAILQ_FIRST(&cfg->eq))) {
+	while ((e = TAILQ_FIRST(&cfg->eq)) != NULL) {
 		TAILQ_REMOVE(&cfg->eq, e, entries);
 		parse_free_enum(e);
 	}
 
-	while (NULL != (r = TAILQ_FIRST(&cfg->rq))) {
+	while ((r = TAILQ_FIRST(&cfg->rq)) != NULL) {
 		TAILQ_REMOVE(&cfg->rq, r, entries);
 		parse_free_role(r);
 	}
 
-	while (NULL != (bf = TAILQ_FIRST(&cfg->bq))) {
+	while ((bf = TAILQ_FIRST(&cfg->bq)) != NULL) {
 		TAILQ_REMOVE(&cfg->bq, bf, entries);
 		parse_free_bitfield(bf);
 	}
 
-	while (NULL != (p = TAILQ_FIRST(&cfg->sq))) {
+	while ((p = TAILQ_FIRST(&cfg->sq)) != NULL) {
 		TAILQ_REMOVE(&cfg->sq, p, entries);
-		while (NULL != (f = TAILQ_FIRST(&p->fq))) {
-			TAILQ_REMOVE(&p->fq, f, entries);
-			parse_free_field(f);
-		}
-		while (NULL != (s = TAILQ_FIRST(&p->sq))) {
-			TAILQ_REMOVE(&p->sq, s, entries);
-			parse_free_search(s);
-		}
-		while (NULL != (rm = TAILQ_FIRST(&p->rq))) {
-			TAILQ_REMOVE(&p->rq, rm, entries);
-			parse_free_rolemap(rm);
-		}
-		while (NULL != (a = TAILQ_FIRST(&p->aq))) {
-			TAILQ_REMOVE(&p->aq, a, entries);
-			free(a->name);
-			free(a->alias);
-			free(a);
-		}
-		while (NULL != (u = TAILQ_FIRST(&p->uq))) {
-			TAILQ_REMOVE(&p->uq, u, entries);
-			parse_free_update(u);
-		}
-		while (NULL != (u = TAILQ_FIRST(&p->dq))) {
-			TAILQ_REMOVE(&p->dq, u, entries);
-			parse_free_update(u);
-		}
-		while (NULL != (n = TAILQ_FIRST(&p->nq))) {
-			TAILQ_REMOVE(&p->nq, n, entries);
-			parse_free_unique(n);
-		}
-		free(p->doc);
-		free(p->name);
-		free(p->cname);
-		free(p->ins);
-		free(p);
+		parse_free_strct(p);
+	}
+
+	while ((res = TAILQ_FIRST(&cfg->priv->rq)) != NULL) {
+		TAILQ_REMOVE(&cfg->priv->rq, res, entries);
+		parse_free_resolve(res);
 	}
 
 	for (i = 0; i < cfg->langsz; i++)
@@ -467,6 +406,7 @@ ort_config_free(struct config *cfg)
 		free(cfg->msgs[i].buf);
 	free(cfg->msgs);
 
+	free(cfg->priv);
 	free(cfg);
 }
 
@@ -480,9 +420,36 @@ ort_config_alloc(void)
 {
 	struct config	*cfg;
 
-	if ((cfg = calloc(1, sizeof(struct config))) == NULL) {
+	cfg = calloc(1, sizeof(struct config));
+	if (cfg == NULL) {
 		ort_msg(NULL, MSGTYPE_FATAL, 
 			"config", errno, NULL, NULL);
+		return NULL;
+	}
+
+	cfg->priv = calloc(1, sizeof(struct config_private));
+	if (cfg->priv == NULL) {
+		ort_msg(NULL, MSGTYPE_FATAL, 
+			"config", errno, NULL, NULL);
+		free(cfg);
+		return NULL;
+	}
+
+	/* The default language must always exist. */
+
+	cfg->langsz = 1;
+	if ((cfg->langs = calloc(1, sizeof(char *))) == NULL) {
+		ort_msg(NULL, MSGTYPE_FATAL, 
+			"config", errno, NULL, NULL);
+		free(cfg->priv);
+		free(cfg);
+		return NULL;
+	} else if ((cfg->langs[0] = strdup("")) == NULL) {
+		ort_msg(NULL, MSGTYPE_FATAL, 
+			"config", errno, NULL, NULL);
+		free(cfg->langs);
+		free(cfg->priv);
+		free(cfg);
 		return NULL;
 	}
 
@@ -490,24 +457,6 @@ ort_config_alloc(void)
 	TAILQ_INIT(&cfg->eq);
 	TAILQ_INIT(&cfg->rq);
 	TAILQ_INIT(&cfg->bq);
-
-	/* 
-	 * Start with the default language.
-	 * This must always exist.
-	 */
-
-	if ((cfg->langs = calloc(1, sizeof(char *))) == NULL) {
-		ort_msg(NULL, MSGTYPE_FATAL, 
-			"config", errno, NULL, NULL);
-		free(cfg);
-		return NULL;
-	} else if ((cfg->langs[0] = strdup("")) == NULL) {
-		ort_msg(NULL, MSGTYPE_FATAL, 
-			"config", errno, NULL, NULL);
-		free(cfg->langs);
-		free(cfg);
-		return NULL;
-	}
-	cfg->langsz = 1;
+	TAILQ_INIT(&cfg->priv->rq);
 	return cfg;
 }

@@ -30,15 +30,9 @@
 
 #include "ort.h"
 #include "extern.h"
+#include "linker.h"
 
 static	const char *const channel = "linker";
-
-static void gen_errx(struct config *, 
-	const struct pos *, const char *, ...)
-	__attribute__((format(printf, 3, 4)));
-static void gen_warnx(struct config *,
-	const struct pos *, const char *, ...)
-	__attribute__((format(printf, 3, 4)));
 
 static	const char *const rolemapts[ROLEMAP__MAX] = {
 	"all", /* ROLEMAP_ALL */
@@ -52,13 +46,16 @@ static	const char *const rolemapts[ROLEMAP__MAX] = {
 	"noexport", /* ROLEMAP_NOEXPORT */
 };
 
-static void
+/*
+ * Generate a warning message at position "pos".
+ */
+void
 gen_warnx(struct config *cfg, 
 	const struct pos *pos, const char *fmt, ...)
 {
 	va_list	 ap;
 
-	if (NULL != fmt) {
+	if (fmt != NULL) {
 		va_start(ap, fmt);
 		ort_msgv(cfg, MSGTYPE_WARN, 
 			channel, 0, pos, fmt, ap);
@@ -68,7 +65,12 @@ gen_warnx(struct config *cfg,
 			channel, 0, pos, NULL);
 }
 
-static void
+/*
+ * Generate a fatal error at position "pos" with only an errno.
+ * This is exclusively used for allocation failures.
+ * The caller is still responsible for exiting.
+ */
+void
 gen_err(struct config *cfg, const struct pos *pos)
 {
 	int	 er = errno;
@@ -76,13 +78,17 @@ gen_err(struct config *cfg, const struct pos *pos)
 	ort_msg(cfg, MSGTYPE_FATAL, channel, er, pos, NULL);
 }
 
-static void
+/*
+ * Generate a fatal error at position "pos" without an errno.
+ * The caller is still responsible for exiting.
+ */
+void
 gen_errx(struct config *cfg, 
 	const struct pos *pos, const char *fmt, ...)
 {
 	va_list	 ap;
 
-	if (NULL != fmt) {
+	if (fmt != NULL) {
 		va_start(ap, fmt);
 		ort_msgv(cfg, MSGTYPE_ERROR, 
 			channel, 0, pos, fmt, ap);

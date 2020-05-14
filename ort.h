@@ -629,6 +629,9 @@ enum	msgtype {
 	MSGTYPE_FATAL /* fatal system error */
 };
 
+/*
+ * A single message emitted during the parse.
+ */
 struct	msg {
 	struct pos	 pos; /* position (or zero/NULL) */
 	enum msgtype	 type; /* type of message */
@@ -650,6 +653,7 @@ struct	config {
 	size_t		  fnamesz; /* number of fnames */
 	struct msg	 *msgs; /* warning/error messages */
 	size_t		  msgsz; /* count of msgs */
+	struct config_private *priv; /* non-exported data */
 };
 
 __BEGIN_DECLS

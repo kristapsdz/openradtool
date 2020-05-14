@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017, 2018 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2020 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,37 +14,13 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef EXTERN_H
-#define EXTERN_H
+#ifndef LINKER_H
+#define LINKER_H
 
-TAILQ_HEAD(resolveq, resolve);
+void	gen_err(struct config *, const struct pos *);
+void 	gen_errx(struct config *, const struct pos *, const char *, ...)
+		__attribute__((format(printf, 3, 4)));
+void	gen_warnx(struct config *, const struct pos *, const char *, ...)
+		__attribute__((format(printf, 3, 4)));
 
-enum	resolvet {
-	RESOLVE_FIELD_SOURCE
-};
-
-struct	resolve {
-	enum resolvet	 	type;
-	union {
-		struct {
-				struct ref	*result;
-				char		*sfield;
-				char		*tstruct;
-				char		*tfield;
-		} field;
-	};
-	TAILQ_ENTRY(resolve)	entries;
-};
-
-struct	config_private {
-	struct resolveq		 rq;
-};
-
-void	 ort_msgv(struct config *, enum msgtype, 
-		const char *, int, const struct pos *, 
-		const char *, va_list);
-void	 ort_msg(struct config *, enum msgtype, 
-		const char *, int, const struct pos *, 
-		const char *, ...);
-
-#endif /* !EXTERN_H */
+#endif /*  !LINKER_H */

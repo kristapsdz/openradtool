@@ -72,6 +72,7 @@ DOTAR		 = audit.c \
 		   ort.5 \
 		   ort.h \
 		   linker.c \
+		   linker.h \
 		   log.c \
 		   Makefile \
 		   main.c \
@@ -292,7 +293,7 @@ db.db: db.sql
 
 # These can be optimised but there's not much point.
 
-$(LIBOBJS) $(OBJS): config.h extern.h ort.h cprotos.h comments.h version.h paths.h parser.h
+$(LIBOBJS) $(OBJS): config.h extern.h ort.h cprotos.h comments.h version.h paths.h parser.h linker.h
 
 .5.5.html:
 	mandoc -Ostyle=https://bsd.lv/css/mandoc.css -Thtml $< >$@

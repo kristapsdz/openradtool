@@ -99,115 +99,6 @@ gen_errx(struct config *cfg,
 }
 
 /*
- * Check the source field (case insensitive).
- * This applies to all reference types, "struct" and otherwise.
- * Return zero on failure, non-zero on success.
- * On success, this sets the "source" field for the referrer.
- */
-static int
-resolve_field_source(struct config *cfg, struct field *f)
-{
-	struct field	*ff;
-
-	assert(NULL == f->ref->source);
-	assert(NULL == f->ref->target);
-
-	if (FTYPE_STRUCT != f->type) {
-		/* 
-		 * This is a non-struct reference, where the sfield is
-		 * going to be the field name itself.
-		 * We also know that it's valid, so no need to check
-		 * more.
-		 */
-		assert(0 == strcmp(f->name, f->ref->sfield));
-		f->ref->source = f;
-		return(1);
-	}
-
-	/*
-	 * Look up the source.
-	 * Then copy over the source's targets into our own.
-	 */
-
-	assert(NULL == f->ref->tfield);
-	assert(NULL == f->ref->tstrct);
-
-	TAILQ_FOREACH(ff, &f->parent->fq, entries)
-		if (0 == strcasecmp(ff->name, f->ref->sfield)) {
-			f->ref->source = ff;
-			break;
-		}
-
-	if (NULL == f->ref->source) {
-		gen_errx(cfg, &f->pos, "unknown reference source");
-		return(0);
-	} else if (NULL == f->ref->source->ref) {
-		gen_errx(cfg, &f->pos, "reference to non-foreign key");
-		return(0);
-	} else if (FTYPE_STRUCT == f->ref->source->type) {
-		gen_errx(cfg, &f->pos, "reference to non-native type");
-		return(0);
-	} 
-
-	assert(NULL != f->ref->source->ref->tfield);
-	assert(NULL != f->ref->source->ref->tstrct);
-
-	f->ref->tfield = strdup(f->ref->source->ref->tfield);
-	f->ref->tstrct = strdup(f->ref->source->ref->tstrct);
-
-	if (NULL == f->ref->tfield || NULL == f->ref->tstrct) {
-		gen_err(cfg, &f->pos);
-		return 0;
-	}
-
-	return(1);
-}
-
-/*
- * Check that the target structure and field exist (case insensitive)
- * and are appropriate.
- * Return zero on failure, non-zero on success.
- * On success, this sets the "target" field for the referrent.
- */
-static int
-resolve_field_target(struct config *cfg, 
-	struct field *f, struct strctq *q)
-{
-	struct strct	*p;
-	struct field	*ff;
-
-	assert(NULL != f->ref->source);
-	assert(NULL == f->ref->target);
-	assert(NULL != f->ref->tfield);
-	assert(NULL != f->ref->tstrct);
-
-	TAILQ_FOREACH(p, q, entries) {
-		if (strcasecmp(p->name, f->ref->tstrct))
-			continue;
-		TAILQ_FOREACH(ff, &p->fq, entries) {
-			if (strcasecmp(ff->name, f->ref->tfield))
-				continue;
-			f->ref->target = ff;
-			break;
-		}
-	}
-
-	if (NULL == f->ref->target) {
-		gen_errx(cfg, &f->pos, "unknown reference target");
-		return(0);
-	} else if (f->ref->source->type != f->ref->target->type) {
-		gen_errx(cfg, &f->pos, "target type mismatch");
-		return(0);
-	} else if ( ! (FIELD_ROWID & f->ref->target->flags) &&
-	            ! (FIELD_UNIQUE & f->ref->target->flags)) {
-		gen_errx(cfg, &f->pos, "target is not a rowid or unique");
-		return(0);
-	}
-
-	return(1);
-}
-
-/*
  * Resolve a bitfield.
  * This returns zero if the resolution fails, non-zero otherwise.
  * In the success case, it sets the bitfield link.
@@ -1462,6 +1353,9 @@ ort_parse_close(struct config *cfg)
 		return 0;
 	}
 
+	if (!linker_resolve(cfg))
+		return 0;
+
 	/* 
 	 * Check rolemap function name and role name linkage.
 	 * Also make sure that any given rolemap doesn't refer to nested
@@ -1536,10 +1430,6 @@ ort_parse_close(struct config *cfg)
 
 	TAILQ_FOREACH(p, &cfg->sq, entries) {
 		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (NULL != f->ref &&
-			    (! resolve_field_source(cfg, f) ||
-			     ! resolve_field_target(cfg, f, &cfg->sq)))
-				return 0;
 			if (NULL != f->eref &&
 			    ! resolve_field_enum(cfg, f->eref, &cfg->eq))
 				return 0;

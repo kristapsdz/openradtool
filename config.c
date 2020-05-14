@@ -41,12 +41,8 @@ parse_free_field(struct field *p)
 		TAILQ_REMOVE(&p->fvq, fv, entries);
 		free(fv);
 	}
-	if (p->ref != NULL) {
-		free(p->ref->sfield);
-		free(p->ref->tfield);
-		free(p->ref->tstrct);
+	if (p->ref != NULL)
 		free(p->ref);
-	}
 	if (FIELD_HASDEF && 
 	    (FTYPE_TEXT == p->type ||
 	     FTYPE_EMAIL == p->type))
@@ -348,6 +344,16 @@ parse_free_strct(struct strct *p)
 static void
 parse_free_resolve(struct resolve *p)
 {
+
+	switch (p->type) {
+	case RESOLVE_FIELD_FOREIGN:
+		free(p->field_foreign.tstrct);
+		free(p->field_foreign.tfield);
+		break;
+	case RESOLVE_FIELD_STRUCT:
+		free(p->field_struct.sfield);
+		break;
+	}
 
 	free(p);
 }

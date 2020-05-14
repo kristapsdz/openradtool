@@ -350,36 +350,21 @@ static int
 parse_check_eof(struct parse *p)
 {
 
-	if (PARSETYPE_BUF == p->type)
-		return p->inbuf.pos >= p->inbuf.len;
-
-	assert(PARSETYPE_FILE == p->type);
-	assert(NULL != p->infile.f);
-	return feof(p->infile.f);
+	return feof(p->f);
 }
 
 static int
 parse_check_error(struct parse *p)
 {
 
-	if (PARSETYPE_BUF == p->type)
-		return 0;
-
-	assert(PARSETYPE_FILE == p->type);
-	assert(NULL != p->infile.f);
-	return ferror(p->infile.f);
+	return ferror(p->f);
 }
 
 static int
 parse_check_error_eof(struct parse *p)
 {
 
-	if (PARSETYPE_BUF == p->type)
-		return p->inbuf.pos >= p->inbuf.len;
-
-	assert(PARSETYPE_FILE == p->type);
-	assert(NULL != p->infile.f);
-	return feof(p->infile.f) || ferror(p->infile.f);
+	return feof(p->f) || ferror(p->f);
 }
 
 static void
@@ -393,14 +378,7 @@ parse_ungetc(struct parse *p, int c)
 	else if (p->column > 0)
 		p->column--;
 
-	if (PARSETYPE_BUF == p->type) {
-		assert(p->inbuf.pos > 0);
-		p->inbuf.pos--;
-		return;
-	}
-
-	assert(PARSETYPE_FILE == p->type);
-	ungetc(c, p->infile.f);
+	ungetc(c, p->f);
 }
 
 /*
@@ -413,11 +391,7 @@ parse_nextchar(struct parse *p)
 {
 	int	 c;
 
-	if (PARSETYPE_BUF == p->type)
-		c = p->inbuf.pos >= p->inbuf.len ?
-			EOF : p->inbuf.buf[p->inbuf.pos++];
-	else
-		c = fgetc(p->infile.f);
+	c = fgetc(p->f);
 
 	if (parse_check_error_eof(p))
 		return EOF;
@@ -821,8 +795,7 @@ ort_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 	p.column = 0;
 	p.line = 1;
 	p.fname = cfg->fnames[cfg->fnamesz - 1];
-	p.infile.f = f;
-	p.type = PARSETYPE_FILE;
+	p.f = f;
 	p.cfg = cfg;
 	rc = parse_root(&p);
 	free(p.buf);

@@ -418,76 +418,78 @@ parse_field_enum(struct parse *p, struct field *fd)
 }
 
 /*
- * Parse information about a foreign key reference.
- * This comes before our type information: it's just the [:struct.field]
- * portion of the reference.
- * Return zero on failure, non-zero on success.
- * On success, sets the fd->ref to be the reference holder.
+ * Creates empty "ref" on field and requests RESOLVE_FIELD_FOREIGN.
  */
-static int
+static void
 parse_field_foreign(struct parse *p, struct field *fd)
 {
+	struct resolve	*r;
 
-	assert(fd->ref == NULL);
-	assert(fd->name != NULL);
+	if ((fd->ref = calloc(1, sizeof(struct ref))) == NULL) {
+		parse_err(p);
+		return;
+	}
+	fd->ref->parent = fd;
+	fd->ref->source = fd;
+	
+	if ((r = calloc(1, sizeof(struct resolve))) == NULL) {
+		parse_err(p);
+		return;
+	}
 
-	if ((fd->ref = calloc(1, sizeof(struct ref))) == NULL)
-		parse_err(p);
-	else if ((fd->ref->sfield = strdup(fd->name)) == NULL)
-		parse_err(p);
-	else if (parse_next(p) != TOK_IDENT)
+	TAILQ_INSERT_TAIL(&p->cfg->priv->rq, r, entries);
+	r->type = RESOLVE_FIELD_FOREIGN;
+	r->field_foreign.result = fd->ref;
+
+	if (parse_next(p) != TOK_IDENT)
 		parse_errx(p, "expected target struct");
-	else if ((fd->ref->tstrct = strdup(p->last.string)) == NULL)
+	else if ((r->field_foreign.tstrct =
+		 strdup(p->last.string)) == NULL)
 		parse_err(p);
 	else if (parse_next(p) != TOK_PERIOD)
 		parse_errx(p, "expected period");
 	else if (parse_next(p) != TOK_IDENT)
 		parse_errx(p, "expected target field");
-	else if ((fd->ref->tfield = strdup(p->last.string)) == NULL)
+	else if ((r->field_foreign.tfield = 
+	         strdup(p->last.string)) == NULL)
 		parse_err(p);
-	else
-		return 1;
-
-	if (fd->ref != NULL)  {
-		free(fd->ref->sfield);
-		free(fd->ref->tfield);
-		free(fd->ref->tfield);
-		free(fd->ref);
-	}
-	fd->ref = NULL;
-	return 0;
 }
 
 /*
- * Parse information about an structure type.
- * This just includes the struct name.
+ * Creates empty "ref" on field and requests RESOLVE_FIELD_STRUCT.
+ * This can't already have a reference.
  */
 static void
 parse_field_struct(struct parse *p, struct field *fd)
 {
+	struct resolve	*r;
 
-	/*
-	 * If we already have a reference, that means that we've already
-	 * parsed this is a local foreign-key reference.
-	 */
+	/* This is already a foreign key reference. */
 
 	if (fd->ref != NULL) {
-		parse_errx(p, "foreign reference cannot be a struct");
+		parse_errx(p, "reference cannot be a struct");
+		return;
+	} else if ((fd->ref = calloc(1, sizeof(struct ref))) == NULL) {
+		parse_err(p);
 		return;
 	}
+	fd->ref->parent = fd;
+
+	if ((r = calloc(1, sizeof(struct resolve))) == NULL) {
+		parse_err(p);
+		return;
+	}
+
+	TAILQ_INSERT_TAIL(&p->cfg->priv->rq, r, entries);
+	r->type = RESOLVE_FIELD_STRUCT;
+	r->field_struct.result = fd->ref;
 
 	if (parse_next(p) != TOK_IDENT) {
 		parse_errx(p, "expected struct source field");
 		return;
 	}
-
-	if ((fd->ref = calloc(1, sizeof(struct ref))) == NULL ||
-	    (fd->ref->sfield = strdup(p->last.string)) == NULL) {
+	if ((r->field_struct.sfield = strdup(p->last.string)) == NULL)
 		parse_err(p);
-		free(fd->ref);
-		fd->ref = NULL;
-	} else
-		fd->ref->parent = fd;
 }
 
 /*
@@ -568,8 +570,7 @@ parse_field(struct parse *p, struct strct *s)
 	/* Check if this is a reference. */
 
 	if (p->lasttype == TOK_COLON) {
-		if (!parse_field_foreign(p, fd))
-			return;
+		parse_field_foreign(p, fd);
 		if (parse_next(p) == TOK_SEMICOLON)
 			return;
 	} 

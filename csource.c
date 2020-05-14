@@ -1496,10 +1496,10 @@ gen_func_unfill_r(const struct strct *p)
 			printf("\tif (p->has_%s)\n"
 			       "\t\tdb_%s_unfill_r(&p->%s);\n",
 				f->ref->source->name, 
-				f->ref->tstrct, f->name);
+				f->ref->target->parent->name, f->name);
 		else
 			printf("\tdb_%s_unfill_r(&p->%s);\n",
-				f->ref->tstrct, f->name);
+				f->ref->target->parent->name, f->name);
 	}
 	puts("}\n"
 	     "");
@@ -1595,7 +1595,7 @@ gen_func_fill_r(const struct config *cfg, const struct strct *p)
 		    !(f->ref->source->flags & FIELD_NULL))
 			printf("\tdb_%s_fill_r(ctx, &p->%s, "
 				"res, pos);\n", 
-				f->ref->tstrct, f->name);
+				f->ref->target->parent->name, f->name);
 	puts("}\n");
 }
 
@@ -1975,7 +1975,7 @@ gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 		       "%s} else\n"
 		       "%s\tkjson_putnullp(r, \"%s\");\n",
 			tabs, f->name, tabs, f->name,
-			tabs, f->ref->tstrct, f->name, 
+			tabs, f->ref->target->parent->name, f->name, 
 			tabs, tabs, tabs, f->name);
 		if ( ! *sp) {
 			puts("");
@@ -1986,7 +1986,7 @@ gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 		       "%sjson_%s_data(r, &p->%s);\n"
 		       "%skjson_obj_close(r);\n",
 			tabs, f->name, tabs, 
-			f->ref->tstrct, f->name, tabs);
+			f->ref->target->parent->name, f->name, tabs);
 
 	if (NULL != f->rolemap) {
 		puts("\t\tbreak;\n"
@@ -2216,10 +2216,10 @@ gen_func_json_parse(const struct strct *p)
 				printf("\tif (p->has_%s)\n"
 				       "\t\tjsmn_%s_clear(&p->%s);\n",
 					f->ref->source->name, 
-					f->ref->tstrct, f->name);
+					f->ref->target->parent->name, f->name);
 			else
 				printf("\tjsmn_%s_clear(&p->%s);\n",
-					f->ref->tstrct, f->name);
+					f->ref->target->parent->name, f->name);
 			break;
 		default:
 			break;
@@ -2531,10 +2531,10 @@ gen_stmt_joins(const struct strct *orig, const struct strct *p,
 
 		(*count)++;
 		printf("\n\t\t\"INNER JOIN %s AS %s ON %s.%s=%s.%s \"",
-			f->ref->tstrct, a->alias,
-			a->alias, f->ref->tfield,
+			f->ref->target->parent->name, a->alias,
+			a->alias, f->ref->target->name,
 			NULL == parent ? p->name : parent->alias,
-			f->ref->sfield);
+			f->ref->source->name);
 		gen_stmt_joins(orig, 
 			f->ref->target->parent, a, count);
 		free(name);

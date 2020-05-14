@@ -67,7 +67,7 @@ gen_strct_field(const struct field *p)
 	switch (p->type) {
 	case (FTYPE_STRUCT):
 		printf("\tstruct %s %s;\n", 
-			p->ref->tstrct, p->name);
+			p->ref->target->parent->name, p->name);
 		break;
 	case (FTYPE_REAL):
 		printf("\tdouble\t %s;\n", p->name);

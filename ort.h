@@ -75,13 +75,6 @@ struct	pos {
  * actual table afterwards.
  */
 struct	ref {
-	char		*sfield; /* column with foreign key */
-	char		*tstrct; /* target structure */
-	char		*tfield; /* target field */
-	/* 
-	 * The following are "const" references that are only valid
-	 * after linkage.
-	 */
 	struct field 	*target; /* target */
 	struct field 	*source; /* source */
 	struct field	*parent; /* parent reference */

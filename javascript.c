@@ -191,7 +191,7 @@ gen_jsdoc_field(const char *ns, const struct field *f)
 			"<li>%s-%s-obj: invoke {@link "
 			"%s.%s#fillInner} with %s data%s</li>",
 			f->parent->name, f->name, 
-			ns, f->ref->tstrct, f->name,
+			ns, f->ref->target->parent->name, f->name,
 			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
 	} else {
@@ -262,7 +262,7 @@ gen_js_field(const struct field *f)
 		return;
 	if (f->type == FTYPE_STRUCT) {
 		rc = asprintf(&buf, "new %s(o.%s)", 
-			f->ref->tstrct, f->name);
+			f->ref->target->parent->name, f->name);
 		if (rc == -1)
 			err(EXIT_FAILURE, "asprintf");
 	}
@@ -989,8 +989,8 @@ gen_javascript(const struct config *cfg, int tsc)
 						"DCbStruct%s|"
 						"DCbStruct%s[];\n", 
 						s->name, f->name, 
-						f->ref->tstrct, 
-						f->ref->tstrct);
+						f->ref->target->parent->name, 
+						f->ref->target->parent->name);
 					continue;
 				} else if (NULL == tstypes[f->type])
 					continue;
@@ -1030,7 +1030,7 @@ gen_javascript(const struct config *cfg, int tsc)
 			if (FTYPE_STRUCT == f->type)
 				printf("\t\t%s: %sData;\n",
 					f->name, 
-					f->ref->tstrct);
+					f->ref->target->parent->name);
 			else if (NULL != types[f->type])
 				printf("\t\t%s: %s;\n",
 					f->name,

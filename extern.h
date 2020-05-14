@@ -20,18 +20,22 @@
 TAILQ_HEAD(resolveq, resolve);
 
 enum	resolvet {
-	RESOLVE_FIELD_SOURCE
+	RESOLVE_FIELD_FOREIGN,
+	RESOLVE_FIELD_STRUCT
 };
 
 struct	resolve {
 	enum resolvet	 	type;
 	union {
-		struct {
+		struct field_foreign {
+				struct ref	*result;
+				char		*tstrct;
+				char		*tfield;
+		} field_foreign;
+		struct field_struct {
 				struct ref	*result;
 				char		*sfield;
-				char		*tstruct;
-				char		*tfield;
-		} field;
+		} field_struct;
 	};
 	TAILQ_ENTRY(resolve)	entries;
 };

@@ -43,24 +43,6 @@ enum	tok {
 #define	PARSE_STOP(_p) \
 	(TOK_ERR == (_p)->lasttype || TOK_EOF == (_p)->lasttype)
 
-struct	parsefile {
-	FILE		*f;
-};
-
-/*
- * Used for parsing from a buffer (PARSETYPE_BUF) instead of a file.
- */
-struct	parsebuf {
-	const char	*buf; /* the (possibly binary) buffer */
-	size_t		 len; /* length of the buffer */
-	size_t		 pos; /* position during the parse */
-};
-
-enum	parsetype {
-	PARSETYPE_BUF, /* a character buffer */
-	PARSETYPE_FILE /* a FILE stream */
-};
-
 /*
  * The current parse.
  * If we have multiple files to parse, we must reinitialise this
@@ -81,11 +63,7 @@ struct	parse {
 	size_t		 column; /* current column (from 1) */
 	const char	*fname; /* current filename */
 	struct config	*cfg; /* current configuration */
-	enum parsetype	 type; /* how we're getting input */
-	union {
-		struct parsebuf inbuf; /* from a buffer */
-		struct parsefile infile; /* ...file */
-	};
+	FILE		*f;
 };
 
 int		parse_check_badidents(struct parse *, const char *);

@@ -267,12 +267,13 @@ parse_write_field(struct writer *w, const struct field *p)
 		return 0;
 	if (NULL != p->ref && FTYPE_STRUCT != p->type)
 		if ( ! wprint(w, ":%s.%s", 
-		    p->ref->tstrct, p->ref->tfield))
+		    p->ref->target->parent->name, 
+		    p->ref->target->name))
 			return 0;
 	if ( ! wprint(w, " %s", ftypes[p->type]))
 		return 0;
 	if (NULL != p->ref && FTYPE_STRUCT == p->type)
-		if ( ! wprint(w, " %s", p->ref->sfield))
+		if ( ! wprint(w, " %s", p->ref->source->name))
 			return 0;
 
 	if (FTYPE_ENUM == p->type)

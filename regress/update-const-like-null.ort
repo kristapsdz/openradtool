@@ -1,0 +1,6 @@
+
+struct foo {
+	field foo text;
+	update foo: foo notnull;
+	field id int rowid;
+};

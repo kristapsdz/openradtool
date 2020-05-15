@@ -60,6 +60,7 @@ DOTAR		 = audit.c \
 		   b64_ntop.c \
 		   cheader.c \
 		   comments.c \
+		   comments.h \
 		   compats.c \
 		   config.c \
 		   cprotos.c \

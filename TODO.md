@@ -7,3 +7,4 @@
 - Add default for enumerations.
 - Allow for noexport statements for queries.
 - Allow unary isnull/notnull operations for password queries.
+- Only allow bit-wise and/or for numeric types on queries.

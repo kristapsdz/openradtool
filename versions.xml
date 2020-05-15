@@ -1,6 +1,36 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- vim: set tw=100: -->
 <articles>
+	<!-- article data-sblg-article="1" data-sblg-tags="version">
+		<header>
+			<h3>0.8.14</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-05-15">2020-05-15</time>
+		</header>
+		<aside>
+			<p>
+				Significant upgrade to the internals: instead of haphazardly
+				resolving names to object components (e.g., the field names in
+				foreign references), do so in a dedicated pass by way of resolver
+				objects.
+			</p>
+			<p>
+				This simplifies the final parsed tree: where before both the name
+				and resolved field were part of (for example) an update reference,
+				now only the resolved field object exists.
+			</p>
+			<p>
+				In doing so, this has made several structures unnecessary, such as
+				<code>struct bref</code>.  This and others like it exists solely to
+				carry both the name of the field to resolve <i>and</i> the results
+				of that resolution.
+			</p>
+			<p>
+				Many many new regression tests have been added to reflect the checks
+				that occur during linking.
+			</p>
+		</aside>
+	</article -->
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
 			<h3>0.8.13</h3>

@@ -29,6 +29,150 @@
 #include "extern.h"
 #include "linker.h"
 
+/*
+ * Look up the constraint part of an "update" or "delete" statement
+ * (e.g., delete ->foo<-" and make sure that the field allows for it.
+ */
+static int
+resolve_up_const(struct config *cfg, struct struct_up_const *r)
+{
+	struct field	*f;
+	size_t		 errs = 0;
+
+	TAILQ_FOREACH(f, &r->result->parent->parent->fq, entries)
+		if (strcasecmp(f->name, r->name) == 0) {
+			r->result->field = f;
+			break;
+		}
+
+	if (r->result->field == NULL) {
+		gen_errx(cfg, &r->result->pos, 
+			"constraint field not found");
+		errs++;
+	} 
+	
+	if (r->result->field != NULL &&
+	    r->result->field->type == FTYPE_STRUCT) {
+		gen_errx(cfg, &r->result->pos, 
+			"constraint field may not be a struct");
+		errs++;
+	}
+
+	/*
+	 * FIXME: this needs to allow for notnull or isnull constraint
+	 * checks on passwords, which are fine.
+	 */
+
+	if (r->result->field != NULL &&
+	    r->result->field->type == FTYPE_PASSWORD &&
+	    r->result->op != OPTYPE_STREQ &&
+	    r->result->op != OPTYPE_STRNEQ &&
+	    !OPTYPE_ISUNARY(r->result->op)) {
+		gen_errx(cfg, &r->result->pos, 
+			"constraint field may not be a "
+			"password in hashing mode");
+		errs++;
+	}
+	
+	/* Warning: isnot or notnull on non-null fields. */
+
+	if (r->result->field != NULL &&
+	    (r->result->op == OPTYPE_NOTNULL ||
+	     r->result->op == OPTYPE_ISNULL) &&
+	    !(r->result->field->flags & FIELD_NULL))
+		gen_warnx(cfg, &r->result->pos, 
+			"notnull or isnull operator "
+			"on field that's never null");
+
+	/* 
+	 * "like" operator needs text.
+	 * FIXME: useful for binary as well?
+	 */
+
+	if (r->result->field != NULL &&
+	    r->result->op == OPTYPE_LIKE &&
+	    r->result->field->type != FTYPE_TEXT &&
+	    r->result->field->type != FTYPE_EMAIL) {
+		gen_errx(cfg, &r->result->pos, 
+			"LIKE operator on non-textual field.");
+		errs++;
+	}
+
+	return errs == 0;
+}
+
+/*
+ * Look up the modifier part of an "update" statement (e.g., update
+ * ->foo<-: id" and make sure that the field allows for it.
+ */
+static int
+resolve_up_mod(struct config *cfg, struct struct_up_mod *r)
+{
+	struct field	*f;
+	size_t		 errs = 0;
+
+	TAILQ_FOREACH(f, &r->result->parent->parent->fq, entries)
+		if (strcasecmp(f->name, r->name) == 0) {
+			r->result->field = f;
+			break;
+		}
+
+	if (r->result->field == NULL) {
+		gen_errx(cfg, &r->result->pos, 
+			"modifier field not found");
+		errs++;
+	} 
+	
+	if (r->result->field != NULL &&
+	    r->result->field->type == FTYPE_STRUCT) {
+		gen_errx(cfg, &r->result->pos, 
+			"modifier field may not be a struct");
+		errs++;
+	}
+
+	/* Check that our mod type is appropriate to the field. */
+
+	if (r->result->field != NULL)
+		switch (r->result->mod) {
+		case MODTYPE_CONCAT:
+			if (r->result->field->type == FTYPE_BLOB ||
+			    r->result->field->type == FTYPE_TEXT ||
+			    r->result->field->type == FTYPE_EMAIL)
+				break;
+			gen_errx(cfg, &r->result->pos, "concatenate "
+				"modification on non-textual and "
+				"non-binary field");
+			errs++;
+			break;
+		case MODTYPE_SET:
+		case MODTYPE_STRSET:
+			/* Can be done with anything. */
+			break;
+		case MODTYPE_INC:
+		case MODTYPE_DEC:
+			if (r->result->field->type == FTYPE_BIT ||
+			    r->result->field->type == FTYPE_BITFIELD ||
+			    r->result->field->type == FTYPE_DATE ||
+			    r->result->field->type == FTYPE_ENUM ||
+			    r->result->field->type == FTYPE_EPOCH ||
+			    r->result->field->type == FTYPE_INT ||
+			    r->result->field->type == FTYPE_REAL)
+				break;
+			gen_errx(cfg, &r->result->pos, "increment or "
+				"decrement modification on non-"
+				"numeric field");
+			errs++;
+			break;
+		default:
+			abort();
+		}
+
+	return errs == 0;
+}
+
+/*
+ * Look up the enum type by its name.
+ */
 static int
 resolve_field_enum(struct config *cfg, struct field_enum *r)
 {
@@ -46,6 +190,9 @@ resolve_field_enum(struct config *cfg, struct field_enum *r)
 	return 0;
 }
 
+/*
+ * Look up the bitfield type by its name.
+ */
 static int
 resolve_field_bits(struct config *cfg, struct field_bits *r)
 {
@@ -64,7 +211,6 @@ resolve_field_bits(struct config *cfg, struct field_bits *r)
 }
 
 /*
- * Reslve a local key reference.
  * The local key refers to another field that should be a foreign
  * reference resolved in resolve_field_foreign().
  * So this must be run *after* all RESOLVE_FIELD_FOREIGN or else it
@@ -123,8 +269,6 @@ resolve_field_struct(struct config *cfg, struct field_struct *r)
 /*
  * Resolve a foreign-key reference "field x:y.z".
  * This looks up both "x" (local) and "y.z" (foreign).
- * Returns zero on failure, non-zero on success.
- * Tries to find as many errors as possible in one pass.
  */
 static int
 resolve_field_foreign(struct config *cfg, struct field_foreign *r)
@@ -197,16 +341,24 @@ linker_resolve(struct config *cfg)
 			 */
 			break;
 		case RESOLVE_FIELD_FOREIGN:
-			if (!resolve_field_foreign(cfg, &r->field_foreign))
-				fail++;
+			fail += !resolve_field_foreign
+				(cfg, &r->field_foreign);
 			break;
 		case RESOLVE_FIELD_BITS:
-			if (!resolve_field_bits(cfg, &r->field_bits))
-				fail++;
+			fail += !resolve_field_bits
+				(cfg, &r->field_bits);
 			break;
 		case RESOLVE_FIELD_ENUM:
-			if (!resolve_field_enum(cfg, &r->field_enum))
-				fail++;
+			fail += !resolve_field_enum
+				(cfg, &r->field_enum);
+			break;
+		case RESOLVE_UP_CONSTRAINT:
+			fail += !resolve_up_const
+				(cfg, &r->struct_up_const);
+			break;
+		case RESOLVE_UP_MODIFIER:
+			fail += !resolve_up_mod
+				(cfg, &r->struct_up_mod);
 			break;
 		default:
 			abort();
@@ -217,8 +369,8 @@ linker_resolve(struct config *cfg)
 	TAILQ_FOREACH(r, &cfg->priv->rq, entries)
 		switch (r->type) {
 		case RESOLVE_FIELD_STRUCT:
-			if (!resolve_field_struct(cfg, &r->field_struct))
-				fail++;
+			fail += !resolve_field_struct
+				(cfg, &r->field_struct);
 			break;
 		default:
 			break;

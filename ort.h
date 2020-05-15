@@ -472,12 +472,9 @@ struct	search {
 };
 
 /*
- * An update reference.
- * This resolves to be a native field in a structure for which update
- * commands will be generated.
+ * An update or delete reference.
  */
 struct	uref {
-	char		 *name; /* name of field */
 	enum optype	  op; /* for constraints, SQL operator */
 	enum modtype	  mod; /* for modifiers */
 	struct field	 *field; /* resolved field */

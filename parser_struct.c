@@ -178,29 +178,50 @@ nref_alloc(struct parse *p, const char *name, struct unique *up)
 }
 
 /*
- * Allocate an update reference and add it to the parent queue.
+ * Allocate uref and register resolve request.
+ * If "mod" is non-zero, it means this is a modifier; otherwise, this is
+ * a constraint uref.
  * Returns the created pointer or NULL.
  */
 static struct uref *
-uref_alloc(struct parse *p, const char *name, 
-	struct update *up, struct urefq *q)
+uref_alloc(struct parse *p, struct update *up, int mod)
 {
 	struct uref	*ref;
+	struct resolve	*r;
 
-	if (NULL == (ref = calloc(1, sizeof(struct uref)))) {
-		parse_err(p);
-		return NULL;
-	} else if (NULL == (ref->name = strdup(name))) {
-		free(ref);
+	if ((ref = calloc(1, sizeof(struct uref))) == NULL) {
 		parse_err(p);
 		return NULL;
 	}
-
 	ref->parent = up;
 	ref->op = OPTYPE_EQUAL;
 	ref->mod = MODTYPE_SET;
 	parse_point(p, &ref->pos);
-	TAILQ_INSERT_TAIL(q, ref, entries);
+	TAILQ_INSERT_TAIL(mod ? &up->mrq : &up->crq, ref, entries);
+
+	if ((r = calloc(1, sizeof(struct resolve))) == NULL) {
+		parse_err(p);
+		return NULL;
+	}
+	TAILQ_INSERT_TAIL(&p->cfg->priv->rq, r, entries);
+
+	if (mod) {
+		r->type = RESOLVE_UP_MODIFIER;
+		r->struct_up_mod.name = strdup(p->last.string);
+		r->struct_up_mod.result = ref;
+		if (r->struct_up_mod.name == NULL) {
+			parse_err(p);
+			return NULL;
+		}
+	} else {
+		r->type = RESOLVE_UP_CONSTRAINT;
+		r->struct_up_const.name = strdup(p->last.string);
+		r->struct_up_const.result = ref;
+		if (r->struct_up_const.name == NULL) {
+			parse_err(p);
+			return NULL;
+		}
+	}
 	return ref;
 }
 
@@ -842,7 +863,7 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 	TAILQ_INIT(&up->mrq);
 	TAILQ_INIT(&up->crq);
 
-	if (UP_MODIFY == up->type)
+	if (up->type == UP_MODIFY)
 		TAILQ_INSERT_TAIL(&s->uq, up, entries);
 	else
 		TAILQ_INSERT_TAIL(&s->dq, up, entries);
@@ -855,21 +876,24 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 
 	parse_next(p);
 
-	if (UP_MODIFY == up->type) {
-		if (TOK_COLON == p->lasttype) {
+	if (up->type == UP_MODIFY) {
+		if (p->lasttype == TOK_COLON) {
 			parse_next(p);
 			goto crq;
-		} else if (TOK_SEMICOLON == p->lasttype)
+		} else if (p->lasttype == TOK_SEMICOLON)
 			return;
-		if (TOK_IDENT != p->lasttype) {
+
+		if (p->lasttype != TOK_IDENT) {
 			parse_errx(p, "expected field to modify");
 			return;
 		}
-		ur = uref_alloc(p, p->last.string, up, &up->mrq);
-		if (NULL == ur)
+
+		/* Parse modifier and delay field name resolution. */
+
+		if ((ur = uref_alloc(p, up, 1)) == NULL)
 			return;
-		while (TOK_COLON != parse_next(p)) {
-			if (TOK_SEMICOLON == p->lasttype)
+		while (parse_next(p) != TOK_COLON) {
+			if (p->lasttype == TOK_SEMICOLON)
 				return;
 
 			/*
@@ -904,8 +928,7 @@ parse_config_update(struct parse *p, struct strct *s, enum upt type)
 				parse_errx(p, "expected modify field");
 				return;
 			}
-			ur = uref_alloc(p, p->last.string, up, &up->mrq);
-			if (NULL == ur)
+			if ((ur = uref_alloc(p, up, 1)) == NULL)
 				return;
 		}
 		assert(TOK_COLON == p->lasttype);
@@ -930,10 +953,8 @@ crq:
 		return;
 	}
 
-	ur = uref_alloc(p, p->last.string, up, &up->crq);
-	if (NULL == ur)
+	if ((ur = uref_alloc(p, up, 0)) == NULL)
 		return;
-
 	while (TOK_COLON != parse_next(p)) {
 		if (TOK_SEMICOLON == p->lasttype)
 			return;
@@ -963,8 +984,7 @@ crq:
 			parse_errx(p, "expected constraint field");
 			return;
 		}
-		ur = uref_alloc(p, p->last.string, up, &up->crq);
-		if (NULL == ur)
+		if ((ur = uref_alloc(p, up, 0)) == NULL)
 			return;
 	}
 	assert(TOK_COLON == p->lasttype);
@@ -1384,6 +1404,49 @@ parse_struct_data(struct parse *p, struct strct *s)
 }
 
 /*
+ * Run any post-parsing operations.
+ */
+static void
+parse_struct_post(struct parse *p, struct strct *s)
+{
+	struct update	*up;
+	struct field	*f;
+	struct uref	*ref;
+
+	if (PARSE_STOP(p))
+		return;
+
+	/*
+	 * Update clauses without any modification fields inherit all
+	 * the fields of the structure.
+	 */
+
+	TAILQ_FOREACH(up, &s->uq, entries) {
+		assert(up->type == UP_MODIFY);
+		if (!TAILQ_EMPTY(&up->mrq))
+			continue;
+		up->flags |= UPDATE_ALL;
+		TAILQ_FOREACH(f, &s->fq, entries) {
+			if (f->flags & FIELD_ROWID)
+				continue;
+			if (f->type == FTYPE_STRUCT)
+				continue;
+			ref = calloc(1, sizeof(struct uref));
+			if (ref == NULL) {
+				parse_err(p);
+				return;
+			}
+			TAILQ_INSERT_TAIL(&up->mrq, ref, entries);
+			ref->mod = MODTYPE_SET;
+			ref->op = OPTYPE_EQUAL;
+			ref->field = f;
+			ref->parent = up;
+			ref->pos = up->pos;
+		}
+	}
+}
+
+/*
  * Verify and allocate a struct, then start parsing its fields and
  * ancillary entries.
  */
@@ -1401,4 +1464,5 @@ parse_struct(struct parse *p)
 	if ((s = strct_alloc(p, p->last.string)) == NULL)
 		return;
 	parse_struct_data(p, s);
+	parse_struct_post(p, s);
 }

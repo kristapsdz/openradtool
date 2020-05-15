@@ -160,14 +160,6 @@ parse_free_nref(struct nref *p)
 }
 
 static void
-parse_free_uref(struct uref *p)
-{
-
-	free(p->name);
-	free(p);
-}
-
-static void
 parse_free_unique(struct unique *p)
 {
 	struct nref	*u;
@@ -188,11 +180,11 @@ parse_free_update(struct update *p)
 
 	while ((u = TAILQ_FIRST(&p->mrq)) != NULL) {
 		TAILQ_REMOVE(&p->mrq, u, entries);
-		parse_free_uref(u);
+		free(u);
 	}
 	while ((u = TAILQ_FIRST(&p->crq)) != NULL) {
 		TAILQ_REMOVE(&p->crq, u, entries);
-		parse_free_uref(u);
+		free(u);
 	}
 
 	free(p->doc);
@@ -350,6 +342,12 @@ parse_free_resolve(struct resolve *p)
 		break;
 	case RESOLVE_FIELD_STRUCT:
 		free(p->field_struct.sfield);
+		break;
+	case RESOLVE_UP_CONSTRAINT:
+		free(p->struct_up_const.name);
+		break;
+	case RESOLVE_UP_MODIFIER:
+		free(p->struct_up_mod.name);
 		break;
 	}
 

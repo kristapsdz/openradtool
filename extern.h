@@ -23,7 +23,9 @@ enum	resolvet {
 	RESOLVE_FIELD_BITS,
 	RESOLVE_FIELD_ENUM,
 	RESOLVE_FIELD_FOREIGN,
-	RESOLVE_FIELD_STRUCT
+	RESOLVE_FIELD_STRUCT,
+	RESOLVE_UP_CONSTRAINT,
+	RESOLVE_UP_MODIFIER
 };
 
 /*
@@ -52,6 +54,14 @@ struct	resolve {
 				struct field	*result;
 				char		*name;
 		} field_enum; /* field foo enum ->bar<- */
+		struct struct_up_const {
+				struct uref	*result;
+				char		*name;
+		} struct_up_const; /* delete ->bar<-, ... */
+		struct struct_up_mod {
+				struct uref	*result;
+				char		*name;
+		} struct_up_mod; /* update ->bar<-: ... */
 	};
 	TAILQ_ENTRY(resolve)	entries;
 };

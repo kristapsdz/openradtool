@@ -408,7 +408,7 @@ parse_write_modify(struct writer *w, const struct update *p)
 		nf = 0;
 		TAILQ_FOREACH(u, &p->mrq, entries) {
 			if (!wprint(w, "%s %s", 
-			    nf++ ? "," : "", u->name))
+			    nf++ ? "," : "", u->field->name))
 				return 0;
 			if (u->mod != MODTYPE_SET &&
 			    !wprint(w, " %s", modtypes[u->mod]))
@@ -427,7 +427,8 @@ parse_write_modify(struct writer *w, const struct update *p)
 
 	nf = 0;
 	TAILQ_FOREACH(u, &p->crq, entries) {
-		if (!wprint(w, "%s %s", nf++ ? "," : "", u->name))
+		if (!wprint(w, "%s %s", 
+		    nf++ ? "," : "", u->field->name))
 			return 0;
 		if (u->op != OPTYPE_EQUAL &&
 		    !wprint(w, " %s", optypes[u->op]))

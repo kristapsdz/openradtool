@@ -266,14 +266,16 @@ print_name_db_update(const struct update *u)
 		if (!(u->flags & UPDATE_ALL))
 			TAILQ_FOREACH(ur, &u->mrq, entries) {
 				rc = printf("_%s_%s", 
-					ur->name, modtypes[ur->mod]);
+					ur->field->name, 
+					modtypes[ur->mod]);
 				col += rc > 0 ? rc : 0;
 			}
 		if (!TAILQ_EMPTY(&u->crq)) {
 			col += (rc = printf("_by")) > 0 ? rc : 0;
 			TAILQ_FOREACH(ur, &u->crq, entries) {
 				rc = printf("_%s_%s", 
-					ur->name, optypes[ur->op]);
+					ur->field->name, 
+					optypes[ur->op]);
 				col += rc > 0 ? rc : 0;
 			}
 		}
@@ -282,7 +284,8 @@ print_name_db_update(const struct update *u)
 			col += (rc = printf("_by")) > 0 ? rc : 0;
 			TAILQ_FOREACH(ur, &u->crq, entries) {
 				rc = printf("_%s_%s", 
-					ur->name, optypes[ur->op]);
+					ur->field->name, 
+					optypes[ur->op]);
 				col += rc > 0 ? rc : 0;
 			}
 		}

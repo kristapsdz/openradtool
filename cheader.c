@@ -244,11 +244,11 @@ gen_func_update(const struct config *cfg, const struct update *up)
 			if (FTYPE_PASSWORD == ref->field->type) 
 				print_commentv(0, COMMENT_C_FRAG,
 					"\tv%zu: %s (password)", 
-					pos++, ref->name);
+					pos++, ref->field->name);
 			else
 				print_commentv(0, COMMENT_C_FRAG,
 					"\tv%zu: %s", 
-					pos++, ref->name);
+					pos++, ref->field->name);
 		print_commentt(0, COMMENT_C_FRAG,
 			"Constrains the updated records to:");
 	} else {
@@ -261,15 +261,18 @@ gen_func_update(const struct config *cfg, const struct update *up)
 		if (OPTYPE_NOTNULL == ref->op) 
 			print_commentv(0, COMMENT_C_FRAG,
 				"\t%s (not an argument: "
-				"checked not null)", ref->name);
+				"checked not null)",
+				ref->field->name);
 		else if (OPTYPE_ISNULL == ref->op) 
 			print_commentv(0, COMMENT_C_FRAG,
 				"\t%s (not an argument: "
-				"checked null)", ref->name);
+				"checked null)", 
+				ref->field->name);
 		else
 			print_commentv(0, COMMENT_C_FRAG,
 				"\tv%zu: %s (%s)", pos++, 
-				ref->name, optypes[ref->op]);
+				ref->field->name, 
+				optypes[ref->op]);
 
 	print_commentt(0, COMMENT_C_FRAG_CLOSE,
 		"Returns zero on constraint violation, "

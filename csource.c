@@ -2812,14 +2812,16 @@ gen_stmt(const struct strct *p)
 			switch (ur->mod) {
 			case MODTYPE_INC:
 				printf("%s = %s + ?", 
-					ur->name, ur->name);
+					ur->field->name, 
+					ur->field->name);
 				break;
 			case MODTYPE_DEC:
 				printf("%s = %s - ?", 
-					ur->name, ur->name);
+					ur->field->name, 
+					ur->field->name);
 				break;
 			case MODTYPE_CONCAT:
-				printf("%s = ", ur->name);
+				printf("%s = ", ur->field->name);
 
 				/*
 				 * If we concatenate a NULL with a
@@ -2830,13 +2832,14 @@ gen_stmt(const struct strct *p)
 				 */
 
 				if ((ur->field->flags & FIELD_NULL))
-					printf("COALESCE(%s,'')", ur->name);
+					printf("COALESCE(%s,'')",
+						ur->field->name);
 				else
-					printf("%s", ur->name);
+					printf("%s", ur->field->name);
 				printf(" || ?");
 				break;
 			default:
-				printf("%s = ?", ur->name);
+				printf("%s = ?", ur->field->name);
 				break;
 			}
 		}
@@ -2844,10 +2847,10 @@ gen_stmt(const struct strct *p)
 		TAILQ_FOREACH(ur, &up->crq, entries) {
 			printf(" %s ", first ? "WHERE" : "AND");
 			if (OPTYPE_ISUNARY(ur->op))
-				printf("%s %s", ur->name, 
+				printf("%s %s", ur->field->name, 
 					optypes[ur->op]);
 			else
-				printf("%s %s ?", ur->name,
+				printf("%s %s ?", ur->field->name,
 					optypes[ur->op]);
 			first = 0;
 		}
@@ -2865,10 +2868,10 @@ gen_stmt(const struct strct *p)
 		TAILQ_FOREACH(ur, &up->crq, entries) {
 			printf(" %s ", first ? "WHERE" : "AND");
 			if (OPTYPE_ISUNARY(ur->op))
-				printf("%s %s", ur->name, 
+				printf("%s %s", ur->field->name, 
 					optypes[ur->op]);
 			else
-				printf("%s %s ?", ur->name,
+				printf("%s %s ?", ur->field->name,
 					optypes[ur->op]);
 			first = 0;
 		}

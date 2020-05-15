@@ -20,6 +20,7 @@
 # include <sys/queue.h>
 #endif
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +29,67 @@
 #include "ort.h"
 #include "extern.h"
 #include "linker.h"
+
+static int
+resolve_struct_sent(struct config *cfg, struct struct_sent *r)
+{
+	size_t	 	 i;
+	struct strct	*s;
+	struct field	*f = NULL;
+
+	/* Start in the given structure. */
+
+	s = r->result->parent->parent;
+	for (i = 0; i < r->namesz; i++) {
+		TAILQ_FOREACH(f, &s->fq, entries)
+			if (strcasecmp(f->name, r->names[i]) == 0)
+				break;
+		if (f == NULL) {
+			gen_errx(cfg, &r->result->pos,
+				"field not found: %s", r->names[i]);
+			return 0;
+		}
+
+		/* 
+		 * For non-terminal fields, make sure that we're
+		 * pointing to another structure, then enter that
+		 * structure and continue parsing.
+		 */
+
+		if (i < r->namesz - 1) {
+			if (f->type != FTYPE_STRUCT) {
+				gen_errx(cfg, &r->result->pos, 
+					"non-terminal field is not "
+					"a struct: %s", f->name);
+				return 0;
+			}
+			assert(f->ref->source != NULL);
+			if (f->ref->source->flags & FIELD_NULL) {
+				gen_errx(cfg, &r->result->pos, 
+					"non-terminal field cannot "
+					"be null: %s", f->name);
+				return 0;
+			}
+
+			assert(f->ref->target != NULL);
+			s = f->ref->target->parent;
+			continue;
+		}
+
+		/* Terminal field isn't a struct. */
+
+		if (f->type != FTYPE_STRUCT)
+			break;
+
+		gen_errx(cfg, &r->result->pos, "terminal "
+			"field cannot be a struct: %s", f->name);
+		return 0;
+	}
+
+	assert(f != NULL);
+	r->result->field = f;
+	return 1;
+}
 
 /*
  * Look up the constraint part of an "update" or "delete" statement
@@ -352,6 +414,12 @@ linker_resolve(struct config *cfg)
 			fail += !resolve_field_enum
 				(cfg, &r->field_enum);
 			break;
+		case RESOLVE_SENT:
+			/*
+			 * These require both RESOLVE_FIELD_FOREIGN and
+			 * the later RESOLVE_FIELD_STRUCT.
+			 */
+			break;
 		case RESOLVE_UP_CONSTRAINT:
 			fail += !resolve_up_const
 				(cfg, &r->struct_up_const);
@@ -360,8 +428,6 @@ linker_resolve(struct config *cfg)
 			fail += !resolve_up_mod
 				(cfg, &r->struct_up_mod);
 			break;
-		default:
-			abort();
 		}
 
 	/* These depend upon prior resolutions. */
@@ -371,6 +437,18 @@ linker_resolve(struct config *cfg)
 		case RESOLVE_FIELD_STRUCT:
 			fail += !resolve_field_struct
 				(cfg, &r->field_struct);
+			break;
+		default:
+			break;
+		}
+
+	/* Lastly, these depend on full struct target links. */
+
+	TAILQ_FOREACH(r, &cfg->priv->rq, entries)
+		switch (r->type) {
+		case RESOLVE_SENT:
+			fail += !resolve_struct_sent
+				(cfg, &r->struct_sent);
 			break;
 		default:
 			break;

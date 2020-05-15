@@ -24,6 +24,7 @@ enum	resolvet {
 	RESOLVE_FIELD_ENUM,
 	RESOLVE_FIELD_FOREIGN,
 	RESOLVE_FIELD_STRUCT,
+	RESOLVE_SENT,
 	RESOLVE_UP_CONSTRAINT,
 	RESOLVE_UP_MODIFIER
 };
@@ -62,6 +63,11 @@ struct	resolve {
 				struct uref	*result;
 				char		*name;
 		} struct_up_mod; /* update ->bar<-: ... */
+		struct struct_sent {
+				struct sent	 *result;
+				char		**names;
+				size_t		  namesz;
+		} struct_sent; /* update ->bar<-: ... */
 	};
 	TAILQ_ENTRY(resolve)	entries;
 };

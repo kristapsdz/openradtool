@@ -477,60 +477,87 @@ parse_write_unique(struct writer *w, const struct unique *p)
 static int
 parse_write_query(struct writer *w, const struct search *p)
 {
-	const struct sent *s;
-	const struct ord *o;
-	size_t	 nf;
+	const struct sent	*s;
+	const struct ord	*o;
+	size_t			 nf;
+	int			 colon = 0;
 
-	if ( ! wprint(w, "\t%s", stypes[p->type]))
+	if (!wprint(w, "\t%s", stypes[p->type]))
 		return 0;
 
 	/* Search reference queue. */
 
 	nf = 0;
 	TAILQ_FOREACH(s, &p->sntq, entries) {
-		if ( ! wprint(w, "%s %s", nf++ ? "," : "", s->fname))
+		if (!wprint(w, "%s %s", nf++ ? "," : "", s->fname))
 			return 0;
-		if (OPTYPE_EQUAL != s->op)
-			if ( ! wprint(w, " %s", optypes[s->op]))
-				return 0;
+		if (s->op != OPTYPE_EQUAL &&
+		    !wprint(w, " %s", optypes[s->op]))
+			return 0;
 	}
-
-	if ( ! wputc(w, ':'))
-		return 0;
 
 	/* Explicit name of function. */
 
-	if (NULL != p->name)
-		if ( ! wprint(w, " name %s", p->name))
+	if (NULL != p->name) {
+		if (!colon && !wputc(w, ':'))
 			return 0;
+		if (!wprint(w, " name %s", p->name))
+			return 0;
+		colon = 1;
+	}
 
 	/* Ordering. */
 
-	nf = 0;
-	if (TAILQ_FIRST(&p->ordq))
-		if ( ! wputs(w, " order"))
+	if (TAILQ_FIRST(&p->ordq)) {
+		if (!colon && !wputc(w, ':'))
 			return 0;
+		if (!wputs(w, " order"))
+			return 0;
+		colon = 1;
+	}
+
+	nf = 0;
 	TAILQ_FOREACH(o, &p->ordq, entries)
-		if ( ! wprint(w, "%s %s", nf++ ? "," : "", o->fname))
+		if (!wprint(w, "%s %s", nf++ ? "," : "", o->fname))
 			return 0;
 
 	/* Limit and offset. */
 
-	if (p->limit)
-		if ( ! wprint(w, " limit %" PRId64, p->limit))
+	if (p->limit) {
+		if (!colon && !wputc(w, ':'))
 			return 0;
-	if (p->offset)
-		if ( ! wprint(w, " offset %" PRId64, p->offset))
+		if (!wprint(w, " limit %" PRId64, p->limit))
 			return 0;
+		colon = 1;
+	}
+
+	if (p->offset) {
+		if (!colon && !wputc(w, ':'))
+			return 0;
+		if (!wprint(w, " offset %" PRId64, p->offset))
+			return 0;
+		colon = 1;
+	}
 
 	/* Distinct selection. */
 
-	if (NULL != p->dst)
-		if ( ! wprint(w, " distinct %s", p->dst->cname))
+	if (p->dst != NULL) {
+		if (!colon && !wputc(w, ':'))
 			return 0;
+		if (!wprint(w, " distinct %s", p->dst->cname))
+			return 0;
+		colon = 1;
+	}
 
-	if ( ! parse_write_comment(w, p->doc, 2))
-		return 0;
+	/* Comments. */
+
+	if (p->doc != NULL) {
+		if (!colon && !wputc(w, ':'))
+			return 0;
+		if (!parse_write_comment(w, p->doc, 2))
+			return 0;
+		colon = 1;
+	}
 
 	return wprint(w, ";\n");
 }

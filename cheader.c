@@ -288,7 +288,6 @@ static void
 gen_func_search(const struct config *cfg, const struct search *s)
 {
 	const struct sent  *sent;
-	const struct sref  *sr;
 	const struct strct *rc;
 	size_t	 	    pos = 1;
 
@@ -341,8 +340,7 @@ gen_func_search(const struct config *cfg, const struct search *s)
 		"Queries on the following fields in struct %s:",
 		s->parent->name);
 
-	TAILQ_FOREACH(sent, &s->sntq, entries) {
-		sr = TAILQ_LAST(&sent->srq, srefq);
+	TAILQ_FOREACH(sent, &s->sntq, entries)
 		if (sent->op == OPTYPE_NOTNULL)
 			print_commentv(0, COMMENT_C_FRAG,
 				"\t%s (not an argument: "
@@ -355,10 +353,9 @@ gen_func_search(const struct config *cfg, const struct search *s)
 			print_commentv(0, COMMENT_C_FRAG,
 				"\tv%zu: %s (%s%s)", pos++, 
 				sent->fname, 
-				sr->field->type == FTYPE_PASSWORD ?
+				sent->field->type == FTYPE_PASSWORD ?
 				"pre-hashed password, " : "",
 				optypes[sent->op]);
-	}
 
 	if (s->type == STYPE_SEARCH)
 		print_commentv(0, COMMENT_C_FRAG_CLOSE,

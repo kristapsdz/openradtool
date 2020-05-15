@@ -344,7 +344,6 @@ size_t
 print_name_db_search(const struct search *s)
 {
 	const struct sent *sent;
-	const struct sref *sr;
 	size_t		   sz = 0;
 	int	 	   rc;
 
@@ -354,11 +353,9 @@ print_name_db_search(const struct search *s)
 	if (s->name == NULL && !TAILQ_EMPTY(&s->sntq)) {
 		sz += (rc = printf("_by")) > 0 ? rc : 0;
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
-			TAILQ_FOREACH(sr, &sent->srq, entries) {
-				rc = printf("_%s", sr->name);
-				sz += rc > 0 ? rc : 0;
-			}
-			rc = printf("_%s", optypes[sent->op]);
+			rc = printf("_%s_%s", 
+				sent->uname,
+				optypes[sent->op]);
 			sz += rc > 0 ? rc : 0;
 		}
 	} else if (s->name != NULL)
@@ -377,7 +374,6 @@ void
 print_func_db_search(const struct search *s, int decl)
 {
 	const struct sent *sent;
-	const struct sref *sr;
 	const struct strct *retstr;
 	size_t	 	    pos = 1, col = 0;
 	int	 	    rc;
@@ -424,10 +420,8 @@ print_func_db_search(const struct search *s, int decl)
 	}
 
 	TAILQ_FOREACH(sent, &s->sntq, entries)
-		if (!OPTYPE_ISUNARY(sent->op)) {
-			sr = TAILQ_LAST(&sent->srq, srefq);
-			col = print_var(pos++, col, sr->field, 0);
-		}
+		if (!OPTYPE_ISUNARY(sent->op))
+			col = print_var(pos++, col, sent->field, 0);
 
 	printf(")%s", decl ? ";\n" : "");
 }

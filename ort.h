@@ -332,12 +332,13 @@ struct	roleset {
  *
  */
 struct	sent {
-	struct srefq	  srq; /* queue of search fields */
 	struct pos	  pos; /* parse point */
 	struct search	 *parent; /* up-reference */
+	struct field	 *field; /* target of search entity */
 	enum optype	  op; /* operator */
-	char		 *name; /* sub-structure dot-form name or NULL */
-	char		 *fname; /* canonical dot-form name */
+	char		 *name; /* fname w/o last field or NULL */
+	char		 *fname; /* dot-form lowercase of all fields */
+	char		 *uname; /* underscore-form lowercase form */
 	struct alias	 *alias; /* resolved alias */
 	unsigned int	  flags; 
 #define	SENT_IS_UNIQUE	  0x01 /* has a rowid/unique in its refs */

@@ -330,7 +330,6 @@ static int
 check_searchtype(struct config *cfg, struct strct *p)
 {
 	const struct sent	*sent;
-	const struct sref	*sr;
 	struct search		*srch;
 	struct dref		*dr;
 
@@ -364,10 +363,9 @@ check_searchtype(struct config *cfg, struct strct *p)
 				"limit of one");
 
 		TAILQ_FOREACH(sent, &srch->sntq, entries) {
-			sr = TAILQ_LAST(&sent->srq, srefq);
 			if ((sent->op == OPTYPE_NOTNULL ||
 			     sent->op == OPTYPE_ISNULL) &&
-			    !(sr->field->flags & FIELD_NULL))
+			    !(sent->field->flags & FIELD_NULL))
 				gen_warnx(cfg, &sent->pos, 
 					"null operator on field "
 					"that's never null");
@@ -382,7 +380,7 @@ check_searchtype(struct config *cfg, struct strct *p)
 			    sent->op != OPTYPE_NEQUAL &&
 			    sent->op != OPTYPE_STREQ &&
 			    sent->op != OPTYPE_STRNEQ &&
-			    sr->field->type == FTYPE_PASSWORD) {
+			    sent->field->type == FTYPE_PASSWORD) {
 				gen_errx(cfg, &sent->pos, 
 					"passwords only accept "
 					"equality or non-equality "
@@ -393,8 +391,8 @@ check_searchtype(struct config *cfg, struct strct *p)
 			/* Require text types for LIKE operator. */
 
 			if (sent->op == OPTYPE_LIKE &&
-			    sr->field->type != FTYPE_TEXT &&
-			    sr->field->type != FTYPE_EMAIL) {
+			    sent->field->type != FTYPE_TEXT &&
+			    sent->field->type != FTYPE_EMAIL) {
 				gen_errx(cfg, &sent->pos, 
 					"LIKE operator on non-"
 					"textual field.");
@@ -429,8 +427,7 @@ check_searchtype(struct config *cfg, struct strct *p)
 		TAILQ_FOREACH(sent, &srch->sntq, entries) {
 			if (OPTYPE_ISUNARY(sent->op))
 				continue;
-			sr = TAILQ_LAST(&sent->srq, srefq);
-			if (sr->field->type != FTYPE_PASSWORD) 
+			if (sent->field->type != FTYPE_PASSWORD) 
 				continue;
 			gen_errx(cfg, &sent->pos, 
 				"password queries not allowed when "
@@ -455,7 +452,6 @@ check_search_unique(struct config *cfg, const struct search *srch)
 {
 	const struct unique *uq;
 	const struct sent *sent;
-	const struct sref *sr;
 	const struct nref *nr;
 
 	TAILQ_FOREACH(uq, &srch->parent->nq, entries) {
@@ -464,9 +460,7 @@ check_search_unique(struct config *cfg, const struct search *srch)
 			TAILQ_FOREACH(sent, &srch->sntq, entries) {
 				if (OPTYPE_EQUAL != sent->op) 
 					continue;
-				sr = TAILQ_LAST(&sent->srq, srefq);
-				assert(NULL != sr->field);
-				if (sr->field == nr->field)
+				if (sent->field == nr->field)
 					break;
 			}
 			if (NULL == sent)
@@ -499,10 +493,6 @@ resolve_search(struct config *cfg, struct search *srch)
 	p = srch->parent;
 
 	TAILQ_FOREACH(sent, &srch->sntq, entries) {
-		sref = TAILQ_FIRST(&sent->srq);
-		if ( ! resolve_sref(cfg, sref, p))
-			return 0;
-
 		/*
 		 * Check if this is a unique search result that will
 		 * reduce our search to a singleton result always.
@@ -511,9 +501,8 @@ resolve_search(struct config *cfg, struct search *srch)
 		 * equality.
 		 */
 
-		sref = TAILQ_LAST(&sent->srq, srefq);
-		if ((FIELD_ROWID & sref->field->flags ||
-		     FIELD_UNIQUE & sref->field->flags) &&
+		if ((FIELD_ROWID & sent->field->flags ||
+		     FIELD_UNIQUE & sent->field->flags) &&
 		     OPTYPE_EQUAL == sent->op) {
 			sent->flags |= SENT_IS_UNIQUE;
 			srch->flags |= SEARCH_IS_UNIQUE;

@@ -449,7 +449,6 @@ gen_strct_func_iter(const struct config *cfg,
 	const struct search *s, size_t num)
 {
 	const struct sent	*sent;
-	const struct sref	*sr;
 	const struct strct 	*retstr;
 	size_t			 pos, idx, parms = 0;
 
@@ -458,11 +457,9 @@ gen_strct_func_iter(const struct config *cfg,
 	/* Count all possible parameters to bind. */
 
 	TAILQ_FOREACH(sent, &s->sntq, entries)
-		if (OPTYPE_ISBINARY(sent->op)) {
-			sr = TAILQ_LAST(&sent->srq, srefq);
+		if (OPTYPE_ISBINARY(sent->op))
 			parms += query_count_bindfuncs
-				(sr->field->type, sent->op);
-		}
+				(sent->field->type, sent->op);
 
 	/* Emit top of the function w/optional static parameters. */
 
@@ -485,9 +482,8 @@ gen_strct_func_iter(const struct config *cfg,
 	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries)
 		if (OPTYPE_ISBINARY(sent->op)) {
-			sr = TAILQ_LAST(&sent->srq, srefq);
 			pos += query_gen_bindfunc
-				(sr->field->type, idx, pos, sent->op);
+				(sent->field->type, idx, pos, sent->op);
 			idx++;
 		}
 
@@ -518,8 +514,7 @@ gen_strct_func_iter(const struct config *cfg,
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
 		if (OPTYPE_ISUNARY(sent->op))
 			continue;
-		sr = TAILQ_LAST(&sent->srq, srefq);
-		if (sr->field->type != FTYPE_PASSWORD ||
+		if (sent->field->type != FTYPE_PASSWORD ||
 		    sent->op == OPTYPE_STREQ ||
 		    sent->op == OPTYPE_STRNEQ) {
 			pos++;
@@ -527,7 +522,7 @@ gen_strct_func_iter(const struct config *cfg,
 		}
 		printf("\t\tif ");
 		gen_print_checkpass(0, pos,
-			sent->fname, sent->op, sr->field);
+			sent->fname, sent->op, sent->field);
 		printf(" {\n"
 		       "\t\t\tdb_%s_unfill_r(&p);\n"
 		       "\t\t\tcontinue;\n"
@@ -556,7 +551,6 @@ gen_strct_func_list(const struct config *cfg,
 	const struct search *s, size_t num)
 {
 	const struct sent	*sent;
-	const struct sref	*sr;
 	const struct strct	*retstr;
 	size_t	 		 pos, parms = 0, idx;
 
@@ -565,11 +559,9 @@ gen_strct_func_list(const struct config *cfg,
 	/* Count all possible parameters to bind. */
 
 	TAILQ_FOREACH(sent, &s->sntq, entries)
-		if (OPTYPE_ISBINARY(sent->op)) {
-			sr = TAILQ_LAST(&sent->srq, srefq);
+		if (OPTYPE_ISBINARY(sent->op))
 			parms += query_count_bindfuncs
-				(sr->field->type, sent->op);
-		}
+				(sent->field->type, sent->op);
 
 	/* Emit top of the function w/optional static parameters. */
 
@@ -601,9 +593,8 @@ gen_strct_func_list(const struct config *cfg,
 	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries)
 		if (OPTYPE_ISBINARY(sent->op)) {
-			sr = TAILQ_LAST(&sent->srq, srefq);
 			idx += query_gen_bindfunc
-				(sr->field->type, idx, pos, sent->op);
+				(sent->field->type, idx, pos, sent->op);
 			pos++;
 		}
 	if (pos > 1)
@@ -641,8 +632,7 @@ gen_strct_func_list(const struct config *cfg,
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
 		if (OPTYPE_ISUNARY(sent->op))
 			continue;
-		sr = TAILQ_LAST(&sent->srq, srefq);
-		if (sr->field->type != FTYPE_PASSWORD ||
+		if (sent->field->type != FTYPE_PASSWORD ||
 		    sent->op == OPTYPE_STREQ ||
 		    sent->op == OPTYPE_STRNEQ) {
 			pos++;
@@ -650,7 +640,7 @@ gen_strct_func_list(const struct config *cfg,
 		}
 		printf("\t\tif ");
 		gen_print_checkpass(1, pos,
-			sent->fname, sent->op, sr->field);
+			sent->fname, sent->op, sent->field);
 		printf(" {\n"
 		       "\t\t\tdb_%s_free(p);\n"
 		       "\t\t\tp = NULL;\n"
@@ -1125,17 +1115,14 @@ gen_strct_func_count(const struct config *cfg,
 	const struct search *s, size_t num)
 {
 	const struct sent  *sent;
-	const struct sref  *sr;
 	size_t	 	    pos, parms = 0, idx;
 
 	/* Count all possible parameters to bind. */
 
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
-		if (OPTYPE_ISBINARY(sent->op)) {
-			sr = TAILQ_LAST(&sent->srq, srefq);
+		if (OPTYPE_ISBINARY(sent->op))
 			parms += query_count_bindfuncs
-				(sr->field->type, sent->op);
-		}
+				(sent->field->type, sent->op);
 
 	print_func_db_search(s, 0);
 	puts("\n"
@@ -1152,9 +1139,8 @@ gen_strct_func_count(const struct config *cfg,
 	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
 		if (OPTYPE_ISBINARY(sent->op)) {
-			sr = TAILQ_LAST(&sent->srq, srefq);
 			idx += query_gen_bindfunc
-				(sr->field->type, idx, pos, sent->op);
+				(sent->field->type, idx, pos, sent->op);
 			pos++;
 		}
 
@@ -1188,7 +1174,6 @@ gen_strct_func_srch(const struct config *cfg,
 	const struct search *s, size_t num)
 {
 	const struct sent	*sent;
-	const struct sref	*sr;
 	const struct strct	*retstr;
 	size_t			 pos, parms = 0, idx;
 
@@ -1197,11 +1182,9 @@ gen_strct_func_srch(const struct config *cfg,
 	/* Count all possible parameters to bind. */
 
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
-		if (OPTYPE_ISBINARY(sent->op)) {
-			sr = TAILQ_LAST(&sent->srq, srefq);
+		if (OPTYPE_ISBINARY(sent->op))
 			parms += query_count_bindfuncs
-				(sr->field->type, sent->op);
-		}
+				(sent->field->type, sent->op);
 
 	print_func_db_search(s, 0);
 	printf("\n"
@@ -1222,9 +1205,8 @@ gen_strct_func_srch(const struct config *cfg,
 	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
 		if (OPTYPE_ISBINARY(sent->op)) {
-			sr = TAILQ_LAST(&sent->srq, srefq);
 			idx += query_gen_bindfunc
-				(sr->field->type, idx, pos, sent->op);
+				(sent->field->type, idx, pos, sent->op);
 			pos++;
 		} 
 	puts("");
@@ -1255,8 +1237,7 @@ gen_strct_func_srch(const struct config *cfg,
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
 		if (OPTYPE_ISUNARY(sent->op))
 			continue;
-		sr = TAILQ_LAST(&sent->srq, srefq);
-		if (sr->field->type != FTYPE_PASSWORD ||
+		if (sent->field->type != FTYPE_PASSWORD ||
 		    sent->op == OPTYPE_STREQ ||
 		    sent->op == OPTYPE_STRNEQ) {
 			pos++;
@@ -1264,7 +1245,7 @@ gen_strct_func_srch(const struct config *cfg,
 		}
 		printf("\t\tif ");
 		gen_print_checkpass(1, pos,
-			sent->fname, sent->op, sr->field);
+			sent->fname, sent->op, sent->field);
 		printf(" {\n"
 		       "\t\t\tdb_%s_free(p);\n"
 		       "\t\t\tp = NULL;\n"
@@ -2701,8 +2682,7 @@ gen_stmt(const struct strct *p)
 		/* Continue with our proper WHERE clauses. */
 
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
-			sr = TAILQ_LAST(&sent->srq, srefq);
-			if (sr->field->type == FTYPE_PASSWORD &&
+			if (sent->field->type == FTYPE_PASSWORD &&
 			    sent->op != OPTYPE_STREQ &&
 			    sent->op != OPTYPE_STRNEQ)
 				continue;
@@ -2713,12 +2693,14 @@ gen_stmt(const struct strct *p)
 				printf(" %s.%s %s",
 					sent->alias == NULL ?
 					p->name : sent->alias->alias,
-					sr->name, optypes[sent->op]);
+					sent->field->name, 
+					optypes[sent->op]);
 			else
 				printf(" %s.%s %s ?", 
 					sent->alias == NULL ?
 					p->name : sent->alias->alias,
-					sr->name, optypes[sent->op]);
+					sent->field->name, 
+					optypes[sent->op]);
 		}
 
 		first = 1;

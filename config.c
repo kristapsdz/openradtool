@@ -125,7 +125,6 @@ parse_free_distinct(struct dstnct *p)
 static void
 parse_free_search(struct search *p)
 {
-	struct sref	*s;
 	struct sent	*sent;
 
 	if (p->dst != NULL)
@@ -138,10 +137,7 @@ parse_free_search(struct search *p)
 
 	while ((sent = TAILQ_FIRST(&p->sntq)) != NULL) {
 		TAILQ_REMOVE(&p->sntq, sent, entries);
-		while ((s = TAILQ_FIRST(&sent->srq)) != NULL) {
-			TAILQ_REMOVE(&sent->srq, s, entries);
-			parse_free_sref(s);
-		}
+		free(sent->uname);
 		free(sent->fname);
 		free(sent->name);
 		free(sent);
@@ -328,6 +324,7 @@ parse_free_strct(struct strct *p)
 static void
 parse_free_resolve(struct resolve *p)
 {
+	size_t	 i;
 
 	switch (p->type) {
 	case RESOLVE_FIELD_BITS:
@@ -342,6 +339,11 @@ parse_free_resolve(struct resolve *p)
 		break;
 	case RESOLVE_FIELD_STRUCT:
 		free(p->field_struct.sfield);
+		break;
+	case RESOLVE_SENT:
+		for (i = 0; i < p->struct_sent.namesz; i++)
+			free(p->struct_sent.names[i]);
+		free(p->struct_sent.names);
 		break;
 	case RESOLVE_UP_CONSTRAINT:
 		free(p->struct_up_const.name);

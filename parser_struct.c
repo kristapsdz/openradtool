@@ -115,6 +115,37 @@ strct_alloc(struct parse *p, const char *name)
 	return s;
 }
 
+static int
+ref_append2(char **p, const char *v, char delim)
+{
+	size_t		 sz, cursz;
+	void		*pp;
+	const char	*src;
+	char		*dst;
+
+	assert(v != NULL);
+	sz = strlen(v);
+	assert(sz > 0);
+
+	if (*p == NULL) {
+		if ((*p = malloc(sz + 1)) == NULL) 
+			return 0;
+		dst = *p;
+	} else {
+		cursz = strlen(*p);
+		if ((pp = realloc(*p, cursz + sz + 2)) == NULL)
+			return 0;
+		*p = pp;
+		(*p)[cursz] = delim;
+		dst = *p + cursz + 1;
+	}
+
+	for (src = v; *src != '\0'; dst++, src++) 
+		*dst = tolower((unsigned char)*src);
+	*dst = '\0';
+	return 1;
+}
+
 /*
  * Appends a reference "v" to "p".
  * If "p" is NULL, this will simply duplicate "p".
@@ -265,7 +296,6 @@ sent_alloc(struct parse *p, struct search *up)
 	sent->op = OPTYPE_EQUAL;
 	sent->parent = up;
 	parse_point(p, &sent->pos);
-	TAILQ_INIT(&sent->srq);
 	TAILQ_INSERT_TAIL(&up->sntq, sent, entries);
 	return sent;
 }
@@ -558,18 +588,46 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 static void
 parse_config_search_terms(struct parse *p, struct search *srch)
 {
-	struct sref	*sf;
 	struct sent	*sent;
+	struct resolve	*r;
+	size_t		 i;
+	void		*pp;
+	char		*cp;
 
 	if (p->lasttype != TOK_IDENT) {
 		parse_errx(p, "expected field identifier");
 		return;
+	} else if ((sent = sent_alloc(p, srch)) == NULL)
+		return;
+
+	/* Initialise the resolver. */
+
+	if ((r = calloc(1, sizeof(struct resolve))) == NULL) {
+		parse_err(p);
+		return;
+	}
+	TAILQ_INSERT_TAIL(&p->cfg->priv->rq, r, entries);
+	r->type = RESOLVE_SENT;
+	r->struct_sent.result = sent;
+	r->struct_sent.names = calloc(1, sizeof(char *));
+	r->struct_sent.namesz = 1;
+	if (r->struct_sent.names == NULL) {
+		parse_err(p);
+		return;
+	}
+	r->struct_sent.names[0] = strdup(p->last.string);
+	if (r->struct_sent.names[0] == NULL) {
+		parse_err(p);
+		return;
 	}
 
-	if ((sent = sent_alloc(p, srch)) == NULL)
+	/* Initialise the canonical names. */
+	
+	if (!ref_append2(&sent->fname, p->last.string, '.') ||
+	    !ref_append2(&sent->uname, p->last.string, '_')) {
+		parse_err(p);
 		return;
-	if (!sref_alloc(p, p->last.string, &sent->srq))
-		return;
+	}
 
 	while (!PARSE_STOP(p)) {
 		if (parse_next(p) == TOK_COMMA ||
@@ -600,38 +658,49 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 			return;
 		}
 
-		/* Next in field chain... */
+		/* Parse next field name in chain. */
 
-		if (p->lasttype != TOK_PERIOD)
+		if (p->lasttype != TOK_PERIOD) {
 			parse_errx(p, "expected field separator");
-		else if (parse_next(p) != TOK_IDENT)
+			return;
+		} else if (parse_next(p) != TOK_IDENT) {
 			parse_errx(p, "expected field identifier");
-		else if (sref_alloc(p, p->last.string, &sent->srq))
-			continue;
+			return;
+		}
 
-		return;
+		pp = reallocarray(r->struct_sent.names, 
+			r->struct_sent.namesz + 1, sizeof(char *));
+		if (pp == NULL) {
+			parse_err(p);
+			return;
+		}
+		i = r->struct_sent.namesz++;
+		r->struct_sent.names = pp;
+		r->struct_sent.names[i] = strdup(p->last.string);
+		if (r->struct_sent.names[i] == NULL) {
+			parse_err(p);
+			return;
+		}
+
+		/* Append to canonicalised names. */
+
+		if (!ref_append2(&sent->fname, p->last.string, '.') ||
+		    !ref_append2(&sent->uname, p->last.string, '_')) {
+			parse_err(p);
+			return;
+		}
 	}
 
-	/*
-	 * Now fill in the search field's canonical and partial
-	 * structure name.
-	 * For example of the latter, if our fields are
-	 * "user.company.name", this would be "user.company".
-	 * For a singleton field (e.g., "userid"), this is NULL.
-	 */
+	/* Set "name" to be all but the last component of fname. */
 
-	TAILQ_FOREACH(sf, &sent->srq, entries)
-		if (!ref_append(&sent->fname, sf->name)) {
+	if ((cp = strrchr(sent->fname, '.')) != NULL) {
+		if ((sent->name = strdup(sent->fname)) == NULL) {
 			parse_err(p);
 			return;
-		}
-	TAILQ_FOREACH(sf, &sent->srq, entries) {
-		if (TAILQ_NEXT(sf, entries) == NULL)
-			break;
-		if (!ref_append(&sent->name, sf->name)) {
-			parse_err(p);
-			return;
-		}
+		} 
+		cp = strrchr(sent->name, '.');
+		assert(cp != NULL);
+		*cp = '\0';
 	}
 }
 

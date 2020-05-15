@@ -1,0 +1,6 @@
+
+struct foo {
+	field bar int;
+	delete bar and;
+	field id int rowid;
+};

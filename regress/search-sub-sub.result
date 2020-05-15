@@ -1,0 +1,17 @@
+struct baz {
+	field id int rowid;
+};
+
+struct bar {
+	field baz struct bazid;
+	field bazid:baz.id int;
+	field id int rowid;
+};
+
+struct foo {
+	field bar struct barid;
+	field barid:bar.id int;
+	field id int rowid;
+	search bar.baz.id;
+};
+

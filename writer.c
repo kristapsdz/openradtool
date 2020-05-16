@@ -517,9 +517,12 @@ parse_write_query(struct writer *w, const struct search *p)
 	}
 
 	nf = 0;
-	TAILQ_FOREACH(o, &p->ordq, entries)
+	TAILQ_FOREACH(o, &p->ordq, entries) {
 		if (!wprint(w, "%s %s", nf++ ? "," : "", o->fname))
 			return 0;
+		if (o->op != ORDTYPE_ASC && !wputs(w, " desc"))
+			return 0;
+	}
 
 	/* Limit and offset. */
 

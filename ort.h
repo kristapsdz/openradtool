@@ -358,8 +358,8 @@ enum	ordtype {
  * specifying the SQL order of a query.
  */
 struct	ord {
-	struct srefq	 orq; /* queue of order fields */
-	char		*name; /* sub-structure dot-form name or NULL */
+	struct field	*field; /* resolved order field */
+	char		*name; /* fname w/o last field or NULL */
 	char		*fname; /* canonical dot-form name */
 	enum ordtype	 op; /* type of ordering */
 	struct pos	 pos; /* position in parse */

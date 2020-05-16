@@ -116,6 +116,47 @@ strct_alloc(struct parse *p, const char *name)
 }
 
 static int
+name_append(char ***p, size_t *sz, const char *v)
+{
+	void	*pp;
+
+	if (*p == NULL) {
+		if ((*p = calloc(1, sizeof(char *))) == NULL)
+			return 0;
+		*sz = 1;
+		if (((*p)[0] = strdup(v)) == NULL)
+			return 0;
+	} else {
+		pp = reallocarray(*p, *sz + 1, sizeof(char *));
+		if (pp == NULL)
+			return 0;
+		*p = pp;
+		if (((*p)[*sz] = strdup(v)) == NULL)
+			return 0;
+		(*sz)++;
+	}
+
+	return 1;
+}
+
+static int
+name_truncate(char **p, const char *v)
+{
+	char	*cp;
+
+	if (strrchr(v, '.') != NULL) {
+		if ((*p = strdup(v)) == NULL)
+			return 0;
+		cp = strrchr(*p, '.');
+		assert(cp != NULL);
+		*cp = '\0';
+	} else
+		*p = NULL;
+
+	return 1;
+}
+
+static int
 ref_append2(char **p, const char *v, char delim)
 {
 	size_t		 sz, cursz;
@@ -512,13 +553,13 @@ parse_config_group_terms(struct parse *p, struct search *srch)
 static void
 parse_config_order_terms(struct parse *p, struct search *srch)
 {
-	struct sref	*of;
 	struct ord	*ord;
+	struct resolve	*r;
 
-	if (TOK_IDENT != p->lasttype) {
+	if (p->lasttype != TOK_IDENT) {
 		parse_errx(p, "expected order identifier");
 		return;
-	} else if (NULL == (ord = calloc(1, sizeof(struct ord)))) {
+	} else if ((ord = calloc(1, sizeof(struct ord))) == NULL) {
 		parse_err(p);
 		return;
 	}
@@ -526,55 +567,74 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 	ord->parent = srch;
 	ord->op = ORDTYPE_ASC;
 	parse_point(p, &ord->pos);
-	TAILQ_INIT(&ord->orq);
 	TAILQ_INSERT_TAIL(&srch->ordq, ord, entries);
 
-	if ( ! sref_alloc(p, p->last.string, &ord->orq))
-		return;
+	/* Initialise the resolver. */
 
-	while ( ! PARSE_STOP(p)) {
-		if (TOK_COMMA == parse_next(p) ||
-		    TOK_SEMICOLON == p->lasttype)
+	if ((r = calloc(1, sizeof(struct resolve))) == NULL) {
+		parse_err(p);
+		return;
+	}
+	TAILQ_INSERT_TAIL(&p->cfg->priv->rq, r, entries);
+	r->type = RESOLVE_ORDER;
+	r->struct_order.result = ord;
+	if (!name_append(&r->struct_order.names, 
+	    &r->struct_order.namesz, p->last.string)) {
+		parse_err(p);
+		return;
+	}
+
+	/* Initialise canonical name. */
+
+	if (!ref_append2(&ord->fname, p->last.string, '.')) {
+		parse_err(p);
+		return;
+	}
+
+	while (!PARSE_STOP(p)) {
+		if (parse_next(p) == TOK_COMMA ||
+		    p->lasttype == TOK_SEMICOLON)
 			break;
 
-		if (TOK_IDENT == p->lasttype) {
-			if (0 == strcasecmp(p->last.string, "asc"))
+		if (p->lasttype == TOK_IDENT) {
+			if (strcasecmp(p->last.string, "asc") == 0)
 				ord->op = ORDTYPE_ASC;
-			if (0 == strcasecmp(p->last.string, "desc"))
+			if (strcasecmp(p->last.string, "desc") == 0)
 				ord->op = ORDTYPE_DESC;
-
-			if (0 == strcasecmp(p->last.string, "asc") ||
-			    0 == strcasecmp(p->last.string, "desc"))
+			if (strcasecmp(p->last.string, "asc") == 0 ||
+			    strcasecmp(p->last.string, "desc") == 0)
 				parse_next(p);
 			break;
 		}
 
-		if (TOK_PERIOD != p->lasttype)
+		if (p->lasttype != TOK_PERIOD) {
 			parse_errx(p, "expected field separator");
-		else if (TOK_IDENT != parse_next(p))
+			return;
+		} else if (parse_next(p) != TOK_IDENT) {
 			parse_errx(p, "expected field identifier");
-		else if (sref_alloc(p, p->last.string, &ord->orq))
-			continue;
+			return;
+		}
 
-		return;
-	}
+		/* Append to resolver and canonical name. */
 
-	if (PARSE_STOP(p))
-		return;
-
-	TAILQ_FOREACH(of, &ord->orq, entries)
-		if ( ! ref_append(&ord->fname, of->name)) {
+		if (!name_append(&r->struct_order.names, 
+		    &r->struct_order.namesz, p->last.string)) {
 			parse_err(p);
 			return;
 		}
-	TAILQ_FOREACH(of, &ord->orq, entries) {
-		if (NULL == TAILQ_NEXT(of, entries))
-			break;
-		if ( ! ref_append(&ord->name, of->name)) {
+		if (!ref_append2(&ord->fname, p->last.string, '.')) {
 			parse_err(p);
 			return;
 		}
 	}
+
+	/* Set "name" to be all but the last component of fname. */
+
+	if (!PARSE_STOP(p) &&
+	    !name_truncate(&ord->name, ord->fname)) {
+		parse_err(p);
+		return;
+	} 
 }
 
 /*
@@ -590,9 +650,6 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 {
 	struct sent	*sent;
 	struct resolve	*r;
-	size_t		 i;
-	void		*pp;
-	char		*cp;
 
 	if (p->lasttype != TOK_IDENT) {
 		parse_errx(p, "expected field identifier");
@@ -609,14 +666,8 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 	TAILQ_INSERT_TAIL(&p->cfg->priv->rq, r, entries);
 	r->type = RESOLVE_SENT;
 	r->struct_sent.result = sent;
-	r->struct_sent.names = calloc(1, sizeof(char *));
-	r->struct_sent.namesz = 1;
-	if (r->struct_sent.names == NULL) {
-		parse_err(p);
-		return;
-	}
-	r->struct_sent.names[0] = strdup(p->last.string);
-	if (r->struct_sent.names[0] == NULL) {
+	if (!name_append(&r->struct_sent.names, 
+	    &r->struct_sent.namesz, p->last.string)) {
 		parse_err(p);
 		return;
 	}
@@ -668,22 +719,13 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 			return;
 		}
 
-		pp = reallocarray(r->struct_sent.names, 
-			r->struct_sent.namesz + 1, sizeof(char *));
-		if (pp == NULL) {
+		/* Append to resolver and canonical name. */
+
+		if (!name_append(&r->struct_sent.names, 
+		    &r->struct_sent.namesz, p->last.string)) {
 			parse_err(p);
 			return;
 		}
-		i = r->struct_sent.namesz++;
-		r->struct_sent.names = pp;
-		r->struct_sent.names[i] = strdup(p->last.string);
-		if (r->struct_sent.names[i] == NULL) {
-			parse_err(p);
-			return;
-		}
-
-		/* Append to canonicalised names. */
-
 		if (!ref_append2(&sent->fname, p->last.string, '.') ||
 		    !ref_append2(&sent->uname, p->last.string, '_')) {
 			parse_err(p);
@@ -693,15 +735,11 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 
 	/* Set "name" to be all but the last component of fname. */
 
-	if ((cp = strrchr(sent->fname, '.')) != NULL) {
-		if ((sent->name = strdup(sent->fname)) == NULL) {
-			parse_err(p);
-			return;
-		} 
-		cp = strrchr(sent->name, '.');
-		assert(cp != NULL);
-		*cp = '\0';
-	}
+	if (!PARSE_STOP(p) &&
+	    !name_truncate(&sent->name, sent->fname)) {
+		parse_err(p);
+		return;
+	} 
 }
 
 /*

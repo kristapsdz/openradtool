@@ -94,14 +94,9 @@ static void
 parse_free_ordq(struct ordq *q)
 {
 	struct ord	*ord;
-	struct sref	*ref;
 
 	while ((ord = TAILQ_FIRST(q)) != NULL) {
 		TAILQ_REMOVE(q, ord, entries);
-		while ((ref = TAILQ_FIRST(&ord->orq)) != NULL) {
-			TAILQ_REMOVE(&ord->orq, ref, entries);
-			parse_free_sref(ref);
-		}
 		free(ord->fname);
 		free(ord->name);
 		free(ord);
@@ -339,6 +334,11 @@ parse_free_resolve(struct resolve *p)
 		break;
 	case RESOLVE_FIELD_STRUCT:
 		free(p->field_struct.sfield);
+		break;
+	case RESOLVE_ORDER:
+		for (i = 0; i < p->struct_order.namesz; i++)
+			free(p->struct_order.names[i]);
+		free(p->struct_order.names);
 		break;
 	case RESOLVE_SENT:
 		for (i = 0; i < p->struct_sent.namesz; i++)

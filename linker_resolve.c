@@ -30,24 +30,21 @@
 #include "extern.h"
 #include "linker.h"
 
-static int
-resolve_struct_sent(struct config *cfg, struct struct_sent *r)
+static struct field *
+resolve_field_chain(struct config *cfg, const struct pos *pos,
+	struct strct *s, const char **names, size_t namesz)
 {
 	size_t	 	 i;
-	struct strct	*s;
 	struct field	*f = NULL;
 
-	/* Start in the given structure. */
-
-	s = r->result->parent->parent;
-	for (i = 0; i < r->namesz; i++) {
+	for (i = 0; i < namesz; i++) {
 		TAILQ_FOREACH(f, &s->fq, entries)
-			if (strcasecmp(f->name, r->names[i]) == 0)
+			if (strcasecmp(f->name, names[i]) == 0)
 				break;
 		if (f == NULL) {
-			gen_errx(cfg, &r->result->pos,
-				"field not found: %s", r->names[i]);
-			return 0;
+			gen_errx(cfg, pos, "field "
+				"not found: %s", names[i]);
+			return NULL;
 		}
 
 		/* 
@@ -56,19 +53,19 @@ resolve_struct_sent(struct config *cfg, struct struct_sent *r)
 		 * structure and continue parsing.
 		 */
 
-		if (i < r->namesz - 1) {
+		if (i < namesz - 1) {
 			if (f->type != FTYPE_STRUCT) {
-				gen_errx(cfg, &r->result->pos, 
+				gen_errx(cfg, pos,
 					"non-terminal field is not "
 					"a struct: %s", f->name);
-				return 0;
+				return NULL;
 			}
 			assert(f->ref->source != NULL);
 			if (f->ref->source->flags & FIELD_NULL) {
-				gen_errx(cfg, &r->result->pos, 
+				gen_errx(cfg, pos,
 					"non-terminal field cannot "
 					"be null: %s", f->name);
-				return 0;
+				return NULL;
 			}
 
 			assert(f->ref->target != NULL);
@@ -81,14 +78,33 @@ resolve_struct_sent(struct config *cfg, struct struct_sent *r)
 		if (f->type != FTYPE_STRUCT)
 			break;
 
-		gen_errx(cfg, &r->result->pos, "terminal "
-			"field cannot be a struct: %s", f->name);
-		return 0;
+		gen_errx(cfg, pos, "terminal field "
+			"cannot be a struct: %s", f->name);
+		return NULL;
 	}
 
 	assert(f != NULL);
-	r->result->field = f;
-	return 1;
+	return f;
+}
+
+static int
+resolve_struct_order(struct config *cfg, struct struct_order *r)
+{
+
+	r->result->field = resolve_field_chain
+		(cfg, &r->result->pos, r->result->parent->parent, 
+		 (const char **)r->names, r->namesz);
+	return r->result->field != NULL;
+}
+
+static int
+resolve_struct_sent(struct config *cfg, struct struct_sent *r)
+{
+
+	r->result->field = resolve_field_chain
+		(cfg, &r->result->pos, r->result->parent->parent, 
+		 (const char **)r->names, r->namesz);
+	return r->result->field != NULL;
 }
 
 /*
@@ -414,6 +430,7 @@ linker_resolve(struct config *cfg)
 			fail += !resolve_field_enum
 				(cfg, &r->field_enum);
 			break;
+		case RESOLVE_ORDER:
 		case RESOLVE_SENT:
 			/*
 			 * These require both RESOLVE_FIELD_FOREIGN and
@@ -446,6 +463,10 @@ linker_resolve(struct config *cfg)
 
 	TAILQ_FOREACH(r, &cfg->priv->rq, entries)
 		switch (r->type) {
+		case RESOLVE_ORDER:
+			fail += !resolve_struct_order
+				(cfg, &r->struct_order);
+			break;
 		case RESOLVE_SENT:
 			fail += !resolve_struct_sent
 				(cfg, &r->struct_sent);

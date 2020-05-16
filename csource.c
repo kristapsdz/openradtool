@@ -2532,7 +2532,6 @@ gen_stmt(const struct strct *p)
 {
 	const struct search *s;
 	const struct sent   *sent;
-	const struct sref   *sr;
 	const struct field  *f, *ff;
 	const struct update *up;
 	const struct uref   *ur;
@@ -2707,14 +2706,13 @@ gen_stmt(const struct strct *p)
 		if (!TAILQ_EMPTY(&s->ordq))
 			printf(" ORDER BY ");
 		TAILQ_FOREACH(ord, &s->ordq, entries) {
-			sr = TAILQ_LAST(&ord->orq, srefq);
 			if ( ! first)
 				printf(", ");
 			first = 0;
 			printf("%s.%s %s",
 				NULL == ord->alias ?
 				p->name : ord->alias->alias,
-				sr->name, 
+				ord->field->name, 
 				ORDTYPE_ASC == ord->op ?
 				"ASC" : "DESC");
 		}

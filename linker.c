@@ -536,9 +536,6 @@ resolve_search(struct config *cfg, struct search *srch)
 	/* Now resolve the order statement. */
 
 	TAILQ_FOREACH(ord, &srch->ordq, entries) {
-		sref = TAILQ_FIRST(&ord->orq);
-		if ( ! resolve_sref(cfg, sref, p))
-			return 0;
 		if (NULL == ord->name)
 			continue;
 		TAILQ_FOREACH(a, &p->aq, entries)

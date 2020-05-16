@@ -37,7 +37,6 @@ TAILQ_HEAD(roleq, role);
 TAILQ_HEAD(rolesetq, roleset);
 TAILQ_HEAD(searchq, search);
 TAILQ_HEAD(sentq, sent);
-TAILQ_HEAD(srefq, sref);
 TAILQ_HEAD(strctq, strct);
 TAILQ_HEAD(uniqueq, unique);
 TAILQ_HEAD(updateq, update);
@@ -233,20 +232,6 @@ struct 	alias {
 };
 
 /*
- * A single field reference within a chain.
- * For example, in a chain of "user.company.name", which presumes
- * structures "user" and "company", then a "name" in the latter, the
- * fields would be "user", "company", an "name".
- * These compose search entities, order entities, etc.
- */
-struct	sref {
-	char		 *name; /* field name */
-	struct pos	  pos; /* parse point */
-	struct field	 *field; /* field (after link) */
-	TAILQ_ENTRY(sref) entries;
-};
-
-/*
  * SQL operator to use.
  */
 enum	optype {
@@ -326,8 +311,7 @@ struct	roleset {
 /*
  * A search entity.
  * For example, in a set of search criteria "user.company.name, userid",
- * this would be one of "user.company.name" or "userid", both of which
- * are represented by queues of srefs.
+ * this would be one of "user.company.name" or "userid".
  * One or more "struct sent" consist of a single "struct search".
  *
  */
@@ -384,13 +368,12 @@ enum	aggrtype {
  * structure.
  */
 struct	group {
-	struct srefq	   grq; /* queue of group fields */
-	char		  *name; /* sub-structure dot-form name or NULL */
+	struct field	  *field; /* resolved group field */
+	char		  *name; /* fname w/o last field or NULL */
 	char		  *fname; /* canonical dot-form name */
 	struct pos	   pos; /* position in parse */
 	struct search	  *parent; /* up-reference */
 	struct alias	  *alias; /* resolved alias */
-	TAILQ_ENTRY(group) entries;
 };
 
 /*
@@ -401,14 +384,13 @@ struct	group {
  * specification of the generated query.
  */
 struct	aggr {
-	struct srefq	  arq; /* queue of aggregate fields */
-	char		 *name; /* sub-structure dot-form name or NULL */
+	struct field	 *field; /* resolved aggregate field */
+	char		 *name; /* fname w/o last field or NULL */
 	char		 *fname; /* canonical dot-form name */
 	enum aggrtype	  op; /* type of aggregation */
 	struct pos	  pos; /* position in parse */
 	struct search	 *parent; /* up-reference */
 	struct alias	 *alias; /* resolved alias */
-	TAILQ_ENTRY(aggr) entries;
 };
 
 /*
@@ -450,8 +432,7 @@ struct	dstnct {
  * A set of fields to search by and return results.
  * A "search" implies zero or more responses given a query; for example,
  * a unique response to the set of sets "user.company.name, userid",
- * which has two search entities (struct sent) with at least one search
- * reference (sref).
+ * which has two search entities (struct sent).
  */
 struct	search {
 	struct sentq	    sntq; /* nested reference chain */

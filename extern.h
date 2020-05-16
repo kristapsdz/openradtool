@@ -24,6 +24,8 @@ enum	resolvet {
 	RESOLVE_FIELD_ENUM,
 	RESOLVE_FIELD_FOREIGN,
 	RESOLVE_FIELD_STRUCT,
+	RESOLVE_AGGR,
+	RESOLVE_GROUPROW,
 	RESOLVE_ORDER,
 	RESOLVE_SENT,
 	RESOLVE_UP_CONSTRAINT,
@@ -64,6 +66,16 @@ struct	resolve {
 				struct uref	*result;
 				char		*name;
 		} struct_up_mod; /* update ->bar<-: ... */
+		struct struct_aggr {
+				struct aggr	 *result;
+				char		**names;
+				size_t		  namesz;
+		} struct_aggr; /* ...maxrow ->bar<- */
+		struct struct_grouprow {
+				struct group	 *result;
+				char		**names;
+				size_t		  namesz;
+		} struct_grouprow; /* ...grouprow ->bar<- */
 		struct struct_order {
 				struct ord	 *result;
 				char		**names;

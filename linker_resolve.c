@@ -98,6 +98,26 @@ resolve_struct_order(struct config *cfg, struct struct_order *r)
 }
 
 static int
+resolve_struct_aggr(struct config *cfg, struct struct_aggr *r)
+{
+
+	r->result->field = resolve_field_chain
+		(cfg, &r->result->pos, r->result->parent->parent, 
+		 (const char **)r->names, r->namesz);
+	return r->result->field != NULL;
+}
+
+static int
+resolve_struct_grouprow(struct config *cfg, struct struct_grouprow *r)
+{
+
+	r->result->field = resolve_field_chain
+		(cfg, &r->result->pos, r->result->parent->parent, 
+		 (const char **)r->names, r->namesz);
+	return r->result->field != NULL;
+}
+
+static int
 resolve_struct_sent(struct config *cfg, struct struct_sent *r)
 {
 
@@ -430,6 +450,8 @@ linker_resolve(struct config *cfg)
 			fail += !resolve_field_enum
 				(cfg, &r->field_enum);
 			break;
+		case RESOLVE_AGGR:
+		case RESOLVE_GROUPROW:
 		case RESOLVE_ORDER:
 		case RESOLVE_SENT:
 			/*
@@ -463,6 +485,14 @@ linker_resolve(struct config *cfg)
 
 	TAILQ_FOREACH(r, &cfg->priv->rq, entries)
 		switch (r->type) {
+		case RESOLVE_AGGR:
+			fail += !resolve_struct_aggr
+				(cfg, &r->struct_aggr);
+			break;
+		case RESOLVE_GROUPROW:
+			fail += !resolve_struct_grouprow
+				(cfg, &r->struct_grouprow);
+			break;
 		case RESOLVE_ORDER:
 			fail += !resolve_struct_order
 				(cfg, &r->struct_order);

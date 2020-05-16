@@ -2532,7 +2532,7 @@ gen_stmt(const struct strct *p)
 {
 	const struct search *s;
 	const struct sent   *sent;
-	const struct field  *f, *ff;
+	const struct field  *f;
 	const struct update *up;
 	const struct uref   *ur;
 	const struct ord    *ord;
@@ -2628,24 +2628,23 @@ gen_stmt(const struct strct *p)
 		 */
 
 		if (NULL != s->aggr && NULL != s->group) {
-			f = TAILQ_LAST(&s->aggr->arq, srefq)->field;
-			assert(NULL != f);
-			ff = TAILQ_LAST(&s->group->grq, srefq)->field;
-			assert(NULL != ff);
-			assert(f->parent == ff->parent);
+			assert(s->aggr->field->parent == 
+			       s->group->field->parent);
 			printf("\n\t\t\"LEFT OUTER JOIN %s as _custom "
 				"ON %s.%s = _custom.%s "
 				"AND %s.%s %s _custom.%s \"",
-				ff->parent->name, 
+				s->group->field->parent->name, 
 				NULL == s->group->alias ?
-				ff->parent->name : 
+				s->group->field->parent->name : 
 				s->group->alias->alias,
-				ff->name, ff->name,
+				s->group->field->name, 
+				s->group->field->name,
 				NULL == s->group->alias ?
-				ff->parent->name : 
-				s->group->alias->alias, f->name, 
+				s->group->field->parent->name : 
+				s->group->alias->alias, 
+				s->aggr->field->name, 
 				AGGR_MAXROW == s->aggr->op ?  "<" : ">",
-				f->name);
+				s->aggr->field->name);
 		}
 
 		if ( ! hastrail) {
@@ -2672,9 +2671,8 @@ gen_stmt(const struct strct *p)
 		 */
 
 		if (NULL != s->group) {
-			f = TAILQ_LAST(&s->group->grq, srefq)->field;
-			assert(NULL != f);
-			printf(" _custom.%s IS NULL", f->name);
+			printf(" _custom.%s IS NULL", 
+				s->group->field->name);
 			first = 0;
 		}
 

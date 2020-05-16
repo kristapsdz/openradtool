@@ -542,6 +542,18 @@ parse_write_query(struct writer *w, const struct search *p)
 		colon = 1;
 	}
 
+	/* Grouping. */
+
+	if (p->group != NULL) {
+		if (!colon && !wputc(w, ':'))
+			return 0;
+		if (!wprint(w, " grouprow %s %s %s", p->group->fname,
+		    p->aggr->op == AGGR_MAXROW ? "maxrow" : "minrow",
+		    p->aggr->fname))
+			return 0;
+		colon = 1;
+	}
+
 	/* Distinct selection. */
 
 	if (p->dst != NULL) {

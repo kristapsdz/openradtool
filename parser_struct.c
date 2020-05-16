@@ -181,36 +181,15 @@ ref_append2(char **p, const char *v, char delim)
 		dst = *p + cursz + 1;
 	}
 
-	for (src = v; *src != '\0'; dst++, src++) 
-		*dst = tolower((unsigned char)*src);
+	if (delim == '_')
+		for (src = v; *src != '\0'; dst++, src++) 
+			*dst = tolower((unsigned char)*src);
+	else
+		for (src = v; *src != '\0'; dst++, src++) 
+			*dst = *src;
+
 	*dst = '\0';
 	return 1;
-}
-
-/*
- * Appends a reference "v" to "p".
- * If "p" is NULL, this will simply duplicate "p".
- * Else, "p" += "." "v".
- * Returns zero on allocation failure, non-zero otherwise.
- */
-static int
-ref_append(char **p, const char *v)
-{
-	size_t	 sz;
-	void	*pp;
-
-	if (NULL == *p)
-		return(NULL != (*p = strdup(v)));
-
-	assert(NULL != *p);
-	sz = strlen(*p) + strlen(v) + 2;
-	if (NULL == (pp = realloc(*p, sz)))
-		return(0);
-
-	*p = pp;
-	strlcat(*p, ".", sz);
-	strlcat(*p, v, sz);
-	return(1);
 }
 
 /*
@@ -295,29 +274,6 @@ uref_alloc(struct parse *p, struct update *up, int mod)
 		}
 	}
 	return ref;
-}
-
-/*
- * Allocate a search reference and add it to the parent queue.
- * Returns zero on allocation failure, non-zero on success.
- */
-static int
-sref_alloc(struct parse *p, const char *name, struct srefq *q)
-{
-	struct sref	*ref;
-
-	if (NULL == (ref = calloc(1, sizeof(struct sref)))) {
-		parse_err(p);
-		return 0;
-	} else if (NULL == (ref->name = strdup(name))) {
-		free(ref);
-		parse_err(p);
-		return 0;
-	}
-
-	parse_point(p, &ref->pos);
-	TAILQ_INSERT_TAIL(q, ref, entries);
-	return 1;
 }
 
 /*
@@ -426,7 +382,7 @@ static void
 parse_config_aggr_terms(struct parse *p,
 	enum aggrtype type, struct search *srch)
 {
-	struct sref	*af;
+	struct resolve	*r;
 	struct aggr	*aggr;
 
 	if (srch->aggr != NULL) {
@@ -444,42 +400,58 @@ parse_config_aggr_terms(struct parse *p,
 	aggr->parent = srch;
 	aggr->op = type;
 	parse_point(p, &aggr->pos);
-	TAILQ_INIT(&aggr->arq);
 
-	if (!sref_alloc(p, p->last.string, &aggr->arq))
+	/* Initialise the resolver. */
+
+	if ((r = calloc(1, sizeof(struct resolve))) == NULL) {
+		parse_err(p);
 		return;
+	}
+	TAILQ_INSERT_TAIL(&p->cfg->priv->rq, r, entries);
+	r->type = RESOLVE_AGGR;
+	r->struct_aggr.result = aggr;
+	if (!name_append(&r->struct_aggr.names, 
+	    &r->struct_aggr.namesz, p->last.string)) {
+		parse_err(p);
+		return;
+	}
 
-	for (;;) {
-		if (PARSE_STOP(p))
-			return;
-		parse_next(p);
-		if (p->lasttype == TOK_SEMICOLON ||
+	/* Initialise canonical name. */
+
+	if (!ref_append2(&aggr->fname, p->last.string, '.')) {
+		parse_err(p);
+		return;
+	}
+
+	while (!PARSE_STOP(p)) {
+		if (parse_next(p) == TOK_SEMICOLON ||
 		    p->lasttype == TOK_IDENT)
 			break;
-		if (p->lasttype != TOK_PERIOD)
+
+		if (p->lasttype != TOK_PERIOD) {
 			parse_errx(p, "expected field separator");
-		else if (parse_next(p) != TOK_IDENT)
+			return;
+		} else if (parse_next(p) != TOK_IDENT) {
 			parse_errx(p, "expected field identifier");
-		else if (sref_alloc(p, p->last.string, &aggr->arq))
-			continue;
-		return;
-	}
+			return;
+		}
 
-	/* Canonical names. */
+		/* Append to resolver and canonical name. */
 
-	TAILQ_FOREACH(af, &aggr->arq, entries)
-		if (!ref_append(&aggr->fname, af->name)) {
+		if (!name_append(&r->struct_aggr.names, 
+		    &r->struct_aggr.namesz, p->last.string)) {
 			parse_err(p);
 			return;
 		}
-	TAILQ_FOREACH(af, &aggr->arq, entries) {
-		if (TAILQ_NEXT(af, entries) == NULL)
-			break;
-		if (!ref_append(&aggr->name, af->name)) {
+		if (!ref_append2(&aggr->fname, p->last.string, '.')) {
 			parse_err(p);
 			return;
 		}
 	}
+
+	if (!PARSE_STOP(p) &&
+	    !name_truncate(&aggr->name, aggr->fname))
+		parse_err(p);
 }
 
 /*
@@ -490,16 +462,16 @@ parse_config_aggr_terms(struct parse *p,
 static void
 parse_config_group_terms(struct parse *p, struct search *srch)
 {
-	struct sref	*of;
 	struct group	*grp;
+	struct resolve	*r;
 
-	if (NULL != srch->group) {
+	if (srch->group != NULL) {
 		parse_errx(p, "duplicate grouprow identifier");
 		return;
-	} else if (TOK_IDENT != p->lasttype) {
+	} else if (p->lasttype != TOK_IDENT) {
 		parse_errx(p, "expected grouprow identifier");
 		return;
-	} else if (NULL == (grp = calloc(1, sizeof(struct group)))) {
+	} else if ((grp = calloc(1, sizeof(struct group))) == NULL) {
 		parse_err(p);
 		return;
 	}
@@ -507,42 +479,58 @@ parse_config_group_terms(struct parse *p, struct search *srch)
 	srch->group = grp;
 	grp->parent = srch;
 	parse_point(p, &grp->pos);
-	TAILQ_INIT(&grp->grq);
 
-	if ( ! sref_alloc(p, p->last.string, &grp->grq))
+	/* Initialise the resolver. */
+
+	if ((r = calloc(1, sizeof(struct resolve))) == NULL) {
+		parse_err(p);
 		return;
+	}
+	TAILQ_INSERT_TAIL(&p->cfg->priv->rq, r, entries);
+	r->type = RESOLVE_GROUPROW;
+	r->struct_grouprow.result = grp;
+	if (!name_append(&r->struct_grouprow.names, 
+	    &r->struct_grouprow.namesz, p->last.string)) {
+		parse_err(p);
+		return;
+	}
 
-	for (;;) {
-		if (PARSE_STOP(p))
-			return;
-		parse_next(p);
-		if (TOK_SEMICOLON == p->lasttype ||
-		    TOK_IDENT == p->lasttype)
+	/* Initialise canonical name. */
+
+	if (!ref_append2(&grp->fname, p->last.string, '.')) {
+		parse_err(p);
+		return;
+	}
+	
+	while (!PARSE_STOP(p)) {
+		if (parse_next(p) == TOK_SEMICOLON ||
+		    p->lasttype == TOK_IDENT)
 			break;
-		if (TOK_PERIOD != p->lasttype)
+
+		if (p->lasttype != TOK_PERIOD) {
 			parse_errx(p, "expected field separator");
-		else if (TOK_IDENT != parse_next(p))
+			return;
+		} else if (parse_next(p) != TOK_IDENT) {
 			parse_errx(p, "expected field identifier");
-		else if (sref_alloc(p, p->last.string, &grp->grq))
-			continue;
-		return;
-	}
+			return;
+		}
 
-	/* Canonical names. */
+		/* Append to resolver and canonical name. */
 
-	TAILQ_FOREACH(of, &grp->grq, entries)
-		if ( ! ref_append(&grp->fname, of->name)) {
+		if (!name_append(&r->struct_grouprow.names, 
+		    &r->struct_grouprow.namesz, p->last.string)) {
 			parse_err(p);
 			return;
 		}
-	TAILQ_FOREACH(of, &grp->grq, entries) {
-		if (NULL == TAILQ_NEXT(of, entries))
-			break;
-		if ( ! ref_append(&grp->name, of->name)) {
+		if (!ref_append2(&grp->fname, p->last.string, '.')) {
 			parse_err(p);
 			return;
 		}
 	}
+
+	if (!PARSE_STOP(p) &&
+	    !name_truncate(&grp->name, grp->fname))
+		parse_err(p);
 }
 
 /*

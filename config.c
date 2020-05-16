@@ -53,22 +53,8 @@ parse_free_field(struct field *p)
 }
 
 static void
-parse_free_sref(struct sref *p)
-{
-
-	free(p->name);
-	free(p);
-}
-
-static void
 parse_free_aggr(struct aggr *p)
 {
-	struct sref	*ref;
-
-	while ((ref = TAILQ_FIRST(&p->arq)) != NULL) {
-		TAILQ_REMOVE(&p->arq, ref, entries);
-		parse_free_sref(ref);
-	}
 
 	free(p->fname);
 	free(p->name);
@@ -78,13 +64,7 @@ parse_free_aggr(struct aggr *p)
 static void
 parse_free_group(struct group *p)
 {
-	struct sref	*ref;
 	
-	while ((ref = TAILQ_FIRST(&p->grq)) != NULL) {
-		TAILQ_REMOVE(&p->grq, ref, entries);
-		parse_free_sref(ref);
-	}
-
 	free(p->fname);
 	free(p->name);
 	free(p);
@@ -334,6 +314,16 @@ parse_free_resolve(struct resolve *p)
 		break;
 	case RESOLVE_FIELD_STRUCT:
 		free(p->field_struct.sfield);
+		break;
+	case RESOLVE_AGGR:
+		for (i = 0; i < p->struct_aggr.namesz; i++)
+			free(p->struct_aggr.names[i]);
+		free(p->struct_aggr.names);
+		break;
+	case RESOLVE_GROUPROW:
+		for (i = 0; i < p->struct_grouprow.namesz; i++)
+			free(p->struct_grouprow.names[i]);
+		free(p->struct_grouprow.names);
 		break;
 	case RESOLVE_ORDER:
 		for (i = 0; i < p->struct_order.namesz; i++)

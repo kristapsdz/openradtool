@@ -145,7 +145,7 @@ annotate(struct ref *ref, size_t height, size_t colour)
 }
 
 /*
- * Like resolve_sref() but for distinct references.
+ * Resolve distinct references.
  * These must be always non-null struct refs.
  * Return zero on failure, non-zero on success.
  */
@@ -182,53 +182,6 @@ resolve_dref(struct config *cfg, struct dref *ref, struct strct *s)
 
 	ref->parent->strct = f->ref->target->parent;
 	return 1;
-}
-
-/*
- * Recursively follow the chain of references in a search target,
- * finding out whether it's well-formed in the process.
- * Returns zero on failure, non-zero on success.
- */
-static int
-resolve_sref(struct config *cfg, struct sref *ref, struct strct *s)
-{
-	struct field	*f;
-
-	TAILQ_FOREACH(f, &s->fq, entries)
-		if (0 == strcasecmp(f->name, ref->name))
-			break;
-
-	if (NULL == (ref->field = f)) {
-		gen_errx(cfg, &ref->pos,
-			"term not found: %s", ref->name);
-		return 0;
-	}
-
-	/* 
-	 * If we're following a chain, we must have a "struct" type;
-	 * otherwise, we must have a native type.
-	 */
-
-	if (NULL == TAILQ_NEXT(ref, entries)) {
-		if (FTYPE_STRUCT != f->type) 
-			return 1;
-		gen_errx(cfg, &ref->pos, "terminal field "
-			"is a struct: %s", f->name);
-		return 0;
-	} 
-	
-	if (FTYPE_STRUCT != f->type) {
-		gen_errx(cfg, &ref->pos, "non-terminal "
-			"field not a struct: %s", f->name);
-		return 0;
-	} else if (FIELD_NULL & f->ref->source->flags) {
-		gen_errx(cfg, &ref->pos, "non-terminal "
-			"field is a null struct: %s", f->name);
-		return 0;
-	}
-
-	ref = TAILQ_NEXT(ref, entries);
-	return resolve_sref(cfg, ref, f->ref->target->parent);
 }
 
 /*
@@ -484,11 +437,9 @@ static int
 resolve_search(struct config *cfg, struct search *srch)
 {
 	struct sent	*sent;
-	struct sref	*sref;
 	struct alias	*a;
 	struct strct	*p;
 	struct ord	*ord;
-	struct field	*f1, *f2;
 
 	p = srch->parent;
 
@@ -510,12 +461,7 @@ resolve_search(struct config *cfg, struct search *srch)
 		if (NULL == sent->name)
 			continue;
 
-		/* 
-		 * Look up our alias name.
-		 * Our resolve_sref() function above
-		 * makes sure that the reference exists,
-		 * so just assert on lack of finding.
-		 */
+		/* Look up our alias name. */
 
 		TAILQ_FOREACH(a, &p->aq, entries)
 			if (0 == strcasecmp(a->name, sent->name))
@@ -557,9 +503,6 @@ resolve_search(struct config *cfg, struct search *srch)
 				"group without a constraint");
 			return 0;
 		}
-		sref = TAILQ_FIRST(&srch->group->grq);
-		if ( ! resolve_sref(cfg, sref, p))
-			return 0;
 		if (NULL != srch->group->name) {
 			TAILQ_FOREACH(a, &p->aq, entries)
 				if (0 == strcasecmp
@@ -568,9 +511,7 @@ resolve_search(struct config *cfg, struct search *srch)
 			assert(NULL != a);
 			srch->group->alias = a;
 		}
-		f1 = TAILQ_LAST(&srch->group->grq, srefq)->field;
-		assert(NULL != f1);
-		if (FIELD_NULL & f1->flags) {
+		if (FIELD_NULL & srch->group->field->flags) {
 			gen_errx(cfg, &srch->group->pos,
 				"group cannot be null");
 			return 0;
@@ -591,18 +532,13 @@ resolve_search(struct config *cfg, struct search *srch)
 				"constraint without a group");
 			return 0;
 		}
-		sref = TAILQ_FIRST(&srch->aggr->arq);
-		if ( ! resolve_sref(cfg, sref, p))
-			return 0;
-		f1 = TAILQ_LAST(&srch->aggr->arq, srefq)->field;
-		assert(NULL != f1);
-		f2 = TAILQ_LAST(&srch->group->grq, srefq)->field;
-		assert(NULL != f2);
-		if (f1 == f2) {
+		if (srch->aggr->field == srch->group->field) {
 			gen_errx(cfg, &srch->group->pos, "same "
 				"column for group and constraint");
 			return 0;
-		} else if (f1->parent != f2->parent) {
+		}
+		if (srch->aggr->field->parent != 
+		    srch->group->field->parent) {
 			gen_errx(cfg, &srch->group->pos, 
 				"structure for group and constraint "
 				"must be the same");

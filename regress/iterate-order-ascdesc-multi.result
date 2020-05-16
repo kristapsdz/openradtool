@@ -1,0 +1,6 @@
+struct foo {
+	field foo int;
+	field id int rowid;
+	iterate: order id desc, foo;
+};
+

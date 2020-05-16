@@ -1,0 +1,11 @@
+struct bar {
+	field id int rowid;
+};
+
+struct foo {
+	field bar struct barid;
+	field barid:bar.id int;
+	field id int rowid;
+	iterate: order bar.id desc, id;
+};
+

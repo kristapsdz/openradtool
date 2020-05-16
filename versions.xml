@@ -9,6 +9,14 @@
 		</header>
 		<aside>
 			<p>
+				Bug-fix: the <code>grouprow</code> and associated row operation
+				were not being written by <a href="ort.1.html">ort(1)</a>.
+			</p>
+			<p>
+				Bug-fix: the <code>order</code> type was not being written by
+				<a href="ort.1.html">ort(1)</a>.
+			</p>
+			<p>
 				Significant upgrade to the internals: instead of haphazardly
 				resolving names to object components (e.g., the field names in
 				foreign references), do so in a dedicated pass by way of resolver

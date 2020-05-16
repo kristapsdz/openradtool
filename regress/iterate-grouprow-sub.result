@@ -1,4 +1,5 @@
 struct bar {
+	field baz int;
 	field id int rowid;
 };
 
@@ -6,6 +7,6 @@ struct foo {
 	field bar struct barid;
 	field barid:bar.id int;
 	field id int rowid;
-	search Bar.Id;
+	iterate: grouprow bar.id maxrow bar.baz;
 };
 

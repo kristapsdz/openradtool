@@ -1,0 +1,7 @@
+struct foo {
+	field foo int;
+	field baz int;
+	field id int rowid;
+	iterate: grouprow foo minrow baz;
+};
+

@@ -25,6 +25,7 @@ enum	resolvet {
 	RESOLVE_FIELD_FOREIGN,
 	RESOLVE_FIELD_STRUCT,
 	RESOLVE_AGGR,
+	RESOLVE_DISTINCT,
 	RESOLVE_GROUPROW,
 	RESOLVE_ORDER,
 	RESOLVE_SENT,
@@ -71,6 +72,11 @@ struct	resolve {
 				char		**names;
 				size_t		  namesz;
 		} struct_aggr; /* ...maxrow ->bar<- */
+		struct struct_distinct {
+				struct dstnct	 *result;
+				char		**names;
+				size_t		  namesz;
+		} struct_distinct; /* ...distinct ->bar<- */
 		struct struct_grouprow {
 				struct group	 *result;
 				char		**names;

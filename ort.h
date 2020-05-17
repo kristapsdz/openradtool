@@ -24,7 +24,6 @@
 TAILQ_HEAD(aliasq, alias);
 TAILQ_HEAD(bitfq, bitf);
 TAILQ_HEAD(bitidxq, bitidx);
-TAILQ_HEAD(drefq, dref);
 TAILQ_HEAD(eitemq, eitem);
 TAILQ_HEAD(enmq, enm);
 TAILQ_HEAD(fieldq, field);
@@ -407,24 +406,13 @@ enum	stype {
 };
 
 /*
- * A single field in a chain of fields constituting a distinction.
- */
-struct	dref {
-	char		 *name; /* name of field in ref chain */
-	struct pos	  pos; /* parse point */
-	struct dstnct	 *parent; /* parent entry */
-	TAILQ_ENTRY(dref) entries;
-};
-
-/*
  * A "distinct" clause set of fields.
  * This is set for search fields that are returning distinct rows.
  */
 struct	dstnct {
-	struct drefq	 drefq; /* all fields */
 	char		*cname; /* canonical (dotted) name */
 	struct pos	 pos; /* parse point */
-	struct strct	*strct; /* resolved struct (on link) */
+	struct strct	*strct; /* resolved struct */
 	struct search	*parent; /* search entry */
 };
 

@@ -307,17 +307,13 @@ sent_alloc(struct parse *p, struct search *up)
 static void
 parse_config_distinct_term(struct parse *p, struct search *srch)
 {
-	struct dref	*df;
+	struct resolve	*r;
 	struct dstnct	*d;
-	size_t		 sz = 0, nsz;
-	void		*pp;
 
 	if (srch->dst != NULL) {
 		parse_errx(p, "redeclaring distinct");
 		return;
-	}
-
-	if ((d = calloc(1, sizeof(struct dstnct))) == NULL) {
+	} else if ((d = calloc(1, sizeof(struct dstnct))) == NULL) {
 		parse_err(p);
 		return;
 	}
@@ -325,51 +321,61 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 	srch->dst = d;
 	d->parent = srch;
 	parse_point(p, &d->pos);
-	TAILQ_INIT(&d->drefq);
+
+	/* If a period, refers to the current structure. */
 
 	if (p->lasttype == TOK_PERIOD) {
+		d->strct = srch->parent;
 		parse_next(p);
+		return;
+	} else if (p->lasttype != TOK_IDENT) {
+		parse_errx(p, "expected distinct field");
+		return;
+	}
+
+	/* Initialise the resolver and canonical name. */
+
+	if ((r = calloc(1, sizeof(struct resolve))) == NULL) {
+		parse_err(p);
+		return;
+	}
+	TAILQ_INSERT_TAIL(&p->cfg->priv->rq, r, entries);
+	r->type = RESOLVE_DISTINCT;
+	r->struct_distinct.result = d;
+	if (!name_append(&r->struct_distinct.names, 
+	    &r->struct_distinct.namesz, p->last.string)) {
+		parse_err(p);
+		return;
+	}
+	if (!ref_append2(&d->cname, p->last.string, '.')) {
+		parse_err(p);
 		return;
 	}
 
 	while (!PARSE_STOP(p)) {
-		if (p->lasttype != TOK_IDENT) {
+		if (parse_next(p) == TOK_SEMICOLON ||
+		    p->lasttype == TOK_IDENT)
+			break;
+
+		if (parse_next(p) != TOK_PERIOD) {
+			parse_errx(p, "expected field separator");
+			return;
+		} else if (parse_next(p) != TOK_IDENT) {
 			parse_errx(p, "expected distinct field");
 			return;
 		}
-		if ((df = calloc(1, sizeof(struct dref))) == NULL) {
+
+		/* Append to resolve and canonical name. */
+
+		if (!name_append(&r->struct_distinct.names, 
+		    &r->struct_distinct.namesz, p->last.string)) {
 			parse_err(p);
 			return;
 		}
-		TAILQ_INSERT_TAIL(&d->drefq, df, entries);
-		if ((df->name = strdup(p->last.string)) == NULL) {
+		if (!ref_append2(&d->cname, p->last.string, '.')) {
 			parse_err(p);
 			return;
 		}
-		parse_point(p, &df->pos);
-		df->parent = d;
-
-		/* 
-		 * New size of the canonical name: if we're nested, then
-		 * we need the full stop in there as well.
-		 */
-
-		nsz = sz + strlen(df->name) + (0 == sz ? 0 : 1) + 1;
-		if ((pp = realloc(d->cname, nsz)) == NULL) {
-			parse_err(p);
-			return;
-		}
-		d->cname = pp;
-		if (sz == 0) 
-			d->cname[0] = '\0';
-		else
-			strlcat(d->cname, ".", nsz);
-		strlcat(d->cname, df->name, nsz);
-		sz = nsz;
-
-		if (parse_next(p) != TOK_PERIOD) 
-			break;
-		parse_next(p);
 	}
 }
 

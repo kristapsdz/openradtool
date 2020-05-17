@@ -145,46 +145,6 @@ annotate(struct ref *ref, size_t height, size_t colour)
 }
 
 /*
- * Resolve distinct references.
- * These must be always non-null struct refs.
- * Return zero on failure, non-zero on success.
- */
-static int
-resolve_dref(struct config *cfg, struct dref *ref, struct strct *s)
-{
-	struct field	*f;
-
-	TAILQ_FOREACH(f, &s->fq, entries)
-		if (0 == strcasecmp(f->name, ref->name))
-			break;
-
-	/* Make sure we're a non-null struct. */
-
-	if (NULL == f) {
-		gen_errx(cfg, &ref->pos, "distinct field "
-			"not found: %s", ref->name);
-		return 0;
-	} else if (FTYPE_STRUCT != f->type) {
-		gen_errx(cfg, &ref->pos, "distinct field "
-			"not a struct: %s", f->name);
-		return 0;
-	} else if (FIELD_NULL & f->ref->source->flags) {
-		gen_errx(cfg, &ref->pos, "distinct field "
-			"is a null struct: %s", f->name);
-		return 0;
-	}
-
-	if (NULL != TAILQ_NEXT(ref, entries)) {
-		ref = TAILQ_NEXT(ref, entries);
-		return resolve_dref(cfg, 
-			ref, f->ref->target->parent);
-	}
-
-	ref->parent->strct = f->ref->target->parent;
-	return 1;
-}
-
-/*
  * Sort by reverse height.
  */
 static int
@@ -284,7 +244,6 @@ check_searchtype(struct config *cfg, struct strct *p)
 {
 	const struct sent	*sent;
 	struct search		*srch;
-	struct dref		*dr;
 
 	TAILQ_FOREACH(srch, &p->sq, entries) {
 		/*
@@ -355,21 +314,6 @@ check_searchtype(struct config *cfg, struct strct *p)
 
 		if (srch->dst == NULL)
 			continue;
-
-		/*
-		 * Resolve the "distinct" structure.
-		 * If this is unset, then our entire structure is marked
-		 * with the distinction keyword.
-		 */
-
-		if (srch->dst->cname != NULL) {
-			dr = TAILQ_FIRST(&srch->dst->drefq);
-			if (!resolve_dref(cfg, dr, p))
-				return 0;
-		} else {
-			srch->dst->strct = p;
-			continue;
-		}
 
 		/* 
 		 * Disallow passwords.

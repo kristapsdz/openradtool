@@ -86,13 +86,7 @@ parse_free_ordq(struct ordq *q)
 static void
 parse_free_distinct(struct dstnct *p)
 {
-	struct dref	*d;
 
-	while ((d = TAILQ_FIRST(&p->drefq)) != NULL) {
-		TAILQ_REMOVE(&p->drefq, d, entries);
-		free(d->name);
-		free(d);
-	}
 	free(p->cname);
 	free(p);
 }
@@ -319,6 +313,11 @@ parse_free_resolve(struct resolve *p)
 		for (i = 0; i < p->struct_aggr.namesz; i++)
 			free(p->struct_aggr.names[i]);
 		free(p->struct_aggr.names);
+		break;
+	case RESOLVE_DISTINCT:
+		for (i = 0; i < p->struct_distinct.namesz; i++)
+			free(p->struct_distinct.names[i]);
+		free(p->struct_distinct.names);
 		break;
 	case RESOLVE_GROUPROW:
 		for (i = 0; i < p->struct_grouprow.namesz; i++)

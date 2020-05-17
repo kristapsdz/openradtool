@@ -73,14 +73,11 @@ resolve_field_chain(struct config *cfg, const struct pos *pos,
 			continue;
 		}
 
-		/* Terminal field isn't a struct. */
-
-		if (f->type != FTYPE_STRUCT)
-			break;
-
-		gen_errx(cfg, pos, "terminal field "
-			"cannot be a struct: %s", f->name);
-		return NULL;
+		/* 
+		 * Terminal fields are handled according to the caller:
+		 * most require a non-struct terminal, but some (like
+		 * distinct) require a struct terminal.
+		 */
 	}
 
 	assert(f != NULL);
@@ -94,6 +91,15 @@ resolve_struct_order(struct config *cfg, struct struct_order *r)
 	r->result->field = resolve_field_chain
 		(cfg, &r->result->pos, r->result->parent->parent, 
 		 (const char **)r->names, r->namesz);
+
+	if (r->result->field != NULL &&
+	    r->result->field->type == FTYPE_STRUCT) {
+		gen_errx(cfg, &r->result->pos, 
+			"terminal field cannot be a struct: %s",
+			r->result->field->name);
+		r->result->field = NULL;
+	}
+
 	return r->result->field != NULL;
 }
 
@@ -104,6 +110,15 @@ resolve_struct_aggr(struct config *cfg, struct struct_aggr *r)
 	r->result->field = resolve_field_chain
 		(cfg, &r->result->pos, r->result->parent->parent, 
 		 (const char **)r->names, r->namesz);
+
+	if (r->result->field != NULL &&
+	    r->result->field->type == FTYPE_STRUCT) {
+		gen_errx(cfg, &r->result->pos, 
+			"terminal field cannot be a struct: %s",
+			r->result->field->name);
+		r->result->field = NULL;
+	}
+
 	return r->result->field != NULL;
 }
 
@@ -114,6 +129,15 @@ resolve_struct_grouprow(struct config *cfg, struct struct_grouprow *r)
 	r->result->field = resolve_field_chain
 		(cfg, &r->result->pos, r->result->parent->parent, 
 		 (const char **)r->names, r->namesz);
+
+	if (r->result->field != NULL &&
+	    r->result->field->type == FTYPE_STRUCT) {
+		gen_errx(cfg, &r->result->pos, 
+			"terminal field cannot be a struct: %s",
+			r->result->field->name);
+		r->result->field = NULL;
+	}
+
 	return r->result->field != NULL;
 }
 
@@ -124,7 +148,44 @@ resolve_struct_sent(struct config *cfg, struct struct_sent *r)
 	r->result->field = resolve_field_chain
 		(cfg, &r->result->pos, r->result->parent->parent, 
 		 (const char **)r->names, r->namesz);
+
+	if (r->result->field != NULL &&
+	    r->result->field->type == FTYPE_STRUCT) {
+		gen_errx(cfg, &r->result->pos, 
+			"terminal field cannot be a struct: %s",
+			r->result->field->name);
+		r->result->field = NULL;
+	}
+
 	return r->result->field != NULL;
+}
+
+static int
+resolve_struct_distinct(struct config *cfg, struct struct_distinct *r)
+{
+	struct field	*f;
+
+	f = resolve_field_chain
+		(cfg, &r->result->pos, r->result->parent->parent, 
+		 (const char **)r->names, r->namesz);
+
+	if (f == NULL)
+		return 0;
+
+	if (f->type != FTYPE_STRUCT) {
+		gen_errx(cfg, &r->result->pos, 
+			"terminal field must be a struct: %s",
+			f->name);
+		return 0;
+	} else if (f->ref->source->flags & FIELD_NULL) {
+		gen_errx(cfg, &r->result->pos, 
+			"terminal field may not be null: %s",
+			f->name);
+		return 0;
+	}
+
+	r->result->strct = f->ref->target->parent;
+	return 1;
 }
 
 /*
@@ -451,6 +512,7 @@ linker_resolve(struct config *cfg)
 				(cfg, &r->field_enum);
 			break;
 		case RESOLVE_AGGR:
+		case RESOLVE_DISTINCT:
 		case RESOLVE_GROUPROW:
 		case RESOLVE_ORDER:
 		case RESOLVE_SENT:
@@ -488,6 +550,10 @@ linker_resolve(struct config *cfg)
 		case RESOLVE_AGGR:
 			fail += !resolve_struct_aggr
 				(cfg, &r->struct_aggr);
+			break;
+		case RESOLVE_DISTINCT:
+			fail += !resolve_struct_distinct
+				(cfg, &r->struct_distinct);
 			break;
 		case RESOLVE_GROUPROW:
 			fail += !resolve_struct_grouprow

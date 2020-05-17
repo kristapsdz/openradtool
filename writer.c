@@ -559,7 +559,8 @@ parse_write_query(struct writer *w, const struct search *p)
 	if (p->dst != NULL) {
 		if (!colon && !wputc(w, ':'))
 			return 0;
-		if (!wprint(w, " distinct %s", p->dst->cname))
+		if (!wprint(w, " distinct %s",
+		    p->dst->cname == NULL ? "." : p->dst->cname))
 			return 0;
 		colon = 1;
 	}

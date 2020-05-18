@@ -321,7 +321,7 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 		    p->lasttype == TOK_IDENT)
 			break;
 
-		if (parse_next(p) != TOK_PERIOD) {
+		if (p->lasttype != TOK_PERIOD) {
 			parse_errx(p, "expected field separator");
 			return;
 		} else if (parse_next(p) != TOK_IDENT) {
@@ -830,7 +830,6 @@ parse_config_unique(struct parse *p, struct strct *s)
 	struct unique	*up;
 	struct resolve	*r;
 	size_t		 num = 0;
-	void		*pp;
 
 	if (NULL == (up = calloc(1, sizeof(struct unique)))) {
 		parse_err(p);

@@ -936,7 +936,6 @@ ort_parse_close(struct config *cfg)
 	struct strct	 *p;
 	struct strct	**pa;
 	struct field	 *f;
-	struct unique	 *n;
 	struct rolemap	 *rm;
 	struct search	 *srch;
 	size_t		  colour = 1, sz = 0, i;

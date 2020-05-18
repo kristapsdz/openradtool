@@ -111,22 +111,8 @@ static	const char *const rolemapts[ROLEMAP__MAX] = {
 	"noexport", /* ROLEMAP_NOEXPORT */
 };
 
-enum	wtype {
-	WTYPE_FILE, /* FILE stream output */
-	WTYPE_BUF /* buffer output */
-};
-
-struct	wbuf {
-	char		*buf; /* NUL-terminated buffer */
-	size_t		 len; /* length of buffer w/o NUL */
-};
-
 struct	writer {
-	enum wtype	 type; /* type of output */
-	union {
-		FILE	*f; /* WTYPE_FILE */
-		struct wbuf buf; /* WTYPE_BUF */
-	};
+	FILE	*f;
 };
 
 static int
@@ -140,22 +126,8 @@ wprint(struct writer *w, const char *fmt, ...)
 static int
 wputs(struct writer *w, const char *buf)
 {
-	size_t	 sz;
-	void	*pp;
 
-	if (WTYPE_FILE == w->type) 
-		return EOF != fputs(buf, w->f);
-
-	sz = strlen(buf);
-	pp = realloc(w->buf.buf, w->buf.len + sz + 1);
-	if (NULL == pp)
-		return 0;
-	w->buf.buf = pp;
-
-	memcpy(w->buf.buf + w->buf.len, buf, sz);
-	w->buf.len += sz;
-	w->buf.buf[w->buf.len] = '\0';
-	return 1;
+	return fputs(buf, w->f) != EOF;
 }
 
 /*
@@ -180,36 +152,11 @@ wprint(struct writer *w, const char *fmt, ...)
 {
 	va_list	 ap;
 	int	 len;
-	void	*pp;
 
-	if (WTYPE_BUF == w->type) {
-		va_start(ap, fmt);
-		len = vsnprintf(NULL, 0, fmt, ap);
-		va_end(ap);
-
-		if (len < 0)
-			return 0;
-		pp = realloc(w->buf.buf, w->buf.len + len + 1);
-		if (NULL == pp)
-			return 0;
-		w->buf.buf = pp;
-
-		va_start(ap, fmt);
-		vsnprintf(w->buf.buf + w->buf.len,
-			len + 1, fmt, ap);
-		va_end(ap);
-
-		w->buf.len += len;
-		w->buf.buf[w->buf.len] = '\0';
-	} else {
-		va_start(ap, fmt);
-		len = vfprintf(w->f, fmt, ap);
-		va_end(ap);
-		if (len < 0)
-			return 0;
-	}
-
-	return 1;
+	va_start(ap, fmt);
+	len = vfprintf(w->f, fmt, ap);
+	va_end(ap);
+	return len >= 0;
 }
 
 /*
@@ -862,7 +809,6 @@ ort_write_file(FILE *f, const struct config *cfg)
 	int		    rc = 0;
 
 	memset(&w, 0, sizeof(struct writer));
-	w.type = WTYPE_FILE;
 	w.f = f;
 
 	if (!TAILQ_EMPTY(&cfg->rq))

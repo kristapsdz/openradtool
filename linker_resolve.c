@@ -30,6 +30,13 @@
 #include "extern.h"
 #include "linker.h"
 
+/*
+ * Resolve a reference chain to a single field: a "names" consisting of
+ * "foo" "bar" "bar" would have been input as "foo.bar.baz" and resolves
+ * to the field "baz" wherever that is.
+ * Each non-terminal field must be a "struct" and not null.
+ * Returns the resolved field (of any type) or NULL if not found.
+ */
 static struct field *
 resolve_field_chain(struct config *cfg, const struct pos *pos,
 	struct strct *s, const char **names, size_t namesz)
@@ -47,37 +54,27 @@ resolve_field_chain(struct config *cfg, const struct pos *pos,
 			return NULL;
 		}
 
-		/* 
-		 * For non-terminal fields, make sure that we're
-		 * pointing to another structure, then enter that
-		 * structure and continue parsing.
-		 */
+		/* Terminal fields handled by caller. */
 
-		if (i < namesz - 1) {
-			if (f->type != FTYPE_STRUCT) {
-				gen_errx(cfg, pos,
-					"non-terminal field is not "
-					"a struct: %s", f->name);
-				return NULL;
-			}
-			assert(f->ref->source != NULL);
-			if (f->ref->source->flags & FIELD_NULL) {
-				gen_errx(cfg, pos,
-					"non-terminal field cannot "
-					"be null: %s", f->name);
-				return NULL;
-			}
-
-			assert(f->ref->target != NULL);
-			s = f->ref->target->parent;
+		if (i == namesz - 1)
 			continue;
+
+		/* Non-terminal must be non-null and a struct. */
+
+		if (f->type != FTYPE_STRUCT) {
+			gen_errx(cfg, pos, "non-terminal field must "
+				"be a struct: %s", f->name);
+			return NULL;
+		}
+		assert(f->ref->source != NULL);
+		if (f->ref->source->flags & FIELD_NULL) {
+			gen_errx(cfg, pos, "non-terminal field "
+				"cannot be null: %s", f->name);
+			return NULL;
 		}
 
-		/* 
-		 * Terminal fields are handled according to the caller:
-		 * most require a non-struct terminal, but some (like
-		 * distinct) require a struct terminal.
-		 */
+		assert(f->ref->target != NULL);
+		s = f->ref->target->parent;
 	}
 
 	assert(f != NULL);
@@ -179,7 +176,7 @@ resolve_struct_distinct(struct config *cfg, struct struct_distinct *r)
 		return 0;
 	} else if (f->ref->source->flags & FIELD_NULL) {
 		gen_errx(cfg, &r->result->pos, 
-			"terminal field may not be null: %s",
+			"terminal field cannot be null: %s",
 			f->name);
 		return 0;
 	}
@@ -327,6 +324,40 @@ resolve_up_mod(struct config *cfg, struct struct_up_mod *r)
 		}
 
 	return errs == 0;
+}
+
+static int
+resolve_struct_unique(struct config *cfg, struct struct_unique *r)
+{
+	struct field	*f;
+	struct nref	*nf;
+
+	TAILQ_FOREACH(f, &r->result->parent->parent->fq, entries) {
+		if (strcasecmp(f->name, r->name) != 0)
+			continue;
+		if (f->type != FTYPE_STRUCT)
+			break;
+		gen_errx(cfg, &r->result->pos, "unique field "
+			"may not be a struct: %s", f->name);
+		return 0;
+	}
+
+	if (f == NULL) {
+		gen_errx(cfg, &r->result->pos, "unknown field");
+		return 0;
+	}
+
+	/* Disallow duplicates. */
+
+	TAILQ_FOREACH(nf, &r->result->parent->nq, entries)
+		if (f == nf->field) {
+			gen_errx(cfg, &r->result->pos, 
+				"duplicate field: %s", f->name);
+			return 0;
+		}
+
+	r->result->field = f;
+	return 1;
 }
 
 /*
@@ -520,6 +551,10 @@ linker_resolve(struct config *cfg)
 			 * These require both RESOLVE_FIELD_FOREIGN and
 			 * the later RESOLVE_FIELD_STRUCT.
 			 */
+			break;
+		case RESOLVE_UNIQUE:
+			fail += !resolve_struct_unique
+				(cfg, &r->struct_unique);
 			break;
 		case RESOLVE_UP_CONSTRAINT:
 			fail += !resolve_up_const

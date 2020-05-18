@@ -29,6 +29,7 @@ enum	resolvet {
 	RESOLVE_GROUPROW,
 	RESOLVE_ORDER,
 	RESOLVE_SENT,
+	RESOLVE_UNIQUE,
 	RESOLVE_UP_CONSTRAINT,
 	RESOLVE_UP_MODIFIER
 };
@@ -92,6 +93,10 @@ struct	resolve {
 				char		**names;
 				size_t		  namesz;
 		} struct_sent; /* update ->bar<-: ... */
+		struct struct_unique {
+				struct nref	*result;
+				char		*name;
+		} struct_unique; /* unique ->bar<-... */
 	};
 	TAILQ_ENTRY(resolve)	entries;
 };

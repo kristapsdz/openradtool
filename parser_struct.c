@@ -193,42 +193,6 @@ ref_append2(char **p, const char *v, char delim)
 }
 
 /*
- * Allocate a unique reference and add it to the parent queue in order
- * by alpha.
- * Returns the created pointer or NULL.
- */
-static struct nref *
-nref_alloc(struct parse *p, const char *name, struct unique *up)
-{
-	struct nref	*ref, *n;
-
-	if (NULL == (ref = calloc(1, sizeof(struct nref)))) {
-		parse_err(p);
-		return NULL;
-	} else if (NULL == (ref->name = strdup(name))) {
-		free(ref);
-		parse_err(p);
-		return NULL;
-	}
-
-	ref->parent = up;
-	parse_point(p, &ref->pos);
-
-	/* Order alphabetically. */
-
-	TAILQ_FOREACH(n, &up->nq, entries)
-		if (strcasecmp(n->name, ref->name) >= 0)
-			break;
-
-	if (NULL == n)
-		TAILQ_INSERT_TAIL(&up->nq, ref, entries);
-	else
-		TAILQ_INSERT_BEFORE(n, ref, entries);
-
-	return ref;
-}
-
-/*
  * Allocate uref and register resolve request.
  * If "mod" is non-zero, it means this is a modifier; otherwise, this is
  * a constraint uref.
@@ -862,9 +826,10 @@ parse_config_search_params(struct parse *p, struct search *s)
 static void
 parse_config_unique(struct parse *p, struct strct *s)
 {
-	struct unique	*up, *upp;
-	struct nref	*n;
-	size_t		 sz, num = 0;
+	struct nref	*nf;
+	struct unique	*up;
+	struct resolve	*r;
+	size_t		 num = 0;
 	void		*pp;
 
 	if (NULL == (up = calloc(1, sizeof(struct unique)))) {
@@ -877,58 +842,51 @@ parse_config_unique(struct parse *p, struct strct *s)
 	TAILQ_INIT(&up->nq);
 	TAILQ_INSERT_TAIL(&s->nq, up, entries);
 
-	while ( ! PARSE_STOP(p)) {
-		if (TOK_IDENT != parse_next(p)) {
+	while (!PARSE_STOP(p)) {
+		if (parse_next(p) != TOK_IDENT) {
 			parse_errx(p, "expected unique field");
-			break;
-		}
-		if (NULL == nref_alloc(p, p->last.string, up))
 			return;
+		}
+
+		/* Append to resolver and canonical name. */
+
+		if ((nf = calloc(1, sizeof(struct nref))) == NULL) {
+			parse_err(p);
+			return;
+		}
+		TAILQ_INSERT_TAIL(&up->nq, nf, entries);
+		parse_point(p, &nf->pos);
+		nf->parent = up;
+
+		if ((r = calloc(1, sizeof(struct resolve))) == NULL) {
+			parse_err(p);
+			return;
+		}
+		r->type = RESOLVE_UNIQUE;
+		TAILQ_INSERT_TAIL(&p->cfg->priv->rq, r, entries);
+		r->struct_unique.result = nf;
+		r->struct_unique.name = strdup(p->last.string);
+		if (r->struct_unique.name == NULL) {
+			parse_err(p);
+			return;
+		}
+		if (!ref_append2(&up->cname, p->last.string, ',')) {
+			parse_err(p);
+			return;
+		}
+
 		num++;
 		if (TOK_SEMICOLON == parse_next(p))
 			break;
-		if (TOK_COMMA == p->lasttype)
-			continue;
-		parse_errx(p, "unknown unique token");
+		if (TOK_COMMA != p->lasttype) {
+			parse_errx(p, "expected semicolon or comma");
+			return;
+		}
 	}
 
 	if (num < 2) {
 		parse_errx(p, "at least two fields "
 			"required for unique constraint");
-		return;
-	}
-
-	/* Establish canonical name of search. */
-
-	sz = 0;
-	TAILQ_FOREACH(n, &up->nq, entries) {
-		sz += strlen(n->name) + 1; /* comma */
-		if (NULL == up->cname) {
-			up->cname = calloc(sz + 1, 1);
-			if (NULL == up->cname) {
-				parse_err(p);
-				return;
-			}
-		} else {
-			pp = realloc(up->cname, sz + 1);
-			if (NULL == pp) {
-				parse_err(p);
-				return;
-			}
-			up->cname = pp;
-		}
-		strlcat(up->cname, n->name, sz + 1);
-		strlcat(up->cname, ",", sz + 1);
-	}
-	assert(sz > 0);
-	up->cname[sz - 1] = '\0';
-
-	/* Check for duplicate unique constraint. */
-
-	TAILQ_FOREACH(upp, &s->nq, entries) {
-		if (upp == up || strcasecmp(upp->cname, up->cname)) 
-			continue;
-		parse_errx(p, "duplicate unique constraint");
 		return;
 	}
 }

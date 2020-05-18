@@ -502,49 +502,6 @@ resolve_search(struct config *cfg, struct search *srch)
 }
 
 /*
- * Make sure that a unique entry is on non-struct types.
- * Return zero on failure, non-zero on success.
- */
-static int
-check_unique(struct config *cfg, const struct unique *u)
-{
-	const struct nref *n;
-
-	TAILQ_FOREACH(n, &u->nq, entries) {
-		if (FTYPE_STRUCT != n->field->type)
-			continue;
-		gen_errx(cfg, &n->pos, "field not a native type");
-		return 0;
-	}
-
-	return 1;
-}
-
-/*
- * Resolve the chain of unique fields.
- * These are all in the local structure.
- * Returns zero on failure, non-zero on success.
- */
-static int
-resolve_unique(struct config *cfg, struct unique *u)
-{
-	struct nref	*n;
-	struct field	*f;
-
-	TAILQ_FOREACH(n, &u->nq, entries) {
-		TAILQ_FOREACH(f, &u->parent->fq, entries) 
-			if (0 == strcasecmp(f->name, n->name))
-				break;
-		if (NULL != (n->field = f))
-			continue;
-		gen_errx(cfg, &n->pos, "field not found");
-		return 0;
-	}
-
-	return 1;
-}
-
-/*
  * Given a single roleset "rs", look it up recursively in the queue
  * given by "rq", which should initially be invoked by the top-level
  * queue of the configuration.
@@ -1106,12 +1063,6 @@ ort_parse_close(struct config *cfg)
 			return 0;
 
 	/* Resolve search terms. */
-
-	TAILQ_FOREACH(p, &cfg->sq, entries)
-		TAILQ_FOREACH(n, &p->nq, entries)
-			if ( ! resolve_unique(cfg, n) ||
-			     ! check_unique(cfg, n))
-				return(0);
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		TAILQ_FOREACH(srch, &p->sq, entries)

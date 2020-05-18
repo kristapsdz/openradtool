@@ -458,7 +458,6 @@ struct	uref {
  * chain of fields.
  */
 struct	nref {
-	char		 *name; /* name of field */
 	struct field	 *field; /* resolved field */
 	struct pos	  pos; /* position in parse */
 	struct unique	 *parent; /* up-reference */

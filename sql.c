@@ -158,7 +158,8 @@ gen_unique(const struct unique *n, int *first)
 	printf("%s\n\tUNIQUE(", *first ? "" : ",");
 
 	TAILQ_FOREACH(ref, &n->nq, entries) {
-		printf("%s%s", ffirst ? "" : ", ", ref->name);
+		printf("%s%s", ffirst ? "" : ", ",
+			ref->field->name);
 		ffirst = 0;
 	}
 	putchar(')');

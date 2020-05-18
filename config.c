@@ -117,21 +117,13 @@ parse_free_search(struct search *p)
 }
 
 static void
-parse_free_nref(struct nref *p)
-{
-
-	free(p->name);
-	free(p);
-}
-
-static void
 parse_free_unique(struct unique *p)
 {
 	struct nref	*u;
 
 	while ((u = TAILQ_FIRST(&p->nq)) != NULL) {
 		TAILQ_REMOVE(&p->nq, u, entries);
-		parse_free_nref(u);
+		free(u);
 	}
 
 	free(p->cname);
@@ -333,6 +325,9 @@ parse_free_resolve(struct resolve *p)
 		for (i = 0; i < p->struct_sent.namesz; i++)
 			free(p->struct_sent.names[i]);
 		free(p->struct_sent.names);
+		break;
+	case RESOLVE_UNIQUE:
+		free(p->struct_unique.name);
 		break;
 	case RESOLVE_UP_CONSTRAINT:
 		free(p->struct_up_const.name);

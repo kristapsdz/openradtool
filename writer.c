@@ -457,14 +457,15 @@ parse_write_modify(struct writer *w, const struct update *p)
 static int
 parse_write_unique(struct writer *w, const struct unique *p)
 {
-	const struct nref *n;
-	size_t	 nf = 0;
+	const struct nref	*n;
+	size_t			 nf = 0;
 
-	if ( ! wputs(w, "\tunique"))
+	if (!wputs(w, "\tunique"))
 		return 0;
 
 	TAILQ_FOREACH(n, &p->nq, entries)
-		if ( ! wprint(w, "%s %s", nf++ ? "," : "", n->name))
+		if (!wprint(w, "%s %s",
+		    nf++ ? "," : "", n->field->name))
 			return 0;
 
 	return wputs(w, ";\n");

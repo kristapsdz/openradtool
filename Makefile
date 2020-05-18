@@ -5,7 +5,7 @@ include Makefile.configure
 
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 8
-VERSION_BUILD	 = 13
+VERSION_BUILD	 = 14
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = compats.o \
 		   config.o \
@@ -390,13 +390,11 @@ atom.xml: versions.xml atom-template.xml
 # Remove what is built by "all" and "www".
 
 clean:
-	rm -f $(BINS) version.h paths.h $(LIBOBJS) libort.a test test.o
+	rm -f $(BINS) version.h paths.h $(LIBOBJS) $(OBJS) libort.a test test.o
 	rm -f db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db db.trans.ort
 	rm -f openradtool.tar.gz openradtool.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml
 	rm -f db.ort.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
-	rm -f source.o header.o javascript.o sql.o audit.o main.o xliff.o
-	rm -rf regress/share
 
 # Remove both what can be built and what's built by ./configure.
 

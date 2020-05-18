@@ -9,4 +9,8 @@
 - Allow unary isnull/notnull operations for password queries.
 - Only allow bit-wise and/or for numeric types on queries.
 - Restrict grouprow, maxrow, and minrow not to be passwords or null values.
-- Improve maxrow and minrow docu regarding lexicographic max/min.
+- Improve maxrow and minrow docs regarding lexicographic max/min.
+- Improve docs for distinct.
+- Check for unique equivalence shouldn't use cname because the contents
+  aren't consistently ordered.
+- Check for unique having duplicate fields between unique statements.

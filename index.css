@@ -99,7 +99,8 @@ article > nav > span			{ background-color: #eee;
 img					{ max-width: 100%; }
 article[data-sblg-article]		{ width: 100%; }
 code, pre.hl				{ font-family: monospace; 
-					  font-size: smaller; }
+					  line-height: 1.4em;
+					  font-size: 10pt; }
 pre.hl					{ overflow: hidden; }
 .hl .lin				{ color: #aaa; }
 #archive nav[data-sblg-nav] ul		{ list-style-type: none; 

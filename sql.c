@@ -308,10 +308,15 @@ gen_diff_field(const struct field *f, const struct field *df)
 		}
 	} 
 
-	if (f->flags != df->flags) {
+	/* Only care about SQL-specific field differences. */
+
+	if ((f->flags & FIELD_ROWID) != (df->flags & FIELD_ROWID) ||
+	    (f->flags & FIELD_NULL) != (df->flags & FIELD_NULL) ||
+	    (f->flags & FIELD_UNIQUE) != (df->flags & FIELD_UNIQUE)) {
 		diff_errx(&f->pos, &df->pos, "attribute change");
 		rc = 0;
 	}
+
 	if (f->actdel != df->actdel) {
 		diff_errx(&f->pos, &df->pos, "delete action change");
 		rc = 0;

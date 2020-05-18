@@ -17,6 +17,10 @@
 				<a href="ort.1.html">ort(1)</a>.
 			</p>
 			<p>
+				Bug-fix: the <code>distinct</code> keyword on the local structure
+				was not being printed properly by <a href="ort.1.html">ort(1)</a>.
+			</p>
+			<p>
 				Significant upgrade to the internals: instead of haphazardly
 				resolving names to object components (e.g., the field names in
 				foreign references), do so in a dedicated pass by way of resolver

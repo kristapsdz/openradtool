@@ -87,7 +87,7 @@ static void
 parse_free_distinct(struct dstnct *p)
 {
 
-	free(p->cname);
+	free(p->fname);
 	free(p);
 }
 

@@ -2589,7 +2589,7 @@ gen_stmt(const struct strct *p)
 		if (s->dst) {
 			col += printf("DISTINCT ");
 			gen_stmt_schema(p, 1, s->dst->strct, 
-				s->dst->cname, &col);
+				s->dst->fname, &col);
 			needquot = 1;
 		} else if (s->type != STYPE_COUNT) {
 			gen_stmt_schema(p, 1, p, NULL, &col);

@@ -410,7 +410,7 @@ enum	stype {
  * This is set for search fields that are returning distinct rows.
  */
 struct	dstnct {
-	char		*cname; /* canonical (dotted) name */
+	char		*fname; /* canonical (dotted) name */
 	struct pos	 pos; /* parse point */
 	struct strct	*strct; /* resolved struct */
 	struct search	*parent; /* search entry */

@@ -311,7 +311,7 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 		parse_err(p);
 		return;
 	}
-	if (!ref_append2(&d->cname, p->last.string, '.')) {
+	if (!ref_append2(&d->fname, p->last.string, '.')) {
 		parse_err(p);
 		return;
 	}
@@ -336,7 +336,7 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 			parse_err(p);
 			return;
 		}
-		if (!ref_append2(&d->cname, p->last.string, '.')) {
+		if (!ref_append2(&d->fname, p->last.string, '.')) {
 			parse_err(p);
 			return;
 		}

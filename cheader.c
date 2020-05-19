@@ -319,7 +319,7 @@ gen_func_search(const struct config *cfg, const struct search *s)
 			print_commentv(0, COMMENT_C_FRAG,
 				"The results are limited "
 				"to the nested structure of \"%s\" "
-				"within %s.", s->dst->cname,
+				"within %s.", s->dst->fname,
 				s->parent->name);
 	}
 

@@ -249,10 +249,14 @@ openradtool.tar.gz.sha512: openradtool.tar.gz
 openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/openradtool-$(VERSION)/
 	mkdir -p .dist/openradtool-$(VERSION)/regress
+	mkdir -p .dist/openradtool-$(VERSION)/regress/sqldiff
 	install -m 0444 $(DOTAR) .dist/openradtool-$(VERSION)
 	install -m 0444 regress/*.ort .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.result .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.nresult .dist/openradtool-$(VERSION)/regress
+	install -m 0444 regress/sqldiff/*.ort .dist/openradtool-$(VERSION)/regress/sqldiff
+	install -m 0444 regress/sqldiff/*.result .dist/openradtool-$(VERSION)/regress/sqldiff
+	install -m 0444 regress/sqldiff/*.nresult .dist/openradtool-$(VERSION)/regress/sqldiff
 	install -m 0555 $(DOTAREXEC) .dist/openradtool-$(VERSION)
 	( cd .dist/ && tar zcf ../$@ ./ )
 	rm -rf .dist/
@@ -401,14 +405,7 @@ clean:
 distclean: clean
 	rm -f config.h config.log Makefile.configure
 
-# The tests go over each type of file in "regress".
-# Each test has a configuration (.ort) and a type to cross-check: a C
-# file (.c), header file (.h), or configuration (.orf).
-# First, make sure the .ort generates a similar C, header, or config.
-# Second, create a configuration from the configuration and try again,
-# making sure that it's the same.
-
-regress: ort
+regress: ort ort-sqldiff
 	@tmp=`mktemp` ; \
 	for f in regress/*.result ; do \
 		bf=`basename $$f .result`.ort ; \
@@ -430,7 +427,6 @@ regress: ort
 		echo "pass" ; \
 		set -e ; \
 	done ; \
-	rm $$tmp ; \
 	for f in regress/*.nresult ; do \
 		set +e ; \
 		printf "`basename $$f`... " ; \
@@ -441,4 +437,38 @@ regress: ort
 		fi ; \
 		echo "pass" ; \
 		set -e ; \
-	done ;
+	done ; \
+	for f in regress/sqldiff/*.result ; do \
+		new=regress/sqldiff/`basename $$f .result`.new.ort ; \
+		old=regress/sqldiff/`basename $$f .result`.old.ort ; \
+		set +e ; \
+		printf "$$old -> $$new... " ; \
+		./ort-sqldiff $$old $$new >$$tmp 2>/dev/null ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (did not execute)" ; \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		diff -w $$tmp $$f >/dev/null 2>&1 ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (output)" ; \
+			diff -wu $$tmp $$f ; \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+		set -e ; \
+	done ; \
+	for old in regress/sqldiff/*.old.nresult ; do \
+		new=regress/sqldiff/`basename $$f .old.nresult`.new.nresult ; \
+		set +e ; \
+		printf "$$old -> $$new... " ; \
+		./ort-sqldiff $$old $$new >/dev/null 2>&1 ; \
+		if [ $$? -eq 0 ] ; then \
+			echo "fail (did not error out)" ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+		set -e ; \
+	done ; \
+	rm $$tmp ;

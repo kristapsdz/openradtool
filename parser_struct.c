@@ -826,10 +826,10 @@ parse_config_search_params(struct parse *p, struct search *s)
 static void
 parse_config_unique(struct parse *p, struct strct *s)
 {
-	struct nref	*nf;
-	struct unique	*up;
-	struct resolve	*r;
-	size_t		 num = 0;
+	struct nref	 *nf;
+	struct unique	 *up;
+	struct resolve	 *r;
+	size_t		  fieldsz = 0;
 
 	if (NULL == (up = calloc(1, sizeof(struct unique)))) {
 		parse_err(p);
@@ -847,7 +847,7 @@ parse_config_unique(struct parse *p, struct strct *s)
 			return;
 		}
 
-		/* Append to resolver and canonical name. */
+		/* Append to resolver. */
 
 		if ((nf = calloc(1, sizeof(struct nref))) == NULL) {
 			parse_err(p);
@@ -869,12 +869,10 @@ parse_config_unique(struct parse *p, struct strct *s)
 			parse_err(p);
 			return;
 		}
-		if (!ref_append2(&up->cname, p->last.string, ',')) {
-			parse_err(p);
-			return;
-		}
+		fieldsz++;
 
-		num++;
+		/* Next statement. */
+
 		if (TOK_SEMICOLON == parse_next(p))
 			break;
 		if (TOK_COMMA != p->lasttype) {
@@ -883,11 +881,9 @@ parse_config_unique(struct parse *p, struct strct *s)
 		}
 	}
 
-	if (num < 2) {
+	if (fieldsz < 2)
 		parse_errx(p, "at least two fields "
 			"required for unique constraint");
-		return;
-	}
 }
 
 /*

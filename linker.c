@@ -923,6 +923,55 @@ check_reffind(struct config *cfg, const struct strct *p)
 }
 
 /*
+ * Make sure that the unique statements noted in "u" are not equal
+ * to any other unique statements.
+ * Returns zero on failure, non-zero on success.
+ */
+static int
+check_unique_unique(struct config *cfg, const struct strct *s)
+{
+	const struct unique	*u, *uu;
+	const struct nref	*nf, *unf;
+	size_t			 errs = 0, sz, usz;
+
+	/*
+	 * "Duplicate" means same number of fields, same fields by
+	 * pointer equality.
+	 */
+
+	TAILQ_FOREACH(u, &s->nq, entries) {
+		sz = 0;
+		TAILQ_FOREACH(nf, &u->nq, entries)
+			sz++;
+		TAILQ_FOREACH(uu, &s->nq, entries) {
+			if (uu == u)
+				continue;
+			usz = 0;
+			TAILQ_FOREACH(unf, &uu->nq, entries) 
+				usz++;
+			if (usz != sz)
+				continue;
+			TAILQ_FOREACH(nf, &u->nq, entries) {
+				TAILQ_FOREACH(unf, &uu->nq, entries)
+					if (nf->field == unf->field)
+						break;
+				if (unf == NULL)
+					break;
+			}
+			if (nf != NULL)
+				break;
+			gen_warnx(cfg, &u->pos, "duplicate "
+				"unique statements: %s:%zu:%zu",
+				uu->pos.fname, uu->pos.line,
+				uu->pos.column);
+			errs++;
+		}
+	}
+
+	return errs == 0;
+}
+
+/*
  * This is the "linking" phase where a fully-parsed configuration file
  * has its components linked together and checked for correctness.
  * It MUST be called following ort_parse_file_r() or equivalent or the
@@ -947,6 +996,14 @@ ort_parse_close(struct config *cfg)
 	}
 
 	if (!linker_resolve(cfg))
+		return 0;
+
+	/* Check for unique statement duplicates. */
+
+	i = 0;
+	TAILQ_FOREACH(p, &cfg->sq, entries)
+		i += !check_unique_unique(cfg, p);
+	if (i > 0)
 		return 0;
 
 	/* 

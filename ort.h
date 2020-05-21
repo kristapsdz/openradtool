@@ -472,7 +472,6 @@ struct	unique {
 	struct nrefq	    nq; /* constraint chain */
 	struct strct	   *parent; /* up-reference */
 	struct pos	    pos; /* position in parse */
-	char		   *cname; /* canonical name */
 	TAILQ_ENTRY(unique) entries;
 };
 

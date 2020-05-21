@@ -31,9 +31,7 @@
 .Ar oldconfig
 .Op Ar config
 .Sh DESCRIPTION
-The
-.Nm
-utility accepts
+Accepts
 .Xr ort 5
 .Ar config
 and
@@ -43,7 +41,7 @@ and produces SQL commands updating the old to new schema.
 Its arguments are as follows:
 .Bl -tag -width Ds
 .It Fl d
-Apply and allow some destructive changes.
+Allow some destructive changes.
 See
 .Sx Delete mode .
 .El
@@ -77,10 +75,18 @@ This is a limitation of
 .Xr sqlite3 1 . )
 .Pp
 The configuration files are considered incompatible if they contain
-destructive differences: dropped objects (structures or fields) or
-different fields (types, references, attributes).
+destructive differences:
+.Bd -bullet
+.It
+dropped structures or fields
+.It
+different field types, references, or SQL attributes
+.It
+new unique constraints
+.El
 .Pp
 If fields are added to a structure (columns to a table), the
+configuration's
 .Cm default
 statement is used for generating an SQL default value.
 If a

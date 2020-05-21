@@ -357,6 +357,7 @@ resolve_struct_unique(struct config *cfg, struct struct_unique *r)
 		}
 
 	r->result->field = f;
+
 	return 1;
 }
 

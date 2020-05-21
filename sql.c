@@ -467,41 +467,81 @@ gen_diff_fields_new(const struct strct *s,
 	return(errors ? -1 : count ? 1 : 0);
 }
 
+/*
+ * See if all of the fields in "u" are found in one of the unique
+ * statements in "os".
+ * Return zero if not found, non-zero if found.
+ */
+static int
+gen_diff_uniques(const struct unique *u, const struct strct *os)
+{
+	const struct unique	*ou;
+	const struct nref	*nf, *onf;
+	size_t			 sz, osz;
+
+	sz = 0;
+	TAILQ_FOREACH(nf, &u->nq, entries)
+		sz++;
+
+	TAILQ_FOREACH(ou, &os->nq, entries) {
+		TAILQ_FOREACH(nf, &u->nq, entries) {
+			osz = 0;
+			TAILQ_FOREACH(onf, &ou->nq, entries)
+				osz++;
+			if (osz != sz)
+				break;
+			TAILQ_FOREACH(onf, &ou->nq, entries)
+				if (strcasecmp(onf->field->name,
+				    nf->field->name) == 0)
+					break;
+			if (onf == NULL)
+				break;
+		}
+		if (nf == NULL)
+			return 1;
+	}
+
+	return 0;
+}
+
+/*
+ * See if all the uniques in the new structure "s" may be found in the
+ * old structure "ds".
+ * A new unique field is an error because the existing data might
+ * violate the unique constraint.
+ */
 static int
 gen_diff_uniques_new(const struct strct *s, const struct strct *ds)
 {
-	struct unique	*us, *uds;
-	size_t		 errs = 0;
+	const struct unique	*u;
+	size_t		 	 errs = 0;
 
-	TAILQ_FOREACH(us, &s->nq, entries) {
-		TAILQ_FOREACH(uds, &ds->nq, entries)
-			if (0 == strcasecmp(uds->cname, us->cname))
-				break;
-		if (NULL != uds) 
+	TAILQ_FOREACH(u, &s->nq, entries) {
+		if (gen_diff_uniques(u, ds))
 			continue;
-		gen_warnx(&us->pos, "new unique fields");
+		gen_warnx(&u->pos, "new unique fields: existing "
+			"data might violate these constraints");
 		errs++;
 	}
-	return(0 == errs);
+
+	return errs == 0;
 }
 
-static int
+/*
+ * Look for old unique constraints that we've dropped.
+ * This is only a warning because it means we're relaxing an existing
+ * unique situation.
+ */
+static void
 gen_diff_uniques_old(const struct strct *s, const struct strct *ds)
 {
-	struct unique	*us, *uds;
-	size_t		 errs = 0;
+	const struct unique	*u;
 
-	TAILQ_FOREACH(uds, &ds->nq, entries) {
-		TAILQ_FOREACH(us, &s->nq, entries)
-			if (0 == strcasecmp(uds->cname, us->cname))
-				break;
-		if (NULL != us) 
+	TAILQ_FOREACH(u, &ds->nq, entries) {
+		if (gen_diff_uniques(u, s))
 			continue;
-		gen_warnx(&uds->pos, "unique field disappeared");
-		errs++;
+		gen_warnx(&u->pos, "unique fields have disappeared");
 	}
-
-	return(0 == errs);
 }
 
 /*
@@ -753,7 +793,7 @@ gen_diff(const struct config *cfg,
 		TAILQ_FOREACH(s, &cfg->sq, entries) {
 			if (strcasecmp(s->name, ds->name))
 				continue;
-			errors += !gen_diff_uniques_old(s, ds);
+			gen_diff_uniques_old(s, ds);
 		}
 
 	return errors ? 0 : 1;

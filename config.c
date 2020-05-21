@@ -125,8 +125,6 @@ parse_free_unique(struct unique *p)
 		TAILQ_REMOVE(&p->nq, u, entries);
 		free(u);
 	}
-
-	free(p->cname);
 	free(p);
 }
 

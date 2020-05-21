@@ -804,7 +804,7 @@ main(int argc, char *argv[])
 {
 	FILE		**confs = NULL, **dconfs = NULL;
 	struct config	 *cfg = NULL, *dcfg = NULL;
-	int		  rc = 1, diff = 0, c, destruct = 0;
+	int		  rc = 0, diff = 0, c, destruct = 0;
 	size_t		  confsz = 0, dconfsz = 0, i, j, 
 			  confst = 0;
 

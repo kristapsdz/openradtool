@@ -250,6 +250,7 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/openradtool-$(VERSION)/
 	mkdir -p .dist/openradtool-$(VERSION)/regress
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sqldiff
+	mkdir -p .dist/openradtool-$(VERSION)/regress/sql
 	install -m 0444 $(DOTAR) .dist/openradtool-$(VERSION)
 	install -m 0444 regress/*.ort .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.result .dist/openradtool-$(VERSION)/regress
@@ -257,6 +258,8 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	install -m 0444 regress/sqldiff/*.ort .dist/openradtool-$(VERSION)/regress/sqldiff
 	install -m 0444 regress/sqldiff/*.result .dist/openradtool-$(VERSION)/regress/sqldiff
 	install -m 0444 regress/sqldiff/*.nresult .dist/openradtool-$(VERSION)/regress/sqldiff
+	install -m 0444 regress/sql/*.ort .dist/openradtool-$(VERSION)/regress/sql
+	install -m 0444 regress/sql/*.result .dist/openradtool-$(VERSION)/regress/sql
 	install -m 0555 $(DOTAREXEC) .dist/openradtool-$(VERSION)
 	( cd .dist/ && tar zcf ../$@ ./ )
 	rm -rf .dist/
@@ -405,7 +408,7 @@ clean:
 distclean: clean
 	rm -f config.h config.log Makefile.configure
 
-regress: ort ort-sqldiff
+regress: ort ort-sqldiff ort-sql
 	@tmp=`mktemp` ; \
 	for f in regress/*.result ; do \
 		bf=`basename $$f .result`.ort ; \
@@ -460,12 +463,32 @@ regress: ort ort-sqldiff
 		set -e ; \
 	done ; \
 	for old in regress/sqldiff/*.old.nresult ; do \
-		new=regress/sqldiff/`basename $$f .old.nresult`.new.nresult ; \
+		new=regress/sqldiff/`basename $$old .old.nresult`.new.nresult ; \
 		set +e ; \
 		printf "$$old -> $$new... " ; \
 		./ort-sqldiff $$old $$new >/dev/null 2>&1 ; \
 		if [ $$? -eq 0 ] ; then \
 			echo "fail (did not error out)" ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+		set -e ; \
+	done ; \
+	for f in regress/sql/*.result ; do \
+		bf=regress/sql/`basename $$f .result`.ort ; \
+		set +e ; \
+		printf "$$bf... " ; \
+		./ort-sql $$bf >$$tmp 2>/dev/null ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (did not execute)" ; \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		diff -w $$tmp $$f >/dev/null 2>&1 ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (output)" ; \
+			diff -wu $$tmp $$f ; \
+			rm $$tmp ; \
 			exit 1 ; \
 		fi ; \
 		echo "pass" ; \

@@ -1,0 +1,8 @@
+PRAGMA foreign_keys=ON;
+
+CREATE TABLE foo (
+	foo INTEGER NOT NULL,
+	bar INTEGER NOT NULL,
+	UNIQUE(foo, bar)
+);
+

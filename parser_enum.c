@@ -194,7 +194,6 @@ parse_enum(struct parse *p)
 {
 	struct enm	*e;
 	struct eitem	*ei;
-	char		*caps;
 	int		 foundauto = 0;
 	int64_t		 maxv = INT64_MIN;
 
@@ -221,13 +220,7 @@ parse_enum(struct parse *p)
 	if ((e->name = strdup(p->last.string)) == NULL) {
 		parse_err(p);
 		return;
-	} else if ((e->cname = strdup(e->name)) == NULL) {
-		parse_err(p);
-		return;
 	}
-
-	for (caps = e->cname; *caps != '\0'; caps++)
-		*caps = toupper((unsigned char)*caps);
 
 	parse_enum_data(p, e);
 

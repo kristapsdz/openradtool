@@ -197,7 +197,6 @@ void
 parse_bitfield(struct parse *p)
 {
 	struct bitf	*b;
-	char		*caps;
 
 	if (parse_next(p) != TOK_IDENT) {
 		parse_errx(p, "expected bitfield name");
@@ -227,13 +226,7 @@ parse_bitfield(struct parse *p)
 	if ((b->name = strdup(p->last.string)) == NULL) {
 		parse_err(p);
 		return;
-	} else if ((b->cname = strdup(b->name)) == NULL) {
-		parse_err(p);
-		return;
 	}
-
-	for (caps = b->cname; *caps != '\0'; caps++)
-		*caps = toupper((unsigned char)*caps);
 
 	parse_bitidx(p, b);
 }

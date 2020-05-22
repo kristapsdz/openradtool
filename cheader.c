@@ -54,6 +54,14 @@ static	const char *const optypes[OPTYPE__MAX] = {
 	"is not null" /* OPTYPE_NOTNULL */
 };
 
+static void
+gen_caps(const char *cp)
+{
+
+	for ( ; *cp != '\0'; cp++)
+		putchar(toupper((unsigned char)*cp));
+}
+
 /*
  * Generate the C API for a given field.
  */
@@ -118,15 +126,19 @@ gen_bitfield(const struct bitf *b)
 	TAILQ_FOREACH(bi, &b->bq, entries) {
 		if (NULL != bi->doc)
 			print_commentt(1, COMMENT_C, bi->doc);
-		printf("\tBITI_%s_%s = %" PRId64 ",\n",
-			b->cname, bi->name, bi->value);
-		printf("\tBITF_%s_%s = (1U << %" PRId64 "),\n",
-			b->cname, bi->name, bi->value);
+		printf("\tBITI_");
+		gen_caps(b->name);
+		printf("_%s = %" PRId64 ",\n", bi->name, bi->value);
+		printf("\tBITF_");
+		gen_caps(b->name);
+		printf("_%s = (1U << %" PRId64 "),\n",
+			bi->name, bi->value);
 		if (bi->value > maxvalue)
 			maxvalue = bi->value;
 	}
-	printf("\tBITI_%s__MAX = %" PRId64 ",\n",
-		b->cname, maxvalue + 1);
+	printf("\tBITI_");
+	gen_caps(b->name);
+	printf("__MAX = %" PRId64 ",\n", maxvalue + 1);
 	puts("};\n"
 	     "");
 
@@ -146,8 +158,9 @@ gen_enum(const struct enm *e)
 	TAILQ_FOREACH(ei, &e->eq, entries) {
 		if (NULL != ei->doc)
 			print_commentt(1, COMMENT_C, ei->doc);
-		printf("\t%s_%s = %" PRId64 "%s\n",
-			e->cname, ei->name, ei->value, 
+		putchar('\t');
+		gen_caps(e->name);
+		printf("_%s = %" PRId64 "%s\n", ei->name, ei->value, 
 			TAILQ_NEXT(ei, entries) ? "," : "");
 	}
 	puts("};\n"

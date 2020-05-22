@@ -137,7 +137,6 @@ struct	eitem {
  */
 struct	enm {
 	char		*name; /* name of enumeration */
-	char		*cname; /* capitalised name */
 	char		*doc; /* documentation */
 	struct pos	 pos; /* parse point */
 	struct eitemq	 eq; /* items in enumeration */
@@ -162,7 +161,6 @@ struct	bitidx {
  */
 struct	bitf {
 	char		 *name; /* name of bitfield */
-	char		 *cname; /* capitalised name */
 	char		 *doc; /* documentation */
 	struct labelq	  labels_unset; /* "isunset" js labels */
 	struct labelq	  labels_null; /* "isnull" js labels */

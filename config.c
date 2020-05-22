@@ -173,7 +173,6 @@ parse_free_enum(struct enm *e)
 	}
 
 	free(e->name);
-	free(e->cname);
 	free(e->doc);
 	free(e);
 }
@@ -212,7 +211,6 @@ parse_free_bitfield(struct bitf *bf)
 	parse_free_label(&bf->labels_unset);
 	parse_free_label(&bf->labels_null);
 	free(bf->name);
-	free(bf->cname);
 	free(bf->doc);
 	free(bf);
 }

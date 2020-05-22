@@ -77,7 +77,6 @@ static struct strct *
 strct_alloc(struct parse *p, const char *name)
 {
 	struct strct	*s;
-	char		*caps;
 
 	/* Check reserved identifiers and dupe names. */
 
@@ -88,19 +87,14 @@ strct_alloc(struct parse *p, const char *name)
 		return NULL;
 
 	if ((s = calloc(1, sizeof(struct strct))) == NULL ||
-	    (s->name = strdup(name)) == NULL ||
-	    (s->cname = strdup(s->name)) == NULL) {
+	    (s->name = strdup(name)) == NULL) {
 		parse_err(p);
 		if (NULL != s) {
 			free(s->name);
-			free(s->cname);
 			free(s);
 		}
 		return NULL;
 	}
-
-	for (caps = s->cname; *caps != '\0'; caps++)
-		*caps = toupper((unsigned char)*caps);
 
 	s->cfg = p->cfg;
 	parse_point(p, &s->pos);

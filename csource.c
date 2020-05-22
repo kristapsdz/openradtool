@@ -494,7 +494,7 @@ gen_strct_func_iter(const struct config *cfg,
 	       "\t    (db, 0, STMT_%s_BY_SEARCH_%zu,\n"
 	       "\t     %zu, %s, SQLBOX_STMT_MULTI))\n"
 	       "\t	exit(EXIT_FAILURE);\n",
-	       s->parent->cname, num, parms,
+	       s->parent->name, num, parms,
 	       parms > 0 ? "parms" : "NULL");
 
 	/* Step til none left. */
@@ -606,7 +606,7 @@ gen_strct_func_list(const struct config *cfg,
 	       "\t    (db, 0, STMT_%s_BY_SEARCH_%zu,\n"
 	       "\t     %zu, %s, SQLBOX_STMT_MULTI))\n"
 	       "\t	exit(EXIT_FAILURE);\n",
-	       s->parent->cname, num, parms,
+	       s->parent->name, num, parms,
 	       parms > 0 ? "parms" : "NULL");
 
 	/* Step til none left. */
@@ -750,7 +750,7 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if ((f->flags & (FIELD_ROWID|FIELD_UNIQUE))) {
 			if (asprintf(&buf, "STMT_%s_BY_UNIQUE_%s",
-			    p->cname, f->name) < 0)
+			    p->name, f->name) < 0)
 				return -1;
 			gen_func_role_stmts_all(cfg, buf);
 			shown++;
@@ -765,7 +765,7 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 		if (s->rolemap == NULL)
 			continue;
 		if (asprintf(&buf, "STMT_%s_BY_SEARCH_%zu", 
-		    p->cname, pos - 1) < 0)
+		    p->name, pos - 1) < 0)
 			return -1;
 		TAILQ_FOREACH(rs, &s->rolemap->setq, entries)
 			if (strcmp(rs->name, "all") == 0)
@@ -779,7 +779,7 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 	/* Next: insertions. */
 
 	if (p->ins != NULL && p->ins->rolemap != NULL) {
-		if (asprintf(&buf, "STMT_%s_INSERT", p->cname) < 0)
+		if (asprintf(&buf, "STMT_%s_INSERT", p->name) < 0)
 			return -1;
 		TAILQ_FOREACH(rs, &p->ins->rolemap->setq, entries)
 			if (strcmp(rs->name, "all") == 0)
@@ -798,7 +798,7 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 		if (u->rolemap == NULL)
 			continue;
 		if (asprintf(&buf, "STMT_%s_UPDATE_%zu", 
-		    p->cname, pos - 1) < 0)
+		    p->name, pos - 1) < 0)
 			return -1;
 		TAILQ_FOREACH(rs, &u->rolemap->setq, entries)
 			if (strcmp(rs->name, "all") == 0)
@@ -817,7 +817,7 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 		if (u->rolemap == NULL)
 			continue;
 		if (asprintf(&buf, "STMT_%s_DELETE_%zu", 
-		    p->cname, pos - 1) < 0)
+		    p->name, pos - 1) < 0)
 			return -1;
 		TAILQ_FOREACH(rs, &u->rolemap->setq, entries)
 			if (strcmp(rs->name, "all") == 0)
@@ -1150,7 +1150,7 @@ gen_strct_func_count(const struct config *cfg,
 	printf("\tif (!sqlbox_prepare_bind_async\n"
 	       "\t    (db, 0, STMT_%s_BY_SEARCH_%zu, %zu, %s, 0))\n"
 	       "\t	exit(EXIT_FAILURE);\n",
-	       s->parent->cname, num, parms,
+	       s->parent->name, num, parms,
 	       parms > 0 ? "parms" : "NULL");
 
 	printf("\tif ((res = sqlbox_step(db, 0)) == NULL)\n"
@@ -1214,7 +1214,7 @@ gen_strct_func_srch(const struct config *cfg,
 	printf("\tif (!sqlbox_prepare_bind_async\n"
 	       "\t    (db, 0, STMT_%s_BY_SEARCH_%zu, %zu, %s, 0))\n"
 	       "\t	exit(EXIT_FAILURE);\n",
-	       s->parent->cname, num, parms,
+	       s->parent->name, num, parms,
 	       parms > 0 ? "parms" : "NULL");
 
 	printf("\tif ((res = sqlbox_step(db, 0)) != NULL "
@@ -1398,7 +1398,7 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 	       "\treturn id;\n"
 	       "}\n"
 	       "\n",
-	       p->cname, parms,
+	       p->name, parms,
 	       parms > 0 ? "parms" : "NULL");
 }
 
@@ -1535,7 +1535,7 @@ gen_func_reffind(const struct config *cfg, const struct strct *p)
 			       "\t}\n",
 			       f->ref->source->name,
 			       f->ref->source->name,
-			       f->ref->target->parent->cname,
+			       f->ref->target->parent->name,
 			       f->ref->target->name,
 			       f->ref->target->parent->name,
 			       f->name, f->name);
@@ -1606,7 +1606,7 @@ gen_func_fill(const struct config *cfg, const struct strct *p)
 	       "This starts grabbing results from \"pos\", "
 	       "which may be NULL to start from zero.\n"
 	       "This follows DB_SCHEMA_%s's order for columns.",
-	       p->name, p->cname);
+	       p->name, p->name);
 	printf("static void\n"
 	       "db_%s_fill(struct ort *ctx, struct %s *p, "
 		"const struct sqlbox_parmset *set, size_t *pos)\n",
@@ -1757,7 +1757,7 @@ gen_func_update(const struct config *cfg,
 	       "\treturn (c == SQLBOX_CODE_OK) ? 1 : 0;\n"
 	       "}\n"
 	       "\n",
-	       up->parent->cname, 
+	       up->parent->name, 
 	       up->type == UP_MODIFY ? "UPDATE" : "DELETE",
 	       num, parms, parms > 0 ? "parms" : "NULL");
 }
@@ -2392,22 +2392,22 @@ gen_enum(const struct strct *p)
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if ((f->flags & (FIELD_UNIQUE|FIELD_ROWID)))
 			printf("\tSTMT_%s_BY_UNIQUE_%s,\n", 
-				p->cname, f->name);
+				p->name, f->name);
 
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
-		printf("\tSTMT_%s_BY_SEARCH_%zu,\n", p->cname, pos++);
+		printf("\tSTMT_%s_BY_SEARCH_%zu,\n", p->name, pos++);
 
 	if (p->ins != NULL)
-		printf("\tSTMT_%s_INSERT,\n", p->cname);
+		printf("\tSTMT_%s_INSERT,\n", p->name);
 
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
-		printf("\tSTMT_%s_UPDATE_%zu,\n", p->cname, pos++);
+		printf("\tSTMT_%s_UPDATE_%zu,\n", p->name, pos++);
 
 	pos = 0;
 	TAILQ_FOREACH(u, &p->dq, entries)
-		printf("\tSTMT_%s_DELETE_%zu,\n", p->cname, pos++);
+		printf("\tSTMT_%s_DELETE_%zu,\n", p->name, pos++);
 }
 
 /*
@@ -2445,9 +2445,9 @@ gen_stmt_schema(const struct strct *orig, int first,
 			if (strcasecmp(a->name, pname) == 0)
 				break;
 		assert(a != NULL);
-		*col += printf("DB_SCHEMA_%s(%s) ", p->cname, a->alias);
+		*col += printf("DB_SCHEMA_%s(%s) ", p->name, a->alias);
 	} else
-		*col += printf("DB_SCHEMA_%s(%s) ", p->cname, p->name);
+		*col += printf("DB_SCHEMA_%s(%s) ", p->name, p->name);
 
 	/*
 	 * Recursive step.
@@ -2551,7 +2551,7 @@ gen_stmt(const struct strct *p)
 	TAILQ_FOREACH(f, &p->fq, entries) 
 		if ((f->flags & (FIELD_ROWID|FIELD_UNIQUE))) {
 			printf("\t/* STMT_%s_BY_UNIQUE_%s */\n"
-			       "\t\"SELECT ", p->cname, f->name);
+			       "\t\"SELECT ", p->name, f->name);
 			col = 16;
 			gen_stmt_schema(p, 1, p, NULL, &col);
 			printf("\" FROM %s", p->name);
@@ -2573,7 +2573,7 @@ gen_stmt(const struct strct *p)
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries) {
 		printf("\t/* STMT_%s_BY_SEARCH_%zu */\n"
-		       "\t\"SELECT ", p->cname, pos++);
+		       "\t\"SELECT ", p->name, pos++);
 		col = 16;
 		needquot = 0;
 
@@ -2726,7 +2726,7 @@ gen_stmt(const struct strct *p)
 	/* Insertion of a new record. */
 
 	if (p->ins != NULL) {
-		printf("\t/* STMT_%s_INSERT */\n", p->cname);
+		printf("\t/* STMT_%s_INSERT */\n", p->name);
 		col = printf("\t\"INSERT INTO %s ", p->name);
 
 		first = 1;
@@ -2782,7 +2782,7 @@ gen_stmt(const struct strct *p)
 	TAILQ_FOREACH(up, &p->uq, entries) {
 		printf("\t/* STMT_%s_UPDATE_%zu */\n"
 		       "\t\"UPDATE %s SET",
-		       p->cname, pos++, p->name);
+		       p->name, pos++, p->name);
 		first = 1;
 		TAILQ_FOREACH(ur, &up->mrq, entries) {
 			putchar(first ? ' ' : ',');
@@ -2841,7 +2841,7 @@ gen_stmt(const struct strct *p)
 	TAILQ_FOREACH(up, &p->dq, entries) {
 		printf("\t/* STMT_%s_DELETE_%zu */\n"
 		       "\t\"DELETE FROM %s",
-		       p->cname, pos++, p->name);
+		       p->name, pos++, p->name);
 		first = 1;
 		TAILQ_FOREACH(ur, &up->crq, entries) {
 			printf(" %s ", first ? "WHERE" : "AND");
@@ -2905,7 +2905,7 @@ gen_define_schema(const struct strct *p)
 	const struct field *f;
 	const char *s = "";
 
-	printf("#define DB_SCHEMA_%s(_x) \\", p->cname);
+	printf("#define DB_SCHEMA_%s(_x) \\", p->name);
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		if (FTYPE_STRUCT == f->type)
 			continue;

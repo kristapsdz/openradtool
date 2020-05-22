@@ -319,7 +319,7 @@ struct	sent {
 	enum optype	  op; /* operator */
 	char		 *name; /* fname w/o last field or NULL */
 	char		 *fname; /* dot-form lowercase of all fields */
-	char		 *uname; /* underscore-form lowercase form */
+	char		 *uname; /* fname but with underscores */
 	struct alias	 *alias; /* resolved alias */
 	unsigned int	  flags; 
 #define	SENT_IS_UNIQUE	  0x01 /* has a rowid/unique in its refs */
@@ -518,7 +518,6 @@ struct	insert {
  */
 struct	strct {
 	char		  *name; /* name of structure */
-	char		  *cname; /* name of structure (capitals) */
 	char		  *doc; /* documentation */
 	size_t		   height; /* dependency order */
 	struct pos	   pos; /* parse point */

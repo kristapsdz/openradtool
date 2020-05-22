@@ -54,8 +54,11 @@ static	const char *const optypes[OPTYPE__MAX] = {
 	"is not null" /* OPTYPE_NOTNULL */
 };
 
+/*
+ * Emit as uppercase.
+ */
 static void
-gen_caps(const char *cp)
+gen_upper(const char *cp)
 {
 
 	for ( ; *cp != '\0'; cp++)
@@ -127,17 +130,17 @@ gen_bitfield(const struct bitf *b)
 		if (NULL != bi->doc)
 			print_commentt(1, COMMENT_C, bi->doc);
 		printf("\tBITI_");
-		gen_caps(b->name);
+		gen_upper(b->name);
 		printf("_%s = %" PRId64 ",\n", bi->name, bi->value);
 		printf("\tBITF_");
-		gen_caps(b->name);
+		gen_upper(b->name);
 		printf("_%s = (1U << %" PRId64 "),\n",
 			bi->name, bi->value);
 		if (bi->value > maxvalue)
 			maxvalue = bi->value;
 	}
 	printf("\tBITI_");
-	gen_caps(b->name);
+	gen_upper(b->name);
 	printf("__MAX = %" PRId64 ",\n", maxvalue + 1);
 	puts("};\n"
 	     "");
@@ -159,7 +162,7 @@ gen_enum(const struct enm *e)
 		if (NULL != ei->doc)
 			print_commentt(1, COMMENT_C, ei->doc);
 		putchar('\t');
-		gen_caps(e->name);
+		gen_upper(e->name);
 		printf("_%s = %" PRId64 "%s\n", ei->name, ei->value, 
 			TAILQ_NEXT(ei, entries) ? "," : "");
 	}

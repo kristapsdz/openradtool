@@ -273,7 +273,6 @@ parse_free_strct(struct strct *p)
 
 	free(p->doc);
 	free(p->name);
-	free(p->cname);
 	free(p->ins);
 	free(p);
 }

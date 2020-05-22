@@ -21,6 +21,7 @@
 #endif
 
 #include <assert.h>
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -354,8 +355,7 @@ print_name_db_search(const struct search *s)
 		sz += (rc = printf("_by")) > 0 ? rc : 0;
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
 			rc = printf("_%s_%s", 
-				sent->uname,
-				optypes[sent->op]);
+				sent->uname, optypes[sent->op]);
 			sz += rc > 0 ? rc : 0;
 		}
 	} else if (s->name != NULL)

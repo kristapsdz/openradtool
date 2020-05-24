@@ -222,7 +222,6 @@ parse_free_rolemap(struct rolemap *rm)
 
 	while ((r = TAILQ_FIRST(&rm->setq)) != NULL) {
 		TAILQ_REMOVE(&rm->setq, r, entries);
-		free(r->name);
 		free(r);
 	}
 
@@ -310,6 +309,9 @@ parse_free_resolve(struct resolve *p)
 		for (i = 0; i < p->struct_grouprow.namesz; i++)
 			free(p->struct_grouprow.names[i]);
 		free(p->struct_grouprow.names);
+		break;
+	case RESOLVE_ROLE:
+		free(p->struct_role.name);
 		break;
 	case RESOLVE_ORDER:
 		for (i = 0; i < p->struct_order.namesz; i++)

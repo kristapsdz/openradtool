@@ -540,7 +540,8 @@ parse_write_rolemap(struct writer *w, const struct rolemap *p)
 		return 0;
 
 	TAILQ_FOREACH(r, &p->setq, entries)
-		if (!wprint(w, "%s %s", nf++ ? "," : "", r->name))
+		if (!wprint(w, "%s %s",
+		     nf++ ? "," : "", r->role->name))
 			return 0;
 
 	if (!wprint(w, " { %s", rolemapts[p->type]))

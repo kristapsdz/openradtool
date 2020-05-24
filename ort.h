@@ -290,7 +290,6 @@ struct	rolemap {
 	char		    *name; /* name of operation */
 	enum rolemapt	     type; /* type */
 	struct rolesetq	     setq; /* allowed roles */
-	struct pos	     pos; /* position */
 	TAILQ_ENTRY(rolemap) entries;
 };
 
@@ -299,8 +298,8 @@ struct	rolemap {
  * A roleset (after linkage) will map into an actual role.
  */
 struct	roleset {
-	char		    *name; /* name of role */
-	struct role	    *role; /* post-linkage association */
+	struct role	    *role; /* role in question */
+	struct pos	     pos; /* parse point */
 	struct rolemap	    *parent; /* which operation */
 	TAILQ_ENTRY(roleset) entries;
 };

@@ -28,6 +28,7 @@ enum	resolvet {
 	RESOLVE_DISTINCT,
 	RESOLVE_GROUPROW,
 	RESOLVE_ORDER,
+	RESOLVE_ROLE,
 	RESOLVE_SENT,
 	RESOLVE_UNIQUE,
 	RESOLVE_UP_CONSTRAINT,
@@ -88,6 +89,10 @@ struct	resolve {
 				char		**names;
 				size_t		  namesz;
 		} struct_order; /* ...order ->bar<- */
+		struct struct_role {
+				struct roleset	*result;
+				char		*name;
+		} struct_role; /* ...roles ->bar<- */
 		struct struct_sent {
 				struct sent	 *result;
 				char		**names;

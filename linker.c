@@ -502,33 +502,8 @@ resolve_search(struct config *cfg, struct search *srch)
 }
 
 /*
- * Given a single roleset "rs", look it up recursively in the queue
- * given by "rq", which should initially be invoked by the top-level
- * queue of the configuration.
- * On success, sets the associated role and returns non-zero.
- * On failure, returns zero.
- */
-static int
-resolve_roles(struct config *cfg, struct roleset *rs, struct roleq *rq)
-{
-	struct role 	*r;
-
-	TAILQ_FOREACH(r, rq, entries) {
-		if (0 == strcasecmp(rs->name, r->name)) {
-			rs->role = r;
-			return 1;
-		} else if (resolve_roles(cfg, rs, &r->subrq))
-			return 1;
-	}
-
-	return 0;
-}
-
-/*
- * Given the rolemap "rm", look through all its rolesets ("roles") and
- * match the roles to those given in the configuration "cfg".
- * Then make sure that the matched roles, if any, don't overlap in the
- * tree of roles.
+ * Given the rolemap "rm", make sure that the matched roles, if any,
+ * don't overlap in the tree of roles.
  * Return zero on success, >0 with errors, and <0 on fatal errors.
  * (Never returns the <0 case: this is just for caller convenience.)
  */
@@ -539,16 +514,6 @@ resolve_roleset(struct config *cfg, struct rolemap *rm)
 	struct role	*rp;
 	ssize_t		 i = 0;
 
-	TAILQ_FOREACH(rs, &rm->setq, entries) {
-		if (NULL != rs->role)
-			continue;
-		if (resolve_roles(cfg, rs, &cfg->rq))
-			continue;
-		gen_errx(cfg, &rs->parent->pos, 
-			"unknown role: %s", rs->name);
-		i++;
-	}
-
 	/*
 	 * For each valid role in the roleset, see if another role is
 	 * specified that's a parent of the current role.
@@ -557,8 +522,6 @@ resolve_roleset(struct config *cfg, struct rolemap *rm)
 	 */
 
 	TAILQ_FOREACH(rs, &rm->setq, entries) {
-		if (NULL == rs->role)
-			continue;
 		TAILQ_FOREACH(rrs, &rm->setq, entries) {
 			if (rrs == rs || NULL == (rp = rrs->role))
 				continue;
@@ -568,8 +531,10 @@ resolve_roleset(struct config *cfg, struct rolemap *rm)
 					break;
 			if (NULL == rp)
 				continue;
-			gen_errx(cfg, &rs->parent->pos, 
-				"overlapping role: %s", rs->name);
+			gen_errx(cfg, &rs->pos, 
+				"overlapping role: %s, %s",
+					rrs->role->name,
+					rs->role->name);
 			i++;
 		}
 	}
@@ -602,16 +567,15 @@ resolve_roleset_coverset(struct config *cfg,
 	if (NULL == *rm) {
 		*rm = calloc(1, sizeof(struct rolemap));
 		if (NULL == *rm) {
-			gen_err(cfg, &rs->parent->pos);
+			gen_err(cfg, &rs->pos);
 			return -1;
 		}
 		TAILQ_INSERT_TAIL(&p->rq, *rm, entries);
 		TAILQ_INIT(&(*rm)->setq);
-		(*rm)->pos = rs->parent->pos;
 		(*rm)->type = type;
 		if (NULL != name &&
 		    NULL == ((*rm)->name = strdup(name))) {
-			gen_err(cfg, &rs->parent->pos);
+			gen_err(cfg, &rs->pos);
 			return -1;
 		}
 	}
@@ -622,7 +586,7 @@ resolve_roleset_coverset(struct config *cfg,
 		if (NULL == rrs->role ||
 		    rs->role != rrs->role)
 			continue;
-		gen_errx(cfg, &(*rm)->pos, "role overlapped "
+		gen_errx(cfg, &rrs->pos, "role overlapped "
 			"by \"all\" statement");
 		return 1;
 	}
@@ -633,16 +597,13 @@ resolve_roleset_coverset(struct config *cfg,
 	 */
 
 	if (NULL == (rrs = calloc(1, sizeof(struct roleset)))) {
-		gen_err(cfg, &rs->parent->pos);
+		gen_err(cfg, &rs->pos);
 		return -1;
 	}
 	TAILQ_INSERT_TAIL(&(*rm)->setq, rrs, entries);
 	rrs->role = rs->role;
+	rrs->pos = rs->pos;
 	rrs->parent = *rm;
-	if (NULL == (rrs->name = strdup(rs->name))) {
-		gen_err(cfg, &rs->parent->pos);
-		return -1;
-	}
 	return 0;
 }
 
@@ -738,7 +699,7 @@ rolemap_merge(struct config *cfg,
 
 	TAILQ_FOREACH(rsrc, &src->setq, entries) {
 		TAILQ_FOREACH(rdst, &(*dst)->setq, entries)
-			if (0 == strcasecmp(rdst->name, rsrc->name))
+			if (rdst->role == rsrc->role)
 				break;
 		if (NULL != rdst)
 			continue;
@@ -747,16 +708,13 @@ rolemap_merge(struct config *cfg,
 
 		rdst = calloc(1, sizeof(struct roleset));
 		if (NULL == rdst) {
-			gen_err(cfg, &src->pos);
+			gen_err(cfg, &rsrc->pos);
 			return -1;
 		}
 		TAILQ_INSERT_TAIL(&(*dst)->setq, rdst, entries);
 		rdst->parent = *dst;
-		rdst->name = strdup(rsrc->name);
-		if (NULL == rdst->name) {
-			gen_err(cfg, &src->pos);
-			return -1;
-		}
+		rdst->pos = rsrc->pos;
+		rdst->role = rsrc->role;
 	}
 
 	return 1;
@@ -886,7 +844,7 @@ resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
 		abort();
 	}
 
-	gen_errx(cfg, &rm->pos, "corresponding %s %s not found%s%s",
+	gen_errx(cfg, &p->pos, "corresponding %s %s not found%s%s",
 		rolemapts[rm->type],
 		rm->type == ROLEMAP_NOEXPORT ? "field" : "function",
 		rm->type == ROLEMAP_INSERT ? "" : ": ",
@@ -960,13 +918,31 @@ check_unique_unique(struct config *cfg, const struct strct *s)
 			}
 			if (nf != NULL)
 				break;
-			gen_warnx(cfg, &u->pos, "duplicate "
+			gen_errx(cfg, &u->pos, "duplicate "
 				"unique statements: %s:%zu:%zu",
 				uu->pos.fname, uu->pos.line,
 				uu->pos.column);
 			errs++;
 		}
 	}
+
+	return errs == 0;
+}
+
+static int
+check_unique_roles(struct config *cfg, const struct rolemap *rm)
+{
+	const struct roleset	*rs, *rrs;
+	size_t			 errs = 0;
+
+	TAILQ_FOREACH(rs, &rm->setq, entries)
+		TAILQ_FOREACH(rrs, &rm->setq, entries)
+			if (rs != rrs &&
+			    rs->role == rrs->role) {
+				gen_errx(cfg, &rrs->role->pos,
+					"duplicate operation role");
+				errs++;
+			}
 
 	return errs == 0;
 }
@@ -1003,6 +979,15 @@ ort_parse_close(struct config *cfg)
 	i = 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		i += !check_unique_unique(cfg, p);
+	if (i > 0)
+		return 0;
+
+	/* Check that each rolemap has no duplicate roles. */
+
+	i = 0;
+	TAILQ_FOREACH(p, &cfg->sq, entries)
+		TAILQ_FOREACH(rm, &p->rq, entries)
+			i += !check_unique_roles(cfg, rm);
 	if (i > 0)
 		return 0;
 

@@ -592,6 +592,7 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 /*
  * Parse the field used in a search.
  * This is the search_terms designation in parse_config_search().
+		}
  * This may consist of nested structures, which uses dot-notation to
  * signify the field within a field's reference structure.
  *
@@ -818,7 +819,7 @@ parse_config_search_params(struct parse *p, struct search *s)
  * The fields are within the current structure.
  */
 static void
-parse_config_unique(struct parse *p, struct strct *s)
+parse_struct_unique(struct parse *p, struct strct *s)
 {
 	struct nref	 *nf;
 	struct unique	 *up;
@@ -896,7 +897,7 @@ parse_config_unique(struct parse *p, struct strct *s)
  * the search parameters.
  */
 static void
-parse_config_update(struct parse *p, struct strct *s, enum upt type)
+parse_struct_update(struct parse *p, struct strct *s, enum upt type)
 {
 	struct update	*up;
 	struct uref	*ur;
@@ -1083,7 +1084,7 @@ terms:
  * The optional params are in parse_config_search_params().
  */
 static void
-parse_config_search(struct parse *p, struct strct *s, enum stype stype)
+parse_struct_search(struct parse *p, struct strct *s, enum stype stype)
 {
 	struct search	*srch;
 
@@ -1130,52 +1131,30 @@ parse_config_search(struct parse *p, struct strct *s, enum stype stype)
 		parse_config_search_params(p, srch);
 }
 
-static int
-roleset_alloc(struct parse *p, struct rolesetq *rq, 
-	const char *name, struct rolemap *parent)
-{
-	struct roleset	*rs;
-
-	if (NULL == (rs = calloc(1, sizeof(struct roleset)))) {
-		parse_err(p);
-		return 0;
-	} else if (NULL == (rs->name = strdup(name))) {
-		parse_err(p);
-		free(rs);
-		return 0;
-	}
-
-	rs->parent = parent;
-	TAILQ_INSERT_TAIL(rq, rs, entries);
-	return 1;
-}
-
 /*
- * Look up a rolemap of the given type with the give name, e.g.,
- * "noexport foo", where "noexport" is the type and "foo" is the name.
- * Each structure has a single rolemap that's distributed for all roles
- * that have access to that role.
- * For example, "noexport foo" might be assigned to roles 1, 2, and 3.
+ * Look up or create a rolemap (type and name of role permission).
+ * Assign roles in "ns" to the map.
  */
 static int
 roleset_assign(struct parse *p, struct strct *s, 
-	struct rolesetq *rq, enum rolemapt type, const char *name)
+	const char **ns, size_t nsz, 
+	enum rolemapt type, const char *name)
 {
-	struct roleset	*rs, *rrs;
+	struct roleset	*rs;
 	struct rolemap	*rm;
+	size_t		 i;
+	struct resolve	*r;
 
-	TAILQ_FOREACH(rm, &s->rq, entries) {
-		if (rm->type != type)
-			continue;
-		if ((NULL == name && NULL != rm->name) ||
-		    (NULL != name && NULL == rm->name))
-			continue;
-		if (NULL != name && strcasecmp(rm->name, name))
-			continue;
-		break;
-	}
+	/* Look up existing maps by type and possibly name. */
 
-	if (NULL == rm) {
+	TAILQ_FOREACH(rm, &s->rq, entries)
+		if (rm->type == type &&
+		    ((name == NULL && rm->name == NULL) ||
+		     (name != NULL && rm->name != NULL &&
+		      strcasecmp(rm->name, name) == 0)))
+			break;
+
+	if (rm == NULL) {
 		rm = calloc(1, sizeof(struct rolemap));
 		if (NULL == rm) {
 			parse_err(p);
@@ -1183,75 +1162,58 @@ roleset_assign(struct parse *p, struct strct *s,
 		}
 		TAILQ_INIT(&rm->setq);
 		rm->type = type;
-		parse_point(p, &rm->pos);
 		TAILQ_INSERT_TAIL(&s->rq, rm, entries);
-		if (NULL != name) {
-			rm->name = strdup(name);
-			if (NULL == rm->name) {
-				parse_err(p);
-				return 0;
-			}
-		} 
+		if (name != NULL &&
+		    (rm->name = strdup(name)) == NULL) {
+			parse_err(p);
+			return 0;
+		}
 	}
 
-	/*
-	 * Now go through the rolemap's set and append the new
-	 * set entries if not already specified.
-	 * We deep-copy the roleset.
-	 */
+	/* Create rolesets with all given names. */
 
-	TAILQ_FOREACH(rs, rq, entries) {
-		TAILQ_FOREACH(rrs, &rm->setq, entries) {
-			if (strcasecmp(rrs->name, rs->name))
-				continue;
-			parse_warnx(p, "duplicate role "
-				"assigned to constraint");
-			break;
-		}
-		if (NULL != rrs)
-			continue;
-		if ( ! roleset_alloc(p, &rm->setq, rs->name, rm))
+	for (i = 0; i < nsz; i++) {
+		rs = calloc(1, sizeof(struct roleset));
+		if (rs == NULL) {
+			parse_err(p);
 			return 0;
+		}
+		parse_point(p, &rs->pos);
+		rs->parent = rm;
+		TAILQ_INSERT_TAIL(&rm->setq, rs, entries);
+
+		r = calloc(1, sizeof(struct resolve));
+		if (r == NULL) {
+			parse_err(p);
+			return 0;
+		}
+		TAILQ_INSERT_TAIL(&p->cfg->priv->rq, r, entries);
+		r->type = RESOLVE_ROLE;
+		r->struct_role.result = rs;
+		r->struct_role.name = strdup(ns[i]);
+		if (r->struct_role.name == NULL) {
+			parse_err(p);
+			return 0;
+		}
 	}
 
 	return 1;
 }
 
 /*
- * For a given structure "s", allow access to functions (insert, delete,
- * etc.) based on a set of roles.
- * This is invoked within parse_struct_date().
- * Its syntax is as follows:
- *
- *   "roles" name ["," name ]* "{" [ROLE ";"]* "};"
- *
- * The roles ("ROLE") can be as follows, where "NAME" is the name of the
- * item as described in the structure.
- *
- *   "all"
- *   "delete" NAME
- *   "insert"
- *   "iterate" NAME
- *   "list" NAME
- *   "noexport" [NAME]
- *   "search" NAME
- *   "update" NAME
+ * Parse out a set of role assignments.
+ * Assignment begins with a set of role names (into "rq") then a list of
+ * operations available to those roles.
  */
 static void
-parse_config_roles(struct parse *p, struct strct *s)
+parse_struct_roles(struct parse *p, struct strct *s)
 {
-	struct roleset	*rs;
-	struct rolesetq	 rq;
-	enum rolemapt	 type;
+	enum rolemapt	  type;
+	const char	 *name;
+	char		**ns = NULL;
+	size_t		  i, nsz = 0;
 
-	TAILQ_INIT(&rq);
-
-	/*
-	 * First, gather up all of the roles that we're going to
-	 * associate with whatever comes next and put them in "rq".
-	 * If anything happens during any of these routines, we enter
-	 * the "cleanup" label, which cleans up the "rq" queue.
-	 */
+	/* Get all role names we're going to assign. */
 
 	if (parse_next(p) != TOK_IDENT) {
 		parse_errx(p, "expected role name");
@@ -1259,10 +1221,10 @@ parse_config_roles(struct parse *p, struct strct *s)
 	} else if (strcasecmp("none", p->last.string) == 0) {
 		parse_errx(p, "cannot assign \"none\" role");
 		return;
-	} 
-	
-	if (!roleset_alloc(p, &rq, p->last.string, NULL))
-		goto cleanup;
+	} else if (!name_append(&ns, &nsz, p->last.string)) {
+		parse_err(p);
+		return;
+	}
 
 	while (!PARSE_STOP(p) && parse_next(p) != TOK_LBRACE) {
 		if (p->lasttype != TOK_COMMA) {
@@ -1275,35 +1237,27 @@ parse_config_roles(struct parse *p, struct strct *s)
 			parse_errx(p, "cannot assign \"none\" role");
 			goto cleanup;
 		}
-		TAILQ_FOREACH(rs, &rq, entries) {
-			if (strcasecmp(rs->name, p->last.string))
-				continue;
-			parse_errx(p, "duplicate role name");
-			goto cleanup;
+		if (!name_append(&ns, &nsz, p->last.string)) {
+			parse_err(p);
+			return;
 		}
-		if (!roleset_alloc(p, &rq, p->last.string, NULL))
-			goto cleanup;
 	}
-
-	/* If something bad has happened, clean up. */
 
 	if (PARSE_STOP(p) || p->lasttype != TOK_LBRACE)
 		goto cleanup;
 
-	/* 
-	 * Next phase: read through the constraints.
-	 * Apply the roles above to each of the constraints, possibly
-	 * making them along the way.
-	 * We need to deep-copy the constraints instead of copying the
-	 * pointer because we might be applying the same roleset to
-	 * different constraint types.
-	 */
+	/* Assign each role to each given operation. */
 
-	while (!PARSE_STOP(p) && parse_next(p) != TOK_RBRACE) {
+	while (!PARSE_STOP(p)) {
+		if (parse_next(p) == TOK_RBRACE)
+			break;
 		if (p->lasttype != TOK_IDENT) {
 			parse_errx(p, "expected role constraint type");
 			goto cleanup;
 		}
+
+		/* What kind of operation. */
+
 		for (type = 0; type < ROLEMAP__MAX; type++) 
 			if (strcasecmp
 			    (p->last.string, rolemapts[type]) == 0)
@@ -1313,10 +1267,9 @@ parse_config_roles(struct parse *p, struct strct *s)
 			goto cleanup;
 		}
 
+		/* Some constraints are named, some aren't. */
+
 		parse_next(p);
-
-		/* Some constraints are named; some aren't. */
-
 		if (p->lasttype == TOK_IDENT) {
 			if (type == ROLEMAP_INSERT || 
 			    type == ROLEMAP_ALL) {
@@ -1324,9 +1277,7 @@ parse_config_roles(struct parse *p, struct strct *s)
 					"role constraint name");
 				goto cleanup;
 			}
-			if (!roleset_assign(p, s, 
-			    &rq, type, p->last.string))
-				goto cleanup;
+			name = p->last.string;
 			parse_next(p);
 		} else if (p->lasttype == TOK_SEMICOLON) {
 			if (type != ROLEMAP_INSERT &&
@@ -1336,13 +1287,18 @@ parse_config_roles(struct parse *p, struct strct *s)
 					"role constraint name");
 				goto cleanup;
 			}
-			if (!roleset_assign(p, s, &rq, type, NULL))
-				goto cleanup;
+			name = NULL;
 		} else {
 			parse_errx(p, "expected role constraint "
 				"name or semicolon");
 			goto cleanup;
 		} 
+
+		/* Assign all roles to the given operation. */
+
+		if (!roleset_assign(p, s, 
+		    (const char **)ns, nsz, type, name))
+			goto cleanup;
 
 		if (p->lasttype != TOK_SEMICOLON) {
 			parse_errx(p, "expected semicolon");
@@ -1355,29 +1311,49 @@ parse_config_roles(struct parse *p, struct strct *s)
 			parse_errx(p, "expected semicolon");
 
 cleanup:
-	while ((rs = TAILQ_FIRST(&rq)) != NULL) {
-		TAILQ_REMOVE(&rq, rs, entries);
-		free(rs->name);
-		free(rs);
-	}
+	for (i = 0; i < nsz; i++)
+		free(ns[i]);
+	free(ns);
 }
 
 /*
- * Read an individual structure.
- * This opens and closes the structure, then reads all of the field
- * elements within.
- * Its syntax is:
- * 
- *  "{" 
- *    ["field" ident FIELD]+ 
- *    [["iterate"|"search"|"list"|"count"] search_fields]*
- *    ["update" update_fields]*
- *    ["delete" delete_fields]*
- *    ["insert"]*
- *    ["unique" unique_fields]*
- *    ["comment" quoted_string]?
- *    ["roles" role_fields]*
- *  "};"
+ * Parse the comment field of a struct until and including the trailing
+ * semicolon.
+ */
+static void
+parse_struct_comment(struct parse *p, struct strct *s)
+{
+
+	if (!parse_comment(p, &s->doc))
+		return;
+	if (parse_next(p) != TOK_SEMICOLON)
+		parse_errx(p, "expected semicolon");
+}
+
+/*
+ * Parse the insert statement of a struct until and including the
+ * trailing semicolon.
+ */
+static void
+parse_struct_insert(struct parse *p, struct strct *s)
+{
+
+	if (s->ins != NULL) {
+		parse_errx(p, "insert already defined");
+		return;
+	}
+	if ((s->ins = calloc(1, sizeof(struct insert))) == NULL) {
+		parse_err(p);
+		return;
+	}
+	s->ins->parent = s;
+	parse_point(p, &s->ins->pos);
+	if (parse_next(p) != TOK_SEMICOLON)
+		parse_errx(p, "expected semicolon");
+}
+
+/*
+ * Parse a full struct until and including the semicolon following.
  */
 static void
 parse_struct_data(struct parse *p, struct strct *s)
@@ -1391,56 +1367,33 @@ parse_struct_data(struct parse *p, struct strct *s)
 	while (!PARSE_STOP(p)) {
 		if (parse_next(p) == TOK_RBRACE)
 			break;
-		if (p->lasttype != TOK_IDENT) {
-			parse_errx(p, "expected struct data type");
-			return;
-		}
-		if (strcasecmp(p->last.string, "comment") == 0) {
-			if (!parse_comment(p, &s->doc))
-				return;
-			if (parse_next(p) != TOK_SEMICOLON) {
-				parse_errx(p, "expected end of comment");
-				return;
-			}
-		} else if (strcasecmp(p->last.string, "search") == 0) {
-			parse_config_search(p, s, STYPE_SEARCH);
-		} else if (strcasecmp(p->last.string, "count") == 0) {
-			parse_config_search(p, s, STYPE_COUNT);
-		} else if (strcasecmp(p->last.string, "list") == 0) {
-			parse_config_search(p, s, STYPE_LIST);
-		} else if (strcasecmp(p->last.string, "iterate") == 0) {
-			parse_config_search(p, s, STYPE_ITERATE);
-		} else if (strcasecmp(p->last.string, "update") == 0) {
-			parse_config_update(p, s, UP_MODIFY);
-		} else if (strcasecmp(p->last.string, "delete") == 0) {
-			parse_config_update(p, s, UP_DELETE);
-		} else if (strcasecmp(p->last.string, "insert") == 0) {
-			if (s->ins != NULL) {
-				parse_errx(p, "insert already defined");
-				return;
-			}
-			s->ins = calloc(1, sizeof(struct insert));
-			if (s->ins == NULL) {
-				parse_err(p);
-				return;
-			}
-			s->ins->parent = s;
-			parse_point(p, &s->ins->pos);
-			if (parse_next(p) != TOK_SEMICOLON) {
-				parse_errx(p, "expected semicolon");
-				return;
-			}
-		} else if (strcasecmp(p->last.string, "unique") == 0) {
-			parse_config_unique(p, s);
-		} else if (strcasecmp(p->last.string, "roles") == 0) {
-			parse_config_roles(p, s);
-		} else if (strcasecmp(p->last.string, "field") == 0) {
+		if (p->lasttype != TOK_IDENT)
+			parse_errx(p, "expected statement type");
+		else if (strcasecmp(p->last.string, "comment") == 0)
+			parse_struct_comment(p, s);
+		else if (strcasecmp(p->last.string, "search") == 0)
+			parse_struct_search(p, s, STYPE_SEARCH);
+		else if (strcasecmp(p->last.string, "count") == 0)
+			parse_struct_search(p, s, STYPE_COUNT);
+		else if (strcasecmp(p->last.string, "list") == 0)
+			parse_struct_search(p, s, STYPE_LIST);
+		else if (strcasecmp(p->last.string, "iterate") == 0)
+			parse_struct_search(p, s, STYPE_ITERATE);
+		else if (strcasecmp(p->last.string, "update") == 0)
+			parse_struct_update(p, s, UP_MODIFY);
+		else if (strcasecmp(p->last.string, "delete") == 0)
+			parse_struct_update(p, s, UP_DELETE);
+		else if (strcasecmp(p->last.string, "insert") == 0)
+			parse_struct_insert(p, s);
+		else if (strcasecmp(p->last.string, "unique") == 0)
+			parse_struct_unique(p, s);
+		else if (strcasecmp(p->last.string, "roles") == 0)
+			parse_struct_roles(p, s);
+		else if (strcasecmp(p->last.string, "field") == 0)
 			parse_field(p, s);
-		} else {
-			parse_errx(p, "unknown struct data "
-				"type: %s", p->last.string);
-			return;
-		}
+		else
+			parse_errx(p, "unknown statement type: %s",
+				p->last.string);
 	}
 
 	if (PARSE_STOP(p))

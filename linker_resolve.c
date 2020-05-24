@@ -382,6 +382,34 @@ resolve_field_enum(struct config *cfg, struct field_enum *r)
 }
 
 /*
+ * Recursively look up "name" in the queue "rq" and all of its
+ * descendents.
+ * Returns the role or NULL if none were found.
+ */
+static struct role *
+role_lookup(struct roleq *rq, const char *name)
+{
+	struct role	*r, *res;
+
+	TAILQ_FOREACH(r, rq, entries)
+		if (strcasecmp(r->name, name) == 0)
+			return r;
+		else if ((res = role_lookup(&r->subrq, name)) != NULL)
+			return res;
+
+	return NULL;
+}
+
+static int
+resolve_struct_role(struct config *cfg, struct struct_role *r)
+{
+
+	if ((r->result->role = role_lookup(&cfg->rq, r->name)) == NULL)
+		gen_errx(cfg, &r->result->pos, "unknown role");
+	return r->result->role != NULL;
+}
+
+/*
  * Look up the bitfield type by its name.
  */
 static int
@@ -552,6 +580,10 @@ linker_resolve(struct config *cfg)
 			 * These require both RESOLVE_FIELD_FOREIGN and
 			 * the later RESOLVE_FIELD_STRUCT.
 			 */
+			break;
+		case RESOLVE_ROLE:
+			fail += !resolve_struct_role
+				(cfg, &r->struct_role);
 			break;
 		case RESOLVE_UNIQUE:
 			fail += !resolve_struct_unique

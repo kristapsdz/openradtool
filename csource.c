@@ -768,7 +768,7 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 		    p->name, pos - 1) < 0)
 			return -1;
 		TAILQ_FOREACH(rs, &s->rolemap->setq, entries)
-			if (strcmp(rs->name, "all") == 0)
+			if (strcmp(rs->role->name, "all") == 0)
 				gen_func_role_stmts_all(cfg, buf);
 			else
 				gen_func_role_stmt(rs->role, buf);
@@ -782,7 +782,7 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 		if (asprintf(&buf, "STMT_%s_INSERT", p->name) < 0)
 			return -1;
 		TAILQ_FOREACH(rs, &p->ins->rolemap->setq, entries)
-			if (strcmp(rs->name, "all") == 0)
+			if (strcmp(rs->role->name, "all") == 0)
 				gen_func_role_stmts_all(cfg, buf);
 			else
 				gen_func_role_stmt(rs->role, buf);
@@ -801,7 +801,7 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 		    p->name, pos - 1) < 0)
 			return -1;
 		TAILQ_FOREACH(rs, &u->rolemap->setq, entries)
-			if (strcmp(rs->name, "all") == 0)
+			if (strcmp(rs->role->name, "all") == 0)
 				gen_func_role_stmts_all(cfg, buf);
 			else
 				gen_func_role_stmt(rs->role, buf);
@@ -820,7 +820,7 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 		    p->name, pos - 1) < 0)
 			return -1;
 		TAILQ_FOREACH(rs, &u->rolemap->setq, entries)
-			if (strcmp(rs->name, "all") == 0)
+			if (strcmp(rs->role->name, "all") == 0)
 				gen_func_role_stmts_all(cfg, buf);
 			else
 				gen_func_role_stmt(rs->role, buf);

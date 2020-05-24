@@ -735,7 +735,7 @@ gen_func_role_stmts_all(const struct config *cfg, const char *stmt)
 static int
 gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 {
-	const struct roleset	*rs;
+	const struct rref	*rs;
 	const struct search 	*s;
 	const struct update 	*u;
 	const struct field 	*f;
@@ -767,7 +767,7 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 		if (asprintf(&buf, "STMT_%s_BY_SEARCH_%zu", 
 		    p->name, pos - 1) < 0)
 			return -1;
-		TAILQ_FOREACH(rs, &s->rolemap->setq, entries)
+		TAILQ_FOREACH(rs, &s->rolemap->rq, entries)
 			if (strcmp(rs->role->name, "all") == 0)
 				gen_func_role_stmts_all(cfg, buf);
 			else
@@ -781,7 +781,7 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 	if (p->ins != NULL && p->ins->rolemap != NULL) {
 		if (asprintf(&buf, "STMT_%s_INSERT", p->name) < 0)
 			return -1;
-		TAILQ_FOREACH(rs, &p->ins->rolemap->setq, entries)
+		TAILQ_FOREACH(rs, &p->ins->rolemap->rq, entries)
 			if (strcmp(rs->role->name, "all") == 0)
 				gen_func_role_stmts_all(cfg, buf);
 			else
@@ -800,7 +800,7 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 		if (asprintf(&buf, "STMT_%s_UPDATE_%zu", 
 		    p->name, pos - 1) < 0)
 			return -1;
-		TAILQ_FOREACH(rs, &u->rolemap->setq, entries)
+		TAILQ_FOREACH(rs, &u->rolemap->rq, entries)
 			if (strcmp(rs->role->name, "all") == 0)
 				gen_func_role_stmts_all(cfg, buf);
 			else
@@ -819,7 +819,7 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 		if (asprintf(&buf, "STMT_%s_DELETE_%zu", 
 		    p->name, pos - 1) < 0)
 			return -1;
-		TAILQ_FOREACH(rs, &u->rolemap->setq, entries)
+		TAILQ_FOREACH(rs, &u->rolemap->rq, entries)
 			if (strcmp(rs->role->name, "all") == 0)
 				gen_func_role_stmts_all(cfg, buf);
 			else
@@ -1885,9 +1885,9 @@ gen_func_json_obj(const struct strct *p)
 static void
 gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 {
-	char		 tabs[] = "\t\t";
-	struct roleset	*rs;
-	int		 hassp = *sp;
+	char		 	 tabs[] = "\t\t";
+	const struct rref	*rs;
+	int		 	 hassp = *sp;
 
 	*sp = 0;
 
@@ -1913,7 +1913,7 @@ gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 		if ( ! hassp)
 			puts("");
 		puts("\tswitch (db_role_stored(p->priv_store)) {");
-		TAILQ_FOREACH(rs, &f->rolemap->setq, entries)
+		TAILQ_FOREACH(rs, &f->rolemap->rq, entries)
 			gen_role(rs->role);
 		print_commentt(2, COMMENT_C, 
 			"Don't export field to noted roles.");

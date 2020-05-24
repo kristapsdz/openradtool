@@ -508,21 +508,21 @@ resolve_search(struct config *cfg, struct search *srch)
  * (Never returns the <0 case: this is just for caller convenience.)
  */
 static ssize_t
-resolve_roleset(struct config *cfg, struct rolemap *rm)
+resolve_rref(struct config *cfg, struct rolemap *rm)
 {
-	struct roleset	*rs, *rrs;
+	struct rref	*rs, *rrs;
 	struct role	*rp;
 	ssize_t		 i = 0;
 
 	/*
-	 * For each valid role in the roleset, see if another role is
+	 * For each valid role in the rref, see if another role is
 	 * specified that's a parent of the current role.
 	 * Don't use top-level roles, since by definition they don't
 	 * overlap with anything else.
 	 */
 
-	TAILQ_FOREACH(rs, &rm->setq, entries) {
-		TAILQ_FOREACH(rrs, &rm->setq, entries) {
+	TAILQ_FOREACH(rs, &rm->rq, entries) {
+		TAILQ_FOREACH(rrs, &rm->rq, entries) {
 			if (rrs == rs || NULL == (rp = rrs->role))
 				continue;
 			assert(rp != rs->role);
@@ -543,19 +543,19 @@ resolve_roleset(struct config *cfg, struct rolemap *rm)
 }
 
 /*
- * Performs the work of resolve_roleset_cover() by actually accepting a
- * (possibly-NULL) rolemap, looking through the roleset, and seeing if
+ * Performs the work of resolve_rref_cover() by actually accepting a
+ * (possibly-NULL) rolemap, looking through the rref, and seeing if
  * we're clobbering an existing role.
- * If we're not, then we add our role to the roleset.
+ * If we're not, then we add our role to the rref.
  * This might mean that we're going to create a rolemap in the process.
  * Return zero on success, >0 with errors, and <0 on fatal errors.
  */
 static ssize_t
-resolve_roleset_coverset(struct config *cfg,
-	const struct roleset *rs, struct rolemap **rm, 
+resolve_rref_coverset(struct config *cfg,
+	const struct rref *rs, struct rolemap **rm, 
 	enum rolemapt type, const char *name, struct strct *p)
 {
-	struct roleset	*rrs;
+	struct rref	*rrs;
 
 	/*
 	 * If there are no roles defined for a function at all, we need
@@ -571,7 +571,7 @@ resolve_roleset_coverset(struct config *cfg,
 			return -1;
 		}
 		TAILQ_INSERT_TAIL(&p->rq, *rm, entries);
-		TAILQ_INIT(&(*rm)->setq);
+		TAILQ_INIT(&(*rm)->rq);
 		(*rm)->type = type;
 		if (NULL != name &&
 		    NULL == ((*rm)->name = strdup(name))) {
@@ -582,7 +582,7 @@ resolve_roleset_coverset(struct config *cfg,
 
 	/* See if our role overlaps. */
 
-	TAILQ_FOREACH(rrs, &(*rm)->setq, entries) {
+	TAILQ_FOREACH(rrs, &(*rm)->rq, entries) {
 		if (NULL == rrs->role ||
 		    rs->role != rrs->role)
 			continue;
@@ -592,15 +592,15 @@ resolve_roleset_coverset(struct config *cfg,
 	}
 
 	/*
-	 * Our role didn't appear in the roleset of the give rolemap.
+	 * Our role didn't appear in the rref of the give rolemap.
 	 * Add it now.
 	 */
 
-	if (NULL == (rrs = calloc(1, sizeof(struct roleset)))) {
+	if (NULL == (rrs = calloc(1, sizeof(struct rref)))) {
 		gen_err(cfg, &rs->pos);
 		return -1;
 	}
-	TAILQ_INSERT_TAIL(&(*rm)->setq, rrs, entries);
+	TAILQ_INSERT_TAIL(&(*rm)->rq, rrs, entries);
 	rrs->role = rs->role;
 	rrs->pos = rs->pos;
 	rrs->parent = *rm;
@@ -608,7 +608,7 @@ resolve_roleset_coverset(struct config *cfg,
 }
 
 /*
- * Handle the "all" role assignment, i.e., those where a roleset is
+ * Handle the "all" role assignment, i.e., those where a rref is
  * defined over the function "all".
  * This is tricky.
  * At this level, we just go through all possible functions (queries,
@@ -617,9 +617,9 @@ resolve_roleset_coverset(struct config *cfg,
  * Return zero on success, >0 with errors, and <0 on fatal errors.
  */
 static ssize_t
-resolve_roleset_cover(struct config *cfg, struct strct *p)
+resolve_rref_cover(struct config *cfg, struct strct *p)
 {
-	struct roleset  *rs;
+	struct rref	*rs;
 	struct update	*u;
 	struct search	*s;
 	enum rolemapt	 rt;
@@ -627,11 +627,11 @@ resolve_roleset_cover(struct config *cfg, struct strct *p)
 
 	assert(p->arolemap != NULL);
 
-	TAILQ_FOREACH(rs, &p->arolemap->setq, entries) {
+	TAILQ_FOREACH(rs, &p->arolemap->rq, entries) {
 		if (rs->role == NULL)
 			continue;
 		TAILQ_FOREACH(u, &p->dq, entries) {
-			rc = resolve_roleset_coverset
+			rc = resolve_rref_coverset
 				(cfg, rs, &u->rolemap,
 				 ROLEMAP_DELETE, u->name, p);
 			if (rc < 0)
@@ -639,7 +639,7 @@ resolve_roleset_cover(struct config *cfg, struct strct *p)
 			i += rc;
 		}
 		TAILQ_FOREACH(u, &p->uq, entries) {
-			rc = resolve_roleset_coverset
+			rc = resolve_rref_coverset
 				(cfg, rs, &u->rolemap,
 				 ROLEMAP_UPDATE, u->name, p);
 			if (rc < 0)
@@ -657,14 +657,14 @@ resolve_roleset_cover(struct config *cfg, struct strct *p)
 			else if (STYPE_COUNT == s->type)
 				rt = ROLEMAP_COUNT;
 			assert(rt != ROLEMAP__MAX);
-			rc = resolve_roleset_coverset(cfg, 
+			rc = resolve_rref_coverset(cfg, 
 				rs, &s->rolemap, rt, s->name, p);
 			if (rc < 0)
 				return rc;
 			i += rc;
 		}
 		if (p->ins != NULL) {
-			rc = resolve_roleset_coverset
+			rc = resolve_rref_coverset
 				(cfg, rs, &p->ins->rolemap, 
 				 ROLEMAP_INSERT, NULL, p);
 			if (rc < 0)
@@ -688,7 +688,7 @@ static int
 rolemap_merge(struct config *cfg, 
 	struct rolemap *src, struct rolemap **dst)
 {
-	struct roleset	*rdst, *rsrc;
+	struct rref	*rdst, *rsrc;
 
 	if (NULL == *dst) {
 		*dst = src;
@@ -697,8 +697,8 @@ rolemap_merge(struct config *cfg,
 
 	assert(src->type == (*dst)->type);
 
-	TAILQ_FOREACH(rsrc, &src->setq, entries) {
-		TAILQ_FOREACH(rdst, &(*dst)->setq, entries)
+	TAILQ_FOREACH(rsrc, &src->rq, entries) {
+		TAILQ_FOREACH(rdst, &(*dst)->rq, entries)
 			if (rdst->role == rsrc->role)
 				break;
 		if (NULL != rdst)
@@ -706,12 +706,12 @@ rolemap_merge(struct config *cfg,
 
 		/* Source doesn't exist in destination. */
 
-		rdst = calloc(1, sizeof(struct roleset));
+		rdst = calloc(1, sizeof(struct rref));
 		if (NULL == rdst) {
 			gen_err(cfg, &rsrc->pos);
 			return -1;
 		}
-		TAILQ_INSERT_TAIL(&(*dst)->setq, rdst, entries);
+		TAILQ_INSERT_TAIL(&(*dst)->rq, rdst, entries);
 		rdst->parent = *dst;
 		rdst->pos = rsrc->pos;
 		rdst->role = rsrc->role;
@@ -746,7 +746,7 @@ resolve_rolemap_search(struct config *cfg,
 		    strcasecmp(s->name, rm->name) == 0) {
 			assert(s->rolemap == NULL);
 			s->rolemap = rm;
-			return resolve_roleset(cfg, rm);
+			return resolve_rref(cfg, rm);
 		}
 
 	return -1;
@@ -774,7 +774,7 @@ resolve_rolemap_update(struct config *cfg,
 		    strcasecmp(u->name, rm->name) == 0) {
 			assert(u->rolemap == NULL);
 			u->rolemap = rm;
-			return resolve_roleset(cfg, rm);
+			return resolve_rref(cfg, rm);
 		}
 
 	return -1;
@@ -801,13 +801,13 @@ resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
 	case ROLEMAP_ALL:
 		assert(p->arolemap == NULL);
 		p->arolemap = rm;
-		return resolve_roleset(cfg, rm);
+		return resolve_rref(cfg, rm);
 	case ROLEMAP_INSERT:
 		if (p->ins == NULL) 
 			break;
 		assert(p->ins->rolemap == NULL);
 		p->ins->rolemap = rm;
-		return resolve_roleset(cfg, rm);
+		return resolve_rref(cfg, rm);
 	case ROLEMAP_COUNT:
 	case ROLEMAP_ITERATE:
 	case ROLEMAP_LIST:
@@ -826,7 +826,7 @@ resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
 			TAILQ_FOREACH(f, &p->fq, entries) {
 				if (!rolemap_merge(cfg, rm, &f->rolemap))
 					return -1;
-				rc = resolve_roleset(cfg, f->rolemap);
+				rc = resolve_rref(cfg, f->rolemap);
 				if (rc < 0)
 					return rc;
 				i += rc;
@@ -837,7 +837,7 @@ resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
 			if (strcasecmp(f->name, rm->name) == 0) {
 				if (!rolemap_merge(cfg, rm, &f->rolemap))
 					return -1;
-				return resolve_roleset(cfg, f->rolemap);
+				return resolve_rref(cfg, f->rolemap);
 			}
 		break;
 	default:
@@ -932,11 +932,11 @@ check_unique_unique(struct config *cfg, const struct strct *s)
 static int
 check_unique_roles(struct config *cfg, const struct rolemap *rm)
 {
-	const struct roleset	*rs, *rrs;
+	const struct rref	*rs, *rrs;
 	size_t			 errs = 0;
 
-	TAILQ_FOREACH(rs, &rm->setq, entries)
-		TAILQ_FOREACH(rrs, &rm->setq, entries)
+	TAILQ_FOREACH(rs, &rm->rq, entries)
+		TAILQ_FOREACH(rrs, &rm->rq, entries)
 			if (rs != rrs &&
 			    rs->role == rrs->role) {
 				gen_errx(cfg, &rrs->role->pos,
@@ -1006,13 +1006,13 @@ ort_parse_close(struct config *cfg)
 			i += rc;
 		}
 		if (NULL != p->ins && NULL != p->ins->rolemap) {
-			rc = resolve_roleset(cfg, p->ins->rolemap);
+			rc = resolve_rref(cfg, p->ins->rolemap);
 			if (rc < 0)
 				return 0;
 			i += rc;
 		}
 		if (NULL != p->arolemap) {
-			rc = resolve_roleset_cover(cfg, p);
+			rc = resolve_rref_cover(cfg, p);
 			if (rc < 0)
 				return 0;
 			i += rc;

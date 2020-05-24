@@ -218,10 +218,10 @@ parse_free_bitfield(struct bitf *bf)
 static void
 parse_free_rolemap(struct rolemap *rm)
 {
-	struct roleset	*r;
+	struct rref	*r;
 
-	while ((r = TAILQ_FIRST(&rm->setq)) != NULL) {
-		TAILQ_REMOVE(&rm->setq, r, entries);
+	while ((r = TAILQ_FIRST(&rm->rq)) != NULL) {
+		TAILQ_REMOVE(&rm->rq, r, entries);
 		free(r);
 	}
 

@@ -90,7 +90,7 @@ struct	resolve {
 				size_t		  namesz;
 		} struct_order; /* ...order ->bar<- */
 		struct struct_role {
-				struct roleset	*result;
+				struct rref	*result;
 				char		*name;
 		} struct_role; /* ...roles ->bar<- */
 		struct struct_sent {

@@ -1136,11 +1136,11 @@ parse_struct_search(struct parse *p, struct strct *s, enum stype stype)
  * Assign roles in "ns" to the map.
  */
 static int
-roleset_assign(struct parse *p, struct strct *s, 
+rolemap_assign(struct parse *p, struct strct *s, 
 	const char **ns, size_t nsz, 
 	enum rolemapt type, const char *name)
 {
-	struct roleset	*rs;
+	struct rref	*rs;
 	struct rolemap	*rm;
 	size_t		 i;
 	struct resolve	*r;
@@ -1154,13 +1154,15 @@ roleset_assign(struct parse *p, struct strct *s,
 		      strcasecmp(rm->name, name) == 0)))
 			break;
 
+	/* We haven't defined this map. */
+
 	if (rm == NULL) {
 		rm = calloc(1, sizeof(struct rolemap));
 		if (NULL == rm) {
 			parse_err(p);
 			return 0;
 		}
-		TAILQ_INIT(&rm->setq);
+		TAILQ_INIT(&rm->rq);
 		rm->type = type;
 		TAILQ_INSERT_TAIL(&s->rq, rm, entries);
 		if (name != NULL &&
@@ -1170,17 +1172,17 @@ roleset_assign(struct parse *p, struct strct *s,
 		}
 	}
 
-	/* Create rolesets with all given names. */
+	/* Assign roles and add resolvers for them. */
 
 	for (i = 0; i < nsz; i++) {
-		rs = calloc(1, sizeof(struct roleset));
+		rs = calloc(1, sizeof(struct rref));
 		if (rs == NULL) {
 			parse_err(p);
 			return 0;
 		}
 		parse_point(p, &rs->pos);
 		rs->parent = rm;
-		TAILQ_INSERT_TAIL(&rm->setq, rs, entries);
+		TAILQ_INSERT_TAIL(&rm->rq, rs, entries);
 
 		r = calloc(1, sizeof(struct resolve));
 		if (r == NULL) {
@@ -1296,7 +1298,7 @@ parse_struct_roles(struct parse *p, struct strct *s)
 
 		/* Assign all roles to the given operation. */
 
-		if (!roleset_assign(p, s, 
+		if (!rolemap_assign(p, s, 
 		    (const char **)ns, nsz, type, name))
 			goto cleanup;
 

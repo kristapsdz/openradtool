@@ -19,9 +19,13 @@
 			</p>
 			<p>
 				Clarify the <a href="ort-sqldiff.1.html">ort-sqldiff(1)</a>
-				documentation with regard to exactly the cases that cause
-				errors.
+				documentation with regard to exactly the cases that cause errors.
 				Create a regression suite to test for this.
+			</p>
+			<p>
+				Remove several fields in <i>ort.h</i> used only by the C front-end,
+				such as the capitalised name of structures.  These add moving parts
+				with few discernable benefits.
 			</p>
 		</aside>
 	</article>

@@ -33,7 +33,7 @@ TAILQ_HEAD(nrefq, nref);
 TAILQ_HEAD(ordq, ord);
 TAILQ_HEAD(rolemapq, rolemap);
 TAILQ_HEAD(roleq, role);
-TAILQ_HEAD(rolesetq, roleset);
+TAILQ_HEAD(rrefq, rref);
 TAILQ_HEAD(searchq, search);
 TAILQ_HEAD(sentq, sent);
 TAILQ_HEAD(strctq, strct);
@@ -283,25 +283,24 @@ enum	rolemapt {
 };
 
 /*
- * Maps a given operation (like an insert named "foo") with a set of
- * roles with permission to perform the operation (setq).
+ * Maps a given operation (like an insert named "foo") to a set of
+ * roles who apply the operation.
  */
 struct	rolemap {
 	char		    *name; /* name of operation */
 	enum rolemapt	     type; /* type */
-	struct rolesetq	     setq; /* allowed roles */
+	struct rrefq	     rq; /* applicable roles */
 	TAILQ_ENTRY(rolemap) entries;
 };
 
 /*
- * One of a set of roles allows to perform the given parent operation.
- * A roleset (after linkage) will map into an actual role.
+ * A role reference.
  */
-struct	roleset {
-	struct role	    *role; /* role in question */
-	struct pos	     pos; /* parse point */
-	struct rolemap	    *parent; /* which operation */
-	TAILQ_ENTRY(roleset) entries;
+struct	rref {
+	struct role	 *role; /* role in question */
+	struct pos	  pos; /* parse point */
+	struct rolemap	 *parent; /* which operation */
+	TAILQ_ENTRY(rref) entries;
 };
 
 /*

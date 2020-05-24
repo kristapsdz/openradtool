@@ -100,9 +100,9 @@ check_role(const struct role *r, const struct role *role)
 static int
 check_rolemap(const struct rolemap *r, const struct role *role)
 {
-	const struct roleset *rs;
+	const struct rref	*rs;
 
-	TAILQ_FOREACH(rs, &r->setq, entries)
+	TAILQ_FOREACH(rs, &r->rq, entries)
 		if (check_role(rs->role, role))
 			return(1);
 

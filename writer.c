@@ -533,13 +533,13 @@ parse_write_query(struct writer *w, const struct search *p)
 static int
 parse_write_rolemap(struct writer *w, const struct rolemap *p)
 {
-	const struct roleset *r;
-	size_t	 	      nf = 0;
+	const struct rref	*r;
+	size_t			 nf = 0;
 
 	if (!wputs(w, "\troles"))
 		return 0;
 
-	TAILQ_FOREACH(r, &p->setq, entries)
+	TAILQ_FOREACH(r, &p->rq, entries)
 		if (!wprint(w, "%s %s",
 		     nf++ ? "," : "", r->role->name))
 			return 0;

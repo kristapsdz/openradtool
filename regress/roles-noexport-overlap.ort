@@ -1,0 +1,10 @@
+roles {
+	role foo;
+};
+
+struct foo {
+	field id;
+	roles foo, default { noexport id; };
+	roles default { noexport; };
+};
+

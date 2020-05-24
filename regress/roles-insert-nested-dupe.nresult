@@ -1,0 +1,13 @@
+roles {
+	role foo {
+		role baz;
+	};
+};
+
+struct foo {
+	field id int rowid;
+	insert;
+	roles foo, baz {
+		insert;
+	};
+};

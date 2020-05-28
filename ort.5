@@ -577,8 +577,15 @@ It is an error to apply a role, or any of its descendents, more than once to
 the same operation.
 However,
 .Cm noexport
-is exempted in that fields marked for the same role more than once are not
+is different in that fields marked for the same role more than once are not
 considered an error.
+So specifying
+.Cm noexport
+and also
+.Cm noexport field
+is not an error, but simply specifying
+.Cm noexport
+twice is.
 The
 .Cm all
 keyword is also exempted.

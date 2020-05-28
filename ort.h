@@ -290,6 +290,7 @@ struct	rolemap {
 	char		    *name; /* name of operation */
 	enum rolemapt	     type; /* type */
 	struct rrefq	     rq; /* applicable roles */
+	struct strct	    *parent; /* in which struct defined */
 	TAILQ_ENTRY(rolemap) entries;
 };
 

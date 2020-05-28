@@ -34,18 +34,6 @@
 
 static	const char *const channel = "linker";
 
-static	const char *const rolemapts[ROLEMAP__MAX] = {
-	"all", /* ROLEMAP_ALL */
-	"count", /* ROLEMAP_COUNT */
-	"delete", /* ROLEMAP_DELETE */
-	"insert", /* ROLEMAP_INSERT */
-	"iterate", /* ROLEMAP_ITERATE */
-	"list", /* ROLEMAP_LIST */
-	"search", /* ROLEMAP_SEARCH */
-	"update", /* ROLEMAP_UPDATE */
-	"noexport", /* ROLEMAP_NOEXPORT */
-};
-
 /*
  * Generate a warning message at position "pos".
  */
@@ -508,7 +496,7 @@ resolve_search(struct config *cfg, struct search *srch)
  * (Never returns the <0 case: this is just for caller convenience.)
  */
 static ssize_t
-resolve_rref(struct config *cfg, struct rolemap *rm)
+check_rref_overlap(struct config *cfg, struct rolemap *rm)
 {
 	struct rref	*rs, *rrs;
 	struct role	*rp;
@@ -677,182 +665,6 @@ resolve_rref_cover(struct config *cfg, struct strct *p)
 }
 
 /*
- * Merge a rolemap "src" into a possibly-existing rolemap "dst".
- * This applies to the case of:
- *   roles foo { noexport; noexport foo; };
- * Which would otherwise crash because the rolemap assignment isn't
- * unique, which is otherwise guaranteed with named fields.
- * Return zero on failure, non-zero on success.
- */
-static int
-rolemap_merge(struct config *cfg, 
-	struct rolemap *src, struct rolemap **dst)
-{
-	struct rref	*rdst, *rsrc;
-
-	if (NULL == *dst) {
-		*dst = src;
-		return 1;
-	}
-
-	assert(src->type == (*dst)->type);
-
-	TAILQ_FOREACH(rsrc, &src->rq, entries) {
-		TAILQ_FOREACH(rdst, &(*dst)->rq, entries)
-			if (rdst->role == rsrc->role)
-				break;
-		if (NULL != rdst)
-			continue;
-
-		/* Source doesn't exist in destination. */
-
-		rdst = calloc(1, sizeof(struct rref));
-		if (NULL == rdst) {
-			gen_err(cfg, &rsrc->pos);
-			return -1;
-		}
-		TAILQ_INSERT_TAIL(&(*dst)->rq, rdst, entries);
-		rdst->parent = *dst;
-		rdst->pos = rsrc->pos;
-		rdst->role = rsrc->role;
-	}
-
-	return 1;
-}
-
-/*
- * Endpoint for resolve_rolemap() searches.
- * Returns -1 if no match found, otherwise >= 0.
- */
-static ssize_t
-resolve_rolemap_search(struct config *cfg,
-	struct rolemap *rm, struct strct *p)
-{
-	enum stype	 type = STYPE__MAX;
-	struct search	*s;
-
-	if (rm->type == ROLEMAP_SEARCH)
-		type = STYPE_SEARCH;
-	else if (rm->type == ROLEMAP_ITERATE)
-		type = STYPE_ITERATE;
-	else if (rm->type == ROLEMAP_LIST)
-		type = STYPE_LIST;
-	else if (rm->type == ROLEMAP_COUNT)
-		type = STYPE_COUNT;
-	assert(type != STYPE__MAX);
-
-	TAILQ_FOREACH(s, &p->sq, entries)
-		if (type == s->type && s->name != NULL &&
-		    strcasecmp(s->name, rm->name) == 0) {
-			assert(s->rolemap == NULL);
-			s->rolemap = rm;
-			return resolve_rref(cfg, rm);
-		}
-
-	return -1;
-}
-
-/*
- * Endpoint for resolve_rolemap() updates.
- * Returns -1 if no match found, otherwise >= 0.
- */
-static ssize_t
-resolve_rolemap_update(struct config *cfg,
-	struct rolemap *rm, struct strct *p)
-{
-	struct updateq	*q = NULL;
-	struct update	*u;
-
-	if (rm->type == ROLEMAP_DELETE)
-		q = &p->dq;
-	else if (rm->type == ROLEMAP_UPDATE)
-		q = &p->uq;
-
-	assert(q != NULL);
-	TAILQ_FOREACH(u, q, entries) 
-		if (u->name != NULL &&
-		    strcasecmp(u->name, rm->name) == 0) {
-			assert(u->rolemap == NULL);
-			u->rolemap = rm;
-			return resolve_rref(cfg, rm);
-		}
-
-	return -1;
-}
-
-/*
- * Given the rolemap "rm", which we know to have a unique name and type
- * in "p", assign to the correspending function type in "p".
- * Return zero on success, >0 with errors, and <0 on fatal errors.
- * On success, the rolemap is assigned into the structure.
- */
-static ssize_t
-resolve_rolemap(struct config *cfg, struct rolemap *rm, struct strct *p)
-{
-	struct field	*f;
-	ssize_t		 i = 0, rc;
-
-	switch (rm->type) {
-	case ROLEMAP_DELETE:
-	case ROLEMAP_UPDATE:
-		if ((rc = resolve_rolemap_update(cfg, rm, p)) < 0)
-			break;
-		return rc;
-	case ROLEMAP_ALL:
-		assert(p->arolemap == NULL);
-		p->arolemap = rm;
-		return resolve_rref(cfg, rm);
-	case ROLEMAP_INSERT:
-		if (p->ins == NULL) 
-			break;
-		assert(p->ins->rolemap == NULL);
-		p->ins->rolemap = rm;
-		return resolve_rref(cfg, rm);
-	case ROLEMAP_COUNT:
-	case ROLEMAP_ITERATE:
-	case ROLEMAP_LIST:
-	case ROLEMAP_SEARCH:
-		if ((rc = resolve_rolemap_search(cfg, rm, p)) < 0)
-			break;
-		return rc;
-	case ROLEMAP_NOEXPORT:
-		/*
-		 * Start with the "null" noexport, which is applied to
-		 * all of the fields in the structure.
-		 * Since these fields may already be no-exported, we
-		 * need to merge them into existing rolemaps.
-		 */
-		if (rm->name == NULL) {
-			TAILQ_FOREACH(f, &p->fq, entries) {
-				if (!rolemap_merge(cfg, rm, &f->rolemap))
-					return -1;
-				rc = resolve_rref(cfg, f->rolemap);
-				if (rc < 0)
-					return rc;
-				i += rc;
-			}
-			return i;
-		}
-		TAILQ_FOREACH(f, &p->fq, entries) 
-			if (strcasecmp(f->name, rm->name) == 0) {
-				if (!rolemap_merge(cfg, rm, &f->rolemap))
-					return -1;
-				return resolve_rref(cfg, f->rolemap);
-			}
-		break;
-	default:
-		abort();
-	}
-
-	gen_errx(cfg, &p->pos, "corresponding %s %s not found%s%s",
-		rolemapts[rm->type],
-		rm->type == ROLEMAP_NOEXPORT ? "field" : "function",
-		rm->type == ROLEMAP_INSERT ? "" : ": ",
-		rm->type == ROLEMAP_INSERT ? "" : rm->name);
-	return 1;
-}
-
-/*
  * Recursive check to see whether a given structure "p" directly or
  * indirectly contains any structs that have null foreign key
  * references.
@@ -1000,13 +812,7 @@ ort_parse_close(struct config *cfg)
 	i = 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries) {
 		TAILQ_FOREACH(rm, &p->rq, entries) {
-			rc = resolve_rolemap(cfg, rm, p);
-			if (rc < 0)
-				return 0;
-			i += rc;
-		}
-		if (NULL != p->ins && NULL != p->ins->rolemap) {
-			rc = resolve_rref(cfg, p->ins->rolemap);
+			rc = check_rref_overlap(cfg, rm);
 			if (rc < 0)
 				return 0;
 			i += rc;

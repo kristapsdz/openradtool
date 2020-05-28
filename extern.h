@@ -29,6 +29,7 @@ enum	resolvet {
 	RESOLVE_GROUPROW,
 	RESOLVE_ORDER,
 	RESOLVE_ROLE,
+	RESOLVE_ROLEMAP,
 	RESOLVE_SENT,
 	RESOLVE_UNIQUE,
 	RESOLVE_UP_CONSTRAINT,
@@ -93,6 +94,11 @@ struct	resolve {
 				struct rref	*result;
 				char		*name;
 		} struct_role; /* ...roles ->bar<- */
+		struct struct_rolemap {
+				struct rolemap	*result;
+				char		*name; /* NULL ok */
+				enum rolemapt	 type;
+		} struct_rolemap; /* ...roles bar { ->insert<-; }; */
 		struct struct_sent {
 				struct sent	 *result;
 				char		**names;

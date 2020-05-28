@@ -409,6 +409,208 @@ resolve_struct_role(struct config *cfg, struct struct_role *r)
 	return r->result->role != NULL;
 }
 
+static void
+resolve_struct_rolemap_all(struct config *cfg, struct struct_rolemap *r)
+{
+
+	assert(r->result->parent->arolemap == NULL);
+	r->result->parent->arolemap = r->result;
+}
+
+static int
+resolve_struct_rolemap_insert(struct config *cfg, struct struct_rolemap *r)
+{
+
+	if (r->result->parent->ins == NULL) 
+		return 0;
+	assert(r->result->parent->ins->rolemap == NULL);
+	r->result->parent->ins->rolemap = r->result;
+	return 1;
+}
+
+static int
+resolve_struct_rolemap_update(struct config *cfg, struct struct_rolemap *r)
+{
+	struct updateq	*q = NULL;
+	struct update	*u;
+
+	if (r->type == ROLEMAP_DELETE)
+		q = &r->result->parent->dq;
+	else if (r->type == ROLEMAP_UPDATE)
+		q = &r->result->parent->uq;
+
+	assert(q != NULL);
+	TAILQ_FOREACH(u, q, entries) 
+		if (u->name != NULL &&
+		    strcasecmp(u->name, r->name) == 0) {
+			assert(u->rolemap == NULL);
+			u->rolemap = r->result;
+			return 1;
+		}
+
+	return 0;
+}
+
+static int
+resolve_struct_rolemap_query(struct config *cfg, struct struct_rolemap *r)
+{
+	enum stype	 type = STYPE__MAX;
+	struct search	*s;
+
+	if (r->type == ROLEMAP_SEARCH)
+		type = STYPE_SEARCH;
+	else if (r->type == ROLEMAP_ITERATE)
+		type = STYPE_ITERATE;
+	else if (r->type == ROLEMAP_LIST)
+		type = STYPE_LIST;
+	else if (r->type == ROLEMAP_COUNT)
+		type = STYPE_COUNT;
+
+	assert(type != STYPE__MAX);
+
+	TAILQ_FOREACH(s, &r->result->parent->sq, entries)
+		if (type == s->type && 
+		    s->name != NULL &&
+		    strcasecmp(s->name, r->name) == 0) {
+			assert(s->rolemap == NULL);
+			s->rolemap = r->result;
+			return 1;
+		}
+
+	return 0;
+}
+
+/*
+ * Apply the noexport roles of rolemap "r" to the field "f".
+ * Returns zero on allocation failure, non-zero on success.
+ * It is not an error for the field to already have the role specified
+ * for it: it's just skipped.
+ */
+static int
+resolve_struct_rolemap_field(struct config *cfg,
+	struct struct_rolemap *r, struct field *f)
+{
+	struct rref	*rdst, *rsrc;
+
+	if (f->rolemap == NULL) {
+		f->rolemap = r->result;
+		return 1;
+	}
+
+	TAILQ_FOREACH(rsrc, &r->result->rq, entries) {
+		TAILQ_FOREACH(rdst, &f->rolemap->rq, entries)
+			if (rdst->role == rsrc->role)
+				break;
+
+		/* Already specified! */
+
+		if (rdst != NULL)
+			return 1;
+
+		/* Source doesn't exist in destination. */
+
+		rdst = calloc(1, sizeof(struct rref));
+		if (rdst == NULL) {
+			gen_err(cfg, &rsrc->pos);
+			return 0;
+		}
+		TAILQ_INSERT_TAIL(&f->rolemap->rq, rdst, entries);
+		rdst->parent = f->rolemap;
+		rdst->pos = rsrc->pos;
+		rdst->role = rsrc->role;
+	}
+
+	return 1;
+}
+
+/*
+ * Noexport can handle named fields and all-fields.
+ * Returns -1 on allocation failure, 0 if the field was not found
+ * (obviously only for named fields), 1 on success (applied to all
+ * fields).
+ */
+static int
+resolve_struct_rolemap_noexport(struct config *cfg,
+	struct struct_rolemap *r)
+{
+	struct field	*f;
+
+	/* Start by applying noexport to all fields. */
+
+	if (r->name == NULL) {
+		TAILQ_FOREACH(f, &r->result->parent->fq, entries) {
+			if (!resolve_struct_rolemap_field(cfg, r, f))
+				return -1;
+		}
+		return 1;
+	}
+
+	TAILQ_FOREACH(f, &r->result->parent->fq, entries)
+		if (strcasecmp(f->name, r->name) == 0) {
+			if (!resolve_struct_rolemap_field(cfg, r, f))
+				return -1;
+			return 1;
+		}
+
+	gen_errx(cfg, &r->result->parent->pos,
+		"field not found: %s", r->name);
+	return 0;
+}
+
+/*
+ * Resolve the operation in a role-map.
+ * Some operations are named; others (like "insert") aren't.
+ * This could just as easily have a resolver type for each rolemap type,
+ * but it boils down to the same thing.
+ */
+static int
+resolve_struct_rolemap(struct config *cfg, struct struct_rolemap *r)
+{
+	int	 rc;
+
+	switch (r->type) {
+	case ROLEMAP_ALL:
+		resolve_struct_rolemap_all(cfg, r);
+		return 1;
+	case ROLEMAP_DELETE:
+	case ROLEMAP_UPDATE:
+		if (resolve_struct_rolemap_update(cfg, r))
+			return 1;
+		gen_errx(cfg, &r->result->parent->pos,
+			"%s operation not found: %s",
+			r->type == ROLEMAP_DELETE ?
+			"delete" : "update", r->name);
+		break;
+	case ROLEMAP_INSERT:
+		if (resolve_struct_rolemap_insert(cfg, r))
+			return 1;
+		gen_errx(cfg, &r->result->parent->pos,
+			"insert operation not specified");
+		break;
+	case ROLEMAP_COUNT:
+	case ROLEMAP_ITERATE:
+	case ROLEMAP_LIST:
+	case ROLEMAP_SEARCH:
+		if (resolve_struct_rolemap_query(cfg, r))
+			return 1;
+		gen_errx(cfg, &r->result->parent->pos,
+			"%s operation not found: %s", 
+			r->type == ROLEMAP_COUNT ? "count" : 
+			r->type == ROLEMAP_ITERATE ? "iterate" : 
+			r->type == ROLEMAP_LIST ? "list" : 
+			"search", r->name);
+		break;
+	case ROLEMAP_NOEXPORT:
+		if ((rc = resolve_struct_rolemap_noexport(cfg, r)) > 0)
+			return 1;
+		break;
+	default:
+		abort();
+	}
+
+	return 0;
+}
+
 /*
  * Look up the bitfield type by its name.
  */
@@ -585,6 +787,9 @@ linker_resolve(struct config *cfg)
 			fail += !resolve_struct_role
 				(cfg, &r->struct_role);
 			break;
+		case RESOLVE_ROLEMAP:
+			/* This requires RESOLVE_ROLE. */
+			break;
 		case RESOLVE_UNIQUE:
 			fail += !resolve_struct_unique
 				(cfg, &r->struct_unique);
@@ -606,6 +811,10 @@ linker_resolve(struct config *cfg)
 		case RESOLVE_FIELD_STRUCT:
 			fail += !resolve_field_struct
 				(cfg, &r->field_struct);
+			break;
+		case RESOLVE_ROLEMAP:
+			fail += !resolve_struct_rolemap
+				(cfg, &r->struct_rolemap);
 			break;
 		default:
 			break;

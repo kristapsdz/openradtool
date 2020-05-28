@@ -313,6 +313,9 @@ parse_free_resolve(struct resolve *p)
 	case RESOLVE_ROLE:
 		free(p->struct_role.name);
 		break;
+	case RESOLVE_ROLEMAP:
+		free(p->struct_rolemap.name);
+		break;
 	case RESOLVE_ORDER:
 		for (i = 0; i < p->struct_order.namesz; i++)
 			free(p->struct_order.names[i]);

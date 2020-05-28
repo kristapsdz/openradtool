@@ -1164,13 +1164,31 @@ rolemap_assign(struct parse *p, struct strct *s,
 		}
 		TAILQ_INIT(&rm->rq);
 		rm->type = type;
+		rm->parent = s;
 		TAILQ_INSERT_TAIL(&s->rq, rm, entries);
 		if (name != NULL &&
 		    (rm->name = strdup(name)) == NULL) {
 			parse_err(p);
 			return 0;
 		}
+
+		r = calloc(1, sizeof(struct resolve));
+		if (r == NULL) {
+			parse_err(p);
+			return 0;
+		}
+		TAILQ_INSERT_TAIL(&p->cfg->priv->rq, r, entries);
+		r->type = RESOLVE_ROLEMAP;
+		if (name != NULL &&
+		    (r->struct_rolemap.name = strdup(name)) == NULL) {
+			parse_err(p);
+			return 0;
+		}
+		r->struct_rolemap.type = type;
+		r->struct_rolemap.result = rm;
 	}
+
+	assert(rm->parent == s);
 
 	/* Assign roles and add resolvers for them. */
 

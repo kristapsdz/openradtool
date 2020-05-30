@@ -267,7 +267,6 @@ enum	modtype {
 
 /*
  * The type of function that a rolemap is associated with.
- * Most functions (all except for "insert") are also tagged with a name.
  */
 enum	rolemapt {
 	ROLEMAP_ALL = 0, /* all */
@@ -283,14 +282,17 @@ enum	rolemapt {
 };
 
 /*
- * Maps a given operation (like an insert named "foo") to a set of
- * roles who apply the operation.
+ * Maps a given operation to a set of roles who apply the operation.
  */
 struct	rolemap {
-	char		    *name; /* name of operation */
 	enum rolemapt	     type; /* type */
 	struct rrefq	     rq; /* applicable roles */
 	struct strct	    *parent; /* in which struct defined */
+	union {
+		struct field	*f; /* ROLEMAP_NOEXPORT (named) */
+		struct search	*s; /* ROLEMAP_(query) */
+		struct update	*u; /* ROLEMAP_(modify) */
+	};
 	TAILQ_ENTRY(rolemap) entries;
 };
 

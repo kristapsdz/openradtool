@@ -665,8 +665,6 @@ ort_parse_close(struct config *cfg)
 	if (i > 0)
 		return 0;
 
-	/* Like check_uniqu_roles(), but for the whole tree. */
-
 	i = 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		TAILQ_FOREACH(rm, &p->rq, entries)
@@ -707,14 +705,17 @@ ort_parse_close(struct config *cfg)
 
 	/* Check for reference recursion. */
 
+	i = 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		TAILQ_FOREACH(f, &p->fq, entries)
-			if (f->type == FTYPE_STRUCT) {
-				if (check_recursive(f->ref, p))
-					continue;
-				gen_errx(cfg, &f->pos, "recursive ref");
-				return 0;
-			}
+		TAILQ_FOREACH(f, &p->fq, entries) {
+			if (f->type != FTYPE_STRUCT ||
+			    check_recursive(f->ref, p))
+				continue;
+			gen_errx(cfg, &f->pos, "recursive reference");
+			i++;
+		}
+	if (i > 0)
+		return 0;
 
 	/* 
 	 * Now follow and order all outbound links for structs.

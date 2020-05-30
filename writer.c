@@ -546,9 +546,29 @@ parse_write_rolemap(struct writer *w, const struct rolemap *p)
 
 	if (!wprint(w, " { %s", rolemapts[p->type]))
 		return 0;
-	if (p->name != NULL)
-		if (!wprint(w, " %s", p->name))
+	switch (p->type) {
+	case ROLEMAP_COUNT:
+	case ROLEMAP_ITERATE:
+	case ROLEMAP_LIST:
+	case ROLEMAP_SEARCH:
+		if (p->s != NULL &&
+		    !wprint(w, " %s", p->s->name))
 			return 0;
+		break;
+	case ROLEMAP_DELETE:
+	case ROLEMAP_UPDATE:
+		if (p->u != NULL &&
+		    !wprint(w, " %s", p->u->name))
+			return 0;
+		break;
+	case ROLEMAP_NOEXPORT:
+		if (p->f != NULL &&
+		    !wprint(w, " %s", p->f->name))
+			return 0;
+		break;
+	default:
+		break;
+	}
 
 	return wputs(w, "; };\n");
 }

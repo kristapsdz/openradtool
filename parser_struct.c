@@ -1141,18 +1141,24 @@ rolemap_assign(struct parse *p, struct strct *s,
 	enum rolemapt type, const char *name)
 {
 	struct rref	*rs;
-	struct rolemap	*rm;
+	struct rolemap	*rm = NULL;
 	size_t		 i;
 	struct resolve	*r;
 
 	/* Look up existing maps by type and possibly name. */
 
-	TAILQ_FOREACH(rm, &s->rq, entries)
-		if (rm->type == type &&
-		    ((name == NULL && rm->name == NULL) ||
-		     (name != NULL && rm->name != NULL &&
-		      strcasecmp(rm->name, name) == 0)))
+	TAILQ_FOREACH(r, &p->cfg->priv->rq, entries)
+		if (RESOLVE_ROLEMAP == r->type &&
+		    r->struct_rolemap.result->parent == s &&
+		    r->struct_rolemap.type == type &&
+		    ((name == NULL &&
+		      r->struct_rolemap.name == NULL) ||
+		     (name != NULL &&
+		      r->struct_rolemap.name != NULL &&
+		      strcasecmp(name, r->struct_rolemap.name) == 0))) {
+			rm = r->struct_rolemap.result;
 			break;
+		}
 
 	/* We haven't defined this map. */
 
@@ -1166,11 +1172,6 @@ rolemap_assign(struct parse *p, struct strct *s,
 		rm->type = type;
 		rm->parent = s;
 		TAILQ_INSERT_TAIL(&s->rq, rm, entries);
-		if (name != NULL &&
-		    (rm->name = strdup(name)) == NULL) {
-			parse_err(p);
-			return 0;
-		}
 
 		r = calloc(1, sizeof(struct resolve));
 		if (r == NULL) {

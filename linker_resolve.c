@@ -445,6 +445,7 @@ resolve_struct_rolemap_update(struct config *cfg, struct struct_rolemap *r)
 		    strcasecmp(u->name, r->name) == 0) {
 			assert(u->rolemap == NULL);
 			u->rolemap = r->result;
+			r->result->u = u;
 			return 1;
 		}
 
@@ -474,6 +475,7 @@ resolve_struct_rolemap_query(struct config *cfg, struct struct_rolemap *r)
 		    strcasecmp(s->name, r->name) == 0) {
 			assert(s->rolemap == NULL);
 			s->rolemap = r->result;
+			r->result->s = s;
 			return 1;
 		}
 
@@ -538,10 +540,10 @@ resolve_struct_rolemap_noexport(struct config *cfg,
 	/* Start by applying noexport to all fields. */
 
 	if (r->name == NULL) {
-		TAILQ_FOREACH(f, &r->result->parent->fq, entries) {
+		r->result->f = NULL;
+		TAILQ_FOREACH(f, &r->result->parent->fq, entries)
 			if (!resolve_struct_rolemap_field(cfg, r, f))
 				return -1;
-		}
 		return 1;
 	}
 
@@ -549,6 +551,7 @@ resolve_struct_rolemap_noexport(struct config *cfg,
 		if (strcasecmp(f->name, r->name) == 0) {
 			if (!resolve_struct_rolemap_field(cfg, r, f))
 				return -1;
+			r->result->f = f;
 			return 1;
 		}
 

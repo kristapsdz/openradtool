@@ -225,7 +225,6 @@ parse_free_rolemap(struct rolemap *rm)
 		free(r);
 	}
 
-	free(rm->name);
 	free(rm);
 }
 

@@ -87,26 +87,24 @@ gen_errx(struct config *cfg,
 }
 
 /*
- * Recursively check for... recursion.
+ * Make sure that "check" never accesses itself.
  * Returns zero if the reference is recursive, non-zero otherwise.
  */
 static int
-check_recursive(struct ref *ref, const struct strct *check)
+check_recursive(const struct ref *ref, const struct strct *check)
 {
-	struct field	*f;
-	struct strct	*p;
-
-	assert(NULL != ref);
+	const struct field	*f;
+	const struct strct	*p;
 
 	if ((p = ref->target->parent) == check)
-		return(0);
+		return 0;
 
 	TAILQ_FOREACH(f, &p->fq, entries)
-		if (FTYPE_STRUCT == f->type)
-			if ( ! check_recursive(f->ref, check))
-				return(0);
+		if (f->type == FTYPE_STRUCT &&
+		    !check_recursive(f->ref, check))
+			return 0;
 
-	return(1);
+	return 1;
 }
 
 /*
@@ -602,6 +600,10 @@ check_unique_unique(struct config *cfg, const struct strct *s)
 	return errs == 0;
 }
 
+/*
+ * Make sure that the rolemap contains unique roles.
+ * Returns zero on failure (duplicate roles), non-zero otherwise.
+ */
 static int
 check_unique_roles(struct config *cfg, const struct rolemap *rm)
 {
@@ -707,7 +709,7 @@ ort_parse_close(struct config *cfg)
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		TAILQ_FOREACH(f, &p->fq, entries)
-			if (FTYPE_STRUCT == f->type) {
+			if (f->type == FTYPE_STRUCT) {
 				if (check_recursive(f->ref, p))
 					continue;
 				gen_errx(cfg, &f->pos, "recursive ref");

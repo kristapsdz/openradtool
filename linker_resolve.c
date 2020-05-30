@@ -557,62 +557,43 @@ resolve_struct_rolemap_noexport(struct config *cfg,
 	return 0;
 }
 
-/*
- * Append the role "rs" to a rolemap (which might be NULL).
- * The "type" and "name" are used to create a new rolemap, if necessary,
- * for the operation. 
- * Return zero on failure, non-zero on success.
- */
 static int
 resolve_struct_rolemap_post_cover(struct config *cfg,
-	const struct rref *rs, struct rolemap **rm, 
-	enum rolemapt type, const char *name, struct strct *p)
+	struct rolemap *dst, const struct rolemap *src)
 {
-	struct rref	*rrs;
-	struct rolemap	*r = *rm;
+	const struct rref	*srcr;
+	struct rref		*dstr;
 
-	if (r == NULL) {
-		*rm = r = calloc(1, sizeof(struct rolemap));
-		if (*rm == NULL) {
-			gen_err(cfg, &rs->pos);
+	TAILQ_FOREACH(srcr, &src->rq, entries) {
+		TAILQ_FOREACH(dstr, &dst->rq, entries)
+			if (dstr->role == srcr->role)
+				break;
+		if (dstr != NULL)
+			continue;
+		if ((dstr = calloc(1, sizeof(struct rref))) == NULL) {
+			gen_err(cfg, &srcr->pos);
 			return 0;
 		}
-		TAILQ_INSERT_TAIL(&p->rq, *rm, entries);
-		TAILQ_INIT(&(*rm)->rq);
-		(*rm)->type = type;
-		if (name != NULL &&
-		    ((*rm)->name = strdup(name)) == NULL) {
-			gen_err(cfg, &rs->pos);
-			return 0;
-		}
+		TAILQ_INSERT_TAIL(&dst->rq, dstr, entries);
+		dstr->role = srcr->role;
+		dstr->pos = srcr->pos;
+		dstr->parent = dst;
 	}
 
-	if ((rrs = calloc(1, sizeof(struct rref))) == NULL) {
-		gen_err(cfg, &rs->pos);
-		return 0;
-	}
-	TAILQ_INSERT_TAIL(&r->rq, rrs, entries);
-	rrs->role = rs->role;
-	rrs->pos = rs->pos;
-	rrs->parent = r;
 	return 1;
 }
 
 /*
  * For "all" rolemaps, add the assigned roles to all possible operations
  * except for "noexport".
- * Returns -1 on memory failure, 0 on failure, 1 on success.
+ * Returns zero on allocation failure, non-zero on success.
  */
 static int
 resolve_struct_rolemap_post(struct config *cfg, struct struct_rolemap *r)
 {
-	struct rref	*rs;
+	struct strct	*p;
 	struct update	*u;
 	struct search	*s;
-	struct strct	*p;
-	enum rolemapt	 rt;
-	size_t		 errs = 0;
-	int		 rc;
 
 	if (r->type != ROLEMAP_ALL)
 		return 1;
@@ -620,52 +601,44 @@ resolve_struct_rolemap_post(struct config *cfg, struct struct_rolemap *r)
 	p = r->result->parent;
 	assert(p->arolemap != NULL);
 
-	TAILQ_FOREACH(rs, &p->arolemap->rq, entries) {
-		assert(rs->role != NULL);
-		TAILQ_FOREACH(u, &p->dq, entries) {
-			rc = resolve_struct_rolemap_post_cover
-				(cfg, rs, &u->rolemap,
-				 ROLEMAP_DELETE, u->name, p);
-			if (!rc)
-				return 0;
-			errs += !rc;
+	TAILQ_FOREACH(u, &p->dq, entries) {
+		if (u->rolemap == NULL) {
+			u->rolemap = p->arolemap;
+			continue;
 		}
-		TAILQ_FOREACH(u, &p->uq, entries) {
-			rc = resolve_struct_rolemap_post_cover
-				(cfg, rs, &u->rolemap,
-				 ROLEMAP_UPDATE, u->name, p);
-			if (rc < 0)
-				return rc;
-			errs += !rc;
+		if (!resolve_struct_rolemap_post_cover
+		    (cfg, u->rolemap, p->arolemap))
+			return 0;
+	}
+	TAILQ_FOREACH(u, &p->uq, entries) {
+		if (u->rolemap == NULL) {
+			u->rolemap = p->arolemap;
+			continue;
 		}
-		TAILQ_FOREACH(s, &p->sq, entries) {
-			if (s->type == STYPE_ITERATE)
-				rt = ROLEMAP_ITERATE;
-			else if (s->type == STYPE_LIST)
-				rt = ROLEMAP_LIST;
-			else if (s->type == STYPE_SEARCH)
-				rt = ROLEMAP_SEARCH;
-			else if (s->type == STYPE_COUNT)
-				rt = ROLEMAP_COUNT;
-			else
-				abort();
-			rc = resolve_struct_rolemap_post_cover
-				(cfg, rs, &s->rolemap, rt, s->name, p);
-			if (rc < 0)
-				return rc;
-			errs += !rc;
+		if (!resolve_struct_rolemap_post_cover
+		    (cfg, u->rolemap, p->arolemap))
+			return 0;
+	}
+
+	TAILQ_FOREACH(s, &p->sq, entries) {
+		if (s->rolemap == NULL) {
+			s->rolemap = p->arolemap;
+			continue;
 		}
-		if (p->ins != NULL) {
-			rc = resolve_struct_rolemap_post_cover
-				(cfg, rs, &p->ins->rolemap, 
-				 ROLEMAP_INSERT, NULL, p);
-			if (rc < 0)
-				return rc;
-			errs += !rc;
-		}
+		if (!resolve_struct_rolemap_post_cover
+		    (cfg, s->rolemap, p->arolemap))
+			return 0;
+	}
+
+	if (p->ins != NULL && p->ins->rolemap == NULL) {
+		p->ins->rolemap = p->arolemap;
+	} else if (p->ins != NULL) {
+		if (!resolve_struct_rolemap_post_cover
+		    (cfg, p->ins->rolemap, p->arolemap))
+			return 0;
 	}
 	
-	return errs == 0;
+	return 1;
 }
 
 /*
@@ -964,8 +937,9 @@ linker_resolve(struct config *cfg)
 				(cfg, &r->struct_order);
 			break;
 		case RESOLVE_ROLEMAP:
-			fail += !resolve_struct_rolemap_post
-				(cfg, &r->struct_rolemap);
+			if (!resolve_struct_rolemap_post
+			    (cfg, &r->struct_rolemap))
+				return 0;
 			break;
 		case RESOLVE_SENT:
 			fail += !resolve_struct_sent

@@ -3,9 +3,9 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
-			<h3>0.8.14</h3>
+			<h3>0.8.15</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2020-05-21">2020-05-21</time>
+			<time datetime="2020-05-30">2020-05-30</time>
 		</header>
 		<aside>
 			<p>
@@ -13,9 +13,6 @@
 				<a href="ort-sqldiff.1.html">ort-sqldiff(1)</a>, properly return
 				with an error code.
 				Earlier, this was not returning an error code.
-			</p>
-			<p>
-				Simplify the <code>unique</code> parsing and linking code.
 			</p>
 			<p>
 				Clarify the <a href="ort-sqldiff.1.html">ort-sqldiff(1)</a>
@@ -26,6 +23,16 @@
 				Remove several fields in <i>ort.h</i> used only by the C front-end,
 				such as the capitalised name of structures.  These add moving parts
 				with few discernable benefits.
+			</p>
+			<p>
+				Complete removal of <q>resolution</q> fields from <i>ort.h</i>.
+				These fields were the superfluous names attached to (for example)
+				upgrade references.
+				Earlier, these were required because the names were resolved after
+				parsing, during the linking phase.
+				A new, safer internal API is used instead.
+				This effort has resulted in a much cleaner API and a significant
+				number of regression tests.
 			</p>
 		</aside>
 	</article>

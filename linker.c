@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017--2019 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017--2020 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -492,176 +492,37 @@ resolve_search(struct config *cfg, struct search *srch)
 /*
  * Given the rolemap "rm", make sure that the matched roles, if any,
  * don't overlap in the tree of roles.
- * Return zero on success, >0 with errors, and <0 on fatal errors.
- * (Never returns the <0 case: this is just for caller convenience.)
+ * Return non-zero on success, zero on failure.
  */
 static ssize_t
-check_rref_overlap(struct config *cfg, struct rolemap *rm)
+check_unique_roles_tree(struct config *cfg, struct rolemap *rm)
 {
 	struct rref	*rs, *rrs;
 	struct role	*rp;
-	ssize_t		 i = 0;
+	size_t		 i = 0;
 
 	/*
-	 * For each valid role in the rref, see if another role is
-	 * specified that's a parent of the current role.
 	 * Don't use top-level roles, since by definition they don't
 	 * overlap with anything else.
 	 */
 
-	TAILQ_FOREACH(rs, &rm->rq, entries) {
+	TAILQ_FOREACH(rs, &rm->rq, entries)
 		TAILQ_FOREACH(rrs, &rm->rq, entries) {
-			if (rrs == rs || NULL == (rp = rrs->role))
+			if (rrs == rs || (rp = rrs->role) == NULL)
 				continue;
 			assert(rp != rs->role);
-			for ( ; NULL != rp; rp = rp->parent)
+			for ( ; rp != NULL; rp = rp->parent)
 				if (rp == rs->role)
 					break;
-			if (NULL == rp)
+			if (rp == NULL)
 				continue;
 			gen_errx(cfg, &rs->pos, 
-				"overlapping role: %s, %s",
-					rrs->role->name,
-					rs->role->name);
+				"overlapping role: %s, %s", 
+				rrs->role->name, rs->role->name);
 			i++;
 		}
-	}
 
-	return i;
-}
-
-/*
- * Performs the work of resolve_rref_cover() by actually accepting a
- * (possibly-NULL) rolemap, looking through the rref, and seeing if
- * we're clobbering an existing role.
- * If we're not, then we add our role to the rref.
- * This might mean that we're going to create a rolemap in the process.
- * Return zero on success, >0 with errors, and <0 on fatal errors.
- */
-static ssize_t
-resolve_rref_coverset(struct config *cfg,
-	const struct rref *rs, struct rolemap **rm, 
-	enum rolemapt type, const char *name, struct strct *p)
-{
-	struct rref	*rrs;
-
-	/*
-	 * If there are no roles defined for a function at all, we need
-	 * to fake up a rolemap on the spot.
-	 * Obviously, this will lead to inserting for the "all"
-	 * statement, below.
-	 */
-
-	if (NULL == *rm) {
-		*rm = calloc(1, sizeof(struct rolemap));
-		if (NULL == *rm) {
-			gen_err(cfg, &rs->pos);
-			return -1;
-		}
-		TAILQ_INSERT_TAIL(&p->rq, *rm, entries);
-		TAILQ_INIT(&(*rm)->rq);
-		(*rm)->type = type;
-		if (NULL != name &&
-		    NULL == ((*rm)->name = strdup(name))) {
-			gen_err(cfg, &rs->pos);
-			return -1;
-		}
-	}
-
-	/* See if our role overlaps. */
-
-	TAILQ_FOREACH(rrs, &(*rm)->rq, entries) {
-		if (NULL == rrs->role ||
-		    rs->role != rrs->role)
-			continue;
-		gen_errx(cfg, &rrs->pos, "role overlapped "
-			"by \"all\" statement");
-		return 1;
-	}
-
-	/*
-	 * Our role didn't appear in the rref of the give rolemap.
-	 * Add it now.
-	 */
-
-	if (NULL == (rrs = calloc(1, sizeof(struct rref)))) {
-		gen_err(cfg, &rs->pos);
-		return -1;
-	}
-	TAILQ_INSERT_TAIL(&(*rm)->rq, rrs, entries);
-	rrs->role = rs->role;
-	rrs->pos = rs->pos;
-	rrs->parent = *rm;
-	return 0;
-}
-
-/*
- * Handle the "all" role assignment, i.e., those where a rref is
- * defined over the function "all".
- * This is tricky.
- * At this level, we just go through all possible functions (queries,
- * updates, deletes, and inserts, all named but for the latter) and look
- * through their rolemaps.
- * Return zero on success, >0 with errors, and <0 on fatal errors.
- */
-static ssize_t
-resolve_rref_cover(struct config *cfg, struct strct *p)
-{
-	struct rref	*rs;
-	struct update	*u;
-	struct search	*s;
-	enum rolemapt	 rt;
-	ssize_t		 i = 0, rc;
-
-	assert(p->arolemap != NULL);
-
-	TAILQ_FOREACH(rs, &p->arolemap->rq, entries) {
-		if (rs->role == NULL)
-			continue;
-		TAILQ_FOREACH(u, &p->dq, entries) {
-			rc = resolve_rref_coverset
-				(cfg, rs, &u->rolemap,
-				 ROLEMAP_DELETE, u->name, p);
-			if (rc < 0)
-				return rc;
-			i += rc;
-		}
-		TAILQ_FOREACH(u, &p->uq, entries) {
-			rc = resolve_rref_coverset
-				(cfg, rs, &u->rolemap,
-				 ROLEMAP_UPDATE, u->name, p);
-			if (rc < 0)
-				return rc;
-			i += rc;
-		}
-		TAILQ_FOREACH(s, &p->sq, entries) {
-			rt = ROLEMAP__MAX;
-			if (STYPE_ITERATE == s->type)
-				rt = ROLEMAP_ITERATE;
-			else if (STYPE_LIST == s->type)
-				rt = ROLEMAP_LIST;
-			else if (STYPE_SEARCH == s->type)
-				rt = ROLEMAP_SEARCH;
-			else if (STYPE_COUNT == s->type)
-				rt = ROLEMAP_COUNT;
-			assert(rt != ROLEMAP__MAX);
-			rc = resolve_rref_coverset(cfg, 
-				rs, &s->rolemap, rt, s->name, p);
-			if (rc < 0)
-				return rc;
-			i += rc;
-		}
-		if (p->ins != NULL) {
-			rc = resolve_rref_coverset
-				(cfg, rs, &p->ins->rolemap, 
-				 ROLEMAP_INSERT, NULL, p);
-			if (rc < 0)
-				return rc;
-			i += rc;
-		}
-	}
-	
-	return i;
+	return i == 0;
 }
 
 /*
@@ -776,7 +637,6 @@ ort_parse_close(struct config *cfg)
 	struct rolemap	 *rm;
 	struct search	 *srch;
 	size_t		  colour = 1, sz = 0, i;
-	ssize_t		  rc;
 
 	if (TAILQ_EMPTY(&cfg->sq)) {
 		gen_errx(cfg, NULL, "no structures in configuration");
@@ -803,62 +663,41 @@ ort_parse_close(struct config *cfg)
 	if (i > 0)
 		return 0;
 
-	/* 
-	 * Check rolemap function name and role name linkage.
-	 * Also make sure that any given rolemap doesn't refer to nested
-	 * roles (e.g., a role and one if its ancestors).
-	 */
+	/* Like check_uniqu_roles(), but for the whole tree. */
 
 	i = 0;
-	TAILQ_FOREACH(p, &cfg->sq, entries) {
-		TAILQ_FOREACH(rm, &p->rq, entries) {
-			rc = check_rref_overlap(cfg, rm);
-			if (rc < 0)
-				return 0;
-			i += rc;
-		}
-		if (NULL != p->arolemap) {
-			rc = resolve_rref_cover(cfg, p);
-			if (rc < 0)
-				return 0;
-			i += rc;
-		}
-	}
-
+	TAILQ_FOREACH(p, &cfg->sq, entries)
+		TAILQ_FOREACH(rm, &p->rq, entries)
+			i += !check_unique_roles_tree(cfg, rm);
 	if (i > 0)
 		return 0;
 
-	/* 
-	 * Some role warnings.
-	 * Look through all of our function classes and make sure that
-	 * we've defined role assignments for each one.
-	 * Otherwise, they're unreachable.
-	 */
+	/* For roles, see whether operations are reachable. */
 
 	if (!TAILQ_EMPTY(&cfg->rq))
 		TAILQ_FOREACH(p, &cfg->sq, entries) {
 			TAILQ_FOREACH(srch, &p->sq, entries) {
-				if (srch->rolemap)
+				if (srch->rolemap != NULL)
 					continue;
 				gen_warnx(cfg, &srch->pos,
 					"no roles defined for "
 					"query function");
 			}
 			TAILQ_FOREACH(u, &p->dq, entries) {
-				if (u->rolemap)
+				if (u->rolemap != NULL)
 					continue;
 				gen_warnx(cfg, &u->pos,
 					"no roles defined for "
 					"delete function");
 			}
 			TAILQ_FOREACH(u, &p->uq, entries) {
-				if (u->rolemap)
+				if (u->rolemap != NULL)
 					continue;
 				gen_warnx(cfg, &u->pos,
 					"no roles defined for "
 					"update function");
 			}
-			if (NULL != p->ins && NULL == p->ins->rolemap)
+			if (p->ins != NULL && p->ins->rolemap == NULL)
 				gen_warnx(cfg, &p->ins->pos, 
 					"no roles defined for "
 					"insert function");

@@ -482,9 +482,9 @@ resolve_struct_rolemap_query(struct config *cfg, struct struct_rolemap *r)
 
 /*
  * Apply the noexport roles of rolemap "r" to the field "f".
- * Returns zero on allocation failure, non-zero on success.
  * It is not an error for the field to already have the role specified
  * for it: it's just skipped.
+ * Returns zero on allocation failure, non-zero on success.
  */
 static int
 resolve_struct_rolemap_field(struct config *cfg,
@@ -558,10 +558,122 @@ resolve_struct_rolemap_noexport(struct config *cfg,
 }
 
 /*
+ * Append the role "rs" to a rolemap (which might be NULL).
+ * The "type" and "name" are used to create a new rolemap, if necessary,
+ * for the operation. 
+ * Return zero on failure, non-zero on success.
+ */
+static int
+resolve_struct_rolemap_post_cover(struct config *cfg,
+	const struct rref *rs, struct rolemap **rm, 
+	enum rolemapt type, const char *name, struct strct *p)
+{
+	struct rref	*rrs;
+	struct rolemap	*r = *rm;
+
+	if (r == NULL) {
+		*rm = r = calloc(1, sizeof(struct rolemap));
+		if (*rm == NULL) {
+			gen_err(cfg, &rs->pos);
+			return 0;
+		}
+		TAILQ_INSERT_TAIL(&p->rq, *rm, entries);
+		TAILQ_INIT(&(*rm)->rq);
+		(*rm)->type = type;
+		if (name != NULL &&
+		    ((*rm)->name = strdup(name)) == NULL) {
+			gen_err(cfg, &rs->pos);
+			return 0;
+		}
+	}
+
+	if ((rrs = calloc(1, sizeof(struct rref))) == NULL) {
+		gen_err(cfg, &rs->pos);
+		return 0;
+	}
+	TAILQ_INSERT_TAIL(&r->rq, rrs, entries);
+	rrs->role = rs->role;
+	rrs->pos = rs->pos;
+	rrs->parent = r;
+	return 1;
+}
+
+/*
+ * For "all" rolemaps, add the assigned roles to all possible operations
+ * except for "noexport".
+ * Returns -1 on memory failure, 0 on failure, 1 on success.
+ */
+static int
+resolve_struct_rolemap_post(struct config *cfg, struct struct_rolemap *r)
+{
+	struct rref	*rs;
+	struct update	*u;
+	struct search	*s;
+	struct strct	*p;
+	enum rolemapt	 rt;
+	size_t		 errs = 0;
+	int		 rc;
+
+	if (r->type != ROLEMAP_ALL)
+		return 1;
+
+	p = r->result->parent;
+	assert(p->arolemap != NULL);
+
+	TAILQ_FOREACH(rs, &p->arolemap->rq, entries) {
+		assert(rs->role != NULL);
+		TAILQ_FOREACH(u, &p->dq, entries) {
+			rc = resolve_struct_rolemap_post_cover
+				(cfg, rs, &u->rolemap,
+				 ROLEMAP_DELETE, u->name, p);
+			if (!rc)
+				return 0;
+			errs += !rc;
+		}
+		TAILQ_FOREACH(u, &p->uq, entries) {
+			rc = resolve_struct_rolemap_post_cover
+				(cfg, rs, &u->rolemap,
+				 ROLEMAP_UPDATE, u->name, p);
+			if (rc < 0)
+				return rc;
+			errs += !rc;
+		}
+		TAILQ_FOREACH(s, &p->sq, entries) {
+			if (s->type == STYPE_ITERATE)
+				rt = ROLEMAP_ITERATE;
+			else if (s->type == STYPE_LIST)
+				rt = ROLEMAP_LIST;
+			else if (s->type == STYPE_SEARCH)
+				rt = ROLEMAP_SEARCH;
+			else if (s->type == STYPE_COUNT)
+				rt = ROLEMAP_COUNT;
+			else
+				abort();
+			rc = resolve_struct_rolemap_post_cover
+				(cfg, rs, &s->rolemap, rt, s->name, p);
+			if (rc < 0)
+				return rc;
+			errs += !rc;
+		}
+		if (p->ins != NULL) {
+			rc = resolve_struct_rolemap_post_cover
+				(cfg, rs, &p->ins->rolemap, 
+				 ROLEMAP_INSERT, NULL, p);
+			if (rc < 0)
+				return rc;
+			errs += !rc;
+		}
+	}
+	
+	return errs == 0;
+}
+
+/*
  * Resolve the operation in a role-map.
  * Some operations are named; others (like "insert") aren't.
  * This could just as easily have a resolver type for each rolemap type,
  * but it boils down to the same thing.
+ * Returns -1 on allocation failure, 0 on failure, 1 on success.
  */
 static int
 resolve_struct_rolemap(struct config *cfg, struct struct_rolemap *r)
@@ -601,8 +713,9 @@ resolve_struct_rolemap(struct config *cfg, struct struct_rolemap *r)
 			"search", r->name);
 		break;
 	case ROLEMAP_NOEXPORT:
-		if ((rc = resolve_struct_rolemap_noexport(cfg, r)) > 0)
-			return 1;
+		rc = resolve_struct_rolemap_noexport(cfg, r);
+		if (rc != 0)
+			return rc;
 		break;
 	default:
 		abort();
@@ -751,6 +864,7 @@ linker_resolve(struct config *cfg)
 {
 	struct resolve	*r;
 	size_t		 fail = 0;
+	int		 rc;
 
 	TAILQ_FOREACH(r, &cfg->priv->rq, entries)
 		switch (r->type) {
@@ -804,6 +918,9 @@ linker_resolve(struct config *cfg)
 			break;
 		}
 
+	if (fail > 0)
+		return 0;
+
 	/* These depend upon prior resolutions. */
 
 	TAILQ_FOREACH(r, &cfg->priv->rq, entries)
@@ -813,12 +930,18 @@ linker_resolve(struct config *cfg)
 				(cfg, &r->field_struct);
 			break;
 		case RESOLVE_ROLEMAP:
-			fail += !resolve_struct_rolemap
+			rc = resolve_struct_rolemap
 				(cfg, &r->struct_rolemap);
+			if (rc < 0)
+				return 0;
+			fail += !rc;
 			break;
 		default:
 			break;
 		}
+
+	if (fail > 0)
+		return 0;
 
 	/* Lastly, these depend on full struct target links. */
 
@@ -839,6 +962,10 @@ linker_resolve(struct config *cfg)
 		case RESOLVE_ORDER:
 			fail += !resolve_struct_order
 				(cfg, &r->struct_order);
+			break;
+		case RESOLVE_ROLEMAP:
+			fail += !resolve_struct_rolemap_post
+				(cfg, &r->struct_rolemap);
 			break;
 		case RESOLVE_SENT:
 			fail += !resolve_struct_sent

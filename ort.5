@@ -300,6 +300,10 @@ when adding columns to the SQL schema via
 It's only valid for numeric, date, enumeration, or string literal
 (email, text) field types.
 Dates must be in yyyy-mm-dd format.
+Defaults are
+.Em not
+currently checked against type limits (i.e., e-mail form or string
+length).
 .It Cm limit Ar limit_op limit_val
 Used when generating validation functions.
 Only available for native types.

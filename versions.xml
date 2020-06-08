@@ -20,6 +20,9 @@
 				Create a regression suite to test for this.
 			</p>
 			<p>
+				Allow for <code>enum</code> fields to have a default type.
+			</p>
+			<p>
 				Remove several fields in <i>ort.h</i> used only by the C front-end,
 				such as the capitalised name of structures.  These add moving parts
 				with few discernable benefits.

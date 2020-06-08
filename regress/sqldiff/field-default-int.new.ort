@@ -1,0 +1,4 @@
+struct foo {
+	field foo int;
+	field bar int default 0;
+};

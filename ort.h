@@ -193,6 +193,7 @@ struct	field {
 		int64_t integer;
 		double decimal;
 		char *string;
+		struct eitem *eitem;
 	} def; /* a default value */
 	enum ftype	   type; /* type of column */
 	enum upact	   actdel; /* delete action */

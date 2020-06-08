@@ -453,6 +453,10 @@ gen_diff_fields_new(const struct strct *s,
 					printf(" DEFAULT '%s'",
 						f->def.string);
 					break;
+				case FTYPE_ENUM:
+					printf(" DEFAULT %" PRId64,
+						f->def.eitem->value);
+					break;
 				default:
 					abort();
 					break;

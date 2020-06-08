@@ -200,6 +200,7 @@ static void
 parse_field_info(struct parse *p, struct field *fd)
 {
 	struct tm	 tm;
+	struct resolve	*r;
 
 	while (!PARSE_STOP(p)) {
 		if (parse_next(p) == TOK_SEMICOLON)
@@ -359,6 +360,29 @@ parse_field_info(struct parse *p, struct field *fd)
 				fd->flags |= FIELD_HASDEF;
 				fd->def.string = strdup(p->last.string);
 				if (fd->def.string == NULL) {
+					parse_err(p);
+					return;
+				}
+				break;
+			case FTYPE_ENUM:
+				if (parse_next(p) != TOK_IDENT) {
+					parse_errx(p, "expected identifier");
+					break;
+				}
+				fd->flags |= FIELD_HASDEF;
+				fd->def.eitem = NULL;
+				r = calloc(1, sizeof(struct resolve));
+				if (r == NULL) {
+					parse_err(p);
+					return;
+				}
+				TAILQ_INSERT_TAIL
+					(&p->cfg->priv->rq, r, entries);
+				r->type = RESOLVE_FIELD_DEFAULT_EITEM;
+				r->field_def_eitem.result = fd;
+				r->field_def_eitem.name = 
+					strdup(p->last.string);
+				if (r->field_def_eitem.name == NULL) {
 					parse_err(p);
 					return;
 				}

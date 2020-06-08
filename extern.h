@@ -21,6 +21,7 @@ TAILQ_HEAD(resolveq, resolve);
 
 enum	resolvet {
 	RESOLVE_FIELD_BITS,
+	RESOLVE_FIELD_DEFAULT_EITEM,
 	RESOLVE_FIELD_ENUM,
 	RESOLVE_FIELD_FOREIGN,
 	RESOLVE_FIELD_STRUCT,
@@ -108,6 +109,10 @@ struct	resolve {
 				struct nref	*result;
 				char		*name;
 		} struct_unique; /* unique ->bar<-... */
+		struct field_def_eitem {
+				struct field	*result;
+				char		*name;
+		} field_def_eitem; /* default ->eitem<-... */
 	};
 	TAILQ_ENTRY(resolve)	entries;
 };

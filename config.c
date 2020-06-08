@@ -284,6 +284,9 @@ parse_free_resolve(struct resolve *p)
 	case RESOLVE_FIELD_BITS:
 		free(p->field_bits.name);
 		break;
+	case RESOLVE_FIELD_DEFAULT_EITEM:
+		free(p->field_def_eitem.name);
+		break;
 	case RESOLVE_FIELD_ENUM:
 		free(p->field_enum.name);
 		break;

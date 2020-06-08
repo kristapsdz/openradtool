@@ -720,6 +720,22 @@ resolve_field_bits(struct config *cfg, struct field_bits *r)
 	return 0;
 }
 
+static int
+resolve_field_def_eitem(struct config *cfg, struct field_def_eitem *r)
+{
+	struct eitem	*ei;
+
+	assert(r->result->enm != NULL);
+	TAILQ_FOREACH(ei, &r->result->enm->eq, entries)
+		if (strcasecmp(ei->name, r->name) == 0) {
+			r->result->def.eitem = ei;
+			return 1;
+		}
+
+	gen_errx(cfg, &r->result->pos, "unknown enumeration item");
+	return 0;
+}
+
 /*
  * The local key refers to another field that should be a foreign
  * reference resolved in resolve_field_foreign().
@@ -863,6 +879,11 @@ linker_resolve(struct config *cfg)
 			fail += !resolve_field_enum
 				(cfg, &r->field_enum);
 			break;
+		case RESOLVE_FIELD_DEFAULT_EITEM:
+			/*
+			 * Requires RESOLVE_FIELD_ENUM.
+			 */
+			break;
 		case RESOLVE_AGGR:
 		case RESOLVE_DISTINCT:
 		case RESOLVE_GROUPROW:
@@ -901,6 +922,10 @@ linker_resolve(struct config *cfg)
 
 	TAILQ_FOREACH(r, &cfg->priv->rq, entries)
 		switch (r->type) {
+		case RESOLVE_FIELD_DEFAULT_EITEM:
+			fail += !resolve_field_def_eitem
+				(cfg, &r->field_def_eitem);
+			break;
 		case RESOLVE_FIELD_STRUCT:
 			fail += !resolve_field_struct
 				(cfg, &r->field_struct);

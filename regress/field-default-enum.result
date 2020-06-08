@@ -1,0 +1,8 @@
+enum bar {
+	item baz 0;
+};
+
+struct foo {
+	field foo enum bar default baz;
+};
+

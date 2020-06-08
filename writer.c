@@ -274,6 +274,10 @@ parse_write_field(struct writer *w, const struct field *p)
 			rc = wprint(w, " default \"%s\"",
 				p->def.string);
 			break;
+		case FTYPE_ENUM:
+			rc = wprint(w, " default %s",
+				p->def.eitem->name);
+			break;
 		default:
 			abort();
 			break;

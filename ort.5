@@ -87,7 +87,6 @@ Thus, the following are identical except for the name:
 struct foo {
   field id int rowid;
 };
-
 struct bar{field id int rowid;};
 .Ed
 .Pp
@@ -120,7 +119,6 @@ Document comments are begun by the hash mark
 and extend to the end of the line.
 .Bd -literal -offset indent
 # This is my structure.
-
 struct ident {
   field id int comment "\e"Literal\e"."; # End of line.
 };
@@ -282,7 +280,7 @@ SQL actions taken when the field is updated.
 May be one of
 .Ar none
 .Pq do nothing ,
-.Ar restrict ,
+.Ar restrict
 .Pq disallow if having child referents ,
 .Ar nullify
 .Pq set child referents to null ,
@@ -355,6 +353,42 @@ Has a unique SQL column value.
 A field declaration may consist of any number of
 .Cm typeinfo
 statements.
+.Pp
+A typical set of fields for a web application user in a database may
+consist of the following.
+In this example, the
+.Li email
+is unique,
+.Li name
+must be of non-zero length,
+.Li cookie
+is an internal value never exported (using the
+.Cm default
+keyword implies this was added later in development, such that old
+records have a value of zero while new records are non-zero), and
+.Li id
+is the unique identifier.
+The user references an parent by its
+.Li id .
+If the parent is deleted, the reference is nullified.
+.Bd -literal -offset indent
+struct user {
+  field parentid:user.id int null actdel nullify
+    comment "Parent or null if there is no parent.";
+  field name text limit gt 0 limit lt 128
+    comment "User's full name.";
+  field cookie int noexport default 0 limit lt 0
+    comment "A secret cookie (if zero, added 
+             after secret cookie functionality).";
+  field password password;
+  field email email unique
+    comment "User's unique e-mail address.";
+  field ctime epoch 
+    comment "When the user was added to the database.";
+  field id int rowid noexport
+    comment "Internal unique identifier.";
+};
+.Ed
 .Ss Comments
 A comment is a string literal describing most any component.
 Comments are part of the document structure and are usually passed to

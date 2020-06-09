@@ -1,0 +1,4 @@
+struct foo {
+	field bar password null;
+	update bar strset: bar notnull;
+};

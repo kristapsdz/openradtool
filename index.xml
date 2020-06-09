@@ -137,8 +137,8 @@
 			<section id="usage-box" class="text">
 				<p class="explain">
 					<span class="nm">ort</span> tools are designed to be operated by <a
-						href="https://man.openbsd.org/make.1">make(1)</a>: sources go in, results come out.
-					During development, Makefiles continuously keep C sources, TypeScript, translations, and so on up to
+						href="https://man.openbsd.org/make.1">make(1)</a> or other build tool.
+					During development, these tools continuously keep C sources, TypeScript, translations, and so on up to
 					date from a single <a href="ort.5.html">ort(5)</a> file.
 					These files are in turn compiled or bundled into your application.
 				</p>

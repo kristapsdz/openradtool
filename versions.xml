@@ -5,7 +5,7 @@
 		<header>
 			<h3>0.8.15</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2020-05-30">2020-05-30</time>
+			<time datetime="2020-06-09">2020-06-09</time>
 		</header>
 		<aside>
 			<p>
@@ -21,6 +21,8 @@
 			</p>
 			<p>
 				Allow for <code>enum</code> fields to have a default type.
+				Allow for <code>password</code> fields to accept
+				<code>isnull</code> or <code>notnull</code> operations.
 			</p>
 			<p>
 				Remove several fields in <i>ort.h</i> used only by the C front-end,

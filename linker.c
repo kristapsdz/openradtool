@@ -274,15 +274,15 @@ check_searchtype(struct config *cfg, struct strct *p)
 			 * But for now, mandate equality.
 			 */
 
-			if (sent->op != OPTYPE_EQUAL &&
+			if (!OPTYPE_ISUNARY(sent->op) &&
+			    sent->op != OPTYPE_EQUAL &&
 			    sent->op != OPTYPE_NEQUAL &&
 			    sent->op != OPTYPE_STREQ &&
 			    sent->op != OPTYPE_STRNEQ &&
 			    sent->field->type == FTYPE_PASSWORD) {
 				gen_errx(cfg, &sent->pos, 
 					"passwords only accept "
-					"equality or non-equality "
-					"operators");
+					"unary or equality operators");
 				return 0;
 			}
 

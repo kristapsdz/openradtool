@@ -2680,6 +2680,7 @@ gen_stmt(const struct strct *p)
 
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
 			if (sent->field->type == FTYPE_PASSWORD &&
+			    !OPTYPE_ISUNARY(sent->op) &&
 			    sent->op != OPTYPE_STREQ &&
 			    sent->op != OPTYPE_STRNEQ)
 				continue;

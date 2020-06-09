@@ -462,8 +462,8 @@ The
 .Cm streq
 and
 .Cm strneq
-variants operate the same except for on passwords, where they compare directly
-to the password hash instead of the password value.
+variants operate the same except for on passwords, where they compare
+directly to the password hash instead of the password value.
 .It Cm lt , gt
 Less than or greater than binary operators.
 For text, the comparison is lexical; otherwise, it is by value.
@@ -484,6 +484,8 @@ Unary operator to check whether the field is null or not null.
 The
 .Cm password
 field does not accept any operators but
+.Cm isnull ,
+.Cm notnull ,
 .Cm eq ,
 .Cm neq ,
 .Cm streq ,

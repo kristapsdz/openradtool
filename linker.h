@@ -24,5 +24,6 @@ void	gen_warnx(struct config *, const struct pos *, const char *, ...)
 		__attribute__((format(printf, 3, 4)));
 
 int	linker_resolve(struct config *);
+int	linker_aliases(struct config *);
 
 #endif /*  !LINKER_H */

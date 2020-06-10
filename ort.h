@@ -320,7 +320,7 @@ struct	sent {
 	char		 *uname; /* fname but with underscores */
 	struct alias	 *alias; /* resolved alias */
 	unsigned int	  flags; 
-#define	SENT_IS_UNIQUE	  0x01 /* has a rowid/unique in its refs */
+#define	SENT_IS_UNIQUE	  0x01 /* FIXME: unused */
 	TAILQ_ENTRY(sent) entries;
 };
 

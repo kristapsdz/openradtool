@@ -808,6 +808,11 @@ parse_config_search_params(struct parse *p, struct search *s)
 		if (p->lasttype == TOK_SEMICOLON)
 			break;
 	}
+
+	if (s->group != NULL && s->aggr == NULL)
+		parse_errx(p, "group without a constraint");
+	if (s->aggr != NULL && s->group == NULL)
+		parse_errx(p, "constraint without a group");
 }
 
 /*

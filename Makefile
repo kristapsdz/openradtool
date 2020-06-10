@@ -10,6 +10,7 @@ VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = compats.o \
 		   config.o \
 		   linker.o \
+		   linker_aliases.o \
 		   linker_resolve.o \
 		   log.o \
 		   parser.o \
@@ -74,6 +75,7 @@ DOTAR		 = audit.c \
 		   ort.5 \
 		   ort.h \
 		   linker.c \
+		   linker_aliases.c \
 		   linker_resolve.c \
 		   linker.h \
 		   log.c \

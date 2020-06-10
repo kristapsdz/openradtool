@@ -143,6 +143,46 @@ parse_cmp(const void *a1, const void *a2)
 	return (ssize_t)p1->height - (ssize_t)p2->height;
 }
 
+/*
+ * Make sure that we have a well-defined grouprow and aggregation
+ * function.
+ * Returns zero on failure, non-zero on success.
+ */
+static int
+check_aggrtype(struct config *cfg, const struct search *srch)
+{
+	size_t	errs = 0;
+
+	if (srch->group != NULL) {
+		if (srch->aggr == NULL) {
+			gen_errx(cfg, &srch->group->pos, 
+				"group without a constraint");
+			errs++;
+		}
+		if (srch->group->field->flags & FIELD_NULL) {
+			gen_errx(cfg, &srch->group->pos,
+				"group cannot be null");
+			errs++;
+		}
+	}
+
+	if (srch->aggr != NULL) {
+		if (srch->aggr->field == srch->group->field) {
+			gen_errx(cfg, &srch->group->pos, "same "
+				"column for group and constraint");
+			errs++;
+		}
+		if (srch->aggr->field->parent != 
+		    srch->group->field->parent) {
+			gen_errx(cfg, &srch->group->pos, 
+				"structure for group and constraint "
+				"must be the same");
+			errs++;
+		}
+	}
+
+	return errs == 0;
+}
 
 /*
  * Check to see that our search type (e.g., list or iterate) is
@@ -154,7 +194,7 @@ parse_cmp(const void *a1, const void *a2)
  * Return zero on failure, non-zero on success.
  */
 static int
-check_searchtype(struct config *cfg, struct strct *p)
+check_searchtype(struct config *cfg, const struct strct *p)
 {
 	const struct sent	*sent;
 	struct search		*srch;
@@ -257,11 +297,11 @@ check_searchtype(struct config *cfg, struct strct *p)
  * Return non-zero on success, zero on failure.
  */
 static ssize_t
-check_unique_roles_tree(struct config *cfg, struct rolemap *rm)
+check_unique_roles_tree(struct config *cfg, const struct rolemap *rm)
 {
-	struct rref	*rs, *rrs;
-	struct role	*rp;
-	size_t		 i = 0;
+	const struct rref	*rs, *rrs;
+	const struct role	*rp;
+	size_t		 	 i = 0;
 
 	/*
 	 * Don't use top-level roles, since by definition they don't
@@ -469,6 +509,21 @@ ort_parse_close(struct config *cfg)
 					"insert function");
 		}
 
+	i = 0;
+	TAILQ_FOREACH(p, &cfg->sq, entries)
+		TAILQ_FOREACH(srch, &p->sq, entries)
+			i += !check_aggrtype(cfg, srch);
+	if (i > 0)
+		return 0;
+
+	/* See if our search type is wonky. */
+
+	i = 0;
+	TAILQ_FOREACH(p, &cfg->sq, entries)
+		i += !check_searchtype(cfg, p);
+	if (i > 0)
+		return 0;
+
 	/* Check for reference recursion. */
 
 	i = 0;
@@ -503,12 +558,6 @@ ort_parse_close(struct config *cfg)
 		colour++;
 	}
 	assert(sz > 0);
-
-	/* See if our search type is wonky. */
-
-	TAILQ_FOREACH(p, &cfg->sq, entries)
-		if ( ! check_searchtype(cfg, p))
-			return(0);
 
 	/* 
 	 * Copy the list into a temporary array.

@@ -199,62 +199,22 @@ linker_aliases_resolve(struct config *cfg, struct search *srch)
 			o->alias = a;
 		}
 
-	/* 
-	 * Only resolve the group if we have an aggregator.
-	 * The group identifier cannot be NULL because that would ruin
-	 * the post-join filter of NULL fields.
-	 */
+	/* Resolve aggregate and group row. */
 
-	if (NULL != srch->group) {
-		if (NULL == srch->aggr) {
-			gen_errx(cfg, &srch->group->pos, 
-				"group without a constraint");
-			return 0;
-		}
-		if (NULL != srch->group->name) {
-			TAILQ_FOREACH(a, &p->aq, entries)
-				if (0 == strcasecmp
-				    (a->name, srch->group->name))
-					break;
-			assert(NULL != a);
-			srch->group->alias = a;
-		}
-		if (FIELD_NULL & srch->group->field->flags) {
-			gen_errx(cfg, &srch->group->pos,
-				"group cannot be null");
-			return 0;
-		}
+	if (srch->group != NULL && srch->group->name != NULL) {
+		TAILQ_FOREACH(a, &p->aq, entries)
+			if (strcasecmp(a->name, srch->group->name) == 0)
+				break;
+		assert(a != NULL);
+		srch->group->alias = a;
 	}
 
-	/*
-	 * For the aggregate function, we also want to make sure that we
-	 * haven't defined the same columns to aggregate as the ones we
-	 * want to group.
-	 * It doesn't make a lot of sense to have a NULL field but it
-	 * also doesn't break anything, so it's ok.
-	 */
-
-	if (srch->aggr != NULL) {
-		if (srch->aggr->field == srch->group->field) {
-			gen_errx(cfg, &srch->group->pos, "same "
-				"column for group and constraint");
-			return 0;
-		}
-		if (srch->aggr->field->parent != 
-		    srch->group->field->parent) {
-			gen_errx(cfg, &srch->group->pos, 
-				"structure for group and constraint "
-				"must be the same");
-			return 0;
-		}
-		if (NULL != srch->aggr->name) {
-			TAILQ_FOREACH(a, &p->aq, entries)
-				if (0 == strcasecmp
-				    (a->name, srch->aggr->name))
-					break;
-			assert(NULL != a);
-			srch->aggr->alias = a;
-		}
+	if (srch->aggr != NULL && srch->aggr->name != NULL) {
+		TAILQ_FOREACH(a, &p->aq, entries)
+			if (strcasecmp(a->name, srch->aggr->name) == 0)
+				break;
+		assert(a != NULL);
+		srch->aggr->alias = a;
 	}
 
 	return 1;

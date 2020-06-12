@@ -9,6 +9,22 @@
 		</header>
 		<aside>
 			<p>
+				In the documentation, clarify native, meta, and user-defined types.
+				Clarify that sub-structure references may not be recursive.
+			</p>
+			<p>
+				Only accept logical operators on integer and bit types.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
+			<h3>0.8.15</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-06-09">2020-06-09</time>
+		</header>
+		<aside>
+			<p>
 				Bug-fix: if errors occur when parsing files with
 				<a href="ort-sqldiff.1.html">ort-sqldiff(1)</a>, properly return
 				with an error code.

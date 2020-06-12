@@ -1,0 +1,4 @@
+struct foo {
+	field foo int;
+	iterate foo and;
+};

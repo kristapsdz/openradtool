@@ -1,0 +1,9 @@
+bitfield bar {
+	item foo 0;
+};
+
+struct foo {
+	field foo bits bar;
+	iterate foo and;
+};
+

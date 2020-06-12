@@ -246,14 +246,16 @@ The
 alias is also available, which is the same but using a date (ISO 8601)
 sequence input validator.
 .It Cm struct Ar field
-A non-native type filled in by joining the given
+Assign a sub-object of the
+.Cm struct
+given by the
 .Ar field
-with its referent structure.
+target.
 This type is
 .Dq non-native
-because it is not represented in the database schema, and is instead
-filled in with the referenced row.
-In the C API, this is represented by a
+because it is not represented in the database schema, but only output
+code.
+In the C API, for example, this is represented by a
 .Vt struct name
 of the referent structure.
 The
@@ -262,6 +264,8 @@ may be marked with
 .Cm null ,
 but this involves a not-inconsiderable performance hit when querying
 (directly or indirectly) on the structure.
+Sub-objects may not be recursive: an object may not assign another
+object that eventually assigns the origin.
 .It Cm text
 Text, usually encoded in ASCII or UTF-8.
 .El
@@ -517,6 +521,9 @@ single row with the choice of row being determined by
 .Cm maxrow
 or
 .Cm minrow .
+It may not be a
+.Cm null
+column.
 .It Cm limit Ar limitval ["," offsetval]?
 A value >0 that limits the number of returned results.
 By default, there is no limit.

@@ -33,6 +33,7 @@
 /*
  * Map all "parent.child" chains of foreign references from a given
  * structure (recursively) into alias names.
+ * Also checks that the given "orig" does not have infinite recursion.
  * This is used when creating SQL queries because we might join on the
  * same structure more than once, so it requires "AS" statements.
  * The "AS" name is the alias name.
@@ -51,6 +52,12 @@ linker_aliases_create(struct config *cfg, struct strct *orig,
 		if (f->type != FTYPE_STRUCT)
 			continue;
 		assert(f->ref != NULL);
+
+		if (f->ref->target->parent == orig) {
+			gen_errx(cfg, &orig->pos,
+				"contains recursive references");
+			return 0;
+		}
 		
 		if ((a = calloc(1, sizeof(struct alias))) == NULL) {
 			gen_err(cfg, &f->pos);
@@ -227,9 +234,13 @@ linker_aliases(struct config *cfg)
 	size_t		 count = 0;
 	struct search	*srch;
 
+	/* Creates aliases and checks for infinite recursion. */
+
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		if (!linker_aliases_create(cfg, p, p, &count, NULL))
 			return 0;
+
+	/* Assigns aliases to search types. */
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		TAILQ_FOREACH(srch, &p->sq, entries)

@@ -87,27 +87,6 @@ gen_errx(struct config *cfg,
 }
 
 /*
- * Make sure that "check" never accesses itself.
- * Returns zero if the reference is recursive, non-zero otherwise.
- */
-static int
-check_recursive(const struct ref *ref, const struct strct *check)
-{
-	const struct field	*f;
-	const struct strct	*p;
-
-	if ((p = ref->target->parent) == check)
-		return 0;
-
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if (f->type == FTYPE_STRUCT &&
-		    !check_recursive(f->ref, check))
-			return 0;
-
-	return 1;
-}
-
-/*
  * Recursively annotate our height from each node.
  * We only do this for FTYPE_STRUCT objects.
  */
@@ -416,14 +395,40 @@ check_unique_roles(struct config *cfg, const struct rolemap *rm)
 
 	TAILQ_FOREACH(rs, &rm->rq, entries)
 		TAILQ_FOREACH(rrs, &rm->rq, entries)
-			if (rs != rrs &&
-			    rs->role == rrs->role) {
+			if (rs != rrs && rs->role == rrs->role) {
 				gen_errx(cfg, &rrs->role->pos,
 					"duplicate operation role");
 				errs++;
 			}
 
 	return errs == 0;
+}
+
+/* 
+ * See whether operations are defined in a role.
+ * These aren't errors, but should be warned about.
+ */
+static void
+check_roleops(struct config *cfg, const struct strct *p)
+{
+	const struct search	*srch;
+	const struct update	*u;
+
+	TAILQ_FOREACH(srch, &p->sq, entries)
+		if (srch->rolemap == NULL)
+			gen_warnx(cfg, &srch->pos, "role "
+				"not assigned to query function");
+	TAILQ_FOREACH(u, &p->dq, entries)
+		if (u->rolemap == NULL)
+			gen_warnx(cfg, &u->pos, "role "
+				"not assigned to delete function");
+	TAILQ_FOREACH(u, &p->uq, entries) 
+		if (u->rolemap == NULL)
+			gen_warnx(cfg, &u->pos, "role "
+				"not assigned to update function");
+	if (p->ins != NULL && p->ins->rolemap == NULL)
+		gen_warnx(cfg, &p->ins->pos, 
+			"role not assigned to insert function");
 }
 
 /*
@@ -436,13 +441,12 @@ check_unique_roles(struct config *cfg, const struct rolemap *rm)
 int
 ort_parse_close(struct config *cfg)
 {
-	struct update	 *u;
 	struct strct	 *p;
 	struct strct	**pa;
 	struct field	 *f;
 	struct rolemap	 *rm;
 	struct search	 *srch;
-	size_t		  colour = 1, sz = 0, i;
+	size_t		  colour = 1, sz = 0, i = 0;
 
 	if (TAILQ_EMPTY(&cfg->sq)) {
 		gen_errx(cfg, NULL, "no structures in configuration");
@@ -454,9 +458,15 @@ ort_parse_close(struct config *cfg)
 	if (!linker_aliases(cfg))
 		return 0;
 
+	/*
+	 * At this point we know (1) that all names link to objects, (2)
+	 * that all queries have aliases created (this is for the SQL),
+	 * and (3) that the configuration has non-empty structures that
+	 * are not recursive.
+	 */
+
 	/* Check for unique statement duplicates. */
 
-	i = 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		i += !check_unique_unique(cfg, p);
 	if (i > 0)
@@ -464,77 +474,36 @@ ort_parse_close(struct config *cfg)
 
 	/* Check that each rolemap has no duplicate roles. */
 
-	i = 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		TAILQ_FOREACH(rm, &p->rq, entries)
 			i += !check_unique_roles(cfg, rm);
 	if (i > 0)
 		return 0;
 
-	i = 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		TAILQ_FOREACH(rm, &p->rq, entries)
 			i += !check_unique_roles_tree(cfg, rm);
 	if (i > 0)
 		return 0;
 
-	/* For roles, see whether operations are reachable. */
+	/* See whether operations are defined in a role. */
 
 	if (!TAILQ_EMPTY(&cfg->rq))
-		TAILQ_FOREACH(p, &cfg->sq, entries) {
-			TAILQ_FOREACH(srch, &p->sq, entries) {
-				if (srch->rolemap != NULL)
-					continue;
-				gen_warnx(cfg, &srch->pos,
-					"no roles defined for "
-					"query function");
-			}
-			TAILQ_FOREACH(u, &p->dq, entries) {
-				if (u->rolemap != NULL)
-					continue;
-				gen_warnx(cfg, &u->pos,
-					"no roles defined for "
-					"delete function");
-			}
-			TAILQ_FOREACH(u, &p->uq, entries) {
-				if (u->rolemap != NULL)
-					continue;
-				gen_warnx(cfg, &u->pos,
-					"no roles defined for "
-					"update function");
-			}
-			if (p->ins != NULL && p->ins->rolemap == NULL)
-				gen_warnx(cfg, &p->ins->pos, 
-					"no roles defined for "
-					"insert function");
-		}
+		TAILQ_FOREACH(p, &cfg->sq, entries)
+			check_roleops(cfg, p);
 
-	i = 0;
+	/* Check type for grouprow and aggregate function. */
+
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		TAILQ_FOREACH(srch, &p->sq, entries)
 			i += !check_aggrtype(cfg, srch);
 	if (i > 0)
 		return 0;
 
-	/* See if our search type is wonky. */
+	/* See if our search types are wonky. */
 
-	i = 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		i += !check_searchtype(cfg, p);
-	if (i > 0)
-		return 0;
-
-	/* Check for reference recursion. */
-
-	i = 0;
-	TAILQ_FOREACH(p, &cfg->sq, entries)
-		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (f->type != FTYPE_STRUCT ||
-			    check_recursive(f->ref, p))
-				continue;
-			gen_errx(cfg, &f->pos, "recursive reference");
-			i++;
-		}
 	if (i > 0)
 		return 0;
 
@@ -570,7 +539,6 @@ ort_parse_close(struct config *cfg)
 		return 0;
 	}
 
-	i = 0;
 	while (NULL != (p = TAILQ_FIRST(&cfg->sq))) {
 		TAILQ_REMOVE(&cfg->sq, p, entries);
 		assert(i < sz);

@@ -164,109 +164,107 @@ check_aggrtype(struct config *cfg, const struct search *srch)
 }
 
 /*
- * Check to see that our search type (e.g., list or iterate) is
- * consistent with the fields that we're searching for.
- * In other words, running an iterator search on a unique row isn't
- * generally useful.
- * Also warn if null-sensitive operators (isnull, notnull) will be run
- * on non-null fields.
+ * Check to see that our query type consistent with the fields that
+ * we're searching on.
  * Return zero on failure, non-zero on success.
  */
 static int
-check_searchtype(struct config *cfg, const struct strct *p)
+check_searchtype(struct config *cfg, const struct search *srch)
 {
 	const struct sent	*sent;
-	struct search		*srch;
+	size_t			 errs = 0;
 
-	TAILQ_FOREACH(srch, &p->sq, entries) {
-		/*
-		 * FIXME: this should be possible if we have
-		 *   search: limit 1
-		 * This uses random ordering (which should be warned
-		 * about as well), but it's sometimes desirable like in
-		 * the case of having a single-entry table.
-		 */
+	/*
+	 * Start by checking that singleton returns don't occur on
+	 * multiple searches and vice versa.
+	 * FIXME: an empty search should be possible if we have "search:
+	 * limit 1".
+	 * This uses random ordering (which should be warned about as
+	 * well), but it's sometimes desirable like in the case of
+	 * having a single-entry table.
+	 */
 
-		if (srch->type == STYPE_SEARCH &&
-		    TAILQ_EMPTY(&srch->sntq)) {
-			gen_errx(cfg, &srch->pos, 
-				"unique result search "
-				"without parameters");
-			return 0;
-		}
-		if ((srch->flags & SEARCH_IS_UNIQUE) && 
-		    srch->type != STYPE_SEARCH)
-			gen_warnx(cfg, &srch->pos, 
-				"multiple-result search "
-				"on a unique field");
-		if (!(srch->flags & SEARCH_IS_UNIQUE) && 
-		    srch->type == STYPE_SEARCH && 
-		    srch->limit != 1)
-			gen_warnx(cfg, &srch->pos, 
-				"single-result search "
-				"on a non-unique field without a "
-				"limit of one");
+	if (srch->type == STYPE_SEARCH && TAILQ_EMPTY(&srch->sntq)) {
+		gen_errx(cfg, &srch->pos, 
+			"unique result search without parameters");
+		errs++;
+	}
+	if (srch->type != STYPE_SEARCH &&
+	    (srch->flags & SEARCH_IS_UNIQUE))
+		gen_warnx(cfg, &srch->pos, 
+			"multiple-result search on a unique field");
+	if (!(srch->flags & SEARCH_IS_UNIQUE) && 
+	    srch->type == STYPE_SEARCH && srch->limit != 1)
+		gen_warnx(cfg, &srch->pos, 
+			"single-result search on a non-unique field "
+			"without a limit of one");
 
-		TAILQ_FOREACH(sent, &srch->sntq, entries) {
-			if ((sent->op == OPTYPE_NOTNULL ||
-			     sent->op == OPTYPE_ISNULL) &&
-			    !(sent->field->flags & FIELD_NULL))
-				gen_warnx(cfg, &sent->pos, 
-					"null operator on field "
-					"that's never null");
+	/* Check that unary operations act on possibly-null. */
 
-			/* 
-			 * FIXME: we should (in theory) allow for the
-			 * unary types and equality binary types.
-			 * But for now, mandate equality.
-			 */
+	TAILQ_FOREACH(sent, &srch->sntq, entries)
+		if ((sent->op == OPTYPE_NOTNULL ||
+		     sent->op == OPTYPE_ISNULL) &&
+		    !(sent->field->flags & FIELD_NULL))
+			gen_warnx(cfg, &sent->pos, 
+				"null operator on non-null field");
 
-			if (!OPTYPE_ISUNARY(sent->op) &&
-			    sent->op != OPTYPE_EQUAL &&
-			    sent->op != OPTYPE_NEQUAL &&
-			    sent->op != OPTYPE_STREQ &&
-			    sent->op != OPTYPE_STRNEQ &&
-			    sent->field->type == FTYPE_PASSWORD) {
-				gen_errx(cfg, &sent->pos, 
-					"passwords only accept "
-					"unary or equality operators");
-				return 0;
-			}
+	/* Logical AND/OR should only occur with bitfields. */
 
-			/* Require text types for LIKE operator. */
-
-			if (sent->op == OPTYPE_LIKE &&
-			    sent->field->type != FTYPE_TEXT &&
-			    sent->field->type != FTYPE_EMAIL) {
-				gen_errx(cfg, &sent->pos, 
-					"LIKE operator on non-"
-					"textual field.");
-				return 0;
-			}
+	TAILQ_FOREACH(sent, &srch->sntq, entries)
+		if ((sent->op == OPTYPE_AND ||
+		     sent->op == OPTYPE_OR) &&
+		    (sent->field->type != FTYPE_BIT &&
+		     sent->field->type != FTYPE_BITFIELD &&
+		     sent->field->type != FTYPE_INT)) {
+			gen_errx(cfg, &sent->pos, "bit operations "
+				"only available on bit, bitfield, "
+				"and integer types");
+			errs++;
 		}
 
-		if (srch->dst == NULL)
-			continue;
+	/* Passwords can't use inequalities. */
 
-		/* 
-		 * Disallow passwords.
-		 * TODO: this should allow for passwords *within* the
-		 * distinct subparts.
-		 */
+	TAILQ_FOREACH(sent, &srch->sntq, entries)
+		if (!OPTYPE_ISUNARY(sent->op) &&
+		    sent->op != OPTYPE_EQUAL &&
+		    sent->op != OPTYPE_NEQUAL &&
+		    sent->op != OPTYPE_STREQ &&
+		    sent->op != OPTYPE_STRNEQ &&
+		    sent->field->type == FTYPE_PASSWORD) {
+			gen_errx(cfg, &sent->pos, "passwords only "
+				"accept unary or equality operators");
+			errs++;
+		}
 
+	/* Require text types for LIKE operator. */
+
+	TAILQ_FOREACH(sent, &srch->sntq, entries)
+		if (sent->op == OPTYPE_LIKE &&
+		    sent->field->type != FTYPE_TEXT &&
+		    sent->field->type != FTYPE_EMAIL) {
+			gen_errx(cfg, &sent->pos, "LIKE "
+				"operator on non-textual field.");
+			errs++;
+		}
+
+	/* 
+	 * Disallow passwords in distinct.
+	 * TODO: this should allow for passwords *within* the
+	 * distinct subparts.
+	 */
+
+	if (srch->dst != NULL)
 		TAILQ_FOREACH(sent, &srch->sntq, entries) {
-			if (OPTYPE_ISUNARY(sent->op))
-				continue;
-			if (sent->field->type != FTYPE_PASSWORD) 
+			if (OPTYPE_ISUNARY(sent->op) ||
+			    sent->field->type != FTYPE_PASSWORD) 
 				continue;
 			gen_errx(cfg, &sent->pos, 
 				"password queries not allowed when "
 				"searching on distinct subsets");
-			return 0;
+			errs++;
 		}
-	}
 
-	return 1;
+	return errs == 0;
 }
 
 
@@ -503,7 +501,8 @@ ort_parse_close(struct config *cfg)
 	/* See if our search types are wonky. */
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		i += !check_searchtype(cfg, p);
+		TAILQ_FOREACH(srch, &p->sq, entries)
+			i += !check_searchtype(cfg, srch);
 	if (i > 0)
 		return 0;
 

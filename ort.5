@@ -66,8 +66,8 @@ modifying, deleting.
 The data is specified in fields defining type, validation constraints,
 relations to other structures' data, and so on.
 .Pp
-Data types may be native (integers, strings, references) or user-defined
-enumerations or bit-fields.
+Data types may be native (integers, strings, references), user-defined
+(enumerations or bit-fields), or meta (currently only sub-structures).
 Enumerations define fixed constants used in data field definitions.
 Bit-fields are similar, except that they describe bits set within an
 single value.
@@ -246,15 +246,12 @@ The
 alias is also available, which is the same but using a date (ISO 8601)
 sequence input validator.
 .It Cm struct Ar field
-Assign a sub-object of the
-.Cm struct
-given by the
+A substructure referenced by the
 .Ar field
-target.
-This type is
-.Dq non-native
-because it is not represented in the database schema, but only output
-code.
+target
+.Cm struct .
+This meta type is not represented by real data: it only structures the
+output code.
 In the C API, for example, this is represented by a
 .Vt struct name
 of the referent structure.
@@ -264,8 +261,9 @@ may be marked with
 .Cm null ,
 but this involves a not-inconsiderable performance hit when querying
 (directly or indirectly) on the structure.
-Sub-objects may not be recursive: an object may not assign another
-object that eventually assigns the origin.
+Sub-structures may not be recursive: a field may not reference another
+.Cm struct
+that eventually references the origin.
 .It Cm text
 Text, usually encoded in ASCII or UTF-8.
 .El
@@ -310,7 +308,7 @@ currently checked against type limits (i.e., e-mail form or string
 length).
 .It Cm limit Ar limit_op limit_val
 Used when generating validation functions.
-Only available for native types.
+Only available for non-meta types.
 The
 .Ar limit_op
 argument consists of an operator the
@@ -344,7 +342,7 @@ Fields with type
 .Cm password
 are never exported by default.
 .It Cm null
-Accepts null SQL or C values, and is only available for native types.
+Accepts null SQL values.
 A
 .Cm rowid
 field may not also be
@@ -662,7 +660,7 @@ Both
 .Cm mflds
 and
 .Cm cflds
-are sequences of comma-separated native-type fields in the current
+are sequences of comma-separated non-meta fields in the current
 structure followed by operators.
 The former refers to the fields that will be modified; the latter refers
 to fields that will act as constraints to which data is modified.
@@ -741,7 +739,7 @@ The syntax is as follows:
 .Pp
 Each
 .Cm field
-must be in the local structure, and must be native types.
+must be in the local structure, and must be non-meta types.
 There must be at least two fields in the statement.
 There can be only one unique statement per combination of fields (in any
 order).

@@ -565,6 +565,31 @@ If you're searching (in any way) on a
 field, the field is omitted from the initial search, then hash-verified
 after being extracted from the database.
 Thus, this doesn't have the same performance as a normal search.
+.Pp
+The following are simple web application queries:
+.Bd -literal -offset indent
+struct user {
+  field email email unique;
+  field password password;
+  field mtime epoch null
+    comment "Null if not logged in.";
+  field id int rowid;
+  search email, password: name creds;
+  iterate mtime notnull: name recent order mtime desc limit 20
+    comment "Last 20 logins.";
+};
+.Ed
+.Pp
+The advanced grouping is appropriate when selecting as follows.
+It assumes a user structure such as defined as in the above example.
+.Bd -literal -offset indent
+struct perm {
+  field userid user.id;
+  field ctime epoch;
+  iterate: grouprow userid maxrow ctime name newest
+    comment "Newest permission for each user.";
+};
+.Ed
 .Ss Roles
 Limit role access with the
 .Cm roles

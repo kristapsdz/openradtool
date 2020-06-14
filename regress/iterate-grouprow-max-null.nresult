@@ -1,0 +1,6 @@
+struct foo {
+	field foo int;
+	field baz int null;
+	field id int rowid;
+	iterate: grouprow foo maxrow baz;
+};

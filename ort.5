@@ -507,17 +507,21 @@ nested columns.
 .It Cm comment Ar string_literal
 Documents the query using the quoted string.
 .It Cm distinct Op Ar ["." | term]
-Return only distinct rows.
-If only a period
-.Pq Dq \&.
-follows the keyword, then the distinct applies to the entire returned
-structure.
-If a nested structure follows the keyword, only distinct rows of the
-given structure are returned by the search operation.
+Return only distinct rows of the sub-structure indicated by
+.Ar term ,
+or if only a period
+.Pq Dq \& ,
+the current structure.
 This does not work with
 .Cm null
-structures; and moreover, disallows searching by fields of type
-.Cm password .
+sub-structures.
+It is also not possible to test
+.Cm eq
+or
+.Cm neq
+for
+.Cm password
+types in these queries.
 .It Cm grouprow Ar field ["." field]*
 Groups results by the given column.
 This collapses all rows with the same value for the given column into a

@@ -256,6 +256,8 @@ check_searchtype(struct config *cfg, const struct search *srch)
 	if (srch->dst != NULL)
 		TAILQ_FOREACH(sent, &srch->sntq, entries) {
 			if (OPTYPE_ISUNARY(sent->op) ||
+			    sent->op == OPTYPE_STREQ ||
+			    sent->op == OPTYPE_STRNEQ ||
 			    sent->field->type != FTYPE_PASSWORD) 
 				continue;
 			gen_errx(cfg, &sent->pos, 

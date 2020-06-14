@@ -138,11 +138,6 @@ check_aggrtype(struct config *cfg, const struct search *srch)
 				"group without a constraint");
 			errs++;
 		}
-		if (srch->group->field->flags & FIELD_NULL) {
-			gen_errx(cfg, &srch->group->pos,
-				"group cannot be null");
-			errs++;
-		}
 	}
 
 	if (srch->aggr != NULL) {

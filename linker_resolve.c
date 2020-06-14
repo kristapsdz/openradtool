@@ -109,10 +109,12 @@ resolve_struct_aggr(struct config *cfg, struct struct_aggr *r)
 		 (const char **)r->names, r->namesz);
 
 	if (r->result->field != NULL &&
-	    r->result->field->type == FTYPE_STRUCT) {
+	    (r->result->field->type == FTYPE_STRUCT ||
+	     r->result->field->type == FTYPE_PASSWORD ||
+	     (r->result->field->flags & FIELD_NULL))) {
 		gen_errx(cfg, &r->result->pos, 
-			"terminal field cannot be a struct: %s",
-			r->result->field->name);
+			"terminal field cannot be null, a struct, or "
+			"a password: %s", r->result->field->name);
 		r->result->field = NULL;
 	}
 
@@ -128,10 +130,12 @@ resolve_struct_grouprow(struct config *cfg, struct struct_grouprow *r)
 		 (const char **)r->names, r->namesz);
 
 	if (r->result->field != NULL &&
-	    r->result->field->type == FTYPE_STRUCT) {
+	    (r->result->field->type == FTYPE_STRUCT ||
+	     r->result->field->type == FTYPE_PASSWORD ||
+	     (r->result->field->flags & FIELD_NULL))) {
 		gen_errx(cfg, &r->result->pos, 
-			"terminal field cannot be a struct: %s",
-			r->result->field->name);
+			"terminal field cannot be null, a struct, or "
+			"a password: %s", r->result->field->name);
 		r->result->field = NULL;
 	}
 

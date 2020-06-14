@@ -531,7 +531,11 @@ or
 .Cm minrow .
 It may not be a
 .Cm null
-column.
+column, or a
+.Cm password
+or
+.Cm struct
+type.
 .It Cm limit Ar limitval ["," offsetval]?
 A value >0 that limits the number of returned results.
 By default, there is no limit.
@@ -547,7 +551,16 @@ When grouping rows with
 identify how rows are collapsed with either the
 maximum or minimum value, respectively, of the given column
 in the set of grouped rows.
+This calculation is lexicographic for strings or blobs, and numeric for
+numbers.
 The column may not be the same as the grouping column.
+It also may not be a
+.Cm null
+column, or a
+.Cm struct
+or
+.Cm password
+type.
 .It Cm name Ar searchname
 A unique identifier used in the C API for the search function.
 .It Cm order Ar term [type]? ["," term [type]?]*

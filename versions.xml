@@ -11,9 +11,15 @@
 			<p>
 				In the documentation, clarify native, meta, and user-defined types.
 				Clarify that sub-structure references may not be recursive.
+				While there, also add some query examples and clarify the docs
+				for distinct and grouping queries.
 			</p>
 			<p>
 				Only accept logical operators on integer and bit types.
+			</p>
+			<p>
+				Allow string and unary operators (and document as such) for
+				grouping queries.
 			</p>
 		</aside>
 	</article>

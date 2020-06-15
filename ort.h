@@ -319,8 +319,6 @@ struct	sent {
 	char		 *fname; /* dot-form lowercase of all fields */
 	char		 *uname; /* fname but with underscores */
 	struct alias	 *alias; /* resolved alias */
-	unsigned int	  flags; 
-#define	SENT_IS_UNIQUE	  0x01 /* FIXME: unused */
 	TAILQ_ENTRY(sent) entries;
 };
 

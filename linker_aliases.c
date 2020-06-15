@@ -169,11 +169,8 @@ linker_aliases_resolve(struct config *cfg, struct search *srch)
 	TAILQ_FOREACH(s, &srch->sntq, entries)
 		if (((s->field->flags & FIELD_ROWID) ||
 		     (s->field->flags & FIELD_UNIQUE)) &&
-		     s->op == OPTYPE_EQUAL) {
-			s->flags |= SENT_IS_UNIQUE; /* TODO: remove */
+		     s->op == OPTYPE_EQUAL)
 			srch->flags |= SEARCH_IS_UNIQUE;
-		}
-
 
 	/* 
 	 * If we're not unique on a per-field basis, see if our "unique"

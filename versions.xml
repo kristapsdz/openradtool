@@ -21,6 +21,13 @@
 				Allow string and unary operators (and document as such) for
 				grouping queries.
 			</p>
+			<p>
+				When generating validation functions for the C API, don't emit a
+				<q>wrapper</q> function if not emitting limiting code&#8212;instead,
+				simply use the <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a>
+				function itself as the validator.
+				This saves on superfluous generated code.
+			</p>
 		</aside>
 	</article>
 	<article data-sblg-article="1" data-sblg-tags="version">

@@ -1798,9 +1798,9 @@ gen_func_valid_types(const struct field *f, const struct fvalid *v)
 
 /*
  * Generate the validation function for the given field.
- * This does not apply to structs.
- * It first validates the basic type (e.g., string or int), then runs
- * the custom validators.
+ * Exceptions: struct fields don't have validators, blob fields always
+ * validate, and non-enumerations without limits use the native kcgi(3)
+ * validator function.
  */
 static void
 gen_func_valids(const struct strct *p)
@@ -1810,14 +1810,16 @@ gen_func_valids(const struct strct *p)
 	const struct eitem	*ei;
 
 	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->type == FTYPE_STRUCT)
+		if (f->type == FTYPE_STRUCT || f->type == FTYPE_BLOB)
 			continue;
+		if (f->type != FTYPE_ENUM && TAILQ_EMPTY(&f->fvq))
+			continue;
+
+		assert(validtypes[f->type] != NULL);
 		print_func_valid(f, 0);
-		puts("{");
-		if (NULL != validtypes[f->type])
-			printf("\tif (!%s(p))\n"
-			       "\t\treturn 0;\n",
-			       validtypes[f->type]);
+		printf("{\n"
+		       "\tif (!%s(p))\n"
+		       "\t\treturn 0;\n", validtypes[f->type]);
 
 		/* Enumeration: check against knowns. */
 
@@ -1834,8 +1836,8 @@ gen_func_valids(const struct strct *p)
 
 		TAILQ_FOREACH(v, &f->fvq, entries) 
 			gen_func_valid_types(f, v);
-		puts("\treturn 1;");
-		puts("}\n");
+		puts("\treturn 1;\n"
+		     "}\n");
 	}
 }
 
@@ -2867,9 +2869,25 @@ gen_valid_struct(const struct strct *p)
 {
 	const struct field *f;
 
+	/*
+	 * Don't generate an entry for structs.
+	 * Blobs always succeed (NULL validator).
+	 * Non-enums without limits use the default function.
+	 */
+
 	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT == f->type)
+		if (f->type == FTYPE_BLOB) {
+			printf("\t{ NULL, \"%s-%s\" },\n", 
+				p->name, f->name);
 			continue;
+		} else if (f->type == FTYPE_STRUCT)
+			continue;
+
+		if (f->type != FTYPE_ENUM && TAILQ_EMPTY(&f->fvq)) {
+			printf("\t{ %s, \"%s-%s\" },\n", 
+				validtypes[f->type], p->name, f->name);
+			continue;
+		}
 		printf("\t{ valid_%s_%s, \"%s-%s\" },\n",
 			p->name, f->name,
 			p->name, f->name);

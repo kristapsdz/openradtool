@@ -169,21 +169,36 @@ check_searchtype(struct config *cfg, const struct search *srch)
 	const struct sent	*sent;
 	size_t			 errs = 0;
 
-	/*
-	 * Start by checking that singleton returns don't occur on
-	 * multiple searches and vice versa.
-	 * FIXME: an empty search should be possible if we have "search:
-	 * limit 1".
-	 * This uses random ordering (which should be warned about as
-	 * well), but it's sometimes desirable like in the case of
-	 * having a single-entry table.
-	 */
+	/* XXX: there should be facility to do this. */
 
 	if (srch->type == STYPE_SEARCH && TAILQ_EMPTY(&srch->sntq)) {
 		gen_errx(cfg, &srch->pos, 
 			"unique result search without parameters");
 		errs++;
 	}
+
+	/*
+	 * XXX: we use SQL's "count" function for this, so we can't
+	 * currently use any of the password equality checks.
+	 */
+
+	if (srch->type == STYPE_COUNT)
+		TAILQ_FOREACH(sent, &srch->sntq, entries)
+			if (!OPTYPE_ISUNARY(sent->op) &&
+			    sent->op != OPTYPE_STREQ &&
+			    sent->op != OPTYPE_STRNEQ &&
+			    sent->field->type == FTYPE_PASSWORD) {
+				gen_errx(cfg, &sent->pos, "passwords "
+					"for count only accept unary "
+					"and string operators");
+				errs++;
+			}
+	
+	/*
+	 * Start by checking that singleton returns don't occur on
+	 * multiple searches and vice versa.
+	 */
+
 	if (srch->type != STYPE_SEARCH &&
 	    (srch->flags & SEARCH_IS_UNIQUE))
 		gen_warnx(cfg, &srch->pos, 

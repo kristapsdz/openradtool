@@ -499,6 +499,12 @@ field does not accept any operators but
 .Cm streq ,
 and
 .Cm strneq .
+If the query is a
+.Cm count ,
+it further does not accept
+.Cm eq
+or
+.Cm neq .
 .Pp
 The search parameters are a series of key-value pairs.
 In each of these, terms are all in dotted-notation and may represent

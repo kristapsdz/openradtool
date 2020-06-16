@@ -1,0 +1,6 @@
+struct foo {
+	field hash password;
+	field id int rowid;
+	count;
+};
+

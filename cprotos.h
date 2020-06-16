@@ -17,6 +17,20 @@
 #ifndef CPROTOS_H
 #define CPROTOS_H
 
+/*
+ * Determines whether we should generate allocation functions used by
+ * queries: if we have no queries, don't generate these functions.
+ */
+struct	filldep {
+	const struct strct	*p; /* needs allocation functions */
+	unsigned int		 need; /* do we need extras? */
+#define	FILLDEP_FILL_R		 0x01 /* generate fill_r */
+#define	FILLDEP_REFFIND		 0x02 /* ...reffind (XXX: unused) */
+	TAILQ_ENTRY(filldep)	 entries;
+};
+
+TAILQ_HEAD(filldepq, filldep);
+
 void	print_func_db_close(int);
 void	print_func_db_role(int);
 void	print_func_db_role_current(int);
@@ -33,21 +47,23 @@ void	print_func_db_trans_open(int);
 void	print_func_db_trans_rollback(int);
 void	print_func_db_update(const struct update *, int);
 
-size_t	 print_name_db_insert(const struct strct *);
-size_t	 print_name_db_search(const struct search *);
-size_t	 print_name_db_update(const struct update *);
+size_t	print_name_db_insert(const struct strct *);
+size_t	print_name_db_search(const struct search *);
+size_t	print_name_db_update(const struct update *);
 
-void	 print_func_json_array(const struct strct *, int);
-void	 print_func_json_clear(const struct strct *, int);
-void	 print_func_json_data(const struct strct *, int);
-void	 print_func_json_free_array(const struct strct *, int);
-void	 print_func_json_iterate(const struct strct *, int);
-void	 print_func_json_parse(const struct strct *, int);
-void	 print_func_json_parse_array(const struct strct *, int);
-void	 print_func_json_obj(const struct strct *, int);
+void	print_func_json_array(const struct strct *, int);
+void	print_func_json_clear(const struct strct *, int);
+void	print_func_json_data(const struct strct *, int);
+void	print_func_json_free_array(const struct strct *, int);
+void	print_func_json_iterate(const struct strct *, int);
+void	print_func_json_parse(const struct strct *, int);
+void	print_func_json_parse_array(const struct strct *, int);
+void	print_func_json_obj(const struct strct *, int);
 
-void	 print_func_valid(const struct field *, int);
+void	print_func_valid(const struct field *, int);
 
-__END_DECLS
+int	gen_filldep(struct filldepq *, const struct strct *, unsigned int);
+const struct filldep *
+	get_filldep(const struct filldepq *, const struct strct *);
 
 #endif /* !CPROTOS_H */

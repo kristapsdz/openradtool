@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017--2019 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017--2020 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -2328,15 +2328,21 @@ gen_func_json_data(const struct strct *p)
  */
 static void
 gen_funcs(const struct config *cfg, const struct strct *p, 
-	int json, int jsonparse, int valids, int dbin)
+	int json, int jsonparse, int valids, int dbin,
+	const struct filldepq *fq)
 {
-	const struct search *s;
-	const struct update *u;
-	size_t	 pos;
+	const struct search 	*s;
+	const struct update 	*u;
+	const struct filldep	*f;
+	size_t	 		 pos;
+
+	f = get_filldep(fq, p);
 
 	if (dbin) {
-		gen_func_fill(cfg, p);
-		gen_func_fill_r(cfg, p);
+		if (f != NULL)
+			gen_func_fill(cfg, p);
+		if (f != NULL && f->need & FILLDEP_FILL_R)
+			gen_func_fill_r(cfg, p);
 		gen_func_unfill(cfg, p);
 		gen_func_unfill_r(p);
 		gen_func_reffind(cfg, p);
@@ -2356,26 +2362,24 @@ gen_funcs(const struct config *cfg, const struct strct *p,
 	if (valids)
 		gen_func_valids(p);
 
-	if ( ! dbin)
-		return;
-
-	pos = 0;
-	TAILQ_FOREACH(s, &p->sq, entries)
-		if (s->type == STYPE_SEARCH)
-			gen_strct_func_srch(cfg, s, pos++);
-		else if (s->type == STYPE_LIST)
-			gen_strct_func_list(cfg, s, pos++);
-		else if (s->type == STYPE_COUNT)
-			gen_strct_func_count(cfg, s, pos++);
-		else
-			gen_strct_func_iter(cfg, s, pos++);
-
-	pos = 0;
-	TAILQ_FOREACH(u, &p->uq, entries)
-		gen_func_update(cfg, u, pos++);
-	pos = 0;
-	TAILQ_FOREACH(u, &p->dq, entries)
-		gen_func_update(cfg, u, pos++);
+	if (dbin) {
+		pos = 0;
+		TAILQ_FOREACH(s, &p->sq, entries)
+			if (s->type == STYPE_SEARCH)
+				gen_strct_func_srch(cfg, s, pos++);
+			else if (s->type == STYPE_LIST)
+				gen_strct_func_list(cfg, s, pos++);
+			else if (s->type == STYPE_COUNT)
+				gen_strct_func_count(cfg, s, pos++);
+			else
+				gen_strct_func_iter(cfg, s, pos++);
+		pos = 0;
+		TAILQ_FOREACH(u, &p->uq, entries)
+			gen_func_update(cfg, u, pos++);
+		pos = 0;
+		TAILQ_FOREACH(u, &p->dq, entries)
+			gen_func_update(cfg, u, pos++);
+	}
 }
 
 /*
@@ -2945,18 +2949,20 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 	int valids, int dbin, const char *header, 
 	const char *incls, const int *exs)
 {
-	const struct strct *p;
-	const char	*start;
-	size_t		 sz;
-	int		 need_kcgi = 0, 
-			 need_kcgijson = 0, 
-			 need_sqlbox = 0;
-#if HAVE_B64_NTOP
-	int		 need_b64 = 0;
-#else
-	int		 need_b64 = 1;
-#endif
+	const struct strct 	*p;
+	const struct search	*s;
+	const char		*start;
+	size_t			 sz;
+	int			 need_kcgi = 0, 
+				 need_kcgijson = 0, 
+				 need_sqlbox = 0,
+				 need_b64 = 0;
+	struct filldepq		 fq;
+	struct filldep		*f;
 
+#if !HAVE_B64_NTOP
+	need_b64 = 1;
+#endif
 	if (incls == NULL)
 		incls = "";
 
@@ -3160,8 +3166,28 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 			gen_func_role_transitions(cfg);
 	}
 
+	/*
+	 * Before we generate our functions, we need to decide which
+	 * "fill" functions we're going to generate.
+	 * The gen_filldep() function keeps track of which structures
+	 * are referenced directly or indirectly from queries.
+	 * If we don't do this, we might emit superfluous functions.
+	 */
+
+	TAILQ_INIT(&fq);
+
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		gen_funcs(cfg, p, json, jsonparse, valids, dbin);
+		TAILQ_FOREACH(s, &p->sq, entries)
+			if (!gen_filldep(&fq, p, 1))
+				err(EXIT_FAILURE, NULL);
+
+	TAILQ_FOREACH(p, &cfg->sq, entries)
+		gen_funcs(cfg, p, json, jsonparse, valids, dbin, &fq);
+
+	while ((f = TAILQ_FIRST(&fq)) != NULL) {
+		TAILQ_REMOVE(&fq, f, entries);
+		free(f);
+	}
 
 	return 1;
 }

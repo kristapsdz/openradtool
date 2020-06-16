@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017, 2020 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -633,4 +633,62 @@ print_func_json_iterate(const struct strct *p, int decl)
 	        "void *arg)%s\n",
 		decl ? " " : "\n", p->name, 
 		p->name, decl ? ";" : "");
+}
+
+/*
+ * This recursively adds all structures to "fq" for which we need to
+ * generate fill or fill_r and reffind functions (as defined by "need",
+ * which is a bitfield with definition in struct filldep).
+ * The former case is met if the structure is directly referenced by a
+ * query or comes off a possibly-null reference.
+ * The latter is met if the structure is indirectly referenced by a
+ * query and comes off a possibly-null reference.
+ */
+int
+gen_filldep(struct filldepq *fq, const struct strct *p, unsigned int need)
+{
+	struct filldep		*fd;
+	const struct field	*f;
+
+	TAILQ_FOREACH(fd, fq, entries)
+		if (fd->p == p) {
+			fd->need |= need;
+			return 1;
+		}
+
+	if ((fd = calloc(1, sizeof(struct filldep))) == NULL)
+		return 0;
+
+	TAILQ_INSERT_TAIL(fq, fd, entries);
+	fd->p = p;
+	fd->need = need;
+
+	/* 
+	 * Recursively add all children.
+	 * If they may be null, we'll need to generate a reffind and a
+	 * fill_r for them.
+	 */
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (f->type != FTYPE_STRUCT)
+			continue;
+		if (!gen_filldep(fq, f->ref->target->parent,
+		    (f->ref->source->flags & FIELD_NULL) ?
+		    (FILLDEP_FILL_R |FILLDEP_REFFIND) : 0))
+			return 0;
+	}
+
+	return 1;
+}
+
+const struct filldep *
+get_filldep(const struct filldepq *fq, const struct strct *s)
+{
+	const struct filldep	*f;
+
+	TAILQ_FOREACH(f, fq, entries)
+		if (f->p == s)
+			return f;
+
+	return NULL;
 }

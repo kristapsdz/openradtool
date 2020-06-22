@@ -1,0 +1,9 @@
+
+enum foo {
+	item a 2147483646;
+	item b ;
+};
+
+struct bar {
+	field a enum foo ;
+};

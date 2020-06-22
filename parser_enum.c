@@ -50,6 +50,11 @@ parse_enum_item(struct parse *p, struct eitem *ei)
 
 	if (parse_next(p) == TOK_INTEGER) {
 		ei->value = p->last.integer;
+		if (ei->value >= INT32_MAX ||
+		    ei->value <= INT32_MIN) {
+			parse_errx(p, "enum item value too big or small");
+			return;
+		}
 		TAILQ_FOREACH(eei, &ei->parent->eq, entries) {
 			if (ei == eei || (eei->flags & EITEM_AUTO) ||
 			    ei->value != eei->value) 
@@ -173,7 +178,12 @@ parse_enum_data(struct parse *p, struct enm *e)
 					maxvalue = ei->value;
 		maxvalue = maxvalue < 0 ? 0 : maxvalue + 1;
 		TAILQ_FOREACH(ei, &e->eq, entries)
-			if ((ei->flags & EITEM_AUTO))
+			if (maxvalue == INT32_MAX) {
+				parse_errx(p, "integer overflow "
+					"when assigning dynamic "
+					"enum value");
+				return;
+			} else if ((ei->flags & EITEM_AUTO))
 				ei->value = maxvalue++;
 	}
 

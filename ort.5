@@ -209,7 +209,7 @@ Integer constrained to 64-bit bit index (that is, 0\(en64).
 The bit indices start from 1 in order to represent a zero value (no bits
 to set).
 Each non-zero value is usually merged into a bit-field by setting
-.Li 1u << (value - 1)
+.Li 1LLU << (value - 1)
 for some input or output value.
 For entire bitfields, see
 .Cm bits .
@@ -846,10 +846,13 @@ The
 .Cm value
 is the named constant's value expressed as an integer.
 It must also be unique within the enumeration object.
+It may not be the maximum or minimum 32-bit signed integer.
 If not specified, it is assigned as one more than the maximum of the
 assigned values or zero, whichever is larger.
 Automatic assignment is linear and in the order specified in the
 configuration.
+Assigned values may also not be the maximum or minimum 32-bit signed
+integer.
 Parameters may be any of the following:
 .Bd -literal -offset indent
 "comment" string_literal

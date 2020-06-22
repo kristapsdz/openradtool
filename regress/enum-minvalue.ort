@@ -1,0 +1,7 @@
+enum foo {
+	item a -2147483647;
+};
+
+struct bar {
+	field a enum foo ;
+};

@@ -3,9 +3,9 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
-			<h3>0.8.15</h3>
+			<h3>0.8.16</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2020-06-09">2020-06-09</time>
+			<time datetime="2020-06-22">2020-06-22</time>
 		</header>
 		<aside>
 			<p>
@@ -22,11 +22,25 @@
 				grouping queries.
 			</p>
 			<p>
+				Limit enumerations to 32-bit values and prevent overflow.
+			</p>
+			<p>
 				When generating validation functions for the C API, don't emit a
 				<q>wrapper</q> function if not emitting limiting code&#8212;instead,
 				simply use the <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a>
 				function itself as the validator.
 				This saves on superfluous generated code.
+			</p>
+			<p>
+				Don't allow <code>count</code> query type to have password equality
+				checks.
+				This never worked, but now we explicitly check for it.
+			</p>
+			<p>
+				Don't emit <code>db_xxx_fill_r</code> functions if there are no
+				queries that require it.
+				This saves on superfluous generated code that would otherwise raise
+				warnings during compilation.
 			</p>
 		</aside>
 	</article>

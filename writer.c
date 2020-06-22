@@ -630,30 +630,28 @@ parse_write_strct(struct writer *w, const struct strct *p)
  * Returns zero on failure (memory), non-zero otherwise.
  */
 static int
-parse_write_label(struct writer *w, 
-	const struct config *cfg, 
-	const struct label *p, size_t tabs)
+parse_write_label(struct writer *w, const struct config *cfg,
+	const struct label *p, size_t tabs, size_t pos)
 {
-	const char *cp = p->label;
-	int	 rc;
+	const char	*cp = p->label;
 
-	rc = p->lang ?
-		wprint(w, "\n%sjslabel.%s \"", tabs > 1 ? 
-			"\t\t" : "\t", cfg->langs[p->lang]) :
-		wprint(w, "\n%sjslabel \"", 
-			tabs > 1 ? "\t\t" : "\t");
-
-	if ( ! rc)
+	if (pos && !wprint(w, "%sjslabel", tabs > 1 ? "\t\t" : "\t"))
+		return 0;
+	else if (pos == 0 && !wprint(w, " jslabel"))
+		return 0;
+	if (p->lang && !wprint(w, ".%s", cfg->langs[p->lang]))
+		return 0;
+	if (!wprint(w, " \""))
 		return 0;
 
-	while ('\0' != *cp) {
-		if ( ! isspace((unsigned char)*cp)) {
-			if ( ! wputc(w, *cp))
+	while (*cp != '\0') {
+		if (!isspace((unsigned char)*cp)) {
+			if (!wputc(w, *cp))
 				return 0;
 			cp++;
 			continue;
 		}
-		if ( ! wputc(w, ' '))
+		if (!wputc(w, ' '))
 			return 0;
 		while (isspace((unsigned char)*cp))
 			cp++;
@@ -670,49 +668,53 @@ static int
 parse_write_bitf(struct writer *w, 
 	const struct config *cfg, const struct bitf *p)
 {
-	const struct bitidx *b;
-	const struct label  *l;
+	const struct bitidx	*b;
+	const struct label	*l;
+	size_t			 i;
 
-	if ( ! wprint(w, "bitfield %s {\n", p->name))
+	if (!wprint(w, "bitfield %s {\n", p->name))
 		return 0;
 
 	TAILQ_FOREACH(b, &p->bq, entries) {
-		if ( ! wprint(w, "\titem %s %" 
+		if (!wprint(w, "\titem %s %" 
 		    PRId64, b->name, b->value))
 			return 0;
+		i = 0;
 		TAILQ_FOREACH(l, &b->labels, entries)
-			if ( ! parse_write_label(w, cfg, l, 2))
+			if (!parse_write_label(w, cfg, l, 2, i++))
 				return 0;
-		if ( ! parse_write_comment(w, b->doc, 2))
+		if (!parse_write_comment(w, b->doc, 2))
 			return 0;
-		if ( ! wputs(w, ";\n"))
+		if (!wputs(w, ";\n"))
 			return 0;
 	}
 
 	if (TAILQ_FIRST(&p->labels_unset)) {
-		if ( ! wputs(w, "\tisunset"))
+		if (!wputs(w, "\tisunset"))
 			return 0;
+		i = 0;
 		TAILQ_FOREACH(l, &p->labels_unset, entries)
-			if ( ! parse_write_label(w, cfg, l, 2))
+			if (!parse_write_label(w, cfg, l, 2, i++))
 				return 0;
-		if ( ! wputs(w, ";\n"))
+		if (!wputs(w, ";\n"))
 			return 0;
 	}
 
 	if (TAILQ_FIRST(&p->labels_null)) {
-		if ( ! wputs(w, "\tisnull"))
+		if (!wputs(w, "\tisnull"))
 			return 0;
+		i = 0;
 		TAILQ_FOREACH(l, &p->labels_null, entries)
-			if ( ! parse_write_label(w, cfg, l, 2))
+			if (!parse_write_label(w, cfg, l, 2, i++))
 				return 0;
-		if ( ! wputs(w, ";\n"))
+		if (!wputs(w, ";\n"))
 			return 0;
 	}
 
-	if (NULL != p->doc) {
-		if ( ! parse_write_comment(w, p->doc, 1))
+	if (p->doc != NULL) {
+		if (!parse_write_comment(w, p->doc, 1))
 			return 0;
-		if ( ! wputs(w, ";\n"))
+		if (!wputs(w, ";\n"))
 			return 0;
 	}
 
@@ -729,6 +731,7 @@ parse_write_enm(struct writer *w,
 {
 	const struct eitem	*e;
 	const struct label	*l;
+	size_t			 i;
 
 	if (!wprint(w, "enum %s {\n", p->name))
 		return 0;
@@ -739,8 +742,9 @@ parse_write_enm(struct writer *w,
 		if (!(e->flags & EITEM_AUTO))
 			if (!wprint(w, " %" PRId64, e->value))
 				return 0;
+		i = 0;
 		TAILQ_FOREACH(l, &e->labels, entries)
-			if (!parse_write_label(w, cfg, l, 2))
+			if (!parse_write_label(w, cfg, l, 2, i++))
 				return 0;
 		if (!parse_write_comment(w, e->doc, 2))
 			return 0;

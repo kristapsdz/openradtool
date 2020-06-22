@@ -1,6 +1,5 @@
 enum foo {
-	item a 1
-		jslabel "12345"
+	item a 1 jslabel "12345"
 		comment "54321";
 	item b 2;
 	item c 3;

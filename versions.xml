@@ -4,6 +4,17 @@
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
 			<h3>0.8.16</h3>
+		</header>
+		<aside>
+			<p>
+				Be more explicit as to why the <q>&gt;</q> character is not allowed
+				and further disallow empty labels.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
+			<h3>0.8.16</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2020-06-22">2020-06-22</time>
 		</header>

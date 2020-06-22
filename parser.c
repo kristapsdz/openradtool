@@ -655,17 +655,21 @@ parse_label(struct parse *p, struct labelq *q)
 	if (p->lasttype != TOK_LITERAL) {
 		parse_errx(p, "expected quoted string");
 		return 0;
+	} else if (p->last.string[0] == '\0') {
+		parse_errx(p, "label must be non-empty");
+		return 0;
 	}
 
 	/* 
-	 * Sanity: don't allow HTML '<' in output because it may not be
-	 * safely serialised into the resulting page.
-	 * Should escape as \u003c.
+	 * Don't allow < in the input for now.
+	 * This is because we'll put this label in an XLIFF file and
+	 * it's easier to disallow it here than to jump through hoops in
+	 * translating to and from special characters.
 	 */
 
 	for (cp = p->last.string; *cp != '\0'; cp++) 
 		if (*cp == '<') {
-			parse_errx(p, "illegal html character");
+			parse_errx(p, "invalid character in label");
 			return 0;
 		}
 

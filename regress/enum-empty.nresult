@@ -1,0 +1,8 @@
+
+enum foo {
+	comment "blah blah";
+};
+
+struct bar {
+	field a enum foo ;
+};

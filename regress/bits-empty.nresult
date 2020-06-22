@@ -1,0 +1,7 @@
+bits foo {
+	comment "abcdef";
+};
+
+struct bar {
+	field a bits foo ;
+};

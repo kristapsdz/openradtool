@@ -7,3 +7,4 @@
 - Allow some sort of "search" without qualifiers.
 - Allow (eventually) "count" query to have password equality checks.
 - Make sure that "count" queries don't have nullrefs.
+- Lift restriction that enum and bitfield values should be unique.  (Why!?)

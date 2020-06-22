@@ -1,5 +1,5 @@
 enum foo {
-	item a 2147483646;
+	item a 9223372036854775806;
 };
 
 struct bar {

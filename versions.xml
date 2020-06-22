@@ -9,6 +9,10 @@
 			<p>
 				Be more explicit as to why the <q>&gt;</q> character is not allowed
 				and further disallow empty labels.
+				Clarify the maximum and minimum values for bit-fields and
+				enumerations.
+				(Lift earlier restriction of 32 bits after testing on a variety of
+				machines.)
 			</p>
 		</aside>
 	</article>

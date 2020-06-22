@@ -60,8 +60,7 @@
 					<p class="intro">
 						<span class="nm">openradtool</span> (<q class="nm">ort</q>) is an 
 						<a href="https://opensource.org/licenses/ISC">open source</a> RAD tool generating front-end code
-						(JavaScript, TypeScript) and back-end code (SQL, C) from a straightforward data model
-						configuration.
+						(JavaScript, TypeScript) and back-end code (SQL, C) from a straightforward data model.
 					</p>
 				</div>
 				<p>

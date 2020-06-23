@@ -43,6 +43,13 @@ HTMLS		 = archive.html \
 		   man/ort-xliff.1.html \
 		   man/ort.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/openradtool
+# Not yet installed...
+MAN3S		 = man/ort.3 \
+		   man/ort_config_alloc.3 \
+		   man/ort_config_free.3 \
+		   man/ort_parse_close.3 \
+		   man/ort_parse_file.3 \
+		   man/ort_write_file.3
 MAN5S		 = man/ort.5
 MAN1S		 = man/ort.1 \
 		   man/ort-audit.1 \
@@ -193,7 +200,7 @@ installwww: www
 # Also checks that our manpages are nice.
 
 distcheck: openradtool.tar.gz.sha512 openradtool.tar.gz
-	mandoc -Tlint -Werror $(MAN1S) $(MAN5S)
+	mandoc -Tlint -Werror $(MAN1S) $(MAN5S) $(MAN3S)
 	newest=`grep "<h3>" versions.xml | head -1 | sed 's![ 	]*!!g'` ; \
 	       [ "$$newest" = "<h3>$(VERSION)</h3>" ] || \
 		{ echo "Version $(VERSION) not newest in versions.xml" 1>&2 ; exit 1 ; }

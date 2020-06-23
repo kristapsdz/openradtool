@@ -31,28 +31,29 @@ OBJS		 = audit.o \
 		   xliff.o
 HTMLS		 = archive.html \
 		   index.html \
-		   ort.1.html \
-		   ort-audit.1.html \
-		   ort-audit-gv.1.html \
-		   ort-audit-json.1.html \
-		   ort-c-header.1.html \
-		   ort-c-source.1.html \
-		   ort-javascript.1.html \
-		   ort-sql.1.html \
-		   ort-sqldiff.1.html \
-		   ort-xliff.1.html \
-		   ort.5.html
+		   man/ort.1.html \
+		   man/ort-audit.1.html \
+		   man/ort-audit-gv.1.html \
+		   man/ort-audit-json.1.html \
+		   man/ort-c-header.1.html \
+		   man/ort-c-source.1.html \
+		   man/ort-javascript.1.html \
+		   man/ort-sql.1.html \
+		   man/ort-sqldiff.1.html \
+		   man/ort-xliff.1.html \
+		   man/ort.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/openradtool
-MAN1S		 = ort.1 \
-		   ort-audit.1 \
-		   ort-audit-gv.1 \
-		   ort-audit-json.1 \
-		   ort-c-header.1 \
-		   ort-c-source.1 \
-		   ort-javascript.1 \
-		   ort-sql.1 \
-		   ort-sqldiff.1 \
-		   ort-xliff.1
+MAN5S		 = man/ort.5
+MAN1S		 = man/ort.1 \
+		   man/ort-audit.1 \
+		   man/ort-audit-gv.1 \
+		   man/ort-audit-json.1 \
+		   man/ort-c-header.1 \
+		   man/ort-c-source.1 \
+		   man/ort-javascript.1 \
+		   man/ort-sql.1 \
+		   man/ort-sqldiff.1 \
+		   man/ort-xliff.1
 DOTAREXEC	 = configure
 DOTAR		 = audit.c \
 		   audit.css \
@@ -71,8 +72,6 @@ DOTAR		 = audit.c \
 		   gensalt.c \
 		   javascript.c \
 		   jsmn.c \
-		   $(MAN1S) \
-		   ort.5 \
 		   ort.h \
 		   linker.c \
 		   linker_aliases.c \
@@ -183,7 +182,7 @@ www: $(IMAGES) $(HTMLS) openradtool.tar.gz openradtool.tar.gz.sha512 atom.xml
 installwww: www
 	mkdir -p $(WWWDIR)
 	mkdir -p $(WWWDIR)/snapshots
-	$(INSTALL_DATA) *.html *.css *.js $(IMAGES) atom.xml $(WWWDIR)
+	$(INSTALL_DATA) *.html *.css *.js man/*.html $(IMAGES) atom.xml $(WWWDIR)
 	$(INSTALL_DATA) openradtool.tar.gz openradtool.tar.gz.sha512 $(WWWDIR)/snapshots
 	$(INSTALL_DATA) openradtool.tar.gz $(WWWDIR)/snapshots/openradtool-$(VERSION).tar.gz
 	$(INSTALL_DATA) openradtool.tar.gz.sha512 $(WWWDIR)/snapshots/openradtool-$(VERSION).tar.gz.sha512
@@ -194,7 +193,7 @@ installwww: www
 # Also checks that our manpages are nice.
 
 distcheck: openradtool.tar.gz.sha512 openradtool.tar.gz
-	mandoc -Tlint -Werror $(MAN1S)
+	mandoc -Tlint -Werror $(MAN1S) $(MAN5S)
 	newest=`grep "<h3>" versions.xml | head -1 | sed 's![ 	]*!!g'` ; \
 	       [ "$$newest" = "<h3>$(VERSION)</h3>" ] || \
 		{ echo "Version $(VERSION) not newest in versions.xml" 1>&2 ; exit 1 ; }
@@ -225,17 +224,20 @@ install: all
 	mkdir -p $(DESTDIR)$(MANDIR)/man5
 	mkdir -p $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_MAN) $(MAN1S) $(DESTDIR)$(MANDIR)/man1
-	$(INSTALL_MAN) ort.5 $(DESTDIR)$(MANDIR)/man5
+	$(INSTALL_MAN) $(MAN5S) $(DESTDIR)$(MANDIR)/man5
 	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_DATA) b64_ntop.c jsmn.c gensalt.c $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_PROGRAM) $(BINS) $(DESTDIR)$(BINDIR)
 
 uninstall:
 	@for f in $(MAN1S); do \
-		echo rm -f $(DESTDIR)$(MANDIR)/man1/$$f ; \
-		rm -f $(DESTDIR)$(MANDIR)/man1/$$f ; \
+		echo rm -f $(DESTDIR)$(MANDIR)/man1/`basename $$f` ; \
+		rm -f $(DESTDIR)$(MANDIR)/man1/`basename $$f` ; \
 	done
-	rm -f $(DESTDIR)$(MANDIR)/man5/ort.5
+	@for f in $(MAN5S); do \
+		echo rm -f $(DESTDIR)$(MANDIR)/man5/`basename $$f` ; \
+		rm -f $(DESTDIR)$(MANDIR)/man5/`basename $$f` ; \
+	done
 	rm -f $(DESTDIR)$(SHAREDIR)/openradtool/audit.{html,css,js}
 	rm -f $(DESTDIR)$(SHAREDIR)/openradtool/{b64_ntop,jsmn,gensalt}.c
 	rmdir $(DESTDIR)$(SHAREDIR)/openradtool
@@ -249,10 +251,12 @@ openradtool.tar.gz.sha512: openradtool.tar.gz
 
 openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/openradtool-$(VERSION)/
+	mkdir -p .dist/openradtool-$(VERSION)/man
 	mkdir -p .dist/openradtool-$(VERSION)/regress
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sqldiff
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sql
 	install -m 0444 $(DOTAR) .dist/openradtool-$(VERSION)
+	install -m 0444 man/*.[0-9] .dist/openradtool-$(VERSION)/man
 	install -m 0444 regress/*.ort .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.result .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.nresult .dist/openradtool-$(VERSION)/regress

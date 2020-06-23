@@ -906,18 +906,18 @@ main(int argc, char *argv[])
 	/* Parse the input files themselves. */
 
 	for (i = 0; i < confsz; i++)
-		if (!ort_parse_file_r(cfg, confs[i], argv[confst + i]))
+		if (!ort_parse_file(cfg, confs[i], argv[confst + i]))
 			goto out;
 	for (i = 0; i < dconfsz; i++)
-		if (!ort_parse_file_r(dcfg, dconfs[i], argv[i]))
+		if (!ort_parse_file(dcfg, dconfs[i], argv[i]))
 			goto out;
 
 	/* If we don't have input, parse from stdin. */
 
-	if (confsz == 0 && !ort_parse_file_r(cfg, stdin, "<stdin>"))
+	if (confsz == 0 && !ort_parse_file(cfg, stdin, "<stdin>"))
 		goto out;
 	if (dconfsz == 0 && diff &&
-	    !ort_parse_file_r(dcfg, stdin, "<stdin>"))
+	    !ort_parse_file(dcfg, stdin, "<stdin>"))
 		goto out;
 
 	/* Linker. */

@@ -444,8 +444,8 @@ check_roleops(struct config *cfg, const struct strct *p)
 /*
  * This is the "linking" phase where a fully-parsed configuration file
  * has its components linked together and checked for correctness.
- * It MUST be called following ort_parse_file_r() or equivalent or the
- * configuration may not be considered sound.
+ * It MUST be called following ort_parse_file() or the configuration is
+ * not complete.
  * Returns zero on failure, non-zero on success.
  */
 int

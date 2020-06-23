@@ -590,7 +590,7 @@ __BEGIN_DECLS
 struct config	*ort_config_alloc(void);
 void		 ort_config_free(struct config *);
 int		 ort_parse_close(struct config *);
-int		 ort_parse_file_r(struct config *, FILE *, const char *);
+int		 ort_parse_file(struct config *, FILE *, const char *);
 int		 ort_write_file(FILE *, const struct config *);
 
 __END_DECLS

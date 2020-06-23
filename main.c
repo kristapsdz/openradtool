@@ -75,11 +75,11 @@ main(int argc, char *argv[])
 		goto out;
 
 	for (i = 0; i < confsz; i++)
-		if ( ! ort_parse_file_r(cfg, confs[i], argv[i]))
+		if ( ! ort_parse_file(cfg, confs[i], argv[i]))
 			goto out;
 
 	if (0 == confsz && 
-	    ! ort_parse_file_r(cfg, stdin, "<stdin>"))
+	    ! ort_parse_file(cfg, stdin, "<stdin>"))
 		goto out;
 
 	/* Only echo output on success. */

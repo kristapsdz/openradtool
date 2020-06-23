@@ -772,7 +772,7 @@ parse_root(struct parse *p)
  * Returns zero on failure, non-zero on success.
  */
 int
-ort_parse_file_r(struct config *cfg, FILE *f, const char *fname)
+ort_parse_file(struct config *cfg, FILE *f, const char *fname)
 {
 	struct parse	 p;
 	int		 rc = 0;

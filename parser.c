@@ -805,22 +805,3 @@ ort_parse_file_r(struct config *cfg, FILE *f, const char *fname)
 	free(p.buf);
 	return rc;
 }
-
-/*
- * Parse and link a standalone file "f" into a configuration.
- * Returns NULL on error.
- */
-struct config *
-ort_parse_file(FILE *f, const char *fname)
-{
-	struct config	*cfg;
-
-	if ((cfg = ort_config_alloc()) == NULL ||
-	    !ort_parse_file_r(cfg, f, fname) ||
-	    !ort_parse_close(cfg)) {
-		ort_config_free(cfg);
-		return NULL;
-	}
-
-	return cfg;
-}

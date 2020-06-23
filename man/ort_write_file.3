@@ -15,34 +15,38 @@
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .Dd $Mdocdate$
-.Dt ORT_CONFIG_FREE 3
+.Dt ORT_WRITE_FILE 3
 .Os
 .Sh NAME
-.Nm ort_config_free
-.Nd free openradtool configuration
+.Nm ort_write_file
+.Nd serialise openradtool configuration
 .Sh SYNOPSIS
 .In sys/queue.h
 .In stdio.h
 .In ort.h
-.Ft void
-.Fo ort_config_free
-.Fa struct config *cfg
+.Ft int
+.Fo ort_write_file
+.Fa FILE *f
+.Fa const struct config *cfg
 .Fc
 .Sh DESCRIPTION
-Free a configuration file to be allocated with
-.Xr ort_config_alloc 3 .
-After being invoked,
+Serialise a configuration
 .Fa cfg
-may not be used.
-If
-.Fa cfg
-is
-.Dv NULL ,
-this does nothing.
+previously allocated with
+.Xr ort_config_alloc 3 ,
+populated with
+.Xr ort_parse_file 3 ,
+and finalised with
+.Xr ort_parse_close 3
+to stream
+.Fa s .
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.
-.\" .Sh RETURN VALUES
+.Sh RETURN VALUES
+Returns zero if errors occur writing to
+.Fa s
+or non-zero otherwise.
 .\" For sections 2, 3, and 9 function return values only.
 .\" .Sh ENVIRONMENT
 .\" For sections 1, 6, 7, and 8 only.
@@ -56,13 +60,14 @@ linking, then performing some task is as follows.
 struct config *cfg;
 
 if ((cfg = ort_config_alloc()) == NULL)
-  err(1, NULL);
-if ((cfg = ort_parse_file_r(stdin, "<stdin>"))
-  errx(1, "failed parsing");
+  errx(1, "ort_config_alloc");
+if (!ort_parse_file(stdin, "<stdin>"))
+  errx(1, "ort_parse_file");
 if (!ort_parse_close(cfg))
-  errx(1, "failed linking");
+  errx(1, "ort_parse_close");
 
-/* Do something with the configuration. */
+if (!ort_write_file(cfg, stdout))
+  errx(1, "ort_write_file");
 
 ort_parse_free(cfg);
 .Ed

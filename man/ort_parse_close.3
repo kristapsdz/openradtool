@@ -15,34 +15,34 @@
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .Dd $Mdocdate$
-.Dt ORT_CONFIG_FREE 3
+.Dt ORT_PARSE_CLOSE 3
 .Os
 .Sh NAME
-.Nm ort_config_free
-.Nd free openradtool configuration
+.Nm ort_parse_close
+.Nd finalise openradtool configuration
 .Sh SYNOPSIS
 .In sys/queue.h
 .In stdio.h
 .In ort.h
-.Ft void
-.Fo ort_config_free
+.Ft int
+.Fo ort_parse_close
 .Fa struct config *cfg
 .Fc
 .Sh DESCRIPTION
-Free a configuration file to be allocated with
-.Xr ort_config_alloc 3 .
-After being invoked,
+Finalise a configuration
 .Fa cfg
-may not be used.
-If
-.Fa cfg
-is
-.Dv NULL ,
-this does nothing.
+previously allocated with
+.Xr ort_config_alloc 3
+and populated with
+.Xr ort_parse_file 3 .
+After calling,
+.Xr ort_parse_file 3
+may no longer be used.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.
-.\" .Sh RETURN VALUES
+.Sh RETURN VALUES
+Returns zero if the finalisation failed, non-zero on success.
 .\" For sections 2, 3, and 9 function return values only.
 .\" .Sh ENVIRONMENT
 .\" For sections 1, 6, 7, and 8 only.
@@ -57,7 +57,7 @@ struct config *cfg;
 
 if ((cfg = ort_config_alloc()) == NULL)
   err(1, NULL);
-if ((cfg = ort_parse_file_r(stdin, "<stdin>"))
+if (!ort_parse_file(stdin, "<stdin>"))
   errx(1, "failed parsing");
 if (!ort_parse_close(cfg))
   errx(1, "failed linking");

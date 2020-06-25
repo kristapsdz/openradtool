@@ -451,6 +451,75 @@ or
 .Dv ROLEMAP_UPDATE ,
 the deletion or update to receive the assignment.
 .El
+.Ss Queries
+Data may be extracted by using queries.
+These are defined for each
+.Vt struct strct .
+The foundation for all queries is
+.Vt struct search ,
+which is used for all types of query.
+.Bl -tag -width Ds -offset indent
+.It Va struct sentq sntq
+A possibly-empty queue of the search constraints.
+An empty queue exists if searching for everything.
+.It Va struct ordq ordq
+A possibly-empty queue of how to order the results.
+.It Va struct aggr *aggr; /* aggregate chain or NULL */
+If not
+.Dv NULL ,
+how to aggregate search results.
+This is used with
+.Va group .
+.It Va struct group *group
+If not
+.Dv NULL ,
+the field that is used for grouping results.
+This field's contents must be unique among the results, with the choice
+of which object to use for the unique result being set by
+.Vt aggr .
+.It Va struct pos pos
+Parse point.
+.It Va struct dstnct *dst
+If not
+.Dv NULL ,
+only return distinct results of a reference within the query.
+It may be set to the current structure.
+.It Va char *name; /* named or NULL */
+A non-empty name unique (case insensitive) among other queries of this
+type or
+.Dv NULL
+to have an automatically-generated name.
+.It Va char *doc
+If not
+.Dv NULL ,
+free-form documentation.
+.It Va struct strct *parent
+Parent containing the query.
+.It Va enum stype type
+Type of query.
+This may be
+.Dv STYPE_COUNT
+to return only the count of results,
+.Dv STYPE_SEARCH
+to query for a single result,
+.Dv STYPE_LIST
+to return all results, or
+.Dv STYPE_ITERATE
+to provide a callback to iterate over results.
+.It Va int64_t limit
+Zero or a limit to the returned results.
+.It Va int64_t offset
+Zero or the offset of when to start returning results.
+.It Va struct rolemap *rolemap
+If not
+.Dv NULL ,
+roles allowed to perform this query.
+.It Va unsigned int flags
+This may be only
+.Dv SEARCH_IS_UNIQUE
+if the query will return a single result.
+(That is, it queries unique values.)
+.El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

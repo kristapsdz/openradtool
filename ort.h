@@ -355,16 +355,11 @@ struct	aggr {
 	struct alias	 *alias; /* resolved alias */
 };
 
-/*
- * Type of search.
- * We have many different kinds of search functions, each represented by
- * the same "struct search", without different semantics.
- */
 enum	stype {
-	STYPE_COUNT = 0, /* single counting response */
-	STYPE_SEARCH, /* singular response */
-	STYPE_LIST, /* queue of responses */
-	STYPE_ITERATE, /* iterator of responses */
+	STYPE_COUNT = 0,
+	STYPE_SEARCH,
+	STYPE_LIST,
+	STYPE_ITERATE,
 	STYPE__MAX
 };
 
@@ -379,28 +374,22 @@ struct	dstnct {
 	struct search	*parent; /* search entry */
 };
 
-/*
- * A set of fields to search by and return results.
- * A "search" implies zero or more responses given a query; for example,
- * a unique response to the set of sets "user.company.name, userid",
- * which has two search entities (struct sent).
- */
 struct	search {
-	struct sentq	    sntq; /* nested reference chain */
-	struct ordq	    ordq; /* ordering chains */
-	struct aggr	   *aggr; /* aggregate chain or NULL */
-	struct group	   *group; /* grouping chain or NULL */
-	struct pos	    pos; /* parse point */
-	struct dstnct	   *dst; /* distinct constraint or NULL */
-	char		   *name; /* named or NULL */
-	char		   *doc; /* documentation */
-	struct strct	   *parent; /* up-reference */
-	enum stype	    type; /* type of search */
-	int64_t		    limit; /* query limit or zero (unset) */
-	int64_t		    offset; /* query offset or zero (unset) */
-	struct rolemap	   *rolemap; /* roles assigned to search */
+	struct sentq	    sntq;
+	struct ordq	    ordq;
+	struct aggr	   *aggr;
+	struct group	   *group;
+	struct pos	    pos;
+	struct dstnct	   *dst;
+	char		   *name;
+	char		   *doc;
+	struct strct	   *parent;
+	enum stype	    type;
+	int64_t		    limit;
+	int64_t		    offset;
+	struct rolemap	   *rolemap;
 	unsigned int	    flags; 
-#define	SEARCH_IS_UNIQUE    0x01 /* has a rowid or unique somewhere */
+#define	SEARCH_IS_UNIQUE    0x01
 	TAILQ_ENTRY(search) entries;
 };
 

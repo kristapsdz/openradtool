@@ -24,12 +24,12 @@
 .In sys/queue.h
 .In stdio.h
 .In ort.h
-.Vt struct config
-.Vt struct enm
-.Vt struct eitem
-.Vt struct label
 .Vt struct bitf
 .Vt struct bitidx
+.Vt struct config
+.Vt struct eitem
+.Vt struct enm
+.Vt struct label
 .Vt struct role
 .Vt struct rolemap
 .Vt struct strct
@@ -81,6 +81,174 @@ Warnings and errors encountered during parse.
 .It Va size_t msgsz
 The number of structures in
 .Fa msgs .
+.El
+.Pp
+The central component of
+.Vt struct config
+is the queue of
+.Vt struct strct .
+These collectively represent the data, operations, and other properties.
+It may be represented as an SQL table, a C structure, a TypeScript
+class, or a JavaScript object.
+.Bl -tag -width Ds -offset indent
+.It Va char *name
+The non-empty name of the structure.
+It is unique (case insensitive) among all structures.
+.It Va char *doc
+If not
+.Dv NULL ,
+free-form documentation.
+.It Va struct pos pos
+Parse position.
+.It Va struct field *rowid
+If not
+.Dv NULL ,
+the row identifier field.
+.It Va struct fieldq fq
+A non-empty queue of fields.
+.It Va struct searchq sq
+A possibly-empty queue of queries.
+Queries are used to extract data.
+.It Va struct aliasq aq
+A possibly-empty queue of aliases.
+Aliases are used when generating SQL.
+This structure may be removed in the future.
+.It Va struct updateq uq
+A possibly-empty queue of update statements.
+Updates are used to modify data.
+.It Va struct updateq dq
+A possibly-empty queue of delete statements.
+Updates are used to modify (delete) data.
+.It Va struct uniqueq nq
+A possibly-empty queue of unique statements.
+These are used to specify data uniqueness among multiple fields.
+(Individual fields may be marked unique on their own.)
+.It Va struct rolemapq rq
+A possibly-empty queue of role assignments defined for this strutcure.
+.It Va struct insert *ins
+If not
+.Dv NULL ,
+the insert statement for the structure.
+Inserts are used to create data.
+.It Va struct rolemap *arolemap
+If not
+.Dv NULL ,
+the role assignment for
+.Em all
+operations.
+.It Va unsigned int flags
+Useful bits (or zero) set on the structure:
+.Dv STRCT_HAS_QUEUE
+if any list queries are defined,
+.Dv STRCT_HAS_ITERATOR
+if any iterator queries are defined,
+.Dv STRCT_HAS_BLOB
+if any blob fields are defined, and
+.Dv STRCT_HAS_NULLREFS
+if any reference structures can be null.
+.It Va struct config *cfg
+The configuration containing the structure.
+.El
+.Ss Data
+The data of
+.Vt struct strct
+is defined by its queue of
+.Vt struct field .
+It may be represented as a column in an SQL table, a field of a C
+structure, or a member of a JavaScript object.
+.Bl -tag -width Ds -offset indent
+.It Va char *name
+The non-empty name of the field.
+It is unique (case insensitive) among other fields in the structure.
+.It Va struct ref *ref
+This is set for
+.Dv FTYPE_STRUCT
+fields or references to other structures.
+Otherwise it is
+.Dv NULL .
+.It Va struct enm *enm
+Set for
+.Dv FTYPE_ENUM
+fields to the enumeration.
+Otherwise it is
+.Dv NULL .
+.It Va struct bitf *bitf
+Set for
+.Dv FTYPE_BITFIELD
+fields to the bitfield.
+Otherwise it is
+.Dv NULL .
+.It Va char *doc
+If not
+.Dv NULL ,
+free-form documentation.
+.It Va struct pos pos
+Parse point.
+.It Va <anon union> def
+An anonymous union with the default value of the field.
+This consists of
+.Va int64_t integer
+for a default integer type (one of
+.Dv FTYPE_DATE ,
+.Dv FTYPE_BIT ,
+.Dv FTYPE_BITFIELD ,
+.Dv FTYPE_EPOCH ,
+.Dv FTYPE_INT ) ,
+.Va double decimal
+for a default real value
+.Dv FTYPE_REAL ,
+.Va char *string
+for a default string type (one of
+.Dv FTYPE_EMAIL
+or
+.Dv FTYPE_TEXT ) ,
+or
+.Va struct eitem *eitem
+for a default enumeration.
+.It Va enum ftype type
+Type type of the data.
+.It Va enum upact actdel
+For references to other structures, behaviour to take for when the
+referenced data is deleted.
+This may be one of
+.Dv UPACT_NONE
+for not specifying a delete handler,
+.Dv UPACT_RESTRICT
+for inhibiting the default,
+.Dv UPACT_NULLIFY
+for nullifying the field,
+.Dv UPACT_CASCADE
+from propogating changes to the field, or
+.Dv UPACT_DEFAULT
+for the default behaviour.
+.It Va struct rolemap *rolemap
+If not
+.Dv NULL ,
+role assignments for not exporting this field.
+.It Va enum upact actup
+For references to other structures, behaviour to take for when the
+referenced data is updated.
+See
+.Va actdel
+for a list of possible scenarios.
+.It Va struct strct *parent
+Link to parent structure.
+.It Va struct fvalidq fvq; /* validation */
+A possibly-empty queue of validators.
+If data is being inserted or updated, it must conform to the validators.
+.It Va unsigned int flags
+A bit-field consisting of
+.Dv FIELD_ROWID
+if being the structure's unique row identifier (only available for
+.Dv FTYPE_INT ) ,
+.Dv FIELD_UNIQUE
+if a unique field within the structure,
+.Dv FIELD_NULL
+if the field may be null,
+.Dv FIELD_NOEXPORT
+if the field may not be exported ever, and
+.Dv FIELD_HASDEF
+if the field has a default type-specific value set.
 .El
 .Pp
 The user-defined enumerations in
@@ -200,13 +368,15 @@ The parent bit-field structure.
 .It Va struct pos pos
 Parse position.
 .El
-.Pp
+.Ss Role-based Access Control
 The role-based access control of the system is defined by
 .Vt struct role .
-If the queue in the top-level
+If the
+.Va rq
+queue in the top-level
 .Vt struct config
-is emtpy, there are no roles defined.
-This should not change a generated API.
+is empty, there are no roles defined.
+(This should not change a generated API.)
 Roles are hierarchical, so the roles in
 .Vt struct config
 are top-level roles.
@@ -255,7 +425,7 @@ for queries;
 .Dv ROLEMAP_DELETE
 for deletions;
 .Dv ROLEMAP_UPDATE
-for updates; 
+for updates;
 .Dv ROLEMAP_INSERT
 for insertions; and
 .Dv ROLEMAP_NOEXPORT
@@ -280,72 +450,6 @@ If
 or
 .Dv ROLEMAP_UPDATE ,
 the deletion or update to receive the assignment.
-.El
-.Pp
-The most central structure to this tool is
-.Vt struct strct .
-This represents a set of data, operations, and other properties.
-A configuration file at heart consists of
-.Vt struct strct :
-everything else is used therein.
-.Bl -tag -width Ds -offset indent
-.It Va char *name
-The non-empty name of the structure.
-It is unique (case insensitive) among all structures.
-.It Va char *doc
-If not
-.Dv NULL ,
-free-form documentation.
-.It Va struct pos pos
-Parse position.
-.It Va struct field *rowid
-If not
-.Dv NULL ,
-the row identifier field.
-.It Va struct fieldq fq
-A non-empty queue of fields.
-.It Va struct searchq sq
-A possibly-empty queue of queries.
-Queries are used to extract data.
-.It Va struct aliasq aq
-A possibly-empty queue of aliases.
-Aliases are used when generating SQL.
-This structure may be removed in the future.
-.It Va struct updateq uq
-A possibly-empty queue of update statements.
-Updates are used to modify data.
-.It Va struct updateq dq
-A possibly-empty queue of delete statements.
-Updates are used to modify (delete) data.
-.It Va struct uniqueq nq
-A possibly-empty queue of unique statements.
-These are used to specify data uniqueness among multiple fields.
-(Individual fields may be marked unique on their own.)
-.It Va struct rolemapq rq
-A possibly-empty queue of role assignments defined for this strutcure.
-.It Va struct insert *ins
-If not
-.Dv NULL ,
-the insert statement for the structure.
-Inserts are used to create data.
-.It Va struct rolemap *arolemap
-If not
-.Dv NULL ,
-the role assignment for
-.Em all
-operations.
-.It Va unsigned int flags
-Useful bits (or zero) set on the structure:
-.Dv STRCT_HAS_QUEUE
-if any list queries are defined,
-.Dv STRCT_HAS_ITERATOR
-if any iterator queries are defined,
-.Dv STRCT_HAS_BLOB
-if any blob fields are defined, and
-.Dv STRCT_HAS_NULLREFS
-if any reference structures can be null.
-.It Va struct config *cfg
-The configuration containing the structure.
 .El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT

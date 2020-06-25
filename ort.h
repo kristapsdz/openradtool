@@ -98,77 +98,53 @@ struct	fvalid {
 	TAILQ_ENTRY(fvalid) entries;
 };
 
-/*
- * A language-specific label.
- * The default language is always index 0.
- * See the "langs" array in struct config.
- */
 struct	label {
-	char		  *label; /* the label itself */
-	size_t		   lang; /* the language */
-	struct pos	   pos; /* parse point */
+	char		  *label;
+	size_t		   lang;
+	struct pos	   pos;
 	TAILQ_ENTRY(label) entries;
 };
 
-/*
- * A single item within an enumeration.
- * This may be statically assigned a value in "value" or it may be
- * automatically done during linking.
- */
 struct	eitem {
-	char		  *name; /* item name */
-	int64_t		   value; /* numeric value */
-	char		  *doc; /* documentation */
-	struct labelq	   labels; /* javascript labels */
-	struct pos	   pos; /* parse point */
-	struct enm	  *parent; /* parent enumeration */
+	char		  *name;
+	int64_t		   value;
+	char		  *doc;
+	struct labelq	   labels;
+	struct pos	   pos;
+	struct enm	  *parent;
 	unsigned int	   flags;
-#define	EITEM_AUTO	   0x01 /* auto-numbering */
+#define	EITEM_AUTO	   0x01
 	TAILQ_ENTRY(eitem) entries;
 };
 
-/*
- * An enumeration of a field's possible values.
- * These are used as field types.
- */
 struct	enm {
-	char		*name; /* name of enumeration */
-	char		*doc; /* documentation */
-	struct pos	 pos; /* parse point */
-	struct eitemq	 eq; /* items in enumeration */
+	char		*name;
+	char		*doc;
+	struct pos	 pos;
+	struct eitemq	 eq;
 	TAILQ_ENTRY(enm) entries;
 };
 
-/*
- * A single bit index within a bitfield.
- */
 struct	bitidx {
 	char		   *name;
-	char		   *doc; /* documentation */
-	struct labelq	    labels; /* javascript labels */
-	int64_t		    value; /* bit 0--63 */
+	char		   *doc;
+	struct labelq	    labels;
+	int64_t		    value;
 	struct bitf	   *parent;
-	struct pos	    pos; /* parse point */
+	struct pos	    pos;
 	TAILQ_ENTRY(bitidx) entries;
 };
 
-/*
- * A 64-bit bitfield (set of bit indices).
- */
 struct	bitf {
-	char		 *name; /* name of bitfield */
-	char		 *doc; /* documentation */
-	struct labelq	  labels_unset; /* "isunset" js labels */
-	struct labelq	  labels_null; /* "isnull" js labels */
-	struct pos	  pos; /* parse point */
-	struct bitidxq	  bq; /* bit indices */
+	char		 *name;
+	char		 *doc;
+	struct labelq	  labels_unset;
+	struct labelq	  labels_null;
+	struct pos	  pos;
+	struct bitidxq	  bq;
 	TAILQ_ENTRY(bitf) entries;
 };
 
-/*
- * Update/delete action.
- * Defaults to UPACT_NONE (no special action).
- */
 enum	upact {
 	UPACT_NONE = 0,
 	UPACT_RESTRICT,
@@ -178,35 +154,31 @@ enum	upact {
 	UPACT__MAX
 };
 
-/*
- * A field defining a database/struct mapping.
- * This can be either reflected in the database, in the C API, or both.
- */
 struct	field {
-	char		  *name; /* column name */
-	struct ref	  *ref; /* "foreign key" ref (or null) */
-	struct enm	  *enm;  /* enumeration ref (or null) */
-	struct bitf	  *bitf;  /* bitfield ref (or null) */
-	char		  *doc; /* documentation */
-	struct pos	   pos; /* parse point */
+	char		  *name;
+	struct ref	  *ref;
+	struct enm	  *enm;
+	struct bitf	  *bitf;
+	char		  *doc;
+	struct pos	   pos;
 	union {
 		int64_t integer;
 		double decimal;
 		char *string;
 		struct eitem *eitem;
-	} def; /* a default value */
-	enum ftype	   type; /* type of column */
-	enum upact	   actdel; /* delete action */
-	struct rolemap	  *rolemap; /* roles for not exporting */
-	enum upact	   actup; /* update action */
-	struct strct	  *parent; /* parent reference */
-	struct fvalidq	   fvq; /* validation */
-	unsigned int	   flags; /* flags */
-#define	FIELD_ROWID	   0x01 /* this is a rowid field */
-#define	FIELD_UNIQUE	   0x02 /* this is a unique field */
-#define FIELD_NULL	   0x04 /* can be null */
-#define	FIELD_NOEXPORT	   0x08 /* don't export the field (JSON) */
-#define FIELD_HASDEF	   0x10 /* has a default value */
+	} def;
+	enum ftype	   type;
+	enum upact	   actdel;
+	struct rolemap	  *rolemap;
+	enum upact	   actup;
+	struct strct	  *parent;
+	struct fvalidq	   fvq;
+	unsigned int	   flags;
+#define	FIELD_ROWID	   0x01
+#define	FIELD_UNIQUE	   0x02
+#define FIELD_NULL	   0x04
+#define	FIELD_NOEXPORT	   0x08
+#define FIELD_HASDEF	   0x10
 	TAILQ_ENTRY(field) entries;
 };
 
@@ -278,17 +250,14 @@ enum	rolemapt {
 	ROLEMAP__MAX
 };
 
-/*
- * Maps a given operation to a set of roles who apply the operation.
- */
 struct	rolemap {
-	enum rolemapt	     type; /* type */
-	struct rrefq	     rq; /* applicable roles */
-	struct strct	    *parent; /* in which struct defined */
+	enum rolemapt	     type;
+	struct rrefq	     rq;
+	struct strct	    *parent;
 	union {
-		struct field	*f; /* ROLEMAP_NOEXPORT (named) */
-		struct search	*s; /* ROLEMAP_(query) */
-		struct update	*u; /* ROLEMAP_(modify) */
+		struct field	*f;
+		struct search	*s;
+		struct update	*u;
 	};
 	TAILQ_ENTRY(rolemap) entries;
 };

@@ -8,3 +8,5 @@
 - Allow (eventually) "count" query to have password equality checks.
 - Make sure that "count" queries don't have nullrefs.
 - Lift restriction that enum and bitfield values should be unique.  (Why!?)
+- Allow bitfield field default to be set from a ref like enums.
+- Updates to a unique id should have a warning if referrers don't have cascade actup.

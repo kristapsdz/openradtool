@@ -507,48 +507,37 @@ struct	insert {
 	struct pos	 pos; /* parse point */
 };
 
-/*
- * A database/struct consisting of fields.
- * Structures depend upon other structures (see the FTYPE_REF in the
- * field), which is represented by the "height" value.
- */
 struct	strct {
-	char		  *name; /* name of structure */
-	char		  *doc; /* documentation */
-	size_t		   height; /* dependency order */
-	struct pos	   pos; /* parse point */
-	size_t		   colour; /* used during linkage */
-	struct field	  *rowid; /* optional rowid */
-	struct fieldq	   fq; /* fields/columns/members */
-	struct searchq	   sq; /* search fields */
-	struct aliasq	   aq; /* join aliases */
-	struct updateq	   uq; /* update conditions */
-	struct updateq	   dq; /* delete constraints */
-	struct uniqueq	   nq; /* unique constraints */
-	struct rolemapq	   rq; /* role assignments */
-	struct insert	  *ins; /* insert function */
-	struct rolemap	  *arolemap; /* catcha-all rolemap */
+	char		  *name;
+	char		  *doc;
+	size_t		   height; /* dep order (XXX: remove) */
+	struct pos	   pos;
+	size_t		   colour; /* during linkage (XXX: remove) */
+	struct field	  *rowid;
+	struct fieldq	   fq;
+	struct searchq	   sq;
+	struct aliasq	   aq;
+	struct updateq	   uq;
+	struct updateq	   dq;
+	struct uniqueq	   nq;
+	struct rolemapq	   rq;
+	struct insert	  *ins;
+	struct rolemap	  *arolemap;
 	unsigned int	   flags;
-#define	STRCT_HAS_QUEUE	   0x01 /* needs a queue interface */
-#define	STRCT_HAS_ITERATOR 0x02 /* needs iterator interface */
-#define	STRCT_HAS_BLOB	   0x04 /* needs resolv.h */
-#define STRCT_HAS_NULLREFS 0x10 /* has nested null fkeys */
+#define	STRCT_HAS_QUEUE	   0x01
+#define	STRCT_HAS_ITERATOR 0x02
+#define	STRCT_HAS_BLOB	   0x04
+#define STRCT_HAS_NULLREFS 0x10
+	struct config	  *cfg;
 	TAILQ_ENTRY(strct) entries;
-	struct config	  *cfg; /* up-reference */
 };
 
-/*
- * Roles are used in the RBAC mechanism of the system.
- * It's just a name possibly nested within another role.
- * In a structure, a function can be associated with a "rolemap" that
- * maps back into roles permitted for the function.
- */
 struct	role {
-	char		  *name; /* unique lowercase name of role */
-	char		  *doc; /* documentation */
-	struct role	  *parent; /* parent (or NULL) */
-	struct roleq	   subrq; /* sub-roles */
-	struct pos	   pos; /* parse point */
+	char		  *name;
+	char		  *doc;
+	struct role	  *parent;
+	struct roleq	   subrq;
+	struct pos	   pos;
 	TAILQ_ENTRY(role)  entries;
 };
 
@@ -568,21 +557,18 @@ struct	msg {
 	int		 er; /* if MSGTYPE_FATAL, errno */
 };
 
-/*
- * Hold entire parse sequence results.
- */
 struct	config {
-	struct strctq	  sq; /* all structures */
-	struct enmq	  eq; /* all enumerations */
-	struct bitfq	  bq; /* all bitfields */
-	struct roleq	  rq; /* all roles (this is a tree) */
-	char		**langs; /* known label langs */
-	size_t		  langsz; /* number of langs */
-	char		**fnames; /* filenames referenced */
-	size_t		  fnamesz; /* number of fnames */
-	struct msg	 *msgs; /* warning/error messages */
-	size_t		  msgsz; /* count of msgs */
-	struct config_private *priv; /* non-exported data */
+	struct strctq	  sq;
+	struct enmq	  eq;
+	struct bitfq	  bq;
+	struct roleq	  rq;
+	char		**langs;
+	size_t		  langsz;
+	char		**fnames;
+	size_t		  fnamesz;
+	struct msg	 *msgs;
+	size_t		  msgsz;
+	struct config_private *priv;
 };
 
 __BEGIN_DECLS

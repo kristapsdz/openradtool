@@ -945,36 +945,37 @@ main(int argc, char *argv[])
 	size_t		  i, confsz;
 
 #if HAVE_PLEDGE
-	if (-1 == pledge("stdio rpath", NULL))
+	if (pledge("stdio rpath", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while (-1 != (c = getopt(argc, argv, "g:jJN:sv")))
+	while ((c = getopt(argc, argv, "g:jJN:sv")) != -1)
 		switch (c) {
-		case ('g'):
+		case 'g':
 			guard = optarg;
 			break;
-		case ('j'):
+		case 'j':
 			json = 1;
 			break;
-		case ('J'):
+		case 'J':
 			jsonparse = 1;
 			break;
-		case ('N'):
-			if (NULL != strchr(optarg, 'b'))
+		case 'N':
+			if (strchr(optarg, 'b') != NULL)
 				dstruct = 0;
-			if (NULL != strchr(optarg, 'd'))
+			if (strchr(optarg, 'd') != NULL)
 				dbin = 0;
 			break;
-		case ('s'):
+		case 's':
 			/* Ignore. */
 			break;
-		case ('v'):
+		case 'v':
 			valids = 1;
 			break;
 		default:
 			goto usage;
 		}
+
 	argc -= optind;
 	argv += optind;
 	confsz = (size_t)argc;
@@ -982,20 +983,15 @@ main(int argc, char *argv[])
 	/* Read in all of our files now so we can repledge. */
 
 	if (confsz > 0) {
-		confs = calloc(confsz, sizeof(FILE *));
-		if (NULL == confs)
+		if ((confs = calloc(confsz, sizeof(FILE *))) == NULL)
 			err(EXIT_FAILURE, NULL);
-		for (i = 0; i < confsz; i++) {
-			confs[i] = fopen(argv[i], "r");
-			if (NULL == confs[i]) {
-				warn("%s", argv[i]);
-				goto out;
-			}
-		}
+		for (i = 0; i < confsz; i++)
+			if ((confs[i] = fopen(argv[i], "r")) == NULL)
+				err(EXIT_FAILURE, "%s", argv[i]);
 	}
 
 #if HAVE_PLEDGE
-	if (-1 == pledge("stdio", NULL))
+	if (pledge("stdio", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 
@@ -1003,20 +999,19 @@ main(int argc, char *argv[])
 		goto out;
 
 	for (i = 0; i < confsz; i++)
-		if ( ! ort_parse_file(cfg, confs[i], argv[i]))
+		if (!ort_parse_file(cfg, confs[i], argv[i]))
 			goto out;
 
-	if (0 == confsz && 
-	    ! ort_parse_file(cfg, stdin, "<stdin>"))
+	if (confsz == 0 && !ort_parse_file(cfg, stdin, "<stdin>"))
 		goto out;
 
-	if (0 != (rc = ort_parse_close(cfg)))
+	if ((rc = ort_parse_close(cfg)))
 		gen_c_header(cfg, guard, json, jsonparse,
 			valids, dbin, dstruct);
 
 out:
 	for (i = 0; i < confsz; i++)
-		if (NULL != confs[i] && EOF == fclose(confs[i]))
+		if (fclose(confs[i]) == EOF)
 			warn("%s", argv[i]);
 	free(confs);
 	ort_config_free(cfg);
@@ -1024,7 +1019,7 @@ out:
 usage:
 	fprintf(stderr, 
 		"usage: %s "
-		"[-jJsv] "
+		"[-jJv] "
 		"[-N bd] "
 		"[config]\n",
 		getprogname());

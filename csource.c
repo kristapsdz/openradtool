@@ -3282,8 +3282,7 @@ main(int argc, char *argv[])
 		if (!ort_parse_file(cfg, confs[i], argv[i]))
 			goto out;
 
-	if (confsz == 0 && 
-	    !ort_parse_file(cfg, stdin, "<stdin>"))
+	if (confsz == 0 && !ort_parse_file(cfg, stdin, "<stdin>"))
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
@@ -3303,7 +3302,7 @@ out:
 usage:
 	fprintf(stderr, 
 		"usage: %s "
-		"[-jJsv] "
+		"[-jJv] "
 		"[-h header[,header...] "
 		"[-I bjJv] "
 		"[-N b] "

@@ -420,24 +420,23 @@ gen_funcs_dbin(const struct config *cfg, const struct strct *p)
 		puts("");
 	}
 
-	if (NULL != p->ins) {
+	if (p->ins != NULL) {
 		print_commentt(0, COMMENT_C_FRAG_OPEN,
 			"Insert a new row into the database.\n"
 			"Only native (and non-rowid) fields may "
 			"be set.");
 		pos = 1;
 		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (FTYPE_STRUCT == f->type ||
-			    FIELD_ROWID & f->flags)
+			if (f->type == FTYPE_STRUCT ||
+			    (f->flags & FIELD_ROWID))
 				continue;
-			if (FTYPE_PASSWORD == f->type) 
+			if (f->type == FTYPE_PASSWORD)
 				print_commentv(0, COMMENT_C_FRAG,
 					"\tv%zu: %s (pre-hashed password)", 
 					pos++, f->name);
 			else
 				print_commentv(0, COMMENT_C_FRAG,
-					"\tv%zu: %s", 
-					pos++, f->name);
+					"\tv%zu: %s", pos++, f->name);
 		}
 		print_commentt(0, COMMENT_C_FRAG_CLOSE,
 			"Returns the new row's identifier on "

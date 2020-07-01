@@ -170,11 +170,13 @@ print_commentt(size_t tabs, enum cmtt type, const char *cp)
 	 * marker itself.
 	 */
 
+#if 0
 	if (type == COMMENT_JS && cp != NULL && tabs == 2 && 
 	    strchr(cp, '\n') == NULL && strlen(cp) < maxcol) {
 		printf("\t\t/** %s */\n", cp);
 		return;
 	}
+#endif
 
 	/* Multi-line (or sufficiently long) comment. */
 

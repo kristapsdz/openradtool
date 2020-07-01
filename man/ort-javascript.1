@@ -1,6 +1,6 @@
 .\"	$OpenBSD$
 .\"
-.\" Copyright (c) 2017--2019 Kristaps Dzonsons <kristaps@bsd.lv>
+.\" Copyright (c) 2017--2020 Kristaps Dzonsons <kristaps@bsd.lv>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -19,10 +19,9 @@
 .Os
 .Sh NAME
 .Nm ort-javascript
-.Nd produce ort JavaScript and TypeScript classes
+.Nd produce ort TypeScript interface
 .Sh SYNOPSIS
 .Nm ort-javascript
-.Op Fl t
 .Op Ar config...
 .Sh DESCRIPTION
 The
@@ -31,61 +30,37 @@ utility accepts
 .Xr ort 5
 .Ar config
 files, defaulting to standard input,
-and creates JavaScript or TypeScript classes that format the JSON
-produced by
+and creates a TypeScript interface that format the JSON produced by
 .Xr ort-c-header 1
 .Fn json_xxxx
 functions.
-Its arguments are as follows:
-.Bl -tag -width Ds
-.It Fl t
-Emits Typescript instead of JavaScript.
-.It Ar config
-Configuration files in
-.Xr ort 5
-syntax.
-.El
 .Pp
-Output consists of a set of classes within the
+Output consists of the
 .Qq ort
-namespace describing structures, enumerations, and bitfields.
-These classes include methods to fill data from the JSON into a DOM tree
-by operating on elements having specific classes.
+namespace with classes that fill data from the JSON into a DOM tree by
+operating on elements having specific classes.
 .Pp
-All output files are fully documented in the jsdoc format.
-.Ss Modules
+The output of
+.Nm
+is fully documented using TypeDoc annotation.
+.Ss Namespaces
 All data produced by
 .Nm
-is contained within a namespace or module (depending upon whether
-.Fl t
-is specified) called
-.Ar ort .
-For TypeScript output, data is namespaced.
+is contained within a namespace
+.Qq ort .
 For example, let
 .Qq foo
 be a
 .Cm struct
 defined in the configuration.
-.Bd -literal
+.Bd -literal -offset indent
 namespace ort {
   export interface DataCallbacks { ... }
   export interface fooData { ... }
-  export class foo { }
+  export class foo { ... }
 }
 .Ed
-.Pp
-For JavaScript, data uses the module pattern.
-.Bd -literal
-var ort;
-(function(ort) {
-  var foo = (function() { ... }());
-  ort.foo = foo;
-})(ort || (ort = {}));
-.Ed
 .Ss Interfaces
-The concept of an interface is only applicable to
-.Fl t
-output.
 Each
 .Cm struct
 in the configuration is rendered as a TypeScript interface suffixed
@@ -98,8 +73,8 @@ Each native field is mapped to a native type:
 .Cm string
 or
 .Cm number .
-Ror references, the type is the referenced interface type.
-.Bd -literal
+For references, the type is the referenced interface type.
+.Bd -literal -offset indent
 namespace ort {
   export interface fooData {
     sometext: string;
@@ -114,37 +89,25 @@ In addition to this, a
 interface may be used for
 .Sx Customisation
 and contains callback functions for each field for formatting purposes.
-.Pp
-In JavaScript output, which has no interfaces, the programmer must
-ensure that the variables are properly constructed.
 .Ss Constructors
 Structures are output as classes containing formatting methods.
 (Enumerations and bitfields have static classes.)
 They are named as found in the configuration.
 Each structure has a constructor to which one passes a single object of
-the given interface type or an array.
-For TypeScript, this is the
-.Qq fooData
-interface.
+the given interface type or an array of interfaces.
 In this example, let
 .Fa parseData
 create the required interfaces.
-.Bd -literal
+.Bd -literal -offset indent
 let input: ort.fooData = parseData();
 let foo: ort.foo = new ort.foo(input);
-.Ed
-.Pp
-For JavaScript, this is a simple dictionary.
-.Bd -literal
-var input = parseData();
-var foo = new ort.foo(input);
 .Ed
 .Pp
 The array may be zero-length, but the object may not be
 .Dv null .
 .Ss Class Methods
 The following methods are generated for each structure.
-.Bl -tag -width Ds
+.Bl -tag -width Ds -offset indent
 .It Fn fillInner "e" "[custom]"
 Fill labelled elements within (but not including) element
 .Fa e ,
@@ -169,7 +132,7 @@ is
 does nothing.
 The
 .Qq inner
-applies to bot"
+applies to both
 .Fa e
 and the matched descendents.
 .It Fn fill "e" "[custom]"
@@ -241,7 +204,7 @@ be the name of a structure in the
 and
 .Qq xxxx
 be any of its fields.
-.Bl -tag -width Ds
+.Bl -tag -width Ds -offset indent
 .It Li foo-xxxx-bits-checked
 Sets or unsets the
 .Li checked
@@ -323,7 +286,7 @@ These take advantage of the
 .Cm jslabel
 enumeration label described in
 .Xr ort 5 .
-.Bl -tag -width Ds
+.Bl -tag -width Ds -offset indent
 .It Fn format "e" "name" "value"
 Fills in all elements (not inclusive) descending from
 .Fa e
@@ -352,7 +315,7 @@ used.
 If there is no default label, an empty string is used instead.
 .Pp
 Bit-fields behave similarly and have the same member.
-.Bl -tag -width Ds
+.Bl -tag -width Ds -offset indent
 .It Fn format "e" "name" "value"
 Fills in all elements (not inclusive) descending from
 .Fa e
@@ -395,30 +358,23 @@ with a field
 .Dq dob
 consisting of a UNIX epoch:
 .Bd -literal -offset indent
-var custom = { 'client-dob': formatDate };
+const custom: DataCallbacks = { 'client-dob': formatDate };
 new ort.client(obj).fillInner(document.body, custom);
 .Ed
 .Pp
 And letting a formatting function be:
 .Bd -literal -offset indent
-function formatDate(e, name, value) {
-  var list, i;
-  list = e.getElementsByClassName('client-dob-date-moment');
-  for (i = 0; i < list.length; i++)
-    list[i].innerHTML =
-      moment.unix(value).format('DD-MM-YYYY'));
+function formatDate(e: HTMLElement,
+  name: string, v: number|null): void {
+    /* Do something... */
 }
 .Ed
-.Pp
-This invokes the
-.Dq moment.js
-formatter to create dates.
 .Pp
 The same can be applied to structures instead of to fields within
 structures.
 The keys for these are simply the structure name.
 .Bd -literal -offset indent
-var custom = { 'client': formatClient };
+const custom: DataCallbacks = { 'client': formatClient };
 new ort.client(obj).fillInner(document.body, custom);
 .Ed
 .Pp
@@ -428,7 +384,9 @@ In either case, the value for the custom key may also be an array of
 functions just as above.
 Each will be invoked in the order given, in the same way.
 .Bd -literal -offset indent
-var custom = { 'client': [ format1, format2 ] };
+const custom: DataCallbacks = {
+    'client': [ format1, format2 ]
+};
 .Ed
 .Pp
 The callback function (or functions) will be invoked regardless of
@@ -436,38 +394,19 @@ whether the value has been set.
 In the event of an unset field value, the function is passed
 .Dv null .
 .Pp
-When using TypeScript, the values of the format function are typed
-according to the structure or field passed.
-For example, if the
-.Dq dob
-field of structure
-.Dq client
-is a UNIX epoch, the format function accepts a number or null.
-.Bd -literal -offset indent
-function formatDate(e: HTMLElement,
-  name: string, v: number|null): void {
-	/* Do something... */
-}
-.Ed
-.Pp
-The dictionary object is defined as follows:
-.Bd -literal -offset indent
-let custom: DataCallbacks = { 'client-dob': formatDate };
-new ort.client(obj).fillInner(document.body, custom);
-.Ed
-.Pp
 For example, to fill in the label of an enumeration
 .Li enum someenum
 on a field named
 .Li val ,
 provide a custom callback.
 .Bd -literal -offset indent
-var obj = JSON.parse(response);
-var e = document.getElementById('foo');
-var custom = {
-  'foo-val': ort.someenum.format
+let e: HTMLElement|null = document.getElementById('foo');
+readonly obj: fooData = <fooData>JSON.parse(response);
+const custom: DataCallbacks = {
+    'foo-val': ort.someenum.format
 };
-new ort.foo(obj).fill(e, custom);
+if (e !== null)
+    new ort.foo(obj).fill(e, custom);
 .Ed
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
@@ -486,7 +425,7 @@ by the
 family of
 .Xr ort-c-header 1 .
 This does not do any error checking.
-.Bd -literal
+.Bd -literal -offset indent
 function init(): void
 {
   let xmh: XMLHttpRequest = new XMLHttpRequest();
@@ -505,7 +444,7 @@ Now define
 to parse the JSON response content using the classes and methods defined
 in the output of
 .Nm .
-.Bd -literal
+.Bd -literal -offset indent
 function success(resp: string): void
 {
     let obj: ort.fooData =
@@ -522,7 +461,7 @@ consist of the AJAX snippet and formatter and
 .Pa foo.s
 be the output of
 .Nm .
-.Bd -literal
+.Bd -literal -offset indent
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -546,7 +485,7 @@ to be invoked when the page has loaded.
 This may be in
 .Pa driver.js
 or directly in the document header.
-.Bd -literal
+.Bd -literal -offset indent
 window.addEventListener('load', init);
 .Ed
 .\" .Sh DIAGNOSTICS

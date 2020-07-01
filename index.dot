@@ -22,12 +22,12 @@ digraph {
 	bin -> sql;
 	bin -> xliff;
 
-	{ rank=same; sqlbox; kcgi; sqlite1; tsc; jsdoc; }
+	{ rank=same; sqlbox; kcgi; sqlite1; tsc; tsdoc; }
 	{ rank=same; sqlite; }
 
 	sqlite1[label="sqlite3(1)", fontcolor="#888888", color="#888888"];
 	tsc[label="tsc(1)", fontcolor="#888888", color="#888888"];
-	jsdoc[label="jsdoc(1)", fontcolor="#888888", color="#888888"];
+	tsdoc[label="tsdoc(1)", fontcolor="#888888", color="#888888"];
 	kcgi[label="kcgi(3)", fontcolor="#888888", color="#888888"];
 	sqlbox[label="sqlbox(3)", fontcolor="#888888", color="#888888"];
 	sqlite[label="sqlite3(3)", fontcolor="#888888", color="#888888"];
@@ -35,7 +35,7 @@ digraph {
 	sql -> sqlite1;
 
 	js -> tsc;
-	js -> jsdoc;
+	js -> tsdoc;
 
 	src -> sqlbox[dir="both"];
 	src -> kcgi[dir="both"];

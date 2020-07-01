@@ -60,7 +60,7 @@
 					<p class="intro">
 						<span class="nm">openradtool</span> (<q class="nm">ort</q>) is an 
 						<a href="https://opensource.org/licenses/ISC">open source</a> RAD tool generating front-end code
-						(JavaScript, TypeScript) and back-end code (SQL, C) from a straightforward data model.
+						(TypeScript) and back-end code (SQL, C) from a straightforward data model.
 					</p>
 				</div>
 				<p>
@@ -101,7 +101,7 @@
 							Presentation Layer
 						</span>
 						<span class="contents">
-							Front-end <a href="#gen-js">JavaScript or TypeScript</a> source code populating HTML5
+							Front-end <a href="#gen-js">TypeScript</a> source code populating HTML5
 							trees with exported data.  This must be driven by your front-end code.
 						</span>
 					</li>
@@ -110,7 +110,7 @@
 							Internationalisation
 						</span>
 						<span class="contents">
-							<a href="#gen-xliff">Translation files</a> for front-end JavaScript labels.
+							<a href="#gen-xliff">Translation files</a> for front-end TypeScript labels.
 						</span>
 					</li>
 					<li>
@@ -287,18 +287,18 @@
 					</figure>
 					<p>
 						The last part of the toolchain is to handle the JSON-export output in the browser itself.
-						The <a href="ort-javascript.1.html">ort-javascript(1)</a> tool will also generate JavaScript or
+						The <a href="ort-javascript.1.html">ort-javascript(1)</a> tool will also generate 
 						TypeScript files to assist in filling in data for your front-end web application code.
 					</p>
 					<p>
 						Both are the same, and provide an easy interface for replacing elements (noted by class names)
 						in HTML DOM trees with data.
-						All of this is documented using <a href="https://usejsdoc.org">jsdoc</a> notation.
+						All of this is documented using <a href="https://typedoc.org">tsdoc</a> notation.
 						For example, consider the following:
 					</p>
 					<article data-sblg-permlink="0" data-sblg-article="1"></article>
 					<p>
-						A JavaScript file may invoke 
+						A TypeScript file may invoke 
 						<code>new ort.user(res).fill<wbr />(document.getElementById<wbr />('foobar'))</code>,
 						where <code>res</code> is the JSON object parsed from an AJAX call to the CGI script.
 						This will recursively replace text (classes ending with <code>-text</code>), fill in input

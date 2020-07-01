@@ -6,12 +6,10 @@ digraph {
 
 	cfg[label="ort(5)"];
 	bin[label="ort-javascript(1)"];
-	js[label="JavaScript"];
 	ts[label="TypeScript"];
 
 	cfg -> bin;
-	bin -> js;
 	bin -> ts;
 
-	{ rank=same; js; ts; }
+	{ rank=same; ts; }
 }

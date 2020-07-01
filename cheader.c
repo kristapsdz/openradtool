@@ -239,11 +239,11 @@ gen_struct(const struct config *cfg, const struct strct *p)
 static void
 gen_func_update(const struct config *cfg, const struct update *up)
 {
-	const struct uref *ref;
-	enum cmtt	 ct = COMMENT_C_FRAG_OPEN;
-	size_t		 pos;
+	const struct uref	*ref;
+	enum cmtt		 ct = COMMENT_C_FRAG_OPEN;
+	size_t			 pos = 1;
 
-	if (NULL != up->doc) {
+	if (up->doc != NULL) {
 		print_commentt(0, COMMENT_C_FRAG_OPEN, up->doc);
 		print_commentt(0, COMMENT_C_FRAG, "");
 		ct = COMMENT_C_FRAG;
@@ -251,11 +251,10 @@ gen_func_update(const struct config *cfg, const struct update *up)
 
 	/* Only update functions have this part. */
 
-	if (UP_MODIFY == up->type) {
+	if (up->type == UP_MODIFY) {
 		print_commentv(0, ct,
-			"Updates the given fields in struct %s:",
-			up->parent->name);
-		pos = 1;
+			"Update fields in struct %s.\n"
+			"Updated fields:", up->parent->name);
 		TAILQ_FOREACH(ref, &up->mrq, entries)
 			if (FTYPE_PASSWORD == ref->field->type) 
 				print_commentv(0, COMMENT_C_FRAG,
@@ -265,30 +264,26 @@ gen_func_update(const struct config *cfg, const struct update *up)
 				print_commentv(0, COMMENT_C_FRAG,
 					"\tv%zu: %s", 
 					pos++, ref->field->name);
-		print_commentt(0, COMMENT_C_FRAG,
-			"Constrains the updated records to:");
-	} else {
-		pos = 1;
-		print_commentt(0, ct,
-			"Constrains the deleted records to:");
-	}
+	} else
+		print_commentv(0, ct, 
+			"Delete fields in struct %s.\n",
+			up->parent->name);
+
+	print_commentt(0, COMMENT_C_FRAG, "Constraint fields:");
 
 	TAILQ_FOREACH(ref, &up->crq, entries)
-		if (OPTYPE_NOTNULL == ref->op) 
+		if (ref->op == OPTYPE_NOTNULL) 
 			print_commentv(0, COMMENT_C_FRAG,
 				"\t%s (not an argument: "
-				"checked not null)",
-				ref->field->name);
-		else if (OPTYPE_ISNULL == ref->op) 
+				"checked not null)", ref->field->name);
+		else if (ref->op == OPTYPE_ISNULL) 
 			print_commentv(0, COMMENT_C_FRAG,
 				"\t%s (not an argument: "
-				"checked null)", 
-				ref->field->name);
+				"checked null)", ref->field->name);
 		else
 			print_commentv(0, COMMENT_C_FRAG,
 				"\tv%zu: %s (%s)", pos++, 
-				ref->field->name, 
-				optypes[ref->op]);
+				ref->field->name, optypes[ref->op]);
 
 	print_commentt(0, COMMENT_C_FRAG_CLOSE,
 		"Returns zero on constraint violation, "

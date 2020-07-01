@@ -26,6 +26,7 @@ OBJS		 = audit.o \
 		   cprotos.o \
 		   csource.o \
 		   main.o \
+		   nodejs.o \
 		   javascript.o \
 		   sql.o \
 		   xliff.o
@@ -79,6 +80,7 @@ DOTAR		 = audit.c \
 		   gensalt.c \
 		   javascript.c \
 		   jsmn.c \
+		   nodejs.c \
 		   ort.h \
 		   linker.c \
 		   linker_aliases.c \
@@ -121,6 +123,7 @@ BINS		 = ort \
 		   ort-c-header \
 		   ort-c-source \
 		   ort-javascript \
+		   ort-nodejs \
 		   ort-sql \
 		   ort-sqldiff \
 		   ort-xliff
@@ -153,6 +156,9 @@ ort: main.o libort.a
 
 libort.a: $(LIBOBJS)
 	$(AR) rs $@ $(LIBOBJS)
+
+ort-nodejs: nodejs.o comments.o libort.a
+	$(CC) -o $@ nodejs.o comments.o libort.a $(LDFLAGS) $(LDADD)
 
 ort-c-source: csource.o cprotos.o comments.o libort.a
 	$(CC) -o $@ csource.o cprotos.o comments.o libort.a $(LDFLAGS) $(LDADD)

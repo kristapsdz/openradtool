@@ -89,6 +89,7 @@ DOTAR		 = audit.c \
 		   log.c \
 		   Makefile \
 		   main.c \
+		   ortPrivate.ts \
 		   parser.c \
 		   parser.h \
 		   parser_bitfield.c \
@@ -240,6 +241,7 @@ install: all
 	$(INSTALL_MAN) $(MAN5S) $(DESTDIR)$(MANDIR)/man5
 	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_DATA) b64_ntop.c jsmn.c gensalt.c $(DESTDIR)$(SHAREDIR)/openradtool
+	$(INSTALL_DATA) ortPrivate.ts $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_PROGRAM) $(BINS) $(DESTDIR)$(BINDIR)
 
 uninstall:
@@ -253,6 +255,7 @@ uninstall:
 	done
 	rm -f $(DESTDIR)$(SHAREDIR)/openradtool/audit.{html,css,js}
 	rm -f $(DESTDIR)$(SHAREDIR)/openradtool/{b64_ntop,jsmn,gensalt}.c
+	rm -f $(DESTDIR)$(SHAREDIR)/openradtool/ortPrivate.ts
 	rmdir $(DESTDIR)$(SHAREDIR)/openradtool
 	@for f in $(BINS); do \
 		echo rm -f $(DESTDIR)$(BINDIR)/$$f ; \

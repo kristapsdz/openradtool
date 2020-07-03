@@ -1015,7 +1015,7 @@ usage:
 		"usage: %s "
 		"[-jJv] "
 		"[-N bd] "
-		"[config]\n",
+		"[config...]\n",
 		getprogname());
 	return EXIT_FAILURE;
 }

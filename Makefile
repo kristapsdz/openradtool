@@ -417,6 +417,7 @@ clean:
 	rm -f openradtool.tar.gz openradtool.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml
 	rm -f db.ort.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
+	rm -f regress/javascript/*.final.ts
 
 # Remove both what can be built and what's built by ./configure.
 
@@ -511,45 +512,27 @@ regress: ort ort-sqldiff ort-sql ort-javascript
 	done ; \
 	for f in regress/javascript/*.ort ; do \
 		bf=regress/javascript/`basename $$f .ort`.ts ; \
-		xf=regress/javascript/`basename $$f .ort`.result ; \
-		ff=regress/javascript/`basename $$f .ort`.xml ; \
-		command -v ts-node >/dev/null || { \
-			echo "$$f: ignoring (no ts-node)" 1>&2 ; \
-			continue ; \
-		} ; \
-		set +e ; \
+		of=regress/javascript/`basename $$f .ort`.final.ts ; \
 		printf "$$f... " ; \
-		tmp2=`mktemp` ; \
-		mv $$tmp2 $$tmp2.ts ; \
-		tmp2=$$tmp2.ts ; \
-		( echo "/// <reference path=\"$(NODE_TYPES)/node/index.d.ts\" />" ; \
+		( ./ort-javascript -S. $$f ; \
 		  echo ; \
-		  ./ort-javascript -S. $$f ; \
+		  cat regress/javascript/regress.ts ; \
 		  echo ; \
-		  sed "s!@FILE@!$$ff!" regress/javascript/regress.ts ; \
-		  echo ; \
-	  	  cat $$bf ) > $$tmp2 ; \
+	  	  cat $$bf ) > $$of ; \
 		if [ $$? -ne 0 ] ; then \
 			echo "fail (did not execute)" ; \
-			rm $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		ts-node --skip-project $$tmp2 >$$tmp 2>/dev/null ; \
-		if [ $$? -ne 0 ] ; then \
-			echo "fail (did not execute)" ; \
-			ts-node --skip-project $$tmp2 ; \
-			rm $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		rm -f $$tmp2 ; \
-		diff -w $$tmp $$xf >/dev/null 2>&1 ; \
-		if [ $$? -ne 0 ] ; then \
-			echo "fail (output)" ; \
-			diff -wu $$tmp $$xf ; \
-			rm $$tmp ; \
+			rm $$tmp $$of ; \
 			exit 1 ; \
 		fi ; \
 		echo "pass" ; \
 		set -e ; \
 	done ; \
+	set +e ; \
+	command -v ts-node >/dev/null; \
+	set -e ; \
+	if [ $$? -eq 1 ]; then \
+		echo "regress/javascript: ignoring (no ts-node)" 1>&2 ; \
+	else \
+		ts-node --skip-project regress/javascript/regress-runner.ts ; \
+	fi ; \
 	rm $$tmp ;

@@ -113,7 +113,6 @@ IHTMLS		 = audit-example.ort.html \
 		   db.sql.html \
 		   db.old.ort.html \
 		   db.update.sql.html \
-		   db.js.html \
 		   db.ts.html \
 		   db.trans.ort.html \
 		   test.c.html
@@ -137,6 +136,7 @@ IMAGES		 = index.svg \
 		   index-fig5.svg \
 		   index-fig6.svg \
 		   index-fig7.svg
+NODE_TYPES	 = $(LIBDIR)/node_modules/@types
 
 # Only needed for test, not built by default.
 LIBS_SQLBOX	!= pkg-config --libs sqlbox 2>/dev/null || echo "-lsqlbox -lsqlite3"
@@ -306,11 +306,8 @@ db.h: ort-c-header db.ort
 db.sql: ort-sql db.ort
 	./ort-sql db.ort >$@
 
-db.js: ort-javascript db.ort
-	./ort-javascript db.ort >$@
-
 db.ts: ort-javascript db.ort
-	./ort-javascript -t db.ort >$@
+	./ort-javascript -S . db.ort >$@
 
 db.update.sql: ort-sqldiff db.old.ort db.ort
 	./ort-sqldiff db.old.ort db.ort >$@
@@ -386,9 +383,6 @@ db.h.html: db.h
 db.sql.html: db.sql
 	highlight -s whitengrey -I -l --src-lang=sql db.sql >$@
 
-db.js.html: db.js
-	highlight -s whitengrey -I -l --src-lang=js db.js >$@
-
 db.ts.html: db.ts
 	highlight -s whitengrey -I -l --src-lang=js db.ts >$@
 
@@ -419,7 +413,7 @@ atom.xml: versions.xml atom-template.xml
 
 clean:
 	rm -f $(BINS) version.h paths.h $(LIBOBJS) $(OBJS) libort.a test test.o
-	rm -f db.c db.h db.o db.sql db.js db.ts db.ts db.update.sql db.db db.trans.ort
+	rm -f db.c db.h db.o db.sql db.ts db.ts db.update.sql db.db db.trans.ort
 	rm -f openradtool.tar.gz openradtool.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml
 	rm -f db.ort.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
@@ -429,7 +423,7 @@ clean:
 distclean: clean
 	rm -f config.h config.log Makefile.configure
 
-regress: ort ort-sqldiff ort-sql
+regress: ort ort-sqldiff ort-sql ort-javascript
 	@tmp=`mktemp` ; \
 	for f in regress/*.result ; do \
 		bf=`basename $$f .result`.ort ; \
@@ -509,6 +503,49 @@ regress: ort ort-sqldiff ort-sql
 		if [ $$? -ne 0 ] ; then \
 			echo "fail (output)" ; \
 			diff -wu $$tmp $$f ; \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+		set -e ; \
+	done ; \
+	for f in regress/javascript/*.ort ; do \
+		bf=regress/javascript/`basename $$f .ort`.ts ; \
+		xf=regress/javascript/`basename $$f .ort`.result ; \
+		ff=regress/javascript/`basename $$f .ort`.xml ; \
+		command -v ts-node >/dev/null || { \
+			echo "$$f: ignoring (no ts-node)" 1>&2 ; \
+			continue ; \
+		} ; \
+		set +e ; \
+		printf "$$f... " ; \
+		tmp2=`mktemp` ; \
+		mv $$tmp2 $$tmp2.ts ; \
+		tmp2=$$tmp2.ts ; \
+		( echo "/// <reference path=\"$(NODE_TYPES)/node/index.d.ts\" />" ; \
+		  echo ; \
+		  ./ort-javascript -S. $$f ; \
+		  echo ; \
+		  sed "s!@FILE@!$$ff!" regress/javascript/regress.ts ; \
+		  echo ; \
+	  	  cat $$bf ) > $$tmp2 ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (did not execute)" ; \
+			rm $$tmp $$tmp2 ; \
+			exit 1 ; \
+		fi ; \
+		ts-node --skip-project $$tmp2 >$$tmp 2>/dev/null ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (did not execute)" ; \
+			ts-node --skip-project $$tmp2 ; \
+			rm $$tmp $$tmp2 ; \
+			exit 1 ; \
+		fi ; \
+		rm -f $$tmp2 ; \
+		diff -w $$tmp $$xf >/dev/null 2>&1 ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (output)" ; \
+			diff -wu $$tmp $$xf ; \
 			rm $$tmp ; \
 			exit 1 ; \
 		fi ; \

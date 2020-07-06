@@ -3,6 +3,27 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.9.0</h3>
+		</header>
+		<aside>
+			<p>
+				Don't emit pure JavaScript any more&#8212;require TypeScript output
+				from <a href="ort-javascript.1.html">ort-javascript(1)</a> as if
+				<b>-t</b> were always provided.
+				This is because straight-up JavaScript is just too unsafe.
+				Any consumers of the JavaScript output will now need to use the 
+				TypeScript transpiler.
+				But, you know&#8230; should just use TypeScript or similarly typed
+				shim.
+			</p>
+			<p>
+				In doing so, use <a href="https://typedoc.org">TypeDoc</a> instead of 
+				<a href="https://jsdoc.app">jsdoc</a>.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.8.16</h3>
 		</header>
 		<aside>

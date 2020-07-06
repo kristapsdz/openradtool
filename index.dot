@@ -12,7 +12,7 @@ digraph {
 	subgraph cluster0 {
 		{ rank=same; src; js; sql; }
 		src[label="C"];
-		js[label="Java/TypeScript"];
+		js[label="TypeScript"];
 		sql[label="SQL"];
 		xliff[label="XLIFF"];
 	}

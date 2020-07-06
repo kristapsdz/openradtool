@@ -272,13 +272,10 @@
 					</p>
 				</section>
 				<h2 id="gen-js">
-					<span>6.</span> generate javascript front-end
+					<span>6.</span> generate typescript front-end
 				</h2>
 				<code>
 					% <a href="ort-javascript.1.html">ort-javascript</a>
-					<a href="db.ort.html">db.ort</a> &gt; <a href="db.js.html">db.js</a>
-					<br />
-					% <a href="ort-javascript.1.html">ort-javascript</a> -t
 					<a href="db.ort.html">db.ort</a> &gt; <a href="db.ts.html">db.ts</a>
 				</code>
 				<section>

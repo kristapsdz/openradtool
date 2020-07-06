@@ -19,11 +19,13 @@
 #if HAVE_SYS_QUEUE
 # include <sys/queue.h>
 #endif
+#include <sys/param.h>
 
 #include <assert.h>
 #if HAVE_ERR
 # include <err.h>
 #endif
+#include <fcntl.h>
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -34,6 +36,7 @@
 #include "ort.h"
 #include "extern.h"
 #include "comments.h"
+#include "paths.h"
 
 static	const char *types[FTYPE__MAX] = {
 	"number", /* FTYPE_BIT */
@@ -167,58 +170,55 @@ warn_label(const struct config *cfg, const struct labelq *q,
 }
 
 static void
-gen_jsdoc_field(const char *ns, const struct field *f)
+gen_jsdoc_field(const struct field *f)
 {
 
 	if ((f->flags & FIELD_NOEXPORT) || f->type == FTYPE_BLOB)
 		return;
 
-	if ((f->flags & FIELD_NULL)) {
+	if (f->flags & FIELD_NULL) {
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-has-%s: <code>hide</code> class "
-			"removed if <i>%s</i> not null, otherwise "
-			"<code>hide</code> class is added</li>",
+			"- `%s-has-%s`: *hide* class removed if "
+			"**%s** not null, otherwise it is added",
 			f->parent->name, f->name, f->name);
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-no-%s: <code>hide</code> class "
-			"added if <i>%s</i> not null, otherwise "
-			"<code>hide</code> class is removed</li>",
+			"- `%s-no-%s`: *hide* class added if "
+			"**%s** not null, otherwise it is removed",
 			f->parent->name, f->name, f->name);
 	} 
 
 	if (f->type == FTYPE_STRUCT) {
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-%s-obj: invoke {@link "
-			"%s.%s#fillInner} with %s data%s</li>",
+			"- `%s-%s-obj`: invoke {@link "
+			"%s#fillInner} with **%s** data%s",
 			f->parent->name, f->name, 
-			ns, f->ref->target->parent->name, f->name,
+			f->ref->target->parent->name, f->name,
 			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
 	} else {
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-%s-enum-select: sets the "
-			"<code>select</code> attribute for "
-			"<code>&lt;option&gt;</code> values "
-			"matching <i>%s</i> under the element%s</li>",
+			"- `%s-%s-enum-select`: sets the "
+			"`select` attribute for `<option>` values "
+			"matching **%s** under the element%s",
 			f->parent->name, f->name, f->name,
 			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-%s-value-checked: sets the "
-			"<code>checked</code> attribute under "
-			"the element matching the input%s</li>",
+			"- `%s-%s-value-checked`: sets the "
+			"`checked` attribute for the element "
+			"matching the input%s",
 			f->parent->name, f->name, 
 			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-%s-text: replace contents "
-			"with <i>%s</i> data%s</li>",
+			"- `%s-%s-text`: replace contents "
+			"with **%s** data%s",
 			f->parent->name, f->name, f->name,
 			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-%s-value: replace <code>value</code> "
-			"attribute with <i>%s</i> data%s</li>",
+			"- `%s-%s-value`: replace `value` "
+			"attribute with **%s** data%s",
 			f->parent->name, f->name, f->name,
 			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
@@ -227,26 +227,24 @@ gen_jsdoc_field(const char *ns, const struct field *f)
 	if (f->type == FTYPE_DATE ||
 	    f->type == FTYPE_EPOCH) {
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-%s-date-value: set the element's "
-			"<code>value</code> to the ISO-8601 date "
-			"format of the data%s</li>",
-			f->parent->name, f->name, 
+			"- `%s-%s-date-value`: set the element's "
+			"`value` to the ISO-8601 date format of the "
+			"data%s", f->parent->name, f->name, 
 			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-%s-date-text: like "
-			"%s-%s-date-value, but replacing contents",
-			f->parent->name, f->name, 
+			"- `%s-%s-date-text`: like "
+			"`%s-%s-date-value`, but replacing textual "
+			"content", f->parent->name, f->name, 
 			f->parent->name, f->name);
 	}
 
 	if (f->type == FTYPE_BIT ||
 	    f->type == FTYPE_BITFIELD)
 		print_commentv(2, COMMENT_JS_FRAG,
-			"<li>%s-%s-bits-checked: set the "
-			"<code>checked</code> attribute when "
-			"the element's <code>value</code> is "
-			"covered by the data bitmask%s</li>",
+			"- `%s-%s-bits-checked`: set the "
+			"`checked` attribute when the element's "
+			"`value` is covered by the data bitmask%s",
 			f->parent->name, f->name, 
 			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
@@ -309,63 +307,45 @@ gen_vars(size_t tabs, ...)
 }
 
 /*
- * Generate a class-level function prototype for class "cls".
+ * Generate a class-level method prototype.
  * If "priv", it is marked as private.
  * Like gen_proto(), otherwise.
  */
 static void
-gen_class_proto(int priv, const char *cls, 
-	const char *ret, const char *func, ...)
+gen_class_proto(int priv, const char *ret, const char *func, ...)
 {
 	va_list	 	 ap;
-	int		 first = 1;
+	int		 first = 1, rc;
 	const char	*name, *type;
-	size_t		 sz;
+	size_t		 sz, col = 0;
 
-	printf("\t\t%s%s(", priv ? "private " : "", func);
-
+	rc = printf("\t\t%s%s(", priv ? "private " : "", func);
+	col += rc > 0 ? (size_t)rc : 0;
 	va_start(ap, func);
 	while ((name = va_arg(ap, char *)) != NULL) {
+		if (first == 0) {
+			rc = printf(", ");
+			col += rc > 0 ? (size_t)rc : 0;
+		}
 		sz = strlen(name);
-		if (first == 0)
-			printf(", ");
 		type = va_arg(ap, char *);
 		assert(type != NULL);
-		printf("%.*s", (int)sz, name);
-		printf(": %s", type);
+		if (sz + 2 + strlen(type) + col >= 72) {
+			fputs("\n\t\t\t", stdout);
+			col = 24;
+		}
+		rc = printf("%.*s", (int)sz, name);
+		col += rc > 0 ? (size_t)rc : 0;
+		rc =printf(": %s", type);
+		col += rc > 0 ? (size_t)rc : 0;
 		first = 0;
 	}
 	va_end(ap);
-	printf("): %s\n\t\t{\n", ret);
-}
-
-/*
- * Generate a function prototype.
- * Uses return type "ret", function name "func", and a variable number
- * of name-type pairs terminating in a single NULL.
- */
-static void
-gen_proto(const char *ret, const char *func, ...)
-{
-	va_list	 	 ap;
-	int		 first = 1;
-	size_t		 sz;
-	const char	*name, *type;
-
-	printf("\tfunction %s(", func);
-	va_start(ap, func);
-	while ((name = va_arg(ap, char *)) != NULL) {
-		sz = strlen(name);
-		if (first == 0)
-			fputs(", ", stdout);
-		type = va_arg(ap, char *);
-		assert(type != NULL);
-		printf("%.*s", (int)sz, name);
-		printf(": %s", type);
-		first = 0;
-	}
-	va_end(ap);
-	printf("): %s\n\t{\n", ret);
+	rc = printf("): ");
+	col += rc > 0 ? (size_t)rc : 0;
+	if (col + strlen(ret) >= 72)
+		fputs("\n\t\t\t", stdout);
+	printf("%s\n", ret);
 }
 
 /*
@@ -373,522 +353,47 @@ gen_proto(const char *ret, const char *func, ...)
  * This emits the top-level structure.
  */
 static void
-gen_javascript(const struct config *cfg)
+gen_javascript(const struct config *cfg, const char *priv, int privfd)
 {
-	const struct strct  *s;
-	const struct field  *f;
-	const struct bitf   *bf;
-	const struct bitidx *bi;
-	const struct enm    *e;
-	const struct eitem  *ei;
-	const char	    *ns = "ort";
-	char		    *obj, *objarray, *type, *typearray;
-	int64_t		     maxvalue;
+	const struct strct	*s;
+	const struct field	*f;
+	const struct bitf	*bf;
+	const struct bitidx	*bi;
+	const struct enm	*e;
+	const struct eitem	*ei;
+	char			*obj, *objarray, *type, *typearray;
+	char			 buf[BUFSIZ];
+	int64_t			 maxvalue;
+	ssize_t			 ssz;
+	const char		*ns = "ort";
 
-	/*
-	 * Begin with the methods we'll use throughout the file.
-	 * All of these are scoped locally to the namespace, but not
-	 * exposed outside of it.
-	 */
+	puts("namespace ort {");
 
-	printf("namespace %s {\n", ns);
+	while ((ssz = read(privfd, buf, sizeof(buf))) > 0)
+		fwrite(buf, 1, (size_t)ssz, stdout);
+	if (ssz == -1)
+		err(EXIT_FAILURE, "%s", priv);
 
-	print_commentt(1, COMMENT_JS,
-		"Labels (\"jslabel\" in ort(5)) may have multiple "
-		"languages.  This maps a language name to a translated "
-		"string.");
-	puts("\tinterface langmap { [lang: string]: string };\n"
-	     "");
-
-	print_commentv(1, COMMENT_JS,
-		"Convenience function to resolve a set of "
-		"translated strings into a single one depending "
-		"upon the current language.\n"
-		"@param {langmap} vals - All translations of "
-		"a given word.\n"
-		"@private\n"
-		"@function _strlang\n"
-		"@memberof %s", ns);
-	gen_proto("string", "_strlang", "vals", "langmap", NULL);
-	gen_vars(2, "lang", "string|null", NULL);
-	puts("\t\tlang = document.documentElement.lang;\n"
-	     "\t\tif (null !== lang && lang in vals)\n"
-	     "\t\t\treturn vals[lang];\n"
-	     "\t\telse if ('_default' in vals)\n"
-	     "\t\t\treturn vals['_default'];\n"
-	     "\t\telse\n"
-	     "\t\t\treturn '';\n"
-	     "\t}\n"
-	     "");
-
-	print_commentv(1, COMMENT_JS,
-		"Used exclusively by enumerations and bitfields to do "
-		"language replacement conditional upon the label "
-		"(<i>jslabel</i> in the configuration).\n"
-		"Like {@link %s._replcl} with inclusion set to false.\n"
-		"@param {HTMLElement} e - The root of the DOM tree in "
-		"which we query for elements to fill into.\n"
-		"@param {String} name - The class name we search for "
-		"within the root (not inclusive).\n"
-		"@param {langmap} vals - All possible translations.\n"
-		"@private\n"
-		"@function _replcllang\n"
-		"@memberof %s", ns, ns);
-	gen_proto("void", "_replcllang",
-		"e", "HTMLElement|null",
-		"name", "string",
-		"vals", "langmap", NULL);
-	puts("\t\t_replcl(e, name, _strlang(vals), false);\n"
-	     "\t}\n"
-	     "");
-
-	print_commentv(1, COMMENT_JS,
-		"Used exclusively by enumerations and bitfields to do "
-		"language replacement conditional upon the label "
-		"(<i>jslabel</i> in the configuration).\n"
-		"Like {@link %s._repl}.\n"
-		"@param {HTMLElement} e - The root of the DOM tree in "
-		"which we query for elements to fill into.\n"
-		"@param {langmap} vals - All possible translations.\n"
-		"@private\n"
-		"@function _repllang\n"
-		"@memberof %s", ns, ns);
-	gen_proto("void", "_repllang",
-		"e", "HTMLElement|null",
-		"vals", "langmap", NULL);
-	puts("\t\t_repl(e, _strlang(vals));\n"
-	     "\t}\n"
-	     "");
-
-	gen_proto("void", "_attr", 
-		"e", "HTMLElement|null",
-		"attr", "string",
-		"text", "string", NULL);
-	puts("\t\tif (null !== e)\n"
-	     "\t\t\te.setAttribute(attr, text);\n"
-	     "\t}\n"
-	     "");
-
-	gen_proto("void", "_rattr", 
-		"e", "HTMLElement|null",
-		"attr", "string", NULL);
-	puts("\t\tif (null !== e)\n"
-	     "\t\t\te.removeAttribute(attr);\n"
-	     "\t}\n"
-	     "");
-
-	print_commentv(1, COMMENT_JS,
-		"Internal function for checking inputs for all "
-		"elements of class strct-name-value-checked whose "
-		"value matches the object\'s value. "
-		"If the object is null, all elements are "
-		"unchecked.\n"
-		"@param {HTMLElement} e - The root of the "
-		"DOM tree in which we query for elements to fill "
-		"into.\n"
-		"@param {String} strct - The name of the structure "
-		"that we\'re filling in.\n"
-		"@param {String} name - The name of the field.\n"
-		"@param {Number|String|null} obj - The data itself.\n"
-		"@param {Boolean} inc - Whether to include the "
-		"root element in looking for elements to fill.\n"
-		"@private\n"
-		"@function _fillValueChecked\n"
-		"@memberof %s", ns);
-	gen_proto("void", "_fillValueChecked",
-		"e", "HTMLElement",
-		"fname", "string",
-		"val", "number|string|null",
-		"inc", "boolean",
-		NULL);
-	gen_vars(2, "list", "HTMLElement[]", 
-		"i", "number",
-		"valstr", "string|null", NULL);
-	puts("\t\tfname += '-value-checked';\n"
-	     "\t\tvalstr = null === val ? null : \n"
-	     "\t\t\t(\"number\" === typeof val ? val.toString() : val);\n"
-	     "\t\tlist = _elemList(e, fname, inc);\n"
-	     "\t\tfor (i = 0; i < list.length; i++)\n"
-	     "\t\t\tif (valstr === null)\n"
-	     "\t\t\t\t_rattr(list[i], \'checked\');\n"
-	     "\t\t\telse if (valstr === (<HTMLInputElement>list[i]).value)\n"
-	     "\t\t\t\t_attr(list[i], \'checked\', \'true\');\n"
-	     "\t\t\telse\n"
-	     "\t\t\t\t_rattr(list[i], \'checked\');\n"
-	     "\t}\n");
-
-	print_commentv(1, COMMENT_JS,
-		"Internal function that takes all <code>"
-		"&lt;option&gt;</code> elements in the root and "
-		"sets or unsets their <code>selected</code> status "
-		"depending upon whether it matches the object\'s "
-		"value.\n"
-		"@param {HTMLElement} e - The root of the "
-		"DOM tree in which we query for elements to fill "
-		"into.\n"
-		"@param {Number|String} val - The object\'s value.\n"
-		"@private\n"
-		"@function _fillValueSelect\n"
-		"@memberof %s", ns);
-	gen_proto("void", "_fillValueSelect",
-		"e", "HTMLElement|null",
-		"val", "number|string", NULL);
-	gen_vars(2,
-	     "list", "HTMLCollectionOf<Element>", 
-	     "i", "number", 
-	     "v", "string|number", NULL);
-	puts("\t\tif (null === e)\n"
-	     "\t\t\treturn;\n"
-	     "\t\tlist = e.getElementsByTagName('option');\n"
-	     "\t\tfor (i = 0; i < list.length; i++) {\n"
-	     "\t\t\tv = 'number' === typeof val ? \n"
-	     "\t\t\t     parseInt((<HTMLOptionElement>list[i]).value) :\n"
-	     "\t\t\t     (<HTMLOptionElement>list[i]).value;\n"
-	     "\t\t\tif (val === v)\n"
-	     "\t\t\t\t_attr(<HTMLOptionElement>list[i], 'selected', 'true');\n"
-	     "\t\t\telse\n"
-	     "\t\t\t\t_rattr(<HTMLOptionElement>list[i], 'selected');\n"
-	     "\t\t}\n"
-	     "\t}\n");
-	
-	gen_proto("void", "_attrcl",
-		"e", "HTMLElement|null",
-		"attr", "string",
-		"name", "string",
-		"text", "string",
-		"inc", "boolean", NULL);
-	gen_vars(2, "list", "HTMLElement[]", "i", "number", NULL);
-	puts("\t\tif (null === e)\n"
-	     "\t\t\treturn;\n"
-	     "\t\tlist = _elemList(e, name, inc);\n"
-	     "\t\tfor (i = 0; i < list.length; i++)\n"
-	     "\t\t\t_attr(list[i], attr, text);\n"
-	     "\t}\n"
-	     "");
-
-	gen_proto("HTMLElement[]", "_elemList", 
-		"e", "HTMLElement|null",
-		"cls", "string",
-		"inc", "boolean", NULL);
-	gen_vars(2, "a", "HTMLElement[]",
-		"list", "HTMLCollectionOf<Element>",
-		"i", "number", NULL);
-	puts("\t\ta = [];\n"
-	     "\t\tif (null === e)\n"
-	     "\t\t\treturn a;\n"
-	     "\t\tlist = e.getElementsByClassName(cls);\n"
-	     "\t\tfor (i = 0; i < list.length; i++)\n"
-	     "\t\t\ta.push(<HTMLElement>list[i]);\n"
-	     "\t\tif (inc && e.classList.contains(cls))\n"
-	     "\t\t\ta.push(e);\n"
-	     "\t\treturn a;\n"
-	     "\t}\n");
-
-	gen_proto("void", "_repl",
-		"e", "HTMLElement|null",
-		"text", "string", NULL);
-	puts("\t\tif (null === e)\n"
-	     "\t\t\treturn;\n"
-	     "\t\twhile (e.firstChild)\n"
-	     "\t\t\te.removeChild(e.firstChild);\n"
-	     "\t\te.appendChild(document.createTextNode(text));\n"
-	     "\t}\n"
-	     "");
-
-	print_commentv(1, COMMENT_JS,
-		"Internal function for filling in ISO-8601 dates.\n"
-		"@param {HTMLElement} e - The root of the "
-		"DOM tree in which we query for elements to fill "
-		"into.\n"
-		"@param {String} strct - The name of the structure "
-		"that we\'re filling in.\n"
-		"@param {String} name - The name of the field.\n"
-		"@param {Number|null} obj - The data itself.\n"
-		"@param {Boolean} inc - Whether to include the "
-		"root element in looking for elements to fill.\n"
-		"@private\n"
-		"@function _fillDateValue\n"
-		"@memberof %s", ns);
-	gen_proto("void", "_fillDateValue",
-		"e", "HTMLElement",
-		"strct", "string",
-		"name", "string",
-		"val", "number|null",
-		"inc", "boolean",
-		NULL);
-	gen_vars(2, "fname", "string",
-		"year", "number",
-		"mo", "number",
-		"day", "number",
-		"full", "string",
-		"d", "Date", NULL);
-	printf("\t\tif (null === val)\n"
-	       "\t\t\treturn;\n"
-	       "\t\td = new Date();\n"
-	       "\t\td.setTime(val * 1000);\n"
-	       "\t\tyear = d.getFullYear();\n"
-	       "\t\tmo = d.getMonth() + 1;\n"
-	       "\t\tday = d.getDate();\n"
-	       "\t\tfull = year + '-' +\n"
-	       "\t\t\t(mo < 10 ? '0' : '') + mo + '-' +\n"
-	       "\t\t\t(day < 10 ? '0' : '') + day;\n"
-	       "\t\tfname = strct + '-' + name + '-date-value';\n"
-	       "\t\t_attrcl(e, 'value', fname, full, inc);\n"
-	       "\t\tfname = strct + '-' + name + '-date-text';\n"
-	       "\t\t_replcl(e, fname, full, inc);\n"
-	       "\t}\n"
-	       "\n");
-
-	print_commentv(1, COMMENT_JS,
-		"Internal function for checking inputs for all "
-		"elements of class strct-name-bits-checked whose "
-		"value is the bit-wise AND of the object\'s value. "
-		"If the object is null, all elements are "
-		"unchecked.\n"
-		"@param {HTMLElement} e - The root of the "
-		"DOM tree in which we query for elements to fill "
-		"into.\n"
-		"@param {String} strct - The name of the structure "
-		"that we\'re filling in.\n"
-		"@param {String} name - The name of the field.\n"
-		"@param {Number|null} obj - The data itself.\n"
-		"@param {Boolean} inc - Whether to include the "
-		"root element in looking for elements to fill.\n"
-		"@private\n"
-		"@function _fillBitsChecked\n"
-		"@memberof %s", ns);
-	gen_proto("void", "_fillBitsChecked",
-		"e", "HTMLElement",
-		"strct", "string",
-		"name", "string",
-		"val", "number|null",
-		"inc", "boolean",
-		NULL);
-	gen_vars(2, "list", "HTMLElement[]", 
-		"fname", "string",
-		"i", "number",
-		"v", "number", NULL);
-	puts("\t\tfname = strct + '-' + name + '-bits-checked';\n"
-	     "\t\tlist = _elemList(e, fname, inc);\n"
-	     "\t\tfor (i = 0; i < list.length; i++) {\n"
-	     "\t\t\tif (val === null) {\n"
-	     "\t\t\t\t_rattr(list[i], \'checked\');\n"
-	     "\t\t\t\tcontinue;\n"
-	     "\t\t\t}\n"
-	     "\t\t\tv = parseInt((<HTMLInputElement>list[i]).value);\n"
-	     "\t\t\tif (isNaN(v))\n"
-	     "\t\t\t\t_rattr(list[i], \'checked\');\n"
-	     "\t\t\telse if (0 === v && 0 === val)\n"
-	     "\t\t\t\t_attr(list[i], \'checked\', \'true\');\n"
-	     "\t\t\telse if ((1 << (v - 1)) & val)\n"
-	     "\t\t\t\t_attr(list[i], \'checked\', \'true\');\n"
-	     "\t\t\telse\n"
-	     "\t\t\t\t_rattr(list[i], \'checked\');\n"
-	     "\t\t}\n"
-	     "\t}\n");
-
-	print_commentv(1, COMMENT_JS,
-		"Internal function for filling a structure field.\n"
-		"This first does the has/no class setting for "
-		"null values, then optionally returns if null "
-		"(running the custom fields first), "
-		"otherwise the generic text/value/etc fields, then "
-		"finally the custom fields.\n"
-		"@param {HTMLElement} e - The root of the "
-		"DOM tree in which we query for elements to fill "
-		"into.\n"
-		"@param {String} strct - The name of the structure "
-		"that we\'re filling in.\n"
-		"@param {String} name - The name of the field.\n"
-		"@param {%s.DataCallbacks|null} custom - Custom "
-		"callback functions to invoke on the field.\n"
-		"@param obj - The data itself, which is either a "
-		"native type or one of the data interfaces for "
-		"an application-specific type.\n"
-		"@param {Boolean} inc - Whether to include the "
-		"root element in looking for elements to fill. "
-		"Note that nested structures are alwyas filled "
-		"non-inclusively.\n"
-		"@param {Boolean} cannull - Whether the data "
-		"object might be null.\n"
-		"@param {Boolean} isblob - Whether the data "
-		"object is a blob.\n"
-		"@param sub - If the data object is a nested "
-		"structure interface, this is the allocated class "
-		"of that interface.\n"
-		"@private\n"
-		"@function _fillField\n"
-		"@memberof %s", ns, ns);
-	gen_proto("void", "_fillField",
-		"e", "HTMLElement",
-		"strct", "string",
-		"name", "string",
-		"custom", "DataCallbacks|null",
-		"obj", "any",
-		"inc", "boolean",
-		"cannull", "boolean",
-		"isblob", "boolean",
-		"sub", "any", NULL);
-	gen_vars(2, "i", "number", "fname", "string", 
-		"list", "HTMLElement[]", NULL);
-	puts("\t\tfname = strct + '-' + name;\n"
-	     "\t\t/* First handle our has/no null situation. */\n"
-	     "\t\tif (cannull) {\n"
-	     "\t\t\tif (null === obj) {\n"
-	     "\t\t\t\t_hidecl(e, strct + '-has-' + name, inc);\n"
-	     "\t\t\t\t_showcl(e, strct + '-no-' + name, inc);\n"
-	     "\t\t\t} else {\n"
-	     "\t\t\t\t_showcl(e, strct + '-has-' + name, inc);\n"
-	     "\t\t\t\t_hidecl(e, strct + '-no-' + name, inc);\n"
-	     "\t\t\t}\n"
-	     "\t\t}\n"
-	     "\t\t/* Don't process null values that can be null. */\n"
-	     "\t\tif (cannull && null === obj) {\n"
-	     "\t\t\tif (null !== custom && fname in custom) {\n"
-	     "\t\t\t\tif (custom[fname] instanceof Array) {\n"
-	     "\t\t\t\t\tfor (i = 0; i < custom[fname].length; i++)\n"
-	     "\t\t\t\t\t\tcustom[fname][i](e, fname, null);\n"
-	     "\t\t\t\t} else {\n"
-	     "\t\t\t\t\tcustom[fname](e, fname, null);\n"
-	     "\t\t\t\t}\n"
-	     "\t\t\t}\n"
-	     "\t\t\treturn;\n"
-	     "\t\t}\n"
-	     "\t\t/* Non-null non-structs. */\n"
-	     "\t\t/* Don't account for blobs. */\n"
-	     "\t\tif (null !== sub) {\n"
-	     "\t\t\tlist = _elemList(e, fname + '-obj', inc);\n"
-	     "\t\t\tfor (i = 0; i < list.length; i++) {\n"
-	     "\t\t\t\tsub.fillInner(list[i], custom);\n"
-	     "\t\t\t}\n"
-	     "\t\t} else if ( ! isblob) {\n"
-	     "\t\t\tlist = _elemList"
-	     	"(e, fname + '-enum-select', inc);\n"
-	     "\t\t\tfor (i = 0; i < list.length; i++) {\n"
-	     "\t\t\t\t_fillValueSelect(list[i], obj);\n"
-	     "\t\t\t}\n"
-	     "\t\t\t_replcl(e, fname + '-text', obj, inc);\n"
-	     "\t\t\t_attrcl(e, 'value', fname + '-value', obj, inc);\n"
-	     "\t\t\t_fillValueChecked(e, fname, obj, inc);\n"
-	     "\t\t}\n"
-	     "\t\t/* Lastly, handle the custom callback. */\n"
-	     "\t\tif (null !== custom && fname in custom) {\n"
-	     "\t\t\tif (custom[fname] instanceof Array) {\n"
-	     "\t\t\t\tfor (i = 0; i < custom[fname].length; i++)\n"
-	     "\t\t\t\t\tcustom[fname][i](e, fname, obj);\n"
-	     "\t\t\t} else {\n"
-	     "\t\t\t\tcustom[fname](e, fname, obj);\n"
-	     "\t\t\t}\n"
-	     "\t\t}\n"
-	     "\t}\n"
-	     "");
-
-	gen_proto("void", "_replcl",
-		"e", "HTMLElement|null",
-		"name", "string",
-		"text", "string",
-		"inc", "boolean", NULL);
-	gen_vars(2, "list", "HTMLElement[]", "i", "number", NULL);
-	puts("\t\tif (null === e)\n"
-	     "\t\t\treturn;\n"
-	     "\t\tlist = _elemList(e, name, inc);\n"
-	     "\t\tfor (i = 0; i < list.length; i++)\n"
-	     "\t\t\t_repl(list[i], text);\n"
-	     "\t}\n"
-	     "");
-
-	gen_proto("HTMLElement|null", "_classadd",
-		"e", "HTMLElement|null",
-		"name", "string", NULL);
-	puts("\t\tif (null === e)\n"
-	     "\t\t\treturn(null);\n"
-	     "\t\tif ( ! e.classList.contains(name))\n"
-	     "\t\t\te.classList.add(name);\n"
-	     "\t\treturn(e);\n"
-	     "\t}\n"
-	     "");
-
-	gen_proto("void", "_classaddcl",
-		"e", "HTMLElement|null",
-		"name", "string",
-		"cls", "string",
-		"inc", "boolean", NULL);
-	gen_vars(2, "list", "HTMLElement[]", "i", "number", NULL);
-	puts("\t\tif (null === e)\n"
-	     "\t\t\treturn;\n"
-	     "\t\tlist = _elemList(e, name, inc);\n"
-	     "\t\tfor (i = 0; i < list.length; i++)\n"
-	     "\t\t\t_classadd(list[i], cls);\n"
-	     "\t}\n"
-	     "");
-
-	gen_proto("HTMLElement|null", "_hide",
-		"e", "HTMLElement|null", NULL);
-	puts("\t\tif (null === e)\n"
-	     "\t\t\treturn null;\n"
-	     "\t\tif ( ! e.classList.contains('hide'))\n"
-	     "\t\t\te.classList.add('hide');\n"
-	     "\t\treturn e;\n"
-	     "\t}\n"
-	     "");
-
-	gen_proto("void", "_hidecl",
-		"e", "HTMLElement|null",
-		"name", "string",
-		"inc", "boolean", NULL);
-	gen_vars(2, "list", "HTMLElement[]", "i", "number", NULL);
-	puts("\t\tif (null === e)\n"
-	     "\t\t\treturn;\n"
-	     "\t\tlist = _elemList(e, name, inc);\n"
-	     "\t\tfor (i = 0; i < list.length; i++)\n"
-	     "\t\t\t_hide(list[i]);\n"
-	     "\t}\n"
-	     "");
-
-	gen_proto("HTMLElement|null", "_show",
-		"e", "HTMLElement|null", NULL);
-	puts("\t\tif (null === e)\n"
-	     "\t\t\treturn null;\n"
-	     "\t\tif (e.classList.contains('hide'))\n"
-	     "\t\t\te.classList.remove('hide');\n"
-	     "\t\treturn e;\n"
-	     "\t}\n"
-	     "");
-
-	gen_proto("void", "_showcl",
-		"e", "HTMLElement|null",
-		"name", "string",
-		"inc", "boolean", NULL);
-	gen_vars(2, "list", "HTMLElement[]", "i", "number", NULL);
-	puts("\t\tif (null === e)\n"
-	     "\t\t\treturn;\n"
-	     "\t\tlist = _elemList(e, name, inc);\n"
-	     "\t\tfor (i = 0; i < list.length; i++)\n"
-	     "\t\t\t_show(list[i]);\n"
-	     "\t}\n"
-	     "");
-	
-	print_commentv(1, COMMENT_JS,
-		"All possible callback functions for passing to "
-		"the \"custom\" associative array when filling "
-		"in DOM trees.\n"
-		"@interface %s.DataCallbacks", ns);
-
-	puts("\texport type DCbstring = (e: HTMLElement, name: "
-		"string, val: string) => void;\n"
-	     "\texport type DCbstringNull = (e: HTMLElement, name: "
-		"string, val: string|null) => void;\n"
-	     "\texport type DCbnumber = (e: HTMLElement, name: "
-		"string, val: number) => void;\n"
-	     "\texport type DCbnumberNull = (e: HTMLElement, name: "
-		"string, val: number|null) => void;");
-	TAILQ_FOREACH(s, &cfg->sq, entries) 
-		printf("\texport type DCbStruct%s = "
-			"(e: HTMLElement, name: string, "
-			 "val: %s.%sData|null) => void;\n", 
-			 s->name, ns, s->name);
 	puts("\n"
-	     "\texport interface DataCallbacks\n"
+	     "\texport type DCbstring = (e: HTMLElement,\n"
+	     "\t\tname: string, val: string) => void;\n"
+	     "\texport type DCbstringNull = (e: HTMLElement,\n"
+	     "\t\tname: string, val: string|null) => void;\n"
+	     "\texport type DCbnumber = (e: HTMLElement,\n"
+	     "\t\tname: string, val: number) => void;\n"
+	     "\texport type DCbnumberNull = (e: HTMLElement,\n"
+	     "\t\tname: string, val: number|null) => void;");
+
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		printf("\texport type DCbStruct%s = (e: HTMLElement,\n"
+		       "\t\tname: string, val: ort.%sData|null) "
+			"=> void;\n", s->name, s->name);
+
+	puts("");
+	print_commentt(1, COMMENT_JS,
+		"All possible custom callbacks for this "
+		"ort configuration.");
+	puts("\texport interface DataCallbacks\n"
 	     "\t{\n"
 	     "\t\t[key: string]: any;");
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
@@ -897,22 +402,21 @@ gen_javascript(const struct config *cfg)
 		TAILQ_FOREACH(f, &s->fq, entries) {
 			if (FTYPE_STRUCT == f->type) {
 				printf("\t\t\'%s-%s\'?: "
-					"DCbStruct%s|"
-					"DCbStruct%s[];\n", 
+					"DCbStruct%s|DCbStruct%s[];\n",
 					s->name, f->name, 
 					f->ref->target->parent->name, 
 					f->ref->target->parent->name);
 				continue;
-			} else if (NULL == tstypes[f->type])
+			} else if (tstypes[f->type] == NULL)
 				continue;
 
 			printf("\t\t'%s-%s'?: DCb%s%s|"
 				"DCb%s%s[];\n", s->name, 
 				f->name, tstypes[f->type], 
-				FIELD_NULL & f->flags ? 
+				(f->flags & FIELD_NULL) ? 
 				"Null" : "", 
 				tstypes[f->type],
-				FIELD_NULL & f->flags ? 
+				(f->flags & FIELD_NULL) ? 
 				"Null" : "");
 		}
 	}
@@ -924,187 +428,157 @@ gen_javascript(const struct config *cfg)
 	 */
 
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
-		print_commentv(1, COMMENT_JS,
-			"%s%s%s\n"
-			"@interface %s.%sData",
-			NULL == s->doc ? "" : "\n",
-			NULL == s->doc ? "" : s->doc,
-			NULL == s->doc ? "" : "<br/>\n",
-			ns, s->name);
+		if (s->doc != NULL)
+			print_commentt(1, COMMENT_JS, s->doc);
 		printf("\texport interface %sData\n"
 		       "\t{\n", s->name);
-		TAILQ_FOREACH(f, &s->fq, entries)
-			if (FTYPE_STRUCT == f->type)
+		TAILQ_FOREACH(f, &s->fq, entries) {
+			if (f->doc != NULL &&
+			    (f->type == FTYPE_STRUCT ||
+			     types[f->type] != NULL))
+				print_commentt(2, COMMENT_JS, f->doc);
+			if (f->type == FTYPE_STRUCT)
 				printf("\t\t%s: %sData;\n",
 					f->name, 
 					f->ref->target->parent->name);
-			else if (NULL != types[f->type])
+			else if (types[f->type] != NULL)
 				printf("\t\t%s: %s;\n",
 					f->name,
 					types[f->type]);
+		}
 		puts("\t}\n");
 	}
 
-	/*
-	 * Each structure is a clas initialised by either an object from
-	 * the server (interface) or an array of objects.
-	 * Each object has the "fill" and "fillArray" methods.
-	 * These use the internal _fill method, which accepts both the
-	 * object (or array) and the element to be filled.
-	 */
+	/* Generate classes for each structure. */
 
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
 		if (asprintf(&obj, 
-		    "%s.%sData|%s.%sData[]|null", 
-		    ns, s->name, ns, s->name) < 0)
+		    "%sData|%sData[]|null", s->name, s->name) < 0)
 			err(EXIT_FAILURE, NULL);
-		if (asprintf(&objarray, "%s.%sData[]", ns, s->name) < 0)
+		if (asprintf(&objarray, "%sData[]", s->name) < 0)
 			err(EXIT_FAILURE, NULL);
-		if (asprintf(&type, "<%s.DCbStruct%s>", ns, s->name) < 0)
+		if (asprintf(&type, "<DCbStruct%s>", s->name) < 0)
 			err(EXIT_FAILURE, NULL);
-		if (asprintf(&typearray, "<%s.DCbStruct%s[]>", ns, s->name) < 0)
+		if (asprintf(&typearray, "<DCbStruct%s[]>", s->name) < 0)
 			err(EXIT_FAILURE, NULL);
+
 		print_commentv(1, COMMENT_JS,
-			"Accepts {@link %s.%sData} for writing into "
-			"a DOM tree.\n"
-			"@param {(%s.%sData|%s.%sData[])} obj - The "
-			"object(s) to write.\n"
-			"@memberof %s\n"
-			"@constructor\n"
-			"@class",
-			ns, s->name, ns, s->name, ns, s->name, ns);
+			"Writes {@link %sData} into a DOM tree.",
+			s->name);
 		printf("\texport class %s {\n"
-		       "\t\tobj: %sData|%sData[];\n"
-		       "\t\tconstructor(o: %sData|%sData[]) {\n"
-		       "\t\t\tthis.obj = o;\n"
-		       "\t\t}\n"
-		       "\n", s->name, s->name, 
+		       "\t\tobj: %sData|%sData[];\n",
 		       s->name, s->name, s->name);
 
+		/* Constructor. */
+
+		print_commentt(2, COMMENT_JS,
+			"@param obj The object(s) to write.");
+		printf("\t\tconstructor(o: %sData|%sData[]) {\n"
+		       "\t\t\tthis.obj = o;\n"
+		       "\t\t}\n\n", s->name, s->name);
+
+		/* fill() method. */
+
 		print_commentv(2, COMMENT_JS_FRAG_OPEN,
-			"Write the {@link %s.%sData} into the given "
-			"HTMLElement in the DOM tree.\n"
-			"If constructed with an array, the first "
-			"element is used.\n"
-			"Elements within (and including) \"e\" having "
-			"the following classes are manipulated as "
-			"follows:", ns, s->name);
-		print_commentt(2, COMMENT_JS_FRAG, "<ul>");
+			"Writes {@link %sData} into the given "
+			"element. If constructed with an array, the "
+			"first element is used.  Elements within (and "
+			"including) the element having the following "
+			"classes are manipulated as follows:", s->name);
+		print_commentt(2, COMMENT_JS_FRAG, "");
 		TAILQ_FOREACH(f, &s->fq, entries)
-			gen_jsdoc_field(ns, f);
-		print_commentt(2, COMMENT_JS_FRAG, "</ul>");
-		print_commentv(2, COMMENT_JS_FRAG_CLOSE,
-			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {%s.DataCallbacks} custom - The "
-			"optional dictionary of functions keyed "
-			"by structure and field name (e.g., "
-			"<i>foo</i> structure, <i>bar</i> "
-			"field would be <code>foo-bar</code>). "
-			"The value is a function for custom "
-			"handling that accepts the \"e\" value, "
+			gen_jsdoc_field(f);
+		print_commentt(2, COMMENT_JS_FRAG, "");
+		print_commentt(2, COMMENT_JS_FRAG_CLOSE,
+			"@param e The DOM element.\n"
+			"@param custom The dictionary of functions "
+			"keyed by structure and field name (e.g., "
+			"*foo** structure, **bar** field would be "
+			"`foo-bar`). The value is a function for "
+			"custom handling that accepts the \'e\' value, "
 			"the name of the structure-field, and the "
-			"value of the structure and field.\n"
+			"value of the structure and field. "
 			"You may also specify an array of functions "
-			"instead of a singleton.\n"
-			"These callbacks are invoked <b>after</b> "
-			"the generic classes are filled.\n"
-			"@function fill\n"
-			"@memberof %s.%s#",
-			ns, ns, s->name);
-		gen_class_proto(0, s->name, "void", "fill",
-			"e", "HTMLElement|null",
+			"instead of a singleton. "
+			"These callbacks are invoked *after* "
+			"the generic classes are filled.");
+		gen_class_proto(0, "void", "fill",
+			"e", "HTMLElement|null", 
 			"custom?", "DataCallbacks|null", NULL);
-		puts("\t\t\tthis._fill(e, this.obj, true, custom);\n"
+		puts("\t\t{\n"
+		     "\t\t\tthis._fill(e, this.obj, true, custom);\n"
 		     "\t\t}\n");
 
-		print_commentv(2, COMMENT_JS,
-			"Like {@link %s.%s#fill} but instead of "
+		/* fillInner() method. */
+
+		print_commentt(2, COMMENT_JS,
+			"Like {@link fill} but not including the "
+			"passed-in element.\n"
+			"@param e The DOM element.\n"
+			"@param custom Custom handler dictionary (see "
+			"{@link fill} for details).");
+		gen_class_proto(0, "void", "fillInner",
+			"e", "HTMLElement|null", 
+			"custom?", "DataCallbacks|null", NULL);
+		puts("\t\t{\n"
+		     "\t\t\tthis._fill(e, this.obj, false, custom);\n"
+		     "\t\t}\n");
+
+		/* fillByClass() method. */
+
+		print_commentt(2, COMMENT_JS,
+			"Like {@link fill} but instead of "
 			"accepting a single element to fill, filling "
 			"into all elements (non-inclusive) matching the "
 			"given class name beneath (non-inclusive) the "
 			"given root.\n"
-			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {String} name - The name of the class "
-			"into which to fill.\n"
-			"@param {%s.DataCallbacks} custom - The optional "
-			"custom handler dictionary (see {@link "
-			"%s.%s#fill} for details).\n"
-			"@function fillByClass\n"
-			"@memberof %s.%s#",
-			ns, s->name, ns, ns, s->name, ns, s->name);
-		gen_class_proto(0, s->name, "void", "fillByClass",
-			"e", "HTMLElement|null",
-			"name", "string", 
+			"@param e The DOM element.\n"
+			"@param name Name of the class to fill.\n"
+			"@param custom Custom handler dictionary (see "
+			"{@link fill} for details).");
+		gen_class_proto(0, "void", "fillByClass",
+			"e", "HTMLElement|null", 
+			"name", "string",
 			"custom?", "DataCallbacks|null", NULL);
-		puts("\t\t\tthis._fillByClass(e, name, true, custom);\n"
+		puts("\t\t{\n"
+		     "\t\t\tthis._fillByClass(e, name, true, custom);\n"
 		     "\t\t}\n");
 
-		print_commentv(2, COMMENT_JS,
-			"Like {@link %s.%s#fillByClass} but inclusive "
+		/* fillInnerByClass() method. */
+
+		print_commentt(2, COMMENT_JS,
+			"Like {@link fillByClass} but inclusive "
 			"the root and targets by class.\n"
-			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {String} name - The name of the class "
-			"into which to fill.\n"
-			"@param {%s.DataCallbacks} custom - The optional "
-			"custom handler dictionary (see {@link "
-			"%s.%s#fill} for details).\n"
-			"@function fillInnerByClass\n"
-			"@memberof %s.%s#",
-			ns, s->name, ns, ns, s->name, ns, s->name);
-		gen_class_proto(0, s->name, "void", 
-			"fillInnerByClass",
-			"e", "HTMLElement|null",
-			"name", "string", 
+			"@param e The DOM element.\n"
+			"@param name Name of the class to fill.\n"
+			"@param custom Custom handler dictionary (see "
+			"{@link fill} for details).");
+		gen_class_proto(0, "void", "fillInnerByClass",
+			"e", "HTMLElement|null", 
+			"name", "string",
 			"custom?", "DataCallbacks|null", NULL);
-		puts("\t\t\tthis._fillByClass(e, name, false, custom);\n"
+		puts("\t\t{\n"
+		     "\t\t\tthis._fillByClass(e, name, false, custom);\n"
 		     "\t\t}\n");
 
-		print_commentv(2, COMMENT_JS,
-			"Like {@link %s.%s#fill} but not "
-			"including the root element \"e\".\n"
-			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {%s.DataCallbacks} custom - The optional "
-			"custom handler dictionary (see {@link "
-			"%s.%s#fill} for details).\n"
-			"@function fillInner\n"
-			"@memberof %s.%s#",
-			ns, s->name, ns, ns, s->name, ns, s->name);
-		gen_class_proto(0, s->name, "void", "fillInner",
-			"e", "HTMLElement|null",
-			"custom?", "DataCallbacks|null", NULL);
-		puts("\t\t\tthis._fill(e, this.obj, false, custom);\n"
-		     "\t\t}\n");
+		/* _fill() private method. */
 
-		print_commentv(2, COMMENT_JS,
-			"Implements all {@link %s.%s#fill} "
-			"functions.\n"
-			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {%s} o - The object "
-			"(or array) to fill.\n"
-			"@param {Boolean} inc - Whether to include "
-			"the root or not when processing.\n"
-			"@param {%s.DataCallbacks} custom - The optional "
-			"custom handler dictionary (see {@link "
-			"%s.%s#fill}).\n"
-			"@private\n"
-			"@function _fill\n"
-			"@memberof %s.%s#",
-			ns, s->name, obj, ns, ns, s->name, ns, s->name);
-		gen_class_proto(1, s->name, "void", "_fill",
-			"e", "HTMLElement|null",
+		gen_class_proto(1, "void", "_fill",
+			"e", "HTMLElement|null", 
 			"o", obj,
 			"inc", "boolean",
 			"custom?", "DataCallbacks|null", NULL);
-		gen_vars(3, "i", "number", NULL);
-		puts("\t\t\tif (null === o || null === e)\n"
+		puts("\t\t{\n"
+		     "\t\t\tlet i: number;\n"
+		     "\t\t\tif (null === o || null === e)\n"
 		     "\t\t\t\treturn;\n"
 		     "\t\t\tif (o instanceof Array) {\n"
 		     "\t\t\t\tif (0 === o.length)\n"
 		     "\t\t\t\t\treturn;\n"
 		     "\t\t\t\to = o[0];\n"
-		     "\t\t\t}");
-		printf("\t\t\tif (typeof custom === 'undefined')\n"
-		       "\t\t\t\tcustom = null;\n");
+		     "\t\t\t}\n"
+		     "\t\t\tif (typeof custom === 'undefined')\n"
+		     "\t\t\t\tcustom = null;");
 		TAILQ_FOREACH(f, &s->fq, entries)
 			gen_js_field(f);
 		printf("\t\t\tif (null !== custom && '%s' in custom) {\n"
@@ -1120,56 +594,39 @@ gen_javascript(const struct config *cfg)
 		       "\n", s->name, s->name, s->name, typearray, 
 		       s->name, s->name, type, s->name, s->name);
 
-		print_commentv(2, COMMENT_JS,
-			"Like {@link %s.%s#_fill} but instead of "
-			"accepting a single element to fill, filling "
-			"into all elements matching the given class "
-			"name beneath the given root.\n"
-			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {String} name - The name of the class "
-			"into which to fill.\n"
-			"@param {Boolean} inc - Whether to include "
-			"the roots or not when processing.\n"
-			"@param {%s.DataCallbacks} custom - The optional "
-			"custom handler dictionary (see {@link "
-			"%s.%s#fill} for details).\n"
-			"@private\n"
-			"@function _fillByClass\n"
-			"@memberof %s.%s#",
-			ns, s->name, ns, ns, s->name, ns, s->name);
-		gen_class_proto(1, s->name, "void", "_fillByClass",
-			"e", "HTMLElement|null",
-			"name", "string", 
+		/* _fillByClass() private method. */
+
+		gen_class_proto(1, "void", "_fillByClass",
+			"e", "HTMLElement|null", 
+			"name", "string",
 			"inc", "boolean",
 			"custom?", "DataCallbacks|null", NULL);
-		gen_vars(3, "i", "number", 
-			"list", "HTMLElement[]", NULL);
-		puts("\t\t\tlist = _elemList(e, name, inc);\n"
+		puts("\t\t{\n"
+		     "\t\t\tlet i: number;\n"
+		     "\t\t\tconst list: HTMLElement[] = \n"
+		     "\t\t\t\t_elemList(e, name, inc);\n"
 	     	     "\t\t\tfor (i = 0; i < list.length; i++)\n"
 		     "\t\t\t\tthis._fill(list[i], this.obj, "
-		      "inc, custom);\n"
+		     	"inc, custom);\n"
 		     "\t\t}\n");
 
-		print_commentv(2, COMMENT_JS,
-			"Like {@link %s.%s#fillArray}, but hiding an "
+		/* fillArrayOrHide() method. */
+
+		print_commentt(2, COMMENT_JS,
+			"Like {@link fillArray}, but hiding an "
 			"element if the array is empty or null.\n"
-			"@param {HTMLElement|null} e - The DOM element.\n"
-			"@param {HTMLElement|null} tohide - The "
-			"DOM element to hide.\n"
-			"@param {%s} o - The array (or object) to fill.\n"
-			"@param {%s.DataCallbacks} custom - The optional "
-			"custom handler dictionary (see {@link "
-			"%s.%s#fill}).\n"
-			"@function fillArrayOrHide\n"
-			"@memberof %s.%s#",
-			ns, s->name, obj, ns, ns, s->name, ns, s->name);
-		gen_class_proto(0, s->name, "void", 
-			"fillArrayOrHide", 
+			"@param e The DOM element.\n"
+			"@param tohide DOM element to hide.\n"
+			"@param o The array (or object) to fill.\n"
+			"@param custom Custom handler dictionary (see "
+			"{@link fill}).");
+		gen_class_proto(0, "void", "fillArrayOrHide", 
 			"e", "HTMLElement|null",
 			"tohide", "HTMLElement|null",
 			"custom?", "DataCallbacks", NULL);
-		gen_vars(3, "len", "number", NULL);
-		puts("\t\t\tif (null === this.obj)\n"
+		puts("\t\t{\n"
+		     "\t\t\tlet len: number;\n"
+		     "\t\t\tif (null === this.obj)\n"
 		     "\t\t\t\tlen = 0;\n"
 		     "\t\t\telse if (this.obj instanceof Array)\n"
 		     "\t\t\t\tlen = this.obj.length;\n"
@@ -1182,28 +639,25 @@ gen_javascript(const struct config *cfg)
 		     "\t\t\tthis.fillArray(e, custom);\n"
 		     "\t\t\tif (null !== tohide && 0 === len)\n"
 		     "\t\t\t\t_hide(tohide);\n"
-		     "\t\t}");
+		     "\t\t}\n");
 
-		print_commentv(2, COMMENT_JS,
-			"Like {@link %s.%s#fillArray}, but showing an "
+		/* fillArrayOrShow() method. */
+
+		print_commentt(2, COMMENT_JS,
+			"Like {@link fillArray}, but showing an "
 			"element if the array is empty or null.\n"
-			"@param {HTMLElement|null} e - The DOM element.\n"
-			"@param {HTMLElement|null} toshow - The "
-			"DOM element to show.\n"
-			"@param {%s} o - The array (or object) to fill.\n"
-			"@param {%s.DataCallbacks} custom - The optional "
-			"custom handler dictionary (see {@link "
-			"%s.%s#fill}).\n"
-			"@function fillArrayOrShow\n"
-			"@memberof %s.%s#",
-			ns, s->name, obj, ns, ns, s->name, ns, s->name);
-		gen_class_proto(0, s->name, "void", 
-			"fillArrayOrShow", 
+			"@param e The DOM element.\n"
+			"@param toshow The DOM element to show.\n"
+			"@param o The array or object to fill.\n"
+			"@param custom Custom handler dictionary (see "
+			"{@link fill}).");
+		gen_class_proto(0, "void", "fillArrayOrShow", 
 			"e", "HTMLElement|null",
 			"toshow", "HTMLElement|null",
 			"custom?", "DataCallbacks", NULL);
-		gen_vars(3, "len", "number", NULL);
-		puts("\t\t\tif (null === this.obj)\n"
+		puts("\t\t{\n"
+		     "\t\t\tlet len: number;\n"
+		     "\t\t\tif (null === this.obj)\n"
 		     "\t\t\t\tlen = 0;\n"
 		     "\t\t\telse if (this.obj instanceof Array)\n"
 		     "\t\t\t\tlen = this.obj.length;\n"
@@ -1216,40 +670,34 @@ gen_javascript(const struct config *cfg)
 		     "\t\t\tthis.fillArray(e, custom);\n"
 		     "\t\t\tif (null !== toshow && 0 === len)\n"
 		     "\t\t\t\t_show(toshow);\n"
-		     "\t\t}");
+		     "\t\t}\n");
 
-		print_commentv(2, COMMENT_JS,
-			"Like {@link %s.%s#fill} but for an "
-			"array of {@link %s.%sData}.\n"
-			"If the data is not an array, it is remapped "
-			"as an array of one.\n"
-			"This will save the first element within "
-			"\"e\", remove all children of \"e\", "
-			"then repeatedly clone the saved element "
-			"and re-append it, filling in the cloned "
-			"subtree with the array (inclusive of the "
-			"subtree root).\n"
-			"If the input array is empty or null, "
-			"\"e\" is hidden by using the "
-			"<code>hide</code> class.\n"
-			"Otherwise, the <code>hide</code> class is "
+		/* fillArray() method. */
+
+		print_commentt(2, COMMENT_JS,
+			"Like {@link fill} but for an array. If the "
+			"data is not an array, it is remapped as an "
+			"array of one. This will save the first "
+			"element within \'e\', remove all children of "
+			"\'e\', then repeatedly clone the saved "
+			"element and re-append it, filling in the "
+			"cloned subtree with the array (inclusive "
+			"of the subtree root). If the input array is "
+			"empty or null, \'e\' is hidden by using the "
+			"*hide* class. Otherwise, the *hide* class is "
 			"removed.\n"
-			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {%s.DataCallbacks} custom - The "
-			"optional custom handler dictionary (see "
-			"{@link %s.%s#fill}).\n"
-			"@memberof %s.%s#\n"
-			"@function fillArray",
-			ns, s->name, ns, s->name, ns,
-			ns, s->name, ns, s->name);
-		gen_class_proto(0, s->name, "void", "fillArray",
+			"@param e The DOM element.\n"
+			"@param custom Custom handler dictionary (see "
+			"{@link fill}).");
+		gen_class_proto(0, "void", "fillArray", 
 			"e", "HTMLElement|null",
 			"custom?", "DataCallbacks", NULL);
-		gen_vars(3, "j", "number", 
-			"o", obj,
-			"cln", "HTMLElement",
-			"ar", objarray,
-			"row", "HTMLElement", NULL);
+		puts("\t\t{\n"
+		     "\t\t\tlet j: number;\n"
+		     "\t\t\tlet cln: HTMLElement;\n"
+		     "\t\t\tlet row: HTMLElement;");
+		printf("\t\t\tlet o: %s;\n"
+	    	       "\t\t\tlet ar: %s;\n", obj, objarray);
 		puts("\t\t\to = this.obj;\n"
 		     "\t\t\tif (null !== e)\n"
 		     "\t\t\t\t_hide(e);\n"
@@ -1274,34 +722,32 @@ gen_javascript(const struct config *cfg)
 		     "\t\t\t\te.appendChild(cln);\n"
 		     "\t\t\t\tthis._fill(cln, o[j], true, custom);\n"
 		     "\t\t\t}\n"
-		     "\t\t}");
+		     "\t\t}\n");
 
-		print_commentv(2, COMMENT_JS,
-			"Like {@link %s.%s#fillArray} but instead of "
+		/* fillArrayByClass() method. */
+
+		print_commentt(2, COMMENT_JS,
+			"Like {@link fillArray} but instead of "
 			"accepting a single element to fill, filling "
 			"all elements by class name beneath the "
 			"given root (non-inclusive).\n"
-			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {String} name - The name of the class "
-			"into which to fill.\n"
-			"@param {%s.DataCallbacks} custom - The optional "
-			"custom handler dictionary (see {@link "
-			"%s.%s#fill} for details).\n"
-			"@function fillArrayByClass\n"
-			"@memberof %s.%s#",
-			ns, s->name, ns, ns, s->name, ns, s->name);
-		gen_class_proto(0, s->name, 
-			"void", "fillArrayByClass",
+			"@param e The DOM element.\n"
+			"@param name Name of the class to fill.\n"
+			"@param custom Custom handler dictionary (see "
+			"{@link fill} for details).");
+		gen_class_proto(0, "void", "fillArrayByClass", 
 			"e", "HTMLElement|null",
-			"name", "string", 
+			"name", "string",
 			"custom?", "DataCallbacks", NULL);
-		gen_vars(3, "i", "number", 
-			"list", "HTMLElement[]", NULL);
-		puts("\t\t\tlist = _elemList(e, name, false);\n"
+		puts("\t\t{\n"
+		     "\t\t\tlet i: number;\n"
+		     "\t\t\tconst list: HTMLElement[] =\n"
+		     "\t\t\t\t_elemList(e, name, false);\n"
 	     	     "\t\t\tfor (i = 0; i < list.length; i++)\n"
 		     "\t\t\t\tthis.fillArray(list[i], custom);\n"
 		     "\t\t}\n\n"
 		     "\t}\n");
+
 		free(obj);
 		free(objarray);
 		free(type);
@@ -1313,37 +759,19 @@ gen_javascript(const struct config *cfg)
 			"%s%s"
 			"This defines the bit indices for the %s "
 			"bit-field.\n"
-			"The <code>BITI</code> fields are the bit indices "
-			"(0&#8211;63) and the <code>BITF</code> fields are the "
+			"The `BITI` fields are the bit indices "
+			"(0&#8211;63) and the `BITF` fields are the "
 			"masked integer values.\n"
-			"All of these values are static: <strong>do "
-			"not use the constructor</strong>.\n"
-			"@class\n"
-			"@memberof %s", 
+			"All of these values are static: **do "
+			"not use the constructor**.",
 			NULL == bf->doc ? "" : bf->doc,
 			NULL == bf->doc ? "" : "<br/>\n",
-			bf->name, ns);
+			bf->name);
 		printf("\texport class %s {\n", bf->name);
 		maxvalue = -INT64_MAX;
 		TAILQ_FOREACH(bi, &bf->bq, entries) {
-			print_commentv(2, COMMENT_JS,
-				"%s%s"
-				"This is the bit index from zero.\n"
-				"@memberof %s.%s#\n"
-				"@readonly\n"
-				"@const {number} BITI_%s",
-				NULL == bi->doc ? "" : bi->doc,
-				NULL == bi->doc ? "" : "<br/>\n",
-				ns, bf->name, bi->name);
-			print_commentv(2, COMMENT_JS,
-				"%s%s"
-				"This is the bit mask.\n"
-				"@memberof %s.%s#\n"
-				"@readonly\n"
-				"@const {number} BITF_%s",
-				NULL == bi->doc ? "" : bi->doc,
-				NULL == bi->doc ? "" : "<br/>\n",
-				ns, bf->name, bi->name);
+			if (bi->doc != NULL)
+				print_commentt(2, COMMENT_JS, bi->doc);
 			printf("\t\tstatic readonly "
 				 "BITF_%s: number = %u;\n"
 				"\t\tstatic readonly "
@@ -1356,12 +784,8 @@ gen_javascript(const struct config *cfg)
 
 		/* Now the maximum enumeration value. */
 
-		print_commentv(2, COMMENT_JS,
-			"One larger than the largest enumeration index.\n"
-			"@memberof %s.%s#\n"
-			"@readonly\n"
-			"@const {number} BITI__MAX",
-			ns, bf->name);
+		print_commentt(2, COMMENT_JS,
+			"One larger than the largest enumeration index.");
 		printf("\t\tstatic readonly "
 			"BITI__MAX: number = %" PRId64 ";\n", 
 			maxvalue + 1);
@@ -1372,29 +796,25 @@ gen_javascript(const struct config *cfg)
 			bf->name, NULL, "bits isnull");
 
 		print_commentv(2, COMMENT_JS,
-			"Uses a bit field's <i>jslabel</i> "
+			"Uses a bit field's **jslabel** "
 			"to format a custom label as invoked on an "
-			"object's <code>fill</code> functions. "
-			"This will act on <code>xxx-yyy-label</code> "
-			"classes, where <code>xxx</code> is the "
-			"structure name and <code>yyy</code> is the "
+			"object's `fill` functions. "
+			"This will act on *xxx-yyy-label* "
+			"classes, where *xxx* is the "
+			"structure name and *yyy* is the "
 			"field name. "
 			"Multiple entries are comma-separated.\n"
-			"For example, <code>xxx.fill(e, { 'xxx-yyy': "
-			"%s.%s.format });</code>, where "
-			"<code>yyy</code> is a field of type "
-			"<i>enum %s</i>.\n"
-			"@static\n"
-			"@function format\n"
-			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {String|null} name - If non-null, "
-			"data is written to elements under the root "
-			"with the given class name. "
-			"Otherwise, data is written directly into "
-			"the DOM element.\n"
-			"@param {Number} v - The bitfield.\n"
-			"@memberof %s.%s#",
-			ns, bf->name, bf->name, ns, bf->name);
+			"For example, `xxx.fill(e, { 'xxx-yyy': "
+			"ort.%s.format });`, where "
+			"*yyy* is a field of type "
+			"**enum %s**.\n"
+			"@param e The DOM element.\n"
+			"@param name If non-null, data is written to "
+			"elements under the root with the given class "
+			"name. Otherwise, data is written directly "
+			"into the DOM element.\n"
+			"@param v The bitfield.",
+			bf->name, bf->name);
 		puts("\t\tstatic format(e: HTMLElement, name: string|null, "
 			"v: number|null): void\n"
 		      "\t\t{");
@@ -1458,61 +878,31 @@ gen_javascript(const struct config *cfg)
 	}
 
 	TAILQ_FOREACH(e, &cfg->eq, entries) {
-		print_commentv(1, COMMENT_JS,
-			"%s%s"
-			"This object consists of all values for "
-			"the <i>%s</i> enumeration.\n"
-			"It also contains a formatting function "
-			"designed to work as a custom callback for "
-			"<code>fill</code> functions.\n"
-			"All of these values are static: <strong>do "
-			"not use the constructor</strong>.\n"
-			"@memberof %s\n"
-			"@class", 
-			NULL == e->doc ? "" : e->doc,
-			NULL == e->doc ? "" : "<br/>\n",
-			e->name, ns);
+		if (e->doc != NULL)
+			print_commentt(1, COMMENT_JS, e->doc);
 		printf("\texport class %s {\n", e->name);
-
 		TAILQ_FOREACH(ei, &e->eq, entries) {
-			print_commentv(2, COMMENT_JS,
-				"%s%s"
-				"@memberof %s.%s#\n"
-				"@readonly\n"
-				"@const {number} %s", 
-				NULL == ei->doc ? "" : ei->doc,
-				NULL == ei->doc ? "" : "<br/>\n",
-				ns, e->name, ei->name);
+			if (ei->doc != NULL)
+				print_commentt(2, COMMENT_JS, ei->doc);
 			printf("\t\tstatic readonly %s: number = %" 
 				PRId64 ";\n", ei->name, 
 				ei->value);
 		}
 
-		print_commentv(2, COMMENT_JS,
-			"Uses the enumeration item's <i>jslabel</i> "
-			"(or just the name, if no <i>jslabel</i> is "
+		print_commentt(2, COMMENT_JS,
+			"Uses the enumeration item's **jslabel** " 
+			"(or just the name, if no **jslabel** is " 
 			"defined) to format a custom label as "
-			"invoked on an object's <code>fill</code> "
-			"function. "
-			"This will act on <code>xxx-yyy-label</code> "
-			"classes, where <code>xxx</code> is the "
-			"structure name and <code>yyy</code> is the "
-			"field name. "
-			"For example, <code>xxx.fill(e, { 'xxx-yyy': "
-			"%s.%s.format });</code>, where "
-			"<code>yyy</code> is a field of type "
-			"<i>enum %s</i>.\n"
-			"@static\n"
-			"@function format\n"
-			"@param {HTMLElement} e - The DOM element.\n"
-			"@param {String|null} name - If non-null, "
-			"data is written to elements under the root "
-			"with the given class name. "
-			"Otherwise, data is written directly into "
-			"the DOM element.\n"
-			"@param {Number} v - The enumeration value.\n"
-			"@memberof %s.%s#",
-			ns, e->name, e->name, ns, e->name);
+			"invoked on an object's `fill` method. "
+			"This will act on *xxx-yyy-label* classes, "
+			"where *xxx* is the structure name and "
+			"*yyy* is the field name.\n"
+			"@param e The DOM element.\n"
+			"@param name If non-null, data is written "
+			"to elements under the root with the given "
+			"class name. Otherwise, data is written "
+			"directly into the DOM element.\n"
+			"@param v The enumeration value.");
 		puts("\t\tstatic format(e: HTMLElement, name: string|null, "
 			"v: number|null): void\n"
 		      "\t\t{");
@@ -1560,18 +950,24 @@ gen_javascript(const struct config *cfg)
 int
 main(int argc, char *argv[])
 {
+	const char	 *sharedir = SHAREDIR;
+	char		  buf[MAXPATHLEN];
 	struct config	 *cfg = NULL;
-	int		  c, rc = 0;
+	int		  c, rc = 0, priv;
 	FILE		**confs = NULL;
 	size_t		  i, confsz;
+	ssize_t		  sz;
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while ((c = getopt(argc, argv, "t")) != -1)
+	while ((c = getopt(argc, argv, "S:t")) != -1)
 		switch (c) {
+		case 'S':
+			sharedir = optarg;
+			break;
 		case ('t'):
 			/* Ignored. */
 			break;
@@ -1595,6 +991,15 @@ main(int argc, char *argv[])
 		}
 	}
 
+	/* Read our private namespace. */
+
+	sz = snprintf(buf, sizeof(buf), 
+		"%s/ortPrivate.ts", sharedir);
+	if (sz == -1 || (size_t)sz > sizeof(buf))
+		errx(EXIT_FAILURE, "%s: too long", sharedir);
+	if ((priv = open(buf, O_RDONLY, 0)) == -1)
+		err(EXIT_FAILURE, "%s", buf);
+
 #if HAVE_PLEDGE
 	if (pledge("stdio", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
@@ -1611,17 +1016,19 @@ main(int argc, char *argv[])
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
-		gen_javascript(cfg);
+		gen_javascript(cfg, buf, priv);
 
 out:
 	for (i = 0; i < confsz; i++)
 		if (fclose(confs[i]) == EOF)
 			warn("%s", argv[i]);
 
+	close(priv);
 	free(confs);
 	ort_config_free(cfg);
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
-	fprintf(stderr, "usage: %s [config]\n", getprogname());
+	fprintf(stderr, "usage: %s [-S sharedir] [config...]\n", 
+		getprogname());
 	return EXIT_FAILURE;
 }

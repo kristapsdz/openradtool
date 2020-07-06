@@ -510,6 +510,7 @@ regress: ort ort-sqldiff ort-sql ort-javascript
 		echo "pass" ; \
 		set -e ; \
 	done ; \
+	rm $$tmp ;
 	for f in regress/javascript/*.ort ; do \
 		bf=regress/javascript/`basename $$f .ort`.ts ; \
 		of=regress/javascript/`basename $$f .ort`.final.ts ; \
@@ -521,18 +522,18 @@ regress: ort ort-sqldiff ort-sql ort-javascript
 	  	  cat $$bf ) > $$of ; \
 		if [ $$? -ne 0 ] ; then \
 			echo "fail (did not execute)" ; \
-			rm $$tmp $$of ; \
+			rm $$of ; \
 			exit 1 ; \
 		fi ; \
 		echo "pass" ; \
 		set -e ; \
 	done ; \
 	set +e ; \
-	command -v ts-node >/dev/null; \
-	set -e ; \
+	command -v ts-node >/dev/null 2>/dev/null; \
 	if [ $$? -eq 1 ]; then \
+		set -e ; \
 		echo "regress/javascript: ignoring (no ts-node)" 1>&2 ; \
 	else \
+		set -e ; \
 		ts-node --skip-project regress/javascript/regress-runner.ts ; \
 	fi ; \
-	rm $$tmp ;

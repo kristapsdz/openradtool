@@ -365,7 +365,6 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 	char			 buf[BUFSIZ];
 	int64_t			 maxvalue;
 	ssize_t			 ssz;
-	const char		*ns = "ort";
 
 	puts("namespace ort {");
 

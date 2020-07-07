@@ -54,6 +54,8 @@ for (i = 0; i < files.length; i++) {
 		console.log('pass');
 	} catch(error) {
 		console.log('fail');
+		console.log('Failing result:');
+		console.log(result);
 
 		/* Emit the difference. */
 

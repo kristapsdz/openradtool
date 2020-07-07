@@ -510,7 +510,7 @@ regress: ort ort-sqldiff ort-sql ort-javascript
 		echo "pass" ; \
 		set -e ; \
 	done ; \
-	rm $$tmp ;
+	rm $$tmp ; \
 	for f in regress/javascript/*.ort ; do \
 		bf=regress/javascript/`basename $$f .ort`.ts ; \
 		of=regress/javascript/`basename $$f .ort`.final.ts ; \

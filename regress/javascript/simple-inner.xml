@@ -1,0 +1,5 @@
+<div class="foo-id-value" id="foo">
+	<span class="foo-id-text"></span>
+	<span class="foo-foo-text"></span>
+	<span class="foo-bar-text"></span>
+</div>

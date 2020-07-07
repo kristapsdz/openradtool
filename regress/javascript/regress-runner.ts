@@ -4,7 +4,7 @@ const ts = require('typescript');
 const fs = require('fs');
 const jsdom = require('jsdom');
 const { JSDOM } = jsdom;
-const { execFileSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 
 const basedir: string = 'regress/javascript';
 let i: number;
@@ -54,6 +54,13 @@ for (i = 0; i < files.length; i++) {
 		console.log('pass');
 	} catch(error) {
 		console.log('fail');
+
+		/* Emit the difference. */
+
+		const diff = spawnSync('diff', ['-w', '-u', resname, '-'], {
+			'input': result
+		});
+		console.log(diff.stdout.toString());
 		process.exit(1);
 	}
 }

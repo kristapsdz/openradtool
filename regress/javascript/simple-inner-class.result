@@ -1,0 +1,17 @@
+<div>
+	<div class="foo">
+		<span class="foo-id-text">1</span>
+		<span class="foo-foo-text">foobarbaz</span>
+		<span class="foo-bar-text">1</span>
+	</div>
+	<div class="foo foo-id-value">
+		<span class="foo-id-text">1</span>
+		<span class="foo-foo-text">foobarbaz</span>
+		<span class="foo-bar-text">1</span>
+	</div>
+	<div class="bar">
+		<span class="foo-id-text"></span>
+		<span class="foo-foo-text"></span>
+		<span class="foo-bar-text"></span>
+	</div>
+</div>

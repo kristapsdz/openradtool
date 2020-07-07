@@ -22,6 +22,7 @@
 .Nd produce ort TypeScript interface
 .Sh SYNOPSIS
 .Nm ort-javascript
+.Op Fl S Ar sharedir
 .Op Ar config...
 .Sh DESCRIPTION
 The
@@ -34,6 +35,12 @@ and creates a TypeScript interface that format the JSON produced by
 .Xr ort-c-header 1
 .Fn json_xxxx
 functions.
+Its arguments are as follows:
+.Bl -tag -width Ds
+.It Fl S Ar sharedir
+Directory containing external source files.
+The default is to use the install-time directory.
+.El
 .Pp
 Output consists of the
 .Qq ort

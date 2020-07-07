@@ -526,11 +526,10 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		/* fillByClass() method. */
 
 		print_commentt(2, COMMENT_JS,
-			"Like {@link fill} but instead of "
-			"accepting a single element to fill, filling "
-			"into all elements (non-inclusive) matching the "
-			"given class name beneath (non-inclusive) the "
-			"given root.\n"
+			"Like {@link fill} but instead of accepting a "
+			"single element to fill, filling into all "
+			"elements (inclusive) matching the given "
+			"class name beneath (inclusive) the element.\n"
 			"@param e The DOM element.\n"
 			"@param name Name of the class to fill.\n"
 			"@param custom Custom handler dictionary (see "
@@ -546,8 +545,8 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		/* fillInnerByClass() method. */
 
 		print_commentt(2, COMMENT_JS,
-			"Like {@link fillByClass} but inclusive "
-			"the root and targets by class.\n"
+			"Like {@link fillByClass} but not inclusive "
+			"the root element and class matches.\n"
 			"@param e The DOM element.\n"
 			"@param name Name of the class to fill.\n"
 			"@param custom Custom handler dictionary (see "

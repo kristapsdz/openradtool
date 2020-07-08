@@ -1,0 +1,4 @@
+struct foo {
+	field val bit;
+	field id int rowid;
+};

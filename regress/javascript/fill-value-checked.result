@@ -1,0 +1,5 @@
+<div>
+	<input type="checkbox" class="foo-foo-value-checked" value="a">
+	<input type="checkbox" class="foo-foo-value-checked" value="b" checked="checked">
+	<input type="checkbox" class="foo-foo-value-checked" value="c">
+</div>

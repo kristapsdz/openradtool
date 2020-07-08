@@ -417,7 +417,6 @@ clean:
 	rm -f openradtool.tar.gz openradtool.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml
 	rm -f db.ort.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
-	rm -f regress/javascript/*.final.ts
 
 # Remove both what can be built and what's built by ./configure.
 
@@ -512,17 +511,12 @@ regress: ort ort-sqldiff ort-sql ort-javascript
 	done ; \
 	rm $$tmp ; \
 	for f in regress/javascript/*.ort ; do \
-		bf=regress/javascript/`basename $$f .ort`.ts ; \
-		of=regress/javascript/`basename $$f .ort`.final.ts ; \
+		set +e ; \
 		printf "$$f... " ; \
-		( ./ort-javascript -S. $$f ; \
-		  echo ; \
-		  cat regress/javascript/regress.ts ; \
-		  echo ; \
-	  	  cat $$bf ) > $$of ; \
+		./ort-javascript -S. $$f >/dev/null 2>/dev/null ; \
 		if [ $$? -ne 0 ] ; then \
 			echo "fail (did not execute)" ; \
-			rm $$of ; \
+			./ort-javascript -S. $$f >/dev/null ; \
 			exit 1 ; \
 		fi ; \
 		echo "pass" ; \
@@ -536,4 +530,4 @@ regress: ort ort-sqldiff ort-sql ort-javascript
 	else \
 		set -e ; \
 		ts-node --skip-project regress/javascript/regress-runner.ts ; \
-	fi ; \
+	fi

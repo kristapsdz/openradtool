@@ -274,17 +274,15 @@
 
 	/**
 	 * Fill in ISO-8601 dates.
-	 * @param e Root of the DOM tree in which we query for
-	 * elements to fill into.
-	 * @param strct Name of the structure filled into.
-	 * @param name Name of the field.
+	 * Does nothing for null date.
+	 * @param e Root of tree scanned for elements.
+	 * @param fname Structure name, '-', field name.
 	 * @param val Epoch date itself.
-	 * @param inc Whether to include the root element in looking 
-	 * for elements to fill.
+	 * @param inc Include root in scanning for elements.
 	 * @internal
 	 */
-	function _fillDateValue(e: HTMLElement, strct: string,
-		name: string, val: number|null, inc: boolean): void
+	function _fillDateValue(e: HTMLElement,
+		fname: string, val: number|null, inc: boolean): void
 	{
 		let fname: string;
 		let year: number;
@@ -299,6 +297,9 @@
 		year = d.getFullYear();
 		mo = d.getMonth() + 1;
 		day = d.getDate();
+
+		/* Make sure to zero-pad the digits. */
+
 		full = year + '-' +
 			(mo < 10 ? '0' : '') + mo + '-' +
 			(day < 10 ? '0' : '') + day;

@@ -336,10 +336,10 @@
 			v = parseInt((<HTMLInputElement>list[i]).value);
 			if (isNaN(v))
 				_rattr(list[i], 'checked');
-			else if (0 === v && 0 === val)
-				_attr(list[i], 'checked', 'true');
+			else if (v === 0 && val === 0)
+				_attr(list[i], 'checked', 'checked');
 			else if ((1 << (v - 1)) & val)
-				_attr(list[i], 'checked', 'true');
+				_attr(list[i], 'checked', 'checked');
 			else
 				_rattr(list[i], 'checked');
 		}

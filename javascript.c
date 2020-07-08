@@ -242,9 +242,10 @@ gen_jsdoc_field(const struct field *f)
 	if (f->type == FTYPE_BIT ||
 	    f->type == FTYPE_BITFIELD)
 		print_commentv(2, COMMENT_JS_FRAG,
-			"- `%s-%s-bits-checked`: set the "
-			"`checked` attribute when the element's "
-			"`value` is covered by the data bitmask%s",
+			"- `%s-%s-bits-checked`: set the `checked` "
+			"attribute when the bit index of the "
+			"element's `value` is set in the data as "
+			"a bit-field%s",
 			f->parent->name, f->name, 
 			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");

@@ -1,0 +1,8 @@
+<div>
+	<select class="foo-foo-enum-select">
+		<option selected="selected">a</option>
+		<option value="b">a</option>
+		<option value="c">a</option>
+		<option value="" selected="selected">a</option>
+	</select>
+</div>

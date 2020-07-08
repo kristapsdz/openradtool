@@ -229,19 +229,19 @@
 	function _fillValueChecked(e: HTMLElement, fname: string,
 		val: number|string|null, inc: boolean): void
 	{
-		const list: HTMLElement[] = 
-			_elemList(e, fname + '-value-checked', inc);
-		const valstr: string|null = (val === null) ? null : 
-			(typeof val === 'number' ? val.toString() : val);
 		let i: number;
+		const list: HTMLElement[] = _elemList
+			(e, fname + '-value-checked', inc);
 
-		for (i = 0; i < list.length; i++)
-			if (valstr === null)
-				_rattr(list[i], 'checked');
-			else if (valstr === (<HTMLInputElement>list[i]).value)
+		for (i = 0; i < list.length; i++) {
+			const attrval: string|null = 
+				(<HTMLInputElement>list[i]).value;
+			_rattr(list[i], 'checked');
+			if (val === null || attrval === null)
+				continue;
+			if (val.toString() === attrval)
 				_attr(list[i], 'checked', 'checked');
-			else
-				_rattr(list[i], 'checked');
+		}
 	}
 
 	/**
@@ -262,7 +262,7 @@
 
 		for (i = 0; i < list.length; i++) {
 			v = typeof val === 'number' ? 
-			     parseInt((<HTMLOptionElement>list[i]).value) :
+			     parseInt((<HTMLOptionElement>list[i]).value, 10) :
 			     (<HTMLOptionElement>list[i]).value;
 			if (val === v)
 				_attr(<HTMLOptionElement>list[i], 'selected', 'true');
@@ -308,40 +308,46 @@
 	}
 
 	/**
-	 * Check inputs for all elements of class
-	 * `strct-name-bits-checked` whose value is the bit-wise AND of
-	 * the object's value.  If the object is null, all elements are
-	 * unchecked.
-	 * @param e Root of the DOM tree filled into.
-	 * @param strct Name of the structure filled.
-	 * @param name Name of the field.
-	 * @param val Bit-field itself.
-	 * @param inc Whether to include the root element in looking for 
-	 * elements to fill.
+	 * Check input elements (that is, set the attribute `checked` to
+	 * the value `checked`) for elements with class 
+	 * `fname-value-checked` whose non-null, numeric value as a bit index
+	 * is set in the bit-field given as input.
+	 * If the object is null, all elements are unchecked.
+	 * @param e Root of tree scanned for elements.
+	 * @param fname Structure name, '-', field name.
+	 * @param val Bit-field to test for.
+	 * @param inc Include root in scanning for elements.
 	 * @internal
 	 */
-	function _fillBitsChecked(e: HTMLElement, strct: string,
-		name: string, val: number|null, inc: boolean): void
+	function _fillBitsChecked(e: HTMLElement, 
+		fname: string, val: number|null, inc: boolean): void
 	{
 		let i: number;
 		let v: number;
-		const list: HTMLElement[] = _elemList(e, 
-			strct + '-' + name + '-bits-checked', inc);
+		const list: HTMLElement[] = _elemList
+			(e, fname + '-bits-checked', inc);
 
 		for (i = 0; i < list.length; i++) {
-			if (val === null) {
-				_rattr(list[i], 'checked');
+			const attrval: string|null = 
+				(<HTMLInputElement>list[i]).value;
+			_rattr(list[i], 'checked');
+			if (val === null || attrval === null)
 				continue;
-			}
-			v = parseInt((<HTMLInputElement>list[i]).value);
-			if (isNaN(v))
-				_rattr(list[i], 'checked');
-			else if (v === 0 && val === 0)
+
+			/* 
+			 * Pseudo-polyfill of Number.isNumber().
+			 * Also checks if the result is negative.
+			 */
+
+			if (!(isFinite(attrval) && 
+			      Math.floor(attrval).toString() === attrval))
+				continue;
+			v = parseInt(attrval);
+			if (isNaN(v) || v < 0)
+				continue;
+			if ((v === 0 && val === 0) || 
+			    (v > 0 && ((1 << (v - 1)) & val)))
 				_attr(list[i], 'checked', 'checked');
-			else if ((1 << (v - 1)) & val)
-				_attr(list[i], 'checked', 'checked');
-			else
-				_rattr(list[i], 'checked');
 		}
 	}
 

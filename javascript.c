@@ -276,7 +276,7 @@ gen_js_field(const struct field *f)
 
 	if (f->type == FTYPE_BIT || f->type == FTYPE_BITFIELD)
 		printf("\t\t\t_fillBitsChecked"
-			"(e, '%s', '%s', o.%s, inc);\n",
+			"(e, '%s-%s', o.%s, inc);\n",
 			f->parent->name, f->name, f->name);
 	if (f->type == FTYPE_DATE || f->type == FTYPE_EPOCH)
 		printf("\t\t\t_fillDateValue"

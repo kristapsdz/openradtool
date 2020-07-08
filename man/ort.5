@@ -208,15 +208,22 @@ The type, if specified, may be one of the following.
 Integer constrained to 64-bit bit index (that is, 0\(en64).
 The bit indices start from 1 in order to represent a zero value (no bits
 to set).
-Each non-zero value is usually merged into a bit-field by setting
+Non-zero values must be merged into a bit-field by setting
 .Li 1LLU << (value - 1)
-for some input or output value.
+.Pq using C notation
+prior to storage.
 For entire bitfields, see
 .Cm bits .
 .It Cm bits Ar name
 Integer constrained to the given
 .Ar name
 bitfield's bits.
+As with
+.Cm bit ,
+non-zero values must be merged into a bit-field by setting
+.Li 1LLU << (value - 1)
+.Pq using C notation
+prior to storage.
 .It Cm blob
 A fixed-size binary buffer.
 .It Cm email
@@ -384,12 +391,12 @@ struct user {
   field name text limit gt 0 limit lt 128
     comment "User's full name.";
   field cookie int noexport default 0 limit lt 0
-    comment "A secret cookie (if zero, added 
+    comment "A secret cookie (if zero, added
              after secret cookie functionality).";
   field password password;
   field email email unique
     comment "User's unique e-mail address.";
-  field ctime epoch 
+  field ctime epoch
     comment "When the user was added to the database.";
   field id int rowid noexport
     comment "Internal unique identifier.";
@@ -654,7 +661,6 @@ The only way to refer to un-named operations is to use
 .Cm all ,
 which refers to all operations except
 .Cm noexport .
-.Pp
 .Bd -literal -offset indent
 roles { role loggedin; };
 struct user {

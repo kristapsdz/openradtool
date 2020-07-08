@@ -197,10 +197,11 @@ gen_jsdoc_field(const struct field *f)
 			" (if non-null)" : "");
 	} else {
 		print_commentv(2, COMMENT_JS_FRAG,
-			"- `%s-%s-enum-select`: sets the "
-			"`select` attribute for `<option>` values "
-			"matching **%s** under the element%s",
-			f->parent->name, f->name, f->name,
+			"- `%s-%s-enum-select`: sets or unsets the "
+			"`selected` attribute for non-inclusive "
+			"descendent `<option>` elements depending on "
+			"whether the value matches%s",
+			f->parent->name, f->name, 
 			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,

@@ -231,11 +231,13 @@ Sets the
 attribute to the ISO 8601 date of the object's value.
 Only applicable to date and epoch types.
 .It Li foo-xxxx-enum-select
-All
+Sets or unsets the
+.Li selected
+attribute on descending (non-inclusive)
 .Li <option>
-descendents of the element are marked as
-.Qq selected
-or not depending upon whether their value matches the field value.
+elements depending upon whether the input's
+.Li value
+attribute (if found) matches.
 .It Li foo-xxxx-obj
 For structures, creates and invokes the
 .Fn fillInner

@@ -218,8 +218,8 @@
 	 * Check input elements (that is, set the attribute `checked` to
 	 * the value `checked`) for all elements of class
 	 * `fname-value-checked` whose value matches the given.  The
-	 * checked status is removed for each item scanned.  If the
-	 * given value is null, it never matches.
+	 * checked status is removed for each item scanned.
+	 * A null value never matches.
 	 * @param e Root of tree scanned for elements.
 	 * @param fname Structure name, '-', field name.
 	 * @param val The value to test for.
@@ -245,29 +245,30 @@
 	}
 
 	/**
-	 * Take all `<option>` elements in the root and sets or unsets
-	 * their `selected` attribute depending upon whether it matches
-	 * the * object's value.
-	 * @param e The root of the DOM tree in which we query for 
-	 * elements to fill into.
-	 * @param val The object's value.
+	 * Take all `<option>` elements under the root (non-inclusive)
+	 * and sets or unsets the `selected` attribute depending upon
+	 * whether it matches the object's value.
+	 * A null value never matches.
+	 * @param e Root of tree scanned for elements.
+	 * @param val The value to test for.
 	 * @internal
 	 */
-	function _fillValueSelect(e: HTMLElement, val: number|string): void
+	function _fillValueSelect(e: HTMLElement,
+		val: number|string|null): void
 	{
 		let i: number;
 		let v: string|number;
-		const list: HTMLCollectionOf<Element> = 
+		const list: HTMLCollectionOf<HTMLElement> = 
 			e.getElementsByTagName('option');
 
 		for (i = 0; i < list.length; i++) {
-			v = typeof val === 'number' ? 
-			     parseInt((<HTMLOptionElement>list[i]).value, 10) :
-			     (<HTMLOptionElement>list[i]).value;
-			if (val === v)
-				_attr(<HTMLOptionElement>list[i], 'selected', 'true');
-			else
-				_rattr(<HTMLOptionElement>list[i], 'selected');
+			const attrval: string|null = 
+				(<HTMLOptionElement>list[i]).value;
+			_rattr(list[i], 'selected');
+			if (val === null || attrval === null)
+				continue;
+			if (val.toString() === attrval)
+				_attr(list[i], 'selected', 'selected');
 		}
 	}
 
@@ -312,7 +313,7 @@
 	 * the value `checked`) for elements with class 
 	 * `fname-value-checked` whose non-null, numeric value as a bit index
 	 * is set in the bit-field given as input.
-	 * If the object is null, all elements are unchecked.
+	 * A null value never matches.
 	 * @param e Root of tree scanned for elements.
 	 * @param fname Structure name, '-', field name.
 	 * @param val Bit-field to test for.
@@ -414,9 +415,8 @@
 		} else if (!isblob) {
 			const list: HTMLElement[] = 
 				_elemList(e, fname + '-enum-select', inc);
-			for (i = 0; i < list.length; i++) {
+			for (i = 0; i < list.length; i++)
 				_fillValueSelect(list[i], obj);
-			}
 			_replcl(e, fname + '-text', obj, inc);
 			_attrcl(e, 'value', fname + '-value', obj, inc);
 			_fillValueChecked(e, fname, obj, inc);

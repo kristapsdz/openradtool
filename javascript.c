@@ -204,9 +204,9 @@ gen_jsdoc_field(const struct field *f)
 			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
-			"- `%s-%s-value-checked`: sets the "
-			"`checked` attribute for the element "
-			"matching the input%s",
+			"- `%s-%s-value-checked`: sets or unsets "
+			"the `checked` attribute depending on whether "
+			"the value matches%s",
 			f->parent->name, f->name, 
 			(f->flags & FIELD_NULL) ? 
 			" (if non-null)" : "");

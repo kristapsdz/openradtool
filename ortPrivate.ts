@@ -215,16 +215,15 @@
 	}
 
 	/**
-	 * Check inputs for all elements of class
-	 * `strct-name-value-checked` whose value matches the object's
-	 * value. If the object is null, all elements are unchecked.
-	 * @param e The root of the DOM tree in which we query for 
-	 * elements to fill into.
-	 * @param strct The name of the structure we're filling in.
-	 * @param name The name of the field.
-	 * @param obj The data itself.
-	 * @param inc Whether to include the root element in looking for 
-	 * elements to fill.
+	 * Check input elements (that is, set the attribute `checked` to
+	 * the value `checked`) for all elements of class
+	 * `fname-value-checked` whose value matches the given.  The
+	 * checked status is removed for each item scanned.  If the
+	 * given value is null, it never matches.
+	 * @param e Root of tree scanned for elements.
+	 * @param fname Structure name, '-', field name.
+	 * @param val The value to test for.
+	 * @param inc Include root in scanning for elements.
 	 * @internal
 	 */
 	function _fillValueChecked(e: HTMLElement, fname: string,
@@ -240,7 +239,7 @@
 			if (valstr === null)
 				_rattr(list[i], 'checked');
 			else if (valstr === (<HTMLInputElement>list[i]).value)
-				_attr(list[i], 'checked', 'true');
+				_attr(list[i], 'checked', 'checked');
 			else
 				_rattr(list[i], 'checked');
 	}

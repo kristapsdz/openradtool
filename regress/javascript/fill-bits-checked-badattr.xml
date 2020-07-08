@@ -1,0 +1,7 @@
+<div>
+	<input type="checkbox" class="foo-val-bits-checked" value="a" checked="checked" />
+	<input type="checkbox" class="foo-val-bits-checked" value="2a" checked="checked" />
+	<input type="checkbox" class="foo-val-bits-checked" value="-1" checked="checked" />
+	<input type="checkbox" class="foo-val-bits-checked" value="2" />
+	<input type="checkbox" class="foo-val-bits-checked" value="3" />
+</div>

@@ -1,0 +1,8 @@
+enum anenum {
+	item a 0;
+};
+
+struct foo {
+	field val enum anenum;
+	field id int rowid;
+};

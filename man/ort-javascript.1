@@ -360,6 +360,29 @@ class is added and the
 label is used.
 If not specified, an empty string is used.
 .El
+.Pp
+A common label fill idiom is as follows:
+.Bd -literal -offset indent
+<div id="place">
+  <span class="foo-val-label>label</span>: 
+  <span class="foo-val-text>text</span>
+</div>
+.Ed
+.Pp
+Letting the field
+.Qq val
+have type
+.Cm enum anenum ,
+both label and text may be filled in as follows:
+.Bd -literal -offset indent
+const custom: ort.DataCallbacks = {
+  'foo-val': ort.anenum.format
+};
+.Ed
+.Pp
+This will fill in both the
+.Cm jslabel
+of the value's corresponding item and the value itself.
 .Ss Customisation
 All functions accept an optional argument for providing custom per-field
 or per-structure callbacks.
@@ -371,7 +394,9 @@ with a field
 .Dq dob
 consisting of a UNIX epoch:
 .Bd -literal -offset indent
-const custom: DataCallbacks = { 'client-dob': formatDate };
+const custom: ort.DataCallbacks = {
+  'client-dob': formatDate
+};
 new ort.client(obj).fillInner(document.body, custom);
 .Ed
 .Pp
@@ -387,7 +412,9 @@ The same can be applied to structures instead of to fields within
 structures.
 The keys for these are simply the structure name.
 .Bd -literal -offset indent
-const custom: DataCallbacks = { 'client': formatClient };
+const custom: ort.DataCallbacks = {
+  'client': formatClient
+};
 new ort.client(obj).fillInner(document.body, custom);
 .Ed
 .Pp
@@ -397,7 +424,7 @@ In either case, the value for the custom key may also be an array of
 functions just as above.
 Each will be invoked in the order given, in the same way.
 .Bd -literal -offset indent
-const custom: DataCallbacks = {
+const custom: ort.DataCallbacks = {
     'client': [ format1, format2 ]
 };
 .Ed
@@ -415,11 +442,10 @@ provide a custom callback.
 .Bd -literal -offset indent
 let e: HTMLElement|null = document.getElementById('foo');
 readonly obj: fooData = <fooData>JSON.parse(response);
-const custom: DataCallbacks = {
+const custom: ort.DataCallbacks = {
     'foo-val': ort.someenum.format
 };
-if (e !== null)
-    new ort.foo(obj).fill(e, custom);
+new ort.foo(obj).fill(e, custom);
 .Ed
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT

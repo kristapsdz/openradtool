@@ -165,9 +165,9 @@ is
 .Dv null ,
 does nothing.
 .It Fn fillArray "e" "[custom]"
-First hides (appends the
+First adds the
 .Qq hide
-class)
+class to
 .Fa e ,
 then invokes
 .Fn fill
@@ -189,18 +189,18 @@ class to
 .Fa e .
 .It Fn fillArrayOrShow "e" "toshow" "[custom]"
 Convenience method around
-.Fa fillArray ,
-showing (remove the
+.Fa fillArray
+removing the
 .Qq hide
-class)
+class from
 .Fa toshow
 if the object or objects at construction are non-empty.
 .It Fn fillArrayOrHide "e" "tohide" "[custom]"
 Convenience method around
-.Fa fillArray ,
-hiding (append the
+.Fa fillArray
+adding the
 .Qq hide
-class)
+class to
 .Fa tohide
 if the object or objects at construction are empty.
 .El
@@ -262,9 +262,9 @@ attribute matches the objects.
 This is not applicable to blob or structure types.
 .It Li foo-has-xxxx
 Remove the
-.Dq hide
+.Qq hide
 class if the object is null, otherwise add the
-.Dq hide
+.Qq hide
 class.
 .It Li foo-no-xxxx
 Add the

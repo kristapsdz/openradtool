@@ -284,7 +284,6 @@
 	function _fillDateValue(e: HTMLElement,
 		fname: string, val: number|null, inc: boolean): void
 	{
-		let fname: string;
 		let year: number;
 		let mo: number;
 		let day: number;
@@ -303,10 +302,8 @@
 		full = year + '-' +
 			(mo < 10 ? '0' : '') + mo + '-' +
 			(day < 10 ? '0' : '') + day;
-		fname = strct + '-' + name + '-date-value';
-		_attrcl(e, 'value', fname, full, inc);
-		fname = strct + '-' + name + '-date-text';
-		_replcl(e, fname, full, inc);
+		_attrcl(e, 'value', fname + '-date-value', full, inc);
+		_replcl(e, fname + '-date-text', full, inc);
 	}
 
 	/**

@@ -179,12 +179,12 @@ gen_jsdoc_field(const struct field *f)
 	if (f->flags & FIELD_NULL) {
 		print_commentv(2, COMMENT_JS_FRAG,
 			"- `%s-has-%s`: *hide* class removed if "
-			"**%s** not null, otherwise it is added",
-			f->parent->name, f->name, f->name);
+			"value is not null, otherwise it is added",
+			f->parent->name, f->name);
 		print_commentv(2, COMMENT_JS_FRAG,
 			"- `%s-no-%s`: *hide* class added if "
-			"**%s** not null, otherwise it is removed",
-			f->parent->name, f->name, f->name);
+			"value is not null, otherwise it is removed",
+			f->parent->name, f->name);
 	} 
 
 	if (f->type == FTYPE_STRUCT) {

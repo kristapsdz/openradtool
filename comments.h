@@ -32,8 +32,15 @@ enum	cmtt {
 	COMMENT_SQL /* self-contained SQL comment */
 };
 
+enum	langt {
+	LANG_JS,
+	LANG_C
+};
+
 void	 print_commentt(size_t, enum cmtt, const char *);
 void	 print_commentv(size_t, enum cmtt, const char *, ...)
 		__attribute__((format(printf, 3, 4)));
+void	 print_sql_stmts(size_t, const struct strct *, enum langt);
+void	 print_sql_enums(size_t, const struct strct *, enum langt);
 
 #endif /* !COMMENTS_H */

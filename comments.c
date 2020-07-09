@@ -25,6 +25,7 @@
 #if HAVE_ERR
 # include <err.h>
 #endif
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,6 +36,30 @@
 #include "comments.h"
 
 #define	MAXCOLS 70
+
+/*
+ * SQL operators.
+ * Some of these binary, some of these are unary.
+ * Use the OPTYPE_ISUNARY or OPTYPE_ISBINARY macro to determine where
+ * within the expressions this should sit.
+ */
+static	const char *const optypes[OPTYPE__MAX] = {
+	"=", /* OPTYPE_EQUAL */
+	">=", /* OPTYPE_GE */
+	">", /* OPTYPE_GT */
+	"<=", /* OPTYPE_LE */
+	"<", /* OPTYPE_LT */
+	"!=", /* OPTYPE_NEQUAL */
+	"LIKE", /* OPTYPE_LIKE */
+	"&", /* OPTYPE_AND */
+	"|", /* OPTYPE_OR */
+	"=", /* OPTYPE_STREQ */
+	"!=", /* OPTYPE_STRNEQ */
+	/* Unary types... */
+	"ISNULL", /* OPTYPE_ISNULL */
+	"NOTNULL", /* OPTYPE_NOTNULL */
+};
+
 
 /*
  * Generate a (possibly) multi-line comment with "tabs" number of
@@ -223,4 +248,531 @@ print_commentv(size_t tabs, enum cmtt type, const char *fmt, ...)
 	va_end(ap);
 	print_commentt(tabs, type, cp);
 	free(cp);
+}
+
+static void
+print_sql_stmt_schema(enum langt lang, const struct strct *orig,
+	int first, const struct strct *p, const char *pname, 
+	size_t *col)
+{
+	const struct field *f;
+	const struct alias *a = NULL;
+	int	 	    c;
+	char		   *name = NULL;
+
+	*col += printf("\"%s ", !first ? ",\"" : "");
+	if (!first && *col >= 72) {
+		printf("\n\t\t");
+		*col = 16;
+	}
+
+	/* 
+	 * If applicable, looks up our alias and emit it as the alias
+	 * for the table.
+	 * Otherwise, use the table name itself.
+	 */
+
+	if (lang == LANG_C)
+		*col += printf("DB_SCHEMA_%s(", p->name);
+	else
+		*col += printf("ort_schema_%s(", p->name);
+
+	if (pname != NULL) {
+		TAILQ_FOREACH(a, &orig->aq, entries)
+			if (strcasecmp(a->name, pname) == 0)
+				break;
+		assert(a != NULL);
+		*col += printf("%s) ", a->alias);
+	} else
+		*col += printf("%s) ", p->name);
+
+	/*
+	 * Recursive step.
+	 * Search through all of our fields for structures.
+	 * If we find them, build up the canonical field reference and
+	 * descend.
+	 */
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (f->type != FTYPE_STRUCT ||
+		    (f->ref->source->flags & FIELD_NULL))
+			continue;
+
+		if (pname != NULL) {
+			c = asprintf(&name, "%s.%s", pname, f->name);
+			if (c < 0)
+				err(EXIT_FAILURE, NULL);
+		} else if ((name = strdup(f->name)) == NULL)
+			err(EXIT_FAILURE, "strdup");
+		print_sql_stmt_schema(lang, orig, 0,
+			f->ref->target->parent, name, col);
+		free(name);
+	}
+}
+
+static void
+print_sql_stmt_join(size_t tabs, enum langt lang,
+	const struct strct *orig, const struct strct *p,
+	const struct alias *parent, size_t *count)
+{
+	const struct field	*f;
+	const struct alias	*a;
+	char			*name;
+	char			 delim;
+	size_t			 i;
+
+	delim = lang == LANG_JS ? '\'' : '"';
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (f->type != FTYPE_STRUCT ||
+		    (f->ref->source->flags & FIELD_NULL))
+			continue;
+
+		if (parent != NULL) {
+			if (asprintf(&name, "%s.%s",
+			    parent->name, f->name) == -1)
+				err(EXIT_FAILURE, NULL);
+		} else if ((name = strdup(f->name)) == NULL)
+			err(EXIT_FAILURE, NULL);
+
+		TAILQ_FOREACH(a, &orig->aq, entries)
+			if (strcasecmp(a->name, name) == 0)
+				break;
+
+		assert(a != NULL);
+
+		if (*count == 0)
+			printf(" %c", delim);
+
+		(*count)++;
+		putchar('\n');
+		for (i = 0; i < tabs + 1; i++)
+			putchar('\t');
+		printf("%cINNER JOIN %s AS %s ON %s.%s=%s.%s %c",
+			delim, f->ref->target->parent->name, a->alias,
+			a->alias, f->ref->target->name,
+			NULL == parent ? p->name : parent->alias,
+			f->ref->source->name, delim);
+		print_sql_stmt_join(tabs, lang, orig, 
+			f->ref->target->parent, a, count);
+		free(name);
+	}
+}
+
+void
+print_sql_stmts(size_t tabs, const struct strct *p, enum langt lang)
+{
+	const struct search	*s;
+	const struct sent	*sent;
+	const struct field	*f;
+	const struct update	*up;
+	const struct uref	*ur;
+	const struct ord	*ord;
+	int			 first, hastrail, needquot;
+	size_t			 i, pos, rc, col;
+	char			 delim;
+
+	delim = lang == LANG_JS ? '\'' : '"';
+
+	/* 
+	 * We have a special query just for our unique fields.
+	 * These are generated in the event of null foreign key
+	 * reference lookups with the generated db_xxx_reffind()
+	 * functions.
+	 * TODO: figure out which ones we should be generating and only
+	 * do this, as otherwise we're just wasting static space.
+	 */
+
+	TAILQ_FOREACH(f, &p->fq, entries)  {
+		if (!(f->flags & (FIELD_ROWID|FIELD_UNIQUE)))
+			continue;
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		printf("/* STMT_%s_BY_UNIQUE_%s */\n", 
+			p->name, f->name);
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		printf("%cSELECT ", delim);
+		col = tabs * 8 + 8;
+		print_sql_stmt_schema(lang, p, 1, p, NULL, &col);
+		printf("\" FROM %s", p->name);
+		rc = 0;
+		print_sql_stmt_join(tabs, lang, p, p, NULL, &rc);
+		if (rc > 0) {
+			putchar('\n');
+			for (i = 0; i < tabs + 1; i++)
+				putchar('\t');
+			putchar('"');
+		} else
+			printf(" ");
+		printf("WHERE %s.%s = ?\",\n", p->name, f->name);
+	}
+
+	/* Print custom search queries. */
+
+	pos = 0;
+	TAILQ_FOREACH(s, &p->sq, entries) {
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		printf("/* STMT_%s_BY_SEARCH_%zu */\n", p->name, pos++);
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		printf("\"SELECT ");
+		col = 16;
+		needquot = 0;
+
+		/* 
+		 * Juggle around the possibilities of...
+		 *   select count(*)
+		 *   select count(distinct --print_sql_stmt_schema--)
+		 *   select --print_sql_stmt_schema--
+		 */
+
+		if (s->type == STYPE_COUNT)
+			col += printf("COUNT(");
+		if (s->dst) {
+			col += printf("DISTINCT ");
+			print_sql_stmt_schema(lang, p, 1, 
+				s->dst->strct, s->dst->fname, &col);
+			needquot = 1;
+		} else if (s->type != STYPE_COUNT) {
+			print_sql_stmt_schema
+				(lang, p, 1, p, NULL, &col);
+			needquot = 1;
+		} else
+			printf("*");
+
+		if (needquot)
+			putchar('"');
+		if (s->type == STYPE_COUNT)
+			putchar(')');
+
+		printf(" FROM %s", p->name);
+
+		/* 
+		 * Whether anything is coming after the "FROM" clause,
+		 * which includes all ORDER, WHERE, GROUP, LIMIT, and
+		 * OFFSET commands.
+		 */
+
+		hastrail = 
+			(s->aggr != NULL && s->group != NULL) ||
+			(!TAILQ_EMPTY(&s->sntq)) ||
+			(!TAILQ_EMPTY(&s->ordq)) ||
+			(s->type != STYPE_SEARCH && s->limit > 0) ||
+			(s->type != STYPE_SEARCH && s->offset > 0);
+		
+		rc = 0;
+		print_sql_stmt_join(tabs, lang, p, p, NULL, &rc);
+
+		/* 
+		 * We need to have a special JOIN command for aggregate
+		 * groupings: we LEFT OUTER JOIN the grouped set to
+		 * itself, conditioning upon the aggregate inequality.
+		 * We'll filter NULL joinings in the WHERE statement.
+		 */
+
+		if (NULL != s->aggr && NULL != s->group) {
+			assert(s->aggr->field->parent == 
+			       s->group->field->parent);
+			putchar('\n');
+			for (i = 0; i < tabs + 1; i++)
+				putchar('\t');
+			printf("\"LEFT OUTER JOIN %s as _custom "
+				"ON %s.%s = _custom.%s "
+				"AND %s.%s %s _custom.%s \"",
+				s->group->field->parent->name, 
+				s->group->alias == NULL ?
+				s->group->field->parent->name : 
+				s->group->alias->alias,
+				s->group->field->name, 
+				s->group->field->name,
+				s->group->alias == NULL ?
+				s->group->field->parent->name : 
+				s->group->alias->alias, 
+				s->aggr->field->name, 
+				AGGR_MAXROW == s->aggr->op ?  "<" : ">",
+				s->aggr->field->name);
+		}
+
+		if (!hastrail) {
+			if (rc == 0)
+				putchar('"');
+			puts(",");
+			continue;
+		}
+
+		if (rc > 0)
+			printf("\n");
+		else
+			printf(" \"\n");
+		for (i = 0; i < tabs + 1; i++)
+			putchar('\t');
+		putchar('"');
+
+		if (!TAILQ_EMPTY(&s->sntq) || 
+		    (s->aggr != NULL && s->group != NULL))
+			printf("WHERE");
+
+		first = 1;
+
+		/* 
+		 * If we're grouping, filter out all of the joins that
+		 * failed and aren't part of the results.
+		 */
+
+		if (s->group != NULL) {
+			printf(" _custom.%s IS NULL", 
+				s->group->field->name);
+			first = 0;
+		}
+
+		/* Continue with our proper WHERE clauses. */
+
+		TAILQ_FOREACH(sent, &s->sntq, entries) {
+			if (sent->field->type == FTYPE_PASSWORD &&
+			    !OPTYPE_ISUNARY(sent->op) &&
+			    sent->op != OPTYPE_STREQ &&
+			    sent->op != OPTYPE_STRNEQ)
+				continue;
+			if (!first)
+				printf(" AND");
+			first = 0;
+			if (OPTYPE_ISUNARY(sent->op))
+				printf(" %s.%s %s",
+					sent->alias == NULL ?
+					p->name : sent->alias->alias,
+					sent->field->name, 
+					optypes[sent->op]);
+			else
+				printf(" %s.%s %s ?", 
+					sent->alias == NULL ?
+					p->name : sent->alias->alias,
+					sent->field->name, 
+					optypes[sent->op]);
+		}
+
+		first = 1;
+		if (!TAILQ_EMPTY(&s->ordq))
+			printf(" ORDER BY ");
+		TAILQ_FOREACH(ord, &s->ordq, entries) {
+			if ( ! first)
+				printf(", ");
+			first = 0;
+			printf("%s.%s %s",
+				NULL == ord->alias ?
+				p->name : ord->alias->alias,
+				ord->field->name, 
+				ORDTYPE_ASC == ord->op ?
+				"ASC" : "DESC");
+		}
+
+		if (STYPE_SEARCH != s->type && s->limit > 0)
+			printf(" LIMIT %" PRId64, s->limit);
+		if (STYPE_SEARCH != s->type && s->offset > 0)
+			printf(" OFFSET %" PRId64, s->offset);
+
+		puts("\",");
+	}
+
+	/* Insertion of a new record. */
+	/* FIXME: cols += printf(...) is wrong. */
+
+	if (p->ins != NULL) {
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		printf("/* STMT_%s_INSERT */\n", p->name);
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+
+		col = tabs * 8;
+		col += printf("\"INSERT INTO %s ", p->name);
+
+		first = 1;
+		TAILQ_FOREACH(f, &p->fq, entries) {
+			if (f->type == FTYPE_STRUCT ||
+			    (f->flags & FIELD_ROWID))
+				continue;
+
+			if (col >= 72) {
+				printf("%s\"\n", first ? "" : ",");
+				for (i = 0; i < tabs + 1; i++)
+					putchar('\t');
+				printf("\"%s", first ? "(" : " ");
+				col = (tabs + 1) * 8;
+			} else
+				putchar(first ? '(' : ',');
+
+			col += 1 + printf("%s", f->name);
+			first = 0;
+		}
+
+		if (first == 0) {
+			if ((col += printf(") ")) >= 72) {
+				printf("\"\n");
+				for (i = 0; i < tabs + 1; i++)
+					putchar('\t');
+				putchar('"');
+				col = (tabs + 1) * 8 + 1;
+			}
+
+			first = 1;
+			col += printf("VALUES ");
+			TAILQ_FOREACH(f, &p->fq, entries) {
+				if (f->type == FTYPE_STRUCT ||
+				    (f->flags & FIELD_ROWID))
+					continue;
+				if (col >= 72) {
+					printf("%s\"\n", first ? "" : ",");
+					for (i = 0; i < tabs + 1; i++)
+						putchar('\t');
+					printf("\"%s", first ? "(" : " ");
+					col = (tabs + 1) * 8 + 1;
+				} else
+					putchar(first ? '(' : ',');
+
+				putchar('?');
+				col += 2;
+				first = 0;
+			}
+			puts(")\",");
+		} else
+			puts("DEFAULT VALUES\",");
+	}
+	
+	/* 
+	 * Custom update queries. 
+	 * Our updates can have modifications where they modify the
+	 * given field (instead of setting it externally).
+	 */
+
+	pos = 0;
+	TAILQ_FOREACH(up, &p->uq, entries) {
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		printf("/* STMT_%s_UPDATE_%zu */\n", p->name, pos++);
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		printf("\"UPDATE %s SET", p->name);
+
+		first = 1;
+		TAILQ_FOREACH(ur, &up->mrq, entries) {
+			putchar(first ? ' ' : ',');
+			first = 0;
+			switch (ur->mod) {
+			case MODTYPE_INC:
+				printf("%s = %s + ?", 
+					ur->field->name, 
+					ur->field->name);
+				break;
+			case MODTYPE_DEC:
+				printf("%s = %s - ?", 
+					ur->field->name, 
+					ur->field->name);
+				break;
+			case MODTYPE_CONCAT:
+				printf("%s = ", ur->field->name);
+
+				/*
+				 * If we concatenate a NULL with a
+				 * non-NULL, we'll always get a NULL
+				 * value, which isn't what we want.
+				 * This will wrap possibly-null values
+				 * so that they're always strings.
+				 */
+
+				if ((ur->field->flags & FIELD_NULL))
+					printf("COALESCE(%s,'')",
+						ur->field->name);
+				else
+					printf("%s", ur->field->name);
+				printf(" || ?");
+				break;
+			default:
+				printf("%s = ?", ur->field->name);
+				break;
+			}
+		}
+		first = 1;
+		TAILQ_FOREACH(ur, &up->crq, entries) {
+			printf(" %s ", first ? "WHERE" : "AND");
+			if (OPTYPE_ISUNARY(ur->op))
+				printf("%s %s", ur->field->name, 
+					optypes[ur->op]);
+			else
+				printf("%s %s ?", ur->field->name,
+					optypes[ur->op]);
+			first = 0;
+		}
+		puts("\",");
+	}
+
+	/* Custom delete queries. */
+
+	pos = 0;
+	TAILQ_FOREACH(up, &p->dq, entries) {
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		printf("/* STMT_%s_DELETE_%zu */\n", p->name, pos++);
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		printf("\"DELETE FROM %s", p->name);
+
+		first = 1;
+		TAILQ_FOREACH(ur, &up->crq, entries) {
+			printf(" %s ", first ? "WHERE" : "AND");
+			if (OPTYPE_ISUNARY(ur->op))
+				printf("%s %s", ur->field->name, 
+					optypes[ur->op]);
+			else
+				printf("%s %s ?", ur->field->name,
+					optypes[ur->op]);
+			first = 0;
+		}
+		puts("\",");
+	}
+}
+
+void
+print_sql_enums(size_t tabs, const struct strct *p, enum langt lang)
+{
+	const struct search	*s;
+	const struct update	*u;
+	const struct field	*f;
+	size_t			 i, pos;
+
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (f->flags & (FIELD_UNIQUE|FIELD_ROWID)) {
+			for (i = 0; i < tabs; i++)
+				putchar('\t');
+			printf("STMT_%s_BY_UNIQUE_%s,\n", 
+				p->name, f->name);
+		}
+
+	pos = 0;
+	TAILQ_FOREACH(s, &p->sq, entries) {
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		printf("STMT_%s_BY_SEARCH_%zu,\n", p->name, pos++);
+	}
+
+	if (p->ins != NULL) {
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		printf("STMT_%s_INSERT,\n", p->name);
+	}
+
+	pos = 0;
+	TAILQ_FOREACH(u, &p->uq, entries) {
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		printf("STMT_%s_UPDATE_%zu,\n", p->name, pos++);
+	}
+
+	pos = 0;
+	TAILQ_FOREACH(u, &p->dq, entries) {
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		printf("STMT_%s_DELETE_%zu,\n", p->name, pos++);
+	}
 }

@@ -690,6 +690,42 @@ gen_ortdb(void)
 }
 
 /*
+ * Generate the schema for a given table.
+ * This macro accepts a single parameter that's given to all of the
+ * members so that a later SELECT can use INNER JOIN xxx AS yyy and have
+ * multiple joins on the same table.
+ */
+static void
+gen_alias_builder(const struct strct *p)
+{
+	const struct field	*f, *last = NULL;
+	int			 first = 1;
+
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (f->type != FTYPE_STRUCT)
+			last = f;
+
+	assert(last != NULL);
+	printf("\n"
+	       "\texport function ort_schema_%s(v: string): string\n"
+	       "\t{\n"
+	       "\t\treturn ", p->name);
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (f->type == FTYPE_STRUCT)
+			continue;
+		if (!first)
+			fputs("\t\t       ", stdout);
+		printf("v + \'.%s\'", f->name);
+		if (f != last)
+			puts(" + \',\' +");
+		else
+			puts(";");
+		first = 0;
+	}
+	puts("\t}");
+}
+
+/*
  * Output the data access portion of the data model entirely within a
  * single class.
  */
@@ -697,6 +733,19 @@ static void
 gen_ortctx(const struct config *cfg)
 {
 	const struct strct	*p;
+
+	puts("namespace ortstmt {");
+	puts("\tenum ortstmt {");
+	TAILQ_FOREACH(p, &cfg->sq, entries)
+		print_sql_enums(2, p, LANG_JS);
+	puts("\t}");
+	puts("\treadonly ortstmts: string[] = [");
+	TAILQ_FOREACH(p, &cfg->sq, entries)
+		print_sql_stmts(2, p, LANG_JS);
+	puts("\t];");
+	TAILQ_FOREACH(p, &cfg->sq, entries)
+		gen_alias_builder(p);
+	puts("}\n");
 
 	puts("");
 	print_commentt(0, COMMENT_JS,

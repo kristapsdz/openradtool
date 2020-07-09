@@ -1,0 +1,6 @@
+<div>
+	<span class="foo-has-foo"><span class="foo-foo-text">xyz</span></span>
+	<span class="foo-no-foo hide">xyz</span>
+	<span class="foo-has-bar hide"><span class="foo-bar-text">a</span></span>
+	<span class="foo-no-bar">xyz</span>
+</div>

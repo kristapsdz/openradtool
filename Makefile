@@ -4,8 +4,8 @@
 include Makefile.configure
 
 VERSION_MAJOR	 = 0
-VERSION_MINOR	 = 8
-VERSION_BUILD	 = 16
+VERSION_MINOR	 = 9
+VERSION_BUILD	 = 0
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = compats.o \
 		   config.o \
@@ -269,6 +269,7 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/openradtool-$(VERSION)/
 	mkdir -p .dist/openradtool-$(VERSION)/man
 	mkdir -p .dist/openradtool-$(VERSION)/regress
+	mkdir -p .dist/openradtool-$(VERSION)/regress/javascript
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sqldiff
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sql
 	install -m 0444 $(DOTAR) .dist/openradtool-$(VERSION)
@@ -281,6 +282,10 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	install -m 0444 regress/sqldiff/*.nresult .dist/openradtool-$(VERSION)/regress/sqldiff
 	install -m 0444 regress/sql/*.ort .dist/openradtool-$(VERSION)/regress/sql
 	install -m 0444 regress/sql/*.result .dist/openradtool-$(VERSION)/regress/sql
+	install -m 0444 regress/javascript/*.ort .dist/openradtool-$(VERSION)/regress/javascript
+	install -m 0444 regress/javascript/*.result .dist/openradtool-$(VERSION)/regress/javascript
+	install -m 0444 regress/javascript/*.ts .dist/openradtool-$(VERSION)/regress/javascript
+	install -m 0444 regress/javascript/*.xml .dist/openradtool-$(VERSION)/regress/javascript
 	install -m 0555 $(DOTAREXEC) .dist/openradtool-$(VERSION)
 	( cd .dist/ && tar zcf ../$@ ./ )
 	rm -rf .dist/

@@ -257,7 +257,6 @@
 		val: number|string|null): void
 	{
 		let i: number;
-		let v: string|number;
 		const list: HTMLCollectionOf<HTMLElement> = 
 			e.getElementsByTagName('option');
 
@@ -333,16 +332,18 @@
 			if (val === null || attrval === null)
 				continue;
 
-			/* 
-			 * Pseudo-polyfill of Number.isNumber().
-			 * Also checks if the result is negative.
+			/*
+			 * This would be better served with
+			 * Number.isInteger(), but we don't want to
+			 * assume ES6.
 			 */
 
-			if (!(isFinite(attrval) && 
-			      Math.floor(attrval).toString() === attrval))
+			v = Number(attrval);
+			if (isNaN(v))
 				continue;
-			v = parseInt(attrval);
-			if (isNaN(v) || v < 0)
+			if (!(isFinite(v) && Math.floor(v) === v))
+				continue;
+			if (v < 0)
 				continue;
 			if ((v === 0 && val === 0) || 
 			    (v > 0 && ((1 << (v - 1)) & val)))

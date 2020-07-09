@@ -892,7 +892,8 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		print_commentt(2, COMMENT_JS,
 			"Uses the enumeration item's **jslabel** " 
 			"(or an empty string if no **jslabel** is " 
-			"defined) to format a custom label as "
+			"defined or there is no matching item "
+			"for the value) to format a custom label as "
 			"invoked on an object's `fill` method. "
 			"This will act on *xxx-yyy-label* classes, "
 			"where *xxx* is the structure name and "

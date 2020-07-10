@@ -1,0 +1,8 @@
+bitfield somebits {
+	item a 0;
+};
+
+struct foo {
+	field val bits somebits;
+	field id int rowid;
+};

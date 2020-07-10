@@ -323,40 +323,6 @@ used.
 If there is no default label, an empty string is used instead.
 An empty string is also used for invalid enumeration values.
 .Pp
-Bit-fields behave similarly and have the same member.
-.Bl -tag -width Ds -offset indent
-.It Fn format "e" "name" "value"
-Fills in all elements (not inclusive) descending from
-.Fa e
-having class
-.Fa name Ns "-label"
-with all configuration labels with corresponding bits set in
-.Fa value .
-If
-.Fa name
-is
-.Dv null ,
-the element itself has its contents filled in.
-It
-.Fa value
-is
-.Dv null ,
-the
-.Qq ort-null
-class is added and the
-.Cm isnull
-label is used.
-If not specified, an empty string is used.
-If
-.Fa value
-is zero, the
-.Qq ort-unset
-class is added and the
-.Cm isunset
-label is used.
-If not specified, an empty string is used.
-.El
-.Pp
 A common label fill idiom is as follows:
 .Bd -literal -offset indent
 <div id="place">
@@ -379,6 +345,42 @@ const custom: ort.DataCallbacks = {
 This will fill in both the
 .Cm jslabel
 of the value's corresponding item and the value itself.
+.Pp
+Bit-fields behave similarly and have the same member.
+.Bl -tag -width Ds -offset indent
+.It Fn format "e" "name" "value"
+Fills in all elements (not inclusive) descending from
+.Fa e
+having class
+.Fa name Ns "-label"
+with all configuration labels with corresponding bits set in
+.Fa value .
+If
+.Fa name
+is
+.Dv null ,
+the element itself has its contents filled in.
+.Pp
+If
+.Fa value
+is
+.Dv null ,
+the
+.Qq ort-null
+class is added and the
+.Cm isnull
+label is used (or an empty string).
+If
+.Fa value
+is zero, the
+.Qq ort-unset
+class is added and the
+.Cm isunset
+label is used (or an empty string).
+Multiple matching labels are separated by a comma and space.
+If any given bit doesn't have or match a label, it is not given any
+label text.
+.El
 .Ss Customisation
 All functions accept an optional argument for providing custom per-field
 or per-structure callbacks.

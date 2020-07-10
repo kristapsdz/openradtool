@@ -1,0 +1,10 @@
+bitfield somebits {
+	item a 0 jslabel "xyz";
+	isunset jslabel "abc";
+	isnull jslabel "def";
+};
+
+struct foo {
+	field val bits somebits null;
+	field id int rowid;
+};

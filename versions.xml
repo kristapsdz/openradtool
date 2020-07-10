@@ -36,6 +36,13 @@
 				standards compliant.
 			</p>
 			<p>
+				Clarify what happens when bits for bit-fields don't have
+				corresponding labels when formatted.
+				Earlier, the undocumented, string <q>unset</q> was emitted; now it
+				is a documented empty string.
+				Also handle missing individual labels and so on.
+			</p>
+			<p>
 				Add a large regression suite to tests for the behaviour documented
 				in both <a href="ort-javascript.1.html">ort-javascript(1)</a> and
 				the generated documentation.

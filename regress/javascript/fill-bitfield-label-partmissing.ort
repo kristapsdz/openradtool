@@ -1,0 +1,10 @@
+bitfield somebits {
+	item a 0;
+	item b 1 jslabel "xyz";
+	item c 2 jslabel "zyx";
+};
+
+struct foo {
+	field val bits somebits;
+	field id int rowid;
+};

@@ -286,32 +286,9 @@ gen_js_field(const struct field *f)
 }
 
 /*
- * Generate variable declarations.
- * Accepts a variable number of name-type pairs terminating in a single
- * NULL.
- */
-static void
-gen_vars(size_t tabs, ...)
-{
-	va_list	 	 ap;
-	size_t		 i;
-	const char	*name, *type;
-
-	va_start(ap, tabs);
-	while ((name = va_arg(ap, char *)) != NULL) {
-		type = va_arg(ap, char *);
-		assert(type != NULL);
-		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("let %s: %s;\n", name, type);
-	}
-	va_end(ap);
-}
-
-/*
  * Generate a class-level method prototype.
- * If "priv", it is marked as private.
- * Like gen_proto(), otherwise.
+ * If "priv" > 1, it is marked as static, if simply > 0, it is private.
+ * Otherwise it is neither and assumed public.
  */
 static void
 gen_class_proto(int priv, const char *ret, const char *func, ...)
@@ -319,10 +296,21 @@ gen_class_proto(int priv, const char *ret, const char *func, ...)
 	va_list	 	 ap;
 	int		 first = 1, rc;
 	const char	*name, *type;
-	size_t		 sz, col = 0;
+	size_t		 sz, col = 8;
 
-	rc = printf("\t\t%s%s(", priv ? "private " : "", func);
+	fputs("\t\t", stdout);
+
+	if (priv > 1) {
+		fputs("static ", stdout);
+		col += 7;
+	} else if (priv > 0) {
+		fputs("private ", stdout);
+		col += 8;
+	}
+
+	rc = printf("%s(", func);
 	col += rc > 0 ? (size_t)rc : 0;
+
 	va_start(ap, func);
 	while ((name = va_arg(ap, char *)) != NULL) {
 		if (first == 0) {
@@ -755,18 +743,8 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 	}
 
 	TAILQ_FOREACH(bf, &cfg->bq, entries) {
-		print_commentv(1, COMMENT_JS,
-			"%s%s"
-			"This defines the bit indices for the %s "
-			"bit-field.\n"
-			"The `BITI` fields are the bit indices "
-			"(0&#8211;63) and the `BITF` fields are the "
-			"masked integer values.\n"
-			"All of these values are static: **do "
-			"not use the constructor**.",
-			NULL == bf->doc ? "" : bf->doc,
-			NULL == bf->doc ? "" : "<br/>\n",
-			bf->name);
+		if (bf->doc != NULL)
+			print_commentt(1, COMMENT_JS, bf->doc);
 		printf("\texport class %s {\n", bf->name);
 		maxvalue = -INT64_MAX;
 		TAILQ_FOREACH(bi, &bf->bq, entries) {
@@ -795,40 +773,40 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		warn_label(cfg, &bf->labels_null, &bf->pos,
 			bf->name, NULL, "bits isnull");
 
-		print_commentv(2, COMMENT_JS,
-			"Uses a bit field's **jslabel** "
-			"to format a custom label as invoked on an "
-			"object's `fill` functions. "
-			"This will act on *xxx-yyy-label* "
-			"classes, where *xxx* is the "
-			"structure name and *yyy* is the "
-			"field name. "
-			"Multiple entries are comma-separated.\n"
-			"For example, `xxx.fill(e, { 'xxx-yyy': "
-			"ort.%s.format });`, where "
-			"*yyy* is a field of type "
-			"**enum %s**.\n"
+		puts("");
+		print_commentt(2, COMMENT_JS,
+			"For each bit-field item with its bit index "
+			"set in the value, use the item's **jslabel** "
+			"to format a custom label. Any bit-field item "
+			"without a **jslabel** is ignored.  If no "
+			"item is found (or no **jslabel** were found) "
+			"use an empty string. Multiple labels, if "
+			"found, are separated by a comma. This will "
+			"act on *xxx-yyy-label* classes, where *xxx* "
+			"is the structure name and *yyy* is the "
+			"field name.\n"
 			"@param e The DOM element.\n"
 			"@param name If non-null, data is written to "
 			"elements under the root with the given class "
 			"name. Otherwise, data is written directly "
 			"into the DOM element.\n"
-			"@param v The bitfield.",
-			bf->name, bf->name);
-		puts("\t\tstatic format(e: HTMLElement, name: string|null, "
-			"v: number|null): void\n"
-		      "\t\t{");
-		gen_vars(3, 
-			"i", "number",
-			"s", "string", NULL);
-		printf("\t\t\ts = '';\n"
-		       "\t\t\ti = 0;\n"
-		       "\t\t\tif (name !== null)\n"
-		       "\t\t\t\tname += '-label';\n"
-		       "\t\t\tif (v === null && name !== null) {\n"
-		       "\t\t\t\t_classaddcl(e, name, "
-		       	"\'ort-null\', false);\n"
-		       "\t\t\t\t_replcllang(e, name, ");
+			"@param v The bitfield.");
+		gen_class_proto(2, "void", "format",
+			"e", "HTMLElement", 
+			"name", "string|null",
+			"v", "number|null", NULL);
+		puts("\t\t{\n"
+		     "\t\t\tlet i: number = 0;\n"
+		     "\t\t\tlet res: string;\n"
+		     "\t\t\tconst s: string = '';\n"
+		     "\n"
+		     "\t\t\tif (name !== null)\n"
+		     "\t\t\t\tname += '-label';\n"
+		     "\n"
+		     "\t\t\tif (v === null && name !== null) {\n"
+		     "\t\t\t\t_classaddcl(e, name, "
+		     	"\'ort-null\', false);");
+		printf("\t\t\t\t_replcllang(e, name, ");
 		gen_labels(cfg, &bf->labels_null);
 		printf(");\n"
 		       "\t\t\t\treturn;\n"
@@ -851,24 +829,21 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		gen_labels(cfg, &bf->labels_unset);
 		puts(");\n"
 		     "\t\t\t\treturn;\n"
-		     "\t\t\t}");
+		     "\t\t\t}\n");
 		TAILQ_FOREACH(bi, &bf->bq, entries) {
 			warn_label(cfg, &bi->labels, &bi->pos,
 				bf->name, bi->name, "item");
-			printf("\t\t\tif ((v & %s.BITF_%s))\n"
-		       	       "\t\t\t\ts += (i++ > 0 ? ', ' : '') +\n"
-			       "\t\t\t\t  _strlang(", 
+			printf("\t\t\tif ((v & %s.BITF_%s)) {\n"
+			       "\t\t\t\tres = _strlang(", 
 			       bf->name, bi->name);
 			gen_labels(cfg, &bi->labels);
-			puts(");");
+			puts(");\n"
+			     "\t\t\t\tif (res.length)\n"
+		       	     "\t\t\t\t\ts += "
+			     "(i++ > 0 ? ', ' : '') + res;\n"
+			     "\t\t\t}");
 		}
-		puts("\t\t\tif (s.length === 0 && name !== null) {\n"
-		     "\t\t\t\t_replcl(e, name, \'unknown\', false);\n"
-		     "\t\t\t\treturn;\n"
-		     "\t\t\t} else if (s.length === 0) { \n"
-		     "\t\t\t\t_repl(e, \'unknown\');\n"
-		     "\t\t\t\treturn;\n"
-		     "\t\t\t}\n"
+		puts("\n"
 		     "\t\t\tif (name !== null)\n"
 		     "\t\t\t\t_replcl(e, name, s, false);\n"
 		     "\t\t\telse\n"
@@ -893,8 +868,7 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 			"Uses the enumeration item's **jslabel** " 
 			"(or an empty string if no **jslabel** is " 
 			"defined or there is no matching item "
-			"for the value) to format a custom label as "
-			"invoked on an object's `fill` method. "
+			"for the value) to format a custom label. "
 			"This will act on *xxx-yyy-label* classes, "
 			"where *xxx* is the structure name and "
 			"*yyy* is the field name.\n"
@@ -904,22 +878,24 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 			"class name. If null, data is written "
 			"directly into the DOM element.\n"
 			"@param v The enumeration value.");
-		puts("\t\tstatic format(e: HTMLElement, name: string|null, "
-			"v: number|null): void\n"
-		      "\t\t{");
-		gen_vars(3, "s", "string", NULL);
-		printf("\t\t\tif (name !== null)\n"
-		       "\t\t\t\tname += '-label';\n"
-		       "\t\t\tif (v === null && name !== null) {\n"
-		       "\t\t\t\t_replcl(e, name, \'not given\', false);\n"
-		       "\t\t\t\t_classaddcl(e, name, \'noanswer\', false);\n"
-		       "\t\t\t\treturn;\n"
-		       "\t\t\t} else if (v === null) {\n"
-		       "\t\t\t\t_repl(e, \'not given\');\n"
-		       "\t\t\t\t_classadd(e, \'noanswer\');\n"
-		       "\t\t\t\treturn;\n"
-		       "\t\t\t}\n"
-		       "\t\t\tswitch(v) {\n");
+		gen_class_proto(2, "void", "format",
+			"e", "HTMLElement", 
+			"name", "string|null",
+			"v", "number|null", NULL);
+		puts("\t\t{\n"
+		     "\t\t\tlet s: string;\n"
+		     "\t\t\tif (name !== null)\n"
+		     "\t\t\t\tname += '-label';\n"
+		     "\t\t\tif (v === null && name !== null) {\n"
+		     "\t\t\t\t_replcl(e, name, \'not given\', false);\n"
+		     "\t\t\t\t_classaddcl(e, name, \'noanswer\', false);\n"
+		     "\t\t\t\treturn;\n"
+		     "\t\t\t} else if (v === null) {\n"
+		     "\t\t\t\t_repl(e, \'not given\');\n"
+		     "\t\t\t\t_classadd(e, \'noanswer\');\n"
+		     "\t\t\t\treturn;\n"
+		     "\t\t\t}\n"
+		     "\t\t\tswitch(v) {");
 		TAILQ_FOREACH(ei, &e->eq, entries) {
 			warn_label(cfg, &ei->labels, &ei->pos,
 				e->name, ei->name, "item");

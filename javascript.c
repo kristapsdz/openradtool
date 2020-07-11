@@ -803,7 +803,7 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		puts("\t\t{\n"
 		     "\t\t\tlet i: number = 0;\n"
 		     "\t\t\tlet res: string;\n"
-		     "\t\t\tconst s: string = '';\n"
+		     "\t\t\tlet s: string = '';\n"
 		     "\n"
 		     "\t\t\tif (name !== null)\n"
 		     "\t\t\t\tname += '-label';\n"

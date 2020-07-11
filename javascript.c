@@ -864,6 +864,9 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 				ei->value);
 		}
 
+		warn_label(cfg, &e->labels_null, &e->pos,
+			e->name, NULL, "enum isnull");
+
 		print_commentt(2, COMMENT_JS,
 			"Uses the enumeration item's **jslabel** " 
 			"(or an empty string if no **jslabel** is " 
@@ -887,12 +890,17 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		     "\t\t\tif (name !== null)\n"
 		     "\t\t\t\tname += '-label';\n"
 		     "\t\t\tif (v === null && name !== null) {\n"
-		     "\t\t\t\t_replcl(e, name, \'not given\', false);\n"
-		     "\t\t\t\t_classaddcl(e, name, \'noanswer\', false);\n"
+		     "\t\t\t\t_classaddcl(e, name, "
+		     	"\'ort-null\', false);");
+		printf("\t\t\t\t_replcllang(e, name, ");
+		gen_labels(cfg, &e->labels_null);
+		puts(");\n"
 		     "\t\t\t\treturn;\n"
 		     "\t\t\t} else if (v === null) {\n"
-		     "\t\t\t\t_repl(e, \'not given\');\n"
-		     "\t\t\t\t_classadd(e, \'noanswer\');\n"
+		     "\t\t\t\t_classadd(e, \'ort-null\');");
+		printf("\t\t\t\t_repllang(e, ");
+		gen_labels(cfg, &e->labels_null);
+		puts(");\n"
 		     "\t\t\t\treturn;\n"
 		     "\t\t\t}\n"
 		     "\t\t\tswitch(v) {");

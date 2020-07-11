@@ -1,0 +1,9 @@
+enum anenum {
+	item a 0 jslabel "xyz";
+	isnull jslabel "isnull";
+};
+
+struct foo {
+	field val enum anenum null;
+	field id int rowid;
+};

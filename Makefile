@@ -529,7 +529,7 @@ regress: ort ort-sqldiff ort-sql ort-javascript
 	done ; \
 	set +e ; \
 	command -v ts-node >/dev/null 2>/dev/null; \
-	if [ $$? -eq 1 ]; then \
+	if [ $$? -ne 0 ]; then \
 		set -e ; \
 		echo "regress/javascript: ignoring (no ts-node)" 1>&2 ; \
 	else \

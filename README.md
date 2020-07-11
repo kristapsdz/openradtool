@@ -1,26 +1,23 @@
 # Introduction
 
 **openradtool** ("**ort**") translates a data model (data layout and
-operations) into C, SQL ([SQLite3](https://sqlite.org)), and
-TypeScript/JavaScript code.  It also has a raft of related features,
-such as role-based access control, auditing, full documentation of
-generated sources, etc.
+operations) into C, SQL ([SQLite3](https://sqlite.org)), and TypeScript
+code.  It also has a raft of related features, such as role-based access
+control, auditing, full documentation of generated sources, etc.
 
 This repository consists of bleeding-edge code between versions: to keep
 up to date with the current stable release of **openradtool**, visit the
-[website](https://kristaps.bsd.lv/openradtool).
-The website also contains canonical installation, deployment, examples,
-and usage documentation.
+[website](https://kristaps.bsd.lv/openradtool).  The website also
+contains canonical installation, deployment, examples, and usage
+documentation.
 
 What follows describes using the bleeding-edge version of the system.
 
 # Installation
 
 First, make sure the depending libraries
-[kcgi](https://kristaps.bsd.lv/kcgi)
-and
-[sqlbox](https://kristaps.bsd.lv/sqlbox)
-are up to date.
+[kcgi](https://kristaps.bsd.lv/kcgi) and
+[sqlbox](https://kristaps.bsd.lv/sqlbox) are up to date.
 
 Then clone or update your sources.  Configure with `./configure`,
 compile with `make` (BSD make, so it may be `bmake` on your system),

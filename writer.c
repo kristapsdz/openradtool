@@ -757,6 +757,17 @@ parse_write_enm(struct writer *w,
 			return 0;
 	}
 
+	if (TAILQ_FIRST(&p->labels_null)) {
+		if (!wputs(w, "\tisnull"))
+			return 0;
+		i = 0;
+		TAILQ_FOREACH(l, &p->labels_null, entries)
+			if (!parse_write_label(w, cfg, l, 2, i++))
+				return 0;
+		if (!wputs(w, ";\n"))
+			return 0;
+	}
+
 	if (p->doc != NULL) {
 		if (!parse_write_comment(w, p->doc, 1))
 			return 0;

@@ -118,11 +118,12 @@ struct	eitem {
 };
 
 struct	enm {
-	char		*name;
-	char		*doc;
-	struct pos	 pos;
-	struct eitemq	 eq;
-	TAILQ_ENTRY(enm) entries;
+	char			*name;
+	char			*doc;
+	struct pos		 pos;
+	struct labelq		 labels_null;
+	struct eitemq		 eq;
+	TAILQ_ENTRY(enm)	 entries;
 };
 
 struct	bitidx {

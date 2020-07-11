@@ -84,6 +84,28 @@ parse_enum_item(struct parse *p, struct eitem *ei)
 }
 
 /*
+ * Parse semicolon-terminated labels of special phrase.
+ * Return zero on failure, non-zero on success.
+ */
+static int
+parse_enum_label(struct parse *p, struct labelq *q)
+{
+
+	for (;;) {
+		if (parse_next(p) == TOK_SEMICOLON)
+			return 1;
+		if (p->lasttype != TOK_IDENT ||
+		    strcasecmp(p->last.string, "jslabel")) {
+			parse_errx(p, "expected \"jslabel\"");
+			return 0;
+		} 
+		if (!parse_label(p, q))
+			return 0;
+	}
+}
+
+
+/*
  * Read an individual enumeration.
  * This opens and closes the enumeration, then reads all of the enum
  * data within.
@@ -121,6 +143,10 @@ parse_enum_data(struct parse *p, struct enm *e)
 				parse_errx(p, "expected semicolon");
 				return;
 			}
+			continue;
+		} else if (strcasecmp(p->last.string, "isnull") == 0) {
+			if (!parse_enum_label(p, &e->labels_null))
+				return;
 			continue;
 		} else if (strcasecmp(p->last.string, "item")) {
 			parse_errx(p, "unknown enum attribute");
@@ -226,6 +252,7 @@ parse_enum(struct parse *p)
 	parse_point(p, &e->pos);
 	TAILQ_INSERT_TAIL(&p->cfg->eq, e, entries);
 	TAILQ_INIT(&e->eq);
+	TAILQ_INIT(&e->labels_null);
 
 	if ((e->name = strdup(p->last.string)) == NULL) {
 		parse_err(p);

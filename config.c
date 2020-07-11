@@ -172,6 +172,7 @@ parse_free_enum(struct enm *e)
 		free(ei);
 	}
 
+	parse_free_label(&e->labels_null);
 	free(e->name);
 	free(e->doc);
 	free(e);

@@ -50,6 +50,7 @@ struct :== "struct" structname "{"
 enum :== "enum" enumname "{"
   [ "comment" string_literal ";" ]?
   [ "item" enumdata ";" ]+
+  [ "isnull" label ";" ]?
 "};"
 bitfield :== "bits" bitsname "{"
   [ "comment" string_literal ";" ]?
@@ -830,6 +831,7 @@ They are defined as follows:
 "enum" enumname "{"
   [ "comment" string_literal ";" ]?
   [ "item" name [value]? [parms]* ";" ]+
+  [ "isnull" label ";" ]?
 "};"
 .Ed
 .Pp
@@ -837,6 +839,7 @@ For example,
 .Bd -literal -offset indent
 enum enumname {
   item "val1" 1 jslabel "Value one";
+  isnull jslabel "Not given";
 };
 .Ed
 .Pp
@@ -870,6 +873,10 @@ The item's
 is used to document the field, while its label
 .Pq see Sx Labels
 is used only for formatting output.
+The
+.Cm isnull
+label is used for labelling fields evaluating to
+.Cm null .
 .Pp
 The above enumeration would be used in an example field definition as
 follows:

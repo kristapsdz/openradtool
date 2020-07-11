@@ -785,6 +785,11 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 			"act on *xxx-yyy-label* classes, where *xxx* "
 			"is the structure name and *yyy* is the "
 			"field name.\n"
+			"A null value is represented by the "
+			"**isnull** labels (the `ort-null` class is "
+			"also appended in this case) and for no bits "
+			"by the " "**unset** label (the `ort-unset` "
+			"class is added in this case).\n"
 			"@param e The DOM element.\n"
 			"@param name If non-null, data is written to "
 			"elements under the root with the given class "
@@ -875,6 +880,9 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 			"This will act on *xxx-yyy-label* classes, "
 			"where *xxx* is the structure name and "
 			"*yyy* is the field name.\n"
+			"A null value is represented by the "
+			"**isnull** labels (the `ort-null` class is "
+			"also appended in this case)\n"
 			"@param e The DOM element.\n"
 			"@param name If non-null, data is written "
 			"to elements under the root with the given "
@@ -914,19 +922,16 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 			puts(");\n"
 			     "\t\t\t\tbreak;");
 		}
-		printf("\t\t\tdefault:\n"
-		       "\t\t\t\tconsole.log(\'%s.format: "
-		         "unknown value: ' + v);\n"
-		       "\t\t\t\ts = '';\n"
-		       "\t\t\t\tbreak;\n"
-		       "\t\t\t}\n"
-		       "\t\t\tif (name !== null)\n"
-		       "\t\t\t\t_replcl(e, name, s, false);\n"
-		       "\t\t\telse\n"
-		       "\t\t\t\t_repl(e, s);\n"
-		       "\t\t}\n"
-		       "\t}\n"
-		       "\n", e->name);
+		puts("\t\t\tdefault:\n"
+		     "\t\t\t\ts = '';\n"
+		     "\t\t\t\tbreak;\n"
+		     "\t\t\t}\n"
+		     "\t\t\tif (name !== null)\n"
+		     "\t\t\t\t_replcl(e, name, s, false);\n"
+		     "\t\t\telse\n"
+		     "\t\t\t\t_repl(e, s);\n"
+		     "\t\t}\n"
+		     "\t}\n");
 	}
 
 	puts("}");

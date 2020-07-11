@@ -10,5 +10,3 @@
 - Lift restriction that enum and bitfield values should be unique.  (Why!?)
 - Allow bitfield field default to be set from a ref like enums.
 - Updates to a unique id should have a warning if referrers don't have cascade actup.
-- Enums should have "isnull" statement as well.
-- Enums that are null should use ort-null instead of the undocumented version.

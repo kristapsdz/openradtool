@@ -734,12 +734,13 @@ gen_ortctx(const struct config *cfg)
 {
 	const struct strct	*p;
 
-	puts("namespace ortstmt {");
-	puts("\tenum ortstmt {");
+	puts("namespace ortstmt {\n"
+	     "\tenum ortstmt {");
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		print_sql_enums(2, p, LANG_JS);
-	puts("\t}");
-	puts("\treadonly ortstmts: string[] = [");
+	puts("\t}\n"
+	     "\n"
+	     "\tconst ortstmts: readonly string[] = [");
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		print_sql_stmts(2, p, LANG_JS);
 	puts("\t];");
@@ -771,10 +772,6 @@ gen_ortctx(const struct config *cfg)
 	     "\t}\n"
 	     "\n"
 	     "\tdbTransExclusive(id: number): void\n"
-	     "\t{\n"
-	     "\t}\n"
-	     "\n"
-	     "\tdbTransRollback(id: number): void\n"
 	     "\t{\n"
 	     "\t}\n"
 	     "\n"

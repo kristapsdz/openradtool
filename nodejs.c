@@ -204,6 +204,41 @@ print_name_search(const struct search *s)
 	return sz;
 }
 
+static void
+gen_role(const struct role *r, size_t tabs)
+{
+	const struct role	*rr;
+	size_t			 i;
+
+	if (strcmp(r->name, "all")) {
+		for (i = 0; i < tabs; i++)
+			putchar('\t');
+		printf("case '%s\':\n", r->name);
+	}
+	TAILQ_FOREACH(rr, &r->subrq, entries)
+		gen_role(rr, tabs);
+}
+
+/*
+ * Recursively generate all roles allowed by this rolemap.
+ */
+static void
+gen_rolemap(const struct rolemap *rm)
+{
+	const struct rref	*rr;
+
+	if (rm == NULL)
+		return;
+
+	puts("\t\tswitch (this.#role) {");
+	TAILQ_FOREACH(rr, &rm->rq, entries)
+		gen_role(rr->role, 2);
+	puts("\t\t\tbreak;\n"
+	     "\t\tdefault:\n"
+	     "\t\t\tprocess.abort();\n"
+	     "\t\t}");
+}
+
 /*
  * Generate the insertion function.
  */
@@ -253,8 +288,9 @@ gen_insert(const struct strct *p)
 		fputs(" number", stdout);
 
 	puts("\n"
-	     "\t{\n"
-	     "\t\treturn 0;\n"
+	     "\t{");
+	gen_rolemap(p->ins->rolemap);
+	puts("\t\treturn 0;\n"
 	     "\t}");
 }
 
@@ -356,8 +392,9 @@ gen_modifier(const struct config *cfg, const struct update *up)
 		fputs(" boolean", stdout);
 
 	puts("\n"
-	     "\t{\n"
-	     "\t\treturn false;\n"
+	     "\t{");
+	gen_rolemap(up->rolemap);
+	puts("\t\treturn false;\n"
 	     "\t}");
 }
 
@@ -529,6 +566,7 @@ gen_query(const struct config *cfg, const struct search *s)
 		puts("number");
 
 	puts("\t{");
+	gen_rolemap(s->rolemap);
 
 	if (s->type == STYPE_SEARCH)
 		puts("\t\treturn null;");
@@ -548,7 +586,6 @@ gen_api(const struct config *cfg, const struct strct *p)
 
 	if (p->ins != NULL)
 		gen_insert(p);
-
 	TAILQ_FOREACH(s, &p->sq, entries)
 		gen_query(cfg, s);
 	TAILQ_FOREACH(u, &p->dq, entries)
@@ -614,10 +651,10 @@ gen_strct(const struct strct *p, size_t pos)
 		p->name);
 
 	printf("\texport class %s {\n"
-	       "\t\t#role: number;\n"
+	       "\t\t#role: string;\n"
 	       "\t\treadonly obj: ortns.%sData;\n"
 	       "\n"
-	       "\t\tconstructor(role: number, obj: ortns.%sData)\n"
+	       "\t\tconstructor(role: string, obj: ortns.%sData)\n"
 	       "\t\t{\n"
 	       "\t\t\tthis.#role = role;\n"
 	       "\t\t\tthis.obj = obj;\n"
@@ -726,6 +763,72 @@ gen_alias_builder(const struct strct *p)
 }
 
 /*
+ * For any given role, emit all of the possible transitions from the
+ * current role into all possible roles, then all of the transitions
+ * from the roles "beneath" the current role.
+ */
+static void
+gen_ortctx_dbrole_role(const struct role *r)
+{
+	const struct role	*rr;
+
+	printf("\t\tcase '%s':\n"
+	       "\t\t\tswitch(newrole) {\n",
+	       r->name);
+	gen_role(r, 3);
+	puts("\t\t\t\tthis.#role = newrole;\n"
+	     "\t\t\t\treturn;\n"
+	     "\t\t\tdefault:\n"
+	     "\t\t\t\tbreak;\n"
+	     "\t\t\t}\n"
+	     "\t\t\tbreak;");
+	TAILQ_FOREACH(rr, &r->subrq, entries)
+		gen_ortctx_dbrole_role(rr);
+}
+
+/*
+ * Generate the dbRole role transition function.
+ */
+static void
+gen_ortctx_dbrole(const struct config *cfg)
+{
+	const struct role	*r, *rr;
+
+	if (TAILQ_EMPTY(&cfg->rq))
+		return;
+
+	puts("\n"
+	     "\tdbRole(newrole: string): void\n"
+	     "\t{\n"
+	     "\t\tif (this.#role === 'none')\n"
+	     "\t\t\tprocess.abort();\n"
+	     "\t\tif (newrole === 'all')\n"
+	     "\t\t\tprocess.abort();\n");
+
+	/* All possible descents from current into encompassed role. */
+
+	puts("\t\tswitch (this.#role) {\n"
+	     "\t\tcase 'default':\n"
+	     "\t\t\tthis.#role = newrole;\n"
+	     "\t\t\treturn;");
+
+	TAILQ_FOREACH(r, &cfg->rq, entries)
+		if (strcmp(r->name, "all") == 0)
+			break;
+
+	assert(r != NULL);
+	TAILQ_FOREACH(rr, &r->subrq, entries) 
+		gen_ortctx_dbrole_role(rr);
+
+	puts("\t\tdefault:\n"
+	     "\t\t\tbreak;\n"
+	     "\t\t}\n"
+	     "\n"
+	     "\t\tprocess.abort();\n"
+	     "\t}");
+}
+
+/*
  * Output the data access portion of the data model entirely within a
  * single class.
  */
@@ -754,13 +857,13 @@ gen_ortctx(const struct config *cfg)
 		"This object should be used for the lifetime of a "
 		"single \'request\', such as a request for a web "
 		"application.");
-	puts("export class ortctx {\n"
-	     "\t#role: number;\n"
-	     "\treadonly #o: ortdb;\n"
+	puts("export class ortctx {");
+	if (!TAILQ_EMPTY(&cfg->rq))
+		puts("\t#role: string = 'default';");
+	puts("\treadonly #o: ortdb;\n"
 	     "\n"
 	     "\tconstructor(o: ortdb) {\n"
 	     "\t\tthis.#o = o;\n"
-	     "\t\tthis.#role = 0;\n"
 	     "\t}\n"
 	     "\n"
 	     "\tdbTransImmediate(id: number): void\n"
@@ -781,12 +884,8 @@ gen_ortctx(const struct config *cfg)
 	     "\n"
 	     "\tdbTransCommit(id: number): void\n"
 	     "\t{\n"
-	     "\t}\n"
-	     "\n"
-	     "\tdbRole(newrole: number): void\n"
-	     "\t{\n"
-	     "\t\tthis.#role = newrole;\n"
 	     "\t}");
+	gen_ortctx_dbrole(cfg);
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		gen_api(cfg, p);
 	puts("}");

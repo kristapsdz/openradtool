@@ -117,6 +117,8 @@ print_var(size_t pos, size_t col, const struct field *f)
 	rc = f->type == FTYPE_ENUM ?
 		printf("ortns.%s", f->enm->name) :
 		printf("%s", ftypes[f->type]);
+	if (f->flags & FIELD_NULL)
+		printf("|null");
 
 	col += rc > 0 ? rc : 0;
 	return col;
@@ -307,7 +309,24 @@ gen_insert(const struct strct *p)
 		if (f->type == FTYPE_STRUCT ||
 		    (f->flags & FIELD_ROWID))
 			continue;
-		printf("\t\tparms.push(v%zu);\n", pos++);
+
+		if (f->type != FTYPE_PASSWORD) {
+			printf("\t\tparms.push(v%zu);\n", pos++);
+			continue;
+		}
+
+		if (f->flags & FIELD_NULL)
+			printf("\t\tif (v%zu === null)\n"
+			       "\t\t\tparms.push(null);\n"
+			       "\t\telse\n"
+			       "\t\t\tparms.push(bcrypt.hashSync"
+				"(v%zu, bcrypt.genSaltSync()));\n", 
+				pos, pos);
+		else
+			printf("\t\tparms.push(bcrypt.hashSync"
+				"(v%zu, bcrypt.genSaltSync()));\n", 
+				pos);
+		pos++;
 	}
 
 	puts("\n"
@@ -946,6 +965,7 @@ gen_nodejs(const struct config *cfg)
 	       "@packageDocumentation", getprogname());
 
 	puts("\n"
+	     "import bcrypt from 'bcrypt';\n"
 	     "import Database from 'better-sqlite3';\n");
 
 	gen_ortns(cfg);

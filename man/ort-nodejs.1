@@ -49,11 +49,13 @@ dependencies.
 The following example is a full web-server running on port 3000 using
 the Node framework.
 It uses the
-.Qq express
+.Qq express ,
 framework for web requests,
+.Qq bcrypt
+for passwords, and
 .Qq better-sqlite3
-for the database, and mandates the use of TypeScript instead of
-JavaScript.
+for the database.
+It mandates the use of TypeScript instead of JavaScript.
 It needs only the
 .Xr npm 1
 system installed and (depending on the operating system) a C/C++
@@ -64,20 +66,22 @@ Begin a project (if not already begun) as follows:
 .Bd -literal -offset indent
 % cd myproject
 % npm init -y
-% npm install typescript better-sqlite3 express
-% npm install @types/express @types/better-sqlite3
+% npm install typescript better-sqlite3 express bcrypt
+% npm install @types/express @types/bcrypt @types/better-sqlite3
 % npx tsc --init
 .Ed
 .Pp
-If compiling
+If installing
 .Qq better-sqlite3
+or
+.Qq bcrypt
 on
 .Ox ,
 you may need to specify an alternate compiler:
 .Bd -literal -offset indent
 % CXX=/usr/local/bin/clang++ \e
-  C=/usr/local/bin/clang \e
-  npm install better-sqlite3
+  CC=/usr/local/bin/clang \e
+  npm install better-sqlite3 bcrypt
 .Ed
 .Pp
 Modify

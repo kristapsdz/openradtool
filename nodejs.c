@@ -74,18 +74,18 @@ static	const char *const optypes[OPTYPE__MAX] = {
 };
 
 static	const char *const ftypes[FTYPE__MAX] = {
-	"number", /* FTYPE_BIT */
-	"number", /* FTYPE_DATE */
-	"number", /* FTYPE_EPOCH */
-	"number", /* FTYPE_INT */
-	"number", /* FTYPE_REAL */
+	"BigInt", /* FTYPE_BIT */
+	"BigInt", /* FTYPE_DATE */
+	"BigInt", /* FTYPE_EPOCH */
+	"BigInt", /* FTYPE_INT */
+	"BigInt", /* FTYPE_REAL */
 	"ArrayBuffer", /* FTYPE_BLOB */
 	"string", /* FTYPE_TEXT */
 	"string", /* FTYPE_PASSWORD */
 	"string", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 	NULL, /* FTYPE_ENUM */
-	"number", /* FTYPE_BITFIELD */
+	"BigInt", /* FTYPE_BITFIELD */
 };
 
 /*
@@ -221,14 +221,15 @@ gen_role(const struct role *r, size_t tabs)
 
 /*
  * Recursively generate all roles allowed by this rolemap.
+ * Returns non-zero if we wrote something, zero otherwise.
  */
-static void
+static int
 gen_rolemap(const struct rolemap *rm)
 {
 	const struct rref	*rr;
 
 	if (rm == NULL)
-		return;
+		return 0;
 
 	puts("\t\tswitch (this.#role) {");
 	TAILQ_FOREACH(rr, &rm->rq, entries)
@@ -237,6 +238,7 @@ gen_rolemap(const struct rolemap *rm)
 	     "\t\tdefault:\n"
 	     "\t\t\tprocess.abort();\n"
 	     "\t\t}");
+	return 1;
 }
 
 /*
@@ -283,14 +285,39 @@ gen_insert(const struct strct *p)
 	fputs("):", stdout);
 
 	if (col + 7 >= 72)
-		fputs("\n\t\tnumber", stdout);
+		fputs("\n\t\tBigInt", stdout);
 	else
-		fputs(" number", stdout);
+		fputs(" BigInt", stdout);
 
 	puts("\n"
 	     "\t{");
-	gen_rolemap(p->ins->rolemap);
-	puts("\t\treturn 0;\n"
+
+	printf("\t\tconst parms: any[] = [];\n"
+	       "\t\tlet info: Database.RunResult;\n"
+	       "\t\tconst stmt: Database.Statement =\n"
+	       "\t\t\tthis.#o.db.prepare(ortstmt.stmtBuilder\n"
+	       "\t\t\t(ortstmt.ortstmt.STMT_%s_INSERT));\n"
+	       "\n", p->name);
+
+	if (gen_rolemap(p->ins->rolemap))
+		puts("");
+
+	pos = 1;
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (f->type == FTYPE_STRUCT ||
+		    (f->flags & FIELD_ROWID))
+			continue;
+		printf("\t\tparms.push(v%zu);\n", pos++);
+	}
+
+	puts("\n"
+	     "\t\ttry {\n"
+	     "\t\t\tinfo = stmt.run(parms);\n"
+	     "\t\t} catch (er) {\n"
+	     "\t\t\treturn BigInt(-1);\n"
+	     "\t\t}\n"
+	     "\n"
+	     "\t\treturn BigInt(info.lastInsertRowid);\n"
 	     "\t}");
 }
 
@@ -703,6 +730,7 @@ gen_ortdb(void)
 		"server.");
 	printf("export class ortdb {\n"
 	       "\t#dbname: string;\n"
+	       "\tdb: Database.Database;\n"
 	       "\treadonly version: string = \'%s\';\n"
 	       "\treadonly vstamp: number = %lld;\n"
 	       "\n",
@@ -712,6 +740,8 @@ gen_ortdb(void)
 		"relative to the running application.");
 	puts("\tconstructor(dbname: string) {\n"
 	     "\t\tthis.#dbname = dbname;\n"
+	     "\t\tthis.db = new Database(dbname);\n"
+	     "\t\tthis.db.defaultSafeIntegers(true);\n"
 	     "\t}\n");
 	print_commentt(1, COMMENT_JS,
 		"Create a connection to the database. "
@@ -744,7 +774,7 @@ gen_alias_builder(const struct strct *p)
 
 	assert(last != NULL);
 	printf("\n"
-	       "\texport function ort_schema_%s(v: string): string\n"
+	       "\tfunction ort_schema_%s(v: string): string\n"
 	       "\t{\n"
 	       "\t\treturn ", p->name);
 	TAILQ_FOREACH(f, &p->fq, entries) {
@@ -837,11 +867,17 @@ gen_ortctx(const struct config *cfg)
 {
 	const struct strct	*p;
 
-	puts("namespace ortstmt {\n"
-	     "\tenum ortstmt {");
+	puts("\n"
+	     "namespace ortstmt {\n"
+	     "\texport enum ortstmt {");
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		print_sql_enums(2, p, LANG_JS);
 	puts("\t}\n"
+	     "\n"
+	     "\texport function stmtBuilder(idx: ortstmt): string\n"
+	     "\t{\n"
+	     "\t\treturn ortstmts[idx];\n"
+	     "\t}\n"
 	     "\n"
 	     "\tconst ortstmts: readonly string[] = [");
 	TAILQ_FOREACH(p, &cfg->sq, entries)
@@ -868,22 +904,27 @@ gen_ortctx(const struct config *cfg)
 	     "\n"
 	     "\tdbTransImmediate(id: number): void\n"
 	     "\t{\n"
+	     "\t\tthis.#o.db.exec(\'BEGIN TRANSACTION IMMEDIATE\');\n"
 	     "\t}\n"
 	     "\n"
 	     "\tdbTransDeferred(id: number): void\n"
 	     "\t{\n"
+	     "\t\tthis.#o.db.exec(\'BEGIN TRANSACTION DEFERRED\');\n"
 	     "\t}\n"
 	     "\n"
 	     "\tdbTransExclusive(id: number): void\n"
 	     "\t{\n"
+	     "\t\tthis.#o.db.exec(\'BEGIN TRANSACTION EXCLUSIVE\');\n"
 	     "\t}\n"
 	     "\n"
 	     "\tdbTransRollback(id: number): void\n"
 	     "\t{\n"
+	     "\t\tthis.#o.db.exec(\'ROLLBACK TRANSACTION\');\n"
 	     "\t}\n"
 	     "\n"
 	     "\tdbTransCommit(id: number): void\n"
 	     "\t{\n"
+	     "\t\tthis.#o.db.exec(\'COMMIT TRANSACTION\');\n"
 	     "\t}");
 	gen_ortctx_dbrole(cfg);
 	TAILQ_FOREACH(p, &cfg->sq, entries)
@@ -903,6 +944,9 @@ gen_nodejs(const struct config *cfg)
 	       "%s " VERSION ".\n"
 	       "DO NOT EDIT!\n"
 	       "@packageDocumentation", getprogname());
+
+	puts("\n"
+	     "import Database from 'better-sqlite3';\n");
 
 	gen_ortns(cfg);
 	gen_ortdb();

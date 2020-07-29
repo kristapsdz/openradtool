@@ -1,0 +1,178 @@
+.\"	$OpenBSD$
+.\"
+.\" Copyright (c) 2020 Kristaps Dzonsons <kristaps@bsd.lv>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate$
+.Dt ORT-NODEJS 1
+.Os
+.Sh NAME
+.Nm ort-nodejs
+.Nd generate node.js module
+.Sh SYNOPSIS
+.Nm ort-nodejs
+.Op Ar config...
+.Sh DESCRIPTION
+Accepts
+.Xr ort 5
+.Ar config
+files, defaulting to standard input,
+and generates a Node module in TypeScript.
+.Pp
+The output requires only the
+.Qq typescript
+and
+.Qq better-sqlite3
+dependencies.
+.\" The following requests should be uncommented and used where appropriate.
+.\" .Sh CONTEXT
+.\" For section 9 functions only.
+.\" .Sh RETURN VALUES
+.\" For sections 2, 3, and 9 function return values only.
+.\" .Sh ENVIRONMENT
+.\" For sections 1, 6, 7, and 8 only.
+.\" .Sh FILES
+.Sh EXIT STATUS
+.Ex -std
+.Sh EXAMPLES
+The following example is a full web-server running on port 3000 using
+the Node framework.
+It uses the
+.Qq express
+framework for web requests,
+.Qq better-sqlite3
+for the database, and mandates the use of TypeScript instead of
+JavaScript.
+It needs only the
+.Xr npm 1
+system installed and (depending on the operating system) a C/C++
+compiler for
+.Qq better-sqlite3 .
+.Pp
+Begin a project (if not already begun) as follows:
+.Bd -literal -offset indent
+% cd myproject
+% npm init -y
+% npm install typescript better-sqlite3 express
+% npm install @types/express @types/better-sqlite3
+% npx tsc --init
+.Ed
+.Pp
+If compiling
+.Qq better-sqlite3
+on
+.Ox ,
+you may need to specify an alternate compiler:
+.Bd -literal -offset indent
+% CXX=/usr/local/bin/clang++ \e
+  C=/usr/local/bin/clang \e
+  npm install better-sqlite3
+.Ed
+.Pp
+Modify
+.Pa package.json
+to mandate the use of TypeScript instead of JavaScript:
+.Bd -literal -offset indent
+[...]
+"main": "index.ts",
+"scripts": {
+  "test": "echo \e"Error: no test specified\e" && exit 1",
+  "tsc": "tsc"
+}
+[...]
+.Ed
+.Pp
+Next, modify
+.Pa tsconfig.json
+to use a more up-to-date output type for JavaScript, otherwise many
+TypeScript security idioms will not be available.
+.Bd -literal -offset indent
+"target": "es2015",
+.Ed
+.Pp
+Now use the following toy
+.Xr ort 5
+configuration installed as
+.Pa myproject.ort :
+.Bd -literal -offset indent
+roles {
+  role user;
+};
+struct user {
+  field name text;
+  field id int rowid;
+  insert;
+  roles default { insert; };
+};
+.Ed
+.Pp
+Compile the configuration as a module:
+.Bd -literal -offset indent
+% mkdir modules
+% ort-nodejs myproject.ort > modules/ort.ts
+.Ed
+.Pp
+Use the following simple application:
+.Bd -literal -offset indent
+import express, { Request, Response } from 'express';
+import { ort, ortns, ortctx, ortdb } from './modules/ort';
+
+const app = express();
+const db: ortdb = ort('test.db');
+
+app.get("/", function(req: Request, res: Response) {
+  const ctx: ortctx = db.connect();
+  const id: BigInt = ctx.db_user_insert('name');
+  res.send(id.toString());
+});
+
+app.listen(3000, function() {
+  console.log('Server is running.');
+});
+.Ed
+.Pp
+Compile the application.
+This will create
+.Pa index.js .
+.Bd -literal -offset indent
+% npm run tsc
+.Ed
+.Pp
+Make sure that the database exists.
+This should only be run once.
+.Bd -literal -offset indent
+% ort-sql db.ort | sqlite3 test.db
+.Ed
+.Pp
+Lastly, run the project itself:
+.Bd -literal -offset indent
+% node index.js
+Server is running.
+.Ed
+.Pp
+Making an HTTP request to
+.Qq localhost:3000
+will result in a display of the created user's identifier.
+.\" .Sh DIAGNOSTICS
+.\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
+.\" .Sh ERRORS
+.\" For sections 2, 3, 4, and 9 errno settings only.
+.Sh SEE ALSO
+.Xr npm 1 ,
+.Xr ort 5
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh CAVEATS
+.\" .Sh BUGS

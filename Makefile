@@ -39,6 +39,7 @@ HTMLS		 = archive.html \
 		   man/ort-c-header.1.html \
 		   man/ort-c-source.1.html \
 		   man/ort-javascript.1.html \
+		   man/ort-nodejs.1.html \
 		   man/ort-sql.1.html \
 		   man/ort-sqldiff.1.html \
 		   man/ort-xliff.1.html \

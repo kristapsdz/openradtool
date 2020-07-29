@@ -344,7 +344,8 @@ gen_insert(const struct strct *p)
  * Generate update/delete function.
  */
 static void
-gen_modifier(const struct config *cfg, const struct update *up)
+gen_modifier(const struct config *cfg,
+	const struct update *up, size_t num)
 {
 	const struct uref	*ref;
 	enum cmtt		 ct = COMMENT_JS_FRAG_OPEN;
@@ -414,6 +415,8 @@ gen_modifier(const struct config *cfg, const struct update *up)
 		"@return False on constraint violation, "
 		"true on success.");
 
+	/* Method signature. */
+
 	col = 8;
 	putchar('\t');
 	if ((col += print_name_update(up)) >= 72) {
@@ -437,10 +440,58 @@ gen_modifier(const struct config *cfg, const struct update *up)
 	else
 		fputs(" boolean", stdout);
 
+	/* Method body. */
+
 	puts("\n"
 	     "\t{");
-	gen_rolemap(up->rolemap);
-	puts("\t\treturn false;\n"
+	printf("\t\tconst parms: any[] = [];\n"
+	       "\t\tlet info: Database.RunResult;\n"
+	       "\t\tconst stmt: Database.Statement =\n"
+	       "\t\t\tthis.#o.db.prepare(ortstmt.stmtBuilder\n"
+	       "\t\t\t(ortstmt.ortstmt.STMT_%s_%s_%zu));\n"
+	       "\n", 
+	       up->parent->name,
+	       up->type == UP_MODIFY ? "UPDATE" : "DELETE",
+	       num);
+	if (gen_rolemap(up->rolemap))
+		puts("");
+
+	pos = 1;
+	TAILQ_FOREACH(ref, &up->mrq, entries) {
+		if (ref->field->type != FTYPE_PASSWORD ||
+		    ref->mod == MODTYPE_STRSET) {
+			printf("\t\tparms.push(v%zu);\n", pos++);
+			continue;
+		}
+		if (ref->field->flags & FIELD_NULL)
+			printf("\t\tif (v%zu === null)\n"
+			       "\t\t\tparms.push(null);\n"
+			       "\t\telse\n"
+			       "\t\t\tparms.push(bcrypt.hashSync"
+				"(v%zu, bcrypt.genSaltSync()));\n", 
+				pos, pos);
+		else
+			printf("\t\tparms.push(bcrypt.hashSync"
+				"(v%zu, bcrypt.genSaltSync()));\n", 
+				pos);
+		pos++;
+	}
+
+	TAILQ_FOREACH(ref, &up->crq, entries) {
+		assert(ref->field->type != FTYPE_STRUCT);
+		if (OPTYPE_ISUNARY(ref->op))
+			continue;
+		printf("\t\tparms.push(v%zu);\n", pos++);
+	}
+
+	puts("\n"
+	     "\t\ttry {\n"
+	     "\t\t\tinfo = stmt.run(parms);\n"
+	     "\t\t} catch (er) {\n"
+	     "\t\t\treturn false;\n"
+	     "\t\t}\n"
+	     "\n"
+	     "\t\treturn true;\n"
 	     "\t}");
 }
 
@@ -629,15 +680,18 @@ gen_api(const struct config *cfg, const struct strct *p)
 {
 	const struct search	*s;
 	const struct update	*u;
+	size_t			 pos;
 
 	if (p->ins != NULL)
 		gen_insert(p);
 	TAILQ_FOREACH(s, &p->sq, entries)
 		gen_query(cfg, s);
+	pos = 0;
 	TAILQ_FOREACH(u, &p->dq, entries)
-		gen_modifier(cfg, u);
+		gen_modifier(cfg, u, pos);
+	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
-		gen_modifier(cfg, u);
+		gen_modifier(cfg, u, pos);
 }
 
 static void

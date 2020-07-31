@@ -88,6 +88,23 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	"BigInt", /* FTYPE_BITFIELD */
 };
 
+static size_t
+xprintf(const char *fmt, ...) 
+	__attribute__((format(printf, 1, 2)));
+
+static size_t
+xprintf(const char *fmt, ...)
+{
+	va_list	 ap;
+	int	 rc;
+
+	va_start(ap, fmt);
+	rc = vprintf(fmt, ap);
+	va_end(ap);
+
+	return rc > 0 ? rc : 0;
+}
+
 /*
  * Print a variable vNN where NN is position "pos" (from one) with the
  * appropriate type in a method signature.
@@ -97,7 +114,6 @@ static	const char *const ftypes[FTYPE__MAX] = {
 static size_t
 print_var(size_t pos, size_t col, const struct field *f)
 {
-	int	rc;
 
 	if (pos > 1) {
 		putchar(',');
@@ -112,98 +128,16 @@ print_var(size_t pos, size_t col, const struct field *f)
 		col++;
 	}
 
-	col += (rc = printf("v%zu: ", pos)) > 0 ? rc : 0;
-
-	rc = f->type == FTYPE_ENUM ?
-		printf("ortns.%s", f->enm->name) :
-		printf("%s", ftypes[f->type]);
-	if (f->flags & FIELD_NULL)
-		printf("|null");
-
-	col += rc > 0 ? rc : 0;
-	return col;
-}
-
-static size_t
-print_name_update(const struct update *u)
-{
-	const struct uref *ur;
-	size_t	 	   col = 0;
-	int		   rc;
-
-	rc = printf("db_%s_%s", u->parent->name, utypes[u->type]);
-	col = rc > 0 ? rc : 0;
-
-	if (u->name == NULL && u->type == UP_MODIFY) {
-		if (!(u->flags & UPDATE_ALL))
-			TAILQ_FOREACH(ur, &u->mrq, entries) {
-				rc = printf("_%s_%s", 
-					ur->field->name, 
-					modtypes[ur->mod]);
-				col += rc > 0 ? rc : 0;
-			}
-		if (!TAILQ_EMPTY(&u->crq)) {
-			col += (rc = printf("_by")) > 0 ? rc : 0;
-			TAILQ_FOREACH(ur, &u->crq, entries) {
-				rc = printf("_%s_%s", 
-					ur->field->name, 
-					optypes[ur->op]);
-				col += rc > 0 ? rc : 0;
-			}
-		}
-	} else if (u->name == NULL) {
-		if (!TAILQ_EMPTY(&u->crq)) {
-			col += (rc = printf("_by")) > 0 ? rc : 0;
-			TAILQ_FOREACH(ur, &u->crq, entries) {
-				rc = printf("_%s_%s", 
-					ur->field->name, 
-					optypes[ur->op]);
-				col += rc > 0 ? rc : 0;
-			}
-		}
-	} else 
-		col += (rc = printf("_%s", u->name)) > 0 ? rc : 0;
+	col += xprintf("v%zu: ", pos);
+	col += f->type == FTYPE_ENUM ?
+		xprintf("ortns.%s", f->enm->name) :
+		xprintf("%s", ftypes[f->type]);
+	if ((f->flags & FIELD_NULL) ||
+	    (f->type == FTYPE_STRUCT &&
+	     (f->ref->source->flags & FIELD_NULL)))
+		col += xprintf("|null");
 
 	return col;
-}
-
-/*
- * Print the method name for an insertion.
- * Returns the number of columns printed.
- */
-static size_t
-print_name_insert(const struct strct *p)
-{
-	int	 rc;
-
-	return (rc = printf("db_%s_insert", p->name)) > 0 ? rc : 0;
-}
-
-/*
- * Print the method name for a query.
- * Returns the number of columns printed.
- */
-static size_t
-print_name_search(const struct search *s)
-{
-	const struct sent	*sent;
-	size_t			 sz = 0;
-	int			 rc;
-
-	rc = printf("db_%s_%s", s->parent->name, stypes[s->type]);
-	sz += rc > 0 ? rc : 0;
-
-	if (s->name == NULL && !TAILQ_EMPTY(&s->sntq)) {
-		sz += (rc = printf("_by")) > 0 ? rc : 0;
-		TAILQ_FOREACH(sent, &s->sntq, entries) {
-			rc = printf("_%s_%s", 
-				sent->uname, optypes[sent->op]);
-			sz += rc > 0 ? rc : 0;
-		}
-	} else if (s->name != NULL)
-		sz += (rc = printf("_%s", s->name)) > 0 ? rc : 0;
-
-	return sz;
 }
 
 static void
@@ -243,6 +177,156 @@ gen_rolemap(const struct rolemap *rm)
 	return 1;
 }
 
+static void
+gen_reffind(const struct strct *p)
+{
+	const struct field	*f;
+	size_t			 col;
+
+	if (!(p->flags & STRCT_HAS_NULLREFS))
+		return;
+
+	/* 
+	 * Do we have any null-ref fields in this?
+	 * (They might be in target references.)
+	 */
+
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if ((f->type == FTYPE_STRUCT) &&
+		    (f->ref->source->flags & FIELD_NULL))
+			break;
+
+	puts("");
+	putchar('\t');
+	col = 8 + xprintf("private db_%s_reffind", p->name);
+	if (col >= 72) {
+		fputs("\n\t(", stdout);
+		col = 9;
+	} else {
+		putchar('(');
+		col++;
+	}
+
+	printf("db: ortdb, obj: ortns.%sData): void\n"
+	       "\t{\n", p->name);
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (f->type != FTYPE_STRUCT)
+			continue;
+		if (f->ref->source->flags & FIELD_NULL)
+			printf("\t\tif (obj.%s !== null) {\n"
+			       "\t\t\tlet cols: any;\n"
+			       "\t\t\tconst parms: any[] = [];\n"
+			       "\t\t\tconst stmt: Database.Statement =\n"
+			       "\t\t\t\tdb.db.prepare(ortstmt.stmtBuilder\n"
+			       "\t\t\t\t(ortstmt.ortstmt.STMT_%s_BY_UNIQUE_%s));\n"
+			       "\t\t\tparms.push(obj.%s);\n"
+		               "\t\t\tcols = stmt.get(parms);\n"
+			       "\t\t\tif (typeof cols === \'undefined\')\n"
+			       "\t\t\t\tprocess.abort();\n"
+			       "\t\t\tobj.%s = this.db_%s_fill\n"
+			       "\t\t\t\t({row: <any[]>cols, pos: 0});\n"
+			       "\t\t}\n",
+			       f->ref->source->name,
+			       f->ref->target->parent->name,
+			       f->ref->target->name,
+			       f->ref->source->name,
+			       f->name,
+			       f->ref->target->parent->name);
+		if (!(f->ref->target->parent->flags & 
+		    STRCT_HAS_NULLREFS))
+			continue;
+		printf("\t\tthis.db_%s_reffind(db, obj.%s);\n", 
+			f->ref->target->parent->name, f->name);
+	}
+	puts("\t}");
+}
+
+static void
+gen_fill(const struct strct *p)
+{
+	size_t	 		 col;
+	const struct field	*f;
+
+	puts("");
+	putchar('\t');
+	col = 8 + xprintf("private db_%s_fill", p->name);
+	if (col >= 72) {
+		fputs("\n\t(", stdout);
+		col = 9;
+	} else {
+		putchar('(');
+		col++;
+	}
+
+	col += xprintf("data: {row: any[], pos: number}):");
+	if (col + strlen(p->name) + 13 >= 72)
+		fputs("\n\t\t", stdout);
+	else
+		putchar(' ');
+
+	printf("ortns.%sData\n", p->name);
+
+	printf("\t{\n"
+	       "\t\tconst obj: ortns.%sData = {\n", p->name);
+
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		switch (f->type) {
+		case FTYPE_BIT:
+		case FTYPE_BITFIELD:
+		case FTYPE_DATE:
+		case FTYPE_EPOCH:
+		case FTYPE_INT:
+			printf("\t\t\t'%s': BigInt(data.row[data.pos++]),\n",
+				f->name);
+			break;
+		case FTYPE_REAL:
+			printf("\t\t\t'%s': <number%s>"
+				"data.row[data.pos++],\n",
+				f->name, (f->flags & FIELD_NULL) ? 
+				"|null" : "");
+			break;
+		case FTYPE_BLOB:
+			/* TODO. */
+			break;
+		case FTYPE_TEXT:
+		case FTYPE_PASSWORD:
+		case FTYPE_EMAIL:
+			printf("\t\t\t'%s': <string%s>"
+				"data.row[data.pos++],\n",
+				f->name, (f->flags & FIELD_NULL) ? 
+				"|null" : "");
+			break;
+		case FTYPE_STRUCT:
+			puts("\t\t\t/* A dummy value for now. */");
+			if (f->ref->source->flags & FIELD_NULL) {
+				printf("\t\t\t'%s': null,\n", f->name);
+				break;
+			}
+			printf("\t\t\t'%s': <ortns.%sData>{},\n",
+				f->name, f->ref->target->parent->name);
+			break;
+		case FTYPE_ENUM:
+			printf("\t\t\t'%s': <ortns.%s>data.row[data.pos++],\n",
+				f->name, f->enm->name);
+			break;
+		default:
+			abort();
+		}
+	}
+
+	puts("\t\t};");
+
+	TAILQ_FOREACH(f, &p->fq, entries)
+		if (f->type == FTYPE_STRUCT &&
+		    !(f->ref->source->flags & FIELD_NULL))
+			printf("\t\tobj.%s = this.db_%s_fill(data);\n",
+				f->name, f->ref->target->parent->name);
+
+	puts("\t\treturn obj;\n"
+	     "\t}");
+}
+
 /*
  * Generate the insertion function.
  */
@@ -268,9 +352,9 @@ gen_insert(const struct strct *p)
 		"@return New row's identifier on success or "
 		"<0 otherwise.");
 
-	col = 8;
 	putchar('\t');
-	if ((col += print_name_insert(p)) >= 72) {
+	col = 8 + xprintf("db_%s_insert", p->name);
+	if (col >= 72) {
 		fputs("\n\t(", stdout);
 		col = 9;
 	} else {
@@ -291,10 +375,9 @@ gen_insert(const struct strct *p)
 	else
 		fputs(" BigInt", stdout);
 
-	puts("\n"
-	     "\t{");
-
-	printf("\t\tconst parms: any[] = [];\n"
+	printf("\n"
+	       "\t{\n"
+	       "\t\tconst parms: any[] = [];\n"
 	       "\t\tlet info: Database.RunResult;\n"
 	       "\t\tconst stmt: Database.Statement =\n"
 	       "\t\t\tthis.#o.db.prepare(ortstmt.stmtBuilder\n"
@@ -417,9 +500,35 @@ gen_modifier(const struct config *cfg,
 
 	/* Method signature. */
 
-	col = 8;
 	putchar('\t');
-	if ((col += print_name_update(up)) >= 72) {
+	col = 8 + xprintf("db_%s_%s",
+		up->parent->name, utypes[up->type]);
+
+	if (up->name == NULL && up->type == UP_MODIFY) {
+		if (!(up->flags & UPDATE_ALL))
+			TAILQ_FOREACH(ref, &up->mrq, entries)
+				col += xprintf("_%s_%s", 
+					ref->field->name, 
+					modtypes[ref->mod]);
+		if (!TAILQ_EMPTY(&up->crq)) {
+			col += xprintf("_by");
+			TAILQ_FOREACH(ref, &up->crq, entries)
+				col += xprintf("_%s_%s", 
+					ref->field->name, 
+					optypes[ref->op]);
+		}
+	} else if (up->name == NULL) {
+		if (!TAILQ_EMPTY(&up->crq)) {
+			col += xprintf("_by");
+			TAILQ_FOREACH(ref, &up->crq, entries)
+				col += xprintf("_%s_%s", 
+					ref->field->name, 
+					optypes[ref->op]);
+		}
+	} else 
+		col += xprintf("_%s", up->name);
+
+	if (col >= 72) {
 		fputs("\n\t(", stdout);
 		col = 9;
 	} else {
@@ -442,9 +551,9 @@ gen_modifier(const struct config *cfg,
 
 	/* Method body. */
 
-	puts("\n"
-	     "\t{");
-	printf("\t\tconst parms: any[] = [];\n"
+	printf("\n"
+	       "\t{\n"
+	       "\t\tconst parms: any[] = [];\n"
 	       "\t\tlet info: Database.RunResult;\n"
 	       "\t\tconst stmt: Database.Statement =\n"
 	       "\t\t\tthis.#o.db.prepare(ortstmt.stmtBuilder\n"
@@ -496,15 +605,16 @@ gen_modifier(const struct config *cfg,
 }
 
 /*
- * Generate the query function.
+ * Generate a query function.
  */
 static void
-gen_query(const struct config *cfg, const struct search *s)
+gen_query(const struct config *cfg,
+	const struct search *s, size_t num)
 {
 	const struct sent	*sent;
 	const struct strct	*rs;
 	size_t			 pos, col, sz;
-	int		 	 hasunary = 0, rc;
+	int		 	 hasunary = 0;
 
 	/*
 	 * The "real struct" we'll return is either ourselves or the one
@@ -521,10 +631,9 @@ gen_query(const struct config *cfg, const struct search *s)
 			break;
 		}
 
-	puts("");
-
 	/* Print per-query-type method documentation. */
 
+	puts("");
 	if (s->doc != NULL)
 		print_commentt(1, COMMENT_JS_FRAG_OPEN, s->doc);
 	else if (s->type == STYPE_SEARCH)
@@ -609,11 +718,19 @@ gen_query(const struct config *cfg, const struct search *s)
 		print_commentt(1, COMMENT_JS_FRAG_CLOSE,
 			"@return Count of results.");
 
-	/* Now generate the method body. */
-
-	col = 8;
 	putchar('\t');
-	if ((col += print_name_search(s)) >= 72) {
+	col = 8 + xprintf("db_%s_%s", 
+		s->parent->name, stypes[s->type]);
+
+	if (s->name == NULL && !TAILQ_EMPTY(&s->sntq)) {
+		col += xprintf("_by");
+		TAILQ_FOREACH(sent, &s->sntq, entries)
+			col += xprintf("_%s_%s", 
+				sent->uname, optypes[sent->op]);
+	} else if (s->name != NULL)
+		col += xprintf("_%s", s->name);
+
+	if (col >= 72) {
 		fputs("\n\t(", stdout);
 		col = 9;
 	} else {
@@ -635,8 +752,7 @@ gen_query(const struct config *cfg, const struct search *s)
 			fputs(", ", stdout);
 			col += 2;
 		}
-		rc = printf("cb: (res: ortns.%s) => void", rs->name);
-		col += rc > 0 ? rc : 0;
+		col += xprintf("cb: (res: ortns.%s) => void", rs->name);
 	}
 
 	fputs("): ", stdout);
@@ -663,13 +779,64 @@ gen_query(const struct config *cfg, const struct search *s)
 		puts("number");
 
 	puts("\t{");
-	gen_rolemap(s->rolemap);
+
+	/* Now generate the method body. */
 
 	if (s->type == STYPE_SEARCH)
-		puts("\t\treturn null;");
-	else if (s->type == STYPE_LIST)
+		printf("\t\tlet cols: any;\n"
+		       "\t\tlet obj: ortns.%sData;\n",
+		       rs->name);
+
+	printf("\t\tconst parms: any[] = [];\n"
+	       "\t\tconst stmt: Database.Statement =\n"
+	       "\t\t\tthis.#o.db.prepare(ortstmt.stmtBuilder\n"
+	       "\t\t\t(ortstmt.ortstmt.STMT_%s_BY_SEARCH_%zu));\n"
+	       "\n", s->parent->name, num);
+	if (gen_rolemap(s->rolemap))
+		puts("");
+
+	pos = 1;
+	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		if (OPTYPE_ISUNARY(sent->op))
+			continue;
+		if (sent->field->type != FTYPE_PASSWORD ||
+		    (sent->op == OPTYPE_STREQ ||
+		     sent->op == OPTYPE_STRNEQ)) {
+			printf("\t\tparms.push(v%zu);\n", pos++);
+			continue;
+		}
+		if (sent->field->flags & FIELD_NULL)
+			printf("\t\tif (v%zu === null)\n"
+			       "\t\t\tparms.push(null);\n"
+			       "\t\telse\n"
+			       "\t\t\tparms.push(bcrypt.hashSync"
+				"(v%zu, bcrypt.genSaltSync()));\n", 
+				pos, pos);
+		else
+			printf("\t\tparms.push(bcrypt.hashSync"
+				"(v%zu, bcrypt.genSaltSync()));\n", 
+				pos);
+		pos++;
+	}
+
+	if (s->type == STYPE_SEARCH) {
+		printf("\n"
+		       "\t\tcols = stmt.get(parms);\n"
+		       "\t\tif (typeof cols === 'undefined')\n"
+		       "\t\t\treturn null;\n"
+		       "\t\tobj = this.db_%s_fill"
+			"({row: <any[]>cols, pos: 0});\n",
+		       rs->name);
+		if (rs->flags & STRCT_HAS_NULLREFS)
+		       printf("\t\tthis.db_%s_reffind"
+				"(this.#o, obj);\n", rs->name);
+		printf("\t\treturn new ortns.%s(this.#role, obj)\n",
+			rs->name);
+	}
+
+	if (s->type == STYPE_LIST)
 		puts("\t\treturn [];");
-	else if (s->type == STYPE_COUNT)
+	if (s->type == STYPE_COUNT)
 		puts("\t\treturn 0;");
 
 	puts("\t}");
@@ -682,16 +849,20 @@ gen_api(const struct config *cfg, const struct strct *p)
 	const struct update	*u;
 	size_t			 pos;
 
+	gen_fill(p);
+	gen_reffind(p);
+
 	if (p->ins != NULL)
 		gen_insert(p);
+	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
-		gen_query(cfg, s);
+		gen_query(cfg, s, pos++);
 	pos = 0;
 	TAILQ_FOREACH(u, &p->dq, entries)
-		gen_modifier(cfg, u, pos);
+		gen_modifier(cfg, u, pos++);
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
-		gen_modifier(cfg, u, pos);
+		gen_modifier(cfg, u, pos++);
 }
 
 static void
@@ -733,15 +904,18 @@ gen_strct(const struct strct *p, size_t pos)
 			print_commentt(2, COMMENT_JS, f->doc);
 		printf("\t\t%s: ", f->name);
 		if (f->type == FTYPE_STRUCT)
-			printf("ortns.%s", 
+			printf("ortns.%sData", 
 				f->ref->target->parent->name);
 		else if (f->type == FTYPE_ENUM)
 			printf("ortns.%s", f->enm->name);
 		else
 			printf("%s", ftypes[f->type]);
 
-		if (f->flags & FIELD_NULL)
+		if (f->flags & FIELD_NULL ||
+		    (f->type == FTYPE_STRUCT &&
+		     (f->ref->source->flags & FIELD_NULL)))
 			printf("|null");
+
 		puts(";");
 	}
 	puts("\t}\n");
@@ -1020,7 +1194,7 @@ gen_nodejs(const struct config *cfg)
 
 	puts("\n"
 	     "import bcrypt from 'bcrypt';\n"
-	     "import Database from 'better-sqlite3';\n");
+	     "import Database from 'better-sqlite3';");
 
 	gen_ortns(cfg);
 	gen_ortdb();

@@ -34,7 +34,6 @@
 
 #include "version.h"
 #include "ort.h"
-#include "extern.h"
 #include "comments.h"
 
 static	const char *const stypes[STYPE__MAX] = {

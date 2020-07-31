@@ -33,7 +33,6 @@
 #include <unistd.h>
 
 #include "ort.h"
-#include "extern.h"
 
 struct	xliffunit {
 	char		*name;

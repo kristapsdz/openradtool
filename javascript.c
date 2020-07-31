@@ -34,7 +34,6 @@
 #include <unistd.h>
 
 #include "ort.h"
-#include "extern.h"
 #include "comments.h"
 #include "paths.h"
 

@@ -28,7 +28,6 @@
 #include <string.h>
 
 #include "ort.h"
-#include "extern.h"
 #include "cprotos.h"
 
 static	const char *const stypes[STYPE__MAX] = {

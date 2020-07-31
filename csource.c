@@ -37,7 +37,6 @@
 #include "version.h"
 #include "paths.h"
 #include "ort.h"
-#include "extern.h"
 #include "cprotos.h"
 #include "comments.h"
 
@@ -1478,6 +1477,11 @@ gen_func_reffind(const struct config *cfg, const struct strct *p)
 
 	if (!(p->flags & STRCT_HAS_NULLREFS))
 		return;
+
+	/* 
+	 * Do we have any null-ref fields in this?
+	 * (They might be in target references.)
+	 */
 
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if ((f->type == FTYPE_STRUCT) &&

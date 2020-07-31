@@ -29,7 +29,6 @@
 #include <string.h>
 
 #include "ort.h"
-#include "extern.h"
 
 static	const char *const stypes[STYPE__MAX] = {
 	"count", /* STYPE_COUNT */

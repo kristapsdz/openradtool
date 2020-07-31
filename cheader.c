@@ -33,7 +33,6 @@
 
 #include "version.h"
 #include "ort.h"
-#include "extern.h"
 #include "cprotos.h"
 #include "comments.h"
 

@@ -222,7 +222,7 @@ gen_reffind(const struct strct *p)
 			       "\t\t\tparms.push(obj.%s);\n"
 		               "\t\t\tcols = stmt.get(parms);\n"
 			       "\t\t\tif (typeof cols === \'undefined\')\n"
-			       "\t\t\t\tprocess.abort();\n"
+			       "\t\t\t\tthrow \'referenced row not found\';\n"
 			       "\t\t\tobj.%s = this.db_%s_fill\n"
 			       "\t\t\t\t({row: <any[]>cols, pos: 0});\n"
 			       "\t\t}\n",
@@ -709,10 +709,10 @@ gen_query(const struct config *cfg,
 
 	if (s->type == STYPE_SEARCH)
 		print_commentt(1, COMMENT_JS_FRAG_CLOSE,
-			"@return Result or null on fail.");
+			"@return Result or null if no results found.");
 	else if (s->type == STYPE_LIST)
 		print_commentt(1, COMMENT_JS_FRAG_CLOSE,
-			"@return Array of results which may be empty.");
+			"@return Result of null if no results found.");
 	else if (s->type == STYPE_COUNT)
 		print_commentt(1, COMMENT_JS_FRAG_CLOSE,
 			"@return Count of results.");
@@ -771,7 +771,7 @@ gen_query(const struct config *cfg,
 	if (s->type == STYPE_SEARCH)
 		printf("ortns.%s|null\n", rs->name);
 	else if (s->type == STYPE_LIST)
-		printf("ortns.%s[]\n", rs->name);
+		printf("ortns.%s|null\n", rs->name);
 	else if (s->type == STYPE_ITERATE)
 		puts("void");
 	else
@@ -781,9 +781,9 @@ gen_query(const struct config *cfg,
 
 	/* Now generate the method body. */
 
-	if (s->type == STYPE_SEARCH)
-		printf("\t\tlet cols: any;\n"
-		       "\t\tlet obj: ortns.%sData;\n",
+	if (s->type == STYPE_LIST)
+		printf("\t\tlet i: number;\n"
+		       "\t\tconst objs: ortns.%sData[] = [];\n",
 		       rs->name);
 
 	printf("\t\tconst parms: any[] = [];\n"
@@ -817,26 +817,47 @@ gen_query(const struct config *cfg,
 				pos);
 		pos++;
 	}
+	
+	puts("");
 
-	if (s->type == STYPE_SEARCH) {
-		printf("\n"
-		       "\t\tcols = stmt.get(parms);\n"
+	switch (s->type) {
+	case STYPE_SEARCH:
+		printf("\t\tconst cols: any = stmt.get(parms);\n"
+		       "\n"
 		       "\t\tif (typeof cols === 'undefined')\n"
 		       "\t\t\treturn null;\n"
-		       "\t\tobj = this.db_%s_fill"
-			"({row: <any[]>cols, pos: 0});\n",
-		       rs->name);
+		       "\t\tconst obj: ortns.%sData = \n"
+		       "\t\t\tthis.db_%s_fill"
+		       	"({row: <any[]>cols, pos: 0});\n",
+		       rs->name, rs->name);
 		if (rs->flags & STRCT_HAS_NULLREFS)
 		       printf("\t\tthis.db_%s_reffind"
 				"(this.#o, obj);\n", rs->name);
-		printf("\t\treturn new ortns.%s(this.#role, obj)\n",
+		printf("\t\treturn new ortns.%s(this.#role, [obj]);\n",
 			rs->name);
-	}
-
-	if (s->type == STYPE_LIST)
-		puts("\t\treturn [];");
-	if (s->type == STYPE_COUNT)
+		break;
+	case STYPE_LIST:
+		printf("\t\tconst rows: any[] = stmt.all(parms);\n"
+		       "\n"
+		       "\t\tif (rows.length === 0)\n"
+		       "\t\t\treturn null;\n"
+		       "\t\tfor (i = 0; i < rows.length; i++)\n"
+		       "\t\t\tobjs.push(this.db_%s_fill\n"
+		       "\t\t\t\t({row: <any[]>rows[i], pos: 0}));\n",
+		       rs->name);
+		if (rs->flags & STRCT_HAS_NULLREFS)
+			printf("\t\tfor (i = 0; i < objs.length; i++)\n"
+			       "\t\t\tthis.db_%s_reffind"
+				"(this.#o, objs[i]);\n", rs->name);
+		printf("\t\treturn new ortns.%s(this.#role, objs);\n",
+			rs->name);
+		break;
+	case STYPE_COUNT:
 		puts("\t\treturn 0;");
+		break;
+	default:
+		break;
+	}
 
 	puts("\t}");
 }
@@ -925,9 +946,9 @@ gen_strct(const struct strct *p, size_t pos)
 
 	printf("\texport class %s {\n"
 	       "\t\t#role: string;\n"
-	       "\t\treadonly obj: ortns.%sData;\n"
+	       "\t\treadonly obj: ortns.%sData[];\n"
 	       "\n"
-	       "\t\tconstructor(role: string, obj: ortns.%sData)\n"
+	       "\t\tconstructor(role: string, obj: ortns.%sData[])\n"
 	       "\t\t{\n"
 	       "\t\t\tthis.#role = role;\n"
 	       "\t\t\tthis.obj = obj;\n"

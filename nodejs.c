@@ -775,7 +775,7 @@ gen_query(const struct config *cfg,
 	else if (s->type == STYPE_ITERATE)
 		puts("void");
 	else
-		puts("number");
+		puts("BigInt");
 
 	puts("\t{");
 
@@ -836,6 +836,17 @@ gen_query(const struct config *cfg,
 		printf("\t\treturn new ortns.%s(this.#role, [obj]);\n",
 			rs->name);
 		break;
+	case STYPE_ITERATE:
+		printf("\t\tfor (const cols of stmt.iterate(parms)) {\n"
+		       "\t\t\tconst obj: ortns.%sData = this.db_%s_fill\n"
+		       "\t\t\t\t({row: <any>cols, pos: 0});\n",
+		       rs->name, rs->name);
+		if (rs->flags & STRCT_HAS_NULLREFS)
+			printf("\t\t\tthis.db_%s_reffind"
+				"(this.#o, obj);\n", rs->name);
+		printf("\t\t\tcb(new ortns.%s(this.#role, [obj]));\n"
+		       "\t\t}\n", rs->name);
+		break;
 	case STYPE_LIST:
 		printf("\t\tconst rows: any[] = stmt.all(parms);\n"
 		       "\n"
@@ -853,7 +864,11 @@ gen_query(const struct config *cfg,
 			rs->name);
 		break;
 	case STYPE_COUNT:
-		puts("\t\treturn 0;");
+		printf("\t\tconst cols: any = stmt.get(parms);\n"
+		       "\n"
+		       "\t\tif (typeof cols === 'undefined')\n"
+		       "\t\t\tthrow \'count returned no result!?\';\n"
+		       "\t\treturn BigInt(cols[0]);\n");
 		break;
 	default:
 		break;

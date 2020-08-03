@@ -771,7 +771,7 @@ gen_query(const struct config *cfg,
 	if (s->type == STYPE_SEARCH)
 		printf("ortns.%s|null\n", rs->name);
 	else if (s->type == STYPE_LIST)
-		printf("ortns.%s|null\n", rs->name);
+		printf("ortns.%s[]\n", rs->name);
 	else if (s->type == STYPE_ITERATE)
 		puts("void");
 	else
@@ -780,11 +780,6 @@ gen_query(const struct config *cfg,
 	puts("\t{");
 
 	/* Now generate the method body. */
-
-	if (s->type == STYPE_LIST)
-		printf("\t\tlet i: number;\n"
-		       "\t\tconst objs: ortns.%sData[] = [];\n",
-		       rs->name);
 
 	printf("\t\tconst parms: any[] = [];\n"
 	       "\t\tconst stmt: Database.Statement =\n"
@@ -833,35 +828,37 @@ gen_query(const struct config *cfg,
 		if (rs->flags & STRCT_HAS_NULLREFS)
 		       printf("\t\tthis.db_%s_reffind"
 				"(this.#o, obj);\n", rs->name);
-		printf("\t\treturn new ortns.%s(this.#role, [obj]);\n",
+		printf("\t\treturn new ortns.%s(this.#role, obj);\n",
 			rs->name);
 		break;
 	case STYPE_ITERATE:
 		printf("\t\tfor (const cols of stmt.iterate(parms)) {\n"
-		       "\t\t\tconst obj: ortns.%sData = this.db_%s_fill\n"
-		       "\t\t\t\t({row: <any>cols, pos: 0});\n",
+		       "\t\t\tconst obj: ortns.%sData =\n"
+		       "\t\t\t\tthis.db_%s_fill"
+		       	"({row: <any>cols, pos: 0});\n",
 		       rs->name, rs->name);
 		if (rs->flags & STRCT_HAS_NULLREFS)
 			printf("\t\t\tthis.db_%s_reffind"
 				"(this.#o, obj);\n", rs->name);
-		printf("\t\t\tcb(new ortns.%s(this.#role, [obj]));\n"
+		printf("\t\t\tcb(new ortns.%s(this.#role, obj));\n"
 		       "\t\t}\n", rs->name);
 		break;
 	case STYPE_LIST:
 		printf("\t\tconst rows: any[] = stmt.all(parms);\n"
+		       "\t\tconst objs: ortns.%s[] = [];\n"
+		       "\t\tlet i: number;\n"
 		       "\n"
-		       "\t\tif (rows.length === 0)\n"
-		       "\t\t\treturn null;\n"
-		       "\t\tfor (i = 0; i < rows.length; i++)\n"
-		       "\t\t\tobjs.push(this.db_%s_fill\n"
-		       "\t\t\t\t({row: <any[]>rows[i], pos: 0}));\n",
-		       rs->name);
+		       "\t\tfor (i = 0; i < rows.length; i++) {\n"
+		       "\t\t\tconst obj: ortns.%sData =\n"
+		       "\t\t\t\tthis.db_%s_fill"
+		       	"({row: <any[]>rows[i], pos: 0});\n",
+		       rs->name, rs->name, rs->name);
 		if (rs->flags & STRCT_HAS_NULLREFS)
-			printf("\t\tfor (i = 0; i < objs.length; i++)\n"
-			       "\t\t\tthis.db_%s_reffind"
-				"(this.#o, objs[i]);\n", rs->name);
-		printf("\t\treturn new ortns.%s(this.#role, objs);\n",
-			rs->name);
+			printf("\t\t\tthis.db_%s_reffind"
+				"(this.#o, obj);\n", rs->name);
+		printf("\t\t\tobjs.push(new ortns.%s(this.#role, obj));\n"
+		       "\t\t}\n"
+		       "\t\treturn objs;\n", rs->name);
 		break;
 	case STYPE_COUNT:
 		printf("\t\tconst cols: any = stmt.get(parms);\n"
@@ -927,6 +924,8 @@ static void
 gen_strct(const struct strct *p, size_t pos)
 {
 	const struct field	*f;
+	const struct rref	*r;
+	const char		*tab;
 
 	if (pos)
 		puts("");
@@ -955,21 +954,88 @@ gen_strct(const struct strct *p, size_t pos)
 	}
 	puts("\t}\n");
 
+	printf("\tfunction db_export_%s"
+		"(role: string, obj: %sData): any\n"
+	       "\t{\n"
+	       "\t\tconst res: any = {}\n"
+	       "\n", p->name, p->name);
+	TAILQ_FOREACH(f, &p->fq, entries) {
+		if (f->flags & FIELD_NOEXPORT ||
+		    f->type == FTYPE_PASSWORD)
+			continue;
+
+		tab = "";
+		if (f->rolemap != NULL) {
+			tab = "\t";
+			puts("\t\tswitch (role) {");
+			TAILQ_FOREACH(r, &f->rolemap->rq, entries)
+				gen_role(r->role, 2);
+			print_commentt(3, COMMENT_C, 
+				"Don't export field to noted roles.");
+			puts("\t\t\tbreak;\n"
+			     "\t\tdefault:");
+		}
+
+		if (f->type == FTYPE_STRUCT) {
+	     		if (f->ref->source->flags & FIELD_NULL)
+				printf("%s\t\tres[\'%s\'] = "
+					"obj[\'%s\'] === null ?\n"
+				       "%s\t\t\tnull : db_export_%s"
+				       "(role, obj[\'%s\'])\n",
+				       tab, f->name, f->name, tab,
+				       f->ref->target->parent->name,
+				       f->name);
+			else
+				printf("%s\t\tres[\'%s\'] = "
+					"db_export_%s"
+					"(role, obj[\'%s\'])\n",
+				       tab, f->name, 
+				       f->ref->target->parent->name,
+				       f->name);
+		} else
+			printf("%s\t\tres[\'%s\'] = obj[\'%s\'];\n",
+				tab, f->name, f->name);
+
+		if (f->rolemap != NULL) 
+			puts("\t\t\tbreak;\n"
+			      "\t\t}");
+	}
+	puts("\n"
+	     "\t\treturn obj;\n"
+	     "\t}\n");
+
 	print_commentv(1, COMMENT_JS,
 		"Class instance of {@link ortns.%sData}.",
 		p->name);
-
 	printf("\texport class %s {\n"
-	       "\t\t#role: string;\n"
-	       "\t\treadonly obj: ortns.%sData[];\n"
-	       "\n"
-	       "\t\tconstructor(role: string, obj: ortns.%sData[])\n"
+	       "\t\treadonly #role: string;\n"
+	       "\t\treadonly #obj: ortns.%sData;\n"
+	       "\n", p->name, p->name);
+
+	print_commentv(2, COMMENT_JS,
+		"A {@link ortns.%sData} as extracted from the database "
+		"in a particular role.\n"
+		"@param role The role in which this was extracted "
+		"from the database. When exported, this role will be "
+		"checked for permission to export.\n"
+		"@param obj The raw data.", p->name);
+	printf("\t\tconstructor(role: string, obj: ortns.%sData)\n"
 	       "\t\t{\n"
 	       "\t\t\tthis.#role = role;\n"
-	       "\t\t\tthis.obj = obj;\n"
+	       "\t\t\tthis.#obj = obj;\n"
 	       "\t\t}\n"
-	       "\t}\n",
-	       p->name, p->name, p->name);
+	       "\n", p->name);
+
+	print_commentv(2, COMMENT_JS,
+		"Export the contained {@link ortns.%sData} respecting "
+		"fields not exported, roles, etc.  It's safe to call "
+		"`JSON.stringify()` on the returned object to write "
+		"responses.", p->name);
+	printf("\t\texport(): any\n"
+	       "\t\t{\n"
+	       "\t\t\treturn db_export_%s(this.#role, this.#obj);\n"
+	       "\t\t}\n"
+	       "\t}\n", p->name);
 }
 
 /*
@@ -1011,7 +1077,6 @@ gen_ortdb(void)
 		"Only one of these should exist per running node.js "
 		"server.");
 	printf("export class ortdb {\n"
-	       "\t#dbname: string;\n"
 	       "\tdb: Database.Database;\n"
 	       "\treadonly version: string = \'%s\';\n"
 	       "\treadonly vstamp: number = %lld;\n"
@@ -1021,7 +1086,6 @@ gen_ortdb(void)
 		"@param dbname The file-name of the database "
 		"relative to the running application.");
 	puts("\tconstructor(dbname: string) {\n"
-	     "\t\tthis.#dbname = dbname;\n"
 	     "\t\tthis.db = new Database(dbname);\n"
 	     "\t\tthis.db.defaultSafeIntegers(true);\n"
 	     "\t}\n");
@@ -1182,6 +1246,11 @@ gen_ortctx(const struct config *cfg)
 	     "\n"
 	     "\tconstructor(o: ortdb) {\n"
 	     "\t\tthis.#o = o;\n"
+	     "\t}\n"
+	     "\n"
+	     "\tdbRoleCurrent(): string\n"
+	     "\t{\n"
+	     "\t\treturn this.#role;\n"
 	     "\t}\n"
 	     "\n"
 	     "\tdbTransImmediate(id: number): void\n"

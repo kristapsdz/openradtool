@@ -1874,16 +1874,16 @@ gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 
 	*sp = 0;
 
-	if (FIELD_NOEXPORT & f->flags) {
-		if ( ! hassp)
+	if (f->flags & FIELD_NOEXPORT) {
+		if (!hassp)
 			puts("");
 		print_commentv(1, COMMENT_C, "Omitting %s: "
 			"marked no export.", f->name);
 		puts("");
 		*sp = 1;
 		return;
-	} else if (FTYPE_PASSWORD == f->type) {
-		if ( ! hassp)
+	} else if (f->type == FTYPE_PASSWORD) {
+		if (!hassp)
 			puts("");
 		print_commentv(1, COMMENT_C, "Omitting %s: "
 			"is a password hash.", f->name);
@@ -1892,8 +1892,8 @@ gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 		return;
 	}
 
-	if (NULL != f->rolemap) {
-		if ( ! hassp)
+	if (f->rolemap != NULL) {
+		if (!hassp)
 			puts("");
 		puts("\tswitch (db_role_stored(p->priv_store)) {");
 		TAILQ_FOREACH(rs, &f->rolemap->rq, entries)
@@ -1906,9 +1906,9 @@ gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 	} else
 		tabs[1] = '\0';
 
-	if (FTYPE_STRUCT != f->type) {
-		if (FIELD_NULL & f->flags) {
-			if ( ! hassp && ! *sp)
+	if (f->type != FTYPE_STRUCT) {
+		if (f->flags & FIELD_NULL) {
+			if (!hassp && !*sp)
 				puts("");
 			printf("%sif (!p->has_%s)\n"
 			       "%s\tkjson_putnullp(r, \"%s\");\n"
@@ -1917,7 +1917,8 @@ gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 			       f->name, tabs, tabs);
 		} else
 			printf("%s", tabs);
-		if (FTYPE_BLOB == f->type)
+
+		if (f->type == FTYPE_BLOB)
 			printf("%s(r, \"%s\", buf%zu);\n",
 				puttypes[f->type], 
 				f->name, ++(*pos));
@@ -1925,12 +1926,12 @@ gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 			printf("%s(r, \"%s\", p->%s);\n", 
 				puttypes[f->type], 
 				f->name, f->name);
-		if (FIELD_NULL & f->flags && ! *sp) {
+		if ((f->flags & FIELD_NULL) && !*sp) {
 			puts("");
 			*sp = 1;
 		}
-	} else if (FIELD_NULL & f->ref->source->flags) {
-		if ( ! hassp && ! *sp)
+	} else if (f->ref->source->flags & FIELD_NULL) {
+		if (!hassp && !*sp)
 			puts("");
 		printf("%sif (p->has_%s) {\n"
 		       "%s\tkjson_objp_open(r, \"%s\");\n"
@@ -1941,7 +1942,7 @@ gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 			tabs, f->name, tabs, f->name,
 			tabs, f->ref->target->parent->name, f->name, 
 			tabs, tabs, tabs, f->name);
-		if ( ! *sp) {
+		if (!*sp) {
 			puts("");
 			*sp = 1;
 		}
@@ -1952,7 +1953,7 @@ gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 			tabs, f->name, tabs, 
 			f->ref->target->parent->name, f->name, tabs);
 
-	if (NULL != f->rolemap) {
+	if (f->rolemap != NULL) {
 		puts("\t\tbreak;\n"
 		     "\t}\n");
 		*sp = 1;

@@ -143,18 +143,18 @@ database routines, and JSON output) into one pair of files.
 Let
 .Pa foo.ort
 be the configuration file.
-.Bd -literal
-ort-c-header -jv foo.ort > db.h
-ort-c-source -jv foo.ort > db.c
+.Bd -literal -offset indent
+% ort-c-header -jv foo.ort > db.h
+% ort-c-source -jv foo.ort > db.c
 .Ed
 .Pp
 Breaking up into two header and source files: one for basic database
 functions, the other for JSON output.
-.Bd -literal
-ort-c-header foo.ort > db.h
-ort-c-header -g JSON_H -j -Nbd foo.ort > json.h
-ort-c-source -h db.h > db.c
-ort-c-source -j -Nd -Idj -h db.h,json.h > json.c
+.Bd -literal -offset indent
+% ort-c-header foo.ort > db.h
+% ort-c-header -g JSON_H -j -Nbd foo.ort > json.h
+% ort-c-source -h db.h > db.c
+% ort-c-source -j -Nd -Idj -h db.h,json.h > json.c
 .Ed
 .Pp
 In this more complicated snippet, the

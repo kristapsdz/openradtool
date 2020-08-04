@@ -261,8 +261,10 @@ is a noop.
 .It Li void db_trans_commit(struct ort *p, size_t id)
 Commit a transaction opened by
 .Fn db_trans_open
-with unique transaction identifier
+with identifier
 .Fa id .
+If an error occurs, subsequent database access will cause the system to
+.Xr exit 3 .
 .It Li void db_trans_open(struct ort *p, size_t id, int mode)
 Open a transaction with a unique identifier
 .Fa id .
@@ -276,14 +278,19 @@ locks (no writes allowed, reads allowed) on queries and unshared locks
 If >0, the transaction immediately enters unshared lock mode.
 If <0, the transaction locks exclusively, preventing all other
 access.
+Using >0 is the preferred way of creating database transactions.
+If an error occurs, subsequent database access will cause the system to
+.Xr exit 3 .
 .It Li void db_trans_rollback(struct ort *p, size_t id)
 Roll-back a transaction opened by
 .Fn db_trans_open
-with unique transaction identifier
+with identifier
 .Fa id .
-.It Li void db_role(struct ort *ctx, enum ort_role r)
+If an error occurs, subsequent database access will cause the system to
+.Xr exit 3 .
+.It Li void db_role(struct ort *ctx, enum ort_role newrole)
 If roles are enabled, move from the current role to
-.Fa r .
+.Fa newrole .
 If the role is the same as the current role, this does nothing.
 Roles may only transition to ancestor roles, not descendant roles or
 siblings, or any other non-ancestor roles.

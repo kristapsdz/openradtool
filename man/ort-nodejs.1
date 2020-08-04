@@ -35,6 +35,101 @@ The output requires only the
 and
 .Qq better-sqlite3
 dependencies.
+.Ss Module
+A
+.Nm
+context is initialised using the
+.Fn ort "dbname: string" Ns No : ortdb
+function from the application as follows.
+.Bd -literal -offset indent
+const db: ortdb = ort('path/to/data.db');
+.Ed
+.Pp
+The
+.Pa path/to/data.db
+must be an existing SQLite3 database usually created with
+.Xr ort-sql 1 .
+There should be one
+.Vt ortdb
+module instanced per application.
+It has the following members:
+.Bl -tag -width Ds -offset indent
+.It Fn connect Ns No : ortctx
+Connect to the database.
+This should be invoked for each request.
+In applications not having a request, this corresponds to a single
+operator sequence.
+.It Va version Ns No : string
+The version of
+.Nm
+used to create the module.
+.It Va vstamp Ns No : number
+The numeric version of
+.Nm
+used to create the module.
+.El
+.Pp
+Database manipulation occurs with
+.Vt ortctx
+objects, which consist of the following:
+.Bl -tag -width Ds -offset indent
+.It Fn db_role "newrole: string" Ns No : void
+If roles are enabled, move from the current role to
+.Fa newrole .
+If the role is the same as the current role, this does nothing.
+Roles may only transition to ancestor roles, not descendant roles or
+siblings, or any other non-ancestor roles.
+The only exception is when leaving
+.Qq default
+or entering
+.Qq none .
+This does not return failure: on role violation, it invokes
+.Fn process.abort .
+.It Fn db_role_open_current "id: number" Ns No : string
+If roles are enabled, get the currently-assigned role.
+If
+.Fn db_role
+hasn't yet been called, this will be
+.Qq default .
+Throws an exception on error.
+.It Fn db_trans_open_immediate "id: number" Ns No : void
+Open a transaction with a unique identifier
+.Fa id .
+This is the preferred way of creating database transactions.
+The transaction immediately enters unshared lock mode (single writer,
+readers allowed).
+Throws an exception on error.
+.It Fn db_trans_open_deferred "id: number" Ns No : void
+Open a transaction with a unique identifier
+.Fa id .
+The transaction locks the database on first access with shared locks (no
+writes allowed, reads allowed) on queries and unshared locks (single
+writer, reads allowed) on modification.
+Throws an exception on error.
+.It Fn db_trans_exclusive "id: number" Ns No : void
+Open a transaction with a unique identifier
+.Fa id .
+The transaction locks exclusively, preventing all other access.
+Throws an exception on error.
+.It Fn db_trans_commit "id: number" Ns No : void
+Commit a transaction opened by
+.Fn db_trans_open_immediate ,
+.Fn db_trans_open_deferred ,
+or
+.Fn db_trans_open_exclusive
+with identifier
+.Fa id .
+Throws an exception on error.
+.It Fn db_trans_rollback "id: number" Ns No : void
+Roll-back a transaction opened by
+.Fn db_trans_open_immediate ,
+.Fn db_trans_open_deferred ,
+or
+.Fn db_trans_open_exclusive
+with identifier
+.Fa id .
+Throws an exception on error.
+.El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

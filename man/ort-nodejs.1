@@ -53,7 +53,7 @@ There should be one
 .Vt ortdb
 module instanced per application.
 It has the following members:
-.Bl -tag -width Ds -offset indent
+.Bl -tag -width Ds
 .It Fn connect Ns No : ortctx
 Connect to the database.
 This should be invoked for each request.
@@ -72,7 +72,7 @@ used to create the module.
 Database manipulation occurs with
 .Vt ortctx
 objects, which consist of the following:
-.Bl -tag -width Ds -offset indent
+.Bl -tag -width Ds
 .It Fn db_role "newrole: string" Ns No : void
 If roles are enabled, move from the current role to
 .Fa newrole .
@@ -91,26 +91,26 @@ If
 .Fn db_role
 hasn't yet been called, this will be
 .Qq default .
-Throws an exception on error.
+Throws an exception on database error.
 .It Fn db_trans_open_immediate "id: number" Ns No : void
 Open a transaction with a unique identifier
 .Fa id .
 This is the preferred way of creating database transactions.
 The transaction immediately enters unshared lock mode (single writer,
 readers allowed).
-Throws an exception on error.
+Throws an exception on database error.
 .It Fn db_trans_open_deferred "id: number" Ns No : void
 Open a transaction with a unique identifier
 .Fa id .
 The transaction locks the database on first access with shared locks (no
 writes allowed, reads allowed) on queries and unshared locks (single
 writer, reads allowed) on modification.
-Throws an exception on error.
+Throws an exception on database error.
 .It Fn db_trans_exclusive "id: number" Ns No : void
 Open a transaction with a unique identifier
 .Fa id .
 The transaction locks exclusively, preventing all other access.
-Throws an exception on error.
+Throws an exception on database error.
 .It Fn db_trans_commit "id: number" Ns No : void
 Commit a transaction opened by
 .Fn db_trans_open_immediate ,
@@ -119,7 +119,7 @@ or
 .Fn db_trans_open_exclusive
 with identifier
 .Fa id .
-Throws an exception on error.
+Throws an exception on database error.
 .It Fn db_trans_rollback "id: number" Ns No : void
 Roll-back a transaction opened by
 .Fn db_trans_open_immediate ,
@@ -128,7 +128,140 @@ or
 .Fn db_trans_open_exclusive
 with identifier
 .Fa id .
-Throws an exception on error.
+Throws an exception on database error.
+.El
+.Pp
+Each structure has a number of operations available in
+.Vt ortctx .
+These are all stipulated as
+.Cm delete ,
+.Cm insert ,
+.Cm iterate ,
+.Cm list ,
+.Cm search ,
+and
+.Cm update
+statements in the configuration.
+Let
+.Qq foo
+be the name of the exemplar structure.
+All of these functions will throw an exception on database error.
+.Bl -tag -width Ds
+.It Fn "db_foo_delete_xxxx" "ARGS" Ns No : void
+Run the named
+.Cm delete
+function
+.Qq xxxx .
+The
+.Fa ARGS
+passed to this function are the fields that constrain which rows are
+deleted.
+Parameters are only specified for operations for binary-operator
+constraints, i.e., those not checking for null status.
+.It Fn "db_foo_delete_by_yy_op" "ARGS" Ns No : void
+Like
+.Fn db_foo_delete_xxxx ,
+but using an un-named
+.Cm delete
+statement constrained by
+.Qq yy
+with operation
+.Qq op .
+.It Fn "db_foo_get_xxxx" "ARGS" Ns No : ortns.foo|null
+The
+.Cm search
+statement named
+.Qq xxxx .
+The function accepts variables for all binary-operator fields to check
+(i.e., all except for those checking for null).
+.It Fn "db_foo_get_by_xxxx_op1_yy_zz_op2" "ARGS" Ns No : ortns.foo|null
+Like
+.Fn db_foo_get_xxxx ,
+but for (possibly-nested) structures.
+In the given example,
+.Qq xxxx
+is a field in the given structure with operation
+.Qq op1
+and
+.Qq yy_zz
+means a field
+.Qq zz
+in the nested structure
+.Qq yy
+with operation
+.Qq op2 .
+.It Fn "db_foo_insert" "ARGS" Ns No : BigInt
+Insert a row and return its identifier or -1 on constraint failure.
+This accepts all native fields
+.Fa ARGS
+as parameters excluding
+.Cm rowid ,
+which is automatically set by the database.
+If any fields are specified as
+.Cm null ,
+they are passed into this functions as pointers.
+The null values must then be specified as
+.Dv NULL
+pointers.
+This function is only generated if the
+.Cm insert
+statement is specified for the given structure.
+.It Fn "db_foo_iterate" "ARGS" "cb" Ns No : void
+Like
+.Fn db_foo_iterate_xxxx
+but iterating over all rows.
+.It Fn "db_foo_iterate_xxxx" "ARGS" "cb" Ns No : void
+Like
+.Fn db_foo_get_xxxx ,
+but invoking a function callback per row.
+The
+.Fa cb
+callback accepts a single parameter of type
+.Vt ortns.foo
+and does not have a return value.
+.It Fn "void db_foo_iterate_by_xxxx_op1_yy_zz_op2" "ARGS" "cb" Ns No : void
+Like
+.Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
+but invoking a function callback for each retrieved result.
+.It Fn "db_foo_list" Ns No : ortns.foo[]
+Like
+.Fn db_foo_list_xxxx
+but allocating and filling a queue of all rows.
+.It Fn "db_foo_list_xxxx" "ARGS" Ns No : ortns.foo[]
+Like
+.Fn db_foo_get_xxxx ,
+but producing an array of responses.
+.It Fn "db_foo_list_by_xxxx_op1_yy_zz_op2" "ARGS" Ns No : ortns.foo[]
+Like
+.Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
+but producing a queue of responses.
+.It Fn "db_foo_update_xxxx" "ARGS" Ns No : boolean
+Run the named update function
+.Qq xxxx .
+The update functions are specified with
+.Cm update
+statements.
+The parameters passed to this function are first the fields to modify,
+then the fields that constrain which rows are updated.
+Update fields are only specified for operations for binary-operator
+constraints, i.e., those not checking for null status.
+Returns true on success, false on constraint failure.
+.It Fn "db_foo_update_xx_mod_by_yy_op" "ARGS" Ns No : boolean
+Like
+.Fn db_foo_update_xxxx ,
+but using an un-named update statement modifying
+.Qq xx
+with modifier
+.Qq mod
+constrained by
+.Qq yy
+with operation
+.Qq op .
+Either or both modifiers and constraints may be empty.
+If modifiers are empty, all fields are modified by setting.
+If constraints are empty, they and the preceding
+.Qq by
+are omitted.
 .El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT

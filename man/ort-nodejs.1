@@ -263,6 +263,21 @@ If constraints are empty, they and the preceding
 .Qq by
 are omitted.
 .El
+.Pp
+The data objects returned by these functions are in the
+.Vt ortns
+namespace and are named as in the configuration.
+Letting
+.Qq foo
+be an exemplar structure name, the object consists of the following.
+.Bl -tag -width Ds
+.It Fn "export" Ns No any
+Create an exportable object.
+Export rules are governed by the role in which the object was created.
+This is usually used with
+.Fn JSON.stringify
+to output JSON objects.
+.El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.
@@ -345,7 +360,8 @@ struct user {
   field name text;
   field id int rowid;
   insert;
-  roles default { insert; };
+  search id: name id;
+  roles default { all; };
 };
 .Ed
 .Pp
@@ -363,10 +379,20 @@ import { ort, ortns, ortctx, ortdb } from './modules/ort';
 const app = express();
 const db: ortdb = ort('test.db');
 
-app.get("/", function(req: Request, res: Response) {
+app.get("/put", function(req: Request, res: Response) {
   const ctx: ortctx = db.connect();
   const id: BigInt = ctx.db_user_insert('name');
   res.send(id.toString());
+});
+
+app.get("/get", function(req: Request, res: Response) {
+  const ctx: ortctx = db.connect();
+  const obj: ortns.user|null =
+    ctx.db_user_get_id(BigInt(1));
+  if (obj !== null)
+    res.send(JSON.stringify(obj.export()));
+  else
+    res.send('not found');
 });
 
 app.listen(3000, function() {

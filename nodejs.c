@@ -493,9 +493,12 @@ gen_modifier(const struct config *cfg,
 	else
 		ct = COMMENT_JS_FRAG_CLOSE;
 
-	print_commentt(1, ct,
-		"@return False on constraint violation, "
-		"true on success.");
+	if (up->type == UP_MODIFY)
+		print_commentt(1, ct,
+			"@return False on constraint violation, "
+			"true on success.");
+	else
+		print_commentt(1, ct, "");
 
 	/* Method signature. */
 
@@ -544,9 +547,11 @@ gen_modifier(const struct config *cfg,
 
 	fputs("):", stdout);
 	if (col + 7 >= 72)
-		fputs("\n\t\tboolean", stdout);
+		fputs("\n\t\t", stdout);
 	else
-		fputs(" boolean", stdout);
+		putchar(' ');
+
+	fputs(up->type == UP_MODIFY ? "boolean" : "void", stdout);
 
 	/* Method body. */
 
@@ -592,15 +597,20 @@ gen_modifier(const struct config *cfg,
 		printf("\t\tparms.push(v%zu);\n", pos++);
 	}
 
-	puts("\n"
-	     "\t\ttry {\n"
-	     "\t\t\tinfo = stmt.run(parms);\n"
-	     "\t\t} catch (er) {\n"
-	     "\t\t\treturn false;\n"
-	     "\t\t}\n"
-	     "\n"
-	     "\t\treturn true;\n"
-	     "\t}");
+	if (up->type == UP_MODIFY)
+		puts("\n"
+		     "\t\ttry {\n"
+		     "\t\t\tinfo = stmt.run(parms);\n"
+		     "\t\t} catch (er) {\n"
+		     "\t\t\treturn false;\n"
+		     "\t\t}\n"
+		     "\n"
+		     "\t\treturn true;");
+	else
+		puts("\n"
+		     "\t\tstmt.run(parms);");
+
+	puts("\t}");
 }
 
 /*

@@ -245,27 +245,27 @@ that open and close the database, respectively.
 There are also several transaction functions and, if applicable, a
 function for managing roles.
 .Bl -tag -width Ds
-.It Li struct ort *db_open(const char *file)
+.It Fn "struct ort *db_open" "const char *file"
 Open a database named
 .Fa file
 and return a pointer.
 Returns
 .Dv NULL
 on failure to allocate, open, or configure the database.
-.It Li void db_close(struct ort *p)
+.It Fn "void db_close" "struct ort *p"
 Closes a database opened by
 .Fn db_open .
 Passing
 .Dv NULL
 is a noop.
-.It Li void db_trans_commit(struct ort *p, size_t id)
+.It Fn "void db_trans_commit" "struct ort *p" "size_t id"
 Commit a transaction opened by
 .Fn db_trans_open
 with identifier
 .Fa id .
 If an error occurs, subsequent database access will cause the system to
 .Xr exit 3 .
-.It Li void db_trans_open(struct ort *p, size_t id, int mode)
+.It Fn "void db_trans_open" "struct ort *p" "size_t id" "int mode"
 Open a transaction with a unique identifier
 .Fa id .
 The identifier prevents recursive transactions and allows for
@@ -281,14 +281,14 @@ access.
 Using >0 is the preferred way of creating database transactions.
 If an error occurs, subsequent database access will cause the system to
 .Xr exit 3 .
-.It Li void db_trans_rollback(struct ort *p, size_t id)
+.It Fn "void db_trans_rollback" "struct ort *p" "size_t id"
 Roll-back a transaction opened by
 .Fn db_trans_open
 with identifier
 .Fa id .
 If an error occurs, subsequent database access will cause the system to
 .Xr exit 3 .
-.It Li void db_role(struct ort *ctx, enum ort_role newrole)
+.It Fn "void db_role" "struct ort *ctx" "enum ort_role newrole"
 If roles are enabled, move from the current role to
 .Fa newrole .
 If the role is the same as the current role, this does nothing.
@@ -300,13 +300,13 @@ or entering
 .Dv ROLE_none .
 This does not return failure: on role violation, it invokes
 .Xr abort 2 .
-.It Li enum ort_role db_role_current(struct ort *ctx)
+.It Fn "enum ort_role db_role_current" "struct ort *ctx"
 If roles are enabled, get the currently-assigned role.
 If
 .Fn db_role
 hasn't yet been called, this will be
 .Dv ROLE_default .
-.It Li enum ort_role db_role_stored(struct ort_store *ctx)
+.It Fn "enum ort_role db_role_stored" "struct ort_store *ctx"
 If roles are enabled, get the role assigned to an object at the time of its
 creation.
 .El
@@ -326,7 +326,7 @@ Let
 .Qq foo
 be the name of the exemplar structure.
 .Bl -tag -width Ds
-.It Li int db_foo_delete_xxxx(struct ort *p, ARGS)
+.It Fn "int db_foo_delete_xxxx" "struct ort *p, ARGS"
 Run the named
 .Cm delete
 function
@@ -336,7 +336,7 @@ the fields that constrain which rows are deleted.
 Parameters are only specified for operations for binary-operator
 constraints, i.e., those not checking for null status.
 Returns non-zero on success, zero on constraint failure.
-.It Li int db_foo_delete_by_yy_op(struct ort *p, ARGS)
+.It Fn "int db_foo_delete_by_yy_op" "struct ort *p" "ARGS"
 Like
 .Fn db_foo_delete_xxxx ,
 but using an un-named
@@ -345,23 +345,23 @@ statement constrained by
 .Qq yy
 with operation
 .Qq op .
-.It Li void db_foo_free(struct foo *p)
+.It Fn "void db_foo_free" "struct foo *p"
 Frees a pointer returned by a unique search function.
 If passed
 .Dv NULL ,
 this is a noop.
-.It Li void db_foo_freeq(struct foo_q *p)
+.It Fn "void db_foo_freeq" "struct foo_q *p"
 Frees a queue (and its members) created by a listing function.
 This function is produced only if there are listing statements on a
 given structure.
-.It Li struct foo *db_foo_get_xxxx(struct ort *p, ARGS)
+.It Fn "struct foo *db_foo_get_xxxx" "struct ort *p" "ARGS"
 The
 .Cm search
 statement named
 .Qq xxxx .
 The function accepts variables for all binary-operator fields to check
 (i.e., all except for those checking for null).
-.It Li struct foo *db_foo_get_by_xxxx_op1_yy_zz_op2
+.It Fn "struct foo *db_foo_get_by_xxxx_op1_yy_zz_op2" "struct ort *p" "ARGS"
 Like
 .Fn db_foo_get_xxxx ,
 but for (possibly-nested) structures.
@@ -377,12 +377,10 @@ in the nested structure
 .Qq yy
 with operation
 .Qq op2 .
-.It Li int64_t db_foo_insert(struct ort *p, ARGS)
+.It Fn "int64_t db_foo_insert" "struct ort *p" "ARGS"
 Insert a row and return its
 .Ft int64_t
-identifier or
-.Li \&-1
-on constraint failure.
+identifier or -1 on constraint failure.
 This accepts all native fields ARGS as parameters excluding
 .Cm rowid ,
 which is automatically set by the database.
@@ -395,9 +393,9 @@ pointers.
 This function is only generated if the
 .Cm insert
 statement is specified for the given structure.
-.It Li void db_foo_iterate(struct ort *p, foo_cb cb, void *arg, ARGS)
+.It Fn "void db_foo_iterate" "struct ort *p" "foo_cb cb" "void *arg" "ARGS"
 Iterate over all rows.
-.It Li void db_foo_iterate_xxxx(struct ort *p, foo_cb cb, void *arg, ARGS)
+.It Fn "void db_foo_iterate_xxxx" "struct ort *p" "foo_cb cb" "void *arg" "ARGS"
 Like
 .Fn db_foo_get_xxxx ,
 but invoking a function callback
@@ -405,21 +403,21 @@ but invoking a function callback
 passed
 .Fa arg
 within the active query for each retrieved result.
-.It Li void db_foo_iterate_by_xxxx_op1_yy_zz_op2(struct ort *p, foo_cb cb, void *arg, ARGS)
+.It Fn "void db_foo_iterate_by_xxxx_op1_yy_zz_op2" "struct ort *p" "foo_cb cb" "void *arg" "ARGS"
 Like
 .Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
 but invoking a function callback for the retrieved results.
-.It Li struct foo_q *db_foo_list(struct ort *p)
+.It Fn "struct foo_q *db_foo_list" "struct ort *p"
 Allocate and fill a queue of all rows.
-.It Li struct foo_q *db_foo_list_xxxx(struct ort *p, ARGS)
+.It Fn "struct foo_q *db_foo_list_xxxx" "struct ort *p" "ARGS"
 Like
 .Fn db_foo_get_xxxx ,
 but producing a queue of responses.
-.It Li struct foo_q *db_foo_list_by_xxxx_op1_yy_zz_op2(struct ort *p, ARGS)
+.It Fn "struct foo_q *db_foo_list_by_xxxx_op1_yy_zz_op2" "struct ort *p" "ARGS"
 Like
 .Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
 but producing a queue of responses.
-.It Li int db_foo_update_xxxx(struct ort *p, ARGS)
+.It Fn "int db_foo_update_xxxx" "struct ort *p" "ARGS"
 Run the named update function
 .Qq xxxx .
 The update functions are specified with
@@ -436,7 +434,7 @@ pointers.
 Update fields are only specified for operations for binary-operator
 constraints, i.e., those not checking for null status.
 Returns non-zero on success, zero on constraint failure.
-.It Li int db_foo_update_xx_mod_by_yy_op(struct ort *p, ARGS)
+.It Fn "int db_foo_update_xx_mod_by_yy_op" "struct ort *p" "ARGS"
 Like
 .Fn db_foo_update_xxxx ,
 but using an un-named update statement modifying
@@ -470,7 +468,7 @@ must be stipulated.
 #include <kcgijson.h>
 .Ed
 .Bl -tag -width Ds
-.It Li void json_foo_array(struct kjsonreq *r, const struct foo_q *q)
+.It Fn "void json_foo_array" "struct kjsonreq *r" "const struct foo_q *q"
 Print the list
 .Fa q
 of structures as a key-value pair where the key is the
@@ -480,7 +478,7 @@ objects.
 This is only produced if the structure has
 .Cm list
 queries stipulated.
-.It Li void json_foo_data(struct kjsonreq *r, const struct foo *p)
+.It Fn "void json_foo_data" "struct kjsonreq *r" "const struct foo *p"
 Enumerate only the fields of the structure
 .Fa p
 in JSON dictionary format.
@@ -491,7 +489,7 @@ If a field is null, it is serialised as a null value.
 Fields marked
 .Cm noexport
 are not included in the enumeration, nor are passwords.
-.It Li void json_foo_iterate(const struct agent *, void *arg)
+.It Fn "void json_foo_iterate" "const struct foo *p" "void *arg"
 Print a
 .Dq blank
 object consisting only of the structure data (see
@@ -505,7 +503,7 @@ makes for easy integration with iterate functions.
 This is only produced if the structure has
 .Cm iterate
 queries stipulated.
-.It Li void json_foo_obj(struct kjsonreq *r, const struct agent *p)
+.It Fn "void json_foo_obj" "struct kjsonreq *r" "const struct foo *p"
 Print the entire structure
 .Fa p
 as a key-value pair where the key is the structure name and the value is
@@ -523,12 +521,12 @@ The following use
 .Dq foo
 as an example structure.
 .Bl -tag -width Ds
-.It Li int jsmn_init(jsmn_parser *p)
+.It Fn "int jsmn_init" "jsmn_parser *p"
 Initialise a parser.
 This must be called each time before
 .Fn jsmn_parse
 is invoked.
-.It Li int jsmn_parse(jsmn_parse *p, const char *buf, size_t sz, jsmntok_t *toks, unsigned int toksz)
+.It Fn "int jsmn_parse" "jsmn_parse *p" "const char *buf" "size_t sz" "jsmntok_t *toks" "unsigned int toksz"
 Parse a buffer
 .Fa buf
 of length
@@ -545,14 +543,14 @@ value for
 tokens are parsed but not filled in.
 This is the usual practise for parsing an unknown set of objects: a set
 of tokens may be allocated using the non-negative return value.
-.It Li int jsmn_eq(const char *buf, const jsmntok_t *t, const char *s)
+.It Fn "int jsmn_eq" "const char *buf" "const jsmntok_t *t" "const char *s"
 Test whether the current token
 .Fa t
 referencing buffer
 .Fa buf
 is a string equal (case sensitive) to
 .Fa s .
-.It Li int jsmn_foo(struct foo *p, const char *buf, const jsmntok_t *t, size_t toksz)
+.It Fn "int jsmn_foo" "struct foo *p" "const char *buf" "const jsmntok_t *t" "size_t toksz"
 Parse an object starting at token
 .Fa t
 referencing buffer
@@ -566,20 +564,20 @@ Returns less than zero on allocation failure, zero on parse error
 The input structure should be zeroed prior to calling.
 Regardless the return value, the resulting pointer should be passed to
 .Fn jsmn_foo_free .
-.It Li int jsmn_foo_array(struct foo **p, size_t *sz, const char *buf, const jsmntok_t *t, size_t toksz)
+.It Fn "int jsmn_foo_array" "struct foo **p" "size_t *sz" "const char *buf" "const jsmntok_t *t" "size_t toksz"
 Like
 .Fn jsmn_foo ,
 but allocating and filling an array of structures.
 The array must be freed with
 .Fn jsmn_foo_free_array
 regardless the return value.
-.It Li void jsmn_foo_free_array(struct foo *p, size_t sz)
+.It Fn "void jsmn_foo_free_array" "struct foo *p" "size_t sz"
 Free an array of structures, recursively clearing all nested data.
 Does nothing if
 .Fa p
 is
 .Dv NULL .
-.It Li void jsmn_foo_clear(struct foo *p)
+.It Fn "void jsmn_foo_clear" "struct foo *p"
 Recursively clears all nested data, not touching the pointer.
 Does nothing if
 .Fa p
@@ -613,7 +611,7 @@ Given the same structure
 .Qq foo ,
 the following are generated:
 .Bl -tag -width Ds
-.It Li int valid_foo_xxxx(struct kpair *p)
+.It Fn "int valid_foo_xxxx" "struct kpair *p"
 Validate the field
 .Qq xxxx
 in the structure.
@@ -624,7 +622,7 @@ If limitation clauses are given to a field, those will also be emitted
 within this function.
 .Em Note :
 structs are not validated.
-.It Li enum valid_keys
+.It Vt enum valid_keys
 An enumeration of all fields that accept validators.
 The enumeration entries are
 .Dv VALID_FOO_XXXX ,
@@ -633,7 +631,7 @@ where
 is the field name.
 The last enumeration value is always
 .Dv VALID__MAX .
-.It Li const struct kvalid valid_keys[VALID__MAX]
+.It Vt const struct kvalid valid_keys[VALID__MAX]
 A validation array for
 .Xr khttp_parse 3 .
 This uses the
@@ -661,14 +659,14 @@ database routines, and JSON output) into one pair of files.
 Let
 .Pa foo.ort
 be the configuration file.
-.Bd -literal
+.Bd -literal -offset indent
 ort-c-header -jv foo.ort > db.h
 ort-c-source -jv foo.ort > db.c
 .Ed
 .Pp
 Breaking up into two header and source files: one for basic database
 functions, the other for JSON output.
-.Bd -literal
+.Bd -literal -offset indent
 ort-c-header foo.ort > db.h
 ort-c-header -g JSON_H -j -Nbd foo.ort > json.h
 ort-c-source -h db.h > db.c

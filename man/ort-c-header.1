@@ -326,17 +326,18 @@ Let
 .Qq foo
 be the name of the exemplar structure.
 .Bl -tag -width Ds
-.It Fn "int db_foo_delete_xxxx" "struct ort *p, ARGS"
+.It Fn "void db_foo_delete_xxxx" "struct ort *p" "ARGS"
 Run the named
 .Cm delete
 function
 .Qq xxxx .
-The ARGS passed to this function are
-the fields that constrain which rows are deleted.
+The
+.Fa ARGS
+passed to this function are the fields that constrain which rows are
+deleted.
 Parameters are only specified for operations for binary-operator
 constraints, i.e., those not checking for null status.
-Returns non-zero on success, zero on constraint failure.
-.It Fn "int db_foo_delete_by_yy_op" "struct ort *p" "ARGS"
+.It Fn "void db_foo_delete_by_yy_op" "struct ort *p" "ARGS"
 Like
 .Fn db_foo_delete_xxxx ,
 but using an un-named
@@ -378,10 +379,10 @@ in the nested structure
 with operation
 .Qq op2 .
 .It Fn "int64_t db_foo_insert" "struct ort *p" "ARGS"
-Insert a row and return its
-.Ft int64_t
-identifier or -1 on constraint failure.
-This accepts all native fields ARGS as parameters excluding
+Insert a row and return its identifier or -1 on constraint failure.
+This accepts all native fields
+.Fa ARGS
+as parameters excluding
 .Cm rowid ,
 which is automatically set by the database.
 If any fields are specified as
@@ -394,7 +395,9 @@ This function is only generated if the
 .Cm insert
 statement is specified for the given structure.
 .It Fn "void db_foo_iterate" "struct ort *p" "foo_cb cb" "void *arg" "ARGS"
-Iterate over all rows.
+Like
+.Fn db_foo_iterate_xxxx
+but iterating over all rows.
 .It Fn "void db_foo_iterate_xxxx" "struct ort *p" "foo_cb cb" "void *arg" "ARGS"
 Like
 .Fn db_foo_get_xxxx ,
@@ -406,9 +409,11 @@ within the active query for each retrieved result.
 .It Fn "void db_foo_iterate_by_xxxx_op1_yy_zz_op2" "struct ort *p" "foo_cb cb" "void *arg" "ARGS"
 Like
 .Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
-but invoking a function callback for the retrieved results.
+but invoking a function callback for each retrieved result.
 .It Fn "struct foo_q *db_foo_list" "struct ort *p"
-Allocate and fill a queue of all rows.
+Like
+.Fn db_foo_list_xxxx
+but allocating and filling a queue of all rows.
 .It Fn "struct foo_q *db_foo_list_xxxx" "struct ort *p" "ARGS"
 Like
 .Fn db_foo_get_xxxx ,

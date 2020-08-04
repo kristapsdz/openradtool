@@ -306,13 +306,16 @@ print_func_db_update(const struct update *u, int decl)
 	const struct uref *ur;
 	size_t	 	   pos = 1, col = 0;
 	int	 	   rc;
+	const char	  *type;
+
+	type = u->type == UP_MODIFY ? "int" : "void";
 
 	/* Start with return value. */
 
 	if (!decl) 
-		printf("int\n");
+		printf("%s\n", type);
 	else
-		col = (rc = printf("int ")) > 0 ? rc : 0;
+		col = (rc = printf("%s ", type)) > 0 ? rc : 0;
 
 	/* Now function name. */
 

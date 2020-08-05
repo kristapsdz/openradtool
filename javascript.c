@@ -350,7 +350,7 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 	const struct bitidx	*bi;
 	const struct enm	*e;
 	const struct eitem	*ei;
-	char			*obj, *objarray, *type, *typearray;
+	char			*obj, *objarray;
 	char			 buf[BUFSIZ];
 	int64_t			 maxvalue;
 	ssize_t			 ssz;
@@ -444,10 +444,6 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		    "%sData|%sData[]|null", s->name, s->name) < 0)
 			err(EXIT_FAILURE, NULL);
 		if (asprintf(&objarray, "%sData[]", s->name) < 0)
-			err(EXIT_FAILURE, NULL);
-		if (asprintf(&type, "<DCbStruct%s>", s->name) < 0)
-			err(EXIT_FAILURE, NULL);
-		if (asprintf(&typearray, "<DCbStruct%s[]>", s->name) < 0)
 			err(EXIT_FAILURE, NULL);
 
 		print_commentv(1, COMMENT_JS,
@@ -568,18 +564,18 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		     "\t\t\t\tcustom = null;");
 		TAILQ_FOREACH(f, &s->fq, entries)
 			gen_js_field(f);
-		printf("\t\t\tif (null !== custom && '%s' in custom) {\n"
+		printf("\t\t\tif (custom !== null &&\n"
+		       "\t\t\t    typeof custom[\'%s\'] !== \'undefined\') {\n"
 		       "\t\t\t\tif (custom['%s'] instanceof Array) {\n"
 		       "\t\t\t\t\tfor (i = 0; "
-				      "i < custom['%s']!.length; i++)\n"
-		       "\t\t\t\t\t\t(%scustom['%s'])[i](e, '%s', o);\n"
-		       "\t\t\t\t} else {\n"
-		       "\t\t\t\t\t(%scustom['%s'])(e, '%s', o);\n"
-		       "\t\t\t\t}\n"
+				      "i < custom['%s'].length; i++)\n"
+		       "\t\t\t\t\t\tcustom['%s'][i](e, '%s', o);\n"
+		       "\t\t\t\t} else\n"
+		       "\t\t\t\t\tcustom['%s'](e, '%s', o);\n"
 		       "\t\t\t}\n"
 		       "\t\t}\n"
-		       "\n", s->name, s->name, s->name, typearray, 
-		       s->name, s->name, type, s->name, s->name);
+		       "\n", s->name, s->name, s->name, 
+		       s->name, s->name, s->name, s->name);
 
 		/* _fillByClass() private method. */
 
@@ -737,8 +733,6 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 
 		free(obj);
 		free(objarray);
-		free(type);
-		free(typearray);
 	}
 
 	TAILQ_FOREACH(bf, &cfg->bq, entries) {

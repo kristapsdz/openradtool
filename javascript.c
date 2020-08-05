@@ -441,7 +441,7 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
 		if (asprintf(&obj, 
-		    "%sData|%sData[]|null", s->name, s->name) < 0)
+		    "%sData|%sData[]", s->name, s->name) < 0)
 			err(EXIT_FAILURE, NULL);
 		if (asprintf(&objarray, "%sData[]", s->name) < 0)
 			err(EXIT_FAILURE, NULL);
@@ -450,14 +450,15 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 			"Writes {@link %sData} into a DOM tree.",
 			s->name);
 		printf("\texport class %s {\n"
-		       "\t\tobj: %sData|%sData[];\n",
+		       "\t\treadonly obj: %sData|%sData[];\n",
 		       s->name, s->name, s->name);
 
 		/* Constructor. */
 
 		print_commentt(2, COMMENT_JS,
 			"@param obj The object(s) to write.");
-		printf("\t\tconstructor(o: %sData|%sData[]) {\n"
+		printf("\t\tconstructor(o: %sData|%sData[])\n"
+		       "\t\t{\n"
 		       "\t\t\tthis.obj = o;\n"
 		       "\t\t}\n\n", s->name, s->name);
 
@@ -490,7 +491,8 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 			"e", "HTMLElement|null", 
 			"custom?", "DataCallbacks|null", NULL);
 		puts("\t\t{\n"
-		     "\t\t\tthis._fill(e, this.obj, true, custom);\n"
+		     "\t\t\tif (e !== null)\n"
+		     "\t\t\t\tthis._fill(e, this.obj, true, custom);\n"
 		     "\t\t}\n");
 
 		/* fillInner() method. */
@@ -505,7 +507,8 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 			"e", "HTMLElement|null", 
 			"custom?", "DataCallbacks|null", NULL);
 		puts("\t\t{\n"
-		     "\t\t\tthis._fill(e, this.obj, false, custom);\n"
+		     "\t\t\tif (e !== null)\n"
+		     "\t\t\t\tthis._fill(e, this.obj, false, custom);\n"
 		     "\t\t}\n");
 
 		/* fillByClass() method. */
@@ -524,7 +527,8 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 			"name", "string",
 			"custom?", "DataCallbacks|null", NULL);
 		puts("\t\t{\n"
-		     "\t\t\tthis._fillByClass(e, name, true, custom);\n"
+		     "\t\t\tif (e !== null)\n"
+		     "\t\t\t\tthis._fillByClass(e, name, true, custom);\n"
 		     "\t\t}\n");
 
 		/* fillInnerByClass() method. */
@@ -541,32 +545,30 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 			"name", "string",
 			"custom?", "DataCallbacks|null", NULL);
 		puts("\t\t{\n"
-		     "\t\t\tthis._fillByClass(e, name, false, custom);\n"
+		     "\t\t\tif (e !== null)\n"
+		     "\t\t\t\tthis._fillByClass(e, name, false, custom);\n"
 		     "\t\t}\n");
 
 		/* _fill() private method. */
 
 		gen_class_proto(1, "void", "_fill",
-			"e", "HTMLElement|null", 
-			"o", obj,
+			"e", "HTMLElement", 
+			"obj", obj,
 			"inc", "boolean",
 			"custom?", "DataCallbacks|null", NULL);
-		puts("\t\t{\n"
-		     "\t\t\tlet i: number;\n"
-		     "\t\t\tif (null === o || null === e)\n"
-		     "\t\t\t\treturn;\n"
-		     "\t\t\tif (o instanceof Array) {\n"
-		     "\t\t\t\tif (0 === o.length)\n"
-		     "\t\t\t\t\treturn;\n"
-		     "\t\t\t\to = o[0];\n"
-		     "\t\t\t}\n"
-		     "\t\t\tif (typeof custom === 'undefined')\n"
-		     "\t\t\t\tcustom = null;");
+		printf("\t\t{\n"
+		       "\t\t\tif (obj instanceof Array && obj.length === 0)\n"
+		       "\t\t\t\treturn;\n"
+		       "\t\t\tconst o: %sData =\n"
+		       "\t\t\t\t(obj instanceof Array) ? obj[0] : obj;\n"
+		       "\t\t\tif (typeof custom === 'undefined')\n"
+		       "\t\t\t\tcustom = null;\n", s->name);
 		TAILQ_FOREACH(f, &s->fq, entries)
 			gen_js_field(f);
 		printf("\t\t\tif (custom !== null &&\n"
 		       "\t\t\t    typeof custom[\'%s\'] !== \'undefined\') {\n"
 		       "\t\t\t\tif (custom['%s'] instanceof Array) {\n"
+		       "\t\t\t\t\tlet i: number;\n"
 		       "\t\t\t\t\tfor (i = 0; "
 				      "i < custom['%s'].length; i++)\n"
 		       "\t\t\t\t\t\tcustom['%s'][i](e, '%s', o);\n"
@@ -580,7 +582,7 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		/* _fillByClass() private method. */
 
 		gen_class_proto(1, "void", "_fillByClass",
-			"e", "HTMLElement|null", 
+			"e", "HTMLElement", 
 			"name", "string",
 			"inc", "boolean",
 			"custom?", "DataCallbacks|null", NULL);
@@ -675,37 +677,30 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		gen_class_proto(0, "void", "fillArray", 
 			"e", "HTMLElement|null",
 			"custom?", "DataCallbacks|null", NULL);
-		puts("\t\t{\n"
-		     "\t\t\tlet j: number;\n"
-		     "\t\t\tlet cln: HTMLElement;\n"
-		     "\t\t\tlet row: HTMLElement;");
-		printf("\t\t\tlet o: %s;\n"
-	    	       "\t\t\tlet ar: %s;\n", obj, objarray);
-		puts("\t\t\to = this.obj;\n"
-		     "\t\t\tif (null !== e)\n"
-		     "\t\t\t\t_hide(e);\n"
-		     "\t\t\tif (null === o || null === e)\n"
-		     "\t\t\t\treturn;\n"
-		     "\t\t\tif ( ! (o instanceof Array)) {\n"
-		     "\t\t\t\tar = [];\n"
-		     "\t\t\t\tar.push(o);\n"
-		     "\t\t\t\to = ar;\n"
-		     "\t\t\t}\n"
-		     "\t\t\tif (0 === o.length)\n"
-		     "\t\t\t\treturn;\n"
-		     "\t\t\t_show(e);\n"
-		     "\t\t\trow = <HTMLElement>e.children[0];\n"
-		     "\t\t\tif (null === row)\n"
-		     "\t\t\t\treturn;\n"
-		     "\t\t\te.removeChild(row);\n"
-		     "\t\t\twhile (null !== e.firstChild)\n"
-		     "\t\t\t\te.removeChild(e.firstChild)\n"
-		     "\t\t\tfor (j = 0; j < o.length; j++) {\n"
-		     "\t\t\t\tcln = <HTMLElement>row.cloneNode(true);\n"
-		     "\t\t\t\te.appendChild(cln);\n"
-		     "\t\t\t\tthis._fill(cln, o[j], true, custom);\n"
-		     "\t\t\t}\n"
-		     "\t\t}\n");
+		printf("\t\t{\n"
+		       "\t\t\tlet i: number;\n"
+		       "\t\t\tconst o: %sData[] =\n"
+		       "\t\t\t\t(this.obj instanceof Array) ?\n"
+		       "\t\t\t\t this.obj : [this.obj];\n"
+		       "\n"
+		       "\t\t\tif (e === null || e.children.length === 0)\n"
+		       "\t\t\t\treturn;\n"
+		       "\t\t\t_hide(e);\n"
+		       "\t\t\tif (o.length === 0 || this.obj === null)\n"
+		       "\t\t\t\treturn;\n"
+		       "\t\t\t_show(e);\n"
+		       "\n"
+		       "\t\t\tconst row: HTMLElement =\n"
+		       "\t\t\t\t<HTMLElement>e.children[0];\n"
+		       "\t\t\twhile (e.firstChild !== null)\n"
+		       "\t\t\t\te.removeChild(e.firstChild)\n"
+		       "\t\t\tfor (i = 0; i < o.length; i++) {\n"
+		       "\t\t\t\tconst cln: HTMLElement =\n"
+		       "\t\t\t\t\t<HTMLElement>row.cloneNode(true);\n"
+		       "\t\t\t\te.appendChild(cln);\n"
+		       "\t\t\t\tthis._fill(cln, o[i], true, custom);\n"
+		       "\t\t\t}\n"
+		       "\t\t}\n\n", s->name);
 
 		/* fillArrayByClass() method. */
 

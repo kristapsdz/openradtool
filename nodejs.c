@@ -972,9 +972,15 @@ gen_strct(const struct strct *p, size_t pos)
 	       "\t\tconst res: any = {}\n"
 	       "\n", p->name, p->name);
 	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->flags & FIELD_NOEXPORT ||
-		    f->type == FTYPE_PASSWORD)
+		if (f->flags & FIELD_NOEXPORT) {
+			print_commentv(2, COMMENT_JS,
+				"Don't output %s: noexport.", f->name);
 			continue;
+		} else if (f->type == FTYPE_PASSWORD) {
+			print_commentv(2, COMMENT_JS,
+				"Don't output %s: password.", f->name);
+			continue;
+		}
 
 		tab = "";
 		if (f->rolemap != NULL) {
@@ -982,7 +988,7 @@ gen_strct(const struct strct *p, size_t pos)
 			puts("\t\tswitch (role) {");
 			TAILQ_FOREACH(r, &f->rolemap->rq, entries)
 				gen_role(r->role, 2);
-			print_commentt(3, COMMENT_C, 
+			print_commentt(3, COMMENT_JS, 
 				"Don't export field to noted roles.");
 			puts("\t\t\tbreak;\n"
 			     "\t\tdefault:");
@@ -1121,12 +1127,16 @@ gen_ortdb(void)
 		"Primary database object. "
 		"Only one of these should exist per running node.js "
 		"server.");
-	printf("export class ortdb {\n"
-	       "\tdb: Database.Database;\n"
-	       "\treadonly version: string = \'%s\';\n"
-	       "\treadonly vstamp: number = %lld;\n"
-	       "\n",
-	       VERSION, (long long)VSTAMP);
+	puts("export class ortdb {\n"
+	     "\tdb: Database.Database;");
+	print_commentt(1, COMMENT_JS,
+		"The ort-nodejs version used to produce this file.");
+	printf("\treadonly version: string = \'%s\';\n", VERSION);
+	print_commentt(1, COMMENT_JS,
+		"The numeric (monotonically increasing) ort-nodejs "
+		"version used to produce this file.");
+	printf("\treadonly vstamp: number = %lld;\n"
+	       "\n", (long long)VSTAMP);
 	print_commentt(1, COMMENT_JS,
 		"@param dbname The file-name of the database "
 		"relative to the running application.");

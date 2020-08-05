@@ -25,16 +25,16 @@
 .Op Fl S Ar sharedir
 .Op Ar config...
 .Sh DESCRIPTION
-The
-.Nm
-utility accepts
+Accepts
 .Xr ort 5
 .Ar config
 files, defaulting to standard input,
 and creates a TypeScript interface that format the JSON produced by
 .Xr ort-c-header 1
 .Fn json_xxxx
-functions.
+functions and
+.Xr ort-nodej1 1
+exports.
 Its arguments are as follows:
 .Bl -tag -width Ds
 .It Fl S Ar sharedir
@@ -114,8 +114,8 @@ The array may be zero-length, but the object may not be
 .Dv null .
 .Ss Class Methods
 The following methods are generated for each structure.
-.Bl -tag -width Ds -offset indent
-.It Fn fillInner "e" "[custom]"
+.Bl -tag -width Ds
+.It Fn fillInner "e: HTMLElement|null" "custom?: DataCallbacks|null" Ns No : void
 Fill labelled elements within (but not including) element
 .Fa e ,
 with optional call-backs
@@ -125,13 +125,13 @@ If
 is
 .Dv null ,
 does nothing.
-.It Fn fillInnerByClass "e" "className" "[custom]"
+.It Fn fillInnerByClass "e: HTMLElement|null" "name: string" "custom?: DataCallbacks|null" Ns No : void
 Convenience method for invoking
 .Fn fillInner
 over all descendents of element
 .Fa e
 having class
-.Fa className .
+.Fa name .
 If
 .Fa e
 is
@@ -142,7 +142,7 @@ The
 applies to both
 .Fa e
 and the matched descendents.
-.It Fn fill "e" "[custom]"
+.It Fn fill "e: HTMLElement|null" "custom?: DataCallbacks|null" Ns No : void
 Fill labelled elements within (including) element
 .Fa e ,
 with optional call-backs
@@ -152,19 +152,19 @@ If
 is
 .Dv null ,
 does nothing.
-.It Fn fillByClass "e" "className" "[custom]"
+.It Fn fillByClass "e: HTMLElement|null" "name: string" "custom?: DataCallbacks|null" Ns No : void
 Convenience method for invoking
 .Fn fill
 over all descendents of (and including) element
 .Fa e
 having class
-.Fa className .
+.Fa name .
 If
 .Fa e
 is
 .Dv null ,
 does nothing.
-.It Fn fillArray "e" "[custom]"
+.It Fn fillArray "e: HTMLElement|null" "custom?: DataCallbacks|null" Ns No : void
 First adds the
 .Qq hide
 class to
@@ -187,7 +187,7 @@ or empty, does nothing except add the
 .Qq hide
 class to
 .Fa e .
-.It Fn fillArrayOrShow "e" "toshow" "[custom]"
+.It Fn fillArrayOrShow "e: HTMLElement|null" "toshow: HTMLElement|null" "custom?: DataCallbacks|null" Ns No : void
 Convenience method around
 .Fa fillArray
 removing the
@@ -195,7 +195,7 @@ removing the
 class from
 .Fa toshow
 if the object or objects at construction are non-empty.
-.It Fn fillArrayOrHide "e" "tohide" "[custom]"
+.It Fn fillArrayOrHide "e: HTMLElement|null" "tohide: HTMLElement|null" "custom?: DataCallbacks|null" Ns No : void
 Convenience method around
 .Fa fillArray
 adding the
@@ -212,7 +212,7 @@ be the name of a structure in the
 and
 .Qq xxxx
 be any of its fields.
-.Bl -tag -width Ds -offset indent
+.Bl -tag -width Ds
 .It Li foo-xxxx-bits-checked
 Sets or unsets the
 .Li checked
@@ -299,8 +299,8 @@ These take advantage of the
 .Cm jslabel
 enumeration label described in
 .Xr ort 5 .
-.Bl -tag -width Ds -offset indent
-.It Fn format "e" "name" "value"
+.Bl -tag -width Ds
+.It Fn format "e: HTMLElement" "name: string|null" "value: number|null" Ns No : void
 Fills in all elements (not inclusive) descending from
 .Fa e
 having class
@@ -355,8 +355,8 @@ This will fill in both the
 of the value's corresponding item and the value itself.
 .Pp
 Bit-fields behave similarly and have the same member.
-.Bl -tag -width Ds -offset indent
-.It Fn format "e" "name" "value"
+.Bl -tag -width Ds
+.It Fn format "e: HTMLElement" "name: string|null" "value: number|null" Ns No : void
 Fills in all elements (not inclusive) descending from
 .Fa e
 having class

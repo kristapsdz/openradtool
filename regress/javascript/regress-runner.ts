@@ -9,6 +9,7 @@ const { execFileSync, spawnSync } = require('child_process');
 const basedir: string = 'regress/javascript';
 let i: number;
 let result: string;
+let xpiled: string;
 let contents: string;
 let tsname: string;
 let xmlname: string;
@@ -41,7 +42,7 @@ for (i = 0; i < files.length; i++) {
 
 	/* Compile it into JavaScript. */
 
-	result = ts.transpile(contents);
+	xpiled = ts.transpile(contents);
 
 	/* 
 	 * Create and invoke a callable function that accepts the
@@ -49,8 +50,19 @@ for (i = 0; i < files.length; i++) {
 	 * filename.
 	 */
 
-	func = new Function('fs', 'JSDOM', 'fname', result);
-	result = func(fs, JSDOM, xmlname);
+	try {
+		func = new Function('fs', 'JSDOM', 'fname', xpiled);
+		result = func(fs, JSDOM, xmlname);
+	} catch (error) {
+		console.log(tsname + '... fail');
+		console.log(error);
+		console.log('Failing compilation:');
+		const cat = spawnSync('cat', ['-n', '-'], {
+			'input': xpiled
+		});
+		console.log(cat.stdout.toString());
+		process.exit(1);
+	}
 
 	/*
 	 * Now see if the result is different.
@@ -63,8 +75,9 @@ for (i = 0; i < files.length; i++) {
 			'input': result
 		});
 		console.log('pass');
-	} catch(error) {
+	} catch (error) {
 		console.log('fail');
+		console.log(error);
 		console.log('Failing result:');
 		console.log(result);
 

@@ -35,6 +35,9 @@ The output requires only the
 and
 .Qq better-sqlite3
 dependencies.
+The output is documented using the
+.Xr typedoc 1
+language.
 .Ss Module
 A
 .Nm
@@ -271,13 +274,18 @@ Letting
 .Qq foo
 be an exemplar structure name, the object consists of the following.
 .Bl -tag -width Ds
-.It Fn "export" Ns No any
+.It Fn "export" Ns No : any
 Create an exportable object.
 Export rules are governed by the role in which the object was created.
 This is usually used with
 .Fn JSON.stringify
 to output JSON objects.
 .El
+.Pp
+The exported object, when converted into a string, is readable by
+applications using the
+.Xr ort-javascript 1
+tool.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

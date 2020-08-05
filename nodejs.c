@@ -987,11 +987,18 @@ gen_strct(const struct strct *p, size_t pos)
 			puts("\t\t\tbreak;\n"
 			     "\t\tdefault:");
 		}
+		
+		/*
+		 * If the type is a structure, then we need to convert
+		 * that nested structure to an exportable as well.
+		 * Otherwise, make sure we write all integers as strings
+		 * (to preserve 64-bit-ness).
+		 */
 
 		if (f->type == FTYPE_STRUCT) {
 	     		if (f->ref->source->flags & FIELD_NULL)
 				printf("%s\t\tres[\'%s\'] = "
-					"obj[\'%s\'] === null ?\n"
+					"(obj[\'%s\'] === null) ?\n"
 				       "%s\t\t\tnull : db_export_%s"
 				       "(role, obj[\'%s\'])\n",
 				       tab, f->name, f->name, tab,
@@ -1004,9 +1011,35 @@ gen_strct(const struct strct *p, size_t pos)
 				       tab, f->name, 
 				       f->ref->target->parent->name,
 				       f->name);
-		} else
-			printf("%s\t\tres[\'%s\'] = obj[\'%s\'];\n",
-				tab, f->name, f->name);
+		} else {
+			switch (f->type) {
+			case FTYPE_BIT:
+			case FTYPE_DATE:
+			case FTYPE_EPOCH:
+			case FTYPE_INT:
+			case FTYPE_REAL:
+			case FTYPE_BITFIELD:
+				if (!(f->flags & FIELD_NULL)) {
+					printf("%s\t\tres[\'%s\'] = "
+						"obj[\'%s\']."
+						"toString();\n", tab, 
+						f->name, f->name);
+					break;
+				}
+				printf("%s\t\tres[\'%s\'] = "
+					"(obj[\'%s\'] === null) ?\n"
+				       "%s\t\t\tnull : "
+				       "obj[\'%s\'].toString();\n", 
+				       tab, f->name, f->name, 
+				       tab, f->name);
+				break;
+			default:
+				printf("%s\t\tres[\'%s\'] = "
+					"obj[\'%s\'];\n",
+					tab, f->name, f->name);
+				break;
+			}
+		}
 
 		if (f->rolemap != NULL) 
 			puts("\t\t\tbreak;\n"

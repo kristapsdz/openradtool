@@ -219,6 +219,7 @@ gen_reffind(const struct strct *p)
 			       "\t\t\tconst stmt: Database.Statement =\n"
 			       "\t\t\t\tdb.db.prepare(ortstmt.stmtBuilder\n"
 			       "\t\t\t\t(ortstmt.ortstmt.STMT_%s_BY_UNIQUE_%s));\n"
+			       "\t\t\tstmt.raw(true);\n"
 			       "\t\t\tparms.push(obj.%s);\n"
 		               "\t\t\tcols = stmt.get(parms);\n"
 			       "\t\t\tif (typeof cols === \'undefined\')\n"
@@ -795,6 +796,7 @@ gen_query(const struct config *cfg,
 	       "\t\tconst stmt: Database.Statement =\n"
 	       "\t\t\tthis.#o.db.prepare(ortstmt.stmtBuilder\n"
 	       "\t\t\t(ortstmt.ortstmt.STMT_%s_BY_SEARCH_%zu));\n"
+	       "\t\tstmt.raw(true);\n"
 	       "\n", s->parent->name, num);
 	if (gen_rolemap(s->rolemap))
 		puts("");
@@ -1011,7 +1013,7 @@ gen_strct(const struct strct *p, size_t pos)
 			      "\t\t}");
 	}
 	puts("\n"
-	     "\t\treturn obj;\n"
+	     "\t\treturn res;\n"
 	     "\t}\n");
 
 	print_commentv(1, COMMENT_JS,

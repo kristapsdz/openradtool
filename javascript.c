@@ -610,7 +610,7 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		gen_class_proto(0, "void", "fillArrayOrHide", 
 			"e", "HTMLElement|null",
 			"tohide", "HTMLElement|null",
-			"custom?", "DataCallbacks", NULL);
+			"custom?", "DataCallbacks|null", NULL);
 		puts("\t\t{\n"
 		     "\t\t\tlet len: number;\n"
 		     "\t\t\tif (null === this.obj)\n"
@@ -641,7 +641,7 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		gen_class_proto(0, "void", "fillArrayOrShow", 
 			"e", "HTMLElement|null",
 			"toshow", "HTMLElement|null",
-			"custom?", "DataCallbacks", NULL);
+			"custom?", "DataCallbacks|null", NULL);
 		puts("\t\t{\n"
 		     "\t\t\tlet len: number;\n"
 		     "\t\t\tif (null === this.obj)\n"
@@ -678,7 +678,7 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 			"{@link fill}).");
 		gen_class_proto(0, "void", "fillArray", 
 			"e", "HTMLElement|null",
-			"custom?", "DataCallbacks", NULL);
+			"custom?", "DataCallbacks|null", NULL);
 		puts("\t\t{\n"
 		     "\t\t\tlet j: number;\n"
 		     "\t\t\tlet cln: HTMLElement;\n"
@@ -725,7 +725,7 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		gen_class_proto(0, "void", "fillArrayByClass", 
 			"e", "HTMLElement|null",
 			"name", "string",
-			"custom?", "DataCallbacks", NULL);
+			"custom?", "DataCallbacks|null", NULL);
 		puts("\t\t{\n"
 		     "\t\t\tlet i: number;\n"
 		     "\t\t\tconst list: HTMLElement[] =\n"

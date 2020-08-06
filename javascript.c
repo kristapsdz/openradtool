@@ -43,7 +43,7 @@ static	const char *types[FTYPE__MAX] = {
 	"number", /* FTYPE_EPOCH */
 	"number", /* FTYPE_INT */
 	"number", /* FTYPE_REAL */
-	NULL, /* FTYPE_BLOB */
+	"string", /* FTYPE_BLOB (base64) */
 	"string", /* FTYPE_TEXT */
 	"string", /* FTYPE_PASSWORD */
 	"string", /* FTYPE_EMAIL */
@@ -58,7 +58,7 @@ static	const char *tstypes[FTYPE__MAX] = {
 	"number", /* FTYPE_EPOCH */
 	"number", /* FTYPE_INT */
 	"number", /* FTYPE_REAL */
-	NULL, /* FTYPE_BLOB */
+	"string", /* FTYPE_BLOB (base64) */
 	"string", /* FTYPE_TEXT */
 	"string", /* FTYPE_PASSWORD */
 	"string", /* FTYPE_EMAIL */
@@ -172,7 +172,7 @@ static void
 gen_jsdoc_field(const struct field *f)
 {
 
-	if ((f->flags & FIELD_NOEXPORT) || f->type == FTYPE_BLOB)
+	if (f->flags & FIELD_NOEXPORT)
 		return;
 
 	if (f->flags & FIELD_NULL) {
@@ -199,29 +199,37 @@ gen_jsdoc_field(const struct field *f)
 			"- `%s-%s-enum-select`: sets or unsets the "
 			"`selected` attribute for non-inclusive "
 			"descendent `<option>` elements depending on "
-			"whether the value matches%s",
+			"whether the value matches%s%s",
 			f->parent->name, f->name, 
 			(f->flags & FIELD_NULL) ? 
-			" (if non-null)" : "");
+			" (if non-null)" : "",
+			f->type == FTYPE_BLOB ?
+			" (the base64 encoded value)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
 			"- `%s-%s-value-checked`: sets or unsets "
 			"the `checked` attribute depending on whether "
-			"the value matches%s",
+			"the value matches%s%s",
 			f->parent->name, f->name, 
 			(f->flags & FIELD_NULL) ? 
-			" (if non-null)" : "");
+			" (if non-null)" : "",
+			f->type == FTYPE_BLOB ?
+			" (the base64 encoded value)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
 			"- `%s-%s-text`: replace contents "
-			"with **%s** data%s",
+			"with **%s** data%s%s",
 			f->parent->name, f->name, f->name,
 			(f->flags & FIELD_NULL) ? 
-			" (if non-null)" : "");
+			" (if non-null)" : "",
+			f->type == FTYPE_BLOB ?
+			" (the base64 encoded value)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
 			"- `%s-%s-value`: replace `value` "
-			"attribute with **%s** data%s",
+			"attribute with **%s** data%s%s",
 			f->parent->name, f->name, f->name,
 			(f->flags & FIELD_NULL) ? 
-			" (if non-null)" : "");
+			" (if non-null)" : "",
+			f->type == FTYPE_BLOB ?
+			" (the base64 encoded value)" : "");
 	}
 
 	if (f->type == FTYPE_DATE ||
@@ -257,7 +265,7 @@ gen_js_field(const struct field *f)
 	char	*buf = NULL;
 	int	 rc;
 
-	if ((f->flags & FIELD_NOEXPORT) || f->type == FTYPE_BLOB)
+	if (f->flags & FIELD_NOEXPORT)
 		return;
 	if (f->type == FTYPE_STRUCT) {
 		rc = asprintf(&buf, "new %s(o.%s)", 
@@ -267,10 +275,9 @@ gen_js_field(const struct field *f)
 	}
 
 	printf("\t\t\t_fillField(e, '%s', '%s', custom, o.%s, "
-		"inc, %s, %s, %s);\n",
+		"inc, %s, %s);\n",
 		f->parent->name, f->name, f->name,
 		(f->flags & FIELD_NULL) ? "true" : "false",
-		f->type == FTYPE_BLOB ? "true" : "false",
 		buf == NULL ? "null" : buf);
 	free(buf);
 
@@ -395,9 +402,7 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 					f->ref->target->parent->name, 
 					f->ref->target->parent->name);
 				continue;
-			} else if (tstypes[f->type] == NULL)
-				continue;
-
+			} 
 			printf("\t\t'%s-%s'?: DCb%s%s|"
 				"DCb%s%s[];\n", s->name, 
 				f->name, tstypes[f->type], 
@@ -429,10 +434,9 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 				printf("\t\t%s: %sData;\n",
 					f->name, 
 					f->ref->target->parent->name);
-			else if (types[f->type] != NULL)
+			else 
 				printf("\t\t%s: %s;\n",
-					f->name,
-					types[f->type]);
+					f->name, types[f->type]);
 		}
 		puts("\t}\n");
 	}

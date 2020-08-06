@@ -365,14 +365,13 @@
 	 * for elements to fill. Nested structures are always filled 
 	 * non-inclusively.
 	 * @param cannull Whether the data may be null.
-	 * @param isblob Whether the data is a blob.
 	 * @param sub If the data object is a nested structure
 	 * interface, the allocated class of that interface.
 	 * @internal
 	 */
 	function _fillField(e: HTMLElement, strct: string, name: string,
 		custom: DataCallbacks|null, obj: any, inc: boolean,
-		cannull: boolean, isblob: boolean, sub: any): void
+		cannull: boolean, sub: any): void
 	{
 		let i: number;
 		const fname: string = strct + '-' + name;
@@ -403,7 +402,7 @@
 			return;
 		}
 
-		/* Non-null non-structs (don't account for blobs). */
+		/* Non-null non-structs. */
 
 		if (sub !== null) {
 			const list: HTMLElement[] = 
@@ -411,7 +410,7 @@
 			for (i = 0; i < list.length; i++) {
 				sub.fillInner(list[i], custom);
 			}
-		} else if (!isblob) {
+		} else {
 			const list: HTMLElement[] = 
 				_elemList(e, fname + '-enum-select', inc);
 			for (i = 0; i < list.length; i++)

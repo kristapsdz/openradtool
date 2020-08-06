@@ -77,8 +77,8 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	"BigInt", /* FTYPE_DATE */
 	"BigInt", /* FTYPE_EPOCH */
 	"BigInt", /* FTYPE_INT */
-	"BigInt", /* FTYPE_REAL */
-	"ArrayBuffer", /* FTYPE_BLOB */
+	"number", /* FTYPE_REAL */
+	"Buffer", /* FTYPE_BLOB */
 	"string", /* FTYPE_TEXT */
 	"string", /* FTYPE_PASSWORD */
 	"string", /* FTYPE_EMAIL */
@@ -270,33 +270,9 @@ gen_fill(const struct strct *p)
 	printf("\t{\n"
 	       "\t\tconst obj: ortns.%sData = {\n", p->name);
 
+	col = 0;
 	TAILQ_FOREACH(f, &p->fq, entries) {
 		switch (f->type) {
-		case FTYPE_BIT:
-		case FTYPE_BITFIELD:
-		case FTYPE_DATE:
-		case FTYPE_EPOCH:
-		case FTYPE_INT:
-			printf("\t\t\t'%s': BigInt(data.row[data.pos++]),\n",
-				f->name);
-			break;
-		case FTYPE_REAL:
-			printf("\t\t\t'%s': <number%s>"
-				"data.row[data.pos++],\n",
-				f->name, (f->flags & FIELD_NULL) ? 
-				"|null" : "");
-			break;
-		case FTYPE_BLOB:
-			/* TODO. */
-			break;
-		case FTYPE_TEXT:
-		case FTYPE_PASSWORD:
-		case FTYPE_EMAIL:
-			printf("\t\t\t'%s': <string%s>"
-				"data.row[data.pos++],\n",
-				f->name, (f->flags & FIELD_NULL) ? 
-				"|null" : "");
-			break;
 		case FTYPE_STRUCT:
 			puts("\t\t\t/* A dummy value for now. */");
 			if (f->ref->source->flags & FIELD_NULL) {
@@ -307,15 +283,27 @@ gen_fill(const struct strct *p)
 				f->name, f->ref->target->parent->name);
 			break;
 		case FTYPE_ENUM:
-			printf("\t\t\t'%s': <ortns.%s>data.row[data.pos++],\n",
-				f->name, f->enm->name);
+			printf("\t\t\t'%s': <ortns.%s%s>"
+				"data.row[data.pos + %zu],\n",
+				f->name, f->enm->name,
+				(f->flags & FIELD_NULL) ? 
+				"|null" : "", col);
 			break;
 		default:
-			abort();
+			assert(ftypes[f->type] != NULL);
+			printf("\t\t\t'%s': <%s%s>"
+				"data.row[data.pos + %zu],\n",
+				f->name, ftypes[f->type],
+				(f->flags & FIELD_NULL) ? 
+				"|null" : "", col);
+			break;
 		}
+		if (f->type != FTYPE_STRUCT)
+			col++;
 	}
 
-	puts("\t\t};");
+	printf("\t\t};\n"
+	       "\t\tdata.pos += %zu;\n", col);
 
 	TAILQ_FOREACH(f, &p->fq, entries)
 		if (f->type == FTYPE_STRUCT &&
@@ -1039,6 +1027,22 @@ gen_strct(const struct strct *p, size_t pos)
 				       tab, f->name, f->name, 
 				       tab, f->name);
 				break;
+			case FTYPE_BLOB:
+				if (!(f->flags & FIELD_NULL)) {
+					printf("%s\t\tres[\'%s\'] = new "
+						"obj[\'%s\'].toString"
+						"(\'base64\');\n", 
+						tab, f->name, f->name);
+					break;
+				}
+				printf("%s\t\tres[\'%s\'] = "
+					"(obj[\'%s\'] === null) ?\n"
+				       "%s\t\t\tnull : "
+				       "obj[\'%s\'].toString"
+				       "(\'base64\');\n", 
+				       tab, f->name, f->name, 
+				       tab, f->name);
+				break;
 			default:
 				printf("%s\t\tres[\'%s\'] = "
 					"obj[\'%s\'];\n",
@@ -1060,7 +1064,7 @@ gen_strct(const struct strct *p, size_t pos)
 		p->name);
 	printf("\texport class %s {\n"
 	       "\t\treadonly #role: string;\n"
-	       "\t\treadonly #obj: ortns.%sData;\n"
+	       "\t\treadonly obj: ortns.%sData;\n"
 	       "\n", p->name, p->name);
 
 	print_commentv(2, COMMENT_JS,
@@ -1073,7 +1077,7 @@ gen_strct(const struct strct *p, size_t pos)
 	printf("\t\tconstructor(role: string, obj: ortns.%sData)\n"
 	       "\t\t{\n"
 	       "\t\t\tthis.#role = role;\n"
-	       "\t\t\tthis.#obj = obj;\n"
+	       "\t\t\tthis.obj = obj;\n"
 	       "\t\t}\n"
 	       "\n", p->name);
 
@@ -1084,7 +1088,7 @@ gen_strct(const struct strct *p, size_t pos)
 		"responses.", p->name);
 	printf("\t\texport(): any\n"
 	       "\t\t{\n"
-	       "\t\t\treturn db_export_%s(this.#role, this.#obj);\n"
+	       "\t\t\treturn db_export_%s(this.#role, this.obj);\n"
 	       "\t\t}\n"
 	       "\t}\n", p->name);
 }

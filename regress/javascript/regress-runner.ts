@@ -18,10 +18,15 @@ let resname: string;
 let basename: string;
 let func: Function;
 let script: string;
-const files: string[] = fs.readdirSync(basedir);
+let files: string[] = fs.readdirSync(basedir);
 let diff;
 
 script = fs.readFileSync(basedir + '/regress.ts').toString();
+
+/* Allow us to debug specific tests. */
+
+if (process.argv.length > 2)
+	files = process.argv.slice(2);
 
 for (i = 0; i < files.length; i++) {
 	if (files[i].substring

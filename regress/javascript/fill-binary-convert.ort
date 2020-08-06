@@ -1,0 +1,4 @@
+struct foo {
+	field blob blob;
+	field id int rowid;
+};

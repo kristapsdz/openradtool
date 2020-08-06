@@ -264,6 +264,7 @@ gen_js_field(const struct field *f)
 {
 	char	*buf = NULL;
 	int	 rc;
+	size_t	 col;
 
 	if (f->flags & FIELD_NOEXPORT)
 		return;
@@ -274,11 +275,77 @@ gen_js_field(const struct field *f)
 			err(EXIT_FAILURE, "asprintf");
 	}
 
-	printf("\t\t\t_fillField(e, '%s', '%s', custom, o.%s, "
-		"inc, %s, %s);\n",
-		f->parent->name, f->name, f->name,
-		(f->flags & FIELD_NULL) ? "true" : "false",
-		buf == NULL ? "null" : buf);
+	col = 24;
+	fputs("\t\t\t", stdout);
+	col += (rc = printf("_fillField(e,")) > 0 ? rc : 0;
+
+	/* Structure name. */
+
+	if (col + strlen(f->parent->name) + 4 >= 72) {
+		col = 32;
+		fputs("\n\t\t\t\t", stdout);
+	} else {
+		col++;
+		putchar(' ');
+	}
+	col += (rc = printf("\'%s\',", f->parent->name)) > 0 ? rc : 0;
+
+	/* Field name. */
+
+	if (col + strlen(f->name) + 4 >= 72) {
+		col = 32;
+		fputs("\n\t\t\t\t", stdout);
+	} else {
+		col++;
+		putchar(' ');
+	}
+	col += (rc = printf("\'%s\',", f->name)) > 0 ? rc : 0;
+
+	/* "Custom." */
+
+	if (col + 7 >= 72) {
+		col = 32;
+		fputs("\n\t\t\t\t", stdout);
+	} else {
+		col++;
+		putchar(' ');
+	}
+	col += (rc = printf("custom,")) > 0 ? rc : 0;
+
+	/* Field in interface and "inc". */
+
+	if (col + 7 + strlen(f->name) >= 72) {
+		col = 32;
+		fputs("\n\t\t\t\t", stdout);
+	} else {
+		col++;
+		putchar(' ');
+	}
+	col += (rc = printf("o.%s, inc,", f->name)) > 0 ? rc : 0;
+
+	/* True or false. */
+
+	if (col + 6 >= 72) {
+		col = 32;
+		fputs("\n\t\t\t\t", stdout);
+	} else {
+		col++;
+		putchar(' ');
+	}
+	col += (rc = printf("%s,", (f->flags & FIELD_NULL) ? 
+		"true" : "false")) > 0 ? rc : 0;
+
+	/* Nested object or null. */
+
+	if (col + (buf == NULL ? 4 : strlen(buf)) + 2 >= 72) {
+		col = 32;
+		fputs("\n\t\t\t\t", stdout);
+	} else {
+		col++;
+		putchar(' ');
+	}
+	printf("%s);\n", buf == NULL ? "null" : buf);
+
 	free(buf);
 
 	if (f->type == FTYPE_BIT || f->type == FTYPE_BITFIELD)

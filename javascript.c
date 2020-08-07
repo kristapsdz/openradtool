@@ -52,21 +52,6 @@ static	const char *types[FTYPE__MAX] = {
 	"number", /* FTYPE_BITFIELD */
 };
 
-static	const char *tstypes[FTYPE__MAX] = {
-	"number", /* FTYPE_BIT */
-	"number", /* FTYPE_DATE */
-	"number", /* FTYPE_EPOCH */
-	"number", /* FTYPE_INT */
-	"number", /* FTYPE_REAL */
-	"string", /* FTYPE_BLOB (base64) */
-	"string", /* FTYPE_TEXT */
-	"string", /* FTYPE_PASSWORD */
-	"string", /* FTYPE_EMAIL */
-	NULL, /* FTYPE_STRUCT */
-	"number", /* FTYPE_ENUM */
-	"number", /* FTYPE_BITFIELD */
-};
-
 /*
  * Escape JavaScript string literal.
  * This escapes backslashes and single apostrophes.
@@ -168,67 +153,68 @@ warn_label(const struct config *cfg, const struct labelq *q,
 	}
 }
 
+/*
+ * Generate the documentation for each operation we support in
+ * _fill() (e.g., _fillField()).
+ * Don't generate documentation for fields we ever export.
+ */
 static void
 gen_jsdoc_field(const struct field *f)
 {
+	const char	*ifexp, *ifnull;
 
-	if (f->flags & FIELD_NOEXPORT)
+	ifexp = f->rolemap != NULL ? " (if exported)" : "";
+	ifnull = (f->flags & FIELD_NULL) ? " (if non-null)" : "";
+
+	if (f->type == FTYPE_PASSWORD || 
+	    (f->flags & FIELD_NOEXPORT))
 		return;
 
 	if (f->flags & FIELD_NULL) {
 		print_commentv(2, COMMENT_JS_FRAG,
 			"- `%s-has-%s`: *hide* class removed if "
-			"value is not null, otherwise it is added",
-			f->parent->name, f->name);
+			"value is not null, otherwise it is added%s",
+			f->parent->name, f->name, ifexp);
 		print_commentv(2, COMMENT_JS_FRAG,
 			"- `%s-no-%s`: *hide* class added if "
-			"value is not null, otherwise it is removed",
-			f->parent->name, f->name);
+			"value is not null, otherwise it is removed%s",
+			f->parent->name, f->name, ifexp);
 	} 
 
 	if (f->type == FTYPE_STRUCT) {
 		print_commentv(2, COMMENT_JS_FRAG,
 			"- `%s-%s-obj`: invoke {@link "
-			"%s#fillInner} with **%s** data%s",
+			"%s#fillInner} with **%s** data%s%s",
 			f->parent->name, f->name, 
 			f->ref->target->parent->name, f->name,
-			(f->flags & FIELD_NULL) ? 
-			" (if non-null)" : "");
+			ifnull, ifexp);
 	} else {
 		print_commentv(2, COMMENT_JS_FRAG,
 			"- `%s-%s-enum-select`: sets or unsets the "
 			"`selected` attribute for non-inclusive "
 			"descendent `<option>` elements depending on "
-			"whether the value matches%s%s",
-			f->parent->name, f->name, 
-			(f->flags & FIELD_NULL) ? 
-			" (if non-null)" : "",
+			"whether the value matches%s%s%s",
+			f->parent->name, f->name, ifnull, ifexp,
 			f->type == FTYPE_BLOB ?
 			" (the base64 encoded value)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
 			"- `%s-%s-value-checked`: sets or unsets "
 			"the `checked` attribute depending on whether "
-			"the value matches%s%s",
-			f->parent->name, f->name, 
-			(f->flags & FIELD_NULL) ? 
-			" (if non-null)" : "",
+			"the value matches%s%s%s",
+			f->parent->name, f->name, ifnull, ifexp,
 			f->type == FTYPE_BLOB ?
 			" (the base64 encoded value)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
 			"- `%s-%s-text`: replace contents "
-			"with **%s** data%s%s",
+			"with **%s** data%s%s%s",
 			f->parent->name, f->name, f->name,
-			(f->flags & FIELD_NULL) ? 
-			" (if non-null)" : "",
-			f->type == FTYPE_BLOB ?
+			ifnull, ifexp, f->type == FTYPE_BLOB ?
 			" (the base64 encoded value)" : "");
 		print_commentv(2, COMMENT_JS_FRAG,
 			"- `%s-%s-value`: replace `value` "
-			"attribute with **%s** data%s%s",
+			"attribute with **%s** data%s%s%s",
 			f->parent->name, f->name, f->name,
-			(f->flags & FIELD_NULL) ? 
-			" (if non-null)" : "",
-			f->type == FTYPE_BLOB ?
+			ifnull, ifexp, f->type == FTYPE_BLOB ?
 			" (the base64 encoded value)" : "");
 	}
 
@@ -237,14 +223,13 @@ gen_jsdoc_field(const struct field *f)
 		print_commentv(2, COMMENT_JS_FRAG,
 			"- `%s-%s-date-value`: set the element's "
 			"`value` to the ISO-8601 date format of the "
-			"data%s", f->parent->name, f->name, 
-			(f->flags & FIELD_NULL) ? 
-			" (if non-null)" : "");
+			"data%s%s", f->parent->name, f->name, 
+			ifexp, ifnull);
 		print_commentv(2, COMMENT_JS_FRAG,
 			"- `%s-%s-date-text`: like "
 			"`%s-%s-date-value`, but replacing textual "
-			"content", f->parent->name, f->name, 
-			f->parent->name, f->name);
+			"content%s%s", f->parent->name, f->name, 
+			f->parent->name, f->name, ifexp, ifnull);
 	}
 
 	if (f->type == FTYPE_BIT ||
@@ -253,12 +238,15 @@ gen_jsdoc_field(const struct field *f)
 			"- `%s-%s-bits-checked`: set the `checked` "
 			"attribute when the bit index of the "
 			"element's `value` is set in the data as "
-			"a bit-field%s",
-			f->parent->name, f->name, 
-			(f->flags & FIELD_NULL) ? 
-			" (if non-null)" : "");
+			"a bit-field%s%s",
+			f->parent->name, f->name, ifexp, ifnull);
 }
 
+/*
+ * Generate calls to _fillField, _fillDateValue, and _fillBitsChecked
+ * with properly wrapping lines.
+ * Don't generate calls if we don't export the value.
+ */
 static void
 gen_js_field(const struct field *f)
 {
@@ -266,8 +254,10 @@ gen_js_field(const struct field *f)
 	int	 rc;
 	size_t	 col;
 
-	if (f->flags & FIELD_NOEXPORT)
+	if (f->type == FTYPE_PASSWORD ||
+	    (f->flags & FIELD_NOEXPORT))
 		return;
+
 	if (f->type == FTYPE_STRUCT) {
 		rc = asprintf(&buf, "new %s(o.%s)", 
 			f->ref->target->parent->name, f->name);
@@ -462,22 +452,24 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		printf("\t\t'%s'?: DCbStruct%s|DCbStruct%s[];\n",
 			s->name, s->name, s->name);
 		TAILQ_FOREACH(f, &s->fq, entries) {
-			if (FTYPE_STRUCT == f->type) {
+			if (f->type == FTYPE_PASSWORD ||
+			    ((f->flags & FIELD_NOEXPORT)))
+				continue;
+			if (f->type == FTYPE_STRUCT)
 				printf("\t\t\'%s-%s\'?: "
 					"DCbStruct%s|DCbStruct%s[];\n",
 					s->name, f->name, 
 					f->ref->target->parent->name, 
 					f->ref->target->parent->name);
-				continue;
-			} 
-			printf("\t\t'%s-%s'?: DCb%s%s|"
-				"DCb%s%s[];\n", s->name, 
-				f->name, tstypes[f->type], 
-				(f->flags & FIELD_NULL) ? 
-				"Null" : "", 
-				tstypes[f->type],
-				(f->flags & FIELD_NULL) ? 
-				"Null" : "");
+			else
+				printf("\t\t'%s-%s'?: DCb%s%s|"
+					"DCb%s%s[];\n", s->name, 
+					f->name, types[f->type], 
+					(f->flags & FIELD_NULL) ? 
+					"Null" : "", 
+					types[f->type],
+					(f->flags & FIELD_NULL) ? 
+					"Null" : "");
 		}
 	}
 	puts("\t}\n");
@@ -493,17 +485,21 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		printf("\texport interface %sData\n"
 		       "\t{\n", s->name);
 		TAILQ_FOREACH(f, &s->fq, entries) {
+			if (f->type == FTYPE_PASSWORD ||
+			    (f->flags & FIELD_NOEXPORT))
+				continue;
 			if (f->doc != NULL &&
 			    (f->type == FTYPE_STRUCT ||
 			     types[f->type] != NULL))
 				print_commentt(2, COMMENT_JS, f->doc);
 			if (f->type == FTYPE_STRUCT)
-				printf("\t\t%s: %sData;\n",
-					f->name, 
+				printf("\t\t%s%s: %sData;\n", f->name,
+					f->rolemap != NULL ? "?" : "",
 					f->ref->target->parent->name);
 			else 
-				printf("\t\t%s: %s;\n",
-					f->name, types[f->type]);
+				printf("\t\t%s%s: %s;\n", f->name, 
+					f->rolemap != NULL ? "?" : "",
+					types[f->type]);
 		}
 		puts("\t}\n");
 	}

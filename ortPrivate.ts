@@ -273,15 +273,15 @@
 
 	/**
 	 * Fill in ISO-8601 dates.
-	 * Does nothing for null date.
+	 * Does nothing for null or unexported date.
 	 * @param e Root of tree scanned for elements.
 	 * @param fname Structure name, '-', field name.
 	 * @param val Epoch date itself.
 	 * @param inc Include root in scanning for elements.
 	 * @internal
 	 */
-	function _fillDateValue(e: HTMLElement,
-		fname: string, val: number|null, inc: boolean): void
+	function _fillDateValue(e: HTMLElement, fname: string,
+		val: number|null|undefined, inc: boolean): void
 	{
 		let year: number;
 		let mo: number;
@@ -289,7 +289,7 @@
 		let full: string;
 		const d: Date = new Date();
 
-		if (val === null)
+		if (val === null || typeof val === 'undefined')
 			return;
 		d.setTime(val * 1000);
 		year = d.getFullYear();
@@ -317,13 +317,16 @@
 	 * @param inc Include root in scanning for elements.
 	 * @internal
 	 */
-	function _fillBitsChecked(e: HTMLElement, 
-		fname: string, val: number|null, inc: boolean): void
+	function _fillBitsChecked(e: HTMLElement, fname: string,
+		 val: number|null|undefined, inc: boolean): void
 	{
 		let i: number;
 		let v: number;
 		const list: HTMLElement[] = _elemList
 			(e, fname + '-bits-checked', inc);
+
+		if (typeof val === 'undefined')
+			return;
 
 		for (i = 0; i < list.length; i++) {
 			const attrval: string|null = 
@@ -376,6 +379,11 @@
 		let i: number;
 		const fname: string = strct + '-' + name;
 
+		/* Don't do anything if we're not defined. */
+
+		if (typeof obj === 'undefined')
+			return;
+
 		/* First handle our has/no null situation. */
 
 		if (cannull) {
@@ -407,9 +415,8 @@
 		if (sub !== null) {
 			const list: HTMLElement[] = 
 				_elemList(e, fname + '-obj', inc);
-			for (i = 0; i < list.length; i++) {
+			for (i = 0; i < list.length; i++)
 				sub.fillInner(list[i], custom);
-			}
 		} else {
 			const list: HTMLElement[] = 
 				_elemList(e, fname + '-enum-select', inc);
@@ -422,12 +429,12 @@
 
 		/* Lastly, handle the custom callback. */
 
-		if (custom !== null && fname in custom) {
+		if (custom !== null &&
+		    typeof custom[fname] !== 'undefined') {
 			if (custom[fname] instanceof Array) {
 				for (i = 0; i < custom[fname].length; i++)
 					custom[fname][i](e, fname, obj);
-			} else {
+			} else
 				custom[fname](e, fname, obj);
-			}
 		}
 	}

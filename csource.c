@@ -1733,7 +1733,7 @@ gen_func_update(const struct config *cfg,
 
 	if (up->type == UP_MODIFY)
 		printf("\tc = sqlbox_exec\n"
-		       "\t\t(db, 0, STMT_UPDATE_%s_%zu,\n"
+		       "\t\t(db, 0, STMT_%s_UPDATE_%zu,\n"
 		       "\t\t %zu, %s, SQLBOX_STMT_CONSTRAINT);\n"
 		       "\tif (c == SQLBOX_CODE_ERROR)\n"
 		       "\t\texit(EXIT_FAILURE);\n"
@@ -1744,7 +1744,7 @@ gen_func_update(const struct config *cfg,
 		       parms > 0 ? "parms" : "NULL");
 	else
 		printf("\tc = sqlbox_exec\n"
-		       "\t\t(db, 0, STMT_DELETE_%s_%zu, %zu, %s, 0);\n"
+		       "\t\t(db, 0, STMT_%s_DELETE_%zu, %zu, %s, 0);\n"
 		       "\tif (c != SQLBOX_CODE_OK)\n"
 		       "\t\texit(EXIT_FAILURE);\n"
 		       "}\n"

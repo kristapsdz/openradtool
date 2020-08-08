@@ -47,7 +47,11 @@ for (i = 0; i < files.length; i++) {
 
 	/* Compile it into JavaScript. */
 
-	xpiled = ts.transpile(contents);
+	xpiled = ts.transpile(contents, {
+		alwaysStrict: true,
+		noUnusedLocals: true,
+		strict: true
+	});
 
 	/* 
 	 * Create and invoke a callable function that accepts the

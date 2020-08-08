@@ -1,0 +1,4 @@
+<div>
+	<span class="foo-ctime-date-text">not filled in</span>
+	<input type="checkbox" class="foo-ctime-date-value" value="not filled in" />
+</div>

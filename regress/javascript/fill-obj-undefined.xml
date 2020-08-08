@@ -1,0 +1,13 @@
+<div>
+	<div class="foo-bar-obj bar-id-value">
+		<span class="bar-id-text">2</span>
+		<span class="bar-foo-text">foobarbaz</span>
+		<span class="bar-bar-text">3</span>
+		<span class="foo-id-text">1</span>
+	</div>
+	<div class="foo-id-value">
+		<span class="bar-id-text"></span>
+		<span class="bar-foo-text"></span>
+		<span class="bar-bar-text"></span>
+	</div>
+</div>

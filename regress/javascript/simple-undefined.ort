@@ -1,0 +1,13 @@
+roles {};
+
+struct foo {
+	field foo text;
+	field bar double;
+	field id int rowid;
+
+	field xxfoo text;
+	field xxbar double;
+	field xxid int unique;
+
+	roles default { noexport xxfoo; noexport xxbar; noexport xxid; };
+};

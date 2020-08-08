@@ -1,0 +1,7 @@
+roles { };
+
+struct foo {
+	field ctime epoch;
+	field id int rowid;
+	roles default { noexport ctime; };
+};

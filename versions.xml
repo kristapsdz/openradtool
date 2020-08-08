@@ -3,7 +3,46 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.9.1</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-08-08">2020-08-08</time>
+		</header>
+		<aside>
+			<p>
+				<b>Output change</b>: do not have <b>delete</b> statements return a
+				value.
+			</p>
+			<p>
+				<b>Output change</b>: the output of
+				<a href="ort-javascript.1.html">ort-javascript(1)</a> is now
+				sensitive to fields that are not exported.
+				This applies to fully unexported (i.e., those marked with
+				<code>noexport</code> or passwords) and having optional fields
+				(those not exported per role) to be checked and behaviour if not
+				found documented and regression-tested.
+			</p>
+			<p>
+				<b>Output change</b>: full support for binary blobs in
+				<a href="ort-javascript.1.html">ort-javascript(1)</a> by using
+				base64 encoding throughout.
+				Those wishing to use the binary data will need to use custom
+				callbacks with (for example) <code>Buffer.from()</code> to convert
+				from base64 to binary.
+			</p>
+			<p>
+				Considerable improvements to the output of
+				<a href="ort-javascript.1.html">ort-javascript(1)</a> and the
+				documentation itself.
+				This has no functional change, but introduces more TypeScript idioms
+				such as <code>const</code> and <code>readonly</code>.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.9.0</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-07-11">2020-07-11</time>
 		</header>
 		<aside>
 			<p>
@@ -59,13 +98,6 @@
 				in both <a href="ort-javascript.1.html">ort-javascript(1)</a> and
 				the generated documentation.
 			</p>
-		</aside>
-	</article>
-	<article data-sblg-article="1" data-sblg-tags="version">
-		<header>
-			<h3>0.8.16</h3>
-		</header>
-		<aside>
 			<p>
 				Be more explicit as to why the <q>&gt;</q> character is not allowed
 				and further disallow empty labels.

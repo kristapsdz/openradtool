@@ -33,7 +33,7 @@ and creates a TypeScript interface that format the JSON produced by
 .Xr ort-c-header 1
 .Fn json_xxxx
 functions and
-.Xr ort-nodej1 1
+.Xr ort-nodejs 1
 exports.
 Its arguments are as follows:
 .Bl -tag -width Ds
@@ -46,10 +46,7 @@ Output consists of the
 .Qq ort
 namespace with classes that fill data from the JSON into a DOM tree by
 operating on elements having specific classes.
-.Pp
-The output of
-.Nm
-is fully documented using TypeDoc annotation.
+The output of is fully documented using TypeDoc.
 .Ss Namespaces
 All data produced by
 .Nm
@@ -93,30 +90,26 @@ namespace ort {
 .Pp
 Any blob data is retained as base64-encoded string.
 .Pp
+If a field may not be exported due to role restrictions, it is marked as
+optional within the interface.
+.Pp
 In addition to this, a
 .Qq DataCallbacks
-interface may be used for
+interface is defined for
 .Sx Customisation
 and contains callback functions for each field for formatting purposes.
-.Ss Constructors
-Structures are output as classes containing formatting methods.
-(Enumerations and bitfields have static classes.)
+.Ss Classes
+Each
+.Cm struct
+in the configuration is rendered as a class whose members may be used
+for formatting output.
 They are named as found in the configuration.
-Each structure has a constructor to which one passes a single object of
-the given interface type or an array of interfaces.
-In this example, let
-.Fa parseData
-create the required interfaces.
-.Bd -literal -offset indent
-let input: ort.fooData = parseData();
-let foo: ort.foo = new ort.foo(input);
-.Ed
 .Pp
-The array may be zero-length, but the object may not be
-.Dv null .
-.Ss Class Methods
 The following methods are generated for each structure.
 .Bl -tag -width Ds
+.It Fn "new foo" "obj: fooData|fooData[]" Ns No : foo
+Constructor passed an object or array.
+The array may consist of zero objects.
 .It Fn fillInner "e: HTMLElement|null" "custom?: DataCallbacks|null" Ns No : void
 Fill labelled elements within (but not including) element
 .Fa e ,
@@ -207,7 +200,10 @@ class to
 if the object or objects at construction are empty.
 .El
 .Pp
-Applicable element labels (class names) are as follows, letting
+Formatting within the elements passed to these methods operates on
+specific class names.
+.Pp
+The following class names are recognised, letting
 .Qq foo
 be the name of a structure in the
 .Ar config
@@ -277,125 +273,9 @@ class if the object is null, otherwise remove the
 .Dq hide
 class.
 .El
-.Ss Static Members
-Each enumeration class contains static members with the numeric value of
-its items.
 .Pp
-Each bitfield class contains two static members per item: one for the
-bit index, one for the generated bit mask.
-The former is prefixed
-.Li BITI_ ,
-the latter with
-.Li BITF_ .
-Thus an item
-.Qq foo
-creates numeric static members
-.Va BITI_foo
-and
-.Va BITF_foo .
-There is always a
-.Va BITI__MAX
-that is one greater than the largest item's value.
-.Ss Static Methods
-Each enumeration corresponds to a class with field values and formatting
-static methods.
-These take advantage of the
-.Cm jslabel
-enumeration label described in
-.Xr ort 5 .
-.Bl -tag -width Ds
-.It Fn format "e: HTMLElement" "name: string|null" "value: number|null" Ns No : void
-Fills in all elements (not inclusive) descending from
-.Fa e
-having class
-.Fa name Ns "-label"
-with the configuration label corresponding to the enumeration value
-.Fa value .
-If
-.Fa name
-is
-.Dv null ,
-the element itself has its contents filled in.
-.Pp
-If
-.Fa value
-is null, the
-.Qq ort-class
-is added and the
-.Cm isnull
-label is used (or an empty string).
-.El
-.Pp
-If a language is specified in the root of the HTML or XML document with
-the
-.Qq lang
-attribute, it is first matched a label for that language.
-If there is no language, or none for that label, the default label is
-used.
-If there is no default label, an empty string is used instead.
-An empty string is also used for invalid enumeration values.
-.Pp
-A common label fill idiom is as follows:
-.Bd -literal -offset indent
-<div id="place">
-  <span class="foo-val-label>label</span>: 
-  <span class="foo-val-text>text</span>
-</div>
-.Ed
-.Pp
-Letting the field
-.Qq val
-have type
-.Cm enum anenum ,
-both label and text may be filled in as follows:
-.Bd -literal -offset indent
-const custom: ort.DataCallbacks = {
-  'foo-val': ort.anenum.format
-};
-.Ed
-.Pp
-This will fill in both the
-.Cm jslabel
-of the value's corresponding item and the value itself.
-.Pp
-Bit-fields behave similarly and have the same member.
-.Bl -tag -width Ds
-.It Fn format "e: HTMLElement" "name: string|null" "value: number|null" Ns No : void
-Fills in all elements (not inclusive) descending from
-.Fa e
-having class
-.Fa name Ns "-label"
-with all configuration labels with corresponding bits set in
-.Fa value .
-If
-.Fa name
-is
-.Dv null ,
-the element itself has its contents filled in.
-.Pp
-If
-.Fa value
-is
-.Dv null ,
-the
-.Qq ort-null
-class is added and the
-.Cm isnull
-label is used (or an empty string).
-If
-.Fa value
-is zero, the
-.Qq ort-unset
-class is added and the
-.Cm isunset
-label is used (or an empty string).
-Multiple matching labels are separated by a comma and space.
-If any given bit doesn't have or match a label, it is not given any
-label text.
-.El
-.Ss Customisation
-All functions accept an optional argument for providing custom per-field
-or per-structure callbacks.
+All class methods accept an optional argument for providing custom
+per-field or per-structure callbacks.
 Keys in the object must consist of the structure name, followed by a
 dash, followed by the field name.
 For example, assuming a structure
@@ -457,6 +337,130 @@ const custom: ort.DataCallbacks = {
 };
 new ort.foo(obj).fill(e, custom);
 .Ed
+.Ss Static Classes
+Each enumeration and bitfield corresponds to a class with field values
+and formatting static methods.
+.Pp
+Enumeration classes contains static members with the numeric value of
+its items.
+For example, an enumeration
+.Qq foo
+will produce a class
+.Qq foo
+with static members corresponding to each enumeration item.
+.Pp
+Bitfield classes are similarly named and contain two static members per
+item: one for the bit index, one for the generated bit mask.
+The former is prefixed
+.Li BITI_ ,
+the latter with
+.Li BITF_ .
+Thus an item
+.Qq bar
+creates numeric static members
+.Va BITI_bar
+and
+.Va BITF_bar .
+There is always a
+.Va BITI__MAX
+that is one greater than the largest item's value.
+.Pp
+Each enumeration corresponds to a class with field values and formatting
+static methods.
+These take advantage of the
+.Cm jslabel
+enumeration label described in
+.Xr ort 5 .
+.Bl -tag -width Ds
+.It Fn format "e: HTMLElement" "name: string|null" "value: number|null" Ns No : void
+Fills in all elements (not inclusive) descending from
+.Fa e
+having class
+.Fa name Ns "-label"
+with the configuration label corresponding to the enumeration value
+.Fa value .
+If
+.Fa name
+is
+.Dv null ,
+the element itself has its contents filled in.
+.Pp
+If
+.Fa value
+is null, the
+.Qq ort-class
+is added and the
+.Cm isnull
+label is used (or an empty string).
+.El
+.Pp
+If a language is specified in the root of the HTML or XML document with
+the
+.Qq lang
+attribute, it is first matched a label for that language.
+If there is no language, or none for that label, the default label is
+used.
+If there is no default label, an empty string is used instead.
+An empty string is also used for invalid enumeration values.
+.Pp
+A common label fill idiom is as follows:
+.Bd -literal -offset indent
+<div id="place">
+  <span class="foo-val-label>label</span>:
+  <span class="foo-val-text>text</span>
+</div>
+.Ed
+.Pp
+Letting the field
+.Qq val
+have type
+.Cm enum anenum ,
+both label and text may be filled in as follows:
+.Bd -literal -offset indent
+const custom: ort.DataCallbacks = {
+  'foo-val': ort.anenum.format
+};
+.Ed
+.Pp
+This will fill in both the
+.Cm jslabel
+of the value's corresponding item and the value itself.
+.Pp
+Bitfields behave similarly and have the same member.
+.Bl -tag -width Ds
+.It Fn format "e: HTMLElement" "name: string|null" "value: number|null" Ns No : void
+Fills in all elements (not inclusive) descending from
+.Fa e
+having class
+.Fa name Ns "-label"
+with all configuration labels with corresponding bits set in
+.Fa value .
+If
+.Fa name
+is
+.Dv null ,
+the element itself has its contents filled in.
+.Pp
+If
+.Fa value
+is
+.Dv null ,
+the
+.Qq ort-null
+class is added and the
+.Cm isnull
+label is used (or an empty string).
+If
+.Fa value
+is zero, the
+.Qq ort-unset
+class is added and the
+.Cm isunset
+label is used (or an empty string).
+Multiple matching labels are separated by a comma and space.
+If any given bit doesn't have or match a label, it is not given any
+label text.
+.El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.
@@ -474,6 +478,8 @@ by the
 family of
 .Xr ort-c-header 1 .
 This does not do any error checking.
+Let this file be called
+.Pa script.ts .
 .Bd -literal -offset indent
 function init(): void
 {
@@ -483,12 +489,12 @@ function init(): void
     if (xmh.readyState === 4 && xmh.status === 200)
         success(v);
   };
-  xmh.open('GET', 'https://your-cgi-script, true);
-  xmh.send(new FormData(form));
+  xmh.open('GET', 'https://your-cgi-script', true);
+  xmh.send();
 }
 .Ed
 .Pp
-Now define
+Now in the same file, define
 .Fn success
 to parse the JSON response content using the classes and methods defined
 in the output of
@@ -502,21 +508,26 @@ function success(resp: string): void
 }
 .Ed
 .Pp
-Lastly, use the following abbreviated HTML in which to display the
+To drive the script, cause
+.Fn init
+to be invoked when the page has loaded.
+.Bd -literal -offset indent
+window.addEventListener('load', init);
+.Ed
+.Pp
+The following abbreviated HTML in which to display the
 contents of these objects.
 Let
-.Pa driver.js
-consist of the AJAX snippet and formatter and
-.Pa foo.s
-be the output of
-.Nm .
+.Pa foo.js
+be the concatenated output of
+.Xr tsc 1
+over all TypeScript files.
 .Bd -literal -offset indent
 <!DOCTYPE html>
 <html lang="en">
     <head>
       <title>Example</title>
       <script src="foo.js"></script>
-      <script src="driver.js"></script>
     </head>
     <body>
         <div id="place">
@@ -528,14 +539,12 @@ be the output of
 </html>
 .Ed
 .Pp
-Finally, to drive the script, cause
-.Fn init
-to be invoked when the page has loaded.
-This may be in
-.Pa driver.js
-or directly in the document header.
+Assuming a configuration file
+.Pa foo.ort ,
+the following creates the single JavaScript file:
 .Bd -literal -offset indent
-window.addEventListener('load', init);
+% ort-javascript foo.ort > foo.ts
+% tsc --alwaysStrict --strict --outFile foo.js foo.ts script.ts
 .Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
@@ -543,7 +552,9 @@ window.addEventListener('load', init);
 .\" For sections 2, 3, 4, and 9 errno settings only.
 .Sh SEE ALSO
 .Xr ort-c-header 1 ,
-.Xr ort-c-source 1 ,
+.Xr ort-nodejs 1 ,
+.Xr tsc 1 ,
+.Xr typedoc 1 ,
 .Xr ort 5
 .\" .Sh STANDARDS
 .\" .Sh HISTORY

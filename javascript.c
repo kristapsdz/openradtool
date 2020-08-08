@@ -259,8 +259,34 @@ gen_js_field(const struct field *f)
 		return;
 
 	if (f->type == FTYPE_STRUCT) {
-		rc = asprintf(&buf, "new %s(o.%s)", 
-			f->ref->target->parent->name, f->name);
+		if (f->rolemap != NULL)
+			rc = (f->ref->source->flags & FIELD_NULL) ?
+				asprintf(&buf, 
+					"\t\t\t\ttypeof o.%s === "
+					  "\'undefined\' ? undefined :\n"
+					"\t\t\t\to.%s === null ? null :\n"
+					"\t\t\t\tnew %s(o.%s)", 
+					f->name, f->name,
+					f->ref->target->parent->name, 
+					f->name) :
+				asprintf(&buf, 
+					"\t\t\t\ttypeof o.%s === "
+					  "\'undefined\' ?\n"
+					"\t\t\t\tundefined : new %s(o.%s)", 
+					f->name,
+					f->ref->target->parent->name, 
+					f->name);
+		else
+			rc = (f->ref->source->flags & FIELD_NULL) ?
+				asprintf(&buf, 
+					"\t\t\t\to.%s === null ? null :\n"
+					"\t\t\t\tnew %s(o.%s)", 
+					f->name,
+					f->ref->target->parent->name, 
+					f->name) :
+				asprintf(&buf, "\t\t\t\tnew %s(o.%s)", 
+					f->ref->target->parent->name, 
+					f->name);
 		if (rc == -1)
 			err(EXIT_FAILURE, "asprintf");
 	}
@@ -322,19 +348,20 @@ gen_js_field(const struct field *f)
 		col++;
 		putchar(' ');
 	}
-	col += (rc = printf("%s,", (f->flags & FIELD_NULL) ? 
-		"true" : "false")) > 0 ? rc : 0;
+	rc = printf("%s,",
+		(f->flags & FIELD_NULL) ||
+		(f->type == FTYPE_STRUCT && 
+		 (f->ref->source->flags & FIELD_NULL)) ?
+		"true" : "false");
+
+	col += rc > 0 ? rc : 0;
 
 	/* Nested object or null. */
 
-	if (col + (buf == NULL ? 4 : strlen(buf)) + 2 >= 72) {
-		col = 32;
-		fputs("\n\t\t\t\t", stdout);
-	} else {
-		col++;
-		putchar(' ');
-	}
-	printf("%s);\n", buf == NULL ? "null" : buf);
+	if (buf != NULL)
+		printf("\n%s);\n", buf);
+	else 
+		puts("null);");
 
 	free(buf);
 

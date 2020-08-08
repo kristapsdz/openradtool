@@ -403,14 +403,17 @@
 				if (custom[fname] instanceof Array) {
 					for (i = 0; i < custom[fname].length; i++)
 						custom[fname][i](e, fname, null);
-				} else {
+				} else
 					custom[fname](e, fname, null);
-				}
 			}
 			return;
 		}
 
-		/* Non-null non-structs. */
+		/* 
+		 * Non-null non-structs.
+		 * Note that "sub" is never undefined because that would
+		 * otherwise be caught in the "typeof obj" guard above.
+		 */
 
 		if (sub !== null) {
 			const list: HTMLElement[] = 

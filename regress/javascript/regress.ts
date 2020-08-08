@@ -1,6 +1,7 @@
-let contents: Buffer;
+const contents: Buffer =
+	fs.readFileSync(fname);
+const dom: JSDOM =
+	new JSDOM(contents.toString());
 
-contents = fs.readFileSync(fname);
-doc = new JSDOM(contents.toString()).window.document;
-(<any>global).document = doc;
-return runTest(doc).body.innerHTML;
+(<any>global).document = dom.window.document;
+return runTest(dom.window.document).body.innerHTML;

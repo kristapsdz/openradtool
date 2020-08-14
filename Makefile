@@ -146,6 +146,10 @@ CFLAGS_SQLBOX	!= pkg-config --cflags sqlbox 2>/dev/null || echo ""
 LIBS_PKG	!= pkg-config --libs expat 2>/dev/null || echo "-lexpat"
 CFLAGS_PKG	!= pkg-config --cflags expat 2>/dev/null || echo ""
 
+PKG_REGRESS	 = sqlbox kcgi-regress kcgi-json libcurl
+LIBS_REGRESS	!= pkg-config --libs $(PKG_REGRESS) 2>/dev/null || echo ""
+CFLAGS_REGRESS	!= pkg-config --cflags $(PKG_REGRESS) 2>/dev/null || echo ""
+
 all: $(BINS)
 
 afl::
@@ -429,8 +433,40 @@ clean:
 distclean: clean
 	rm -f config.h config.log Makefile.configure
 
-regress: ort ort-sqldiff ort-sql ort-javascript
+regress: all
 	@tmp=`mktemp` ; \
+	if [ "$(LIBS_REGRESS)" == "" ]; then \
+		echo "regress/c: ignoring (no sqlbox library)" 1>&2 ; \
+	else \
+		for f in regress/c/*.ort ; do \
+			bf=regress/c/`basename $$f .ort` ; \
+			cf=regress/c/`basename $$f .ort`.c ; \
+			hf=`basename $$f`.h ; \
+			./ort-c-header -Jj $$f > $$f.h ; \
+			./ort-c-source -S. -h $$hf -Jj $$f > $$f.c ; \
+			./ort-sql $$f | sqlite3 $$tmp ; \
+			set +e ; \
+			$(CC) $(CFLAGS_REGRESS) $(CFLAGS) -o $$bf \
+				$$f.c $$cf $(LIBS_REGRESS) $(LDADD_CRYPT) ; \
+			if [ $$? -ne 0 ] ; then \
+				set -e ; \
+				echo "$$f: fail (did not compile)" ; \
+				rm $$f.h $$f.c $$bf $$tmp ; \
+				exit 1 ; \
+			fi ; \
+			rm $$f.h $$f.c ; \
+			./$$bf 2>/dev/null 1>/dev/null $$tmp ; \
+			if [ $$? -ne 0 ] ; then \
+				set -e ; \
+				echo "$$f: fail" ; \
+				rm $$bf $$tmp ; \
+				exit 1 ; \
+			fi ; \
+			rm $$bf $$tmp ; \
+			set -e ; \
+			echo "$$f: pass" ; \
+		done ; \
+	fi ; \
 	for f in regress/*.result ; do \
 		bf=`basename $$f .result`.ort ; \
 		set +e ; \

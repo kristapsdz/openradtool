@@ -4,8 +4,8 @@
 include Makefile.configure
 
 VERSION_MAJOR	 = 0
-VERSION_MINOR	 = 9
-VERSION_BUILD	 = 1
+VERSION_MINOR	 = 10
+VERSION_BUILD	 = 0
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = compats.o \
 		   config.o \
@@ -274,6 +274,7 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/openradtool-$(VERSION)/
 	mkdir -p .dist/openradtool-$(VERSION)/man
 	mkdir -p .dist/openradtool-$(VERSION)/regress
+	mkdir -p .dist/openradtool-$(VERSION)/regress/c
 	mkdir -p .dist/openradtool-$(VERSION)/regress/javascript
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sqldiff
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sql
@@ -291,6 +292,9 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	install -m 0444 regress/javascript/*.result .dist/openradtool-$(VERSION)/regress/javascript
 	install -m 0444 regress/javascript/*.ts .dist/openradtool-$(VERSION)/regress/javascript
 	install -m 0444 regress/javascript/*.xml .dist/openradtool-$(VERSION)/regress/javascript
+	install -m 0444 regress/c/*.ort .dist/openradtool-$(VERSION)/regress/c
+	install -m 0444 regress/c/*.c .dist/openradtool-$(VERSION)/regress/c
+	install -m 0444 regress/c/regress.h .dist/openradtool-$(VERSION)/regress/c
 	install -m 0555 $(DOTAREXEC) .dist/openradtool-$(VERSION)
 	( cd .dist/ && tar zcf ../$@ ./ )
 	rm -rf .dist/
@@ -439,6 +443,7 @@ regress: all
 		echo "regress/c: ignoring (no sqlbox library)" 1>&2 ; \
 	else \
 		for f in regress/c/*.ort ; do \
+			rr=regress/c/regress.c ; \
 			bf=regress/c/`basename $$f .ort` ; \
 			cf=regress/c/`basename $$f .ort`.c ; \
 			hf=`basename $$f`.h ; \
@@ -447,7 +452,7 @@ regress: all
 			./ort-sql $$f | sqlite3 $$tmp ; \
 			set +e ; \
 			$(CC) $(CFLAGS_REGRESS) $(CFLAGS) -o $$bf \
-				$$f.c $$cf $(LIBS_REGRESS) $(LDADD_CRYPT) ; \
+				$$f.c $$cf $$rr $(LIBS_REGRESS) $(LDADD_CRYPT) ; \
 			if [ $$? -ne 0 ] ; then \
 				set -e ; \
 				echo "$$f: fail (did not compile)" ; \

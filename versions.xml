@@ -3,6 +3,49 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.10.0</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-08-08">2020-08-08</time>
+		</header>
+		<aside>
+			<p>
+				<b>Major breaking change</b>: integer values are now JSON-serialised
+				as strings intead of numbers.
+				This affects
+				<a href="ort-c-header.1.html">ort-c-header(1)</a>'s JSON export
+				interface,
+				<a href="ort-c-header.1.html">ort-c-header(1)</a>'s JSON import
+				interface, and most importantly,
+				<a href="ort-javascript.1.html">ort-javascript(1)</a>'s typing of
+				integers as <code>string</code> instead of <code>number</code>.
+			</p>
+			<p>
+				This breaking change is painful but completely necessary because of
+				JavaScript's inability to parse integers with more than 53 bits and
+				the necessity to handle full 64-bit numbers.
+				While JSON can accept arbitrary-precision numbers if used purely as
+				a transport protocol, it's more portable to just use a string
+				encoding.
+			</p>
+			<p>
+				Internally,
+				<a href="ort-javascript.1.html">ort-javascript(1)</a> uses code from
+				<a href="https://github.com/dcodeIO/Long.js">Long.js</a> to parse
+				and manipulate integers-as-strings for its bit-wise formatting.
+				This is bundled with the generated output.
+			</p>
+			<p>
+				While the proper (and simpler) way to store integers in
+				<a href="ort-javascript.1.html">ort-javascript(1)</a> would be
+				<code>BigInt</code>, this isn't yet standard across browsers, and
+				would require alternative encoding during transit anyway (JSON
+				doesn't recognise it).  The current implementation is portable
+				across all browsers.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.9.1</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2020-08-08">2020-08-08</time>

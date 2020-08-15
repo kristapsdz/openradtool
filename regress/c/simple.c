@@ -25,21 +25,19 @@
 #include <kcgijson.h>
 #include <kcgiregress.h>
 
+#include "regress.h"
 #include "simple.ort.h"
 
-#define	URL "http://localhost:17123/index.json"
-
 static int
-server(void *arg)
+server(const char *fname)
 {
 	struct kreq	 r;
-	struct ort	*ort;
-	const char	*db = arg;
 	struct foo	*foo;
+	struct ort	*ort;
 	struct kjsonreq	 req;
 	int64_t		 id;
 
-	if ((ort = db_open(db)) == NULL)
+	if ((ort = db_open(fname)) == NULL)
 		return 0;
 	id = db_foo_insert(ort, "test", 
 		1.0, ENM_a, BITF_BITS_a);
@@ -61,60 +59,37 @@ server(void *arg)
 	json_foo_data(&req, foo);
 	kjson_close(&req);
 	khttp_free(&r);
-	db_close(ort);
 	db_foo_free(foo);
+	db_close(ort);
 	return 1;
 }
 
-static size_t
-client_parse(void *dat, size_t sz, size_t nm, void *arg)
-{
-
-	return kcgi_buf_write(dat, nm * sz, arg) != KCGI_OK ?
-		0 : nm * sz;
-}
-
 static int
-client(void *arg)
+client(long http, const char *buf, size_t sz)
 {
-	CURL		*curl;
-	long		 http;
-	struct kcgi_buf	 buf;
 	struct foo	 foo;
 	struct foo	*foop = NULL;
 	int		 rc = 0, tsz, ntsz;
 	jsmn_parser	 jp;
 	jsmntok_t	*t = NULL;
 
-	if ((curl = curl_easy_init()) == NULL)
-		return 0;
-	memset(&buf, 0, sizeof(struct kcgi_buf));
-	curl_easy_setopt(curl, CURLOPT_URL, URL);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, client_parse);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
-
-	/* Make HTTP query. */
-
-	if (curl_easy_perform(curl) != CURLE_OK)
-		goto out;
-	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http);
 	if (http != 200)
 		goto out;
 
 	/* Parse JSON results. */
 
 	jsmn_init(&jp);
-	if ((tsz = jsmn_parse(&jp, buf.buf, buf.sz, NULL, 0)) <= 0)
+	if ((tsz = jsmn_parse(&jp, buf, sz, NULL, 0)) <= 0)
 		goto out;
 	if ((t = calloc(tsz, sizeof(jsmntok_t))) == NULL)
 		goto out;
 	jsmn_init(&jp);
-	if ((ntsz = jsmn_parse(&jp, buf.buf, buf.sz, t, tsz)) != tsz)
+	if ((ntsz = jsmn_parse(&jp, buf, sz, t, tsz)) != tsz)
 		goto out;
 	
 	/* Analyse. */
 
-	if ((ntsz = jsmn_foo(&foo, buf.buf, t, tsz)) <= 0)
+	if ((ntsz = jsmn_foo(&foo, buf, t, tsz)) <= 0)
 		goto out;
 	tsz += ntsz;
 	foop = &foo;
@@ -131,10 +106,7 @@ client(void *arg)
 
 	rc = 1;
 out:
-	curl_easy_cleanup(curl);
-	curl_global_cleanup();
 	jsmn_foo_clear(foop);
-	free(buf.buf);
 	free(t);
 	return rc;
 }
@@ -143,9 +115,6 @@ int
 main(int argc, char *argv[])
 {
 
-	if (argc != 2)
-		return 1;
-	return kcgi_regress_cgi
-		(client, NULL, server, argv[1]) ? 0 : 1;
+	return regress(client, server, argc, argv);
 }
 

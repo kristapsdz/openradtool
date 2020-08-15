@@ -14,36 +14,21 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <float.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include <kcgi.h>
 #include <kcgijson.h>
 #include <kcgiregress.h>
 
 #include "regress.h"
-#include "simple.ort.h"
+#include "simple-bits-as-int.ort.h"
 
 static int
 server(const char *fname)
 {
 	struct kreq	 r;
-	struct foo	*foo;
-	struct ort	*ort;
-	struct kjsonreq	 req;
-	int64_t		 id;
-
-	if ((ort = db_open(fname)) == NULL)
-		return 0;
-	id = db_foo_insert(ort, "test", 
-		1.0, ENM_a, BITF_BITS_a);
-	if (id == -1)
-		return 0;
-	if ((foo = db_foo_get_id(ort, id)) == NULL)
-		return 0;
 
 	if (khttp_parse(&r, NULL, 0, NULL, 0, 0) != KCGI_OK)
 		return 0;
@@ -53,15 +38,13 @@ server(const char *fname)
 		"%s", kmimetypes[KMIME_APP_JSON]);
 	khttp_body(&r);
 
-	kjson_open(&req, &r);
-	kjson_obj_open(&req);
-	json_foo_data(&req, foo);
-	kjson_close(&req);
+	khttp_printf(&r, 
+		"{ \"d\": %u, \"id\": 1 }\n",
+		1U << BITI_BITS_lo);
 	khttp_free(&r);
-	db_foo_free(foo);
-	db_close(ort);
 	return 1;
 }
+
 
 static int
 client(long http, const char *buf, size_t sz)
@@ -92,13 +75,7 @@ client(long http, const char *buf, size_t sz)
 		goto out;
 	tsz += ntsz;
 	foop = &foo;
-	if (strcmp(foo.a, "test"))
-		goto out;
-	if (foo.b > 1.0 + DBL_EPSILON || foo.b < 1.0 - DBL_EPSILON)
-		goto out;
-	if (foo.c != ENM_a)
-		goto out;
-	if (foo.d != BITF_BITS_a)
+	if (foo.d != BITF_BITS_lo)
 		goto out;
 	if (foo.id != 1)
 		goto out;

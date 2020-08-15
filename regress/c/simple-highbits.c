@@ -14,13 +14,10 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <float.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 
-#include <curl/curl.h>
 #include <kcgi.h>
 #include <kcgijson.h>
 #include <kcgiregress.h>

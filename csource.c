@@ -2066,6 +2066,10 @@ gen_func_json_parse(const struct strct *p)
 			break;
 		case FTYPE_BIT:
 		case FTYPE_BITFIELD:
+			puts("\t\t\tif (t[j+1].type != JSMN_STRING && "
+			       "t[j+1].type != JSMN_PRIMITIVE)\n"
+			     "\t\t\t\treturn 0;");
+			break;
 		case FTYPE_BLOB:
 		case FTYPE_TEXT:
 		case FTYPE_PASSWORD:

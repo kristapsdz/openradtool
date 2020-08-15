@@ -51,9 +51,7 @@ parse_bitidx_item(struct parse *p, struct bitidx *bi)
 	if (bi->value < 0 || bi->value >= 64) {
 		parse_errx(p, "bit index out of range");
 		return;
-	} else if (bi->value >= 32)
-		parse_warnx(p, "bit index will not work with "
-			"JavaScript applications (32-bit)");
+	} 
 
 	TAILQ_FOREACH(bbi, &bi->parent->bq, entries) 
 		if (bi != bbi && bi->value == bbi->value) {

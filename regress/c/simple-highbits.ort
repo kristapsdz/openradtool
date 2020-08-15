@@ -1,0 +1,11 @@
+bits bits {
+	item lo 3;
+	item hi 63;
+};
+
+struct foo {
+	field d bits bits;
+	field id int rowid;
+	insert;
+	search id: name id;
+};

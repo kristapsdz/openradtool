@@ -5,7 +5,7 @@ function runTest(dom: HTMLDocument): HTMLDocument
 	};
 	const data: ort.fooData = { 
 		'id': 1,
-		'val': 0
+		'val': '0'
 	};
 	const obj: ort.foo = new ort.foo(data);
 

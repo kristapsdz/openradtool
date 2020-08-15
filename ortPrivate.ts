@@ -1,3 +1,174 @@
+	class Long {
+		readonly low: number;
+		readonly high: number;
+		static readonly ZERO: Long = Long.fromNumber(0);
+		static readonly ONE: Long = Long.fromNumber(1);
+
+		private constructor(low: number, high: number)
+		{
+			this.low = low | 0;
+			this.high = high | 0;
+		}
+
+		isZero(): boolean
+		{
+			return this.high === 0 && this.low === 0;
+		}
+
+		and(other: Long): Long
+		{
+    			return new Long
+				(this.low & other.low, 
+				 this.high & other.high);
+		}
+
+		shiftLeft(numBits: number): Long
+		{
+
+			if ((numBits &= 63) === 0)
+				return this;
+			else if (numBits < 32)
+				return new Long
+					(this.low << numBits, 
+					 (this.high << numBits) | 
+					 (this.low >>> (32 - numBits)));
+			else
+        			return new Long
+					(0, this.low << (numBits - 32));
+		}
+
+		mul(multiplier: Long): Long
+		{
+
+			if (this.isZero() || multiplier.isZero())
+				return new Long(0, 0);
+
+			// Divide each long into 4 chunks of 16 bits,
+			// and then add up 4x4 products.  We can skip
+			// products that would overflow.
+
+			const a48: number = this.high >>> 16;
+			const a32: number = this.high & 0xFFFF;
+			const a16: number = this.low >>> 16;
+			const a00: number = this.low & 0xFFFF;
+
+			const b48: number = multiplier.high >>> 16;
+			const b32: number = multiplier.high & 0xFFFF;
+			const b16: number = multiplier.low >>> 16;
+			const b00: number = multiplier.low & 0xFFFF;
+
+			let c48: number = 0;
+			let c32: number = 0;
+			let c16: number = 0;
+			let c00: number = 0;
+
+			c00 += a00 * b00;
+			c16 += c00 >>> 16;
+			c00 &= 0xFFFF;
+			c16 += a16 * b00;
+			c32 += c16 >>> 16;
+			c16 &= 0xFFFF;
+			c16 += a00 * b16;
+			c32 += c16 >>> 16;
+			c16 &= 0xFFFF;
+			c32 += a32 * b00;
+			c48 += c32 >>> 16;
+			c32 &= 0xFFFF;
+			c32 += a16 * b16;
+			c48 += c32 >>> 16;
+			c32 &= 0xFFFF;
+			c32 += a00 * b32;
+			c48 += c32 >>> 16;
+			c32 &= 0xFFFF;
+			c48 += a48 * b00 + a32 * b16 + a16 * b32 + a00 * b48;
+			c48 &= 0xFFFF;
+
+			return new Long
+				((c16 << 16) | c00, (c48 << 16) | c32);
+		}
+
+		add(addend: Long): Long
+		{
+			// Divide each number into 4 chunks of 16 bits,
+			// and then sum the chunks.
+
+			const a48: number = this.high >>> 16;
+			const a32: number = this.high & 0xFFFF;
+			const a16: number = this.low >>> 16;
+			const a00: number = this.low & 0xFFFF;
+
+			const b48: number = addend.high >>> 16;
+			const b32: number = addend.high & 0xFFFF;
+			const b16: number = addend.low >>> 16;
+			const b00: number = addend.low & 0xFFFF;
+
+			let c48: number = 0;
+			let c32: number = 0;
+			let c16: number = 0;
+			let c00: number = 0;
+
+			c00 += a00 + b00;
+			c16 += c00 >>> 16;
+			c00 &= 0xFFFF;
+			c16 += a16 + b16;
+			c32 += c16 >>> 16;
+			c16 &= 0xFFFF;
+			c32 += a32 + b32;
+			c48 += c32 >>> 16;
+			c32 &= 0xFFFF;
+			c48 += a48 + b48;
+			c48 &= 0xFFFF;
+
+			return new Long
+				((c16 << 16) | c00, (c48 << 16) | c32);
+		}
+
+		static fromNumber(value: number): Long
+		{
+			return new Long
+				((value % ((1 << 16) * (1 << 16))) | 0, 
+				 (value / ((1 << 16) * (1 << 16))) | 0);
+		}
+
+		static fromStringZero(str: string): Long
+		{
+			const val: Long|null = Long.fromString(str);
+			return val === null ? Long.ZERO : val;
+		}
+
+		static fromString(str: string): Long | null
+		{
+			const radixToPower = new Long(57600, 1525);
+			let result: Long = new Long(0, 0);
+			let i: number;
+
+			if (str === null || str.length === 0)
+				return null;
+			if (str.indexOf('-') >= 0)
+				return null;
+
+			for (i = 0; i < str.length; i += 8) {
+				let size: number = 
+					Math.min(8, str.length - i);
+				let value: number = parseInt
+					(str.substring(i, i + size), 10);
+				if (size < 8) {
+					const power: Long = 
+						this.fromNumber
+						(Math.pow(10, size));
+					result = result.mul(power).add
+						(this.fromNumber(value));
+				} else {
+					result = result.mul
+						(radixToPower);
+					result = result.add
+						(this.fromNumber(value));
+				}
+			}
+			return result;
+		}
+	}
+
 	/**
 	 * Labels ("jslabel" in ort(5)) may have multiple languages.
 	 * This maps a language name to a translated string.
@@ -318,21 +489,24 @@
 	 * @internal
 	 */
 	function _fillBitsChecked(e: HTMLElement, fname: string,
-		 val: number|null|undefined, inc: boolean): void
+		 val: string|null|undefined, inc: boolean): void
 	{
 		let i: number;
 		let v: number;
+		let lval: Long|null;
 		const list: HTMLElement[] = _elemList
 			(e, fname + '-bits-checked', inc);
 
 		if (typeof val === 'undefined')
 			return;
 
+		lval = val === null ? null : Long.fromString(val);
+
 		for (i = 0; i < list.length; i++) {
 			const attrval: string|null = 
 				(<HTMLInputElement>list[i]).value;
 			_rattr(list[i], 'checked');
-			if (val === null || attrval === null)
+			if (lval === null || attrval === null)
 				continue;
 
 			/*
@@ -346,10 +520,12 @@
 				continue;
 			if (!(isFinite(v) && Math.floor(v) === v))
 				continue;
-			if (v < 0)
+			if (v < 0 || v > 64)
 				continue;
-			if ((v === 0 && val === 0) || 
-			    (v > 0 && ((1 << (v - 1)) & val)))
+
+			if (v === 0 && lval.isZero() ||
+			    !Long.ONE.shiftLeft
+			    (v - 1).and(lval).isZero())
 				_attr(list[i], 'checked', 'checked');
 		}
 	}

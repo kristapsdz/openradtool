@@ -73,7 +73,7 @@ static	const char *const coltypes[FTYPE__MAX] = {
 };
 
 static	const char *const puttypes[FTYPE__MAX] = {
-	"kjson_putintp", /* FTYPE_BIT */
+	"kjson_putintstrp", /* FTYPE_BIT */
 	"kjson_putintp", /* FTYPE_DATE */
 	"kjson_putintp", /* FTYPE_EPOCH */
 	"kjson_putintp", /* FTYPE_INT */
@@ -84,7 +84,7 @@ static	const char *const puttypes[FTYPE__MAX] = {
 	"kjson_putstringp", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 	"kjson_putintp", /* FTYPE_ENUM */
-	"kjson_putintp", /* FTYPE_BITFIELD */
+	"kjson_putintstrp", /* FTYPE_BITFIELD */
 };
 
 static	const char *const bindtypes[FTYPE__MAX] = {
@@ -2052,8 +2052,6 @@ gen_func_json_parse(const struct strct *p)
 			       f->name, f->name);
 
 		switch (f->type) {
-		case FTYPE_BIT:
-		case FTYPE_BITFIELD:
 		case FTYPE_DATE:
 		case FTYPE_ENUM:
 		case FTYPE_EPOCH:
@@ -2066,6 +2064,8 @@ gen_func_json_parse(const struct strct *p)
 			      "buf[t[j+1].start])))\n"
 			     "\t\t\t\treturn 0;");
 			break;
+		case FTYPE_BIT:
+		case FTYPE_BITFIELD:
 		case FTYPE_BLOB:
 		case FTYPE_TEXT:
 		case FTYPE_PASSWORD:

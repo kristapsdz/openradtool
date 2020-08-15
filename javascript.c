@@ -38,7 +38,7 @@
 #include "paths.h"
 
 static	const char *types[FTYPE__MAX] = {
-	"number", /* FTYPE_BIT */
+	"string", /* FTYPE_BIT */
 	"number", /* FTYPE_DATE */
 	"number", /* FTYPE_EPOCH */
 	"number", /* FTYPE_INT */
@@ -49,7 +49,7 @@ static	const char *types[FTYPE__MAX] = {
 	"string", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 	"number", /* FTYPE_ENUM */
-	"number", /* FTYPE_BITFIELD */
+	"string", /* FTYPE_BITFIELD */
 };
 
 /*
@@ -833,10 +833,10 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 			if (bi->doc != NULL)
 				print_commentt(2, COMMENT_JS, bi->doc);
 			printf("\t\tstatic readonly "
-				 "BITF_%s: number = %u;\n"
+				 "BITF_%s: Long = Long.fromStringZero(\'%" PRIu64 "\');\n"
 				"\t\tstatic readonly "
 			      	 "BITI_%s: number = %" PRId64 ";\n",
-				bi->name, 1U << bi->value,
+				bi->name, 1LLU << bi->value,
 				bi->name, bi->value);
 			if (bi->value > maxvalue)
 				maxvalue = bi->value;
@@ -881,36 +881,37 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		gen_class_proto(2, "void", "format",
 			"e", "HTMLElement", 
 			"name", "string|null",
-			"v", "number|null", NULL);
+			"v", "string|null", NULL);
 		puts("\t\t{\n"
 		     "\t\t\tlet i: number = 0;\n"
-		     "\t\t\tlet res: string;\n"
 		     "\t\t\tlet s: string = '';\n"
+		     "\t\t\tconst vlong: Long|null =\n"
+		     "\t\t\t\tv === null ? null : Long.fromString(v);\n"
 		     "\n"
 		     "\t\t\tif (name !== null)\n"
 		     "\t\t\t\tname += '-label';\n"
 		     "\n"
-		     "\t\t\tif (v === null && name !== null) {\n"
+		     "\t\t\tif (vlong === null && name !== null) {\n"
 		     "\t\t\t\t_classaddcl(e, name, "
 		     	"\'ort-null\', false);");
 		printf("\t\t\t\t_replcllang(e, name, ");
 		gen_labels(cfg, &bf->labels_null);
 		printf(");\n"
 		       "\t\t\t\treturn;\n"
-		       "\t\t\t} else if (v === null) {\n"
+		       "\t\t\t} else if (vlong === null) {\n"
 		       "\t\t\t\t_classadd(e, \'ort-null\');\n"
 		       "\t\t\t\t_repllang(e, ");
 		gen_labels(cfg, &bf->labels_null);
 		printf(");\n"
 		       "\t\t\t\treturn;\n"
-		       "\t\t\t} else if (v === 0 && name !== null) {\n"
+		       "\t\t\t} else if (vlong.isZero() && name !== null) {\n"
 		       "\t\t\t\t_classaddcl(e, name, "
 		     	"\'ort-unset\', false);\n"
 		       "\t\t\t\t_replcllang(e, name, ");
 		gen_labels(cfg, &bf->labels_unset);
 		printf(");\n"
 		       "\t\t\t\treturn;\n"
-		       "\t\t\t} else if (v === 0) {\n"
+		       "\t\t\t} else if (vlong.isZero()) {\n"
 		       "\t\t\t\t_classadd(e, \'ort-unset\');\n"
 		       "\t\t\t\t_repllang(e, ");
 		gen_labels(cfg, &bf->labels_unset);
@@ -920,8 +921,8 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		TAILQ_FOREACH(bi, &bf->bq, entries) {
 			warn_label(cfg, &bi->labels, &bi->pos,
 				bf->name, bi->name, "item");
-			printf("\t\t\tif ((v & %s.BITF_%s)) {\n"
-			       "\t\t\t\tres = _strlang(", 
+			printf("\t\t\tif (!vlong.and(%s.BITF_%s).isZero()) {\n"
+			       "\t\t\t\tconst res: string = _strlang(", 
 			       bf->name, bi->name);
 			gen_labels(cfg, &bi->labels);
 			puts(");\n"

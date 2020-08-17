@@ -71,7 +71,7 @@ Each
 in the configuration is rendered as a TypeScript interface suffixed
 .Qq Data ,
 for example,
-.Qq fooData
+.Vt ort.fooData
 for a structure named
 .Qq foo .
 Each native field is mapped to a native type.
@@ -80,6 +80,7 @@ For references, the type is the referenced interface type.
 namespace ort {
   export interface fooData {
     sometext: string;
+    someint: string|number;
     somenumber: number;
     areference: barData;
   }
@@ -104,14 +105,14 @@ configuration type to the TypeScript type along with any notes.
 .Pp
 Front-ends should be attentive to integer types being either string or
 numeric.
-This is to accomodate for the 53-bit limit of what's stored as 64-bit
+This is to accommodate for the 53-bit limit of what's stored as 64-bit
 integers.
 .Pp
 If a field may not be exported due to role restrictions, it is marked as
 optional within the interface.
 .Pp
 In addition to this, a
-.Qq DataCallbacks
+.Vt ort.DataCallbacks
 interface is defined for
 .Sx Customisation
 and contains callback functions for each field for formatting purposes.
@@ -124,10 +125,10 @@ They are named as found in the configuration.
 .Pp
 The following methods are generated for each structure.
 .Bl -tag -width Ds
-.It Fn "new foo" "obj: fooData|fooData[]" Ns No : foo
+.It Fn "new foo" "obj: ort.fooData|ort.fooData[]" Ns No : foo
 Constructor passed an object or array.
 The array may consist of zero objects.
-.It Fn fillInner "e: HTMLElement|null" "custom?: DataCallbacks|null" Ns No : void
+.It Fn fillInner "e: HTMLElement|null" "custom?: ort.DataCallbacks|null" Ns No : void
 Fill labelled elements within (but not including) element
 .Fa e ,
 with optional call-backs
@@ -137,7 +138,7 @@ If
 is
 .Dv null ,
 does nothing.
-.It Fn fillInnerByClass "e: HTMLElement|null" "name: string" "custom?: DataCallbacks|null" Ns No : void
+.It Fn fillInnerByClass "e: HTMLElement|null" "name: string" "custom?: ort.DataCallbacks|null" Ns No : void
 Convenience method for invoking
 .Fn fillInner
 over all descendents of element
@@ -154,7 +155,7 @@ The
 applies to both
 .Fa e
 and the matched descendents.
-.It Fn fill "e: HTMLElement|null" "custom?: DataCallbacks|null" Ns No : void
+.It Fn fill "e: HTMLElement|null" "custom?: ort.DataCallbacks|null" Ns No : void
 Fill labelled elements within (including) element
 .Fa e ,
 with optional call-backs
@@ -164,7 +165,7 @@ If
 is
 .Dv null ,
 does nothing.
-.It Fn fillByClass "e: HTMLElement|null" "name: string" "custom?: DataCallbacks|null" Ns No : void
+.It Fn fillByClass "e: HTMLElement|null" "name: string" "custom?: ort.DataCallbacks|null" Ns No : void
 Convenience method for invoking
 .Fn fill
 over all descendents of (and including) element
@@ -176,7 +177,7 @@ If
 is
 .Dv null ,
 does nothing.
-.It Fn fillArray "e: HTMLElement|null" "custom?: DataCallbacks|null" Ns No : void
+.It Fn fillArray "e: HTMLElement|null" "custom?: ort.DataCallbacks|null" Ns No : void
 First adds the
 .Qq hide
 class to
@@ -199,7 +200,7 @@ or empty, does nothing except add the
 .Qq hide
 class to
 .Fa e .
-.It Fn fillArrayOrShow "e: HTMLElement|null" "toshow: HTMLElement|null" "custom?: DataCallbacks|null" Ns No : void
+.It Fn fillArrayOrShow "e: HTMLElement|null" "toshow: HTMLElement|null" "custom?: ort.DataCallbacks|null" Ns No : void
 Convenience method around
 .Fa fillArray
 removing the
@@ -207,7 +208,7 @@ removing the
 class from
 .Fa toshow
 if the object or objects at construction are non-empty.
-.It Fn fillArrayOrHide "e: HTMLElement|null" "tohide: HTMLElement|null" "custom?: DataCallbacks|null" Ns No : void
+.It Fn fillArrayOrHide "e: HTMLElement|null" "tohide: HTMLElement|null" "custom?: ort.DataCallbacks|null" Ns No : void
 Convenience method around
 .Fa fillArray
 adding the
@@ -326,13 +327,19 @@ new ort.client(obj).fillInner(document.body, custom);
 .Ed
 .Pp
 The callback will then be provided the full client object.
+.Bd -literal -offset indent
+function formatClient(e: HTMLElement,
+  name: string, v: ort.clientData|null): void {
+    /* Do something... */
+}
+.Ed
 .Pp
 In either case, the value for the custom key may also be an array of
 functions just as above.
 Each will be invoked in the order given, in the same way.
 .Bd -literal -offset indent
 const custom: ort.DataCallbacks = {
-    'client': [ format1, format2 ]
+  'client': [ format1, format2 ]
 };
 .Ed
 .Pp
@@ -347,11 +354,14 @@ on a field named
 .Li val ,
 provide a custom callback.
 .Bd -literal -offset indent
-let e: HTMLElement|null = document.getElementById('foo');
-readonly obj: fooData = <fooData>JSON.parse(response);
+const e: HTMLElement|null = 
+  document.getElementById('foo');
+const obj: ort.fooData = 
+  <ort.fooData>JSON.parse(response);
 const custom: ort.DataCallbacks = {
-    'foo-val': ort.someenum.format
+  'foo-val': ort.someenum.format
 };
+
 new ort.foo(obj).fill(e, custom);
 .Ed
 .Ss Static Classes
@@ -520,9 +530,10 @@ in the output of
 .Bd -literal -offset indent
 function success(resp: string): void
 {
-    let obj: ort.fooData =
-        <ort.fooData>JSON.parse(resp);
-    new ort.foo(obj).fill(document.getElementById('place'));
+  let obj: ort.fooData =
+    <ort.fooData>JSON.parse(resp);
+  new ort.foo(obj).fill
+    (document.getElementById('place'));
 }
 .Ed
 .Pp
@@ -543,17 +554,17 @@ over all TypeScript files.
 .Bd -literal -offset indent
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-      <title>Example</title>
-      <script src="foo.js"></script>
-    </head>
-    <body>
-        <div id="place">
-            <span class="foo-xxxx-text>
-                Replaced by the "text" field.
-            </span>
-        </div>
-    </body>
+  <head>
+    <title>Example</title>
+    <script src="foo.js"></script>
+  </head>
+  <body>
+    <div id="place">
+      <span class="foo-xxxx-text>
+        Replaced by the "text" field.
+      </span>
+    </div>
+  </body>
 </html>
 .Ed
 .Pp

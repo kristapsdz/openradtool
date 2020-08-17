@@ -41,15 +41,15 @@
 
 		/* Constant numbers used in the code. */
 
-		static private readonly TWO_PWR_16_DBL: number = 
+		private static readonly TWO_PWR_16_DBL: number = 
 			(1 << 16);
-		static private readonly TWO_PWR_32_DBL: number = 
+		private static readonly TWO_PWR_32_DBL: number = 
 			Long.TWO_PWR_16_DBL *
 			Long.TWO_PWR_16_DBL;
-		static private readonly  TWO_PWR_64_DBL: number =
+		private static readonly TWO_PWR_64_DBL: number =
 			Long.TWO_PWR_32_DBL *
 			Long.TWO_PWR_32_DBL;
-		static private readonly TWO_PWR_63_DBL: number = 
+		private static readonly TWO_PWR_63_DBL: number = 
 			Long.TWO_PWR_64_DBL / 2;
 
 		/**
@@ -57,7 +57,8 @@
 		 */
 		static isLong(obj: any): boolean 
 		{
-			return obj !== null && 
+			return typeof obj === 'object' &&
+		 	       obj !== null && 
 			       obj['__isLong__'] === true;
 		}
 
@@ -100,6 +101,9 @@
 			return this.high === 0 && this.low === 0;
 		}
 
+		/**
+		 * @return Whether the value is an odd number.
+		 */
 		isOdd(): boolean
 		{
 			return (this.low & 1) === 1;
@@ -291,6 +295,24 @@
 			return new Long
 				((c16 << 16) | c00, (c48 << 16) | c32,
 				 this.unsigned);
+		}
+
+		/**
+		 * Attempt to convert from a Long, number, or string.
+		 * @return The Long representation of the value or null
+		 * on conversion failure.
+		 */
+		static fromValue(val: any, unsigned?: boolean): Long|null
+		{
+			if (typeof val === 'number')
+				return Long.fromNumber
+					(<number>val, unsigned);
+			if (typeof val === 'string')
+				return Long.fromString
+					(<string>val, unsigned);
+			if (Long.isLong(val))
+				return <Long>val;
+			return null;
 		}
 
 		/**
@@ -680,12 +702,9 @@
 	 * @internal
 	 */
 	function _fillDateValue(e: HTMLElement, fname: string,
-		val: string|null|undefined, inc: boolean): void
+		val: string|number|null|undefined, inc: boolean): void
 	{
-		const v: Long|null = 
-			(val === null ||
-			 typeof val === 'undefined') ?
-			null : Long.fromString(val);
+		const v: Long|null = Long.fromValue(val);
 		const d: Date = new Date();
 
 		if (v === null)
@@ -698,7 +717,7 @@
 		const year: number = d.getFullYear();
 		const mo: number = d.getMonth() + 1;
 		const day: number = d.getDate();
-		const full: number = year + '-' +
+		const full: string = year + '-' +
 			(mo < 10 ? '0' : '') + mo + '-' +
 			(day < 10 ? '0' : '') + day;
 
@@ -719,18 +738,16 @@
 	 * @internal
 	 */
 	function _fillBitsChecked(e: HTMLElement, fname: string,
-		 val: string|null|undefined, inc: boolean): void
+		 val: string|number|null|undefined, inc: boolean): void
 	{
 		let i: number;
 		let v: number;
-		let lval: Long|null;
+		const lval: Long|null = Long.fromValue(val);
 		const list: HTMLElement[] = _elemList
 			(e, fname + '-bits-checked', inc);
 
 		if (typeof val === 'undefined')
 			return;
-
-		lval = val === null ? null : Long.fromString(val);
 
 		for (i = 0; i < list.length; i++) {
 			const attrval: string|null = 

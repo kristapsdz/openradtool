@@ -37,8 +37,11 @@
 #include "comments.h"
 #include "paths.h"
 
-static	const char *types[FTYPE__MAX] = {
-	"string", /* FTYPE_BIT */
+/*
+ * Used for DCbnumber, Dcstring, etc. callback types.
+ */
+static	const char *cbtypes[FTYPE__MAX] = {
+	"integer", /* FTYPE_BIT */
 	"string", /* FTYPE_DATE */
 	"string", /* FTYPE_EPOCH */
 	"string", /* FTYPE_INT */
@@ -49,7 +52,27 @@ static	const char *types[FTYPE__MAX] = {
 	"string", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 	"string", /* FTYPE_ENUM */
-	"string", /* FTYPE_BITFIELD */
+	"integer", /* FTYPE_BITFIELD */
+};
+
+/*
+ * Used for the field value type.
+ * This will be augmented with "null" possibility and optionalised in
+ * case a role is defined on it.
+ */
+static	const char *types[FTYPE__MAX] = {
+	"string|number", /* FTYPE_BIT */
+	"string", /* FTYPE_DATE */
+	"string", /* FTYPE_EPOCH */
+	"string", /* FTYPE_INT */
+	"number", /* FTYPE_REAL */
+	"string", /* FTYPE_BLOB (base64) */
+	"string", /* FTYPE_TEXT */
+	"string", /* FTYPE_PASSWORD */
+	"string", /* FTYPE_EMAIL */
+	NULL, /* FTYPE_STRUCT */
+	"string", /* FTYPE_ENUM */
+	"string|number", /* FTYPE_BITFIELD */
 };
 
 /*
@@ -458,6 +481,10 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 	     "\t\tname: string, val: string) => void;\n"
 	     "\texport type DCbstringNull = (e: HTMLElement,\n"
 	     "\t\tname: string, val: string|null) => void;\n"
+	     "\texport type DCbinteger = (e: HTMLElement,\n"
+	     "\t\tname: string, val: string|number) => void;\n"
+	     "\texport type DCbintegerNull = (e: HTMLElement,\n"
+	     "\t\tname: string, val: string|number|null) => void;\n"
 	     "\texport type DCbnumber = (e: HTMLElement,\n"
 	     "\t\tname: string, val: number) => void;\n"
 	     "\texport type DCbnumberNull = (e: HTMLElement,\n"
@@ -491,10 +518,10 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 			else
 				printf("\t\t'%s-%s'?: DCb%s%s|"
 					"DCb%s%s[];\n", s->name, 
-					f->name, types[f->type], 
+					f->name, cbtypes[f->type], 
 					(f->flags & FIELD_NULL) ? 
 					"Null" : "", 
-					types[f->type],
+					cbtypes[f->type],
 					(f->flags & FIELD_NULL) ? 
 					"Null" : "");
 		}
@@ -881,12 +908,12 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		gen_class_proto(2, "void", "format",
 			"e", "HTMLElement", 
 			"name", "string|null",
-			"v", "string|null", NULL);
+			"v", "string|number|null", NULL);
 		puts("\t\t{\n"
 		     "\t\t\tlet i: number = 0;\n"
 		     "\t\t\tlet s: string = '';\n"
-		     "\t\t\tconst vlong: Long|null =\n"
-		     "\t\t\t\tv === null ? null : Long.fromString(v);\n"
+		     "\t\t\tconst vlong: Long|null = "
+		     	"Long.fromValue(v);\n"
 		     "\n"
 		     "\t\t\tif (name !== null)\n"
 		     "\t\t\t\tname += '-label';\n"

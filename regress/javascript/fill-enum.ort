@@ -1,0 +1,10 @@
+enum bar {
+	item a 20;
+	item b 100;
+	item c;
+};
+
+struct foo {
+	field test enum bar;
+	field id int rowid;
+};

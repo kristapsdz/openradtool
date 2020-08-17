@@ -1,0 +1,4 @@
+<div>
+	<span class="foo-ctime-date-text">2020-07-08</span>
+	<input type="checkbox" class="foo-ctime-date-value" value="2020-07-08">
+</div>

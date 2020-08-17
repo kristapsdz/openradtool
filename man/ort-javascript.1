@@ -74,10 +74,7 @@ for example,
 .Qq fooData
 for a structure named
 .Qq foo .
-Each native field is mapped to a native type:
-.Cm string
-or
-.Cm number .
+Each native field is mapped to a native type.
 For references, the type is the referenced interface type.
 .Bd -literal -offset indent
 namespace ort {
@@ -89,7 +86,26 @@ namespace ort {
 }
 .Ed
 .Pp
-Any blob data is retained as base64-encoded string.
+Types are mapped as follows, from
+.Xr openradtool 5
+configuration type to the TypeScript type along with any notes.
+.Bl -column -offset indent "epoch " "number|string " "base-64 encoded"
+.It Cm bit Ta number|string Ta
+.It Cm date Ta number|string Ta
+.It Cm epoch Ta number|string Ta
+.It Cm int Ta number|string Ta
+.It Cm real Ta number Ta
+.It Cm blob Ta string Ta base-64 encoded
+.It Cm text Ta string Ta
+.It Cm email Ta string Ta
+.It Cm enum Ta number|string Ta
+.It Cm bits Ta number|string Ta
+.El
+.Pp
+Front-ends should be attentive to integer types being either string or
+numeric.
+This is to accomodate for the 53-bit limit of what's stored as 64-bit
+integers.
 .Pp
 If a field may not be exported due to role restrictions, it is marked as
 optional within the interface.
@@ -294,7 +310,7 @@ new ort.client(obj).fillInner(document.body, custom);
 And letting a formatting function be:
 .Bd -literal -offset indent
 function formatDate(e: HTMLElement,
-  name: string, v: number|null): void {
+  name: string, v: number|string|null): void {
     /* Do something... */
 }
 .Ed
@@ -342,7 +358,7 @@ new ort.foo(obj).fill(e, custom);
 Each enumeration and bitfield corresponds to a class with field values
 and formatting static methods.
 .Pp
-Enumeration classes contains static members with the numeric value of
+Enumeration classes contains static members with the string value of
 its items.
 For example, an enumeration
 .Qq foo
@@ -353,9 +369,10 @@ with static members corresponding to each enumeration item.
 Bitfield classes are similarly named and contain two static members per
 item: one for the bit index, one for the generated bit mask.
 The former is prefixed
-.Li BITI_ ,
-the latter with
-.Li BITF_ .
+.Li BITI_
+and is a number, the latter with
+.Li BITF_
+and is a string.
 Thus an item
 .Qq bar
 creates numeric static members
@@ -373,7 +390,7 @@ These take advantage of the
 enumeration label described in
 .Xr ort 5 .
 .Bl -tag -width Ds
-.It Fn format "e: HTMLElement" "name: string|null" "value: number|null" Ns No : void
+.It Fn format "e: HTMLElement" "name: string|null" "value: string|number|null" Ns No : void
 Fills in all elements (not inclusive) descending from
 .Fa e
 having class
@@ -429,7 +446,7 @@ of the value's corresponding item and the value itself.
 .Pp
 Bitfields behave similarly and have the same member.
 .Bl -tag -width Ds
-.It Fn format "e: HTMLElement" "name: string|null" "value: number|null" Ns No : void
+.It Fn format "e: HTMLElement" "name: string|null" "value: string|number|null" Ns No : void
 Fills in all elements (not inclusive) descending from
 .Fa e
 having class
@@ -561,18 +578,4 @@ the following creates the single JavaScript file:
 .\" .Sh HISTORY
 .\" .Sh AUTHORS
 .\" .Sh CAVEATS
-.Sh BUGS
-This most significant issue with JavaScript and
-.Nm
-is that of JSON/JavaScript incompatibility.
-In
-.Nm ,
-as exported in JSON, all integers are signed and 64 bits.
-JavaScript (and of course TypeScript) encode integers as double
-precision floats, which leave than 64 bits of precision.
-Therefore, it's very possible to transmit valid numbers and have them be
-truncated by JavaScript interpreters.
-.Pp
-There is as yet no simple way to protect against this.
-While some aspects (like enumeration values) may be limited to 32 bits,
-raw data emitted by the system is prone to truncation.
+.\" .Sh BUGS

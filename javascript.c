@@ -42,16 +42,16 @@
  */
 static	const char *cbtypes[FTYPE__MAX] = {
 	"integer", /* FTYPE_BIT */
-	"string", /* FTYPE_DATE */
-	"string", /* FTYPE_EPOCH */
-	"string", /* FTYPE_INT */
+	"integer", /* FTYPE_DATE */
+	"integer", /* FTYPE_EPOCH */
+	"integer", /* FTYPE_INT */
 	"number", /* FTYPE_REAL */
 	"string", /* FTYPE_BLOB (base64) */
 	"string", /* FTYPE_TEXT */
 	"string", /* FTYPE_PASSWORD */
 	"string", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
-	"string", /* FTYPE_ENUM */
+	"integer", /* FTYPE_ENUM */
 	"integer", /* FTYPE_BITFIELD */
 };
 
@@ -62,16 +62,16 @@ static	const char *cbtypes[FTYPE__MAX] = {
  */
 static	const char *types[FTYPE__MAX] = {
 	"string|number", /* FTYPE_BIT */
-	"string", /* FTYPE_DATE */
-	"string", /* FTYPE_EPOCH */
-	"string", /* FTYPE_INT */
+	"string|number", /* FTYPE_DATE */
+	"string|number", /* FTYPE_EPOCH */
+	"string|number", /* FTYPE_INT */
 	"number", /* FTYPE_REAL */
 	"string", /* FTYPE_BLOB (base64) */
 	"string", /* FTYPE_TEXT */
 	"string", /* FTYPE_PASSWORD */
 	"string", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
-	"string", /* FTYPE_ENUM */
+	"string|number", /* FTYPE_ENUM */
 	"string|number", /* FTYPE_BITFIELD */
 };
 

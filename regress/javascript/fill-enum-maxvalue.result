@@ -1,0 +1,15 @@
+<div>
+	<select class="foo-test-enum-select">
+		<option value="9223372036854775806" selected="selected">Hello</option>
+		<option value="20">Another</option>
+	</select>
+	<select class="foo-test-enum-select">
+		<option value="9223372036854775806" selected="selected">Hello</option>
+		<option value="20">Another</option>
+	</select>
+	<input class="foo-test-value-checked" type="checkbox" value="9223372036854775806" checked="checked">
+	<input class="foo-test-value-checked" type="checkbox" value="20">
+	<input class="foo-test-value-checked" type="checkbox" value="20">
+	<span class="foo-test-text">9223372036854775806</span>
+	<input type="checkbox" class="foo-test-value" value="9223372036854775806">
+</div>

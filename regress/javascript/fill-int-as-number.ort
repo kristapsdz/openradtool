@@ -1,0 +1,4 @@
+struct foo {
+	field test int;
+	field id int rowid;
+};

@@ -1,0 +1,4 @@
+<div>
+	<span class="foo-test-text">1099511627776</span>
+	<input type="checkbox" class="foo-test-value" value="1099511627776">
+</div>

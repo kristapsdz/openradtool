@@ -1,0 +1,4 @@
+<div>
+	<span class="foo-ctime-date-text"></span>
+	<input type="checkbox" class="foo-ctime-date-value" value="xyz" />
+</div>

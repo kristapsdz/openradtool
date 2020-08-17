@@ -136,7 +136,7 @@ with identifier
 .Fa id .
 Throws an exception on database error.
 .El
-.Pp
+.Ss Data access
 Each structure has a number of operations available in
 .Vt ortctx .
 These are all stipulated as
@@ -291,6 +291,38 @@ The exported object, when converted into a string, is readable by
 applications using the
 .Xr ort-javascript 1
 tool.
+.Ss Data structures
+Assuming the exemplar structure
+.Qq foo ,
+the data in
+.Sx Data access
+may be manipulated with the
+.Vt ortns.fooData obj
+object interface in
+.Vt ortns.foo .
+This consists of all fields in the structure with types mapped as follows:
+.Bl -column -offset indent "password " "Buffer "
+.It Cm bit Ta BigInt
+.It Cm date Ta BigInt
+.It Cm epoch Ta BigInt
+.It Cm int Ta BigInt
+.It Cm real Ta number
+.It Cm blob Ta Buffer
+.It Cm text Ta string
+.It Cm email Ta string
+.It Cm password Ta string
+.It Cm bits Ta BigInt
+.El
+.Pp
+Structures are mapped to their interfaces, such as
+.Va ortns.barData
+for a structure named
+.Qq bar .
+Enumerations are mapped to enumerations defined similarly, such as
+.Va ortns.baz
+for an enumeration named
+.Qq baz .
+The enumeration values are all string literals of their numeric value.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.
@@ -440,6 +472,7 @@ will result in a display of the created user's identifier.
 .\" .Sh ERRORS
 .\" For sections 2, 3, 4, and 9 errno settings only.
 .Sh SEE ALSO
+.Xr node 1 ,
 .Xr npm 1 ,
 .Xr ort 5
 .\" .Sh STANDARDS

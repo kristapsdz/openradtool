@@ -4,8 +4,8 @@ function runTest(dom: HTMLDocument): HTMLDocument
 		'foo-val': ort.anenum.format
 	};
 	const data: ort.fooData = { 
-		'id': 1,
-		'val': 2
+		'id': '1',
+		'val': '2'
 	};
 	const obj: ort.foo = new ort.foo(data);
 

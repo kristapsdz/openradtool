@@ -1,0 +1,10 @@
+enum enm {
+	item a 200;
+};
+
+struct foo {
+	field c enum enm;
+	field id int rowid;
+	insert;
+	search id: name id;
+};

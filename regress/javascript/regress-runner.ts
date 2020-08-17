@@ -48,9 +48,10 @@ for (i = 0; i < files.length; i++) {
 	/* Compile it into JavaScript. */
 
 	xpiled = ts.transpile(contents, {
+		allowsJs: false,
 		alwaysStrict: true,
-		noUnusedLocals: true,
-		strict: true
+		strict: true,
+		noUnusedLocals: true
 	});
 
 	/* 
@@ -64,12 +65,11 @@ for (i = 0; i < files.length; i++) {
 		result = func(fs, JSDOM, xmlname);
 	} catch (error) {
 		console.log(tsname + '... fail');
-		console.log(error);
-		console.log('Failing compilation:');
 		const cat = spawnSync('cat', ['-n', '-'], {
 			'input': xpiled
 		});
 		console.log(cat.stdout.toString());
+		console.log(error);
 		process.exit(1);
 	}
 
@@ -86,9 +86,6 @@ for (i = 0; i < files.length; i++) {
 		console.log('pass');
 	} catch (error) {
 		console.log('fail');
-		console.log(error);
-		console.log('Failing result:');
-		console.log(result);
 
 		/* Emit the difference. */
 

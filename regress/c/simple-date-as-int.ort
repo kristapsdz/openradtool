@@ -1,0 +1,7 @@
+struct foo {
+	field c date;
+	field d epoch;
+	field id int rowid;
+	insert;
+	search id: name id;
+};

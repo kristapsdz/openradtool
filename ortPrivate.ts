@@ -1,47 +1,208 @@
+	/**
+	 * Facilities to manipulate 64-bit numbers encoded as strings.
+	 * The JavaScript implementation of openradtool uses strings for
+	 * numbers because of the 64-bit problem: internally,
+	 * openradtool uses 64-bit integer numbers, but JavaScript has
+	 * only 53 bits of precision for integers.
+	 * This class is a modified version of long.js fixed to base 10.
+	 */
 	class Long {
-		readonly low: number;
-		readonly high: number;
-		static readonly ZERO: Long = Long.fromNumber(0);
-		static readonly ONE: Long = Long.fromNumber(1);
+		private readonly __isLong__: boolean = true;
+		private readonly low: number;
+		private readonly high: number;
+		private readonly unsigned: boolean;
 
-		private constructor(low: number, high: number)
+		private constructor(low: number,
+			high?: number, unsigned?: boolean)
 		{
 			this.low = low | 0;
-			this.high = high | 0;
+			this.high = 
+				(typeof high === 'undefined') ?
+				0 : (high | 0);
+			this.unsigned = 
+				(typeof unsigned === 'undefined') ?
+				false: unsigned;
 		}
 
+		static readonly ZERO: Long = 
+			new Long(0, 0);
+		static readonly ONE: Long = 
+			new Long(1, 0);
+		static readonly UZERO: Long = 
+			new Long(0, 0, true);
+		static readonly TEN_TO_EIGHT: Long =
+			new Long(100000000, 0);
+		static readonly MIN_VALUE: Long = 
+			new Long(0, 0x80000000|0, false);
+		static readonly MAX_UNSIGNED_VALUE: Long = 
+			new Long(0xFFFFFFFF|0, 0xFFFFFFFF|0, true);
+		static readonly  MAX_VALUE: Long = 
+			new Long(0xFFFFFFFF|0, 0x7FFFFFFF|0, false);
+
+		/* Constant numbers used in the code. */
+
+		static private readonly TWO_PWR_16_DBL: number = 
+			(1 << 16);
+		static private readonly TWO_PWR_32_DBL: number = 
+			Long.TWO_PWR_16_DBL *
+			Long.TWO_PWR_16_DBL;
+		static private readonly  TWO_PWR_64_DBL: number =
+			Long.TWO_PWR_32_DBL *
+			Long.TWO_PWR_32_DBL;
+		static private readonly TWO_PWR_63_DBL: number = 
+			Long.TWO_PWR_64_DBL / 2;
+
+		/**
+		 * @return Whether this is a ortns.Long object.
+		 */
+		static isLong(obj: any): boolean 
+		{
+			return obj !== null && 
+			       obj['__isLong__'] === true;
+		}
+
+		/**
+		 * Convert to a JavaScript number, losing precision and
+		 * possibly truncating with larger or smaller numbers.
+		 * @return The Long best-effort converted to a number.
+		 */
+		toNumber(): number
+		{
+			if (this.unsigned)
+				return ((this.high >>> 0) * 
+					Long.TWO_PWR_32_DBL) + 
+				       (this.low >>> 0);
+			return this.high * Long.TWO_PWR_32_DBL + 
+				(this.low >>> 0);
+		};
+
+		/**
+		 * Assume this is a 32-bit integer and return that.
+		 */
+		toInt(): number
+		{
+			return this.unsigned ? this.low >>> 0 : this.low;
+		}
+
+		/**
+		 * @return Whether the value is strictly < 0.
+		 */
+		isNegative(): boolean
+		{
+			return !this.unsigned && this.high < 0;
+		}
+
+		/**
+		 * @return Whether the value is zero.
+		 */
 		isZero(): boolean
 		{
 			return this.high === 0 && this.low === 0;
 		}
 
-		and(other: Long): Long
+		isOdd(): boolean
 		{
-    			return new Long
-				(this.low & other.low, 
-				 this.high & other.high);
+			return (this.low & 1) === 1;
 		}
 
-		shiftLeft(numBits: number): Long
+		/**
+		 * @return Whether the value equals the given value.
+		 */
+		eq(other: Long|number): boolean
 		{
+			const v: Long = !Long.isLong(other) ?
+				new Long(<number>other) : <Long>other;
 
-			if ((numBits &= 63) === 0)
+			if (this.unsigned !== v.unsigned && 
+			    (this.high >>> 31) === 1 && 
+				    (v.high >>> 31) === 1)
+				return false;
+			return this.high === v.high && 
+				this.low === v.low;
+		}
+
+		/**
+		 * @return The negative of the value.
+		 */
+		neg(): Long
+		{
+			if (!this.unsigned && this.eq(Long.MIN_VALUE))
+				return Long.MIN_VALUE;
+			return this.not().add(Long.ONE);
+		}
+
+		/**
+		 * @return The bit-wise NOT of the value.
+		 */
+		not(): Long
+		{
+			return new Long(~this.low, 
+				~this.high, this.unsigned);
+		}
+
+		/**
+		 * @return The bit-wise AND of the value with the given.
+		 */
+		and(other: Long|number): Long
+		{
+			const v: Long = !Long.isLong(other) ?
+				Long.fromNumber(<number>other) : 
+				<Long>other;
+
+			return new Long(this.low & v.low, 
+					this.high & v.high, 
+					this.unsigned);
+		}
+
+		/**
+		 * @return The value left-shifted by the given number of
+		 * bits.
+		 */
+		shl(numBits: Long|number): Long
+		{
+			let v: number = Long.isLong(numBits) ?
+				(<Long>numBits).toInt() : 
+				<number>numBits;
+
+			if ((v &= 63) === 0)
 				return this;
-			else if (numBits < 32)
+			else if (v < 32)
 				return new Long
-					(this.low << numBits, 
-					 (this.high << numBits) | 
-					 (this.low >>> (32 - numBits)));
+					(this.low << v, 
+					 (this.high << v) | 
+					 (this.low >>> (32 - v)), 
+					 this.unsigned);
 			else
-        			return new Long
-					(0, this.low << (numBits - 32));
+				return new Long
+					(0, this.low << (v - 32), 
+					 this.unsigned);
 		}
 
-		mul(multiplier: Long): Long
+		/**
+		 * @return The value multiplied by the given value.
+		 */
+		mul(tomul: Long|number): Long
 		{
+			const v: Long = !Long.isLong(tomul) ?
+				Long.fromNumber(<number>tomul) : 
+				<Long>tomul;
 
-			if (this.isZero() || multiplier.isZero())
-				return new Long(0, 0);
+			if (this.isZero() || v.isZero())
+				return Long.ZERO;
+			if (this.eq(Long.MIN_VALUE))
+				return v.isOdd() ? Long.MIN_VALUE :
+				Long.ZERO;
+			if (v.eq(Long.MIN_VALUE))
+				return this.isOdd() ? Long.MIN_VALUE :
+				Long.ZERO;
+
+			if (this.isNegative()) {
+				if (v.isNegative())
+					return this.neg().mul(v.neg());
+				else
+					return this.neg().mul(v).neg();
+			} else if (v.isNegative())
+				return this.mul(v.neg()).neg();
 
 			// Divide each long into 4 chunks of 16 bits,
 			// and then add up 4x4 products.  We can skip
@@ -52,10 +213,10 @@
 			const a16: number = this.low >>> 16;
 			const a00: number = this.low & 0xFFFF;
 
-			const b48: number = multiplier.high >>> 16;
-			const b32: number = multiplier.high & 0xFFFF;
-			const b16: number = multiplier.low >>> 16;
-			const b00: number = multiplier.low & 0xFFFF;
+			const b48: number = v.high >>> 16;
+			const b32: number = v.high & 0xFFFF;
+			const b16: number = v.low >>> 16;
+			const b00: number = v.low & 0xFFFF;
 
 			let c48: number = 0;
 			let c32: number = 0;
@@ -84,11 +245,19 @@
 			c48 &= 0xFFFF;
 
 			return new Long
-				((c16 << 16) | c00, (c48 << 16) | c32);
+				((c16 << 16) | c00, (c48 << 16) | c32,
+				 this.unsigned);
 		}
 
-		add(addend: Long): Long
+		/**
+		 * @return The sum of the value and the given value.
+		 */
+		add(toadd: Long|number): Long
 		{
+			const v: Long = !Long.isLong(toadd) ?
+				Long.fromNumber(<number>toadd) : 
+				<Long>toadd;
+
 			// Divide each number into 4 chunks of 16 bits,
 			// and then sum the chunks.
 
@@ -97,10 +266,10 @@
 			const a16: number = this.low >>> 16;
 			const a00: number = this.low & 0xFFFF;
 
-			const b48: number = addend.high >>> 16;
-			const b32: number = addend.high & 0xFFFF;
-			const b16: number = addend.low >>> 16;
-			const b00: number = addend.low & 0xFFFF;
+			const b48: number = v.high >>> 16;
+			const b32: number = v.high & 0xFFFF;
+			const b16: number = v.low >>> 16;
+			const b00: number = v.low & 0xFFFF;
 
 			let c48: number = 0;
 			let c32: number = 0;
@@ -120,52 +289,111 @@
 			c48 &= 0xFFFF;
 
 			return new Long
-				((c16 << 16) | c00, (c48 << 16) | c32);
+				((c16 << 16) | c00, (c48 << 16) | c32,
+				 this.unsigned);
 		}
 
-		static fromNumber(value: number): Long
+		/**
+		 * @return The Long representation of the value.  If
+		 * NaN, returns zero or unsigned zero as applicable.
+		 * If negative and wanting unsigned, bound at zero.
+		 * Otherwise bound to a 64-bit integer size.
+		 */
+		static fromNumber(value: number, unsigned?: boolean): Long
 		{
+			const usgn: boolean =
+				(typeof unsigned === 'undefined') ?
+				false : unsigned;
+
+			if (isNaN(value))
+				return usgn ? Long.UZERO : Long.ZERO;
+
+			if (usgn) {
+				if (value < 0)
+					return Long.UZERO;
+				if (value >= Long.TWO_PWR_64_DBL)
+					return Long.MAX_UNSIGNED_VALUE;
+			} else {
+				if (value <= -Long.TWO_PWR_63_DBL)
+					return Long.MIN_VALUE;
+				if (value + 1 >= Long.TWO_PWR_63_DBL)
+					return Long.MAX_VALUE;
+			}
+
+			if (value < 0)
+				return Long.fromNumber
+					(-value, unsigned).neg();
+
 			return new Long
-				((value % ((1 << 16) * (1 << 16))) | 0, 
-				 (value / ((1 << 16) * (1 << 16))) | 0);
+				((value % Long.TWO_PWR_32_DBL) | 0, 
+				 (value / Long.TWO_PWR_32_DBL) | 0, 
+				 unsigned);
 		}
 
+		/**
+		 * @return The Long representation of the string or zero
+		 * if conversion failed.  This should only be used for
+		 * constant-value transformation that is *guaranteed*
+		 * will not fail.
+		 */
 		static fromStringZero(str: string): Long
 		{
 			const val: Long|null = Long.fromString(str);
 			return val === null ? Long.ZERO : val;
 		}
 
-		static fromString(str: string): Long | null
+		/**
+		 * @return The Long representation of the string, which
+		 * may be an optional leading "-" followed by digits.
+		 * It does not accept NaN, Infinity, or other symbols.
+		 */
+		static fromString(str: string, unsigned?: boolean): Long | null
 		{
-			const radixToPower = new Long(57600, 1525);
-			let result: Long = new Long(0, 0);
-			let i: number;
+			const usgn: boolean =
+				(typeof unsigned === 'undefined') ?
+				false : unsigned;
+			const radix: number = 10;
+			const hyph: number = str.indexOf('-');
+			const radixToPower: Long = Long.TEN_TO_EIGHT;
+			let result: Long = Long.ZERO;
 
-			if (str === null || str.length === 0)
-				return null;
-			if (str.indexOf('-') >= 0)
+			if (str.length === 0 || hyph > 0 ||
+			    str === 'NaN' || str === 'Infinity' || 
+			    str === '+Infinity' || str === '-Infinity')
 				return null;
 
-			for (i = 0; i < str.length; i += 8) {
-				let size: number = 
+			if (hyph === 0) {
+				const nresult: Long|null = 
+					Long.fromString
+					(str.substring(1), usgn);
+				if (nresult === null)
+					return null;
+				return nresult.neg();
+			}
+
+			// Do several (8) digits each time through the
+			// loop, so as to  minimize the calls to the
+			// very expensive emulated div.
+
+			for (let i: number = 0; i < str.length; i += 8) {
+				const size: number = 
 					Math.min(8, str.length - i);
-				let value: number = parseInt
-					(str.substring(i, i + size), 10);
+				const value: number = 
+					parseInt(str.substring(i, i + size), 10);
 				if (size < 8) {
 					const power: Long = 
-						this.fromNumber
+						Long.fromNumber
 						(Math.pow(10, size));
 					result = result.mul(power).add
-						(this.fromNumber(value));
+						(Long.fromNumber(value));
 				} else {
 					result = result.mul
 						(radixToPower);
 					result = result.add
-						(this.fromNumber(value));
+						(Long.fromNumber(value));
 				}
 			}
-			return result;
+			return new Long(result.low, result.high, usgn);
 		}
 	}
 
@@ -452,26 +680,28 @@
 	 * @internal
 	 */
 	function _fillDateValue(e: HTMLElement, fname: string,
-		val: number|null|undefined, inc: boolean): void
+		val: string|null|undefined, inc: boolean): void
 	{
-		let year: number;
-		let mo: number;
-		let day: number;
-		let full: string;
+		const v: Long|null = 
+			(val === null ||
+			 typeof val === 'undefined') ?
+			null : Long.fromString(val);
 		const d: Date = new Date();
 
-		if (val === null || typeof val === 'undefined')
+		if (v === null)
 			return;
-		d.setTime(val * 1000);
-		year = d.getFullYear();
-		mo = d.getMonth() + 1;
-		day = d.getDate();
+
+		d.setTime(v.toNumber() * 1000);
 
 		/* Make sure to zero-pad the digits. */
 
-		full = year + '-' +
+		const year: number = d.getFullYear();
+		const mo: number = d.getMonth() + 1;
+		const day: number = d.getDate();
+		const full: number = year + '-' +
 			(mo < 10 ? '0' : '') + mo + '-' +
 			(day < 10 ? '0' : '') + day;
+
 		_attrcl(e, 'value', fname + '-date-value', full, inc);
 		_replcl(e, fname + '-date-text', full, inc);
 	}
@@ -523,9 +753,8 @@
 			if (v < 0 || v > 64)
 				continue;
 
-			if (v === 0 && lval.isZero() ||
-			    !Long.ONE.shiftLeft
-			    (v - 1).and(lval).isZero())
+			if ((v === 0 && lval.isZero()) ||
+			    !Long.ONE.shl(v - 1).and(lval).isZero())
 				_attr(list[i], 'checked', 'checked');
 		}
 	}

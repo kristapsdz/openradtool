@@ -74,16 +74,16 @@ static	const char *const coltypes[FTYPE__MAX] = {
 
 static	const char *const puttypes[FTYPE__MAX] = {
 	"kjson_putintstrp", /* FTYPE_BIT */
-	"kjson_putintp", /* FTYPE_DATE */
-	"kjson_putintp", /* FTYPE_EPOCH */
-	"kjson_putintp", /* FTYPE_INT */
+	"kjson_putintstrp", /* FTYPE_DATE */
+	"kjson_putintstrp", /* FTYPE_EPOCH */
+	"kjson_putintstrp", /* FTYPE_INT */
 	"kjson_putdoublep", /* FTYPE_REAL */
 	"kjson_putstringp", /* FTYPE_BLOB (XXX: is special) */
 	"kjson_putstringp", /* FTYPE_TEXT */
 	NULL, /* FTYPE_PASSWORD (don't print) */
 	"kjson_putstringp", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
-	"kjson_putintp", /* FTYPE_ENUM */
+	"kjson_putintstrp", /* FTYPE_ENUM */
 	"kjson_putintstrp", /* FTYPE_BITFIELD */
 };
 
@@ -2043,7 +2043,7 @@ gen_func_json_parse(const struct strct *p)
 		if (FIELD_NULL & f->flags)
 			printf("\t\t\tif (t[j+1].type == "
 				"JSMN_PRIMITIVE &&\n"
-			       "\t\t\t    \'n\' == buf[t[j+1].start]) {\n"
+			       "\t\t\t    buf[t[j+1].start] == \'n\') {\n"
 			       "\t\t\t\tp->has_%s = 0;\n"
 			       "\t\t\t\tj++;\n"
 			       "\t\t\t\tcontinue;\n"
@@ -2057,17 +2057,19 @@ gen_func_json_parse(const struct strct *p)
 		case FTYPE_EPOCH:
 		case FTYPE_INT:
 		case FTYPE_REAL:
-			puts("\t\t\tif (t[j+1].type != "
-			      "JSMN_PRIMITIVE ||\n"
-			     "\t\t\t    (\'-\' != buf[t[j+1].start] &&\n"
-			     "\t\t\t    ! isdigit((unsigned int)"
+			puts("\t\t\tif ((t[j+1].type != JSMN_STRING && "
+			       "t[j+1].type != JSMN_PRIMITIVE) ||\n"
+			     "\t\t\t    (buf[t[j+1].start] != \'-\' &&\n"
+			     "\t\t\t    !isdigit((unsigned int)"
 			      "buf[t[j+1].start])))\n"
 			     "\t\t\t\treturn 0;");
 			break;
 		case FTYPE_BIT:
 		case FTYPE_BITFIELD:
-			puts("\t\t\tif (t[j+1].type != JSMN_STRING && "
-			       "t[j+1].type != JSMN_PRIMITIVE)\n"
+			puts("\t\t\tif ((t[j+1].type != JSMN_STRING && "
+			       "t[j+1].type != JSMN_PRIMITIVE) ||\n"
+			     "\t\t\t    !isdigit((unsigned int)"
+			      "buf[t[j+1].start]))\n"
 			     "\t\t\t\treturn 0;");
 			break;
 		case FTYPE_BLOB:

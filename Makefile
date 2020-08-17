@@ -320,7 +320,7 @@ db.h: ort-c-header db.ort
 db.sql: ort-sql db.ort
 	./ort-sql db.ort >$@
 
-db.ts: ort-javascript db.ort
+db.ts: ort-javascript db.ort ortPrivate.ts
 	./ort-javascript -S . db.ort >$@
 
 db.update.sql: ort-sqldiff db.old.ort db.ort

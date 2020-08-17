@@ -39,16 +39,16 @@
 
 static	const char *types[FTYPE__MAX] = {
 	"string", /* FTYPE_BIT */
-	"number", /* FTYPE_DATE */
-	"number", /* FTYPE_EPOCH */
-	"number", /* FTYPE_INT */
+	"string", /* FTYPE_DATE */
+	"string", /* FTYPE_EPOCH */
+	"string", /* FTYPE_INT */
 	"number", /* FTYPE_REAL */
 	"string", /* FTYPE_BLOB (base64) */
 	"string", /* FTYPE_TEXT */
 	"string", /* FTYPE_PASSWORD */
 	"string", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
-	"number", /* FTYPE_ENUM */
+	"string", /* FTYPE_ENUM */
 	"string", /* FTYPE_BITFIELD */
 };
 
@@ -845,7 +845,7 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		/* Now the maximum enumeration value. */
 
 		print_commentt(2, COMMENT_JS,
-			"One larger than the largest enumeration index.");
+			"One larger than the largest bit index.");
 		printf("\t\tstatic readonly "
 			"BITI__MAX: number = %" PRId64 ";\n", 
 			maxvalue + 1);
@@ -947,8 +947,8 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		TAILQ_FOREACH(ei, &e->eq, entries) {
 			if (ei->doc != NULL)
 				print_commentt(2, COMMENT_JS, ei->doc);
-			printf("\t\tstatic readonly %s: number = %" 
-				PRId64 ";\n", ei->name, 
+			printf("\t\tstatic readonly %s: string = "
+				"\'%" PRId64 "\';\n", ei->name, 
 				ei->value);
 		}
 
@@ -975,7 +975,7 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		gen_class_proto(2, "void", "format",
 			"e", "HTMLElement", 
 			"name", "string|null",
-			"v", "number|null", NULL);
+			"v", "string|null", NULL);
 		puts("\t\t{\n"
 		     "\t\t\tlet s: string;\n"
 		     "\t\t\tif (name !== null)\n"

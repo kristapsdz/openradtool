@@ -60,7 +60,7 @@
 					<p class="intro">
 						<span class="nm">openradtool</span> (<q class="nm">ort</q>) is an 
 						<a href="https://opensource.org/licenses/ISC">open source</a> RAD tool generating front-end code
-						(TypeScript) and back-end code (SQL, C) from a straightforward data model.
+						(TypeScript) and back-end code (SQL, C, Node.js) from a straightforward data model.
 					</p>
 				</div>
 				<p>
@@ -92,8 +92,9 @@
 							Data Layer
 						</span>
 						<span class="contents">
-							Back-end <a href="#gen-c">C source code</a>&#8212;API and implementation&#8212;for
-							manipulating and exporting from the database.  This must be driven by your program code.
+							Node.js and C <a href="#gen-backend">back-end source code</a>&#8212;API and
+							implementation&#8212;for manipulating and exporting from the database.  This must be
+							driven by your program code.
 						</span>
 					</li>
 					<li>
@@ -171,7 +172,7 @@
 						<em>This validation is superfluous, as all other tools validate during parse.</em>
 					</p>
 				</section>
-				<h2 id="gen-c">
+				<h2 id="gen-backend">
 					<span>2.</span> generate back-end code
 				</h2>
 				<code>
@@ -180,48 +181,37 @@
 					<br />
 					% <a href="ort-c-source.1.html">ort-c-source</a> -jv 
 					-h <a href="db.h.html">db.h</a> <a href="db.ort.html">db.ort</a> &gt; <a href="db.c.html">db.c</a>
+					<br />
+					% <a href="ort-nodejs.1.html">ort-nodejs</a> 
+					<a href="db.ort.html">db.ort</a> &gt; <a href="db.node.ts.html">db.node.ts</a>
 				</code>
 				<section>
+					<p>
+						Both C and <a href="https://nodejs.org">Node.js</a> back-ends are available.
+						The Node.js output is still somewhat experimental.
+					</p>
+					<figure>
+						<img src="index-fig8.svg" alt="ort-nodejs(1) functionality" />
+					</figure>
+					<p>
+						The Node.js backend currently lacks many of the security benefits of using the C API, such as
+						privilege separation, but is the more widely-used of languages.
+						The generated TypeScript code is built to work within <a href="https://npmjs.com">npm</a>
+						applications.
+						A full application example is available in <a href="ort-nodejs.1.html">ort-nodejs(1)</a>.
+					</p>
 					<figure>
 						<img src="index-fig2.svg" alt="ort-c-header(1) and ort-c-source(1) functionality" />
 					</figure>
 					<p>
-						Generate source and header files to be linked to sources (usually, but not necessarily) driving
+						The C API files may be linked to sources (usually, but not necessarily) driving
 						a <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> CGI script.
 						Each function and structure in the header file is documented thoroughly.
 						The source files are also documented, though more sparsely.
 					</p>
-					<p>
-						The C source file is generated for the target operating system, so it's not guaranteed to be
-						portable between operating systems.
-					</p>
-					<p>
-						You can break apart C headers and sources into the database routines, JSON export, validation,
-						and so on.
-						For smaller applications, it's generally easiest to have them in one.
-					</p>
-				</section>
-				<h2>
-					<span>3.</span> compile back-end code
-				</h2>
-				<code>
-					% cc -static `pkg-config --cflags sqlbox kcgi-json` -o test main.c <a href="db.c.html">db.c</a> `pkg-config --libs --static sqlbox kcgi-json`
-				</code>
-				<section>
-					<p>
-						This uses the <a href="https://man.openbsd.org/pkg-config">pkg-config</a> system to set compiler
-						and linker flags.  The <b>-static</b> and <b>--static</b> are for running CGI scripts in a
-						file-system jail.
-						This is the default operation on <a href="https://man.openbsd.org/chroot.2">chroot(2)</a>ed web
-						servers such as OpenBSD's <a href="http://man.openbsd.org/httpd.8">httpd(8)</a>.
-						These aren't necessary for non-jailed CGI applications.
-					</p>
-					<p>
-						Some operating systems (Linux) may also need <b>-l</b><i>crypt</i> for password hashing.
-					</p>
 				</section>
 				<h2 id="gen-sql">
-					<span>4.</span> generate and initialise database
+					<span>3.</span> generate and initialise database
 				</h2>
 				<code>
 					% <a href="ort-sql.1.html">ort-sql</a> <a href="db.ort.html">db.ort</a> &gt; <a href="db.sql.html">db.sql</a>
@@ -247,7 +237,7 @@
 					</div>
 				</section>
 				<h2 id="gen-sqldiff">
-					<span>5.</span> update database
+					<span>4.</span> update database
 				</h2>
 				<code>
 					% <a href="ort-sqldiff.1.html">ort-sqldiff</a>
@@ -272,7 +262,7 @@
 					</p>
 				</section>
 				<h2 id="gen-js">
-					<span>6.</span> generate typescript front-end
+					<span>5.</span> generate typescript front-end
 				</h2>
 				<code>
 					% <a href="ort-javascript.1.html">ort-javascript</a>
@@ -303,7 +293,7 @@
 					</p>
 				</section>
 				<h2 id="gen-xliff">
-					<span>7.</span> translate javascript labels
+					<span>6.</span> translate javascript labels
 				</h2>
 				<code>
 					% <a href="ort-xliff.1.html">ort-xliff</a>
@@ -334,7 +324,7 @@
 					</p>
 				</section>
 				<h2 id="gen-audit">
-					<span>8.</span> audit role-based access
+					<span>7.</span> audit role-based access
 				</h2>
 				<code>
 					% <a href="ort-audit.1.html">ort-audit</a>

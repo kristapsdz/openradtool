@@ -13,12 +13,14 @@ digraph {
 		{ rank=same; src; js; sql; }
 		src[label="C"];
 		js[label="TypeScript"];
+		njs[label="Node.js"];
 		sql[label="SQL"];
 		xliff[label="XLIFF"];
 	}
 	cfg -> bin;
 	bin -> src;
 	bin -> js;
+	bin -> njs;
 	bin -> sql;
 	bin -> xliff;
 
@@ -28,6 +30,7 @@ digraph {
 	sqlite1[label="sqlite3(1)", fontcolor="#888888", color="#888888"];
 	tsc[label="tsc(1)", fontcolor="#888888", color="#888888"];
 	tsdoc[label="tsdoc(1)", fontcolor="#888888", color="#888888"];
+	nodejs[label="node(1)", fontcolor="#888888", color="#888888"];
 	kcgi[label="kcgi(3)", fontcolor="#888888", color="#888888"];
 	sqlbox[label="sqlbox(3)", fontcolor="#888888", color="#888888"];
 	sqlite[label="sqlite3(3)", fontcolor="#888888", color="#888888"];
@@ -36,6 +39,11 @@ digraph {
 
 	js -> tsc;
 	js -> tsdoc;
+
+	njs -> nodejs;
+	njs -> tsdoc;
+
+	nodejs -> sqlite[dir="both"];
 
 	src -> sqlbox[dir="both"];
 	src -> kcgi[dir="both"];

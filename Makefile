@@ -60,6 +60,7 @@ MAN1S		 = man/ort.1 \
 		   man/ort-c-header.1 \
 		   man/ort-c-source.1 \
 		   man/ort-javascript.1 \
+		   man/ort-nodejs.1 \
 		   man/ort-sql.1 \
 		   man/ort-sqldiff.1 \
 		   man/ort-xliff.1
@@ -111,6 +112,7 @@ IHTMLS		 = audit-example.ort.html \
 		   db.fr.xml.html \
 		   db.h.html \
 		   db.c.html \
+		   db.node.ts.html \
 		   db.sql.html \
 		   db.old.ort.html \
 		   db.update.sql.html \
@@ -136,7 +138,8 @@ IMAGES		 = index.svg \
 		   index-fig4.svg \
 		   index-fig5.svg \
 		   index-fig6.svg \
-		   index-fig7.svg
+		   index-fig7.svg \
+		   index-fig8.svg
 NODE_TYPES	 = $(LIBDIR)/node_modules/@types
 
 # Only needed for test, not built by default.
@@ -323,6 +326,9 @@ db.sql: ort-sql db.ort
 db.ts: ort-javascript db.ort ortPrivate.ts
 	./ort-javascript -S . db.ort >$@
 
+db.node.ts: ort-nodejs db.ort
+	./ort-nodejs db.ort >$@
+
 db.update.sql: ort-sqldiff db.old.ort db.ort
 	./ort-sqldiff db.old.ort db.ort >$@
 
@@ -400,6 +406,9 @@ db.sql.html: db.sql
 db.ts.html: db.ts
 	highlight -s whitengrey -I -l --src-lang=js db.ts >$@
 
+db.node.ts.html: db.node.ts
+	highlight -s whitengrey -I -l --src-lang=js db.node.ts >$@
+
 db.update.sql.html: db.update.sql
 	highlight -s whitengrey -I -l --src-lang=sql db.update.sql >$@
 
@@ -427,7 +436,7 @@ atom.xml: versions.xml atom-template.xml
 
 clean:
 	rm -f $(BINS) version.h paths.h $(LIBOBJS) $(OBJS) libort.a test test.o
-	rm -f db.c db.h db.o db.sql db.ts db.ts db.update.sql db.db db.trans.ort
+	rm -f db.c db.h db.o db.sql db.ts db.node.ts db.update.sql db.db db.trans.ort
 	rm -f openradtool.tar.gz openradtool.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml
 	rm -f db.ort.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml

@@ -1,0 +1,16 @@
+digraph {
+	edge [arrowsize="0.5";];
+	bgcolor="transparent";
+	rankdir="LR";
+
+	cfg[label="ort(5)"];
+	bin[label="ort-nodejs(1)"];
+	typescript[label="TypeScript"];
+	npm[label="npm(1)"];
+	nodejs[label="node(1)"];
+
+	cfg -> bin;
+	bin -> typescript;
+	typescript -> npm[style="dotted"];
+	npm -> nodejs[style="dotted"];
+}

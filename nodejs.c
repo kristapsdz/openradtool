@@ -283,11 +283,23 @@ gen_fill(const struct strct *p)
 				f->name, f->ref->target->parent->name);
 			break;
 		case FTYPE_ENUM:
-			printf("\t\t\t'%s': <ortns.%s%s>"
-				"data.row[data.pos + %zu],\n",
+			/*
+			 * Convert these to a string because our
+			 * internal representation is 64-bit but numeric
+			 * enumerations are constraint to 53.
+			 */
+			printf("\t\t\t'%s': <ortns.%s%s>",
 				f->name, f->enm->name,
 				(f->flags & FIELD_NULL) ? 
-				"|null" : "", col);
+				"|null" : "");
+			if (f->flags & FIELD_NULL)
+				printf("(data.row[data.pos + %zu] === "
+					"null ?\n\t\t\t\tnull : "
+					"data.row[data.pos + %zu]."
+					"toString()),\n", col, col);
+			else
+				printf("data.row[data.pos + %zu]."
+					"toString(),\n", col);
 			break;
 		default:
 			assert(ftypes[f->type] != NULL);
@@ -911,7 +923,7 @@ gen_enm(const struct enm *p, size_t pos)
 	TAILQ_FOREACH(ei, &p->eq, entries) {
 		if (ei->doc != NULL)
 			print_commentt(2, COMMENT_JS, ei->doc);
-		printf("\t\t%s = %" PRId64, 
+		printf("\t\t%s = \'%" PRId64 "\'", 
 			ei->name, ei->value);
 		if (TAILQ_NEXT(ei, entries) != NULL)
 			putchar(',');

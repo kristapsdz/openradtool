@@ -6,7 +6,7 @@
 	 * only 53 bits of precision for integers.
 	 * This class is a modified version of long.js fixed to base 10.
 	 */
-	class Long {
+	export class Long {
 		private readonly __isLong__: boolean = true;
 		private readonly low: number;
 		private readonly high: number;
@@ -57,9 +57,15 @@
 		 */
 		static isLong(obj: any): boolean 
 		{
+			/* 
+			 * Complex to silence a typescript warning about
+			 * __isLong__ being an unused local otherwise.
+			 */
+
 			return typeof obj === 'object' &&
 		 	       obj !== null && 
-			       obj['__isLong__'] === true;
+			       '__isLong__' in obj &&
+			       (<Long>obj).__isLong__ === true;
 		}
 
 		/**
@@ -145,13 +151,16 @@
 		}
 
 		/**
-		 * @return The bit-wise AND of the value with the given.
+		 * @return The bit-wise AND of the value with the given value.
+		 * If the given value can't be parsed, returns zero.
 		 */
-		and(other: Long|number): Long
+		and(other: Long|number|string|null): Long
 		{
-			const v: Long = !Long.isLong(other) ?
-				Long.fromNumber(<number>other) : 
-				<Long>other;
+			const v: Long|null = !Long.isLong(other) ?
+				Long.fromValue(other) : <Long>other;
+
+			if (v === null)
+				return Long.ZERO;
 
 			return new Long(this.low & v.low, 
 					this.high & v.high, 
@@ -299,11 +308,13 @@
 
 		/**
 		 * Attempt to convert from a Long, number, or string.
-		 * @return The Long representation of the value or null
-		 * on conversion failure.
+		 * @return The Long representation of the value, or null on
+		 * conversion failure including undefined-ness.
 		 */
 		static fromValue(val: any, unsigned?: boolean): Long|null
 		{
+			if (typeof val === 'undefined')
+				return null;
 			if (typeof val === 'number')
 				return Long.fromNumber
 					(<number>val, unsigned);
@@ -313,6 +324,19 @@
 			if (Long.isLong(val))
 				return <Long>val;
 			return null;
+		}
+
+		/**
+		 * Attempt to convert from a Long, number, or string.
+		 * @return The Long representation of the value, null
+		 * on conversion failure, or undefined it it was passed
+		 * undefined.
+		 */
+		static fromValueUndef(val: any, unsigned?: boolean): Long|null|undefined
+		{
+			if (typeof val === 'undefined')
+				return undefined;
+			return Long.fromValue(val);
 		}
 
 		/**
@@ -374,7 +398,6 @@
 			const usgn: boolean =
 				(typeof unsigned === 'undefined') ?
 				false : unsigned;
-			const radix: number = 10;
 			const hyph: number = str.indexOf('-');
 			const radixToPower: Long = Long.TEN_TO_EIGHT;
 			let result: Long = Long.ZERO;
@@ -742,11 +765,12 @@
 	{
 		let i: number;
 		let v: number;
-		const lval: Long|null = Long.fromValue(val);
+		const lval: Long|null|undefined = 
+			Long.fromValueUndef(val);
 		const list: HTMLElement[] = _elemList
 			(e, fname + '-bits-checked', inc);
 
-		if (typeof val === 'undefined')
+		if (typeof lval === 'undefined')
 			return;
 
 		for (i = 0; i < list.length; i++) {

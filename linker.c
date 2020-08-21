@@ -140,7 +140,7 @@ check_aggrtype(struct config *cfg, const struct search *srch)
 		}
 	}
 
-	if (srch->aggr != NULL) {
+	if (srch->aggr != NULL && srch->group != NULL) {
 		if (srch->aggr->field == srch->group->field) {
 			gen_errx(cfg, &srch->group->pos, "same "
 				"column for group and constraint");

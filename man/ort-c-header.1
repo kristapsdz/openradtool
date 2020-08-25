@@ -245,19 +245,54 @@ that open and close the database, respectively.
 There are also several transaction functions and, if applicable, a
 function for managing roles.
 .Bl -tag -width Ds
-.It Fn "struct ort *db_open" "const char *file"
-Open a database named
-.Fa file
-and return a pointer.
-Returns
-.Dv NULL
-on failure to allocate, open, or configure the database.
 .It Fn "void db_close" "struct ort *p"
 Closes a database opened by
 .Fn db_open .
 Passing
 .Dv NULL
 is a noop.
+.It Fn "struct ort *db_open" "const char *file"
+Like
+.Fn db_open_logging ,
+but with
+.Dv NULL
+values for all parameters except
+.Fa file .
+.It Fn "struct ort *db_open_logging" "const char *file" "void (*log)(const char *, void *)" "void (*log_short)(const char *, ...)" "void *log_arg"
+Open a database named
+.Fa file
+and return a pointer.
+.Pp
+If
+.Fa log
+is not set, it will be invoked within the child or parent process on
+database errors with the error message first, then
+.Fa log_arg
+as the second parameter.
+It must not have any side effects.
+If
+.Fa log_short
+is set and
+.Fa log
+is
+.Dv NULL ,
+it is used and is compatible with the
+.Xr warn 3
+family of functions.
+.Pp
+Returns
+.Dv NULL
+on failure to allocate, open, or configure the database.
+.It Fn "void db_logging_data" "struct ort *p" "const void *arg" "size_t sz"
+Set the opaque pointer
+.Fa log_arg
+as otherwise passed to
+.Fn db_open_logging .
+The binary data in
+.Fa arg
+of byte size
+.Fa sz
+are passed to the child process.
 .It Fn "void db_trans_commit" "struct ort *p" "size_t id"
 Commit a transaction opened by
 .Fn db_trans_open

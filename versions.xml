@@ -3,9 +3,28 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.10.1</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-08-27">2020-08-27</time>
+		</header>
+		<aside>
+			<p>
+				<b>Bug-fix</b>:
+				<a href="ort-c-source.1.html">ort-c-source(1)</a> was not generating
+				the internal <code>db_xxxx_fill_r</code> functions in some cases,
+				even though required by query functions.
+			</p>
+			<p>
+				Document the <code>db_open_logging</code> function in
+				<a href="ort-c-header.1.html">ort-c-header(1)</a>.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.10.0</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2020-08-08">2020-08-08</time>
+			<time datetime="2020-08-17">2020-08-17</time>
 		</header>
 		<aside>
 			<p>

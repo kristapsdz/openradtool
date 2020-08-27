@@ -676,7 +676,8 @@ gen_filldep(struct filldepq *fq, const struct strct *p, unsigned int need)
 			continue;
 		if (!gen_filldep(fq, f->ref->target->parent,
 		    (f->ref->source->flags & FIELD_NULL) ?
-		    (FILLDEP_FILL_R |FILLDEP_REFFIND) : 0))
+		    (FILLDEP_FILL_R |FILLDEP_REFFIND) : 
+		    FILLDEP_FILL_R))
 			return 0;
 	}
 

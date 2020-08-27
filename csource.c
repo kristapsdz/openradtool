@@ -2340,7 +2340,7 @@ gen_funcs(const struct config *cfg, const struct strct *p,
 	if (dbin) {
 		if (f != NULL)
 			gen_func_fill(cfg, p);
-		if (f != NULL && f->need & FILLDEP_FILL_R)
+		if (f != NULL && (f->need & FILLDEP_FILL_R))
 			gen_func_fill_r(cfg, p);
 		gen_func_unfill(cfg, p);
 		gen_func_unfill_r(p);
@@ -2695,7 +2695,7 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		TAILQ_FOREACH(s, &p->sq, entries)
-			if (!gen_filldep(&fq, p, 1))
+			if (!gen_filldep(&fq, p, FILLDEP_FILL_R))
 				err(EXIT_FAILURE, NULL);
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)

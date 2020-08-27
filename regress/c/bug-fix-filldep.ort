@@ -1,0 +1,10 @@
+struct foo {
+	field id int rowid;
+};
+
+struct bar {
+	field foo struct fooid;
+	field fooid:foo.id;
+	field id int rowid;
+	iterate fooid: name active;
+};

@@ -461,11 +461,12 @@ regress: all
 			./ort-sql $$f | sqlite3 $$tmp ; \
 			set +e ; \
 			$(CC) $(CFLAGS_REGRESS) $(CFLAGS) -o $$bf \
-				$$f.c $$cf $$rr $(LIBS_REGRESS) $(LDADD_CRYPT) ; \
+				$$f.c $$cf $$rr $(LIBS_REGRESS) \
+				$(LDADD_CRYPT) 2>/dev/null ; \
 			if [ $$? -ne 0 ] ; then \
 				set -e ; \
 				echo "$$f: fail (did not compile)" ; \
-				rm $$f.h $$f.c $$bf $$tmp ; \
+				rm -f $$f.h $$f.c $$bf $$tmp ; \
 				exit 1 ; \
 			fi ; \
 			rm $$f.h $$f.c ; \

@@ -1,6 +1,9 @@
-Top-level regression test directory.  Language-specific regression tests
-are in subdirectories.  This directory can run on any operating system
-that can compile the openradtool binaries: it has no dependencies.
+Top-level regression test directory.  Driven by `make regress` in the source
+root.
+
+Language-specific regression tests are in subdirectories.  This directory can
+run on any operating system that can compile the openradtool binaries: it has
+no dependencies.
 
 The files in this directory are tested only for being parsed properly
 (or for failing to parse as expected).

@@ -42,16 +42,19 @@ for (i = 0; i < files.length; i++) {
 
 	diff = spawnSync('./ort-javascript', ['-S', '.', ortname]);
 	contents = diff.stdout.toString();
-	contents += script;
 	contents += fs.readFileSync(tsname).toString();
+	contents += script;
 
 	/* Compile it into JavaScript. */
 
 	xpiled = ts.transpile(contents, {
 		allowsJs: false,
 		alwaysStrict: true,
+		noEmitOnError: true,
+		noImplicitAny: true,
+		noUnusedLocals: true,
+		noUnusedParameters: true,
 		strict: true,
-		noUnusedLocals: true
 	});
 
 	/* 

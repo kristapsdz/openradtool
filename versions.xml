@@ -3,6 +3,24 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.10.2</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-08-28">2020-08-28</time>
+		</header>
+		<aside>
+			<p>
+				<b>Bug-fix</b>:
+				make sure that
+				<a href="ort-javascript.1.html">ort-javascript(1)</a> correctly 
+				handles numbers and strings when formatting.  This was not caught
+				by the regression framework because <code>ts.transpile</code>
+				accepts the type-mangling code while <code>tsc</code> does not.
+				Fixed and added regression tests that force the issue.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.10.1</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2020-08-27">2020-08-27</time>

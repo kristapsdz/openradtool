@@ -1002,7 +1002,7 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		gen_class_proto(2, "void", "format",
 			"e", "HTMLElement", 
 			"name", "string|null",
-			"v", "string|null", NULL);
+			"v", "string|number|null", NULL);
 		puts("\t\t{\n"
 		     "\t\t\tlet s: string;\n"
 		     "\t\t\tif (name !== null)\n"
@@ -1021,7 +1021,7 @@ gen_javascript(const struct config *cfg, const char *priv, int privfd)
 		puts(");\n"
 		     "\t\t\t\treturn;\n"
 		     "\t\t\t}\n"
-		     "\t\t\tswitch(v) {");
+		     "\t\t\tswitch(v.toString()) {");
 		TAILQ_FOREACH(ei, &e->eq, entries) {
 			warn_label(cfg, &ei->labels, &ei->pos,
 				e->name, ei->name, "item");

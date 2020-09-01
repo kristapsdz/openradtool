@@ -349,6 +349,7 @@ creation.
 Each structure has a number of operations for operating on the
 .Sx Data structures .
 These are all stipulated as
+.Cm count ,
 .Cm delete ,
 .Cm insert ,
 .Cm iterate ,
@@ -445,6 +446,18 @@ within the active query for each retrieved result.
 Like
 .Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
 but invoking a function callback for each retrieved result.
+.It Fn "uint64_t db_foo_count" "struct ort *p"
+Like
+.Fn db_foo_count_xxxx
+but returning a count of all rows.
+.It Fn "uint64_t db_foo_count_xxxx" "struct ort *p" "ARGS"
+Like
+.Fn db_foo_get_xxxx ,
+but returning a count of all rows returned.
+.It Fn "uint64_t db_foo_count_by_xxxx_op1_yy_zz_op2" "struct ort *p" "ARGS"
+Like
+.Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
+but returning a count of all rows returned.
 .It Fn "struct foo_q *db_foo_list" "struct ort *p"
 Like
 .Fn db_foo_list_xxxx

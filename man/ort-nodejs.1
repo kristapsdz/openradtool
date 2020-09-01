@@ -138,6 +138,7 @@ Throws an exception on database error.
 Each structure has a number of operations available in
 .Vt ortctx .
 These are all stipulated as
+.Cm count ,
 .Cm delete ,
 .Cm insert ,
 .Cm iterate ,
@@ -227,6 +228,18 @@ and does not have a return value.
 Like
 .Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
 but invoking a function callback for each retrieved result.
+.It Fn "db_foo_count" Ns No : BigInt
+Like
+.Fn db_foo_count_xxxx
+but returning a count of all rows.
+.It Fn "db_foo_count_xxxx" "ARGS" Ns No : BigInt
+Like
+.Fn db_foo_get_xxxx ,
+but returning a count of responses.
+.It Fn "db_foo_count_by_xxxx_op1_yy_zz_op2" "ARGS" Ns No : BigInt
+Like
+.Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
+but returning a count of responses.
 .It Fn "db_foo_list" Ns No : ortns.foo[]
 Like
 .Fn db_foo_list_xxxx

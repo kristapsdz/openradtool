@@ -199,6 +199,18 @@ or empty, does nothing except add the
 .Qq hide
 class to
 .Fa e .
+.It Fn fillArrayByClass "e: HTMLElement|null" "name: string" "custom?: ort.DataCallbacks|null" Ns No : void
+Convenience method for invoking
+.Fn fillArray
+over all descendents of (and including) element
+.Fa e
+having class
+.Fa name .
+If
+.Fa e
+is
+.Dv null ,
+does nothing.
 .It Fn fillArrayOrShow "e: HTMLElement|null" "toshow: HTMLElement|null" "custom?: ort.DataCallbacks|null" Ns No : void
 Convenience method around
 .Fa fillArray

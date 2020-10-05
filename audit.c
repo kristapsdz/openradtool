@@ -31,7 +31,6 @@
 #include <unistd.h>
 
 #include "ort.h"
-#include "cprotos.h" /* XXX: print_name_db_search */
 
 #define	SPACE	"\t" /* Space for output indentation. */
 
@@ -68,6 +67,43 @@ struct	fieldstack {
 	const struct field **f;
 	size_t		cur;
 	size_t		max;
+};
+
+static	const char *const modtypes[MODTYPE__MAX] = {
+	"cat", /* MODTYPE_CONCAT */
+	"dec", /* MODTYPE_DEC */
+	"inc", /* MODTYPE_INC */
+	"set", /* MODTYPE_SET */
+	"strset", /* MODTYPE_STRSET */
+};
+
+static	const char *const stypes[STYPE__MAX] = {
+	"count", /* STYPE_COUNT */
+	"get", /* STYPE_SEARCH */
+	"list", /* STYPE_LIST */
+	"iterate", /* STYPE_ITERATE */
+};
+
+static	const char *const optypes[OPTYPE__MAX] = {
+	"eq", /* OPTYPE_EQUAL */
+	"ge", /* OPTYPE_GE */
+	"gt", /* OPTYPE_GT */
+	"le", /* OPTYPE_LE */
+	"lt", /* OPTYPE_LT */
+	"neq", /* OPTYPE_NEQUAL */
+	"like", /* OPTYPE_LIKE */
+	"and", /* OPTYPE_AND */
+	"or", /* OPTYPE_OR */
+	"streq", /* OPTYPE_STREQ */
+	"strneq", /* OPTYPE_STRNEQ */
+	/* Unary types... */
+	"isnull", /* OPTYPE_ISNULL */
+	"notnull", /* OPTYPE_NOTNULL */
+};
+
+static	const char *const utypes[UP__MAX] = {
+	"update", /* UP_MODIFY */
+	"delete", /* UP_DELETE */
 };
 
 /*
@@ -189,6 +225,87 @@ check_role_exists(const struct roleq *rq, const char *role)
 	return(NULL);
 }
 
+/*
+ * Print just the name of a insert function for "p".
+ * Returns the number of characters printed.
+ */
+static size_t
+print_name_db_insert(const struct strct *p)
+{
+	int	 rc;
+
+	return (rc = printf("db_%s_insert", p->name)) > 0 ? rc : 0;
+}
+
+/*
+ * Print just the name of a search function for "s".
+ * Returns the number of characters printed.
+ */
+static size_t
+print_name_db_search(const struct search *s)
+{
+	const struct sent *sent;
+	size_t		   sz = 0;
+	int	 	   rc;
+
+	rc = printf("db_%s_%s", s->parent->name, stypes[s->type]);
+	sz += rc > 0 ? rc : 0;
+
+	if (s->name == NULL && !TAILQ_EMPTY(&s->sntq)) {
+		sz += (rc = printf("_by")) > 0 ? rc : 0;
+		TAILQ_FOREACH(sent, &s->sntq, entries) {
+			rc = printf("_%s_%s", 
+				sent->uname, optypes[sent->op]);
+			sz += rc > 0 ? rc : 0;
+		}
+	} else if (s->name != NULL)
+		sz += (rc = printf("_%s", s->name)) > 0 ? rc : 0;
+
+	return sz;
+}
+
+static size_t
+print_name_db_update(const struct update *u)
+{
+	const struct uref *ur;
+	size_t	 	   col = 0;
+	int		   rc;
+
+	rc = printf("db_%s_%s", u->parent->name, utypes[u->type]);
+	col = rc > 0 ? rc : 0;
+
+	if (u->name == NULL && u->type == UP_MODIFY) {
+		if (!(u->flags & UPDATE_ALL))
+			TAILQ_FOREACH(ur, &u->mrq, entries) {
+				rc = printf("_%s_%s", 
+					ur->field->name, 
+					modtypes[ur->mod]);
+				col += rc > 0 ? rc : 0;
+			}
+		if (!TAILQ_EMPTY(&u->crq)) {
+			col += (rc = printf("_by")) > 0 ? rc : 0;
+			TAILQ_FOREACH(ur, &u->crq, entries) {
+				rc = printf("_%s_%s", 
+					ur->field->name, 
+					optypes[ur->op]);
+				col += rc > 0 ? rc : 0;
+			}
+		}
+	} else if (u->name == NULL) {
+		if (!TAILQ_EMPTY(&u->crq)) {
+			col += (rc = printf("_by")) > 0 ? rc : 0;
+			TAILQ_FOREACH(ur, &u->crq, entries) {
+				rc = printf("_%s_%s", 
+					ur->field->name, 
+					optypes[ur->op]);
+				col += rc > 0 ? rc : 0;
+			}
+		}
+	} else 
+		col += (rc = printf("_%s", u->name)) > 0 ? rc : 0;
+
+	return col;
+}
 
 /*
  * Invoked for all structures that are reachable by the role.

@@ -172,10 +172,10 @@ ort-nodejs: nodejs.o comments.o libort.a
 ort-c-source: csource.o cprotos.o comments.o libort.a
 	$(CC) -o $@ csource.o cprotos.o comments.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-c-header: cheader.o cprotos.o comments.o libort.a
+ort-c-header: cheader.o cprotos.o comments.o libort.a cprotos.h
 	$(CC) -o $@ cheader.o cprotos.o comments.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-javascript: javascript.o comments.o libort.a
+ort-javascript: javascript.o comments.o libort.a cprotos.h
 	$(CC) -o $@ javascript.o comments.o libort.a $(LDFLAGS) $(LDADD)
 
 ort-sql: sql.o comments.o libort.a
@@ -341,7 +341,7 @@ db.db: db.sql
 
 # These can be optimised but there's not much point.
 
-$(LIBOBJS) $(OBJS): config.h extern.h ort.h cprotos.h comments.h version.h paths.h parser.h linker.h
+$(LIBOBJS) $(OBJS): config.h extern.h ort.h comments.h version.h paths.h parser.h linker.h
 
 .5.5.html:
 	mandoc -Ostyle=https://bsd.lv/css/mandoc.css -Thtml $< >$@

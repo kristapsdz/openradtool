@@ -22,9 +22,13 @@ LIBOBJS		 = compats.o \
 		   writer.o
 OBJS		 = audit.o \
 		   cheader.o \
-		   comments.o \
-		   cprotos.o \
 		   csource.o \
+		   lang.o \
+		   lang-c-header.o \
+		   lang-c-source.o \
+		   lang-c.o \
+		   lang-javascript.o \
+		   lang-nodejs.o \
 		   main.o \
 		   nodejs.o \
 		   javascript.o \
@@ -65,32 +69,40 @@ MAN1S		 = man/ort.1 \
 		   man/ort-sqldiff.1 \
 		   man/ort-xliff.1
 DOTAREXEC	 = configure
-DOTAR		 = audit.c \
+DOTAR		 = Makefile \
+		   audit.c \
 		   audit.css \
 		   audit.html \
 		   audit.js \
 		   b64_ntop.c \
 		   cheader.c \
-		   comments.c \
-		   comments.h \
 		   compats.c \
 		   config.c \
-		   cprotos.c \
-		   cprotos.h \
 		   csource.c \
 		   extern.h \
 		   gensalt.c \
 		   javascript.c \
 		   jsmn.c \
-		   nodejs.c \
-		   ort.h \
+		   lang-c-header.c \
+		   lang-c-source.c \
+		   lang-c.c \
+		   lang-c.h \
+		   lang-javascript.c \
+		   lang-nodejs.c \
+		   lang.c \
+		   lang.h \
 		   linker.c \
+		   linker.h \
 		   linker_aliases.c \
 		   linker_resolve.c \
-		   linker.h \
 		   log.c \
-		   Makefile \
 		   main.c \
+		   nodejs.c \
+		   ort-lang-javascript.h \
+		   ort-lang-nodejs.h \
+		   ort-lang-c-header.h \
+		   ort-lang-c.h \
+		   ort.h \
 		   ortPrivate.ts \
 		   parser.c \
 		   parser.h \
@@ -100,8 +112,8 @@ DOTAR		 = audit.c \
 		   parser_roles.c \
 		   parser_struct.c \
 		   sql.c \
-		   tests.c \
 		   test.c \
+		   tests.c \
 		   writer.c \
 		   xliff.c
 XMLS		 = test.xml.xml \
@@ -166,32 +178,32 @@ ort: main.o libort.a
 libort.a: $(LIBOBJS)
 	$(AR) rs $@ $(LIBOBJS)
 
-ort-nodejs: nodejs.o comments.o libort.a
-	$(CC) -o $@ nodejs.o comments.o libort.a $(LDFLAGS) $(LDADD)
+ort-nodejs: nodejs.o lang-nodejs.o lang.o libort.a
+	$(CC) -o $@ nodejs.o lang-nodejs.o lang.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-c-source: csource.o cprotos.o comments.o libort.a
-	$(CC) -o $@ csource.o cprotos.o comments.o libort.a $(LDFLAGS) $(LDADD)
+ort-c-source: csource.o lang-c.o lang-c-source.o lang.o libort.a
+	$(CC) -o $@ csource.o lang-c.o lang-c-source.o lang.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-c-header: cheader.o cprotos.o comments.o libort.a cprotos.h
-	$(CC) -o $@ cheader.o cprotos.o comments.o libort.a $(LDFLAGS) $(LDADD)
+ort-c-header: cheader.o lang-c.o lang-c-header.o lang.o libort.a
+	$(CC) -o $@ cheader.o lang-c.o lang-c-header.o lang.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-javascript: javascript.o comments.o libort.a cprotos.h
-	$(CC) -o $@ javascript.o comments.o libort.a $(LDFLAGS) $(LDADD)
+ort-javascript: javascript.o lang-javascript.o lang.o libort.a
+	$(CC) -o $@ javascript.o lang-javascript.o lang.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-sql: sql.o comments.o libort.a
-	$(CC) -o $@ sql.o comments.o libort.a $(LDFLAGS) $(LDADD)
+ort-sql: sql.o lang.o libort.a
+	$(CC) -o $@ sql.o lang.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-sqldiff: sql.o comments.o libort.a
-	$(CC) -o $@ sql.o comments.o libort.a $(LDFLAGS) $(LDADD)
+ort-sqldiff: sql.o lang.o libort.a
+	$(CC) -o $@ sql.o lang.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-audit: audit.o cprotos.o libort.a
-	$(CC) -o $@ audit.o cprotos.o libort.a $(LDFLAGS) $(LDADD)
+ort-audit: audit.o libort.a
+	$(CC) -o $@ audit.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-audit-gv: audit.o cprotos.o libort.a
-	$(CC) -o $@ audit.o cprotos.o libort.a $(LDFLAGS) $(LDADD)
+ort-audit-gv: audit.o libort.a
+	$(CC) -o $@ audit.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-audit-json: audit.o cprotos.o libort.a
-	$(CC) -o $@ audit.o cprotos.o libort.a $(LDFLAGS) $(LDADD)
+ort-audit-json: audit.o libort.a
+	$(CC) -o $@ audit.o libort.a $(LDFLAGS) $(LDADD)
 
 ort-xliff: xliff.o libort.a
 	$(CC) -o $@ xliff.o libort.a $(LDFLAGS) $(LIBS_PKG) $(LDADD)
@@ -341,7 +353,7 @@ db.db: db.sql
 
 # These can be optimised but there's not much point.
 
-$(LIBOBJS) $(OBJS): config.h extern.h ort.h comments.h version.h paths.h parser.h linker.h
+$(LIBOBJS) $(OBJS): config.h extern.h ort.h version.h paths.h parser.h linker.h
 
 .5.5.html:
 	mandoc -Ostyle=https://bsd.lv/css/mandoc.css -Thtml $< >$@

@@ -32,7 +32,7 @@
 #include <unistd.h>
 
 #include "ort.h"
-#include "comments.h"
+#include "lang.h"
 
 static	const char *const realtypes[FTYPE__MAX] = {
 	"int", /* FTYPE_BIT */

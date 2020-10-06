@@ -14,8 +14,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef COMMENTS_H
-#define COMMENTS_H
+#ifndef ORT_LANG_H
+#define ORT_LANG_H
 
 /*
  * Type of comment.
@@ -43,4 +43,4 @@ void	 print_commentv(size_t, enum cmtt, const char *, ...)
 void	 print_sql_stmts(size_t, const struct strct *, enum langt);
 void	 print_sql_enums(size_t, const struct strct *, enum langt);
 
-#endif /* !COMMENTS_H */
+#endif /* !ORT_LANG_H */

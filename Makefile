@@ -68,8 +68,21 @@ MAN1S		 = man/ort.1 \
 		   man/ort-sql.1 \
 		   man/ort-sqldiff.1 \
 		   man/ort-xliff.1
+GENHEADERS	 = paths.h \
+		   version.h
+HEADERS 	 = extern.h \
+		   lang-c.h \
+		   lang.h \
+		   linker.h \
+		   ort-lang-c.h \
+		   ort-lang-javascript.h \
+		   ort-lang-nodejs.h \
+		   ort-nodejs.h \
+		   ort.h \
+		   parser.h
 DOTAREXEC	 = configure
-DOTAR		 = Makefile \
+DOTAR		 = $(HEADERS) \
+		   Makefile \
 		   audit.c \
 		   audit.css \
 		   audit.html \
@@ -79,33 +92,23 @@ DOTAR		 = Makefile \
 		   compats.c \
 		   config.c \
 		   csource.c \
-		   extern.h \
 		   gensalt.c \
 		   javascript.c \
 		   jsmn.c \
 		   lang-c-header.c \
 		   lang-c-source.c \
 		   lang-c.c \
-		   lang-c.h \
 		   lang-javascript.c \
 		   lang-nodejs.c \
 		   lang.c \
-		   lang.h \
 		   linker.c \
-		   linker.h \
 		   linker_aliases.c \
 		   linker_resolve.c \
 		   log.c \
 		   main.c \
 		   nodejs.c \
-		   ort-lang-javascript.h \
-		   ort-lang-nodejs.h \
-		   ort-lang-c-header.h \
-		   ort-lang-c.h \
-		   ort.h \
 		   ortPrivate.ts \
 		   parser.c \
-		   parser.h \
 		   parser_bitfield.c \
 		   parser_enum.c \
 		   parser_field.c \
@@ -353,7 +356,7 @@ db.db: db.sql
 
 # These can be optimised but there's not much point.
 
-$(LIBOBJS) $(OBJS): config.h extern.h ort.h version.h paths.h parser.h linker.h
+$(LIBOBJS) $(OBJS): config.h $(GENHEADERS) $(HEADERS)
 
 .5.5.html:
 	mandoc -Ostyle=https://bsd.lv/css/mandoc.css -Thtml $< >$@
@@ -447,7 +450,7 @@ atom.xml: versions.xml atom-template.xml
 # Remove what is built by "all" and "www".
 
 clean:
-	rm -f $(BINS) version.h paths.h $(LIBOBJS) $(OBJS) libort.a test test.o
+	rm -f $(BINS) $(GENHEADERS) $(LIBOBJS) $(OBJS) libort.a test test.o
 	rm -f db.c db.h db.o db.sql db.ts db.node.ts db.update.sql db.db db.trans.ort
 	rm -f openradtool.tar.gz openradtool.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml

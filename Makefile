@@ -20,6 +20,11 @@ LIBOBJS		 = compats.o \
 		   parser_roles.o \
 		   parser_struct.o \
 		   writer.o
+LIBS		 = libort.a \
+		   libort-lang-c.a \
+		   libort-lang-nodejs.a \
+		   libort-lang-javascript.a \
+		   libort-lang-sql.a
 OBJS		 = audit.o \
 		   cheader.o \
 		   csource.o \
@@ -29,10 +34,12 @@ OBJS		 = audit.o \
 		   lang-c.o \
 		   lang-javascript.o \
 		   lang-nodejs.o \
+		   lang-sql.o \
 		   main.o \
 		   nodejs.o \
 		   javascript.o \
 		   sql.o \
+		   sqldiff.o \
 		   xliff.o
 HTMLS		 = archive.html \
 		   index.html \
@@ -76,7 +83,7 @@ HEADERS 	 = extern.h \
 		   ort-lang-c.h \
 		   ort-lang-javascript.h \
 		   ort-lang-nodejs.h \
-		   ort-nodejs.h \
+		   ort-lang-sql.h \
 		   ort.h \
 		   parser.h
 DOTAREXEC	 = configure
@@ -99,6 +106,7 @@ DOTAR		 = $(HEADERS) \
 		   lang-c.c \
 		   lang-javascript.c \
 		   lang-nodejs.c \
+		   lang-sql.c \
 		   lang.c \
 		   linker.c \
 		   linker_aliases.c \
@@ -115,6 +123,7 @@ DOTAR		 = $(HEADERS) \
 		   parser_roles.c \
 		   parser_struct.c \
 		   sql.c \
+		   sqldiff.c \
 		   test.c \
 		   tests.c \
 		   writer.c \
@@ -181,23 +190,35 @@ ort: main.o libort.a
 libort.a: $(LIBOBJS)
 	$(AR) rs $@ $(LIBOBJS)
 
-ort-nodejs: nodejs.o lang-nodejs.o lang.o libort.a
-	$(CC) -o $@ nodejs.o lang-nodejs.o lang.o libort.a $(LDFLAGS) $(LDADD)
+libort-lang-c.a: lang-c.o lang-c-source.o lang-c-header.o lang.o
+	$(AR) rs $@ lang-c.o lang-c-source.o lang-c-header.o lang.o
 
-ort-c-source: csource.o lang-c.o lang-c-source.o lang.o libort.a
-	$(CC) -o $@ csource.o lang-c.o lang-c-source.o lang.o libort.a $(LDFLAGS) $(LDADD)
+libort-lang-nodejs.a: lang-nodejs.o lang.o
+	$(AR) rs $@ lang-nodejs.o lang.o
 
-ort-c-header: cheader.o lang-c.o lang-c-header.o lang.o libort.a
-	$(CC) -o $@ cheader.o lang-c.o lang-c-header.o lang.o libort.a $(LDFLAGS) $(LDADD)
+libort-lang-sql.a: lang-sql.o lang.o
+	$(AR) rs $@ lang-sql.o lang.o
 
-ort-javascript: javascript.o lang-javascript.o lang.o libort.a
-	$(CC) -o $@ javascript.o lang-javascript.o lang.o libort.a $(LDFLAGS) $(LDADD)
+libort-lang-javascript.a: lang-javascript.o lang.o
+	$(AR) rs $@ lang-javascript.o lang.o
 
-ort-sql: sql.o lang.o libort.a
-	$(CC) -o $@ sql.o lang.o libort.a $(LDFLAGS) $(LDADD)
+ort-nodejs: nodejs.o libort-lang-nodejs.a libort.a
+	$(CC) -o $@ nodejs.o libort-lang-nodejs.a libort.a $(LDFLAGS) $(LDADD)
 
-ort-sqldiff: sql.o lang.o libort.a
-	$(CC) -o $@ sql.o lang.o libort.a $(LDFLAGS) $(LDADD)
+ort-c-source: csource.o libort-lang-c.a libort.a
+	$(CC) -o $@ csource.o libort-lang-c.a libort.a $(LDFLAGS) $(LDADD)
+
+ort-c-header: cheader.o libort-lang-c.a libort.a
+	$(CC) -o $@ cheader.o libort-lang-c.a libort.a $(LDFLAGS) $(LDADD)
+
+ort-javascript: javascript.o libort-lang-javascript.a libort.a
+	$(CC) -o $@ javascript.o libort-lang-javascript.a libort.a $(LDFLAGS) $(LDADD)
+
+ort-sql: sql.o libort-lang-sql.a libort.a
+	$(CC) -o $@ sql.o libort-lang-sql.a libort.a $(LDFLAGS) $(LDADD)
+
+ort-sqldiff: sqldiff.o libort-lang-sql.a libort.a
+	$(CC) -o $@ sqldiff.o libort-lang-sql.a libort.a $(LDFLAGS) $(LDADD)
 
 ort-audit: audit.o libort.a
 	$(CC) -o $@ audit.o libort.a $(LDFLAGS) $(LDADD)
@@ -440,7 +461,7 @@ atom.xml: versions.xml atom-template.xml
 # Remove what is built by "all" and "www".
 
 clean:
-	rm -f $(BINS) $(GENHEADERS) $(LIBOBJS) $(OBJS) libort.a test test.o
+	rm -f $(BINS) $(GENHEADERS) $(LIBOBJS) $(OBJS) $(LIBS) test test.o
 	rm -f db.c db.h db.o db.sql db.ts db.node.ts db.update.sql db.db db.trans.ort
 	rm -f openradtool.tar.gz openradtool.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml ort.pc

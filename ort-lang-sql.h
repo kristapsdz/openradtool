@@ -14,9 +14,10 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef ORT_NODEJS_H
-#define ORT_NODEJS_H
+#ifndef ORT_LANG_SQL_H
+#define ORT_LANG_SQL_H
 
-void	gen_nodejs(const struct config *);
+void	gen_sql(const struct config *);
+int	gen_diff_sql(const struct config *, const struct config *, int);
 
-#endif
+#endif /* !ORT_LANG_SQL_H */

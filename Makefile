@@ -107,6 +107,7 @@ DOTAR		 = $(HEADERS) \
 		   main.c \
 		   nodejs.c \
 		   ortPrivate.ts \
+		   ort.in.pc \
 		   parser.c \
 		   parser_bitfield.c \
 		   parser_enum.c \
@@ -285,7 +286,7 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/openradtool-$(VERSION)/regress/javascript
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sqldiff
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sql
-	install -m 0444 $(DOTAR) ort.pc .dist/openradtool-$(VERSION)
+	install -m 0444 $(DOTAR) .dist/openradtool-$(VERSION)
 	install -m 0444 man/*.[0-9] .dist/openradtool-$(VERSION)/man
 	install -m 0444 regress/*.ort .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.result .dist/openradtool-$(VERSION)/regress

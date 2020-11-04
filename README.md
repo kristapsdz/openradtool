@@ -15,13 +15,9 @@ What follows describes using the bleeding-edge version of the system.
 
 # Installation
 
-First, make sure the depending libraries
-[kcgi](https://kristaps.bsd.lv/kcgi) and
-[sqlbox](https://kristaps.bsd.lv/sqlbox) are up to date.
-
-Then clone or update your sources.  Configure with `./configure`,
-compile with `make` (BSD make, so it may be `bmake` on your system),
-then `make install` (or use `sudo` or `doas`, if applicable).
+Clone or update your sources.  Configure with `./configure`, compile
+with `make` (BSD make, so it may be `bmake` on your system), then `make
+install` (or use `sudo` or `doas`, if applicable).
 
 To install in an alternative directory to `/usr/local`, set the `PREFIX`
 variable when you run `configure`.
@@ -31,6 +27,11 @@ variable when you run `configure`.
 make
 make install
 ```
+
+If you plan on using `pkg-config` with the above invocation, make sure
+that *~/.local/lib/pkgconfig* is recognised as a path to package
+specifications.  You'll also want to make sure that `man` can access the
+installed location of *~/.local/man*, in this case.
 
 Good luck!
 

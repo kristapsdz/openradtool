@@ -3,6 +3,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.10.3</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-11-04">2020-11-04</time>
+		</header>
+		<aside>
+			<p>
+				Start installing the ort library.
+				This includes header, library code, manpages, and a pkgconfig.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.10.2</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2020-08-28">2020-08-28</time>

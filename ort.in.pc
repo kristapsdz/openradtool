@@ -1,0 +1,13 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=@LIBDIR@
+includedir=@INCLUDEDIR@
+
+Name: ort
+Description: ort code generator library
+URL: https://kristaps.bsd.lv/openradtool
+Version: @VERSION@
+Requires:
+Libs.private: 
+Libs: -L${libdir} -lort
+Cflags: -I${includedir}

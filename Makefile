@@ -1,4 +1,4 @@
-.SUFFIXES: .dot .svg .1 .1.html .5 .5.html
+.SUFFIXES: .dot .svg .1 .1.html .5 .5.html .in.pc .pc
 .PHONY: regress
 
 include Makefile.configure
@@ -49,7 +49,6 @@ HTMLS		 = archive.html \
 		   man/ort-xliff.1.html \
 		   man/ort.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/openradtool
-# Not yet installed...
 MAN3S		 = man/ort.3 \
 		   man/ort_config_alloc.3 \
 		   man/ort_config_free.3 \
@@ -168,7 +167,7 @@ PKG_REGRESS	 = sqlbox kcgi-regress kcgi-json libcurl
 LIBS_REGRESS	!= pkg-config --libs $(PKG_REGRESS) 2>/dev/null || echo ""
 CFLAGS_REGRESS	!= pkg-config --cflags $(PKG_REGRESS) 2>/dev/null || echo ""
 
-all: $(BINS)
+all: $(BINS) ort.pc
 
 afl::
 	$(MAKE) clean
@@ -257,33 +256,23 @@ paths.h: Makefile
 
 install: all
 	mkdir -p $(DESTDIR)$(BINDIR)
+	mkdir -p $(DESTDIR)$(INCLUDEDIR)
+	mkdir -p $(DESTDIR)$(LIBDIR)
+	mkdir -p $(DESTDIR)$(LIBDIR)/pkgconfig
 	mkdir -p $(DESTDIR)$(MANDIR)/man1
+	mkdir -p $(DESTDIR)$(MANDIR)/man3
 	mkdir -p $(DESTDIR)$(MANDIR)/man5
 	mkdir -p $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_MAN) $(MAN1S) $(DESTDIR)$(MANDIR)/man1
+	$(INSTALL_MAN) $(MAN3S) $(DESTDIR)$(MANDIR)/man3
 	$(INSTALL_MAN) $(MAN5S) $(DESTDIR)$(MANDIR)/man5
 	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_DATA) b64_ntop.c jsmn.c gensalt.c $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_DATA) ortPrivate.ts $(DESTDIR)$(SHAREDIR)/openradtool
+	$(INSTALL_DATA) ort.h $(DESTDIR)$(INCLUDEDIR)
+	$(INSTALL_LIB) libort.a $(DESTDIR)$(LIBDIR)
+	$(INSTALL_DATA) ort.pc $(DESTDIR)$(LIBDIR)/pkgconfig
 	$(INSTALL_PROGRAM) $(BINS) $(DESTDIR)$(BINDIR)
-
-uninstall:
-	@for f in $(MAN1S); do \
-		echo rm -f $(DESTDIR)$(MANDIR)/man1/`basename $$f` ; \
-		rm -f $(DESTDIR)$(MANDIR)/man1/`basename $$f` ; \
-	done
-	@for f in $(MAN5S); do \
-		echo rm -f $(DESTDIR)$(MANDIR)/man5/`basename $$f` ; \
-		rm -f $(DESTDIR)$(MANDIR)/man5/`basename $$f` ; \
-	done
-	rm -f $(DESTDIR)$(SHAREDIR)/openradtool/audit.{html,css,js}
-	rm -f $(DESTDIR)$(SHAREDIR)/openradtool/{b64_ntop,jsmn,gensalt}.c
-	rm -f $(DESTDIR)$(SHAREDIR)/openradtool/ortPrivate.ts
-	rmdir $(DESTDIR)$(SHAREDIR)/openradtool
-	@for f in $(BINS); do \
-		echo rm -f $(DESTDIR)$(BINDIR)/$$f ; \
-		rm -f $(DESTDIR)$(BINDIR)/$$f ; \
-	done
 
 openradtool.tar.gz.sha512: openradtool.tar.gz
 	openssl dgst -sha512 -hex openradtool.tar.gz >$@
@@ -296,7 +285,7 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/openradtool-$(VERSION)/regress/javascript
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sqldiff
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sql
-	install -m 0444 $(DOTAR) .dist/openradtool-$(VERSION)
+	install -m 0444 $(DOTAR) ort.pc .dist/openradtool-$(VERSION)
 	install -m 0444 man/*.[0-9] .dist/openradtool-$(VERSION)/man
 	install -m 0444 regress/*.ort .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.result .dist/openradtool-$(VERSION)/regress
@@ -453,7 +442,7 @@ clean:
 	rm -f $(BINS) $(GENHEADERS) $(LIBOBJS) $(OBJS) libort.a test test.o
 	rm -f db.c db.h db.o db.sql db.ts db.node.ts db.update.sql db.db db.trans.ort
 	rm -f openradtool.tar.gz openradtool.tar.gz.sha512
-	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml
+	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml ort.pc
 	rm -f db.ort.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
 
 # Remove both what can be built and what's built by ./configure.
@@ -603,3 +592,9 @@ regress: all
 		set -e ; \
 		ts-node --skip-project regress/javascript/regress-runner.ts ; \
 	fi
+
+.in.pc.pc:
+	sed -e "s!@PREFIX@!$(PREFIX)!g" \
+	    -e "s!@LIBDIR@!$(LIBDIR)!g" \
+	    -e "s!@INCLUDEDIR@!$(INCLUDEDIR)!g" \
+	    -e "s!@VERSION@!$(VERSION)!g" $< >$@

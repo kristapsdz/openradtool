@@ -58,6 +58,24 @@ manipulate the configuration
 free the configuration with
 .Xr ort_config_free 3
 .El
+.Pp
+To compile applications with
+.Nm ,
+include the
+.Pa ort.h
+as follows:
+.Bd -literal
+#include <sys/queue.h>
+#include <stdio.h> /* FILE */
+#include <ort.h>
+.Ed
+.Pp
+To compile and link, use
+.Xr pkg-config 1 :
+.Bd -literal
+% cc `pkg-config --cflags ort` -c -o sample.o sample.c
+% cc -o sample sample.o `pkg-config --libs ort`
+.Ed
 .Ss Pledge Promises
 The
 .Nm

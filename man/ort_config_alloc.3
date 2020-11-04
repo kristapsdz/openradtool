@@ -53,14 +53,14 @@ struct config *cfg;
 
 if ((cfg = ort_config_alloc()) == NULL)
   err(1, NULL);
-if (!ort_parse_file(stdin, "<stdin>"))
+if (!ort_parse_file(cfg, stdin, "<stdin>"))
   errx(1, "failed parsing");
 if (!ort_parse_close(cfg))
   errx(1, "failed linking");
 
 /* Do something with the configuration. */
 
-ort_parse_free(cfg);
+ort_config_free(cfg);
 .Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.

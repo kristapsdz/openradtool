@@ -26,8 +26,8 @@
 .In ort.h
 .Ft int
 .Fo ort_write_file
-.Fa FILE *f
-.Fa const struct config *cfg
+.Fa "FILE *f"
+.Fa "const struct config *cfg"
 .Fc
 .Sh DESCRIPTION
 Serialise a configuration
@@ -61,7 +61,7 @@ struct config *cfg;
 
 if ((cfg = ort_config_alloc()) == NULL)
   errx(1, "ort_config_alloc");
-if (!ort_parse_file(stdin, "<stdin>"))
+if (!ort_parse_file(cfg, stdin, "<stdin>"))
   errx(1, "ort_parse_file");
 if (!ort_parse_close(cfg))
   errx(1, "ort_parse_close");
@@ -69,7 +69,7 @@ if (!ort_parse_close(cfg))
 if (!ort_write_file(cfg, stdout))
   errx(1, "ort_write_file");
 
-ort_parse_free(cfg);
+ort_config_free(cfg);
 .Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.

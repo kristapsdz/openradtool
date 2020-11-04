@@ -235,7 +235,7 @@ See
 for a list of possible scenarios.
 .It Va struct strct *parent
 Link to parent structure.
-.It Va struct fvalidq fvq; /* validation */
+.It Va struct fvalidq fvq
 A possibly-empty queue of validators.
 If data is being inserted or updated, it must conform to the validators.
 .It Va unsigned int flags
@@ -466,7 +466,7 @@ A possibly-empty queue of the search constraints.
 An empty queue exists if searching for everything.
 .It Va struct ordq ordq
 A possibly-empty queue of how to order the results.
-.It Va struct aggr *aggr; /* aggregate chain or NULL */
+.It Va struct aggr *aggr
 If not
 .Dv NULL ,
 how to aggregate search results.
@@ -486,7 +486,7 @@ If not
 .Dv NULL ,
 only return distinct results of a reference within the query.
 It may be set to the current structure.
-.It Va char *name; /* named or NULL */
+.It Va char *name
 A non-empty name unique (case insensitive) among other queries of this
 type or
 .Dv NULL

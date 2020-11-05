@@ -606,13 +606,13 @@ regress: all
 		set -e ; \
 	done ; \
 	set +e ; \
-	command -v ts-node >/dev/null 2>/dev/null; \
-	if [ $$? -ne 0 ]; then \
+	if [ ! -f "node_modules/.bin/ts-node" ]; then \
 		set -e ; \
+		echo "regress/javascript: run \`npm install\` for these tests" 1>&2 ; \
 		echo "regress/javascript: ignoring (no ts-node)" 1>&2 ; \
 	else \
 		set -e ; \
-		ts-node --skip-project regress/javascript/regress-runner.ts ; \
+		node_modules/.bin/ts-node --skip-project regress/javascript/regress-runner.ts ; \
 	fi
 
 .in.pc.pc:

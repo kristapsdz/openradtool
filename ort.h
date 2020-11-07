@@ -20,6 +20,7 @@
 TAILQ_HEAD(aliasq, alias);
 TAILQ_HEAD(bitfq, bitf);
 TAILQ_HEAD(bitidxq, bitidx);
+TAILQ_HEAD(diffq, diff);
 TAILQ_HEAD(eitemq, eitem);
 TAILQ_HEAD(enmq, enm);
 TAILQ_HEAD(fieldq, field);
@@ -530,6 +531,29 @@ struct	config {
 	struct config_private *priv;
 };
 
+enum	difftype {
+	DIFF_ADD_ENM,
+	DIFF_ADD_EITEM,
+	DIFF_DEL_ENM,
+	DIFF_DEL_EITEM,
+	DIFF_MOD_EITEM,
+};
+
+struct	diff_eitem {
+	const struct eitem *from;
+	const struct eitem *into;
+};
+
+struct	diff {
+	enum difftype	   	 type;
+	union {
+		const struct enm *enm;
+		const struct eitem *eitem;
+		struct diff_eitem eitem_pair;
+	};
+	TAILQ_ENTRY(diff) 	 entries;
+};
+
 __BEGIN_DECLS
 
 struct config	*ort_config_alloc(void);
@@ -537,6 +561,10 @@ void		 ort_config_free(struct config *);
 int		 ort_parse_close(struct config *);
 int		 ort_parse_file(struct config *, FILE *, const char *);
 int		 ort_write_file(FILE *, const struct config *);
+struct diffq	*ort_diff(const struct config *, const struct config *);
+void		 ort_diff_free(struct diffq *);
+int		 ort_write_diff_file(FILE *, const struct diffq *,
+			const char **, size_t, const char **, size_t);
 
 __END_DECLS
 

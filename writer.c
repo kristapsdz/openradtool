@@ -865,3 +865,47 @@ ort_write_file(FILE *f, const struct config *cfg)
 out:
 	return rc;
 }
+
+int
+ort_write_diff_file(FILE *f, const struct diffq *q, 
+	const char **into, size_t intosz,
+	const char **from, size_t fromsz)
+{
+	const struct diff	*d;
+	int			 rc;
+	size_t			 i;
+
+	for (i = 0; i < fromsz; i++)
+		fprintf(f, "--- %s\n", from[i]);
+	if (fromsz == 0)
+		fprintf(f, "--- <stdin>\n");
+
+	for (i = 0; i < intosz; i++)
+		fprintf(f, "+++ %s\n", into[i]);
+	if (intosz == 0)
+		fprintf(f, "+++ <stdin>\n");
+
+	TAILQ_FOREACH(d, q, entries) {
+		switch (d->type) {
+		case DIFF_ADD_ENM:
+			rc = fprintf(f, "+ enumeration %s:%zu:%zu\n",
+				d->enm->pos.fname,
+				d->enm->pos.line,
+				d->enm->pos.column);
+			break;
+		case DIFF_DEL_ENM:
+			rc = fprintf(f, "- enumeration %s:%zu:%zu\n",
+				d->enm->pos.fname,
+				d->enm->pos.line,
+				d->enm->pos.column);
+			break;
+		default:
+			rc = 1;
+			break;
+		}
+		if (rc < 0)
+			return 0;
+	}
+
+	return 1;
+}

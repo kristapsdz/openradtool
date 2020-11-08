@@ -42,28 +42,82 @@ diff_alloc(struct diffq *q, enum difftype type)
 	return d;
 }
 
+/*
+ * Check if two comments are the same (both empty or both with same
+ * string contents).
+ * Return zero if dissimilar, non-zero if similar.
+ */
+static int
+ort_check_comment(const char *from, const char *into)
+{
+
+	if (from != NULL && into != NULL)
+		return strcmp(from, into) == 0;
+
+	return from == NULL && into == NULL;
+}
+
+/*
+ * Return <0 on failure, 0 if the same, >0 if modified.
+ */
+static int
+ort_diff_eitem(struct diffq *q,
+	const struct eitem *ifrom, const struct eitem *iinto)
+{
+	struct diff	*d;
+	int		 same = 0;
+
+	assert(iinto != NULL);
+
+	if (ifrom == NULL) {
+		if ((d = diff_alloc(q, DIFF_ADD_EITEM)) == NULL)
+			return -1;
+		d->eitem = iinto;
+		return 0;
+	}
+
+	assert(strcasecmp(ifrom->name, iinto->name) == 0);
+
+	if (ifrom->value == iinto->value &&
+	    ort_check_comment(ifrom->doc, iinto->doc))
+		same = 1;
+
+	d = diff_alloc(q, same ? DIFF_SAME_EITEM : DIFF_MOD_EITEM);
+	if (d == NULL)
+		return -1;
+	d->eitem_pair.from = ifrom;
+	d->eitem_pair.into = iinto;
+
+	return same ? 0 : 1;
+}
+
+/*
+ * Return zero on failure, non-zero on success.
+ */
 static int
 ort_diff_enm(struct diffq *q,
 	const struct enm *efrom, const struct enm *einto)
 {
 	const struct eitem	*ifrom, *iinto;
 	struct diff		*d;
+	int			 rc, same = 1;
+
+	/* 
+	 * Look at new enumerations, see if they exist in the old.  If
+	 * they do, then check them for sameness.
+	 */
 
 	TAILQ_FOREACH(iinto, &einto->eq, entries) {
 		TAILQ_FOREACH(ifrom, &efrom->eq, entries)
 			if (strcasecmp(iinto->name, ifrom->name) == 0)
 				break;
-
-		d = diff_alloc(q, ifrom == NULL ?
-			DIFF_ADD_EITEM : DIFF_MOD_EITEM);
-		if (d == NULL)
+		if ((rc = ort_diff_eitem(q, ifrom, iinto)) < 0)
 			return 0;
-		if (d->type == DIFF_MOD_EITEM) {
-			d->eitem_pair.from = ifrom;
-			d->eitem_pair.into = iinto;
-		} else
-			d->eitem = iinto;
+		if (same)
+			same = rc > 0;
 	}
+
+	/* Look at old enumerations no longer in the new. */
 
 	TAILQ_FOREACH(ifrom, &efrom->eq, entries) {
 		TAILQ_FOREACH(iinto, &einto->eq, entries)
@@ -73,8 +127,22 @@ ort_diff_enm(struct diffq *q,
 			if ((d = diff_alloc(q, DIFF_DEL_EITEM)) == NULL)
 				return 0;
 			d->eitem = ifrom;
+			same = 0;
 		}
 	}
+
+	/* More checks if we're still registered as the same. */
+
+	if (same && !ort_check_comment(efrom->doc, einto->doc))
+		same = 0;
+
+	/* Encompassing check. */
+
+	d = diff_alloc(q, same ? DIFF_SAME_ENM : DIFF_MOD_ENM);
+	if (d == NULL)
+		return 0;
+	d->enm_pair.from = efrom;
+	d->enm_pair.into = einto;
 
 	return 1;
 }

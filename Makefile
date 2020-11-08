@@ -9,6 +9,7 @@ VERSION_BUILD	 = 3
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = compats.o \
 		   config.o \
+		   diff.o \
 		   linker.o \
 		   linker_aliases.o \
 		   linker_resolve.o \
@@ -36,6 +37,7 @@ OBJS		 = audit.o \
 		   lang-nodejs.o \
 		   lang-sql.o \
 		   main.o \
+		   maindiff.o \
 		   nodejs.o \
 		   javascript.o \
 		   sql.o \
@@ -59,6 +61,8 @@ WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/openradtool
 MAN3S		 = man/ort.3 \
 		   man/ort_config_alloc.3 \
 		   man/ort_config_free.3 \
+		   man/ort_diff.3  \
+		   man/ort_diff_free.3  \
 		   man/ort_parse_close.3 \
 		   man/ort_parse_file.3 \
 		   man/ort_write_file.3
@@ -113,6 +117,7 @@ DOTAR		 = $(HEADERS) \
 		   linker_resolve.c \
 		   log.c \
 		   main.c \
+		   maindiff.c \
 		   nodejs.c \
 		   ortPrivate.ts \
 		   ort.in.pc \
@@ -149,6 +154,7 @@ BINS		 = ort \
 		   ort-audit-json \
 		   ort-c-header \
 		   ort-c-source \
+		   ort-diff \
 		   ort-javascript \
 		   ort-nodejs \
 		   ort-sql \
@@ -186,6 +192,9 @@ afl::
 
 ort: main.o libort.a
 	$(CC) -o $@ main.o libort.a
+
+ort-diff: maindiff.o libort.a
+	$(CC) -o $@ maindiff.o libort.a
 
 libort.a: $(LIBOBJS)
 	$(AR) rs $@ $(LIBOBJS)
@@ -474,6 +483,62 @@ distclean: clean
 
 regress: all
 	@tmp=`mktemp` ; \
+	for f in regress/diff/*.result ; do \
+		new=regress/diff/`basename $$f .result`.new.ort ; \
+		old=regress/diff/`basename $$f .result`.old.ort ; \
+		set +e ; \
+		printf "$$old -> $$new... " ; \
+		./ort-diff $$old $$new >$$tmp 2>/dev/null ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (did not execute)" ; \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		diff -w $$tmp $$f >/dev/null 2>&1 ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (output)" ; \
+			diff -wu $$tmp $$f ; \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+		set -e ; \
+	done ; \
+	rm -f $$tmp ; \
+	for f in regress/sqldiff/*.result ; do \
+		new=regress/sqldiff/`basename $$f .result`.new.ort ; \
+		old=regress/sqldiff/`basename $$f .result`.old.ort ; \
+		set +e ; \
+		printf "$$old -> $$new... " ; \
+		./ort-sqldiff $$old $$new >$$tmp 2>/dev/null ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (did not execute)" ; \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		diff -w $$tmp $$f >/dev/null 2>&1 ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (output)" ; \
+			diff -wu $$tmp $$f ; \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+		set -e ; \
+	done ; \
+	rm -f $$tmp ; \
+	for old in regress/sqldiff/*.old.nresult ; do \
+		new=regress/sqldiff/`basename $$old .old.nresult`.new.nresult ; \
+		set +e ; \
+		printf "$$old -> $$new... " ; \
+		./ort-sqldiff $$old $$new >/dev/null 2>&1 ; \
+		if [ $$? -eq 0 ] ; then \
+			echo "fail (did not error out)" ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+		set -e ; \
+	done ; \
 	if [ "$(LIBS_REGRESS)" == "" ]; then \
 		echo "regress/c: ignoring (no sqlbox library)" 1>&2 ; \
 	else \
@@ -539,39 +604,6 @@ regress: all
 		echo "pass" ; \
 		set -e ; \
 	done ; \
-	for f in regress/sqldiff/*.result ; do \
-		new=regress/sqldiff/`basename $$f .result`.new.ort ; \
-		old=regress/sqldiff/`basename $$f .result`.old.ort ; \
-		set +e ; \
-		printf "$$old -> $$new... " ; \
-		./ort-sqldiff $$old $$new >$$tmp 2>/dev/null ; \
-		if [ $$? -ne 0 ] ; then \
-			echo "fail (did not execute)" ; \
-			rm $$tmp ; \
-			exit 1 ; \
-		fi ; \
-		diff -w $$tmp $$f >/dev/null 2>&1 ; \
-		if [ $$? -ne 0 ] ; then \
-			echo "fail (output)" ; \
-			diff -wu $$tmp $$f ; \
-			rm $$tmp ; \
-			exit 1 ; \
-		fi ; \
-		echo "pass" ; \
-		set -e ; \
-	done ; \
-	for old in regress/sqldiff/*.old.nresult ; do \
-		new=regress/sqldiff/`basename $$old .old.nresult`.new.nresult ; \
-		set +e ; \
-		printf "$$old -> $$new... " ; \
-		./ort-sqldiff $$old $$new >/dev/null 2>&1 ; \
-		if [ $$? -eq 0 ] ; then \
-			echo "fail (did not error out)" ; \
-			exit 1 ; \
-		fi ; \
-		echo "pass" ; \
-		set -e ; \
-	done ; \
 	for f in regress/sql/*.result ; do \
 		bf=regress/sql/`basename $$f .result`.ort ; \
 		set +e ; \
@@ -608,7 +640,7 @@ regress: all
 	set +e ; \
 	if [ ! -f "node_modules/.bin/ts-node" ]; then \
 		set -e ; \
-		echo "regress/javascript: run \`npm install\` for these tests" 1>&2 ; \
+		echo "regress/javascript: run npm install for these tests" 1>&2 ; \
 		echo "regress/javascript: ignoring (no ts-node)" 1>&2 ; \
 	else \
 		set -e ; \

@@ -35,6 +35,30 @@ installed location of *~/.local/man*, in this case.
 
 Good luck!
 
+## Tests
+
+It's useful to run the installed regression tests on the bleeding edge
+sources.  (Again, this uses BSD make, so it may be `bmake` on your
+system.)
+
+```sh
+make regress
+```
+
+The regression suite will use Node.js tools if available, though it will
+not configure these for you.  You'll need [npm](https://www.npmjs.com)
+for this to work.
+
+```sh
+npm install
+make regress
+```
+
+This will use the *package.json* and *package-lock.json* files to
+configure the *node_modules* subdirectory required for the regression
+tests.  You can safely remove the *node_modules* directory at any time,
+though you will need to re-run `npm install` to recreate it.
+
 # License
 
 All sources use the ISC (like OpenBSD) license.  See the

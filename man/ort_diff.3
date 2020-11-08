@@ -1,0 +1,224 @@
+.\"	$Id$
+.\"
+.\" Copyright (c) 2020 Kristaps Dzonsons <kristaps@bsd.lv>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate$
+.Dt ORT_DIFF 3
+.Os
+.Sh NAME
+.Nm ort_diff
+.Nd compute ort configuration differences
+.Sh LIBRARY
+.Lb libort
+.Sh SYNOPSIS
+.In sys/queue.h
+.In stdio.h
+.In ort.h
+.Ft "struct diffq *"
+.Fo ort_diff
+.Fa "const struct config *from"
+.Fa "const struct config *into"
+.Fc
+.Sh DESCRIPTION
+Computes the differences from the old
+.Xr ort 5
+configuration
+.Fa from
+and the new
+.Fa into .
+The differences are returned as a queue of structures that indicate
+whether any configuration component has changed, has not changed, has
+been added, or has been removed.
+.Pp
+The result should be freed by
+.Xr ort_diff_free 3
+after use.
+.Pp
+Both
+.Fa from
+and
+.Fa into
+must be fully linked as driven by
+.Xr ort_parse_close 3 .
+.Pp
+The differences are typed according to
+.Vt "enum difftype" ,
+which may be any of the following:
+.Bl -tag -width Ds -offset indent
+.It Dv DIFF_ADD_EITEM
+A
+.Vt "struct eitem"
+was added to
+.Fa into .
+.It Dv DIFF_ADD_ENM
+A
+.Vt "struct enm"
+was added to
+.Fa into .
+.It Dv DIFF_DEL_EITEM
+A
+.Vt "struct eitem"
+was removed from
+.Fa from .
+.It Dv DIFF_DEL_ENM
+A
+.Vt "struct enm"
+was removed from
+.Fa from .
+.It Dv DIFF_MOD_EITEM
+A
+.Vt "struct eitem"
+changed between
+.Fa from
+and
+.Fa into .
+This stipulates that one or more of
+.Dv DIFF_MOD_EITEM_COMMENT
+or
+.Dv DIFF_MOD_EITEM_VALUE
+will also be set for the given object.
+.It Dv DIFF_MOD_EITEM_COMMENT
+The
+.Va doc
+field of a
+.Vt "struct eitem"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_EITEM_VALUE
+The
+.Va value
+field of a
+.Vt "struct eitem"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_ENM
+A
+.Vt "struct enm"
+changed between
+.Fa from
+and
+.Fa into .
+This stipulates that one or more of
+.Dv DIFF_MOD_ENM_COMMENT ,
+.Dv DIFF_ADD_EITEM ,
+.Dv DIFF_DEL_EITEM ,
+or
+.Dv DIFF_MOD_EITEM
+will also be set for the given object.
+.It Dv DIFF_MOD_ENM_COMMENT
+The
+.Va doc
+field of a
+.Vt "struct enm"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_SAME_EITEM
+The
+.Vt "struct eitem"
+did not change.
+.It Dv DIFF_SAME_ENM
+The
+.Vt "struct enm"
+did not change.
+.El
+.Pp
+The returned structure is a queue of
+.Vt struct diff ,
+which consists of the following:
+.Bl -tag -width Ds -offset indent
+.It Va "enum difftype type"
+The type of change (or non-change).
+This affects which of the following union fields will be set.
+.It Va "<anon union>"
+This is a union consisting of the following:
+.Bl -tag -width Ds
+.It Va "const struct enm *enm"
+Set by
+.Dv DIFF_ADD_ENM
+and
+.Dv DIFF_DEL_ENM .
+.It Va "struct diff_enm enm_pair"
+Set by
+.Dv DIFF_MOD_ENM ,
+.Dv DIFF_MOD_ENM_COMMENT ,
+and
+.Dv DIFF_SAME_ENM .
+.It Va "const struct eitem *eitem"
+Set by
+.Dv DIFF_ADD_EITEM
+and
+.Dv DIFF_DEL_EITEM .
+.It Va "struct diff_eitem eitem_pair"
+Set by
+.Dv DIFF_MOD_EITEM ,
+.Dv DIFF_MOD_EITEM_COMMENT ,
+.Dv DIFF_MOD_EITEM_VALUE ,
+and
+.Dv DIFF_SAME_EITEM .
+.El
+.El
+.Pp
+A configuration that has not changed at all will consists solely of
+.Dv DIFF_SAME_ENM
+and
+.Dv DIFF_SAME_EITEM
+entries.
+.\" The following requests should be uncommented and used where appropriate.
+.\" .Sh CONTEXT
+.\" For section 9 functions only.
+.Sh RETURN VALUES
+Returns the queue of differences or
+.Dv NULL
+on memory allocation failure.
+.\" For sections 2, 3, and 9 function return values only.
+.\" .Sh ENVIRONMENT
+.\" For sections 1, 6, 7, and 8 only.
+.\" .Sh FILES
+.\" .Sh EXIT STATUS
+.\" For sections 1, 6, and 8 only.
+.\" .Sh EXAMPLES
+.\" The following parses standard input and repeats the parsed, canonicalised
+.\" configuration on standard output.
+.\" .Bd -literal -offset indent
+.\" struct config *cfg;
+.\"
+.\" if ((cfg = ort_config_alloc()) == NULL)
+.\" 	err(1, NULL);
+.\" if (!ort_parse_file(cfg, stdin, "<stdin>");
+.\" 	errx(1, "ort_parse_file");
+.\" if (!ort_parse_close(cfg))
+.\" 	errx(1, "ort_parse_close");
+.\" if (!ort_write_file(stdout, cfg))
+.\" 	errx(1, "ort_write_file");
+.\"
+.\" ort_config_free(cfg);
+.\" .Ed
+.\" .Sh DIAGNOSTICS
+.\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
+.\" .Sh ERRORS
+.\" For sections 2, 3, 4, and 9 errno settings only.
+.\" .Sh SEE ALSO
+.\" .Xr foobar 1
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh CAVEATS
+.\" .Sh BUGS

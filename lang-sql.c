@@ -623,82 +623,39 @@ gen_diff_bits(const struct config *cfg,
 }
 
 /*
- * Compare the enumeration objects in both files.
- * This does the usual check of new <-> old, then old -> new.
- * Returns the number of errors.
+ * Compare enumeration object return the number of errors.
  * If "destruct" is non-zero, allow dropped enumerations and enumeration
  * items.
  */
 static size_t
-gen_diff_enums(const struct config *cfg,
-	const struct config *dcfg, int destruct)
+gen_diff_enums(const struct diffq *q, int destruct)
 {
-	const struct enm *e, *de;
-	const struct eitem *ei, *dei;
-	size_t	 errors = 0;
+	const struct diff	*d;
+	size_t	 		 errors = 0;
 
-	/*
-	 * First, compare the current to the old enumerations.
-	 * For enumerations found in both, error on disparities.
-	 */
-
-	TAILQ_FOREACH(e, &cfg->eq, entries) {
-		TAILQ_FOREACH(de, &dcfg->eq, entries)
-			if (strcasecmp(e->name, de->name) == 0)
-				break;
-		if (de == NULL) {
-			gen_warnx(&e->pos, "new enumeration");
-			continue;
-		}
-		
-		/* Compare current to old entries. */
-
-		TAILQ_FOREACH(ei, &e->eq, entries) {
-			TAILQ_FOREACH(dei, &de->eq, entries)
-				if (strcasecmp(ei->name, dei->name) == 0)
-					break;
-			if (dei != NULL && ei->value != dei->value) {
-				diff_errx(&ei->pos, &dei->pos,
-					"item has changed value");
-				errors++;
-			} else if (dei == NULL)
-				gen_warnx(&ei->pos, "new item");
-		}
-
-		/* 
-		 * Compare existence of old to current entries. 
-		 * This constitutes a deletion if the item is lost, so
-		 * only report it as an error if we're not letting
-		 * through deletions.
-		 */
-
-		TAILQ_FOREACH(dei, &de->eq, entries) {
-			TAILQ_FOREACH(ei, &e->eq, entries)
-				if (strcasecmp(ei->name, dei->name) == 0)
-					break;
-			if (ei != NULL)
-				continue;
-			gen_warnx(&dei->pos, "lost old item");
+	TAILQ_FOREACH(d, q, entries) {
+		switch (d->type) {
+		case DIFF_DEL_ENM:
+			gen_warnx(&d->enm->pos, 
+				"deleted enumeration");
 			if (!destruct)
 				errors++;
-		}
-	}
-
-	/*
-	 * Now we've compared enumerations that are new or already exist
-	 * between the two, so make sure we didn't lose any.
-	 * Report it as an error only if we're not allowing deletions.
-	 */
-
-	TAILQ_FOREACH(de, &dcfg->eq, entries) {
-		TAILQ_FOREACH(e, &cfg->eq, entries)
-			if (strcasecmp(e->name, de->name) == 0)
-				break;
-		if (e != NULL)
-			continue;
-		gen_warnx(&de->pos, "lost old enumeration");
-		if (!destruct)
+			break;
+		case DIFF_MOD_EITEM_VALUE:
+			diff_errx(&d->eitem_pair.from->pos, 
+			  	&d->eitem_pair.into->pos,
+				"item has changed value");
 			errors++;
+			break;
+		case DIFF_DEL_EITEM:
+			gen_warnx(&d->eitem->pos, 
+				"deleted enumeration item");
+			if (!destruct)
+				errors++;
+			break;
+		default:
+			break;
+		}
 	}
 
 	return errors;
@@ -713,14 +670,14 @@ gen_diff_enums(const struct config *cfg,
  * would change the database, such as dropping tables.
  */
 int
-gen_diff_sql(const struct config *cfg, 
+gen_diff_sql(const struct diffq *q, const struct config *cfg, 
 	const struct config *dcfg, int destruct)
 {
 	const struct strct *s, *ds;
 	size_t	 errors = 0;
 	int	 rc, prol = 0;
 
-	errors += gen_diff_enums(cfg, dcfg, destruct);
+	errors += gen_diff_enums(q, destruct);
 	errors += gen_diff_bits(cfg, dcfg, destruct);
 
 	/*

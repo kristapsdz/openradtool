@@ -74,15 +74,49 @@ SQL commands are also emitted.
 This is a limitation of
 .Xr sqlite3 1 . )
 .Pp
-The configuration files are considered incompatible if they contain
-destructive differences:
-.Bl -bullet
+The configuration files are considered incompatible if any of the
+following are true:
+.Pp
+.Bl -bullet -offset indent -compact
 .It
-dropped structures or fields
+dropped enumerations
 .It
-different field types, references, or SQL attributes
+dropped enumeration items
 .It
-new unique constraints
+changed enumeration item values
+.It
+dropped structures
+.It
+dropped fields
+.It
+changed field types
+.It
+changed foreign key references
+.It
+changed SQL attributes
+.It
+added unique constraints
+.El
+.Pp
+When
+.Fl d
+has been specified,
+.Nm
+the following destructive changes are allowed:
+.Pp
+.Bl -bullet -offset indent -compact
+.It
+dropped enumerations
+.It
+dropped bit-fields
+.It
+dropped enumeration items
+.It
+dropped bit-field items
+.It
+dropped tables
+.It
+dropped table columns
 .El
 .Pp
 If fields are added to a structure (columns to a table), the
@@ -99,7 +133,7 @@ values.
 It's good practise, but not enforced by
 .Nm ,
 to wrap the edit script in a transaction.
-.Bd -literal
+.Bd -literal -offset indent
 % ( echo "BEGIN EXCLUSIVE TRANSACTION ;" \e
     ort-sqldiff old.kwbp new.kwbp ; \e
     echo "COMMIT TRANSACTION ;" ) | sqlite3 foo.db
@@ -111,23 +145,6 @@ twice.
 .Pp
 The SQL generated is designed for
 .Xr sqlite3 1 .
-.Ss Delete mode
-When
-.Fl d
-has been specified,
-.Nm
-destructive changes are allowed.
-These consist of the following:
-.Bl -bullet
-.It
-dropped enumerations and bitfields
-.It
-dropped enumeration and bitfield items
-.It
-dropped tables
-.It
-dropped table columns
-.El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

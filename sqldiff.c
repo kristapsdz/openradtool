@@ -42,6 +42,7 @@ main(int argc, char *argv[])
 	int		  rc = 0, c, destruct = 0;
 	size_t		  confsz = 0, dconfsz = 0, i, j, 
 			  confst = 0;
+	struct diffq	 *q = NULL;
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
@@ -141,10 +142,17 @@ main(int argc, char *argv[])
 		goto out;
 	if (!ort_parse_close(dcfg))
 		goto out;
+
+	/* Generate diffs. */
 	
+	if ((q = ort_diff(dcfg, cfg)) == NULL) {
+		warn(NULL);
+		goto out;
+	}
+
 	/* Generate output. */
 
-	rc = gen_diff_sql(cfg, dcfg, destruct);
+	rc = gen_diff_sql(q, cfg, dcfg, destruct);
 out:
 	for (i = 0; i < confsz; i++)
 		if (fclose(confs[i]) == EOF)
@@ -157,6 +165,7 @@ out:
 	free(dconfs);
 	ort_config_free(cfg);
 	ort_config_free(dcfg);
+	ort_diff_free(q);
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 
 usage:

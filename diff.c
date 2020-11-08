@@ -165,6 +165,9 @@ ort_diff_enm(struct diffq *q,
 	return 1;
 }
 
+/*
+ * Return zero on failure, non-zero on success.
+ */
 static int
 ort_diff_enms(struct diffq *q, 
 	const struct config *from, const struct config *into)

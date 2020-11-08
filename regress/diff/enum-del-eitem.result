@@ -1,0 +1,6 @@
+--- regress/diff/enum-del-eitem.old.ort
++++ regress/diff/enum-del-eitem.new.ort
+@@ enumerations @@
+@@ enm regress/diff/enum-del-eitem.old.ort:1:12 -> regress/diff/enum-del-eitem.new.ort:1:12 @@
+  eitem regress/diff/enum-del-eitem.old.ort:2:9 -> regress/diff/enum-del-eitem.new.ort:2:9
+- eitem regress/diff/enum-del-eitem.old.ort:3:9

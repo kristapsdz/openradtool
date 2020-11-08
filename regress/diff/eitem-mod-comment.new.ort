@@ -1,0 +1,8 @@
+enum fooenum {
+	item baz 0;
+	item bar 1 comment "foo";
+};
+
+struct foo {
+	field xyzzy enum fooenum;
+};

@@ -1,0 +1,7 @@
+--- regress/diff/eitem-unset-comment.old.ort
++++ regress/diff/eitem-unset-comment.new.ort
+@@ enumerations @@
+@@ enm regress/diff/eitem-unset-comment.old.ort:1:12 -> regress/diff/eitem-unset-comment.new.ort:1:12 @@
+  eitem regress/diff/eitem-unset-comment.old.ort:2:9 -> regress/diff/eitem-unset-comment.new.ort:2:9
+@@ eitem regress/diff/eitem-unset-comment.old.ort:3:9 -> regress/diff/eitem-unset-comment.new.ort:3:9 @@
+! eitem comment regress/diff/eitem-unset-comment.old.ort:3:9 regress/diff/eitem-unset-comment.new.ort:3:9

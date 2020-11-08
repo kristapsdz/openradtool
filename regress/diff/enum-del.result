@@ -1,0 +1,4 @@
+--- regress/diff/enum-del.old.ort
++++ regress/diff/enum-del.new.ort
+@@ enumerations @@
+- enm regress/diff/enum-del.old.ort:1:12

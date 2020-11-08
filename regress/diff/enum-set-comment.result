@@ -1,0 +1,6 @@
+--- regress/diff/enum-set-comment.old.ort
++++ regress/diff/enum-set-comment.new.ort
+@@ enumerations @@
+@@ enm regress/diff/enum-set-comment.old.ort:1:12 -> regress/diff/enum-set-comment.new.ort:1:12 @@
+  eitem regress/diff/enum-set-comment.old.ort:2:9 -> regress/diff/enum-set-comment.new.ort:2:9
+! enm comment regress/diff/enum-set-comment.old.ort:1:12 -> regress/diff/enum-set-comment.new.ort:1:12

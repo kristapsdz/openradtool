@@ -880,9 +880,8 @@ ort_write_diff_eitem(FILE *f, const struct diffq *q, const struct diff *d)
 		case DIFF_MOD_EITEM_VALUE:
 			if (dd->eitem_pair.into != d->eitem_pair.into)
 				break;
-			rc = fprintf(f, 
-				"- eitem value %s:%zu:%zu\n"
-				"+ eitem value %s:%zu:%zu\n",
+			rc = fprintf(f, "! eitem value "
+				"%s:%zu:%zu -> %s:%zu:%zu\n",
 				dd->eitem_pair.from->pos.fname,
 				dd->eitem_pair.from->pos.line,
 				dd->eitem_pair.from->pos.column,
@@ -893,9 +892,8 @@ ort_write_diff_eitem(FILE *f, const struct diffq *q, const struct diff *d)
 		case DIFF_MOD_EITEM_COMMENT:
 			if (dd->eitem_pair.into != d->eitem_pair.into)
 				break;
-			rc = fprintf(f, 
-				"- eitem comment %s:%zu:%zu\n"
-				"+ eitem comment %s:%zu:%zu\n",
+			rc = fprintf(f, "! eitem comment "
+				"%s:%zu:%zu %s:%zu:%zu\n",
 				dd->eitem_pair.from->pos.fname,
 				dd->eitem_pair.from->pos.line,
 				dd->eitem_pair.from->pos.column,
@@ -927,9 +925,8 @@ ort_write_diff_enm(FILE *f, const struct diffq *q, const struct diff *d)
 		case DIFF_MOD_ENM_COMMENT:
 			if (dd->enm_pair.into != d->enm_pair.into)
 				break;
-			rc = fprintf(f, 
-				"- enm comment %s:%zu:%zu\n"
-				"+ enm comment %s:%zu:%zu\n",
+			rc = fprintf(f, "! enm comment "
+				"%s:%zu:%zu -> %s:%zu:%zu\n",
 				dd->enm_pair.from->pos.fname,
 				dd->enm_pair.from->pos.line,
 				dd->enm_pair.from->pos.column,

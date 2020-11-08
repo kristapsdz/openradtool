@@ -532,42 +532,62 @@ struct	config {
 };
 
 enum	difftype {
+	DIFF_ADD_BITF,
+	DIFF_ADD_BITIDX,
 	DIFF_ADD_EITEM,
 	DIFF_ADD_ENM,
+	DIFF_DEL_BITF,
+	DIFF_DEL_BITIDX,
 	DIFF_DEL_EITEM,
 	DIFF_DEL_ENM,
+	DIFF_MOD_BITF,
+	DIFF_MOD_BITF_COMMENT,
+	DIFF_MOD_BITIDX,
+	DIFF_MOD_BITIDX_COMMENT,
 	DIFF_MOD_EITEM,
 	DIFF_MOD_EITEM_COMMENT,
 	DIFF_MOD_EITEM_VALUE,
 	DIFF_MOD_ENM,
 	DIFF_MOD_ENM_COMMENT,
+	DIFF_SAME_BITF,
+	DIFF_SAME_BITIDX,
 	DIFF_SAME_EITEM,
 	DIFF_SAME_ENM,
 };
 
 struct	diff_eitem {
-	const struct eitem *from;
-	const struct eitem *into;
+	const struct eitem	*from;
+	const struct eitem	*into;
 };
 
 struct	diff_enm {
-	const struct enm *from;
-	const struct enm *into;
+	const struct enm	*from;
+	const struct enm	*into;
+};
+
+struct	diff_bitf {
+	const struct bitf	*from;
+	const struct bitf	*into;
+};
+
+struct	diff_bitidx {
+	const struct bitidx	*from;
+	const struct bitidx	*into;
 };
 
 struct	diff {
-	enum difftype	   	 type;
+	enum difftype	   	 	 type;
 	union {
-		/* DIFF_ADD_ENM, DIFF_DEL_ENM */
-		const struct enm *enm;
-		/* DIFF_MOD_ENM, DIFF_MOD_ENM_*, DIFF_SAME_ENM */
-		struct diff_enm enm_pair;
-		/* DIFF_ADD_EITEM, DIFF_DEL_EITEM */
-		const struct eitem *eitem;
-		/* DIFF_MOD_EITEM, DIFF_MOD_EITEM_*, DIFF_SAME_EITEM */
-		struct diff_eitem eitem_pair; 
+		const struct bitf	*bitf;
+		struct diff_bitf	 bitf_pair;
+		const struct bitidx	*bitidx;
+		struct diff_bitidx	 bitidx_pair;
+		const struct enm	*enm;
+		struct diff_enm		 enm_pair;
+		const struct eitem	*eitem;
+		struct diff_eitem	 eitem_pair; 
 	};
-	TAILQ_ENTRY(diff) 	 entries;
+	TAILQ_ENTRY(diff) 	 	 entries;
 };
 
 __BEGIN_DECLS

@@ -20,7 +20,8 @@ LIBOBJS		 = compats.o \
 		   parser_field.o \
 		   parser_roles.o \
 		   parser_struct.o \
-		   writer.o
+		   writer.o \
+		   writer-diff.o
 LIBS		 = libort.a \
 		   libort-lang-c.a \
 		   libort-lang-nodejs.a \
@@ -102,6 +103,7 @@ DOTAR		 = $(HEADERS) \
 		   compats.c \
 		   config.c \
 		   csource.c \
+		   diff.c \
 		   gensalt.c \
 		   javascript.c \
 		   jsmn.c \
@@ -132,6 +134,7 @@ DOTAR		 = $(HEADERS) \
 		   test.c \
 		   tests.c \
 		   writer.c \
+		   writer-diff.c \
 		   xliff.c
 XMLS		 = test.xml.xml \
 		   versions.xml
@@ -313,6 +316,7 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/openradtool-$(VERSION)/man
 	mkdir -p .dist/openradtool-$(VERSION)/regress
 	mkdir -p .dist/openradtool-$(VERSION)/regress/c
+	mkdir -p .dist/openradtool-$(VERSION)/regress/diff
 	mkdir -p .dist/openradtool-$(VERSION)/regress/javascript
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sqldiff
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sql
@@ -321,6 +325,8 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	install -m 0444 regress/*.ort .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.result .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.nresult .dist/openradtool-$(VERSION)/regress
+	install -m 0444 regress/diff/*.ort .dist/openradtool-$(VERSION)/regress/diff
+	install -m 0444 regress/diff/*.result .dist/openradtool-$(VERSION)/regress/diff
 	install -m 0444 regress/sqldiff/*.ort .dist/openradtool-$(VERSION)/regress/sqldiff
 	install -m 0444 regress/sqldiff/*.result .dist/openradtool-$(VERSION)/regress/sqldiff
 	install -m 0444 regress/sqldiff/*.nresult .dist/openradtool-$(VERSION)/regress/sqldiff

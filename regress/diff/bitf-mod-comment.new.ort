@@ -1,0 +1,8 @@
+bits fooenum {
+	item baz 0;
+	comment "";
+};
+
+struct foo {
+	field xyzzy bits fooenum;
+};

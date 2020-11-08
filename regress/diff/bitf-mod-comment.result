@@ -1,0 +1,6 @@
+--- regress/diff/bitf-mod-comment.old.ort
++++ regress/diff/bitf-mod-comment.new.ort
+@@ bitfields @@
+@@ bitf regress/diff/bitf-mod-comment.old.ort:1:12 -> regress/diff/bitf-mod-comment.new.ort:1:12 @@
+  bitidx regress/diff/bitf-mod-comment.old.ort:2:9 -> regress/diff/bitf-mod-comment.new.ort:2:9
+! bitf comment regress/diff/bitf-mod-comment.old.ort:1:12 -> regress/diff/bitf-mod-comment.new.ort:1:12

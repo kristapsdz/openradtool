@@ -1,0 +1,4 @@
+--- regress/diff/bitf-del.old.ort
++++ regress/diff/bitf-del.new.ort
+@@ bitfields @@
+- bitf regress/diff/bitf-del.old.ort:1:12

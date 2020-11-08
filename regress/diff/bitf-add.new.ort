@@ -1,0 +1,7 @@
+bits fooenum {
+	item baz 0;
+};
+
+struct foo {
+	field xyzzy;
+};

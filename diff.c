@@ -65,7 +65,7 @@ ort_diff_eitem(struct diffq *q,
 	const struct eitem *ifrom, const struct eitem *iinto)
 {
 	struct diff	*d;
-	int		 same = 0;
+	int		 same = 1;
 
 	assert(iinto != NULL);
 
@@ -78,9 +78,21 @@ ort_diff_eitem(struct diffq *q,
 
 	assert(strcasecmp(ifrom->name, iinto->name) == 0);
 
-	if (ifrom->value == iinto->value &&
-	    ort_check_comment(ifrom->doc, iinto->doc))
-		same = 1;
+	if (ifrom->value != iinto->value) {
+		if ((d = diff_alloc(q, DIFF_MOD_EITEM_VALUE)) == NULL)
+			return -1;
+		d->eitem_pair.from = ifrom;
+		d->eitem_pair.into = iinto;
+		same = 0;
+	}
+
+	if (!ort_check_comment(ifrom->doc, iinto->doc)) {
+		if ((d = diff_alloc(q, DIFF_MOD_EITEM_COMMENT)) == NULL)
+			return -1;
+		d->eitem_pair.from = ifrom;
+		d->eitem_pair.into = iinto;
+		same = 0;
+	}
 
 	d = diff_alloc(q, same ? DIFF_SAME_EITEM : DIFF_MOD_EITEM);
 	if (d == NULL)
@@ -131,10 +143,16 @@ ort_diff_enm(struct diffq *q,
 		}
 	}
 
-	/* More checks if we're still registered as the same. */
+	/* More checks. */
 
-	if (same && !ort_check_comment(efrom->doc, einto->doc))
+	if (!ort_check_comment(efrom->doc, einto->doc)) {
+		d = diff_alloc(q, DIFF_MOD_ENM_COMMENT);
+		if (d == NULL)
+			return 0;
+		d->enm_pair.from = efrom;
+		d->enm_pair.into = einto;
 		same = 0;
+	}
 
 	/* Encompassing check. */
 

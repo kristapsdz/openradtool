@@ -537,7 +537,10 @@ enum	difftype {
 	DIFF_DEL_EITEM,
 	DIFF_DEL_ENM,
 	DIFF_MOD_EITEM,
+	DIFF_MOD_EITEM_COMMENT,
+	DIFF_MOD_EITEM_VALUE,
 	DIFF_MOD_ENM,
+	DIFF_MOD_ENM_COMMENT,
 	DIFF_SAME_EITEM,
 	DIFF_SAME_ENM,
 };
@@ -557,11 +560,11 @@ struct	diff {
 	union {
 		/* DIFF_ADD_ENM, DIFF_DEL_ENM */
 		const struct enm *enm;
-		/* DIFF_MOD_ENM, DIFF_SAME_ENM */
+		/* DIFF_MOD_ENM, DIFF_MOD_ENM_*, DIFF_SAME_ENM */
 		struct diff_enm enm_pair;
 		/* DIFF_ADD_EITEM, DIFF_DEL_EITEM */
 		const struct eitem *eitem;
-		/* DIFF_MOD_EITEM, DIFF_SAME_EITEM */
+		/* DIFF_MOD_EITEM, DIFF_MOD_EITEM_*, DIFF_SAME_EITEM */
 		struct diff_eitem eitem_pair; 
 	};
 	TAILQ_ENTRY(diff) 	 entries;

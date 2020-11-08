@@ -57,6 +57,16 @@ The differences are typed according to
 .Vt "enum difftype" ,
 which may be any of the following:
 .Bl -tag -width Ds -offset indent
+.It Dv DIFF_ADD_BITF
+A
+.Vt "struct bitf"
+was added to
+.Fa into .
+.It Dv DIFF_ADD_BITIDX
+A
+.Vt "struct bitidx"
+was added to
+.Fa into .
 .It Dv DIFF_ADD_EITEM
 A
 .Vt "struct eitem"
@@ -67,6 +77,16 @@ A
 .Vt "struct enm"
 was added to
 .Fa into .
+.It Dv DIFF_DEL_BITF
+A
+.Vt "struct bitf"
+was removed from
+.Fa from .
+.It Dv DIFF_DEL_BITIDX
+A
+.Vt "struct bitidx"
+was removed from
+.Fa from .
 .It Dv DIFF_DEL_EITEM
 A
 .Vt "struct eitem"
@@ -77,6 +97,48 @@ A
 .Vt "struct enm"
 was removed from
 .Fa from .
+.It Dv DIFF_MOD_BITF
+A
+.Vt "struct bitf"
+changed between
+.Fa from
+and
+.Fa into .
+This stipulates that one or more of
+.Dv DIFF_MOD_BITF_COMMENT ,
+.Dv DIFF_ADD_BITIDX ,
+.Dv DIFF_DEL_BITIDX ,
+or
+.Dv DIFF_MOD_BITIDX
+will also be set for the given object.
+.It Dv DIFF_MOD_BITF_COMMENT
+The
+.Va doc
+field of a
+.Vt "struct bitf"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_BITIDX
+A
+.Vt "struct bitidx"
+changed between
+.Fa from
+and
+.Fa into .
+This stipulates that one or more of
+.Dv DIFF_MOD_BITIDX_COMMENT
+will also be set for the given object.
+.It Dv DIFF_MOD_BITIDX_COMMENT
+The
+.Va doc
+field of a
+.Vt "struct bitidx"
+changed between
+.Fa from
+and
+.Fa into .
 .It Dv DIFF_MOD_EITEM
 A
 .Vt "struct eitem"
@@ -130,6 +192,14 @@ changed between
 .Fa from
 and
 .Fa into .
+.It Dv DIFF_SAME_BITF
+The
+.Vt "struct bitf"
+did not change.
+.It Dv DIFF_SAME_BITIDX
+The
+.Vt "struct bitidx"
+did not change.
 .It Dv DIFF_SAME_EITEM
 The
 .Vt "struct eitem"
@@ -150,6 +220,28 @@ This affects which of the following union fields will be set.
 .It Va "<anon union>"
 This is a union consisting of the following:
 .Bl -tag -width Ds
+.It Va "const struct bitf *bitf"
+Set by
+.Dv DIFF_ADD_BITF
+and
+.Dv DIFF_DEL_BITF .
+.It Va "struct diff_bitf bitf_pair"
+Set by
+.Dv DIFF_MOD_BITF ,
+.Dv DIFF_MOD_BITF_COMMENT ,
+and
+.Dv DIFF_SAME_BITF .
+.It Va "const struct bitidx *bitidx"
+Set by
+.Dv DIFF_ADD_BITIDX
+and
+.Dv DIFF_DEL_BITIDX .
+.It Va "struct diff_bitidx bitidx_pair"
+Set by
+.Dv DIFF_MOD_BITIDX ,
+.Dv DIFF_MOD_BITIDX_COMMENT ,
+and
+.Dv DIFF_SAME_BITIDX .
 .It Va "const struct enm *enm"
 Set by
 .Dv DIFF_ADD_ENM
@@ -177,7 +269,9 @@ and
 .El
 .Pp
 A configuration that has not changed at all will consists solely of
-.Dv DIFF_SAME_ENM
+.Dv DIFF_SAME_BITF ,
+.Dv DIFF_SAME_BITIDX ,
+.Dv DIFF_SAME_ENM ,
 and
 .Dv DIFF_SAME_EITEM
 entries.

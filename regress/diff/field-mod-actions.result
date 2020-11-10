@@ -1,0 +1,8 @@
+--- regress/diff/field-mod-actions.old.ort
++++ regress/diff/field-mod-actions.new.ort
+@@ strcts @@
+@@ strct regress/diff/field-mod-actions.old.ort:5:10 -> regress/diff/field-mod-actions.new.ort:5:10 @@
+@@ field regress/diff/field-mod-actions.old.ort:6:12 -> regress/diff/field-mod-actions.new.ort:6:12 @@
+! field actions regress/diff/field-mod-actions.old.ort:6:12 -> regress/diff/field-mod-actions.new.ort:6:12
+  field regress/diff/field-mod-actions.old.ort:7:9 -> regress/diff/field-mod-actions.new.ort:7:9
+  strct regress/diff/field-mod-actions.old.ort:1:10 -> regress/diff/field-mod-actions.new.ort:1:10

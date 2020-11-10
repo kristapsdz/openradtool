@@ -1,0 +1,7 @@
+--- regress/diff/field-mod-flags.old.ort
++++ regress/diff/field-mod-flags.new.ort
+@@ strcts @@
+@@ strct regress/diff/field-mod-flags.old.ort:1:10 -> regress/diff/field-mod-flags.new.ort:1:10 @@
+  field regress/diff/field-mod-flags.old.ort:2:10 -> regress/diff/field-mod-flags.new.ort:2:10
+@@ field regress/diff/field-mod-flags.old.ort:3:9 -> regress/diff/field-mod-flags.new.ort:3:9 @@
+! field flags regress/diff/field-mod-flags.old.ort:3:9 -> regress/diff/field-mod-flags.new.ort:3:9

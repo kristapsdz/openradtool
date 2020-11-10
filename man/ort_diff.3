@@ -231,11 +231,44 @@ changed between
 and
 .Fa into .
 This stipulates that one or more of
-.Dv DIFF_MOD_FIELD_COMMENT
+.Dv DIFF_MOD_FIELD_ACTIONS ,
+.Dv DIFF_MOD_FIELD_COMMENT ,
+.Dv DIFF_MOD_FIELD_FLAG ,
+or
+.Dv DIFF_MOD_FIELD_TYPE
 will also be set for the given object.
+.It Dv DIFF_MOD_FIELD_ACTIONS
+The
+.Va actup
+or
+.Va actdel
+field of a
+.Vt "struct field"
+changed between
+.Fa from
+and
+.Fa into .
 .It Dv DIFF_MOD_FIELD_COMMENT
 The
 .Va doc
+field of a
+.Vt "struct field"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_FIELD_FLAG
+The
+.Va flags
+field of a
+.Vt "struct field"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_FIELD_TYPE
+The
+.Va type
 field of a
 .Vt "struct field"
 changed between
@@ -355,7 +388,10 @@ and
 .It Va "struct diff_field field_pair"
 Set by
 .Dv DIFF_MOD_FIELD ,
+.Dv DIFF_MOD_FIELD_ACTIONS ,
 .Dv DIFF_MOD_FIELD_COMMENT ,
+.Dv DIFF_MOD_FIELD_FLAGS ,
+.Dv DIFF_MOD_FIELD_TYPE ,
 and
 .Dv DIFF_SAME_FIELD .
 .It Va "const struct strct *strct"

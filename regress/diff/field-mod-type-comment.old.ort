@@ -1,0 +1,4 @@
+struct foo {
+	field foo double comment "foo";
+	field id;
+};

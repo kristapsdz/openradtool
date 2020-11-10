@@ -122,6 +122,31 @@ ort_diff_field(struct diffq *q,
 
 	assert(strcasecmp(ifrom->name, iinto->name) == 0);
 
+	if (ifrom->type != iinto->type) {
+		if ((d = diff_alloc(q, DIFF_MOD_FIELD_TYPE)) == NULL)
+			return -1;
+		d->field_pair.from = ifrom;
+		d->field_pair.into = iinto;
+		type = DIFF_MOD_FIELD;
+	}
+
+	if (ifrom->actdel != iinto->actdel ||
+	    ifrom->actup != iinto->actup) {
+		if ((d = diff_alloc(q, DIFF_MOD_FIELD_ACTIONS)) == NULL)
+			return -1;
+		d->field_pair.from = ifrom;
+		d->field_pair.into = iinto;
+		type = DIFF_MOD_FIELD;
+	}
+
+	if (ifrom->flags != iinto->flags) {
+		if ((d = diff_alloc(q, DIFF_MOD_FIELD_FLAGS)) == NULL)
+			return -1;
+		d->field_pair.from = ifrom;
+		d->field_pair.into = iinto;
+		type = DIFF_MOD_FIELD;
+	}
+
 	if (!ort_check_comment(ifrom->doc, iinto->doc)) {
 		if ((d = diff_alloc(q, DIFF_MOD_FIELD_COMMENT)) == NULL)
 			return -1;

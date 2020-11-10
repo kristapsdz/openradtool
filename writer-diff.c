@@ -241,10 +241,25 @@ ort_write_diff_field(FILE *f, const struct diffq *q, const struct diff *d)
 	TAILQ_FOREACH(dd, q, entries) {
 		rc = 1;
 		switch (dd->type) {
+		case DIFF_MOD_FIELD_ACTIONS:
+			if (dd->field_pair.into != d->field_pair.into)
+				break;
+			rc = ort_write_field_mod(f, "actions", dd);
+			break;
 		case DIFF_MOD_FIELD_COMMENT:
 			if (dd->field_pair.into != d->field_pair.into)
 				break;
 			rc = ort_write_field_mod(f, "comment", dd);
+			break;
+		case DIFF_MOD_FIELD_FLAGS:
+			if (dd->field_pair.into != d->field_pair.into)
+				break;
+			rc = ort_write_field_mod(f, "flags", dd);
+			break;
+		case DIFF_MOD_FIELD_TYPE:
+			if (dd->field_pair.into != d->field_pair.into)
+				break;
+			rc = ort_write_field_mod(f, "type", dd);
 			break;
 		default:
 			break;

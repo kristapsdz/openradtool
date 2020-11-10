@@ -4,4 +4,4 @@
 @@ enm regress/diff/eitem-mod-comment.old.ort:1:12 -> regress/diff/eitem-mod-comment.new.ort:1:12 @@
   eitem regress/diff/eitem-mod-comment.old.ort:2:9 -> regress/diff/eitem-mod-comment.new.ort:2:9
 @@ eitem regress/diff/eitem-mod-comment.old.ort:3:9 -> regress/diff/eitem-mod-comment.new.ort:3:9 @@
-! eitem comment regress/diff/eitem-mod-comment.old.ort:3:9 regress/diff/eitem-mod-comment.new.ort:3:9
+! eitem comment regress/diff/eitem-mod-comment.old.ort:3:9 -> regress/diff/eitem-mod-comment.new.ort:3:9

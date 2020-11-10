@@ -4,4 +4,4 @@
 @@ bitf regress/diff/bitidx-mod-value.old.ort:1:12 -> regress/diff/bitidx-mod-value.new.ort:1:12 @@
   bitidx regress/diff/bitidx-mod-value.old.ort:2:9 -> regress/diff/bitidx-mod-value.new.ort:2:9
 @@ bitidx regress/diff/bitidx-mod-value.old.ort:3:9 -> regress/diff/bitidx-mod-value.new.ort:3:9 @@
-! bitidx value regress/diff/bitidx-mod-value.old.ort:3:9 regress/diff/bitidx-mod-value.new.ort:3:9
+! bitidx value regress/diff/bitidx-mod-value.old.ort:3:9 -> regress/diff/bitidx-mod-value.new.ort:3:9

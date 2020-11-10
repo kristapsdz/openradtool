@@ -34,7 +34,7 @@ static int
 ort_write_bitidx_pair(FILE *f, const char *name, const struct diff *d)
 {
 
-	return fprintf(f, "! bitidx %s %s:%zu:%zu %s:%zu:%zu\n", 
+	return fprintf(f, "! bitidx %s %s:%zu:%zu -> %s:%zu:%zu\n", 
 		name,
 		d->bitidx_pair.from->pos.fname,
 		d->bitidx_pair.from->pos.line,

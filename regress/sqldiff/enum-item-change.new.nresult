@@ -1,0 +1,8 @@
+enum xyzzy {
+	item moo 2;
+};
+
+struct foo {
+	field bar;
+	field baz enum xyzzy;
+};

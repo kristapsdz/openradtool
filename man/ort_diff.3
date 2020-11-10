@@ -77,6 +77,11 @@ A
 .Vt "struct enm"
 was added to
 .Fa into .
+.It Dv DIFF_ADD_STRCT
+A
+.Vt "struct strct"
+was added to
+.Fa into .
 .It Dv DIFF_DEL_BITF
 A
 .Vt "struct bitf"
@@ -95,6 +100,11 @@ was removed from
 .It Dv DIFF_DEL_ENM
 A
 .Vt "struct enm"
+was removed from
+.Fa from .
+.It Dv DIFF_DEL_STRCT
+A
+.Vt "struct strct"
 was removed from
 .Fa from .
 .It Dv DIFF_MOD_BITF
@@ -277,6 +287,11 @@ Set by
 .Dv DIFF_MOD_EITEM_VALUE ,
 and
 .Dv DIFF_SAME_EITEM .
+.It Va "const struct strct *strct"
+Set by
+.Dv DIFF_ADD_STRCT
+and
+.Dv DIFF_DEL_STRCT .
 .El
 .El
 .Pp

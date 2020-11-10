@@ -149,6 +149,9 @@ ort_diff_eitem(struct diffq *q,
 	return same ? 0 : 1;
 }
 
+/*
+ * Return zero on failure, non-zero on success.
+ */
 static int
 ort_diff_bitf(struct diffq *q,
 	const struct bitf *efrom, const struct bitf *einto)
@@ -298,11 +301,46 @@ ort_diff_bitfs(struct diffq *q,
 			if (strcasecmp(efrom->name, einto->name) == 0)
 				break;
 		if (einto == NULL) {
-			if ((d = calloc(1, sizeof(struct diff))) == NULL)
+			if ((d = diff_alloc(q, DIFF_DEL_BITF)) == NULL)
 				return 0;
-			TAILQ_INSERT_TAIL(q, d, entries);
-			d->type = DIFF_DEL_BITF;
 			d->bitf = efrom;
+		}
+	}
+
+	return 1;
+}
+
+/*
+ * Return zero on failure, non-zero on success.
+ */
+static int
+ort_diff_strcts(struct diffq *q, 
+	const struct config *from, const struct config *into)
+{
+	const struct strct	*efrom, *einto;
+	struct diff		*d;
+
+	TAILQ_FOREACH(einto, &into->sq, entries) {
+		TAILQ_FOREACH(efrom, &from->sq, entries)
+			if (strcasecmp(efrom->name, einto->name) == 0)
+				break;
+
+		if (efrom == NULL) {
+			if ((d = diff_alloc(q, DIFF_ADD_STRCT)) == NULL)
+				return 0;
+			d->strct = einto;
+		} /*else if (!ort_diff_enm(q, efrom, einto))
+			return 0; */
+	}
+
+	TAILQ_FOREACH(efrom, &from->sq, entries) {
+		TAILQ_FOREACH(einto, &into->sq, entries)
+			if (strcasecmp(efrom->name, einto->name) == 0)
+				break;
+		if (einto == NULL) {
+			if ((d = diff_alloc(q, DIFF_DEL_STRCT)) == NULL)
+				return 0;
+			d->strct = efrom;
 		}
 	}
 
@@ -337,10 +375,8 @@ ort_diff_enms(struct diffq *q,
 			if (strcasecmp(efrom->name, einto->name) == 0)
 				break;
 		if (einto == NULL) {
-			if ((d = calloc(1, sizeof(struct diff))) == NULL)
+			if ((d = diff_alloc(q, DIFF_DEL_ENM)) == NULL)
 				return 0;
-			TAILQ_INSERT_TAIL(q, d, entries);
-			d->type = DIFF_DEL_ENM;
 			d->enm = efrom;
 		}
 	}
@@ -361,6 +397,8 @@ ort_diff(const struct config *from, const struct config *into)
 	if (!ort_diff_enms(q, from, into))
 		goto err;
 	if (!ort_diff_bitfs(q, from, into))
+		goto err;
+	if (!ort_diff_strcts(q, from, into))
 		goto err;
 
 	return q;

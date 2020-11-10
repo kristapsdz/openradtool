@@ -637,9 +637,10 @@ int
 gen_diff_sql(const struct diffq *q, const struct config *cfg, 
 	const struct config *dcfg, int destruct)
 {
-	const struct strct *s, *ds;
-	size_t	 errors = 0;
-	int	 rc, prol = 0;
+	const struct strct	*s, *ds;
+	const struct diff	*d;
+	size_t	 		 errors = 0;
+	int	 		 rc, prol = 0;
 
 	errors += gen_diff_enums(q, destruct);
 	errors += gen_diff_bits(q, destruct);
@@ -652,15 +653,11 @@ gen_diff_sql(const struct diffq *q, const struct config *cfg,
 	 * We do this first to handle ADD COLUMN dependencies.
 	 */
 
-	TAILQ_FOREACH(s, &cfg->sq, entries) {
-		TAILQ_FOREACH(ds, &dcfg->sq, entries)
-			if (strcasecmp(s->name, ds->name) == 0)
-				break;
-		if (ds == NULL) {
+	TAILQ_FOREACH(d, q, entries)
+		if (d->type == DIFF_ADD_STRCT) {
 			gen_prologue(&prol);
-			gen_struct(s, 0);
+			gen_struct(d->strct, 0);
 		}
-	}
 
 	/* 
 	 * Now generate table differences.
@@ -688,16 +685,18 @@ gen_diff_sql(const struct diffq *q, const struct config *cfg,
 	 * Also see if there are old fields that are different.
 	 */
 
+	TAILQ_FOREACH(d, q, entries) 
+		if (d->type == DIFF_DEL_STRCT && !destruct) {
+			gen_warnx(&d->strct->pos, "deleted table");
+			errors++;
+		} else if (d->type == DIFF_DEL_STRCT)
+			printf("DROP TABLE %s;\n", d->strct->name);
+
 	TAILQ_FOREACH(ds, &dcfg->sq, entries) {
 		TAILQ_FOREACH(s, &cfg->sq, entries)
 			if (0 == strcasecmp(s->name, ds->name))
 				break;
-		if (NULL == s && destruct) {
-			printf("DROP TABLE %s;\n", ds->name);
-		} else if (s == NULL) {
-			gen_warnx(&ds->pos, "table was dropped");
-			errors++;
-		} else
+		if (s != NULL)
 			errors += gen_diff_fields_old(s, ds, destruct);
 	}
 

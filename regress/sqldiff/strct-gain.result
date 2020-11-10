@@ -1,0 +1,6 @@
+PRAGMA foreign_keys=ON;
+
+CREATE TABLE bar (
+	id INTEGER PRIMARY KEY
+);
+

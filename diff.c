@@ -78,6 +78,14 @@ ort_diff_bitidx(struct diffq *q,
 
 	assert(strcasecmp(ifrom->name, iinto->name) == 0);
 
+	if (ifrom->value != iinto->value) {
+		if ((d = diff_alloc(q, DIFF_MOD_BITIDX_VALUE)) == NULL)
+			return -1;
+		d->bitidx_pair.from = ifrom;
+		d->bitidx_pair.into = iinto;
+		same = 0;
+	}
+
 	if (!ort_check_comment(ifrom->doc, iinto->doc)) {
 		if ((d = diff_alloc(q, DIFF_MOD_BITIDX_COMMENT)) == NULL)
 			return -1;

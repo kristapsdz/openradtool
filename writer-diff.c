@@ -31,6 +31,33 @@
 #include "ort.h"
 
 static int
+ort_write_bitidx_pair(FILE *f, const char *name, const struct diff *d)
+{
+
+	return fprintf(f, "! bitidx %s %s:%zu:%zu %s:%zu:%zu\n", 
+		name,
+		d->bitidx_pair.from->pos.fname,
+		d->bitidx_pair.from->pos.line,
+		d->bitidx_pair.from->pos.column,
+		d->bitidx_pair.into->pos.fname,
+		d->bitidx_pair.into->pos.line,
+		d->bitidx_pair.into->pos.column);
+}
+
+static int
+ort_write_eitem_pair(FILE *f, const char *name, const struct diff *d)
+{
+	return fprintf(f, "! eitem %s %s:%zu:%zu -> %s:%zu:%zu\n",
+		name,
+		d->eitem_pair.from->pos.fname,
+		d->eitem_pair.from->pos.line,
+		d->eitem_pair.from->pos.column,
+		d->eitem_pair.into->pos.fname,
+		d->eitem_pair.into->pos.line,
+		d->eitem_pair.into->pos.column);
+}
+
+static int
 ort_write_diff_bitidx(FILE *f, const struct diffq *q, const struct diff *d)
 {
 	const struct diff	*dd;
@@ -44,14 +71,12 @@ ort_write_diff_bitidx(FILE *f, const struct diffq *q, const struct diff *d)
 		case DIFF_MOD_BITIDX_COMMENT:
 			if (dd->bitidx_pair.into != d->bitidx_pair.into)
 				break;
-			rc = fprintf(f, "! bitidx comment "
-				"%s:%zu:%zu %s:%zu:%zu\n",
-				dd->bitidx_pair.from->pos.fname,
-				dd->bitidx_pair.from->pos.line,
-				dd->bitidx_pair.from->pos.column,
-				dd->bitidx_pair.into->pos.fname,
-				dd->bitidx_pair.into->pos.line,
-				dd->bitidx_pair.into->pos.column);
+			rc = ort_write_bitidx_pair(f, "comment", dd);
+			break;
+		case DIFF_MOD_BITIDX_VALUE:
+			if (dd->bitidx_pair.into != d->bitidx_pair.into)
+				break;
+			rc = ort_write_bitidx_pair(f, "value", dd);
 			break;
 		default:
 			break;
@@ -74,29 +99,15 @@ ort_write_diff_eitem(FILE *f, const struct diffq *q, const struct diff *d)
 	TAILQ_FOREACH(dd, q, entries) {
 		rc = 1;
 		switch (dd->type) {
-		case DIFF_MOD_EITEM_VALUE:
-			if (dd->eitem_pair.into != d->eitem_pair.into)
-				break;
-			rc = fprintf(f, "! eitem value "
-				"%s:%zu:%zu -> %s:%zu:%zu\n",
-				dd->eitem_pair.from->pos.fname,
-				dd->eitem_pair.from->pos.line,
-				dd->eitem_pair.from->pos.column,
-				dd->eitem_pair.into->pos.fname,
-				dd->eitem_pair.into->pos.line,
-				dd->eitem_pair.into->pos.column);
-			break;
 		case DIFF_MOD_EITEM_COMMENT:
 			if (dd->eitem_pair.into != d->eitem_pair.into)
 				break;
-			rc = fprintf(f, "! eitem comment "
-				"%s:%zu:%zu %s:%zu:%zu\n",
-				dd->eitem_pair.from->pos.fname,
-				dd->eitem_pair.from->pos.line,
-				dd->eitem_pair.from->pos.column,
-				dd->eitem_pair.into->pos.fname,
-				dd->eitem_pair.into->pos.line,
-				dd->eitem_pair.into->pos.column);
+			rc = ort_write_eitem_pair(f, "comment", dd);
+			break;
+		case DIFF_MOD_EITEM_VALUE:
+			if (dd->eitem_pair.into != d->eitem_pair.into)
+				break;
+			rc = ort_write_eitem_pair(f, "value", dd);
 			break;
 		default:
 			break;

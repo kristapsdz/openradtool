@@ -129,10 +129,21 @@ and
 .Fa into .
 This stipulates that one or more of
 .Dv DIFF_MOD_BITIDX_COMMENT
+or
+.Dv DIFF_MOD_BITIDX_VALUE
 will also be set for the given object.
 .It Dv DIFF_MOD_BITIDX_COMMENT
 The
 .Va doc
+field of a
+.Vt "struct bitidx"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_BITIDX_VALUE
+The
+.Va value
 field of a
 .Vt "struct bitidx"
 changed between
@@ -240,6 +251,7 @@ and
 Set by
 .Dv DIFF_MOD_BITIDX ,
 .Dv DIFF_MOD_BITIDX_COMMENT ,
+.Dv DIFF_MOD_BITIDX_VALUE ,
 and
 .Dv DIFF_SAME_BITIDX .
 .It Va "const struct enm *enm"

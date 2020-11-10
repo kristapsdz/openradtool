@@ -1,0 +1,6 @@
+--- regress/diff/strct-mod-comment.old.ort
++++ regress/diff/strct-mod-comment.new.ort
+@@ strcts @@
+@@ strct regress/diff/strct-mod-comment.old.ort:1:10 -> regress/diff/strct-mod-comment.new.ort:1:10 @@
+  field regress/diff/strct-mod-comment.old.ort:2:9 -> regress/diff/strct-mod-comment.new.ort:2:9
+! strct comment regress/diff/strct-mod-comment.old.ort:1:10 -> regress/diff/strct-mod-comment.new.ort:1:10

@@ -66,7 +66,8 @@ MAN3S		 = man/ort.3 \
 		   man/ort_diff_free.3  \
 		   man/ort_parse_close.3 \
 		   man/ort_parse_file.3 \
-		   man/ort_write_file.3
+		   man/ort_write_file.3 \
+		   man/ort_write_diff_file.3
 MAN5S		 = man/ort.5
 MAN1S		 = man/ort.1 \
 		   man/ort-audit.1 \

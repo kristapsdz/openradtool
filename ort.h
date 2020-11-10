@@ -536,11 +536,13 @@ enum	difftype {
 	DIFF_ADD_BITIDX,
 	DIFF_ADD_EITEM,
 	DIFF_ADD_ENM,
+	DIFF_ADD_FIELD,
 	DIFF_ADD_STRCT,
 	DIFF_DEL_BITF,
 	DIFF_DEL_BITIDX,
 	DIFF_DEL_EITEM,
 	DIFF_DEL_ENM,
+	DIFF_DEL_FIELD,
 	DIFF_DEL_STRCT,
 	DIFF_MOD_BITF,
 	DIFF_MOD_BITF_COMMENT,
@@ -552,10 +554,16 @@ enum	difftype {
 	DIFF_MOD_EITEM_VALUE,
 	DIFF_MOD_ENM,
 	DIFF_MOD_ENM_COMMENT,
+	DIFF_MOD_FIELD,
+	DIFF_MOD_FIELD_COMMENT,
+	DIFF_MOD_STRCT,
+	DIFF_MOD_STRCT_COMMENT,
 	DIFF_SAME_BITF,
 	DIFF_SAME_BITIDX,
 	DIFF_SAME_EITEM,
 	DIFF_SAME_ENM,
+	DIFF_SAME_FIELD,
+	DIFF_SAME_STRCT,
 };
 
 struct	diff_eitem {
@@ -578,6 +586,16 @@ struct	diff_bitidx {
 	const struct bitidx	*into;
 };
 
+struct	diff_field {
+	const struct field	*from;
+	const struct field	*into;
+};
+
+struct	diff_strct {
+	const struct strct	*from;
+	const struct strct	*into;
+};
+
 struct	diff {
 	enum difftype	   	 	 type;
 	union {
@@ -587,9 +605,12 @@ struct	diff {
 		struct diff_bitidx	 bitidx_pair;
 		const struct enm	*enm;
 		struct diff_enm		 enm_pair;
+		const struct field	*field;
+		struct diff_field	 field_pair;
 		const struct eitem	*eitem;
 		struct diff_eitem	 eitem_pair; 
 		const struct strct	*strct;
+		struct diff_strct	 strct_pair; 
 	};
 	TAILQ_ENTRY(diff) 	 	 entries;
 };

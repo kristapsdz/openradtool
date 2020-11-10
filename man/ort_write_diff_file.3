@@ -15,11 +15,11 @@
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .Dd $Mdocdate$
-.Dt ORT_WRITE_FILE 3
+.Dt ORT_WRITE_DIFF_FILE 3
 .Os
 .Sh NAME
-.Nm ort_write_file
-.Nd serialise openradtool configuration
+.Nm ort_write_diff_file
+.Nd serialise openradtool configuration differences
 .Sh LIBRARY
 .Lb libort
 .Sh SYNOPSIS
@@ -27,21 +27,28 @@
 .In stdio.h
 .In ort.h
 .Ft int
-.Fo ort_write_file
+.Fo ort_write_diff_file
 .Fa "FILE *f"
-.Fa "const struct config *cfg"
+.Fa "const struct diff *q"
+.Fa "const char **froms"
+.Fa "size_t fromsz"
+.Fa "const char **intos"
+.Fa "size_t intosz"
 .Fc
 .Sh DESCRIPTION
-Serialise a configuration
-.Fa cfg
-previously allocated with
-.Xr ort_config_alloc 3 ,
-populated with
-.Xr ort_parse_file 3 ,
-and finalised with
-.Xr ort_parse_close 3
-to stream
-.Fa s .
+Serialise a configuration difference
+.Fa q
+previously generated with
+.Xr ort_diff 3 .
+The differences shown are between the old file names listed in
+.Fa froms
+and the new file names
+.Fa intos
+of length
+.Fa fromsz
+and
+.Fa intosz ,
+respectively.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.
@@ -55,24 +62,7 @@ or non-zero otherwise.
 .\" .Sh FILES
 .\" .Sh EXIT STATUS
 .\" For sections 1, 6, and 8 only.
-.Sh EXAMPLES
-A simple scenario of creating a configuration, parsing standard input,
-linking, then performing some task is as follows.
-.Bd -literal -offset indent
-struct config *cfg;
-
-if ((cfg = ort_config_alloc()) == NULL)
-  errx(1, "ort_config_alloc");
-if (!ort_parse_file(cfg, stdin, "<stdin>"))
-  errx(1, "ort_parse_file");
-if (!ort_parse_close(cfg))
-  errx(1, "ort_parse_close");
-
-if (!ort_write_file(cfg, stdout))
-  errx(1, "ort_write_file");
-
-ort_config_free(cfg);
-.Ed
+.\" .Sh EXAMPLES
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
 .\" .Sh ERRORS

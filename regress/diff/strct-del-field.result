@@ -1,0 +1,6 @@
+--- regress/diff/strct-del-field.old.ort
++++ regress/diff/strct-del-field.new.ort
+@@ strcts @@
+@@ strct regress/diff/strct-del-field.old.ort:1:10 -> regress/diff/strct-del-field.new.ort:1:10 @@
+  field regress/diff/strct-del-field.old.ort:3:9 -> regress/diff/strct-del-field.new.ort:2:9
+- field regress/diff/strct-del-field.old.ort:2:12

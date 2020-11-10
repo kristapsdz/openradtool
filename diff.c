@@ -65,7 +65,7 @@ ort_diff_bitidx(struct diffq *q,
 	const struct bitidx *ifrom, const struct bitidx *iinto)
 {
 	struct diff	*d;
-	int		 same = 1;
+	enum difftype	 type = DIFF_SAME_BITIDX;
 
 	assert(iinto != NULL);
 
@@ -73,7 +73,7 @@ ort_diff_bitidx(struct diffq *q,
 		if ((d = diff_alloc(q, DIFF_ADD_BITIDX)) == NULL)
 			return -1;
 		d->bitidx = iinto;
-		return 0;
+		return 1;
 	}
 
 	assert(strcasecmp(ifrom->name, iinto->name) == 0);
@@ -83,7 +83,7 @@ ort_diff_bitidx(struct diffq *q,
 			return -1;
 		d->bitidx_pair.from = ifrom;
 		d->bitidx_pair.into = iinto;
-		same = 0;
+		type = DIFF_MOD_BITIDX;
 	}
 
 	if (!ort_check_comment(ifrom->doc, iinto->doc)) {
@@ -91,16 +91,50 @@ ort_diff_bitidx(struct diffq *q,
 			return -1;
 		d->bitidx_pair.from = ifrom;
 		d->bitidx_pair.into = iinto;
-		same = 0;
+		type = DIFF_MOD_BITIDX;
 	}
 
-	d = diff_alloc(q, same ? DIFF_SAME_BITIDX : DIFF_MOD_BITIDX);
-	if (d == NULL)
+	if ((d = diff_alloc(q, type)) == NULL)
 		return -1;
 	d->bitidx_pair.from = ifrom;
 	d->bitidx_pair.into = iinto;
+	return type == DIFF_SAME_BITIDX ? 0 : 1;
+}
 
-	return same ? 0 : 1;
+/*
+ * Return <0 on failure, 0 if the same, >0 if modified.
+ */
+static int
+ort_diff_field(struct diffq *q,
+	const struct field *ifrom, const struct field *iinto)
+{
+	struct diff	*d;
+	enum difftype	 type = DIFF_SAME_FIELD;
+
+	assert(iinto != NULL);
+
+	if (ifrom == NULL) {
+		if ((d = diff_alloc(q, DIFF_ADD_FIELD)) == NULL)
+			return -1;
+		d->field = iinto;
+		return 1;
+	}
+
+	assert(strcasecmp(ifrom->name, iinto->name) == 0);
+
+	if (!ort_check_comment(ifrom->doc, iinto->doc)) {
+		if ((d = diff_alloc(q, DIFF_MOD_FIELD_COMMENT)) == NULL)
+			return -1;
+		d->field_pair.from = ifrom;
+		d->field_pair.into = iinto;
+		type = DIFF_MOD_FIELD;
+	}
+
+	if ((d = diff_alloc(q, type)) == NULL)
+		return -1;
+	d->field_pair.from = ifrom;
+	d->field_pair.into = iinto;
+	return type == DIFF_SAME_FIELD ? 0 : 1;
 }
 
 /*
@@ -111,7 +145,7 @@ ort_diff_eitem(struct diffq *q,
 	const struct eitem *ifrom, const struct eitem *iinto)
 {
 	struct diff	*d;
-	int		 same = 1;
+	enum difftype	 type = DIFF_SAME_EITEM;
 
 	assert(iinto != NULL);
 
@@ -119,7 +153,7 @@ ort_diff_eitem(struct diffq *q,
 		if ((d = diff_alloc(q, DIFF_ADD_EITEM)) == NULL)
 			return -1;
 		d->eitem = iinto;
-		return 0;
+		return 1;
 	}
 
 	assert(strcasecmp(ifrom->name, iinto->name) == 0);
@@ -129,7 +163,7 @@ ort_diff_eitem(struct diffq *q,
 			return -1;
 		d->eitem_pair.from = ifrom;
 		d->eitem_pair.into = iinto;
-		same = 0;
+		type = DIFF_MOD_EITEM;
 	}
 
 	if (!ort_check_comment(ifrom->doc, iinto->doc)) {
@@ -137,16 +171,14 @@ ort_diff_eitem(struct diffq *q,
 			return -1;
 		d->eitem_pair.from = ifrom;
 		d->eitem_pair.into = iinto;
-		same = 0;
+		type = DIFF_MOD_EITEM;
 	}
 
-	d = diff_alloc(q, same ? DIFF_SAME_EITEM : DIFF_MOD_EITEM);
-	if (d == NULL)
+	if ((d = diff_alloc(q, type)) == NULL)
 		return -1;
 	d->eitem_pair.from = ifrom;
 	d->eitem_pair.into = iinto;
-
-	return same ? 0 : 1;
+	return type == DIFF_SAME_EITEM ? 0 : 1;
 }
 
 /*
@@ -158,7 +190,8 @@ ort_diff_bitf(struct diffq *q,
 {
 	const struct bitidx	*ifrom, *iinto;
 	struct diff		*d;
-	int			 rc, same = 1;
+	enum difftype		 type = DIFF_SAME_BITF;
+	int			 rc;
 
 	/* 
 	 * Look at new indices, see if they exist in the old.  If they
@@ -171,8 +204,8 @@ ort_diff_bitf(struct diffq *q,
 				break;
 		if ((rc = ort_diff_bitidx(q, ifrom, iinto)) < 0)
 			return 0;
-		if (same)
-			same = rc > 0;
+		else if (rc > 0)
+			type = DIFF_MOD_BITF;
 	}
 
 	/* Look at old indices no longer in the new. */
@@ -185,7 +218,7 @@ ort_diff_bitf(struct diffq *q,
 			if ((d = diff_alloc(q, DIFF_DEL_BITIDX)) == NULL)
 				return 0;
 			d->bitidx = ifrom;
-			same = 0;
+			type = DIFF_MOD_BITF;
 		}
 	}
 
@@ -197,17 +230,65 @@ ort_diff_bitf(struct diffq *q,
 			return 0;
 		d->bitf_pair.from = efrom;
 		d->bitf_pair.into = einto;
-		same = 0;
+		type = DIFF_MOD_BITF;
 	}
 
 	/* Encompassing check. */
 
-	d = diff_alloc(q, same ? DIFF_SAME_BITF : DIFF_MOD_BITF);
-	if (d == NULL)
+	if ((d = diff_alloc(q, type)) == NULL)
 		return 0;
 	d->bitf_pair.from = efrom;
 	d->bitf_pair.into = einto;
+	return 1;
+}
 
+/*
+ * Return zero on failure, non-zero on success.
+ */
+static int
+ort_diff_strct(struct diffq *q,
+	const struct strct *efrom, const struct strct *einto)
+{
+	const struct field	*ifrom, *iinto;
+	struct diff		*d;
+	int			 rc;
+	enum difftype		 type = DIFF_SAME_STRCT;
+
+	TAILQ_FOREACH(iinto, &einto->fq, entries) {
+		TAILQ_FOREACH(ifrom, &efrom->fq, entries)
+			if (strcasecmp(iinto->name, ifrom->name) == 0)
+				break;
+		if ((rc = ort_diff_field(q, ifrom, iinto)) < 0)
+			return 0;
+		else if (rc > 0)
+			type = DIFF_MOD_STRCT;
+	}
+
+	TAILQ_FOREACH(ifrom, &efrom->fq, entries) {
+		TAILQ_FOREACH(iinto, &einto->fq, entries)
+			if (strcasecmp(iinto->name, ifrom->name) == 0)
+				break;
+		if (iinto == NULL) {
+			if ((d = diff_alloc(q, DIFF_DEL_FIELD)) == NULL)
+				return 0;
+			d->field = ifrom;
+			type = DIFF_MOD_STRCT;
+		}
+	}
+
+	if (!ort_check_comment(efrom->doc, einto->doc)) {
+		d = diff_alloc(q, DIFF_MOD_STRCT_COMMENT);
+		if (d == NULL)
+			return 0;
+		d->strct_pair.from = efrom;
+		d->strct_pair.into = einto;
+		type = DIFF_MOD_STRCT;
+	}
+
+	if ((d = diff_alloc(q, type)) == NULL)
+		return 0;
+	d->strct_pair.from = efrom;
+	d->strct_pair.into = einto;
 	return 1;
 }
 
@@ -220,7 +301,8 @@ ort_diff_enm(struct diffq *q,
 {
 	const struct eitem	*ifrom, *iinto;
 	struct diff		*d;
-	int			 rc, same = 1;
+	enum difftype		 type = DIFF_SAME_ENM;
+	int			 rc;
 
 	/* 
 	 * Look at new enumerations, see if they exist in the old.  If
@@ -233,8 +315,8 @@ ort_diff_enm(struct diffq *q,
 				break;
 		if ((rc = ort_diff_eitem(q, ifrom, iinto)) < 0)
 			return 0;
-		if (same)
-			same = rc > 0;
+		else if (rc > 0)
+			type = DIFF_MOD_ENM;
 	}
 
 	/* Look at old enumerations no longer in the new. */
@@ -247,29 +329,26 @@ ort_diff_enm(struct diffq *q,
 			if ((d = diff_alloc(q, DIFF_DEL_EITEM)) == NULL)
 				return 0;
 			d->eitem = ifrom;
-			same = 0;
+			type = DIFF_MOD_ENM;
 		}
 	}
 
 	/* More checks. */
 
 	if (!ort_check_comment(efrom->doc, einto->doc)) {
-		d = diff_alloc(q, DIFF_MOD_ENM_COMMENT);
-		if (d == NULL)
+		if ((d = diff_alloc(q, DIFF_MOD_ENM_COMMENT)) == NULL)
 			return 0;
 		d->enm_pair.from = efrom;
 		d->enm_pair.into = einto;
-		same = 0;
+		type = DIFF_MOD_ENM;
 	}
 
 	/* Encompassing check. */
 
-	d = diff_alloc(q, same ? DIFF_SAME_ENM : DIFF_MOD_ENM);
-	if (d == NULL)
+	if ((d = diff_alloc(q, type)) == NULL)
 		return 0;
 	d->enm_pair.from = efrom;
 	d->enm_pair.into = einto;
-
 	return 1;
 }
 
@@ -329,8 +408,8 @@ ort_diff_strcts(struct diffq *q,
 			if ((d = diff_alloc(q, DIFF_ADD_STRCT)) == NULL)
 				return 0;
 			d->strct = einto;
-		} /*else if (!ort_diff_enm(q, efrom, einto))
-			return 0; */
+		} else if (!ort_diff_strct(q, efrom, einto))
+			return 0; 
 	}
 
 	TAILQ_FOREACH(efrom, &from->sq, entries) {

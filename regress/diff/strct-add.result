@@ -1,4 +1,5 @@
 --- regress/diff/strct-add.old.ort
 +++ regress/diff/strct-add.new.ort
 @@ strcts @@
+  strct regress/diff/strct-add.old.ort:1:10 -> regress/diff/strct-add.new.ort:5:10 
 + strct regress/diff/strct-add.new.ort:1:10

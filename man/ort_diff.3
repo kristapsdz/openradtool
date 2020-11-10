@@ -77,6 +77,11 @@ A
 .Vt "struct enm"
 was added to
 .Fa into .
+.It Dv DIFF_ADD_FIELD
+A
+.Vt "struct field"
+was added to
+.Fa into .
 .It Dv DIFF_ADD_STRCT
 A
 .Vt "struct strct"
@@ -100,6 +105,11 @@ was removed from
 .It Dv DIFF_DEL_ENM
 A
 .Vt "struct enm"
+was removed from
+.Fa from .
+.It Dv DIFF_DEL_FIELD
+A
+.Vt "struct field"
 was removed from
 .Fa from .
 .It Dv DIFF_DEL_STRCT
@@ -213,6 +223,48 @@ changed between
 .Fa from
 and
 .Fa into .
+.It Dv DIFF_MOD_FIELD
+A
+.Vt "struct field"
+changed between
+.Fa from
+and
+.Fa into .
+This stipulates that one or more of
+.Dv DIFF_MOD_FIELD_COMMENT
+will also be set for the given object.
+.It Dv DIFF_MOD_FIELD_COMMENT
+The
+.Va doc
+field of a
+.Vt "struct field"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_STRCT
+A
+.Vt "struct strct"
+changed between
+.Fa from
+and
+.Fa into .
+This stipulates that one or more of
+.Dv DIFF_MOD_STRCT_COMMENT ,
+.Dv DIFF_ADD_FIELD ,
+.Dv DIFF_DEL_FIELD ,
+or
+.Dv DIFF_MOD_FIELD
+will also be set for the given object.
+.It Dv DIFF_MOD_STRCT_COMMENT
+The
+.Va doc
+field of a
+.Vt "struct strct"
+changed between
+.Fa from
+and
+.Fa into .
 .It Dv DIFF_SAME_BITF
 The
 .Vt "struct bitf"
@@ -228,6 +280,14 @@ did not change.
 .It Dv DIFF_SAME_ENM
 The
 .Vt "struct enm"
+did not change.
+.It Dv DIFF_SAME_FIELD
+The
+.Vt "struct field"
+did not change.
+.It Dv DIFF_SAME_STRCT
+The
+.Vt "struct strct"
 did not change.
 .El
 .Pp
@@ -287,11 +347,28 @@ Set by
 .Dv DIFF_MOD_EITEM_VALUE ,
 and
 .Dv DIFF_SAME_EITEM .
+.It Va "const struct field *field"
+Set by
+.Dv DIFF_ADD_FIELD
+and
+.Dv DIFF_DEL_FIELD .
+.It Va "struct diff_field field_pair"
+Set by
+.Dv DIFF_MOD_FIELD ,
+.Dv DIFF_MOD_FIELD_COMMENT ,
+and
+.Dv DIFF_SAME_FIELD .
 .It Va "const struct strct *strct"
 Set by
 .Dv DIFF_ADD_STRCT
 and
 .Dv DIFF_DEL_STRCT .
+.It Va "struct diff_strct strct_pair"
+Set by
+.Dv DIFF_MOD_STRCT ,
+.Dv DIFF_MOD_STRCT_COMMENT ,
+and
+.Dv DIFF_SAME_FIELD .
 .El
 .El
 .Pp
@@ -299,8 +376,10 @@ A configuration that has not changed at all will consists solely of
 .Dv DIFF_SAME_BITF ,
 .Dv DIFF_SAME_BITIDX ,
 .Dv DIFF_SAME_ENM ,
+.Dv DIFF_SAME_EITEM ,
+.Dv DIFF_SAME_FIELD ,
 and
-.Dv DIFF_SAME_EITEM
+.Dv DIFF_SAME_STRCT
 entries.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT

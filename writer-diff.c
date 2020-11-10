@@ -31,70 +31,172 @@
 #include "ort.h"
 
 static int
+ort_write_one(FILE *f, int add, const char *name, const struct pos *pos)
+{
+
+	return fprintf(f, "%s %s %s:%zu:%zu\n", add ? "+" : "-", 
+		name, pos->fname, pos->line, pos->column);
+}
+
+static int
+ort_write_pair(FILE *f, int chnge, const char *name, 
+	const struct pos *from, const struct pos *into)
+{
+
+	return fprintf(f, "%s%s %s:%zu:%zu -> %s:%zu:%zu%s\n",
+		chnge ? "@@ " : "  ", name,
+		from->fname, from->line, from->column,
+		into->fname, into->line, into->column,
+		chnge ? " @@" : "");
+}
+
+static int
+ort_write_mod(FILE *f, const char *name, const char *type,
+	const struct pos *from, const struct pos *into)
+{
+
+	return fprintf(f, "! %s %s %s:%zu:%zu -> %s:%zu:%zu\n",
+		type, name,
+		from->fname, from->line, from->column,
+		into->fname, into->line, into->column);
+}
+
+static int
+ort_write_field(FILE *f, int add, const struct diff *d)
+{
+
+	return ort_write_one(f, add, "field", &d->field->pos);
+}
+
+static int
+ort_write_field_mod(FILE *f, const char *name, const struct diff *d)
+{
+
+	return ort_write_mod(f, name, "field",
+		&d->field_pair.from->pos, &d->field_pair.into->pos);
+}
+
+static int
+ort_write_field_pair(FILE *f, int chnge, const struct diff *d)
+{
+
+	return ort_write_pair(f, chnge, "field",
+		&d->field_pair.from->pos, &d->field_pair.into->pos);
+}
+
+static int
 ort_write_strct(FILE *f, int add, const struct diff *d)
 {
-	return fprintf(f, "%s strct %s:%zu:%zu\n",
-		add ? "+" : "-",
-		d->strct->pos.fname,
-		d->strct->pos.line,
-		d->strct->pos.column);
+
+	return ort_write_one(f, add, "strct", &d->strct->pos);
 }
 
 static int
-ort_write_bitf_pair(FILE *f, int nsame, const struct diff *d)
+ort_write_strct_mod(FILE *f, const char *name, const struct diff *d)
 {
 
-	return fprintf(f, "%s bitf %s:%zu:%zu -> %s:%zu:%zu %s\n",
-		nsame ? "@@ " : "  ",
-		d->bitf_pair.from->pos.fname,
-		d->bitf_pair.from->pos.line,
-		d->bitf_pair.from->pos.column,
-		d->bitf_pair.into->pos.fname,
-		d->bitf_pair.into->pos.line,
-		d->bitf_pair.into->pos.column,
-		nsame ? " @@" : "");
+	return ort_write_mod(f, name, "strct",
+		&d->strct_pair.from->pos, &d->strct_pair.into->pos);
 }
 
 static int
-ort_write_enm_pair(FILE *f, int nsame, const struct diff *d)
+ort_write_strct_pair(FILE *f, int chnge, const struct diff *d)
 {
 
-	return fprintf(f, "%s enm %s:%zu:%zu -> %s:%zu:%zu %s\n",
-		nsame ? "@@ " : "  ",
-		d->enm_pair.from->pos.fname,
-		d->enm_pair.from->pos.line,
-		d->enm_pair.from->pos.column,
-		d->enm_pair.into->pos.fname,
-		d->enm_pair.into->pos.line,
-		d->enm_pair.into->pos.column,
-		nsame ? " @@" : "");
+	return ort_write_pair(f, chnge, "strct",
+		&d->strct_pair.from->pos, &d->strct_pair.into->pos);
 }
 
 static int
-ort_write_bitidx_pair(FILE *f, const char *name, const struct diff *d)
+ort_write_bitf(FILE *f, int add, const struct diff *d)
 {
 
-	return fprintf(f, "! bitidx %s %s:%zu:%zu -> %s:%zu:%zu\n", 
-		name,
-		d->bitidx_pair.from->pos.fname,
-		d->bitidx_pair.from->pos.line,
-		d->bitidx_pair.from->pos.column,
-		d->bitidx_pair.into->pos.fname,
-		d->bitidx_pair.into->pos.line,
-		d->bitidx_pair.into->pos.column);
+	return ort_write_one(f, add, "bitf", &d->bitf->pos);
 }
 
 static int
-ort_write_eitem_pair(FILE *f, const char *name, const struct diff *d)
+ort_write_bitf_mod(FILE *f, const char *name, const struct diff *d)
 {
-	return fprintf(f, "! eitem %s %s:%zu:%zu -> %s:%zu:%zu\n",
-		name,
-		d->eitem_pair.from->pos.fname,
-		d->eitem_pair.from->pos.line,
-		d->eitem_pair.from->pos.column,
-		d->eitem_pair.into->pos.fname,
-		d->eitem_pair.into->pos.line,
-		d->eitem_pair.into->pos.column);
+
+	return ort_write_mod(f, name, "bitf",
+		&d->bitf_pair.from->pos, &d->bitf_pair.into->pos);
+}
+
+static int
+ort_write_bitf_pair(FILE *f, int chnge, const struct diff *d)
+{
+
+	return ort_write_pair(f, chnge, "bitf",
+		&d->bitf_pair.from->pos, &d->bitf_pair.into->pos);
+}
+
+static int
+ort_write_enm(FILE *f, int add, const struct diff *d)
+{
+
+	return ort_write_one(f, add, "enm", &d->enm->pos);
+}
+
+static int
+ort_write_enm_mod(FILE *f, const char *name, const struct diff *d)
+{
+
+	return ort_write_mod(f, name, "enm",
+		&d->enm_pair.from->pos, &d->enm_pair.into->pos);
+}
+
+static int
+ort_write_enm_pair(FILE *f, int chnge, const struct diff *d)
+{
+
+	return ort_write_pair(f, chnge, "enm",
+		&d->enm_pair.from->pos, &d->enm_pair.into->pos);
+}
+
+static int
+ort_write_bitidx(FILE *f, int add, const struct diff *d)
+{
+
+	return ort_write_one(f, add, "bitidx", &d->bitidx->pos);
+}
+
+static int
+ort_write_bitidx_mod(FILE *f, const char *name, const struct diff *d)
+{
+
+	return ort_write_mod(f, name, "bitidx",
+		&d->bitidx_pair.from->pos, &d->bitidx_pair.into->pos);
+}
+
+static int
+ort_write_bitidx_pair(FILE *f, int chnge, const struct diff *d)
+{
+
+	return ort_write_pair(f, chnge, "bitidx",
+		&d->bitidx_pair.from->pos, &d->bitidx_pair.into->pos);
+}
+
+static int
+ort_write_eitem(FILE *f, int add, const struct diff *d)
+{
+
+	return ort_write_one(f, add, "eitem", &d->eitem->pos);
+}
+
+static int
+ort_write_eitem_mod(FILE *f, const char *name, const struct diff *d)
+{
+
+	return ort_write_mod(f, name, "eitem",
+		&d->eitem_pair.from->pos, &d->eitem_pair.into->pos);
+}
+
+static int
+ort_write_eitem_pair(FILE *f, int chnge, const struct diff *d)
+{
+
+	return ort_write_pair(f, chnge, "eitem",
+		&d->eitem_pair.from->pos, &d->eitem_pair.into->pos);
 }
 
 static int
@@ -111,12 +213,38 @@ ort_write_diff_bitidx(FILE *f, const struct diffq *q, const struct diff *d)
 		case DIFF_MOD_BITIDX_COMMENT:
 			if (dd->bitidx_pair.into != d->bitidx_pair.into)
 				break;
-			rc = ort_write_bitidx_pair(f, "comment", dd);
+			rc = ort_write_bitidx_mod(f, "comment", dd);
 			break;
 		case DIFF_MOD_BITIDX_VALUE:
 			if (dd->bitidx_pair.into != d->bitidx_pair.into)
 				break;
-			rc = ort_write_bitidx_pair(f, "value", dd);
+			rc = ort_write_bitidx_mod(f, "value", dd);
+			break;
+		default:
+			break;
+		}
+		if (rc < 0)
+			return 0;
+	}
+
+	return 1;
+}
+
+static int
+ort_write_diff_field(FILE *f, const struct diffq *q, const struct diff *d)
+{
+	const struct diff	*dd;
+	int			 rc;
+
+	assert(d->type == DIFF_MOD_FIELD);
+
+	TAILQ_FOREACH(dd, q, entries) {
+		rc = 1;
+		switch (dd->type) {
+		case DIFF_MOD_FIELD_COMMENT:
+			if (dd->field_pair.into != d->field_pair.into)
+				break;
+			rc = ort_write_field_mod(f, "comment", dd);
 			break;
 		default:
 			break;
@@ -142,12 +270,62 @@ ort_write_diff_eitem(FILE *f, const struct diffq *q, const struct diff *d)
 		case DIFF_MOD_EITEM_COMMENT:
 			if (dd->eitem_pair.into != d->eitem_pair.into)
 				break;
-			rc = ort_write_eitem_pair(f, "comment", dd);
+			rc = ort_write_eitem_mod(f, "comment", dd);
 			break;
 		case DIFF_MOD_EITEM_VALUE:
 			if (dd->eitem_pair.into != d->eitem_pair.into)
 				break;
-			rc = ort_write_eitem_pair(f, "value", dd);
+			rc = ort_write_eitem_mod(f, "value", dd);
+			break;
+		default:
+			break;
+		}
+		if (rc < 0)
+			return 0;
+	}
+
+	return 1;
+}
+
+static int
+ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
+{
+	const struct diff	*dd;
+	int			 rc;
+
+	assert(d->type == DIFF_MOD_STRCT);
+
+	TAILQ_FOREACH(dd, q, entries) {
+		rc = 1;
+		switch (dd->type) {
+		case DIFF_MOD_STRCT_COMMENT:
+			if (dd->strct_pair.into != d->strct_pair.into)
+				break;
+			rc = ort_write_strct_mod(f, "comment", dd);
+			break;
+		case DIFF_ADD_FIELD:
+			if (dd->field->parent != d->strct_pair.into)
+				break;
+			rc = ort_write_field(f, 1, dd);
+			break;
+		case DIFF_DEL_FIELD:
+			if (dd->field->parent != d->strct_pair.from)
+				break;
+			rc = ort_write_field(f, 0, dd);
+			break;
+		case DIFF_MOD_FIELD:
+			if (dd->field_pair.into->parent != 
+			    d->strct_pair.into)
+				break;
+			rc = ort_write_field_pair(f, 1, dd);
+			if (!ort_write_diff_field(f, q, dd))
+				return 0;
+			break;
+		case DIFF_SAME_FIELD:
+			if (dd->field_pair.into->parent != 
+			    d->strct_pair.into)
+				break;
+			rc = ort_write_field_pair(f, 0, dd);
 			break;
 		default:
 			break;
@@ -173,43 +351,23 @@ ort_write_diff_bitf(FILE *f, const struct diffq *q, const struct diff *d)
 		case DIFF_MOD_BITF_COMMENT:
 			if (dd->bitf_pair.into != d->bitf_pair.into)
 				break;
-			rc = fprintf(f, "! bitf comment "
-				"%s:%zu:%zu -> %s:%zu:%zu\n",
-				dd->bitf_pair.from->pos.fname,
-				dd->bitf_pair.from->pos.line,
-				dd->bitf_pair.from->pos.column,
-				dd->bitf_pair.into->pos.fname,
-				dd->bitf_pair.into->pos.line,
-				dd->bitf_pair.into->pos.column);
+			rc = ort_write_bitf_mod(f, "comment", dd);
 			break;
 		case DIFF_ADD_BITIDX:
 			if (dd->bitidx->parent != d->bitf_pair.into)
 				break;
-			rc = fprintf(f, "+ bitidx %s:%zu:%zu\n",
-				dd->bitidx->pos.fname,
-				dd->bitidx->pos.line,
-				dd->bitidx->pos.column);
+			rc = ort_write_bitidx(f, 1, dd);
 			break;
 		case DIFF_DEL_BITIDX:
 			if (dd->bitidx->parent != d->bitf_pair.from)
 				break;
-			rc = fprintf(f, "- bitidx %s:%zu:%zu\n",
-				dd->bitidx->pos.fname,
-				dd->bitidx->pos.line,
-				dd->bitidx->pos.column);
+			rc = ort_write_bitidx(f, 0, dd);
 			break;
 		case DIFF_MOD_BITIDX:
 			if (dd->bitidx_pair.into->parent != 
 			    d->bitf_pair.into)
 				break;
-			rc = fprintf(f, "@@ bitidx "
-				"%s:%zu:%zu -> %s:%zu:%zu @@\n",
-				dd->bitidx_pair.from->pos.fname,
-				dd->bitidx_pair.from->pos.line,
-				dd->bitidx_pair.from->pos.column,
-				dd->bitidx_pair.into->pos.fname,
-				dd->bitidx_pair.into->pos.line,
-				dd->bitidx_pair.into->pos.column);
+			rc = ort_write_bitidx_pair(f, 1, dd);
 			if (!ort_write_diff_bitidx(f, q, dd))
 				return 0;
 			break;
@@ -217,14 +375,7 @@ ort_write_diff_bitf(FILE *f, const struct diffq *q, const struct diff *d)
 			if (dd->bitidx_pair.into->parent != 
 			    d->bitf_pair.into)
 				break;
-			rc = fprintf(f, "  bitidx "
-				"%s:%zu:%zu -> %s:%zu:%zu\n",
-				dd->bitidx_pair.from->pos.fname,
-				dd->bitidx_pair.from->pos.line,
-				dd->bitidx_pair.from->pos.column,
-				dd->bitidx_pair.into->pos.fname,
-				dd->bitidx_pair.into->pos.line,
-				dd->bitidx_pair.into->pos.column);
+			rc = ort_write_bitidx_pair(f, 0, dd);
 			break;
 		default:
 			break;
@@ -250,43 +401,23 @@ ort_write_diff_enm(FILE *f, const struct diffq *q, const struct diff *d)
 		case DIFF_MOD_ENM_COMMENT:
 			if (dd->enm_pair.into != d->enm_pair.into)
 				break;
-			rc = fprintf(f, "! enm comment "
-				"%s:%zu:%zu -> %s:%zu:%zu\n",
-				dd->enm_pair.from->pos.fname,
-				dd->enm_pair.from->pos.line,
-				dd->enm_pair.from->pos.column,
-				dd->enm_pair.into->pos.fname,
-				dd->enm_pair.into->pos.line,
-				dd->enm_pair.into->pos.column);
+			rc = ort_write_enm_mod(f, "comment", dd);
 			break;
 		case DIFF_ADD_EITEM:
 			if (dd->eitem->parent != d->enm_pair.into)
 				break;
-			rc = fprintf(f, "+ eitem %s:%zu:%zu\n",
-				dd->eitem->pos.fname,
-				dd->eitem->pos.line,
-				dd->eitem->pos.column);
+			rc = ort_write_eitem(f, 1, dd);
 			break;
 		case DIFF_DEL_EITEM:
 			if (dd->eitem->parent != d->enm_pair.from)
 				break;
-			rc = fprintf(f, "- eitem %s:%zu:%zu\n",
-				dd->eitem->pos.fname,
-				dd->eitem->pos.line,
-				dd->eitem->pos.column);
+			rc = ort_write_eitem(f, 0, dd);
 			break;
 		case DIFF_MOD_EITEM:
 			if (dd->eitem_pair.into->parent != 
 			    d->enm_pair.into)
 				break;
-			rc = fprintf(f, "@@ eitem "
-				"%s:%zu:%zu -> %s:%zu:%zu @@\n",
-				dd->eitem_pair.from->pos.fname,
-				dd->eitem_pair.from->pos.line,
-				dd->eitem_pair.from->pos.column,
-				dd->eitem_pair.into->pos.fname,
-				dd->eitem_pair.into->pos.line,
-				dd->eitem_pair.into->pos.column);
+			rc = ort_write_eitem_pair(f, 1, dd);
 			if (!ort_write_diff_eitem(f, q, dd))
 				return 0;
 			break;
@@ -294,14 +425,7 @@ ort_write_diff_enm(FILE *f, const struct diffq *q, const struct diff *d)
 			if (dd->eitem_pair.into->parent != 
 			    d->enm_pair.into)
 				break;
-			rc = fprintf(f, "  eitem "
-				"%s:%zu:%zu -> %s:%zu:%zu\n",
-				dd->eitem_pair.from->pos.fname,
-				dd->eitem_pair.from->pos.line,
-				dd->eitem_pair.from->pos.column,
-				dd->eitem_pair.into->pos.fname,
-				dd->eitem_pair.into->pos.line,
-				dd->eitem_pair.into->pos.column);
+			rc = ort_write_eitem_pair(f, 0, dd);
 			break;
 		default:
 			break;
@@ -333,6 +457,14 @@ ort_write_diff_strcts(FILE *f, const struct diffq *q)
 		case DIFF_DEL_STRCT:
 			rc = ort_write_strct(f, 0, d);
 			break;
+		case DIFF_SAME_STRCT:
+			rc = ort_write_strct_pair(f, 0, d);
+			break;
+		case DIFF_MOD_STRCT:
+			rc = ort_write_strct_pair(f, 1, d);
+			if (!ort_write_diff_strct(f, q, d))
+				return 0;
+			break;
 		default:
 			rc = 1;
 			break;
@@ -359,16 +491,10 @@ ort_write_diff_bitfs(FILE *f, const struct diffq *q)
 	TAILQ_FOREACH(d, q, entries) {
 		switch (d->type) {
 		case DIFF_ADD_BITF:
-			rc = fprintf(f, "+ bitf %s:%zu:%zu\n",
-				d->bitf->pos.fname,
-				d->bitf->pos.line,
-				d->bitf->pos.column);
+			rc = ort_write_bitf(f, 1, d);
 			break;
 		case DIFF_DEL_BITF:
-			rc = fprintf(f, "- bitf %s:%zu:%zu\n",
-				d->bitf->pos.fname,
-				d->bitf->pos.line,
-				d->bitf->pos.column);
+			rc = ort_write_bitf(f, 0, d);
 			break;
 		case DIFF_SAME_BITF:
 			rc = ort_write_bitf_pair(f, 0, d);
@@ -404,16 +530,10 @@ ort_write_diff_enms(FILE *f, const struct diffq *q)
 	TAILQ_FOREACH(d, q, entries) {
 		switch (d->type) {
 		case DIFF_ADD_ENM:
-			rc = fprintf(f, "+ enm %s:%zu:%zu\n",
-				d->enm->pos.fname,
-				d->enm->pos.line,
-				d->enm->pos.column);
+			rc = ort_write_enm(f, 1, d);
 			break;
 		case DIFF_DEL_ENM:
-			rc = fprintf(f, "- enm %s:%zu:%zu\n",
-				d->enm->pos.fname,
-				d->enm->pos.line,
-				d->enm->pos.column);
+			rc = ort_write_enm(f, 0, d);
 			break;
 		case DIFF_SAME_ENM:
 			rc = ort_write_enm_pair(f, 0, d);
@@ -474,7 +594,8 @@ ort_write_diff_file(FILE *f, const struct diffq *q,
 
 	TAILQ_FOREACH(d, q, entries)
 		if (d->type == DIFF_ADD_STRCT ||
-		    d->type == DIFF_DEL_STRCT) {
+		    d->type == DIFF_DEL_STRCT ||
+		    d->type == DIFF_MOD_STRCT) {
 			if (!ort_write_diff_strcts(f, q))
 				return 0;
 			break;

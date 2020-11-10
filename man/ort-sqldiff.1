@@ -42,8 +42,6 @@ Its arguments are as follows:
 .Bl -tag -width Ds
 .It Fl d
 Allow some destructive changes.
-See
-.Sx Delete mode .
 .El
 .Pp
 The new configuration is preceded by
@@ -66,8 +64,8 @@ SQL commands to update the configuration
 .Ar oldconfig
 to the new configuration
 .Ar config .
-In
-.Sx Delete mode ,
+With
+.Fl d ,
 .Cm DROP TABLE
 SQL commands are also emitted.
 (Dropped columns are noted, but not actually dropped.
@@ -84,6 +82,12 @@ dropped enumerations
 dropped enumeration items
 .It
 changed enumeration item values
+.It
+dropped bitfields
+.It
+dropped bitfield items
+.It
+changed bitfield item values
 .It
 dropped structures
 .It
@@ -108,11 +112,11 @@ the following destructive changes are allowed:
 .It
 dropped enumerations
 .It
-dropped bit-fields
-.It
 dropped enumeration items
 .It
-dropped bit-field items
+dropped bitfields
+.It
+dropped bitfield items
 .It
 dropped tables
 .It
@@ -135,7 +139,7 @@ It's good practise, but not enforced by
 to wrap the edit script in a transaction.
 .Bd -literal -offset indent
 % ( echo "BEGIN EXCLUSIVE TRANSACTION ;" \e
-    ort-sqldiff old.kwbp new.kwbp ; \e
+    ort-sqldiff old.ort new.ort ; \e
     echo "COMMIT TRANSACTION ;" ) | sqlite3 foo.db
 .Ed
 .Pp
@@ -157,11 +161,11 @@ The SQL generated is designed for
 .Ex -std
 .Sh EXAMPLES
 Let an existing configuration,
-.Pa old.kwbp ,
+.Pa old.ort ,
 consist of a
 .Dq client
 structure.
-.Bd -literal
+.Bd -literal -offset indent
 struct client {
   field name text limit gt 0;
   field id int rowid;
@@ -169,9 +173,9 @@ struct client {
 .Ed
 .Pp
 A new configuration,
-.Pa new.kwbp ,
+.Pa new.ort ,
 augments this structure by adding a new field, and also adds a structure.
-.Bd -literal
+.Bd -literal -offset indent
 struct client {
   field name text limit gt 0;
   field dob epoch;
@@ -184,8 +188,8 @@ struct admin {
 .Ed
 .Pp
 This generates the following update script.
-.Bd -literal
-% ort-sqldiff old.kwbp new.kwbp
+.Bd -literal -offset indent
+% ort-sqldiff old.ort new.ort
 PRAGMA foreign_keys=ON;
 CREATE TABLE admin (
   name TEXT NOT NULL,
@@ -197,8 +201,8 @@ ALTER TABLE client ADD COLUMN dob INTEGER NOT NULL DEFAULT 0;
 Since edit scripts are always non-destructive unless
 .Fl d
 was specified, the results may be piped directly into the database.
-.Bd -literal
-% ort-sqldiff old.kwbp new.kwbp | sqlite3 foo.db
+.Bd -literal -offset indent
+% ort-sqldiff old.ort new.ort | sqlite3 foo.db
 .Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.

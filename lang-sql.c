@@ -553,70 +553,34 @@ gen_diff_uniques_old(const struct strct *s, const struct strct *ds)
  * Same but for the bitfield types.
  */
 static size_t
-gen_diff_bits(const struct config *cfg,
-	const struct config *dcfg, int destruct)
+gen_diff_bits(const struct diffq *q, int destruct)
 {
-	const struct bitf *b, *db;
-	const struct bitidx *bi, *dbi;
-	size_t	 errors = 0;
+	const struct diff	*d;
+	size_t	 		 errors = 0;
 
-	TAILQ_FOREACH(b, &cfg->bq, entries) {
-		TAILQ_FOREACH(db, &dcfg->bq, entries)
-			if (strcasecmp(b->name, db->name) == 0)
-				break;
-		if (db == NULL) {
-			gen_warnx(&b->pos, "new bitfield");
-			continue;
-		}
-		
-		/* Compare current to old bit indexes. */
-
-		TAILQ_FOREACH(bi, &b->bq, entries) {
-			TAILQ_FOREACH(dbi, &db->bq, entries)
-				if (strcasecmp(bi->name, dbi->name) == 0)
-					break;
-			if (dbi != NULL && bi->value != dbi->value) {
-				diff_errx(&bi->pos, &dbi->pos,
-					"item has changed value");
-				errors++;
-			} else if (dbi == NULL)
-				gen_warnx(&bi->pos, "new item");
-		}
-
-		/* 
-		 * Compare existence of old to current indexes. 
-		 * This constitutes a deletion if the item is lost, so
-		 * only report it as an error if we're not letting
-		 * through deletions.
-		 */
-
-		TAILQ_FOREACH(dbi, &db->bq, entries) {
-			TAILQ_FOREACH(bi, &b->bq, entries)
-				if (strcasecmp(bi->name, dbi->name) == 0)
-					break;
-			if (bi != NULL)
-				continue;
-			gen_warnx(&dbi->pos, "lost old item");
+	TAILQ_FOREACH(d, q, entries) {
+		switch (d->type) {
+		case DIFF_DEL_BITF:
+			gen_warnx(&d->bitf->pos, 
+				"deleted bitfield");
 			if (!destruct)
 				errors++;
-		}
-	}
-
-	/*
-	 * Now we've compared bitfields that are new or already exist
-	 * between the two, so make sure we didn't lose any.
-	 * Report it as an error only if we're not allowing deletions.
-	 */
-
-	TAILQ_FOREACH(db, &dcfg->bq, entries) {
-		TAILQ_FOREACH(b, &cfg->bq, entries)
-			if (strcasecmp(b->name, db->name) == 0)
-				break;
-		if (b != NULL)
-			continue;
-		gen_warnx(&db->pos, "lost old bitfield");
-		if (!destruct)
+			break;
+		case DIFF_MOD_BITIDX_VALUE:
+			diff_errx(&d->bitidx_pair.from->pos, 
+			  	&d->bitidx_pair.into->pos,
+				"bitfield item has changed value");
 			errors++;
+			break;
+		case DIFF_DEL_BITIDX:
+			gen_warnx(&d->bitidx->pos, 
+				"deleted bitfield item");
+			if (!destruct)
+				errors++;
+			break;
+		default:
+			break;
+		}
 	}
 
 	return errors;
@@ -678,7 +642,7 @@ gen_diff_sql(const struct diffq *q, const struct config *cfg,
 	int	 rc, prol = 0;
 
 	errors += gen_diff_enums(q, destruct);
-	errors += gen_diff_bits(cfg, dcfg, destruct);
+	errors += gen_diff_bits(q, destruct);
 
 	/*
 	 * Start by looking through all structures in the new queue and

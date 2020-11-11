@@ -305,6 +305,42 @@ if the field may not be exported ever, and
 if the field has a default type-specific value set.
 .El
 .Pp
+References are a central part of
+.Nm
+and allow fields to link to other fields.
+These are governed by
+.Vt "struct ref"
+in
+.Vt "struct field" .
+Any field not of type
+.Dv FTYPE_STRUCT
+may link to any other field in another structure that has the same type.
+This is called a foreign reference.
+Fields with the special
+.Dv FTYPE_STRUCT
+type have a reference that points to a foreign reference in the same
+structure.
+This is called a local reference.
+.Bl -tag -width Ds -offset indent
+.It Va struct field *target
+For both local and remote references, this is the field in the linked-to
+structure.
+.It Va struct field *source
+For remote references, this is the same as
+.Fa parent .
+For local references, this is the field in the current structure that's
+the remote reference.
+.It Va struct field *parent
+The field upon which the reference is set.
+.El
+.Ss User-defined Data Types
+The data in
+.Vt "struct field"
+may be typed as an enumeration or bit-field, both of which are defined
+within the configuration.
+In short, both of these limit the integers accepted to those defined as
+enumeration values or bit masks.
+.Pp
 The user-defined enumerations in
 .Va eq
 limit integer types to specific values.

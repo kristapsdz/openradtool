@@ -147,6 +147,25 @@ ort_diff_field(struct diffq *q,
 		type = DIFF_MOD_FIELD;
 	}
 
+	if ((ifrom->ref != NULL && iinto->ref == NULL) ||
+	    (ifrom->ref == NULL && iinto->ref != NULL) ||
+	    (ifrom->ref != NULL && iinto->ref != NULL &&
+	     (strcasecmp(ifrom->ref->source->parent->name, 
+			 iinto->ref->source->parent->name) != 0 ||
+	      strcasecmp(ifrom->ref->source->name, 
+		         iinto->ref->source->name) != 0 ||
+	      strcasecmp(ifrom->ref->target->parent->name, 
+		         iinto->ref->target->parent->name) != 0 ||
+	      strcasecmp(ifrom->ref->target->name, 
+		         iinto->ref->target->name) != 0))) {
+		d = diff_alloc(q, DIFF_MOD_FIELD_REFERENCE);
+		if (d == NULL)
+			return -1;
+		d->field_pair.from = ifrom;
+		d->field_pair.into = iinto;
+		type = DIFF_MOD_FIELD;
+	}
+
 	if (!ort_check_comment(ifrom->doc, iinto->doc)) {
 		if ((d = diff_alloc(q, DIFF_MOD_FIELD_COMMENT)) == NULL)
 			return -1;

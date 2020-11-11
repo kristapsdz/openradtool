@@ -64,13 +64,10 @@ struct	pos {
 	size_t		 column; /* column number (from 1) */
 };
 
-/*
- * An object reference into another table.
- */
 struct	ref {
-	struct field 	*target; /* target */
-	struct field 	*source; /* source */
-	struct field	*parent; /* parent reference */
+	struct field 	*target;
+	struct field 	*source;
+	struct field	*parent;
 };
 
 enum	vtype {
@@ -558,6 +555,7 @@ enum	difftype {
 	DIFF_MOD_FIELD_ACTIONS,
 	DIFF_MOD_FIELD_COMMENT,
 	DIFF_MOD_FIELD_FLAGS,
+	DIFF_MOD_FIELD_REFERENCE,
 	DIFF_MOD_FIELD_TYPE,
 	DIFF_MOD_STRCT,
 	DIFF_MOD_STRCT_COMMENT,

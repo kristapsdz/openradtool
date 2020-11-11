@@ -233,7 +233,8 @@ and
 This stipulates that one or more of
 .Dv DIFF_MOD_FIELD_ACTIONS ,
 .Dv DIFF_MOD_FIELD_COMMENT ,
-.Dv DIFF_MOD_FIELD_FLAG ,
+.Dv DIFF_MOD_FIELD_FLAGS ,
+.Dv DIFF_MOD_FIELD_REFERENCE ,
 or
 .Dv DIFF_MOD_FIELD_TYPE
 will also be set for the given object.
@@ -257,7 +258,7 @@ changed between
 .Fa from
 and
 .Fa into .
-.It Dv DIFF_MOD_FIELD_FLAG
+.It Dv DIFF_MOD_FIELD_FLAGS
 The
 .Va flags
 field of a
@@ -266,6 +267,17 @@ changed between
 .Fa from
 and
 .Fa into .
+.It Dv DIFF_MOD_FIELD_REFERENCE
+The
+.Va ref
+field of a
+.Vt "struct field"
+changed between
+.Fa from
+and
+.Fa into .
+This has broad consequences: local reference changing, remote reference,
+remote target of local reference, etc.
 .It Dv DIFF_MOD_FIELD_TYPE
 The
 .Va type
@@ -391,6 +403,7 @@ Set by
 .Dv DIFF_MOD_FIELD_ACTIONS ,
 .Dv DIFF_MOD_FIELD_COMMENT ,
 .Dv DIFF_MOD_FIELD_FLAGS ,
+.Dv DIFF_MOD_FIELD_REFERENCE ,
 .Dv DIFF_MOD_FIELD_TYPE ,
 and
 .Dv DIFF_SAME_FIELD .

@@ -1,0 +1,8 @@
+--- regress/diff/field-mod-ref-unset.old.ort
++++ regress/diff/field-mod-ref-unset.new.ort
+@@ strcts @@
+@@ strct regress/diff/field-mod-ref-unset.old.ort:5:10 -> regress/diff/field-mod-ref-unset.new.ort:5:10 @@
+@@ field regress/diff/field-mod-ref-unset.old.ort:6:12 -> regress/diff/field-mod-ref-unset.new.ort:6:12 @@
+! field ref regress/diff/field-mod-ref-unset.old.ort:6:12 -> regress/diff/field-mod-ref-unset.new.ort:6:12
+  field regress/diff/field-mod-ref-unset.old.ort:7:9 -> regress/diff/field-mod-ref-unset.new.ort:7:9
+  strct regress/diff/field-mod-ref-unset.old.ort:1:10 -> regress/diff/field-mod-ref-unset.new.ort:1:10

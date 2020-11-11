@@ -256,6 +256,11 @@ ort_write_diff_field(FILE *f, const struct diffq *q, const struct diff *d)
 				break;
 			rc = ort_write_field_mod(f, "flags", dd);
 			break;
+		case DIFF_MOD_FIELD_REFERENCE:
+			if (dd->field_pair.into != d->field_pair.into)
+				break;
+			rc = ort_write_field_mod(f, "ref", dd);
+			break;
 		case DIFF_MOD_FIELD_TYPE:
 			if (dd->field_pair.into != d->field_pair.into)
 				break;

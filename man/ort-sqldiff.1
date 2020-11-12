@@ -75,7 +75,7 @@ This is a limitation of
 The configuration files are considered incompatible if any of the
 following are true:
 .Pp
-.Bl -bullet -offset indent -compact
+.Bl -bullet -offset indent
 .It
 dropped enumerations
 .It
@@ -98,6 +98,11 @@ changed field types
 changed foreign key references
 .It
 changed SQL attributes
+.Po
+.Cm rowid ,
+.Cm null ,
+.Cm unique
+.Pc
 .It
 added unique constraints
 .El

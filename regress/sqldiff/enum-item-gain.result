@@ -1,4 +1,3 @@
 PRAGMA foreign_keys=ON;
 
 ALTER TABLE foo ADD COLUMN bazzy INTEGER NOT NULL DEFAULT 2;
-

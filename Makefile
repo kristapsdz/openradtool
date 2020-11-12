@@ -490,6 +490,7 @@ distclean: clean
 
 regress: all
 	@tmp=`mktemp` ; \
+	MALLOC_OPTIONS=S ; \
 	for f in regress/diff/*.result ; do \
 		new=regress/diff/`basename $$f .result`.new.ort ; \
 		old=regress/diff/`basename $$f .result`.old.ort ; \

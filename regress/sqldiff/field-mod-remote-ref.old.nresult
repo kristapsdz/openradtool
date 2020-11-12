@@ -1,0 +1,9 @@
+struct bar {
+	field id int unique;
+	field shid int rowid;
+};
+
+struct foo {
+	field bar struct barid;
+	field barid:bar.id;
+};

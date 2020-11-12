@@ -35,21 +35,6 @@
 #include "lang.h"
 #include "ort-lang-sql.h"
 
-static	const char *const realtypes[FTYPE__MAX] = {
-	"int", /* FTYPE_BIT */
-	"date", /* FTYPE_DATE */
-	"epoch", /* FTYPE_EPOCH */
-	"int", /* FTYPE_INT */
-	"real", /* FTYPE_REAL */
-	"blob", /* FTYPE_BLOB */
-	"text", /* FTYPE_TEXT */
-	"password", /* FTYPE_PASSWORD */
-	"email", /* FTYPE_EMAIL */
-	"struct", /* FTYPE_STRUCT */
-	"enum", /* FTYPE_ENUM */
-	"bitfield", /* FTYPE_BITFIELD */
-};
-
 static	const char *const upacts[UPACT__MAX] = {
 	"NO ACTION", /* UPACT_NONE */
 	"RESTRICT", /* UPACT_RESTRICT */
@@ -77,9 +62,6 @@ static	const char *const ftypes[FTYPE__MAX] = {
 
 static void gen_warnx(const struct pos *, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
-static void diff_warnx(const struct pos *,
-		const struct pos *, const char *, ...)
-	__attribute__((format(printf, 3, 4)));
 static void diff_errx(const struct pos *,
 		const struct pos *, const char *, ...)
 	__attribute__((format(printf, 3, 4)));
@@ -110,23 +92,6 @@ diff_errx(const struct pos *posold,
 	va_end(ap);
 
 	fprintf(stderr, "%s:%zu:%zu -> %s:%zu:%zu: error: %s\n", 
-		posold->fname, posold->line, posold->column, 
-		posnew->fname, posnew->line, posnew->column, 
-		buf);
-}
-
-static void
-diff_warnx(const struct pos *posold, 
-	const struct pos *posnew, const char *fmt, ...)
-{
-	va_list	 ap;
-	char	 buf[1024];
-
-	va_start(ap, fmt);
-	vsnprintf(buf, sizeof(buf), fmt, ap);
-	va_end(ap);
-
-	fprintf(stderr, "%s:%zu:%zu -> %s:%zu:%zu: warning: %s\n", 
 		posold->fname, posold->line, posold->column, 
 		posnew->fname, posnew->line, posnew->column, 
 		buf);
@@ -255,96 +220,6 @@ gen_sql(const struct config *cfg)
 }
 
 /*
- * Perform a variety of checks: the fields must have the
- * same type, flags (rowid, etc.), and references.
- * Returns zero on difference, non-zero on equality.
-*/
-static int
-gen_diff_field(const struct field *f, const struct field *df)
-{
-	int	 rc = 1;
-
-	/*
-	 * Type change.
-	 * We might change semantic types (e.g., enum to int), which is
-	 * not technically wrong because we'd still be an INTEGER, but
-	 * might have changed input expectations.
-	 * Thus, we warn in those cases, and error otherwise.
-	 */
-
-	if (f->type != df->type) {
-		if ((FTYPE_DATE == f->type ||
-		     FTYPE_EPOCH == f->type ||
-		     FTYPE_INT == f->type ||
-		     FTYPE_BIT == f->type ||
-		     FTYPE_ENUM == f->type ||
-		     FTYPE_BITFIELD == f->type) &&
-		    (FTYPE_DATE == df->type ||
-		     FTYPE_EPOCH == df->type ||
-		     FTYPE_INT == df->type ||
-		     FTYPE_BIT == df->type ||
-		     FTYPE_ENUM == df->type ||
-		     FTYPE_BITFIELD == df->type)) {
-			diff_warnx(&f->pos, &df->pos, 
-				"change between integer "
-				"alias types: %s to %s",
-				realtypes[f->type], 
-				realtypes[df->type]);
-		} else if ((f->type == FTYPE_TEXT &&
-			    df->type == FTYPE_EMAIL) ||
-			   (f->type == FTYPE_EMAIL &&
-			    df->type == FTYPE_TEXT)) {
-			diff_warnx(&f->pos, &df->pos, 
-				"change between text "
-				"alias types: %s to %s",
-				realtypes[f->type], 
-				realtypes[df->type]);
-		} else { 
-			diff_errx(&f->pos, &df->pos, 
-				"type change: %s to %s",
-				realtypes[f->type], 
-				realtypes[df->type]);
-			rc = 0;
-		}
-	} 
-
-	/* Only care about SQL-specific field differences. */
-
-	if ((f->flags & FIELD_ROWID) != (df->flags & FIELD_ROWID) ||
-	    (f->flags & FIELD_NULL) != (df->flags & FIELD_NULL) ||
-	    (f->flags & FIELD_UNIQUE) != (df->flags & FIELD_UNIQUE)) {
-		diff_errx(&f->pos, &df->pos, "attribute change");
-		rc = 0;
-	}
-
-	if (f->actdel != df->actdel) {
-		diff_errx(&f->pos, &df->pos, "delete action change");
-		rc = 0;
-	}
-	if (f->actup != df->actup) {
-		diff_errx(&f->pos, &df->pos, "update action change");
-		rc = 0;
-	}
-
-	if ((NULL != f->ref && NULL == df->ref) ||
-	    (NULL == f->ref && NULL != df->ref)) {
-		diff_errx(&f->pos, &df->pos, 
-			"foreign reference change");
-		rc = 0;
-	}
-
-	if (NULL != f->ref && NULL != df->ref &&
-	    (strcasecmp(f->ref->source->parent->name,
-			df->ref->source->parent->name))) {
-		diff_errx(&f->pos, &df->pos,
-			"foreign reference source change");
-		rc = 0;
-	}
-
-	return rc;
-}
-
-/*
  * Compare all fields in the old "ds" with the new "s" and see if any
  * columns have been added or removed.
  * Returns the number of errors (or zero).
@@ -378,97 +253,67 @@ gen_diff_fields_old(const struct strct *s,
 		} else if (NULL == f) {
 			gen_warnx(&df->pos, "column was dropped");
 			errors++;
-		} else if ( ! gen_diff_field(df, f))
-			errors++;
+		} 
 	}
 
 	return errors;
 }
 
-static int
-gen_diff_fields_new(const struct strct *s, 
-	const struct strct *ds, int *prologue)
+/*
+ * This is the ALTER TABLE version of the field generators in
+ * gen_struct().
+ */
+static void
+gen_diff_field_new(const struct field *fd)
 {
-	const struct field *f, *df;
-	size_t	 count = 0, errors = 0;
 
-	/*
-	 * Structure in both new and old queues.
-	 * Go through all fields in the new queue.
-	 * If they're not found in the old queue, modify and add.
-	 * Otherwise, make sure they're the same type and have the same
-	 * references.
-	 */
+	printf("ALTER TABLE %s ADD COLUMN %s %s",
+		fd->parent->name, fd->name, ftypes[fd->type]);
 
-	TAILQ_FOREACH(f, &s->fq, entries) {
-		TAILQ_FOREACH(df, &ds->fq, entries)
-			if (0 == strcasecmp(f->name, df->name))
-				break;
+	if (fd->flags & FIELD_ROWID)
+		printf(" PRIMARY KEY");
+	if (fd->flags & FIELD_UNIQUE)
+		printf(" UNIQUE");
+	if (!(fd->flags & FIELD_ROWID) && !(fd->flags & FIELD_NULL))
+		printf(" NOT NULL");
 
-		/* 
-		 * New "struct" fields are a no-op.
-		 * Otherwise, have an ALTER TABLE clause.
-		 */
+	if (fd->ref != NULL)
+		printf(" REFERENCES %s(%s)",
+			fd->ref->target->parent->name,
+			fd->ref->target->name);
 
-		if (NULL == df && FTYPE_STRUCT == f->type) {
-			gen_warnx(&f->pos, "new inner joined field");
-		} else if (NULL == df) {
-			gen_prologue(prologue);
-			printf("ALTER TABLE %s ADD COLUMN %s %s",
-				f->parent->name, f->name, 
-				ftypes[f->type]);
-			if (FIELD_ROWID & f->flags)
-				printf(" PRIMARY KEY");
-			if (FIELD_UNIQUE & f->flags)
-				printf(" UNIQUE");
-			if ( ! (FIELD_ROWID & f->flags) &&
-			     ! (FIELD_NULL & f->flags))
-				printf(" NOT NULL");
-			if (NULL != f->ref)
-				printf(" REFERENCES %s(%s)",
-					f->ref->target->parent->name,
-					f->ref->target->name);
-			if (UPACT_NONE != f->actup)
-				printf(" ON UPDATE %s", 
-					upacts[f->actup]);
-			if (UPACT_NONE != f->actdel)
-				printf(" ON DELETE %s", 
-					upacts[f->actdel]);
-			if (FIELD_HASDEF & f->flags) {
-				switch (f->type) {
-				case FTYPE_BIT:
-				case FTYPE_BITFIELD:
-				case FTYPE_DATE:
-				case FTYPE_EPOCH:
-				case FTYPE_INT:
-					printf(" DEFAULT %" PRId64,
-						f->def.integer);
-					break;
-				case FTYPE_REAL:
-					printf(" DEFAULT %g",
-						f->def.decimal);
-					break;
-				case FTYPE_EMAIL:
-				case FTYPE_TEXT:
-					printf(" DEFAULT '%s'",
-						f->def.string);
-					break;
-				case FTYPE_ENUM:
-					printf(" DEFAULT %" PRId64,
-						f->def.eitem->value);
-					break;
-				default:
-					abort();
-					break;
-				}
-			}
-			puts(";");
-			count++;
-		} else if ( ! gen_diff_field(f, df))
-			errors++;
+	if (fd->actup != UPACT_NONE)
+		printf(" ON UPDATE %s", upacts[fd->actup]);
+	if (fd->actdel != UPACT_NONE)
+		printf(" ON DELETE %s", upacts[fd->actdel]);
+
+	if (fd->flags & FIELD_HASDEF) {
+		printf(" DEFAULT ");
+		switch (fd->type) {
+		case FTYPE_BIT:
+		case FTYPE_BITFIELD:
+		case FTYPE_DATE:
+		case FTYPE_EPOCH:
+		case FTYPE_INT:
+			printf("%" PRId64, fd->def.integer);
+			break;
+		case FTYPE_REAL:
+			printf("%g", fd->def.decimal);
+			break;
+		case FTYPE_EMAIL:
+		case FTYPE_TEXT:
+			printf("'%s'", fd->def.string);
+			break;
+		case FTYPE_ENUM:
+			printf("%" PRId64, fd->def.eitem->value);
+			break;
+		default:
+			abort();
+			break;
+		}
 	}
 
-	return(errors ? -1 : count ? 1 : 0);
+	puts(";");
 }
 
 /*
@@ -548,12 +393,71 @@ gen_diff_uniques_old(const struct strct *s, const struct strct *ds)
 	}
 }
 
+static size_t
+gen_check_fields(const struct diffq *q)
+{
+	const struct diff	*d;
+	const struct field	*f, *df;
+	size_t	 		 errors = 0;
+	unsigned int		 mask;
+
+	mask = FIELD_ROWID | FIELD_NULL | FIELD_UNIQUE;
+
+	TAILQ_FOREACH(d, q, entries) {
+		switch (d->type) {
+		case DIFF_MOD_FIELD_TYPE:
+			f = d->field_pair.into;
+			df = d->field_pair.from;
+			diff_errx(&df->pos, &f->pos, 
+				"field type has changed");
+			errors++;
+			break;
+		case DIFF_MOD_FIELD_FLAGS:
+			f = d->field_pair.into;
+			df = d->field_pair.from;
+
+			/* We only care about SQL flags. */
+
+			if ((f->flags & mask) == (df->flags & mask))
+				break;
+			diff_errx(&df->pos, &f->pos, 
+				"field flag has changed");
+			errors++;
+			break;
+		case DIFF_MOD_FIELD_ACTIONS:
+			f = d->field_pair.into;
+			df = d->field_pair.from;
+			diff_errx(&df->pos, &f->pos, 
+				"field action has changed");
+			errors++;
+			break;
+		case DIFF_MOD_FIELD_REFERENCE:
+			f = d->field_pair.into;
+			df = d->field_pair.from;
+
+			/* We only care about remote references. */
+
+			if (f->type == FTYPE_STRUCT ||
+			    df->type == FTYPE_STRUCT)
+				break;
+			diff_errx(&df->pos, &f->pos, 
+				"field reference has changed");
+			errors++;
+			break;
+		default:
+			break;
+		}
+	}
+
+	return errors;
+}
+
 /*
- * See gen_diff_enums().
+ * See gen_check_enums().
  * Same but for the bitfield types.
  */
 static size_t
-gen_diff_bits(const struct diffq *q, int destruct)
+gen_check_bitfields(const struct diffq *q, int destruct)
 {
 	const struct diff	*d;
 	size_t	 		 errors = 0;
@@ -592,7 +496,7 @@ gen_diff_bits(const struct diffq *q, int destruct)
  * items.
  */
 static size_t
-gen_diff_enums(const struct diffq *q, int destruct)
+gen_check_enums(const struct diffq *q, int destruct)
 {
 	const struct diff	*d;
 	size_t	 		 errors = 0;
@@ -640,10 +544,11 @@ gen_diff_sql(const struct diffq *q, const struct config *cfg,
 	const struct strct	*s, *ds;
 	const struct diff	*d;
 	size_t	 		 errors = 0;
-	int	 		 rc, prol = 0;
+	int	 		 prol = 0;
 
-	errors += gen_diff_enums(q, destruct);
-	errors += gen_diff_bits(q, destruct);
+	errors += gen_check_enums(q, destruct);
+	errors += gen_check_bitfields(q, destruct);
+	errors += gen_check_fields(q);
 
 	/*
 	 * Start by looking through all structures in the new queue and
@@ -659,25 +564,11 @@ gen_diff_sql(const struct diffq *q, const struct config *cfg,
 			gen_struct(d->strct, 0);
 		}
 
-	/* 
-	 * Now generate table differences.
-	 * Do this afterward because we might reference the new tables
-	 * that we've created.
-	 * If the old configuration has different fields, exit with
-	 * error.
-	 */
-
-	TAILQ_FOREACH(s, &cfg->sq, entries) {
-		TAILQ_FOREACH(ds, &dcfg->sq, entries)
-			if (0 == strcasecmp(s->name, ds->name))
-				break;
-		if (NULL == ds)
-			continue;
-		if ((rc = gen_diff_fields_new(s, ds, &prol)) < 0)
-			errors++;
-		else if (rc)
-			puts("");
-	}
+	TAILQ_FOREACH(d, q, entries)
+		if (d->type == DIFF_ADD_FIELD) {
+			gen_prologue(&prol);
+			gen_diff_field_new(d->field);
+		}
 
 	/*
 	 * Now reverse and see if we should drop tables.

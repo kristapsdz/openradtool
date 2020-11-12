@@ -246,10 +246,20 @@ ort_write_diff_field(FILE *f, const struct diffq *q, const struct diff *d)
 				break;
 			rc = ort_write_field_mod(f, "actions", dd);
 			break;
+		case DIFF_MOD_FIELD_BITF:
+			if (dd->field_pair.into != d->field_pair.into)
+				break;
+			rc = ort_write_field_mod(f, "bitf", dd);
+			break;
 		case DIFF_MOD_FIELD_COMMENT:
 			if (dd->field_pair.into != d->field_pair.into)
 				break;
 			rc = ort_write_field_mod(f, "comment", dd);
+			break;
+		case DIFF_MOD_FIELD_ENM:
+			if (dd->field_pair.into != d->field_pair.into)
+				break;
+			rc = ort_write_field_mod(f, "enum", dd);
 			break;
 		case DIFF_MOD_FIELD_FLAGS:
 			if (dd->field_pair.into != d->field_pair.into)

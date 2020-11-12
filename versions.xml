@@ -9,6 +9,34 @@
 		</header>
 		<aside>
 			<p>
+				Introduce 
+				<a href="ort-diff.1.html">ort-diff(1)</a>, which works off the back of 
+				<a href="ort_diff.3.html">ort_diff(3)</a> in producing the semantic
+				differences between two configurations.
+				This is now being used within
+				<a href="ort-sqldiff.1.html">ort-sqldiff(1)</a>, which has been
+				considerably simplified.
+				While here, fully document all of the transformations possible in
+				<a href="ort-sqldiff.1.html">ort-sqldiff(1)</a> and also tighten
+				down on some destructive changes (e.g., allowing type changes) in
+				prior versions.
+			</p>
+			<p>
+				The new difference engine has introduced a significant number of
+				regression tests.
+				The documented transformations of the SQL engine are also now
+				exhaustively tested in the regression suite.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
+			<h3>0.10.3</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-11-04">2020-11-04</time>
+		</header>
+		<aside>
+			<p>
 				Start installing the ort library.
 				This includes header, library code, manpages, and a pkgconfig.
 			</p>

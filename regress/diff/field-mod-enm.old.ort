@@ -1,0 +1,12 @@
+enum aenum {
+	item a 0;
+};
+
+enum benum {
+	item a 0;
+};
+
+struct foo {
+	field id enum aenum;
+};
+

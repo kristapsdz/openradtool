@@ -1,0 +1,12 @@
+bits aenum {
+	item a 0;
+};
+
+bits benum {
+	item a 0;
+};
+
+struct foo {
+	field id bits benum;
+};
+

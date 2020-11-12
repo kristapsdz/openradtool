@@ -1,0 +1,6 @@
+--- regress/diff/field-mod-bitf.old.ort
++++ regress/diff/field-mod-bitf.new.ort
+@@ strcts @@
+@@ strct regress/diff/field-mod-bitf.old.ort:9:10 -> regress/diff/field-mod-bitf.new.ort:9:10 @@
+@@ field regress/diff/field-mod-bitf.old.ort:10:9 -> regress/diff/field-mod-bitf.new.ort:10:9 @@
+! field bitf regress/diff/field-mod-bitf.old.ort:10:9 -> regress/diff/field-mod-bitf.new.ort:10:9

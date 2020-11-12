@@ -147,6 +147,26 @@ ort_diff_field(struct diffq *q,
 		type = DIFF_MOD_FIELD;
 	}
 
+	if (ifrom->bitf != NULL && iinto->bitf != NULL &&
+	    strcasecmp(ifrom->bitf->name, iinto->bitf->name)) {
+		d = diff_alloc(q, DIFF_MOD_FIELD_BITF);
+		if (d == NULL)
+			return -1;
+		d->field_pair.from = ifrom;
+		d->field_pair.into = iinto;
+		type = DIFF_MOD_FIELD;
+	}
+
+	if (ifrom->enm != NULL && iinto->enm != NULL &&
+	    strcasecmp(ifrom->enm->name, iinto->enm->name)) {
+		d = diff_alloc(q, DIFF_MOD_FIELD_ENM);
+		if (d == NULL)
+			return -1;
+		d->field_pair.from = ifrom;
+		d->field_pair.into = iinto;
+		type = DIFF_MOD_FIELD;
+	}
+
 	if ((ifrom->ref != NULL && iinto->ref == NULL) ||
 	    (ifrom->ref == NULL && iinto->ref != NULL) ||
 	    (ifrom->ref != NULL && iinto->ref != NULL &&

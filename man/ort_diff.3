@@ -232,7 +232,9 @@ and
 .Fa into .
 This stipulates that one or more of
 .Dv DIFF_MOD_FIELD_ACTIONS ,
+.Dv DIFF_MOD_FIELD_BITF ,
 .Dv DIFF_MOD_FIELD_COMMENT ,
+.Dv DIFF_MOD_FIELD_ENM ,
 .Dv DIFF_MOD_FIELD_FLAGS ,
 .Dv DIFF_MOD_FIELD_REFERENCE ,
 or
@@ -249,6 +251,17 @@ changed between
 .Fa from
 and
 .Fa into .
+.It Dv DIFF_MOD_FIELD_BITF
+The
+.Va bitf
+field of a
+.Vt "struct field"
+changed between
+.Fa from
+and
+.Fa into .
+This is only for a change: if the type is newly or no longer a
+bit-field, this is not raised.
 .It Dv DIFF_MOD_FIELD_COMMENT
 The
 .Va doc
@@ -258,6 +271,17 @@ changed between
 .Fa from
 and
 .Fa into .
+.It Dv DIFF_MOD_FIELD_ENM
+The
+.Va enm
+field of a
+.Vt "struct field"
+changed between
+.Fa from
+and
+.Fa into .
+This is only for a change: if the type is newly or no longer a
+enumeration, this is not raised.
 .It Dv DIFF_MOD_FIELD_FLAGS
 The
 .Va flags
@@ -401,7 +425,9 @@ and
 Set by
 .Dv DIFF_MOD_FIELD ,
 .Dv DIFF_MOD_FIELD_ACTIONS ,
+.Dv DIFF_MOD_FIELD_BITF ,
 .Dv DIFF_MOD_FIELD_COMMENT ,
+.Dv DIFF_MOD_FIELD_ENM ,
 .Dv DIFF_MOD_FIELD_FLAGS ,
 .Dv DIFF_MOD_FIELD_REFERENCE ,
 .Dv DIFF_MOD_FIELD_TYPE ,

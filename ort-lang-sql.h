@@ -18,6 +18,6 @@
 #define ORT_LANG_SQL_H
 
 void	gen_sql(const struct config *);
-int	gen_diff_sql(const struct diffq *, const struct config *, const struct config *, int);
+int	gen_diff_sql(const struct diffq *, int);
 
 #endif /* !ORT_LANG_SQL_H */

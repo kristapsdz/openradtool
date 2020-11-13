@@ -152,7 +152,7 @@ main(int argc, char *argv[])
 
 	/* Generate output. */
 
-	rc = gen_diff_sql(q, cfg, dcfg, destruct);
+	rc = gen_diff_sql(q, destruct);
 out:
 	for (i = 0; i < confsz; i++)
 		if (fclose(confs[i]) == EOF)

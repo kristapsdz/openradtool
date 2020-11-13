@@ -276,83 +276,6 @@ gen_diff_field_new(const struct field *fd)
 	puts(";");
 }
 
-/*
- * See if all of the fields in "u" are found in one of the unique
- * statements in "os".
- * Return zero if not found, non-zero if found.
- */
-static int
-gen_diff_uniques(const struct unique *u, const struct strct *os)
-{
-	const struct unique	*ou;
-	const struct nref	*nf, *onf;
-	size_t			 sz, osz;
-
-	sz = 0;
-	TAILQ_FOREACH(nf, &u->nq, entries)
-		sz++;
-
-	TAILQ_FOREACH(ou, &os->nq, entries) {
-		TAILQ_FOREACH(nf, &u->nq, entries) {
-			osz = 0;
-			TAILQ_FOREACH(onf, &ou->nq, entries)
-				osz++;
-			if (osz != sz)
-				break;
-			TAILQ_FOREACH(onf, &ou->nq, entries)
-				if (strcasecmp(onf->field->name,
-				    nf->field->name) == 0)
-					break;
-			if (onf == NULL)
-				break;
-		}
-		if (nf == NULL)
-			return 1;
-	}
-
-	return 0;
-}
-
-/*
- * See if all the uniques in the new structure "s" may be found in the
- * old structure "ds".
- * A new unique field is an error because the existing data might
- * violate the unique constraint.
- */
-static int
-gen_diff_uniques_new(const struct strct *s, const struct strct *ds)
-{
-	const struct unique	*u;
-	size_t		 	 errs = 0;
-
-	TAILQ_FOREACH(u, &s->nq, entries) {
-		if (gen_diff_uniques(u, ds))
-			continue;
-		gen_warnx(&u->pos, "new unique fields: existing "
-			"data might violate these constraints");
-		errs++;
-	}
-
-	return errs == 0;
-}
-
-/*
- * Look for old unique constraints that we've dropped.
- * This is only a warning because it means we're relaxing an existing
- * unique situation.
- */
-static void
-gen_diff_uniques_old(const struct strct *s, const struct strct *ds)
-{
-	const struct unique	*u;
-
-	TAILQ_FOREACH(u, &ds->nq, entries) {
-		if (gen_diff_uniques(u, s))
-			continue;
-		gen_warnx(&u->pos, "unique fields have disappeared");
-	}
-}
-
 static size_t
 gen_check_fields(const struct diffq *q, int destruct)
 {
@@ -523,8 +446,27 @@ gen_check_strcts(const struct diffq *q, int destruct)
 	return errors;
 }
 
+static size_t
+gen_check_uniques(const struct diffq *q, int destruct)
+{
+	const struct diff	*d;
+	size_t			 errors = 0;
+
+	TAILQ_FOREACH(d, q, entries)
+		switch (d->type) {
+		case DIFF_ADD_UNIQUE:
+			gen_warnx(&d->unique->pos, "new unique field");
+			errors++;
+			break;
+		default:
+			break;
+		}
+
+	return errors;
+}
+
 /*
- * Generate an SQL diff with "cfg" being the new, "dfcg" being the old.
+ * Generate an SQL diff.
  * This returns zero on failure, non-zero on success.
  * "Failure" means that there were irreconcilable errors between the two
  * configurations, such as new tables or removed colunms or some such.
@@ -532,10 +474,8 @@ gen_check_strcts(const struct diffq *q, int destruct)
  * would change the database, such as dropping tables.
  */
 int
-gen_diff_sql(const struct diffq *q, const struct config *cfg, 
-	const struct config *dcfg, int destruct)
+gen_diff_sql(const struct diffq *q, int destruct)
 {
-	const struct strct	*s, *ds;
 	const struct diff	*d;
 	size_t	 		 errors = 0;
 	int	 		 prol = 0;
@@ -544,14 +484,11 @@ gen_diff_sql(const struct diffq *q, const struct config *cfg,
 	errors += gen_check_bitfs(q, destruct);
 	errors += gen_check_fields(q, destruct);
 	errors += gen_check_strcts(q, destruct);
+	errors += gen_check_uniques(q, destruct);
 
-	/*
-	 * Start by looking through all structures in the new queue and
-	 * see if they exist in the old queue.
-	 * If they don't exist in the old queue, we put out a CREATE
-	 * TABLE for them.
-	 * We do this first to handle ADD COLUMN dependencies.
-	 */
+	if (errors)
+		return 0;
+
 
 	TAILQ_FOREACH(d, q, entries)
 		if (d->type == DIFF_ADD_STRCT) {
@@ -579,25 +516,5 @@ gen_diff_sql(const struct diffq *q, const struct config *cfg,
 				d->field->name);
 		}
 
-	/*
-	 * Test for old and new unique fields.
-	 * We'll test both for newly added unique fields (all done by
-	 * canonical name) and also lost uinque fields.
-	 * Obviously this is only for matching table entries.
-	 */
-
-	TAILQ_FOREACH(s, &cfg->sq, entries) 
-		TAILQ_FOREACH(ds, &dcfg->sq, entries) {
-			if (strcasecmp(s->name, ds->name))
-				continue;
-			errors += !gen_diff_uniques_new(s, ds);
-		}
-	TAILQ_FOREACH(ds, &dcfg->sq, entries) 
-		TAILQ_FOREACH(s, &cfg->sq, entries) {
-			if (strcasecmp(s->name, ds->name))
-				continue;
-			gen_diff_uniques_old(s, ds);
-		}
-
-	return errors ? 0 : 1;
+	return 1;
 }

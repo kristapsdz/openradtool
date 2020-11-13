@@ -220,46 +220,6 @@ gen_sql(const struct config *cfg)
 }
 
 /*
- * Compare all fields in the old "ds" with the new "s" and see if any
- * columns have been added or removed.
- * Returns the number of errors (or zero).
- */
-static size_t
-gen_diff_fields_old(const struct strct *s, 
-	const struct strct *ds, int destruct)
-{
-	const struct field *f, *df;
-	size_t	 errors = 0;
-
-	TAILQ_FOREACH(df, &ds->fq, entries) {
-		TAILQ_FOREACH(f, &s->fq, entries)
-			if (0 == strcasecmp(f->name, df->name))
-				break;
-
-		if (NULL == f && FTYPE_STRUCT == df->type) {
-			gen_warnx(&df->pos, "old inner joined field");
-		} else if (NULL == f && destruct) {
-			/*
-			 * TODO: we don't have a way to drop columns in
-			 * sqlite3: the "approved" way is to do the
-			 * whole rename, create, copy.
-			 * Meanwhile, if we're in destruct mode, just
-			 * ignore it as an error, since the column will
-			 * simply go away.
-			 * Of course, not if we re-add it later...
-			 */
-			printf("-- ALTER TABLE %s DROP COLUMN %s;\n", 
-				df->parent->name, df->name);
-		} else if (NULL == f) {
-			gen_warnx(&df->pos, "column was dropped");
-			errors++;
-		} 
-	}
-
-	return errors;
-}
-
-/*
  * This is the ALTER TABLE version of the field generators in
  * gen_struct().
  */
@@ -394,7 +354,7 @@ gen_diff_uniques_old(const struct strct *s, const struct strct *ds)
 }
 
 static size_t
-gen_check_fields(const struct diffq *q)
+gen_check_fields(const struct diffq *q, int destruct)
 {
 	const struct diff	*d;
 	const struct field	*f, *df;
@@ -405,6 +365,15 @@ gen_check_fields(const struct diffq *q)
 
 	TAILQ_FOREACH(d, q, entries) {
 		switch (d->type) {
+		case DIFF_DEL_FIELD:
+			if (destruct || d->field->type == FTYPE_STRUCT)
+				break;
+			gen_warnx(&d->field->pos, 
+				"field column was dropped");
+			errors++;
+			break;
+		case DIFF_MOD_FIELD_BITF:
+		case DIFF_MOD_FIELD_ENM:
 		case DIFF_MOD_FIELD_TYPE:
 			f = d->field_pair.into;
 			df = d->field_pair.from;
@@ -453,11 +422,11 @@ gen_check_fields(const struct diffq *q)
 }
 
 /*
- * See gen_check_enums().
+ * See gen_check_enms().
  * Same but for the bitfield types.
  */
 static size_t
-gen_check_bitfields(const struct diffq *q, int destruct)
+gen_check_bitfs(const struct diffq *q, int destruct)
 {
 	const struct diff	*d;
 	size_t	 		 errors = 0;
@@ -465,10 +434,11 @@ gen_check_bitfields(const struct diffq *q, int destruct)
 	TAILQ_FOREACH(d, q, entries) {
 		switch (d->type) {
 		case DIFF_DEL_BITF:
+			if (destruct)
+				break;
 			gen_warnx(&d->bitf->pos, 
 				"deleted bitfield");
-			if (!destruct)
-				errors++;
+			errors++;
 			break;
 		case DIFF_MOD_BITIDX_VALUE:
 			diff_errx(&d->bitidx_pair.from->pos, 
@@ -477,10 +447,11 @@ gen_check_bitfields(const struct diffq *q, int destruct)
 			errors++;
 			break;
 		case DIFF_DEL_BITIDX:
+			if (destruct)
+				break;
 			gen_warnx(&d->bitidx->pos, 
 				"deleted bitfield item");
-			if (!destruct)
-				errors++;
+			errors++;
 			break;
 		default:
 			break;
@@ -496,7 +467,7 @@ gen_check_bitfields(const struct diffq *q, int destruct)
  * items.
  */
 static size_t
-gen_check_enums(const struct diffq *q, int destruct)
+gen_check_enms(const struct diffq *q, int destruct)
 {
 	const struct diff	*d;
 	size_t	 		 errors = 0;
@@ -504,10 +475,11 @@ gen_check_enums(const struct diffq *q, int destruct)
 	TAILQ_FOREACH(d, q, entries) {
 		switch (d->type) {
 		case DIFF_DEL_ENM:
+			if (destruct)
+				break;
 			gen_warnx(&d->enm->pos, 
 				"deleted enumeration");
-			if (!destruct)
-				errors++;
+			errors++;
 			break;
 		case DIFF_MOD_EITEM_VALUE:
 			diff_errx(&d->eitem_pair.from->pos, 
@@ -516,15 +488,37 @@ gen_check_enums(const struct diffq *q, int destruct)
 			errors++;
 			break;
 		case DIFF_DEL_EITEM:
+			if (destruct)
+				break;
 			gen_warnx(&d->eitem->pos, 
 				"deleted enumeration item");
-			if (!destruct)
-				errors++;
+			errors++;
 			break;
 		default:
 			break;
 		}
 	}
+
+	return errors;
+}
+
+static size_t
+gen_check_strcts(const struct diffq *q, int destruct)
+{
+	const struct diff	*d;
+	size_t			 errors = 0;
+
+	TAILQ_FOREACH(d, q, entries) 
+		switch (d->type) {
+		case DIFF_DEL_STRCT:
+			if (destruct)
+				break;
+			gen_warnx(&d->strct->pos, "deleted table");
+			errors++;
+			break;
+		default:
+			break;
+		}
 
 	return errors;
 }
@@ -546,9 +540,10 @@ gen_diff_sql(const struct diffq *q, const struct config *cfg,
 	size_t	 		 errors = 0;
 	int	 		 prol = 0;
 
-	errors += gen_check_enums(q, destruct);
-	errors += gen_check_bitfields(q, destruct);
-	errors += gen_check_fields(q);
+	errors += gen_check_enms(q, destruct);
+	errors += gen_check_bitfs(q, destruct);
+	errors += gen_check_fields(q, destruct);
+	errors += gen_check_strcts(q, destruct);
 
 	/*
 	 * Start by looking through all structures in the new queue and
@@ -570,26 +565,19 @@ gen_diff_sql(const struct diffq *q, const struct config *cfg,
 			gen_diff_field_new(d->field);
 		}
 
-	/*
-	 * Now reverse and see if we should drop tables.
-	 * Don't do this---just tell the user and return an error.
-	 * Also see if there are old fields that are different.
-	 */
-
 	TAILQ_FOREACH(d, q, entries) 
-		if (d->type == DIFF_DEL_STRCT && !destruct) {
-			gen_warnx(&d->strct->pos, "deleted table");
-			errors++;
-		} else if (d->type == DIFF_DEL_STRCT)
+		if (d->type == DIFF_DEL_STRCT && destruct) {
+			gen_prologue(&prol);
 			printf("DROP TABLE %s;\n", d->strct->name);
+		}
 
-	TAILQ_FOREACH(ds, &dcfg->sq, entries) {
-		TAILQ_FOREACH(s, &cfg->sq, entries)
-			if (0 == strcasecmp(s->name, ds->name))
-				break;
-		if (s != NULL)
-			errors += gen_diff_fields_old(s, ds, destruct);
-	}
+	TAILQ_FOREACH(d, q, entries)
+		if (d->type == DIFF_DEL_FIELD && destruct) {
+			gen_prologue(&prol);
+			printf("-- ALTER TABLE %s DROP COLUMN %s;\n", 
+				d->field->parent->name, 
+				d->field->name);
+		}
 
 	/*
 	 * Test for old and new unique fields.

@@ -1,0 +1,11 @@
+enum aobj {
+	item a 0;
+};
+
+enum bobj {
+	item a 0;
+};
+
+struct foo {
+	field id enum bobj;
+};

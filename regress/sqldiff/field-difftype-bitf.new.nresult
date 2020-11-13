@@ -1,0 +1,11 @@
+bits aobj {
+	item a 0;
+};
+
+bits bobj {
+	item a 0;
+};
+
+struct foo {
+	field id bits bobj;
+};

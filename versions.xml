@@ -3,9 +3,9 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
-			<h3>0.10.3</h3>
+			<h3>0.11.0</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2020-11-04">2020-11-04</time>
+			<time datetime="2020-11-13">2020-11-13</time>
 		</header>
 		<aside>
 			<p>
@@ -16,6 +16,11 @@
 				This is now being used within
 				<a href="ort-sqldiff.1.html">ort-sqldiff(1)</a>, which has been
 				considerably simplified.
+				The function is still incomplete: it doesn't record all differences.
+				So far, it returns enough to be fully used by
+				<a href="ort-sqldiff.1.html">ort-sqldiff(1)</a>.
+			</p>
+			<p>
 				While here, fully document all of the transformations possible in
 				<a href="ort-sqldiff.1.html">ort-sqldiff(1)</a> and also tighten
 				down on some destructive changes (e.g., allowing type changes) in

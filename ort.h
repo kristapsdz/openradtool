@@ -535,12 +535,14 @@ enum	difftype {
 	DIFF_ADD_ENM,
 	DIFF_ADD_FIELD,
 	DIFF_ADD_STRCT,
+	DIFF_ADD_UNIQUE,
 	DIFF_DEL_BITF,
 	DIFF_DEL_BITIDX,
 	DIFF_DEL_EITEM,
 	DIFF_DEL_ENM,
 	DIFF_DEL_FIELD,
 	DIFF_DEL_STRCT,
+	DIFF_DEL_UNIQUE,
 	DIFF_MOD_BITF,
 	DIFF_MOD_BITF_COMMENT,
 	DIFF_MOD_BITIDX,
@@ -614,6 +616,7 @@ struct	diff {
 		struct diff_eitem	 eitem_pair; 
 		const struct strct	*strct;
 		struct diff_strct	 strct_pair; 
+		const struct unique	*unique;
 	};
 	TAILQ_ENTRY(diff) 	 	 entries;
 };

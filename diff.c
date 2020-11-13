@@ -307,6 +307,42 @@ ort_diff_bitf(struct diffq *q,
 }
 
 /*
+ * See if "os" contains the unique entry "u".
+ * Return zero on failure, non-zero on success.
+ */
+static int
+ort_has_unique(struct diffq *q,
+	const struct unique *u, const struct strct *os)
+{
+	const struct unique	*ou;
+	const struct nref	*nf, *onf;
+	size_t			 sz = 0, osz;
+
+	TAILQ_FOREACH(nf, &u->nq, entries)
+		sz++;
+
+	TAILQ_FOREACH(ou, &os->nq, entries) {
+		TAILQ_FOREACH(nf, &u->nq, entries) {
+			osz = 0;
+			TAILQ_FOREACH(onf, &ou->nq, entries)
+				osz++;
+			if (osz != sz)
+				break;
+			TAILQ_FOREACH(onf, &ou->nq, entries)
+				if (strcasecmp(onf->field->name,
+				    nf->field->name) == 0)
+					break;
+			if (onf == NULL)
+				break;
+		}
+		if (nf == NULL)
+			return 1;
+	}
+
+	return 0;
+}
+
+/*
  * Return zero on failure, non-zero on success.
  */
 static int
@@ -314,6 +350,7 @@ ort_diff_strct(struct diffq *q,
 	const struct strct *efrom, const struct strct *einto)
 {
 	const struct field	*ifrom, *iinto;
+	const struct unique	*u;
 	struct diff		*d;
 	int			 rc;
 	enum difftype		 type = DIFF_SAME_STRCT;
@@ -338,6 +375,24 @@ ort_diff_strct(struct diffq *q,
 			d->field = ifrom;
 			type = DIFF_MOD_STRCT;
 		}
+	}
+
+	TAILQ_FOREACH(u, &einto->nq, entries) {
+		if (ort_has_unique(q, u, efrom))
+			continue;
+		if ((d = diff_alloc(q, DIFF_ADD_UNIQUE)) == NULL)
+			return 0;
+		d->unique = u;
+		type = DIFF_MOD_STRCT;
+	}
+
+	TAILQ_FOREACH(u, &efrom->nq, entries) {
+		if (ort_has_unique(q, u, einto))
+			continue;
+		if ((d = diff_alloc(q, DIFF_DEL_UNIQUE)) == NULL)
+			return 0;
+		d->unique = u;
+		type = DIFF_MOD_STRCT;
 	}
 
 	if (!ort_check_comment(efrom->doc, einto->doc)) {

@@ -62,6 +62,13 @@ ort_write_mod(FILE *f, const char *name, const char *type,
 }
 
 static int
+ort_write_unique(FILE *f, int add, const struct diff *d)
+{
+
+	return ort_write_one(f, add, "unique", &d->unique->pos);
+}
+
+static int
 ort_write_field(FILE *f, int add, const struct diff *d)
 {
 
@@ -328,20 +335,25 @@ ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 	TAILQ_FOREACH(dd, q, entries) {
 		rc = 1;
 		switch (dd->type) {
-		case DIFF_MOD_STRCT_COMMENT:
-			if (dd->strct_pair.into != d->strct_pair.into)
-				break;
-			rc = ort_write_strct_mod(f, "comment", dd);
-			break;
 		case DIFF_ADD_FIELD:
 			if (dd->field->parent != d->strct_pair.into)
 				break;
 			rc = ort_write_field(f, 1, dd);
 			break;
+		case DIFF_ADD_UNIQUE:
+			if (dd->unique->parent != d->strct_pair.into)
+				break;
+			rc = ort_write_unique(f, 1, dd);
+			break;
 		case DIFF_DEL_FIELD:
 			if (dd->field->parent != d->strct_pair.from)
 				break;
 			rc = ort_write_field(f, 0, dd);
+			break;
+		case DIFF_DEL_UNIQUE:
+			if (dd->unique->parent != d->strct_pair.from)
+				break;
+			rc = ort_write_unique(f, 0, dd);
 			break;
 		case DIFF_MOD_FIELD:
 			if (dd->field_pair.into->parent != 
@@ -350,6 +362,11 @@ ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 			rc = ort_write_field_pair(f, 1, dd);
 			if (!ort_write_diff_field(f, q, dd))
 				return 0;
+			break;
+		case DIFF_MOD_STRCT_COMMENT:
+			if (dd->strct_pair.into != d->strct_pair.into)
+				break;
+			rc = ort_write_strct_mod(f, "comment", dd);
 			break;
 		case DIFF_SAME_FIELD:
 			if (dd->field_pair.into->parent != 

@@ -87,6 +87,11 @@ A
 .Vt "struct strct"
 was added to
 .Fa into .
+.It Dv DIFF_ADD_UNIQUE
+A
+.Vt "struct unique"
+was added to
+.Fa into .
 .It Dv DIFF_DEL_BITF
 A
 .Vt "struct bitf"
@@ -115,6 +120,11 @@ was removed from
 .It Dv DIFF_DEL_STRCT
 A
 .Vt "struct strct"
+was removed from
+.Fa from .
+.It Dv DIFF_DEL_UNIQUE
+A
+.Vt "struct unique"
 was removed from
 .Fa from .
 .It Dv DIFF_MOD_BITF
@@ -319,11 +329,13 @@ changed between
 and
 .Fa into .
 This stipulates that one or more of
-.Dv DIFF_MOD_STRCT_COMMENT ,
 .Dv DIFF_ADD_FIELD ,
+.Dv DIFF_ADD_UNIQUE ,
 .Dv DIFF_DEL_FIELD ,
+.Dv DIFF_DEL_UNIQUE ,
+.Dv DIFF_MOD_FIELD ,
 or
-.Dv DIFF_MOD_FIELD
+.Dv DIFF_MOD_STRCT_COMMENT ,
 will also be set for the given object.
 .It Dv DIFF_MOD_STRCT_COMMENT
 The
@@ -444,6 +456,11 @@ Set by
 .Dv DIFF_MOD_STRCT_COMMENT ,
 and
 .Dv DIFF_SAME_FIELD .
+.It Va "const struct unique *unique"
+Set by
+.Dv DIFF_ADD_UNIQUE
+and
+.Dv DIFF_DEL_UNIQUE .
 .El
 .El
 .Pp

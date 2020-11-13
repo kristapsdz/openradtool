@@ -113,7 +113,7 @@ has been specified,
 .Nm
 the following destructive changes are allowed:
 .Pp
-.Bl -bullet -offset indent -compact
+.Bl -bullet -offset indent
 .It
 dropped enumerations
 .It
@@ -168,7 +168,7 @@ The SQL generated is designed for
 Let an existing configuration,
 .Pa old.ort ,
 consist of a
-.Dq client
+.Qq client
 structure.
 .Bd -literal -offset indent
 struct client {
@@ -183,7 +183,7 @@ augments this structure by adding a new field, and also adds a structure.
 .Bd -literal -offset indent
 struct client {
   field name text limit gt 0;
-  field dob epoch;
+  field dob epoch default 0;
   field id int rowid;
 };
 struct admin {

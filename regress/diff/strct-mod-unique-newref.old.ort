@@ -1,0 +1,6 @@
+struct foo {
+	field bar;
+	field baz;
+	field xyzzy;
+	unique bar, baz;
+};

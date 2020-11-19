@@ -1,0 +1,6 @@
+--- regress/diff/enum-mod-labels.old.ort
++++ regress/diff/enum-mod-labels.new.ort
+@@ enumerations @@
+@@ enm regress/diff/enum-mod-labels.old.ort:1:12 -> regress/diff/enum-mod-labels.new.ort:1:12 @@
+  eitem regress/diff/enum-mod-labels.old.ort:2:9 -> regress/diff/enum-mod-labels.new.ort:2:9
+! enm labels regress/diff/enum-mod-labels.old.ort:1:12 -> regress/diff/enum-mod-labels.new.ort:1:12

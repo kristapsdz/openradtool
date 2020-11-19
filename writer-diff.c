@@ -314,6 +314,11 @@ ort_write_diff_eitem(FILE *f, const struct diffq *q, const struct diff *d)
 				break;
 			rc = ort_write_eitem_mod(f, "comment", dd);
 			break;
+		case DIFF_MOD_EITEM_LABELS:
+			if (dd->eitem_pair.into != d->eitem_pair.into)
+				break;
+			rc = ort_write_eitem_mod(f, "labels", dd);
+			break;
 		case DIFF_MOD_EITEM_VALUE:
 			if (dd->eitem_pair.into != d->eitem_pair.into)
 				break;
@@ -459,6 +464,11 @@ ort_write_diff_enm(FILE *f, const struct diffq *q, const struct diff *d)
 			if (dd->enm_pair.into != d->enm_pair.into)
 				break;
 			rc = ort_write_enm_mod(f, "comment", dd);
+			break;
+		case DIFF_MOD_ENM_LABELS:
+			if (dd->enm_pair.into != d->enm_pair.into)
+				break;
+			rc = ort_write_enm_mod(f, "labels", dd);
 			break;
 		case DIFF_ADD_EITEM:
 			if (dd->eitem->parent != d->enm_pair.into)

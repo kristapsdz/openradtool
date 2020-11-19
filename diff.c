@@ -282,6 +282,14 @@ ort_diff_eitem(struct diffq *q,
 		type = DIFF_MOD_EITEM;
 	}
 
+	if (!ort_check_labels(&ifrom->labels, &iinto->labels)) {
+		if ((d = diff_alloc(q, DIFF_MOD_EITEM_LABELS)) == NULL)
+			return -1;
+		d->eitem_pair.from = ifrom;
+		d->eitem_pair.into = iinto;
+		type = DIFF_MOD_EITEM;
+	}
+
 	if ((d = diff_alloc(q, type)) == NULL)
 		return -1;
 	d->eitem_pair.from = ifrom;
@@ -506,10 +514,17 @@ ort_diff_enm(struct diffq *q,
 		}
 	}
 
-	/* More checks. */
-
 	if (!ort_check_comment(efrom->doc, einto->doc)) {
 		if ((d = diff_alloc(q, DIFF_MOD_ENM_COMMENT)) == NULL)
+			return 0;
+		d->enm_pair.from = efrom;
+		d->enm_pair.into = einto;
+		type = DIFF_MOD_ENM;
+	}
+
+	if (!ort_check_labels
+	    (&efrom->labels_null, &einto->labels_null)) {
+		if ((d = diff_alloc(q, DIFF_MOD_ENM_LABELS)) == NULL)
 			return 0;
 		d->enm_pair.from = efrom;
 		d->enm_pair.into = einto;

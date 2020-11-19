@@ -1,0 +1,8 @@
+enum fooenum {
+	item baz 0;
+	isnull jslabel "foobarbaz" jslabel.fr "asdf";
+};
+
+struct foo {
+	field xyzzy enum fooenum;
+};

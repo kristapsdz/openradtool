@@ -134,7 +134,7 @@ Warnings and errors encountered during parse.
 The number of structures in
 .Fa msgs .
 .El
-.Pp
+.Ss Data
 The central component of
 .Vt struct config
 is the queue of
@@ -203,7 +203,7 @@ if any reference structures can be null.
 .It Va struct config *cfg
 The configuration containing the structure.
 .El
-.Ss Data
+.Pp
 The data of
 .Vt struct strct
 is defined by its queue of
@@ -457,6 +457,27 @@ The bit itself inclusive of 0\(en63.
 The parent bit-field structure.
 .It Va struct pos pos
 Parse position.
+.El
+.Pp
+User-based types all have text representations of their numeric values.
+These labels may be assigned in any number of languages.
+All languages are defined in the
+.Va char **langs
+array in
+.Vt struct config .
+Labels are defined in queues of type
+.Vt "struct label"
+in all user-defined types:
+.Bl -tag -width Ds -offset indent
+.It Va char *label
+The label in natural language.
+This is commonly in UTF-8, although there are no restrictions except
+that the string be non-empty and NUL-terminated in the usual way.
+.It Va size_t lang
+The language as indexed into
+.Va char **langs
+in
+.Vt struct config .
 .El
 .Ss Role-based Access Control
 The role-based access control of the system is defined by

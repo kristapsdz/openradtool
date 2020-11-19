@@ -1,0 +1,6 @@
+--- regress/diff/bitf-mod-label-null.old.ort
++++ regress/diff/bitf-mod-label-null.new.ort
+@@ bitfields @@
+@@ bitf regress/diff/bitf-mod-label-null.old.ort:1:12 -> regress/diff/bitf-mod-label-null.new.ort:1:12 @@
+  bitidx regress/diff/bitf-mod-label-null.old.ort:2:9 -> regress/diff/bitf-mod-label-null.new.ort:2:9
+! bitf labels regress/diff/bitf-mod-label-null.old.ort:1:12 -> regress/diff/bitf-mod-label-null.new.ort:1:12

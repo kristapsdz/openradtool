@@ -1,0 +1,9 @@
+
+bits fooenum {
+	item baz 0;
+	item bar 1 jslabel "fdsafdsa";
+};
+
+struct foo {
+	field xyzzy bits fooenum;
+};

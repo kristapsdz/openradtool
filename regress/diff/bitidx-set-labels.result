@@ -1,0 +1,7 @@
+--- regress/diff/bitidx-set-labels.old.ort
++++ regress/diff/bitidx-set-labels.new.ort
+@@ bitfields @@
+@@ bitf regress/diff/bitidx-set-labels.old.ort:1:12 -> regress/diff/bitidx-set-labels.new.ort:2:12 @@
+  bitidx regress/diff/bitidx-set-labels.old.ort:2:9 -> regress/diff/bitidx-set-labels.new.ort:3:9
+@@ bitidx regress/diff/bitidx-set-labels.old.ort:3:9 -> regress/diff/bitidx-set-labels.new.ort:4:9 @@
+! bitidx labels regress/diff/bitidx-set-labels.old.ort:3:9 -> regress/diff/bitidx-set-labels.new.ort:4:9

@@ -222,6 +222,11 @@ ort_write_diff_bitidx(FILE *f, const struct diffq *q, const struct diff *d)
 				break;
 			rc = ort_write_bitidx_mod(f, "comment", dd);
 			break;
+		case DIFF_MOD_BITIDX_LABELS:
+			if (dd->bitidx_pair.into != d->bitidx_pair.into)
+				break;
+			rc = ort_write_bitidx_mod(f, "labels", dd);
+			break;
 		case DIFF_MOD_BITIDX_VALUE:
 			if (dd->bitidx_pair.into != d->bitidx_pair.into)
 				break;
@@ -399,6 +404,11 @@ ort_write_diff_bitf(FILE *f, const struct diffq *q, const struct diff *d)
 			if (dd->bitf_pair.into != d->bitf_pair.into)
 				break;
 			rc = ort_write_bitf_mod(f, "comment", dd);
+			break;
+		case DIFF_MOD_BITF_LABELS:
+			if (dd->bitf_pair.into != d->bitf_pair.into)
+				break;
+			rc = ort_write_bitf_mod(f, "labels", dd);
 			break;
 		case DIFF_ADD_BITIDX:
 			if (dd->bitidx->parent != d->bitf_pair.into)

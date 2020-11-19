@@ -43,6 +43,42 @@ diff_alloc(struct diffq *q, enum difftype type)
 }
 
 /*
+ * Make sure that the queue of labels contains the same data.
+ * Return zero if dissimilar, non-zero if similar.
+ */
+static int
+ort_check_labels(const struct labelq *from, const struct labelq *into)
+{
+	size_t	 		 fromsz = 0, intosz = 0;
+	const struct label	*linto, *lfrom;
+
+	assert(from != NULL);
+	assert(into != NULL);
+
+	TAILQ_FOREACH(lfrom, from, entries)
+		fromsz++;
+	TAILQ_FOREACH(linto, into, entries)
+		intosz++;
+
+	if (fromsz != intosz)
+		return 0;
+
+	TAILQ_FOREACH(lfrom, from, entries) {
+		TAILQ_FOREACH(linto, into, entries) {
+			if (linto->lang != lfrom->lang)
+				continue;
+			if (strcmp(linto->label, lfrom->label))
+				continue;
+			break;
+		}
+		if (linto == NULL)
+			return 0;
+	}
+
+	return 1;
+}
+
+/*
  * Check if two comments are the same (both empty or both with same
  * string contents).
  * Return zero if dissimilar, non-zero if similar.
@@ -80,6 +116,14 @@ ort_diff_bitidx(struct diffq *q,
 
 	if (ifrom->value != iinto->value) {
 		if ((d = diff_alloc(q, DIFF_MOD_BITIDX_VALUE)) == NULL)
+			return -1;
+		d->bitidx_pair.from = ifrom;
+		d->bitidx_pair.into = iinto;
+		type = DIFF_MOD_BITIDX;
+	}
+
+	if (!ort_check_labels(&ifrom->labels, &iinto->labels)) {
+		if ((d = diff_alloc(q, DIFF_MOD_BITIDX_LABELS)) == NULL)
 			return -1;
 		d->bitidx_pair.from = ifrom;
 		d->bitidx_pair.into = iinto;
@@ -286,10 +330,20 @@ ort_diff_bitf(struct diffq *q,
 		}
 	}
 
-	/* More checks. */
-
 	if (!ort_check_comment(efrom->doc, einto->doc)) {
 		d = diff_alloc(q, DIFF_MOD_BITF_COMMENT);
+		if (d == NULL)
+			return 0;
+		d->bitf_pair.from = efrom;
+		d->bitf_pair.into = einto;
+		type = DIFF_MOD_BITF;
+	}
+
+	if (!ort_check_labels
+	     (&efrom->labels_unset, &einto->labels_unset) ||
+	    !ort_check_labels
+	     (&efrom->labels_null, &einto->labels_null)) {
+		d = diff_alloc(q, DIFF_MOD_BITF_LABELS);
 		if (d == NULL)
 			return 0;
 		d->bitf_pair.from = efrom;

@@ -138,6 +138,7 @@ and
 .Fa into .
 This stipulates that one or more of
 .Dv DIFF_MOD_BITF_COMMENT ,
+.Dv DIFF_MOD_BITF_LABELS ,
 .Dv DIFF_ADD_BITIDX ,
 .Dv DIFF_DEL_BITIDX ,
 or
@@ -152,6 +153,17 @@ changed between
 .Fa from
 and
 .Fa into .
+.It Dv DIFF_MOD_BITF_LABELS
+The
+.Va labels_null
+or
+.Va labels_unset
+field of a
+.Vt "struct bitf"
+changed between
+.Fa from
+and
+.Fa into .
 .It Dv DIFF_MOD_BITIDX
 A
 .Vt "struct bitidx"
@@ -160,13 +172,23 @@ changed between
 and
 .Fa into .
 This stipulates that one or more of
-.Dv DIFF_MOD_BITIDX_COMMENT
+.Dv DIFF_MOD_BITIDX_COMMENT ,
+.Dv DIFF_MOD_BITIDX_LABELS ,
 or
 .Dv DIFF_MOD_BITIDX_VALUE
 will also be set for the given object.
 .It Dv DIFF_MOD_BITIDX_COMMENT
 The
 .Va doc
+field of a
+.Vt "struct bitidx"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_BITIDX_LABELS
+The
+.Va labels
 field of a
 .Vt "struct bitidx"
 changed between
@@ -393,6 +415,7 @@ and
 Set by
 .Dv DIFF_MOD_BITF ,
 .Dv DIFF_MOD_BITF_COMMENT ,
+.Dv DIFF_MOD_BITF_LABELS ,
 and
 .Dv DIFF_SAME_BITF .
 .It Va "const struct bitidx *bitidx"
@@ -404,6 +427,7 @@ and
 Set by
 .Dv DIFF_MOD_BITIDX ,
 .Dv DIFF_MOD_BITIDX_COMMENT ,
+.Dv DIFF_MOD_BITIDX_LABELS ,
 .Dv DIFF_MOD_BITIDX_VALUE ,
 and
 .Dv DIFF_SAME_BITIDX .

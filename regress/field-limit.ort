@@ -1,0 +1,3 @@
+struct bar {
+	field a int limit lt 100 limit le 100 limit gt 100 limit ge 100 limit eq 200;
+};

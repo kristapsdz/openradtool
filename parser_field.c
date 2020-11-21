@@ -130,7 +130,8 @@ parse_validate(struct parse *p, struct field *fd)
 		}
 		v->d.value.integer = p->last.integer;
 		TAILQ_FOREACH(vv, &fd->fvq, entries)
-			if (v->type == vv->type &&
+			if (v != vv &&
+			    v->type == vv->type &&
 			    v->d.value.integer == vv->d.value.integer) {
 				parse_errx(p, "duplicate validation");
 				return;
@@ -145,7 +146,8 @@ parse_validate(struct parse *p, struct field *fd)
 		v->d.value.decimal = tok == TOK_DECIMAL ? 
 			p->last.decimal : p->last.integer;
 		TAILQ_FOREACH(vv, &fd->fvq, entries)
-			if (v->type == vv->type &&
+			if (v != vv &&
+			    v->type == vv->type &&
 			    v->d.value.decimal == vv->d.value.decimal) {
 				parse_errx(p, "duplicate validation");
 				return;
@@ -166,7 +168,8 @@ parse_validate(struct parse *p, struct field *fd)
 		}
 		v->d.value.len = p->last.integer;
 		TAILQ_FOREACH(vv, &fd->fvq, entries)
-			if (v->type == vv->type &&
+			if (v != vv && 
+			    v->type == vv->type &&
 			    v->d.value.len == vv->d.value.len) {
 				parse_errx(p, "duplicate validation");
 				return;

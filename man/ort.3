@@ -333,6 +333,41 @@ the remote reference.
 .It Va struct field *parent
 The field upon which the reference is set.
 .El
+.Pp
+Validation allows constraining the data accepted for native types, i.e., not
+.Cm enum
+or
+.Cm bits .
+A
+.Vt struct field
+may contain zero or more validation statements in
+.Va fvq :
+.Bl -tag -width Ds -offset indent
+.It Va enum vtype type
+The constrained inequality type.
+For numeric types, the inequality compares by value.
+For string types, the comparison is by string length.
+.It Va <anon union> d.value
+An anonymous union containing a value depending upon the
+.Va type
+of the parent
+.Vt struct field .
+If of type
+.Dv FTYPE_BIT ,
+.Dv FTYPE_BITFIELD ,
+.Dv FTYPE_DATE ,
+.Dv FTYPE_EPOCH ,
+or
+.Dv FTYPE_INT ,
+this is
+.Va int64_t integer ;
+if
+.Dv FTYPE_REAL ,
+this is
+.Va double decimal ;
+otherwise, it is
+.Va size_t len .
+.El
 .Ss User-defined Data Types
 The data in
 .Vt "struct field"

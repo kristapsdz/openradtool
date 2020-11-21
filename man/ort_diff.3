@@ -291,8 +291,9 @@ This stipulates that one or more of
 .Dv DIFF_MOD_FIELD_ENM ,
 .Dv DIFF_MOD_FIELD_FLAGS ,
 .Dv DIFF_MOD_FIELD_REFERENCE ,
+.Dv DIFF_MOD_FIELD_TYPE ,
 or
-.Dv DIFF_MOD_FIELD_TYPE
+.Dv DIFF_MOD_FIELD_VALIDS
 will also be set for the given object.
 .It Dv DIFF_MOD_FIELD_ACTIONS
 The
@@ -360,6 +361,15 @@ remote target of local reference, etc.
 The
 .Va type
 field of a
+.Vt "struct field"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_FIELD_VALIDS
+The
+.Va fvq
+queue of a
 .Vt "struct field"
 changed between
 .Fa from
@@ -491,6 +501,7 @@ Set by
 .Dv DIFF_MOD_FIELD_FLAGS ,
 .Dv DIFF_MOD_FIELD_REFERENCE ,
 .Dv DIFF_MOD_FIELD_TYPE ,
+.Dv DIFF_MOD_FIELD_VALIDS ,
 and
 .Dv DIFF_SAME_FIELD .
 .It Va "const struct strct *strct"

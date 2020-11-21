@@ -52,6 +52,7 @@ HTMLS		 = archive.html \
 		   man/ort-audit-json.1.html \
 		   man/ort-c-header.1.html \
 		   man/ort-c-source.1.html \
+		   man/ort-diff.1.html \
 		   man/ort-javascript.1.html \
 		   man/ort-nodejs.1.html \
 		   man/ort-sql.1.html \
@@ -75,6 +76,7 @@ MAN1S		 = man/ort.1 \
 		   man/ort-audit-json.1 \
 		   man/ort-c-header.1 \
 		   man/ort-c-source.1 \
+		   man/ort-diff.1 \
 		   man/ort-javascript.1 \
 		   man/ort-nodejs.1 \
 		   man/ort-sql.1 \

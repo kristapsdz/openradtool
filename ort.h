@@ -79,20 +79,15 @@ enum	vtype {
 	VALIDATE__MAX
 };
 
-/*
- * A field validation clause.
- * By default, fields are validated only as to their type.
- * This allows for more advanced validation.
- */
 struct	fvalid {
-	enum vtype	 type; /* type of validation */
+	enum vtype	 type;
 	union {
 		union {
 			int64_t integer;
 			double decimal;
 			size_t len;
-		} value; /* a length/value */
-	} d; /* data associated with validation */
+		} value;
+	} d;
 	TAILQ_ENTRY(fvalid) entries;
 };
 

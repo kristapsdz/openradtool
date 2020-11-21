@@ -288,6 +288,11 @@ ort_write_diff_field(FILE *f, const struct diffq *q, const struct diff *d)
 				break;
 			rc = ort_write_field_mod(f, "type", dd);
 			break;
+		case DIFF_MOD_FIELD_VALIDS:
+			if (dd->field_pair.into != d->field_pair.into)
+				break;
+			rc = ort_write_field_mod(f, "valids", dd);
+			break;
 		default:
 			break;
 		}

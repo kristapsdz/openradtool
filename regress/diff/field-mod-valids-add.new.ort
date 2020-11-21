@@ -1,0 +1,4 @@
+struct foo {
+	field foo int limit gt 0 limit lt 100;
+	field id int rowid;
+};

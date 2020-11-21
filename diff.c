@@ -79,6 +79,73 @@ ort_check_labels(const struct labelq *from, const struct labelq *into)
 }
 
 /*
+ * Make sure that validations queues contain the same constraints.
+ * If the fields have changed type, then the queues are considered
+ * different if non-empty.
+ * Return zero if dissimilar, non-zero if similar.
+ */
+static int
+ort_check_fvalids(const struct field *fdfrom, const struct field *fdinto)
+{
+	const struct fvalid	*finto, *ffrom;
+	const struct fvalidq	*from, *into;
+	size_t			 intosz = 0, fromsz = 0;
+
+	assert(fdfrom != NULL);
+	from = &fdfrom->fvq;
+	assert(fdinto != NULL);
+	into = &fdinto->fvq;
+
+	TAILQ_FOREACH(finto, into, entries)
+		intosz++;
+	TAILQ_FOREACH(ffrom, from, entries)
+		fromsz++;
+
+	if (intosz != fromsz)
+		return 0;
+	if (fdfrom->type != fdinto->type && intosz > 0)
+		return 0;
+
+	TAILQ_FOREACH(ffrom, from, entries) {
+		TAILQ_FOREACH(finto, into, entries) {
+			if (ffrom->type != finto->type)
+				continue;
+			switch (fdfrom->type) {
+			case FTYPE_BIT:
+			case FTYPE_BITFIELD:
+			case FTYPE_DATE:
+			case FTYPE_EPOCH:
+			case FTYPE_INT:
+				if (ffrom->d.value.integer != 
+				    finto->d.value.integer)
+					continue;
+				break;
+			case FTYPE_REAL:
+				if (ffrom->d.value.decimal != 
+				    finto->d.value.decimal)
+					continue;
+				break;
+			case FTYPE_BLOB:
+			case FTYPE_EMAIL:
+			case FTYPE_TEXT:
+			case FTYPE_PASSWORD:
+				if (ffrom->d.value.len != 
+				    finto->d.value.len)
+					continue;
+				break;
+			default:
+				abort();
+			}
+			break;
+		}
+		if (finto == NULL)
+			return 0;
+	}
+
+	return 1;
+}
+
+/*
  * Check if two comments are the same (both empty or both with same
  * string contents).
  * Return zero if dissimilar, non-zero if similar.
@@ -224,6 +291,14 @@ ort_diff_field(struct diffq *q,
 		         iinto->ref->target->name) != 0))) {
 		d = diff_alloc(q, DIFF_MOD_FIELD_REFERENCE);
 		if (d == NULL)
+			return -1;
+		d->field_pair.from = ifrom;
+		d->field_pair.into = iinto;
+		type = DIFF_MOD_FIELD;
+	}
+
+	if (!ort_check_fvalids(ifrom, iinto)) {
+		if ((d = diff_alloc(q, DIFF_MOD_FIELD_VALIDS)) == NULL)
 			return -1;
 		d->field_pair.from = ifrom;
 		d->field_pair.into = iinto;

@@ -78,9 +78,10 @@ static const char *const vtypes[VALIDATE__MAX] = {
 static void
 parse_validate(struct parse *p, struct field *fd)
 {
-	enum vtype	 vt;
-	enum tok	 tok;
-	struct fvalid	*v;
+	enum vtype		 vt;
+	enum tok		 tok;
+	struct fvalid		*v;
+	const struct fvalid	*vv;
 
 	if (fd->type == FTYPE_STRUCT) {
 		parse_errx(p, "no validation on structs");
@@ -115,10 +116,7 @@ parse_validate(struct parse *p, struct field *fd)
 	v->type = vt;
 	TAILQ_INSERT_TAIL(&fd->fvq, v, entries);
 
-	/*
-	 * For now, we have only a scalar value.
-	 * In the future, this will have some conditionalising.
-	 */
+	/* Assign default and make sure we're unique. */
 
 	switch (fd->type) {
 	case FTYPE_BIT:
@@ -131,6 +129,12 @@ parse_validate(struct parse *p, struct field *fd)
 			return;
 		}
 		v->d.value.integer = p->last.integer;
+		TAILQ_FOREACH(vv, &fd->fvq, entries)
+			if (v->type == vv->type &&
+			    v->d.value.integer == vv->d.value.integer) {
+				parse_errx(p, "duplicate validation");
+				return;
+			}
 		break;
 	case FTYPE_REAL:
 		tok = parse_next(p);
@@ -140,6 +144,12 @@ parse_validate(struct parse *p, struct field *fd)
 		}
 		v->d.value.decimal = tok == TOK_DECIMAL ? 
 			p->last.decimal : p->last.integer;
+		TAILQ_FOREACH(vv, &fd->fvq, entries)
+			if (v->type == vv->type &&
+			    v->d.value.decimal == vv->d.value.decimal) {
+				parse_errx(p, "duplicate validation");
+				return;
+			}
 		break;
 	case FTYPE_BLOB:
 	case FTYPE_EMAIL:
@@ -155,6 +165,12 @@ parse_validate(struct parse *p, struct field *fd)
 			return;
 		}
 		v->d.value.len = p->last.integer;
+		TAILQ_FOREACH(vv, &fd->fvq, entries)
+			if (v->type == vv->type &&
+			    v->d.value.len == vv->d.value.len) {
+				parse_errx(p, "duplicate validation");
+				return;
+			}
 		break;
 	default:
 		abort();

@@ -140,7 +140,7 @@ parse_validate(struct parse *p, struct field *fd)
 	case FTYPE_REAL:
 		tok = parse_next(p);
 		if (tok != TOK_DECIMAL && tok != TOK_INTEGER) {
-			parse_errx(p, "expected decimal");
+			parse_errx(p, "expected decimal or integer");
 			return;
 		}
 		v->d.value.decimal = tok == TOK_DECIMAL ? 
@@ -163,7 +163,7 @@ parse_validate(struct parse *p, struct field *fd)
 		} 
 		if (p->last.integer < 0 ||
 		    (uint64_t)p->last.integer > SIZE_MAX) {
-			parse_errx(p, "length out of range");
+			parse_errx(p, "expected length");
 			return;
 		}
 		v->d.value.len = p->last.integer;

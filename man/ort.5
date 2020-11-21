@@ -316,7 +316,12 @@ currently checked against type limits (i.e., e-mail form or string
 length).
 .It Cm limit Ar limit_op limit_val
 Used when generating validation functions.
-Only available for non-meta types.
+Not available for
+.Cm enum ,
+.Cm bits ,
+or
+.Cm struct .
+If there are multiple statements, all of them must validate.
 The
 .Ar limit_op
 argument consists of an operator the
@@ -344,6 +349,8 @@ The given value must match the field type: an integer (which may be
 signed) for integers, integer or real-valued for real, or a positive
 integer for lengths.
 Duplicate limit operator-value pairs are not permitted.
+Limits are not checked for for sanity, for example, non-overlapping
+ranges.
 .It Cm noexport
 Never exported using the JSON interface.
 This is useful for sensitive internal information.

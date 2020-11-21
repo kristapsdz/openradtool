@@ -326,8 +326,10 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	install -m 0444 regress/*.ort .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.result .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.nresult .dist/openradtool-$(VERSION)/regress
+	install -m 0444 regress/*.md .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/diff/*.ort .dist/openradtool-$(VERSION)/regress/diff
 	install -m 0444 regress/diff/*.result .dist/openradtool-$(VERSION)/regress/diff
+	install -m 0444 regress/diff/*.md .dist/openradtool-$(VERSION)/regress/diff
 	install -m 0444 regress/sqldiff/*.ort .dist/openradtool-$(VERSION)/regress/sqldiff
 	install -m 0444 regress/sqldiff/*.result .dist/openradtool-$(VERSION)/regress/sqldiff
 	install -m 0444 regress/sqldiff/*.nresult .dist/openradtool-$(VERSION)/regress/sqldiff
@@ -339,6 +341,7 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	install -m 0444 regress/javascript/*.xml .dist/openradtool-$(VERSION)/regress/javascript
 	install -m 0444 regress/c/*.ort .dist/openradtool-$(VERSION)/regress/c
 	install -m 0444 regress/c/*.c .dist/openradtool-$(VERSION)/regress/c
+	install -m 0444 regress/c/*.md .dist/openradtool-$(VERSION)/regress/c
 	install -m 0444 regress/c/regress.h .dist/openradtool-$(VERSION)/regress/c
 	install -m 0555 $(DOTAREXEC) .dist/openradtool-$(VERSION)
 	( cd .dist/ && tar zcf ../$@ ./ )

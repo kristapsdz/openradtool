@@ -1,0 +1,9 @@
+struct foo {
+	field textgttwo text limit gt 2;
+	field textlttwo text limit lt 2;
+	field textempty text limit eq 0;
+	field texteqone text limit eq 1;
+	field id int rowid;
+	insert;
+	search id: name id;
+};

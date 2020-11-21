@@ -1,0 +1,9 @@
+struct foo {
+	field intgtzero int limit gt 0;
+	field intltzero int limit lt 0;
+	field inteqzero int limit eq 0;
+	field intone int limit gt 0 limit lt 2;
+	field id int rowid;
+	insert;
+	search id: name id;
+};

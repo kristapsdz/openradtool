@@ -1,0 +1,8 @@
+struct foo {
+	field realgtzero real limit gt 0;
+	field realltzero real limit lt 0;
+	field realhalf real limit gt 0.4 limit lt 0.6;
+	field id int rowid;
+	insert;
+	search id: name id;
+};

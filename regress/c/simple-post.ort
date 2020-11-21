@@ -1,0 +1,6 @@
+struct foo {
+	field a;
+	field id int rowid;
+	insert;
+	search id: name id;
+};

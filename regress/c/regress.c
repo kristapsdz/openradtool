@@ -33,6 +33,7 @@ struct	ptrs {
 	int		(*client)(long, const char *, size_t);
 	int		(*server)(const char *);
 	const char	 *fname;
+	const char	 *postdata; /* or NULL */
 };
 
 static size_t
@@ -56,6 +57,10 @@ local_client(void *arg)
 
 	if ((curl = curl_easy_init()) == NULL)
 		return 0;
+
+	if (p->postdata != NULL)
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, p->postdata);
+
 	curl_easy_setopt(curl, CURLOPT_URL, URL);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, local_parse);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
@@ -82,9 +87,34 @@ local_server(void *arg)
 	return (*p->server)(p->fname);
 }
 
+/*
+ * See regress_fields().
+ */
 int
 regress(int (*client)(long, const char *, size_t), 
 	int (*server)(const char *), int argc, char *argv[])
+{
+
+	return regress_fields(client, server, argc, argv, NULL);
+}
+
+/*
+ * Run a regression test.
+ * The "client" and "server" functions are run in different processes.
+ * The "client" function is passed the HTTP status code from the server
+ * and binary data "buf" of length "sz" as returned if the code is 200.
+ * The "server" function is passed the database filename as "fname" and
+ * should behave as if it were a CGI script.
+ * The arguments "argv" of length "argc" should consist of the datbase
+ * filename passed into "server".
+ * The "postdata", if not NULL, must consist of URL-encoded query
+ * string.
+ * Returns the status passed to exit(3).
+ */
+int
+regress_fields(int (*client)(long, const char *, size_t), 
+	int (*server)(const char *), int argc, char *argv[], 
+	const char *postdata)
 {
 	struct ptrs	 ptrs;
 
@@ -94,6 +124,7 @@ regress(int (*client)(long, const char *, size_t),
 	ptrs.client = client;
 	ptrs.server = server;
 	ptrs.fname = argv[1];
+	ptrs.postdata = postdata;
 
 	return kcgi_regress_cgi
 		(local_client, &ptrs, local_server, &ptrs) ? 0 : 1;

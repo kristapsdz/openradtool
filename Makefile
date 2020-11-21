@@ -555,16 +555,19 @@ regress: all
 			bf=regress/c/`basename $$f .ort` ; \
 			cf=regress/c/`basename $$f .ort`.c ; \
 			hf=`basename $$f`.h ; \
-			./ort-c-header -Jj $$f > $$f.h ; \
-			./ort-c-source -S. -h $$hf -Jj $$f > $$f.c ; \
+			./ort-c-header -vJj $$f > $$f.h ; \
+			./ort-c-source -S. -h $$hf -vJj $$f > $$f.c ; \
 			./ort-sql $$f | sqlite3 $$tmp ; \
 			set +e ; \
 			$(CC) $(CFLAGS_REGRESS) $(CFLAGS) -o $$bf \
 				$$f.c $$cf $$rr $(LIBS_REGRESS) \
 				$(LDADD_CRYPT) 2>/dev/null ; \
 			if [ $$? -ne 0 ] ; then \
-				set -e ; \
 				echo "$$f: fail (did not compile)" ; \
+				$(CC) $(CFLAGS_REGRESS) $(CFLAGS) -o $$bf \
+					$$f.c $$cf $$rr $(LIBS_REGRESS) \
+					$(LDADD_CRYPT) ; \
+				set -e ; \
 				rm -f $$f.h $$f.c $$bf $$tmp ; \
 				exit 1 ; \
 			fi ; \

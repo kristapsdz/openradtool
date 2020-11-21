@@ -17,3 +17,6 @@
 
 int	regress(int(*)(long, const char *, size_t), 
 		int(*)(const char *), int, char *[]);
+int	regress_fields(int(*)(long, const char *, size_t), 
+		int(*)(const char *), int, char *[],
+		const char *);

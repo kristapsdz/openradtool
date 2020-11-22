@@ -3,6 +3,23 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.11.1</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-11-22">2020-11-22</time>
+		</header>
+		<aside>
+			<p>
+				Continue adding functionality to
+				<a href="ort-diff.1.html">ort-diff(1)</a> via
+				<a href="ort_diff.3.html">ort_diff(3)</a>.
+				No functional changes.
+				Enumerations, bit-fields, structure uniques, and structure fields
+				are now fully covered by the interface.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.11.0</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2020-11-13">2020-11-13</time>

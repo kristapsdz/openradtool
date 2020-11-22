@@ -64,7 +64,7 @@ To compile applications with
 include the
 .Pa ort.h
 as follows:
-.Bd -literal
+.Bd -literal -offset indent
 #include <sys/queue.h>
 #include <stdio.h> /* FILE */
 #include <ort.h>
@@ -72,7 +72,7 @@ as follows:
 .Pp
 To compile and link, use
 .Xr pkg-config 1 :
-.Bd -literal
+.Bd -literal -offset indent
 % cc `pkg-config --cflags ort` -c -o sample.o sample.c
 % cc -o sample sample.o `pkg-config --libs ort`
 .Ed

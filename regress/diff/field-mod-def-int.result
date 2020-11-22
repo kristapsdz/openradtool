@@ -1,0 +1,7 @@
+--- regress/diff/field-mod-def-int.old.ort
++++ regress/diff/field-mod-def-int.new.ort
+@@ strcts @@
+@@ strct regress/diff/field-mod-def-int.old.ort:1:10 -> regress/diff/field-mod-def-int.new.ort:1:10 @@
+@@ field regress/diff/field-mod-def-int.old.ort:2:10 -> regress/diff/field-mod-def-int.new.ort:2:10 @@
+! field def regress/diff/field-mod-def-int.old.ort:2:10 -> regress/diff/field-mod-def-int.new.ort:2:10
+  field regress/diff/field-mod-def-int.old.ort:3:9 -> regress/diff/field-mod-def-int.new.ort:3:9

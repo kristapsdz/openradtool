@@ -1,0 +1,2 @@
+--- regress/diff/field-mod-def-nochange.old.ort
++++ regress/diff/field-mod-def-nochange.new.ort

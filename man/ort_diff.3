@@ -38,7 +38,7 @@ configuration
 .Fa from
 and the new
 .Fa into .
-.Em It does not return all differences yet: it's a work in progress.
+.Em \&It does not return all differences yet: it's a work in progress.
 .Pp
 The differences are returned as a queue of structures that indicate
 whether any configuration component has changed, has not changed, has
@@ -288,6 +288,7 @@ This stipulates that one or more of
 .Dv DIFF_MOD_FIELD_ACTIONS ,
 .Dv DIFF_MOD_FIELD_BITF ,
 .Dv DIFF_MOD_FIELD_COMMENT ,
+.Dv DIFF_MOD_FIELD_DEF ,
 .Dv DIFF_MOD_FIELD_ENM ,
 .Dv DIFF_MOD_FIELD_FLAGS ,
 .Dv DIFF_MOD_FIELD_REFERENCE ,
@@ -326,6 +327,17 @@ changed between
 .Fa from
 and
 .Fa into .
+.It Dv DIFF_MOD_FIELD_DEF
+The
+.Va def
+field of a
+.Vt "struct field"
+changed between
+.Fa from
+and
+.Fa into .
+This is only for a change: if the type changes, or if a default is newly
+or no longer defined, this is not raised.
 .It Dv DIFF_MOD_FIELD_ENM
 The
 .Va enm
@@ -355,8 +367,9 @@ changed between
 .Fa from
 and
 .Fa into .
-This has broad consequences: local reference changing, remote reference,
-remote target of local reference, etc.
+There are three reasons this might occur: gaining or losing reference status,
+source of a local reference changing, target of a local or remote reference
+changing.
 .It Dv DIFF_MOD_FIELD_TYPE
 The
 .Va type
@@ -497,6 +510,7 @@ Set by
 .Dv DIFF_MOD_FIELD_ACTIONS ,
 .Dv DIFF_MOD_FIELD_BITF ,
 .Dv DIFF_MOD_FIELD_COMMENT ,
+.Dv DIFF_MOD_FIELD_DEF ,
 .Dv DIFF_MOD_FIELD_ENM ,
 .Dv DIFF_MOD_FIELD_FLAGS ,
 .Dv DIFF_MOD_FIELD_REFERENCE ,

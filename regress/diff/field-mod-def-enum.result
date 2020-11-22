@@ -1,0 +1,7 @@
+--- regress/diff/field-mod-def-enum.old.ort
++++ regress/diff/field-mod-def-enum.new.ort
+@@ strcts @@
+@@ strct regress/diff/field-mod-def-enum.old.ort:6:10 -> regress/diff/field-mod-def-enum.new.ort:6:10 @@
+@@ field regress/diff/field-mod-def-enum.old.ort:7:10 -> regress/diff/field-mod-def-enum.new.ort:7:10 @@
+! field def regress/diff/field-mod-def-enum.old.ort:7:10 -> regress/diff/field-mod-def-enum.new.ort:7:10
+  field regress/diff/field-mod-def-enum.old.ort:8:9 -> regress/diff/field-mod-def-enum.new.ort:8:9

@@ -1,0 +1,12 @@
+enum bar {
+	item a;
+	item b;
+};
+
+struct foo {
+	field a enum bar default a;
+	field b text default "foo";
+	field c int default 2323;
+	field d real default 23252.0;
+	field id int rowid;
+};

@@ -268,6 +268,11 @@ ort_write_diff_field(FILE *f, const struct diffq *q, const struct diff *d)
 				break;
 			rc = ort_write_field_mod(f, "comment", dd);
 			break;
+		case DIFF_MOD_FIELD_DEF:
+			if (dd->field_pair.into != d->field_pair.into)
+				break;
+			rc = ort_write_field_mod(f, "def", dd);
+			break;
 		case DIFF_MOD_FIELD_ENM:
 			if (dd->field_pair.into != d->field_pair.into)
 				break;

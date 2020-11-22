@@ -221,6 +221,7 @@ ort_diff_field(struct diffq *q,
 {
 	struct diff	*d;
 	enum difftype	 type = DIFF_SAME_FIELD;
+	int		 diff;
 
 	assert(iinto != NULL);
 
@@ -277,6 +278,57 @@ ort_diff_field(struct diffq *q,
 		d->field_pair.into = iinto;
 		type = DIFF_MOD_FIELD;
 	}
+
+	/* Only raise this if we already have defaults in both. */
+
+	if ((ifrom->flags & FIELD_HASDEF) &&
+	    (iinto->flags & FIELD_HASDEF) &&
+	    ifrom->type == iinto->type) {
+		diff = 1;
+		switch (ifrom->type) {
+		case FTYPE_BIT:
+		case FTYPE_BITFIELD:
+		case FTYPE_DATE:
+		case FTYPE_EPOCH:
+		case FTYPE_INT:
+			diff = ifrom->def.integer != 
+				iinto->def.integer;
+			break;
+		case FTYPE_REAL:
+			diff = ifrom->def.decimal != 
+				iinto->def.decimal;
+			break;
+		case FTYPE_EMAIL:
+		case FTYPE_TEXT:
+			diff = strcmp(ifrom->def.string, 
+				iinto->def.string) != 0;
+			break;
+		case FTYPE_ENUM:
+			diff = strcasecmp
+				(ifrom->def.eitem->parent->name,
+				 iinto->def.eitem->parent->name) != 0 ||
+				strcasecmp
+				(ifrom->def.eitem->name,
+				 iinto->def.eitem->name) != 0;
+			break;
+		default:
+			abort();
+		}
+		if (diff) {
+			d = diff_alloc(q, DIFF_MOD_FIELD_DEF);
+			if (d == NULL)
+				return -1;
+			d->field_pair.from = ifrom;
+			d->field_pair.into = iinto;
+			type = DIFF_MOD_FIELD;
+		}
+	}
+
+	/*
+	 * Foreign or local references changing can be either that we
+	 * have or lost a referenence, or either the source or target of
+	 * the reference (by name) have changed.
+	 */
 
 	if ((ifrom->ref != NULL && iinto->ref == NULL) ||
 	    (ifrom->ref == NULL && iinto->ref != NULL) ||

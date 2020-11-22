@@ -1,0 +1,4 @@
+struct foo {
+	field foo text default "hello, world";
+	field id int rowid;
+};

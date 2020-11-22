@@ -1,0 +1,9 @@
+enum bar {
+	item a;
+	item b;
+};
+
+struct foo {
+	field foo enum bar default a;
+	field id int rowid;
+};

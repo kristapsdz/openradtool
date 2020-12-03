@@ -3,6 +3,25 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.11.2</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-12-03">2020-12-03</time>
+		</header>
+		<aside>
+			<p>
+				Reconsider white-space handling in comments.  Prior to this,
+				consecutive white-space collapsed into the <i>first</i> white-space.
+				This was a problem for two reasons: first, Markdown and other common
+				comment formats recognise multiple newlines to separate blocks.
+				More significantly, a CRLF end of line would convert into a blank CR
+				(instead of a LF).  Modify the system, thus, to accept comments
+				as-is except for CRLF, which is reduced to LF.
+				This makes diffing much more consistent as well.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.11.1</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2020-11-22">2020-11-22</time>

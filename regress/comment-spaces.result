@@ -1,0 +1,15 @@
+struct foo {
+	field id int rowid
+		comment "This has
+
+multiple lines
+
+that should have FS.";
+	comment "This should
+
+
+                   also have
+
+LFs.";
+};
+

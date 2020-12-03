@@ -1,0 +1,12 @@
+struct foo {
+	field id int rowid
+		comment "This has
+
+multiple lines
+
+that should have CRLFS.";
+	comment "This should
+
+also have CRLFs.";
+};
+

@@ -425,7 +425,10 @@ struct foo {
 .Pp
 There's currently no structure imposed on comments: they are interpreted
 as opaque text and passed into the frontend.
-All white-space is currently collapsed.
+The only exception is that CRLF are normalised as LF, so sequences of
+.Li \er\en
+are converted to simply
+.Li \en .
 .Pp
 Components may only have a single comment statement.
 .Ss Queries

@@ -167,32 +167,20 @@ parse_write_comment(struct writer *w, const char *cp, size_t tabs)
 {
 	size_t	 i;
 
-	if (NULL == cp)
+	if (cp == NULL)
 		return 1;
 
 	if (tabs > 1)
-		if ( ! wputc(w, '\n'))
+		if (!wputc(w, '\n'))
 			return 0;
 	for (i = 0; i < tabs; i++)
-		if ( ! wputc(w, '\t'))
+		if (!wputc(w, '\t'))
 			return 0;
 
-	if ( ! wputs(w, "comment \""))
+	if (!wputs(w, "comment \""))
 		return 0;
-
-	while ('\0' != *cp) {
-		if ( ! isspace((unsigned char)*cp)) {
-			if ( ! wputc(w, *cp))
-				return 0;
-			cp++;
-			continue;
-		}
-		if ( ! wputc(w, ' '))
-			return 0;
-		while (isspace((unsigned char)*cp))
-			cp++;
-	}
-
+	if (!wputs(w, cp))
+		return 0;
 	return wputs(w, "\"");
 }
 

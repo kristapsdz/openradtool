@@ -496,19 +496,22 @@ again:
 		p->bufsz = 0;
 		last = ' ';
 		for (;;) {
-			/* 
-			 * Continue until we get an unescaped quote or
-			 * EOF. 
-			 */
 			c = parse_nextchar(p);
-			if (EOF == c ||
-			    ('"' == c && '\\' != last))
+
+			/* Stop at eof or unescaped quote.  */
+
+			if (c == EOF || (c == '"' && last != '\\'))
 				break;
-			if (isspace(last) && isspace(c)) {
-				last = c;
-				continue;
+
+			/* Strip out CRLF. */
+
+			if (last == '\r' && c == '\n') {
+				p->bufsz--;
+				last = p->bufsz == 0 ? 
+					' ' : p->buf[p->bufsz];
 			}
-			if ( ! buf_push(p, c))
+
+			if (!buf_push(p, c))
 				return TOK_ERR;
 			last = c;
 		} 

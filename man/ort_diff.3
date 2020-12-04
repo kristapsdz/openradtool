@@ -597,6 +597,34 @@ Set by
 .Dv DIFF_MOD_FIELD_VALIDS ,
 and
 .Dv DIFF_SAME_FIELD .
+.It Va "const struct role *role"
+Set by
+.Dv DIFF_ADD_ROLE
+and
+.Dv DIFF_DEL_ROLE .
+Also used by
+.Dv DIFF_ADD_ROLES
+and
+.Dv DIFF_DEL_ROLES ,
+where
+.Va role
+is the first of the new or deleted roles.
+.It Va "struct diff_role role_pair"
+Set by
+.Dv DIFF_MOD_ROLES
+and
+.Dv DIFF_SAME_ROLES ,
+where
+.Va into
+and
+.Va from
+are set to the first of the modified or same roles.
+Also set by
+.Dv DIFF_MOD_ROLE_CHILDREN ,
+.Dv DIFF_MOD_ROLE_COMMENT ,
+.Dv DIFF_MOD_ROLE_PARENT ,
+and
+.Dv DIFF_SAME_ROLE .
 .It Va "const struct strct *strct"
 Set by
 .Dv DIFF_ADD_STRCT

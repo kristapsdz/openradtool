@@ -619,6 +619,23 @@ or
 .Dv ROLEMAP_UPDATE ,
 the deletion or update to receive the assignment.
 .El
+.Ss Inserts
+New data may be inserted as defined by
+.Vt struct insert ,
+which is only used in
+.Va ins
+of
+.Vt struct strct .
+.Bl -tag -width Ds -offset indent
+.It Va struct rolemap *rolemap
+If not
+.Dv NULL ,
+roles allowed to perform insertions.
+.It Va struct strct *parent
+Parent containing the insertion.
+.It Va struct pos pos
+Parse point.
+.El
 .Ss Queries
 Data may be extracted by using queries.
 These are defined for each

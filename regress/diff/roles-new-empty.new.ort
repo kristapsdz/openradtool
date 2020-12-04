@@ -1,0 +1,6 @@
+roles {
+};
+
+struct foo {
+	field id int rowid;
+};

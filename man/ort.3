@@ -201,14 +201,14 @@ If not
 .Dv NULL ,
 the insert statement for the structure.
 Inserts are used to create data.
-.It Va struct rolemap *arolemap
-If not
-.Dv NULL ,
-the role assignment for
-.Em all
-operations.
-These assignments are merged into all per-operation roles: it's not
-necessary to also check this member when checking per-operation roles.
+.\" .It Va struct rolemap *arolemap
+.\" If not
+.\" .Dv NULL ,
+.\" the role assignment for
+.\" .Em all
+.\" operations.
+.\" These assignments are merged into all per-operation roles: it's not
+.\" necessary to also check this member when checking per-operation roles.
 .It Va unsigned int flags
 Useful bits (or zero) set on the structure:
 .Dv STRCT_HAS_QUEUE

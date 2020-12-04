@@ -851,6 +851,8 @@ ort_diff_roles(struct diffq *q,
 		return 1;
 	}
 
+	/* Only do same/mod for non-virtual roles. */
+
 	TAILQ_FOREACH(r, &from->arq, allentries) {
 		TAILQ_FOREACH(rr, &into->arq, allentries)
 			if (strcasecmp(r->name, rr->name) == 0)
@@ -861,14 +863,16 @@ ort_diff_roles(struct diffq *q,
 			d->role = r;
 			type = DIFF_MOD_ROLES;
 			continue;
-		}
+		} else if (r->parent == NULL)
+			continue;
 
 		d = diff_alloc(q, ort_diff_role(q, r, rr) ? 
-			DIFF_MOD_ROLE : DIFF_SAME_ROLE);
+			DIFF_SAME_ROLE : DIFF_MOD_ROLE);
 		if (d == NULL)
 			return 0;
 		d->role_pair.into = rr;
 		d->role_pair.from = r;
+		type = DIFF_MOD_ROLES;
 	}
 
 	TAILQ_FOREACH(rr, &into->arq, allentries) {

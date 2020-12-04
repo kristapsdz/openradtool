@@ -1,0 +1,10 @@
+roles {
+	role bar {
+		role xyzzy;
+	};
+	role foo;
+};
+
+struct foo {
+	field id int rowid;
+};

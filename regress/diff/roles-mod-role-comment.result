@@ -1,0 +1,6 @@
+--- regress/diff/roles-mod-role-comment.old.ort
++++ regress/diff/roles-mod-role-comment.new.ort
+@@ roles @@
+@@ roles regress/diff/roles-mod-role-comment.old.ort:1:5 -> regress/diff/roles-mod-role-comment.new.ort:1:5 @@
+@@ role regress/diff/roles-mod-role-comment.old.ort:2:9 -> regress/diff/roles-mod-role-comment.new.ort:2:9 @@
+! role comment regress/diff/roles-mod-role-comment.old.ort:2:9 -> regress/diff/roles-mod-role-comment.new.ort:2:9

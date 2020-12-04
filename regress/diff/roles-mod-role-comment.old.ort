@@ -1,0 +1,7 @@
+roles {
+	role moo comment "foobar";
+};
+
+struct foo {
+	field id int rowid;
+};

@@ -1,0 +1,10 @@
+--- regress/diff/roles-add-role-reparent.old.ort
++++ regress/diff/roles-add-role-reparent.new.ort
+@@ roles @@
+@@ roles regress/diff/roles-add-role-reparent.old.ort:1:5 -> regress/diff/roles-add-role-reparent.new.ort:1:5 @@
+@@ role regress/diff/roles-add-role-reparent.old.ort:2:9 -> regress/diff/roles-add-role-reparent.new.ort:5:9 @@
+! role children regress/diff/roles-add-role-reparent.old.ort:2:9 -> regress/diff/roles-add-role-reparent.new.ort:5:9
+@@ role regress/diff/roles-add-role-reparent.old.ort:3:12 -> regress/diff/roles-add-role-reparent.new.ort:3:12 @@
+! role parent regress/diff/roles-add-role-reparent.old.ort:3:12 -> regress/diff/roles-add-role-reparent.new.ort:3:12
+@@ role regress/diff/roles-add-role-reparent.old.ort:5:9 -> regress/diff/roles-add-role-reparent.new.ort:2:9 @@
+! role children regress/diff/roles-add-role-reparent.old.ort:5:9 -> regress/diff/roles-add-role-reparent.new.ort:2:9

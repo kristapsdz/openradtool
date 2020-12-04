@@ -138,6 +138,44 @@ ort_write_bitf_pair(FILE *f, int chnge, const struct diff *d)
 }
 
 static int
+ort_write_role(FILE *f, int add, const struct diff *d)
+{
+
+	return ort_write_one(f, add, "role", &d->role->pos);
+}
+
+static int
+ort_write_role_mod(FILE *f, const char *name, const struct diff *d)
+{
+
+	return ort_write_mod(f, name, "role",
+		&d->role_pair.from->pos, &d->role_pair.into->pos);
+}
+
+static int
+ort_write_role_pair(FILE *f, int chnge, const struct diff *d)
+{
+
+	return ort_write_pair(f, chnge, "role",
+		&d->role_pair.from->pos, &d->role_pair.into->pos);
+}
+
+static int
+ort_write_roles(FILE *f, int add, const struct diff *d)
+{
+
+	return ort_write_one(f, add, "roles", &d->role->pos);
+}
+
+static int
+ort_write_roles_pair(FILE *f, int chnge, const struct diff *d)
+{
+
+	return ort_write_pair(f, chnge, "roles",
+		&d->role_pair.from->pos, &d->role_pair.into->pos);
+}
+
+static int
 ort_write_enm(FILE *f, int add, const struct diff *d)
 {
 
@@ -592,6 +630,116 @@ ort_write_diff_bitfs(FILE *f, const struct diffq *q)
 	return 1;
 }
 
+static int
+ort_write_diff_role(FILE *f, const struct diffq *q, const struct diff *d)
+{
+	const struct diff	*dd;
+	int			 rc;
+
+	assert(d->type == DIFF_MOD_ROLE);
+
+	TAILQ_FOREACH(dd, q, entries) {
+		rc = 1;
+		switch (dd->type) {
+		case DIFF_MOD_ROLE_COMMENT:
+			if (dd->role_pair.into != d->role_pair.into)
+				break;
+			rc = ort_write_role_mod(f, "comment", dd);
+			break;
+		case DIFF_MOD_ROLE_PARENT:
+			if (dd->role_pair.into != d->role_pair.into)
+				break;
+			rc = ort_write_role_mod(f, "parent", dd);
+			break;
+		case DIFF_MOD_ROLE_CHILDREN:
+			if (dd->role_pair.into != d->role_pair.into)
+				break;
+			rc = ort_write_role_mod(f, "children", dd);
+			break;
+		default:
+			break;
+		}
+		if (rc < 0)
+			return 0;
+	}
+
+	return 1;
+}
+
+static int
+ort_write_diff_roleq(FILE *f, const struct diffq *q, const struct diff *d)
+{
+	const struct diff	*dd;
+	int			 rc;
+
+	assert(d->type == DIFF_MOD_ROLES);
+
+	TAILQ_FOREACH(dd, q, entries) {
+		rc = 1;
+		switch (dd->type) {
+		case DIFF_ADD_ROLE:
+			rc = ort_write_role(f, 1, dd);
+			break;
+		case DIFF_DEL_EITEM:
+			rc = ort_write_role(f, 0, dd);
+			break;
+		case DIFF_MOD_ROLE:
+			rc = ort_write_role_pair(f, 1, dd);
+			if (!ort_write_diff_role(f, q, dd))
+				return 0;
+			break;
+		case DIFF_SAME_ROLE:
+			rc = ort_write_role_pair(f, 0, dd);
+			break;
+		default:
+			break;
+		}
+		if (rc < 0)
+			return 0;
+	}
+
+	return 1;
+}
+
+/*
+ * Return zero on failure, non-zero on success.
+ */
+static int
+ort_write_diff_roles(FILE *f, const struct diffq *q)
+{
+	const struct diff	*d;
+	int		 	 rc;
+
+	if (fprintf(f, "@@ roles @@\n") < 0)
+		return 0;
+
+	TAILQ_FOREACH(d, q, entries) {
+		switch (d->type) {
+		case DIFF_ADD_ROLES:
+			rc = ort_write_roles(f, 1, d);
+			break;
+		case DIFF_DEL_ROLES:
+			rc = ort_write_roles(f, 0, d);
+			break;
+		case DIFF_SAME_ROLES:
+			rc = ort_write_roles_pair(f, 0, d);
+			break;
+		case DIFF_MOD_ROLES:
+			rc = ort_write_roles_pair(f, 1, d);
+			if (!ort_write_diff_roleq(f, q, d))
+				return 0;
+			break;
+		default:
+			rc = 1;
+			break;
+		}
+		if (rc < 0)
+			return 0;
+	}
+
+	return 1;
+}
+
 /*
  * Return zero on failure, non-zero on success.
  */
@@ -650,6 +798,15 @@ ort_write_diff_file(FILE *f, const struct diffq *q,
 		fprintf(f, "+++ <stdin>\n");
 
 	/* Write enumerations iff any have changed. */
+
+	TAILQ_FOREACH(d, q, entries)
+		if (d->type == DIFF_ADD_ROLES ||
+		    d->type == DIFF_DEL_ROLES ||
+		    d->type == DIFF_MOD_ROLES) {
+			if (!ort_write_diff_roles(f, q))
+				return 0;
+			break;
+		}
 
 	TAILQ_FOREACH(d, q, entries)
 		if (d->type == DIFF_ADD_ENM ||

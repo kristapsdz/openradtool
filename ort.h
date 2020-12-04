@@ -491,6 +491,7 @@ struct	role {
 	struct roleq	   subrq;
 	struct pos	   pos;
 	TAILQ_ENTRY(role)  entries;
+	TAILQ_ENTRY(role)  allentries;
 };
 
 enum	msgtype {
@@ -514,6 +515,7 @@ struct	config {
 	struct enmq	  eq;
 	struct bitfq	  bq;
 	struct roleq	  rq;
+	struct roleq	  arq;
 	char		**langs;
 	size_t		  langsz;
 	char		**fnames;
@@ -529,6 +531,8 @@ enum	difftype {
 	DIFF_ADD_EITEM,
 	DIFF_ADD_ENM,
 	DIFF_ADD_FIELD,
+	DIFF_ADD_ROLE,
+	DIFF_ADD_ROLES,
 	DIFF_ADD_STRCT,
 	DIFF_ADD_UNIQUE,
 	DIFF_DEL_BITF,
@@ -536,6 +540,8 @@ enum	difftype {
 	DIFF_DEL_EITEM,
 	DIFF_DEL_ENM,
 	DIFF_DEL_FIELD,
+	DIFF_DEL_ROLE,
+	DIFF_DEL_ROLES,
 	DIFF_DEL_STRCT,
 	DIFF_DEL_UNIQUE,
 	DIFF_MOD_BITF,
@@ -562,6 +568,11 @@ enum	difftype {
 	DIFF_MOD_FIELD_REFERENCE,
 	DIFF_MOD_FIELD_TYPE,
 	DIFF_MOD_FIELD_VALIDS,
+	DIFF_MOD_ROLE,
+	DIFF_MOD_ROLE_CHILDREN,
+	DIFF_MOD_ROLE_COMMENT,
+	DIFF_MOD_ROLE_PARENT,
+	DIFF_MOD_ROLES,
 	DIFF_MOD_STRCT,
 	DIFF_MOD_STRCT_COMMENT,
 	DIFF_SAME_BITF,
@@ -569,6 +580,8 @@ enum	difftype {
 	DIFF_SAME_EITEM,
 	DIFF_SAME_ENM,
 	DIFF_SAME_FIELD,
+	DIFF_SAME_ROLE,
+	DIFF_SAME_ROLES,
 	DIFF_SAME_STRCT,
 };
 
@@ -597,6 +610,11 @@ struct	diff_field {
 	const struct field	*into;
 };
 
+struct	diff_role {
+	const struct role	*from;
+	const struct role	*into;
+};
+
 struct	diff_strct {
 	const struct strct	*from;
 	const struct strct	*into;
@@ -615,6 +633,8 @@ struct	diff {
 		struct diff_field	 field_pair;
 		const struct eitem	*eitem;
 		struct diff_eitem	 eitem_pair; 
+		const struct role	*role;
+		struct diff_role	 role_pair; 
 		const struct strct	*strct;
 		struct diff_strct	 strct_pair; 
 		const struct unique	*unique;

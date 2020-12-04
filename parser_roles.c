@@ -55,8 +55,11 @@ role_alloc(struct parse *p, const char *name, struct role *parent)
 	r->parent = parent;
 	parse_point(p, &r->pos);
 	TAILQ_INIT(&r->subrq);
+	TAILQ_INSERT_TAIL(&p->cfg->arq, r, allentries);
+
 	if (parent != NULL)
 		TAILQ_INSERT_TAIL(&parent->subrq, r, entries);
+
 	return r;
 }
 

@@ -742,6 +742,156 @@ ort_diff_strcts(struct diffq *q,
 }
 
 /*
+ * Check whether two roles are different, meaning their parent or
+ * children have changed in any way.
+ * Return zero on failure (different), non-zero on success.
+ */
+static int
+ort_diff_role(struct diffq *q, const struct role *rfrom, const struct role *rinto)
+{
+	const struct role	*cfrom, *cinto;
+	size_t			 fsz = 0, isz = 0;
+	struct diff		*d;
+	int			 nchange = 1;
+
+	/* 
+	 * If a parent is NULL, that will never change (only our
+	 * "virtual" roles have NULL parents, and these are always
+	 * fixed), so it suffices to just check names.
+	 */
+
+	if (rfrom->parent != NULL && rinto->parent != NULL &&
+	    strcasecmp(rfrom->parent->name, rinto->parent->name)) {
+		if ((d = diff_alloc(q, DIFF_MOD_ROLE_PARENT)) == NULL)
+			return 0;
+		d->role_pair.from = rfrom;
+		d->role_pair.into = rinto;
+		nchange = 0;
+	}
+
+	if (!ort_check_comment(rfrom->doc, rinto->doc)) {
+		if ((d = diff_alloc(q, DIFF_MOD_ROLE_COMMENT)) == NULL)
+			return 0;
+		d->role_pair.from = rfrom;
+		d->role_pair.into = rinto;
+		nchange = 0;
+	}
+
+	/* 
+	 * Check if the children have changed: if the count has changed,
+	 * they've changed; otherwise, if any one has changed, they've
+	 * changed as well.
+	 */
+
+	TAILQ_FOREACH(cfrom, &rfrom->subrq, entries)
+		fsz++;
+	TAILQ_FOREACH(cinto, &rinto->subrq, entries)
+		isz++;
+
+	if (fsz != isz) {
+		d = diff_alloc(q, DIFF_MOD_ROLE_CHILDREN);
+		if (d == NULL)
+			return 0;
+		d->role_pair.from = rfrom;
+		d->role_pair.into = rinto;
+		nchange = 0;
+	} else
+		TAILQ_FOREACH(cfrom, &rfrom->subrq, entries) {
+			TAILQ_FOREACH(cinto, &rinto->subrq, entries)
+				if (strcasecmp
+				    (cfrom->name, cinto->name) == 0)
+					break;
+			if (cinto != NULL)
+				continue;
+			d = diff_alloc(q, DIFF_MOD_ROLE_CHILDREN);
+			if (d == NULL)
+				return 0;
+			d->role_pair.from = rfrom;
+			d->role_pair.into = rinto;
+			nchange = 0;
+			break;
+		}
+
+	return nchange;
+}
+
+/*
+ * Delve into the top-level roles statement.  If the role block has just
+ * arrived or left, use a top-level DIFF_xxx_ROLE statement and that's
+ * it (don't delete individual roles).  A role added or deleted means
+ * what it sounds like.  A role modified means its parent or children
+ * have changed.  So an additional role usually means three changes:
+ * adding the role, the parent of the role changing, any children of the
+ * role changing.
+ */
+static int
+ort_diff_roles(struct diffq *q, 
+	const struct config *from, const struct config *into)
+{
+	const struct role	*r, *rr;
+	struct diff		*d;
+	enum difftype		 type = DIFF_SAME_ROLES;
+
+	/* Do nothing if no roles in either. */
+
+	if (TAILQ_EMPTY(&from->arq) && TAILQ_EMPTY(&into->arq))
+		return 1;
+
+	if (TAILQ_EMPTY(&from->arq) && !TAILQ_EMPTY(&into->arq)) {
+		if ((d = diff_alloc(q, DIFF_ADD_ROLES)) == NULL)
+			return 0;
+		d->role = TAILQ_FIRST(&into->arq);
+		return 1;
+	}
+	
+	if (!TAILQ_EMPTY(&from->arq) && TAILQ_EMPTY(&into->arq)) {
+		if ((d = diff_alloc(q, DIFF_DEL_ROLES)) == NULL)
+			return 0;
+		d->role = TAILQ_FIRST(&from->arq);
+		return 1;
+	}
+
+	TAILQ_FOREACH(r, &from->arq, allentries) {
+		TAILQ_FOREACH(rr, &into->arq, allentries)
+			if (strcasecmp(r->name, rr->name) == 0)
+				break;
+		if (rr == NULL) {
+			if ((d = diff_alloc(q, DIFF_DEL_ROLE)) == NULL)
+				return 0;
+			d->role = r;
+			type = DIFF_MOD_ROLES;
+			continue;
+		}
+
+		d = diff_alloc(q, ort_diff_role(q, r, rr) ? 
+			DIFF_MOD_ROLE : DIFF_SAME_ROLE);
+		if (d == NULL)
+			return 0;
+		d->role_pair.into = rr;
+		d->role_pair.from = r;
+	}
+
+	TAILQ_FOREACH(rr, &into->arq, allentries) {
+		TAILQ_FOREACH(r, &from->arq, allentries)
+			if (strcasecmp(r->name, rr->name) == 0)
+				break;
+		if (r == NULL) {
+			if ((d = diff_alloc(q, DIFF_ADD_ROLE)) == NULL)
+				return 0;
+			d->role = rr;
+			type = DIFF_MOD_ROLES;
+			continue;
+		}
+	}
+
+	if ((d = diff_alloc(q, type)) == NULL)
+		return 0;
+	d->role_pair.into = TAILQ_FIRST(&into->arq);
+	d->role_pair.from = TAILQ_FIRST(&from->arq);
+	return 1;
+}
+
+/*
  * Return zero on failure, non-zero on success.
  */
 static int
@@ -793,6 +943,8 @@ ort_diff(const struct config *from, const struct config *into)
 	if (!ort_diff_bitfs(q, from, into))
 		goto err;
 	if (!ort_diff_strcts(q, from, into))
+		goto err;
+	if (!ort_diff_roles(q, from, into))
 		goto err;
 
 	return q;

@@ -447,6 +447,7 @@ ort_config_alloc(void)
 	TAILQ_INIT(&cfg->sq);
 	TAILQ_INIT(&cfg->eq);
 	TAILQ_INIT(&cfg->rq);
+	TAILQ_INIT(&cfg->arq);
 	TAILQ_INIT(&cfg->bq);
 	TAILQ_INIT(&cfg->priv->rq);
 	return cfg;

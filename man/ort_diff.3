@@ -84,6 +84,14 @@ A
 .Vt "struct field"
 was added to
 .Fa into .
+.It Dv DIFF_ADD_ROLE
+A
+.Vt "struct role"
+was added to
+.Fa into .
+.It Dv DIFF_ADD_ROLES
+Roles were added to
+.Fa into .
 .It Dv DIFF_ADD_STRCT
 A
 .Vt "struct strct"
@@ -118,6 +126,14 @@ was removed from
 A
 .Vt "struct field"
 was removed from
+.Fa from .
+.It Dv DIFF_DEL_ROLE
+A
+.Vt "struct role"
+was removed from
+.Fa from .
+.It Dv DIFF_DEL_ROLES
+All roles were removed from
 .Fa from .
 .It Dv DIFF_DEL_STRCT
 A
@@ -388,6 +404,59 @@ changed between
 .Fa from
 and
 .Fa into .
+.It Dv DIFF_MOD_ROLE
+A
+.Vt "struct role"
+changed between
+.Fa from
+and
+.Fa into .
+This stipulates that one or more of
+.Dv DIFF_MOD_ROLE_CHILDREN ,
+.Dv DIFF_MOD_ROLE_COMMENT ,
+or
+.Dv DIFF_MOD_ROLE_PARENT
+will also be set for the given object.
+.It Dv DIFF_MOD_ROLE_CHILDREN
+One or more roles in the
+.Va subrq
+field of a
+.Vt "struct role"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_ROLE_COMMENT
+The
+.Va doc
+field of a
+.Vt "struct role"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_ROLE_PARENT
+The
+.Va parent
+field of a
+.Vt "struct role"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_ROLES
+A
+.Vt "struct role"
+changed between
+.Fa from
+and
+.Fa into .
+This stipulates that one or more of
+.Dv DIFF_ADD_ROLE ,
+.Dv DIFF_DEL_ROLE ,
+or
+.Dv DIFF_MOD_ROLE
+will also be set for the given object.
 .It Dv DIFF_MOD_STRCT
 A
 .Vt "struct strct"
@@ -432,6 +501,16 @@ did not change.
 .It Dv DIFF_SAME_FIELD
 The
 .Vt "struct field"
+did not change.
+.It Dv DIFF_SAME_ROLES
+Roles were specified in both
+.Fa from
+and
+.Fa into
+and they did not change.
+.It Dv DIFF_SAME_ROLE
+The
+.Vt "struct role"
 did not change.
 .It Dv DIFF_SAME_STRCT
 The
@@ -543,6 +622,8 @@ A configuration that has not changed at all will consists solely of
 .Dv DIFF_SAME_ENM ,
 .Dv DIFF_SAME_EITEM ,
 .Dv DIFF_SAME_FIELD ,
+.Dv DIFF_SAME_ROLE ,
+.Dv DIFF_SAME_ROLES ,
 and
 .Dv DIFF_SAME_STRCT
 entries.

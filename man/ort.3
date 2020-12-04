@@ -114,7 +114,26 @@ A possibly-empty queue of user-defined enumerations.
 .It Va struct bitfq bq
 A possibly-empty queue of user-defined bitfields.
 .It Va struct roleq rq
-A possibly-empty queue of roles.
+A possibly-empty queue of top-level roles.
+If non-empty, this consists of only the
+.Qq all ,
+.Qq none ,
+and
+.Qq default
+roles: other roles are children to those as defined in the
+.Va subrq
+queue in each role.
+These use the
+.Va entries
+queue macro variable in
+.Vt struct role .
+If empty, role-sensitive code should not be produced.
+.It Va struct roleq arq
+A possibly-empty queue of all roles.
+These use the
+.Va allentries
+queue macro variable in
+.Vt struct role .
 If empty, role-sensitive code should not be produced.
 .It Va char **langs
 All languages used by the exported labels.
@@ -544,6 +563,9 @@ If
 this is a top-level role.
 .It Va struct roleq subrq
 A possibly-empty queue of inheriting roles.
+These use the
+.Va entries
+queue macro variable.
 .It Va struct pos pos
 Parse position.
 .El

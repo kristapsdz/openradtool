@@ -178,18 +178,9 @@ parse_free_enum(struct enm *e)
 	free(e);
 }
 
-/*
- * Recursively frees all roles within "r".
- */
 static void
 parse_free_role(struct role *r)
 {
-	struct role	*rr;
-
-	while ((rr = TAILQ_FIRST(&r->subrq)) != NULL) {
-		TAILQ_REMOVE(&r->subrq, rr, entries);
-		parse_free_role(rr);
-	}
 
 	free(r->doc);
 	free(r->name);
@@ -365,8 +356,8 @@ ort_config_free(struct config *cfg)
 		parse_free_enum(e);
 	}
 
-	while ((r = TAILQ_FIRST(&cfg->rq)) != NULL) {
-		TAILQ_REMOVE(&cfg->rq, r, entries);
+	while ((r = TAILQ_FIRST(&cfg->arq)) != NULL) {
+		TAILQ_REMOVE(&cfg->rq, r, allentries);
 		parse_free_role(r);
 	}
 

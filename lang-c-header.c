@@ -714,39 +714,33 @@ gen_func_close(const struct config *cfg)
 }
 
 /*
- * Recursively list all of our roles as ROLE_xxx, where "xxx" is the
- * lowercased name of the role.
- * Don't print out anything for the "all" role, which may never be
- * entered per se.
+ * List a role as ROLE_xxx, where "xxx" is the lowercased name of the
+ * role.  Don't print out anything for the "all" role, which may never
+ * be entered.
  */
 static void
 gen_role(const struct role *r, int *nf)
 {
-	const struct role *rr;
-	int	    suppress = 0;
 
-	if (strcmp(r->name, "all"))  {
-		if (*nf)
-			puts(",");
-		else
-			*nf = 1;
-	} else
-		suppress = 1;
+	if (strcmp(r->name, "all") == 0)
+		return;
 
-	if (0 == strcmp(r->name, "default"))
+	if (*nf)
+		puts(",");
+	else
+		*nf = 1;
+
+	if (strcmp(r->name, "default") == 0)
 		print_commentt(1, COMMENT_C,
 			"The default role.\n"
 			"This is assigned when db_open() is called.\n"
 			"It should be limited only to those "
 			"functions required to narrow the role.");
-	else if (0 == strcmp(r->name, "none"))
+	else if (strcmp(r->name, "none") == 0)
 		print_commentt(1, COMMENT_C,
 			"Role that isn't allowed to do anything.");
 
-	if ( ! suppress)
-		printf("\tROLE_%s", r->name);
-	TAILQ_FOREACH(rr, &r->subrq, entries)
-		gen_role(rr, nf);
+	printf("\tROLE_%s", r->name);
 }
 
 /*
@@ -787,7 +781,7 @@ gen_c_header(const struct config *cfg, const char *guard, int json,
 			"Roles may then be set using the "
 			"ort_role() function.");
 		puts("enum\tort_role {");
-		TAILQ_FOREACH(r, &cfg->rq, entries)
+		TAILQ_FOREACH(r, &cfg->arq, allentries)
 			gen_role(r, &i);
 		puts("\n"
 		     "};\n"

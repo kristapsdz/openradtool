@@ -385,30 +385,18 @@ resolve_field_enum(struct config *cfg, struct field_enum *r)
 	return 0;
 }
 
-/*
- * Recursively look up "name" in the queue "rq" and all of its
- * descendents.
- * Returns the role or NULL if none were found.
- */
-static struct role *
-role_lookup(struct roleq *rq, const char *name)
-{
-	struct role	*r, *res;
-
-	TAILQ_FOREACH(r, rq, entries)
-		if (strcasecmp(r->name, name) == 0)
-			return r;
-		else if ((res = role_lookup(&r->subrq, name)) != NULL)
-			return res;
-
-	return NULL;
-}
-
 static int
 resolve_struct_role(struct config *cfg, struct struct_role *r)
 {
+	struct role	*rr;
 
-	if ((r->result->role = role_lookup(&cfg->rq, r->name)) == NULL)
+	TAILQ_FOREACH(rr, &cfg->arq, allentries) 
+		if (strcasecmp(rr->name, r->name) == 0) {
+			r->result->role = rr;
+			break;
+		}
+
+	if (r->result->role == NULL)
 		gen_errx(cfg, &r->result->pos, "unknown role");
 	return r->result->role != NULL;
 }

@@ -1,0 +1,4 @@
+--- regress/diff/roles-del-empty.old.ort
++++ regress/diff/roles-del-empty.new.ort
+@@ roles @@
+- roles regress/diff/roles-del-empty.old.ort:1:5

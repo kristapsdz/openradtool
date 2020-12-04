@@ -542,19 +542,16 @@ parse_write_rolemap(struct writer *w, const struct rolemap *p)
 	case ROLEMAP_ITERATE:
 	case ROLEMAP_LIST:
 	case ROLEMAP_SEARCH:
-		if (p->s != NULL &&
-		    !wprint(w, " %s", p->s->name))
+		if (p->s != NULL && !wprint(w, " %s", p->s->name))
 			return 0;
 		break;
 	case ROLEMAP_DELETE:
 	case ROLEMAP_UPDATE:
-		if (p->u != NULL &&
-		    !wprint(w, " %s", p->u->name))
+		if (p->u != NULL && !wprint(w, " %s", p->u->name))
 			return 0;
 		break;
 	case ROLEMAP_NOEXPORT:
-		if (p->f != NULL &&
-		    !wprint(w, " %s", p->f->name))
+		if (p->f != NULL && !wprint(w, " %s", p->f->name))
 			return 0;
 		break;
 	default:
@@ -571,41 +568,40 @@ parse_write_rolemap(struct writer *w, const struct rolemap *p)
 static int
 parse_write_strct(struct writer *w, const struct strct *p)
 {
-	const struct field   *fd;
-	const struct search  *s;
-	const struct update  *u;
-	const struct unique  *n;
-	const struct rolemap *r;
+	const struct field	*fd;
+	const struct search	*s;
+	const struct update	*u;
+	const struct unique	*n;
+	const struct rolemap	*r;
 
-	if ( ! wprint(w, "struct %s {\n", p->name))
+	if (!wprint(w, "struct %s {\n", p->name))
 		return 0;
 
 	TAILQ_FOREACH(fd, &p->fq, entries)
-		if ( ! parse_write_field(w, fd))
+		if (!parse_write_field(w, fd))
 			return 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
-		if ( ! parse_write_query(w, s))
+		if (!parse_write_query(w, s))
 			return 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
-		if ( ! parse_write_modify(w, u))
+		if (!parse_write_modify(w, u))
 			return 0;
 	TAILQ_FOREACH(u, &p->dq, entries)
-		if ( ! parse_write_modify(w, u))
+		if (!parse_write_modify(w, u))
 			return 0;
-	if (NULL != p->ins) 
-		if ( ! wputs(w, "\tinsert;\n"))
-			return 0;
+	if (p->ins != NULL && !wputs(w, "\tinsert;\n"))
+		return 0;
 	TAILQ_FOREACH(n, &p->nq, entries)
-		if ( ! parse_write_unique(w, n))
+		if (!parse_write_unique(w, n))
 			return 0;
 	TAILQ_FOREACH(r, &p->rq, entries) 
-		if ( ! parse_write_rolemap(w, r))
+		if (!parse_write_rolemap(w, r))
 			return 0;
 
-	if (NULL != p->doc) {
-		if ( ! parse_write_comment(w, p->doc, 1))
+	if (p->doc != NULL) {
+		if (!parse_write_comment(w, p->doc, 1))
 			return 0;
-		if ( ! wputs(w, ";\n"))
+		if (!wputs(w, ";\n"))
 			return 0;
 	}
 
@@ -773,30 +769,30 @@ static int
 parse_write_role(struct writer *w, 
 	const struct role *r, size_t tabs)
 {
-	size_t	 i;
-	const struct role *rr;
+	size_t	 		 i;
+	const struct role 	*rr;
 
 	for (i = 0; i < tabs; i++)
-		if ( ! wputc(w, '\t'))
+		if (!wputc(w, '\t'))
 			return 0;
 
-	if ( ! wprint(w, "role %s", r->name))
+	if (!wprint(w, "role %s", r->name))
 		return 0;
 
-	if (NULL != r->doc &&
-	    ! parse_write_comment(w, r->doc, tabs + 1))
+	if (r->doc != NULL && 
+	    !parse_write_comment(w, r->doc, tabs + 1))
 		return 0;
 
 	if (TAILQ_FIRST(&r->subrq)) {
-		if ( ! wputs(w, " {\n"))
+		if (!wputs(w, " {\n"))
 			return 0;
 		TAILQ_FOREACH(rr, &r->subrq, entries)
-			if ( ! parse_write_role(w, rr, tabs + 1))
+			if (!parse_write_role(w, rr, tabs + 1))
 				return 0;
 		for (i = 0; i < tabs; i++)
-			if ( ! wputc(w, '\t'))
+			if (!wputc(w, '\t'))
 				return 0;
-		if ( ! wputc(w, '}'))
+		if (!wputc(w, '}'))
 			return 0;
 	} 
 
@@ -810,16 +806,16 @@ parse_write_role(struct writer *w,
 static int
 parse_write_roles(struct writer *w, const struct config *cfg)
 {
-	const struct role *r, *rr;
+	const struct role	*r, *rr;
 
-	if ( ! wputs(w, "roles {\n"))
+	if (!wputs(w, "roles {\n"))
 		return 0;
 
 	TAILQ_FOREACH(r, &cfg->rq, entries) {
 		if (strcmp(r->name, "all"))
 			continue;
 		TAILQ_FOREACH(rr, &r->subrq, entries) 
-			if ( ! parse_write_role(w, rr, 1))
+			if (!parse_write_role(w, rr, 1))
 				return 0;
 	}
 
@@ -829,17 +825,17 @@ parse_write_roles(struct writer *w, const struct config *cfg)
 int
 ort_write_file(FILE *f, const struct config *cfg)
 {
-	const struct strct *s;
-	const struct enm   *e;
-	const struct bitf  *b;
-	struct writer	    w;
-	int		    rc = 0;
+	const struct strct	*s;
+	const struct enm	*e;
+	const struct bitf	*b;
+	struct writer		 w;
+	int			 rc = 0;
 
 	memset(&w, 0, sizeof(struct writer));
 	w.f = f;
 
 	if (!TAILQ_EMPTY(&cfg->rq))
-		if ( ! parse_write_roles(&w, cfg))
+		if (!parse_write_roles(&w, cfg))
 			goto out;
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)

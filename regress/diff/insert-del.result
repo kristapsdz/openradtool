@@ -1,0 +1,6 @@
+--- regress/diff/insert-del.old.ort
++++ regress/diff/insert-del.new.ort
+@@ strcts @@
+@@ strct regress/diff/insert-del.old.ort:1:10 -> regress/diff/insert-del.new.ort:1:10 @@
+- insert regress/diff/insert-del.old.ort:3:7
+  field regress/diff/insert-del.old.ort:2:9 -> regress/diff/insert-del.new.ort:2:9

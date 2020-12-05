@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2018 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2020 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -89,6 +89,31 @@ ort_write_field_pair(FILE *f, int chnge, const struct diff *d)
 
 	return ort_write_pair(f, chnge, "field",
 		&d->field_pair.from->pos, &d->field_pair.into->pos);
+}
+
+static int
+ort_write_insert(FILE *f, int add, const struct diff *d)
+{
+
+	return ort_write_one(f, add, "insert", &d->strct->ins->pos);
+}
+
+static int
+ort_write_insert_mod(FILE *f, const char *name, const struct diff *d)
+{
+
+	return ort_write_mod(f, name, "insert",
+		&d->strct_pair.from->ins->pos, 
+		&d->strct_pair.into->ins->pos);
+}
+
+static int
+ort_write_insert_pair(FILE *f, int chnge, const struct diff *d)
+{
+
+	return ort_write_pair(f, chnge, "insert",
+		&d->strct_pair.from->ins->pos, 
+		&d->strct_pair.into->ins->pos);
 }
 
 static int
@@ -281,6 +306,32 @@ ort_write_diff_bitidx(FILE *f, const struct diffq *q, const struct diff *d)
 }
 
 static int
+ort_write_diff_insert(FILE *f, const struct diffq *q, const struct diff *d)
+{
+	const struct diff	*dd;
+	int			 rc;
+
+	assert(d->type == DIFF_MOD_INSERT);
+
+	TAILQ_FOREACH(dd, q, entries) {
+		rc = 1;
+		switch (dd->type) {
+		case DIFF_MOD_INSERT_ROLEMAP:
+			if (dd->strct_pair.into != d->strct_pair.into)
+				break;
+			rc = ort_write_insert_mod(f, "rolemap", dd);
+			break;
+		default:
+			break;
+		}
+		if (rc < 0)
+			return 0;
+	}
+
+	return 1;
+}
+
+static int
 ort_write_diff_field(FILE *f, const struct diffq *q, const struct diff *d)
 {
 	const struct diff	*dd;
@@ -393,6 +444,11 @@ ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 	TAILQ_FOREACH(dd, q, entries) {
 		rc = 1;
 		switch (dd->type) {
+		case DIFF_ADD_INSERT:
+			if (dd->strct != d->strct_pair.into)
+				break;
+			rc = ort_write_insert(f, 1, dd);
+			break;
 		case DIFF_ADD_FIELD:
 			if (dd->field->parent != d->strct_pair.into)
 				break;
@@ -408,6 +464,11 @@ ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 				break;
 			rc = ort_write_field(f, 0, dd);
 			break;
+		case DIFF_DEL_INSERT:
+			if (dd->strct != d->strct_pair.from)
+				break;
+			rc = ort_write_insert(f, 0, dd);
+			break;
 		case DIFF_DEL_UNIQUE:
 			if (dd->unique->parent != d->strct_pair.from)
 				break;
@@ -419,6 +480,13 @@ ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 				break;
 			rc = ort_write_field_pair(f, 1, dd);
 			if (!ort_write_diff_field(f, q, dd))
+				return 0;
+			break;
+		case DIFF_MOD_INSERT:
+			if (dd->strct_pair.into != d->strct_pair.into)
+				break;
+			rc = ort_write_insert_pair(f, 1, dd);
+			if (!ort_write_diff_insert(f, q, dd))
 				return 0;
 			break;
 		case DIFF_MOD_STRCT_COMMENT:

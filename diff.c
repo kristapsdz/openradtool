@@ -43,6 +43,44 @@ diff_alloc(struct diffq *q, enum difftype type)
 }
 
 /*
+ * See if the rolemap exists and has the same top-level roles.
+ * Return zero if dissimilar, non-zero if similar.
+ */
+static int
+ort_check_rolemap_roles(const struct rolemap *from,
+	const struct rolemap *into)
+{
+	const struct rref	*rinto, *rfrom;
+	size_t			 fromsz = 0, intosz = 0;
+
+	if (from == NULL && into == NULL)
+		return 1;
+
+	if ((from != NULL && into == NULL) ||
+	    (from == NULL && into != NULL))
+		return 0;
+
+	TAILQ_FOREACH(rfrom, &from->rq, entries)
+		fromsz++;
+	TAILQ_FOREACH(rinto, &into->rq, entries)
+		intosz++;
+
+	if (fromsz != intosz)
+		return 0;
+
+	TAILQ_FOREACH(rfrom, &from->rq, entries) {
+		TAILQ_FOREACH(rinto, &into->rq, entries)
+			if (strcasecmp
+			    (rinto->role->name, rfrom->role->name) == 0)
+				break;
+		if (rinto == NULL)
+			return 0;
+	}
+
+	return 1;
+}
+
+/*
  * Make sure that the queue of labels contains the same data.
  * Return zero if dissimilar, non-zero if similar.
  */
@@ -544,6 +582,35 @@ ort_diff_strct(struct diffq *q,
 	int			 rc;
 	enum difftype		 type = DIFF_SAME_STRCT;
 
+	if (efrom->ins == NULL && einto->ins != NULL) {
+		if ((d = diff_alloc(q, DIFF_ADD_INSERT)) == NULL)
+			return 0;
+		d->strct = einto;
+		type = DIFF_MOD_STRCT;
+	} else if (efrom->ins != NULL && einto->ins == NULL) {
+		if ((d = diff_alloc(q, DIFF_DEL_INSERT)) == NULL)
+			return 0;
+		d->strct = efrom;
+		type = DIFF_MOD_STRCT;
+	} else if (efrom->ins != NULL && einto->ins != NULL) {
+		if (!ort_check_rolemap_roles
+		    (efrom->ins->rolemap, einto->ins->rolemap)) {
+			d = diff_alloc(q, DIFF_MOD_INSERT_ROLEMAP);
+			if (d == NULL)
+				return 0;
+			d->strct_pair.into = einto;
+			d->strct_pair.from = efrom;
+			d = diff_alloc(q, DIFF_MOD_INSERT);
+			type = DIFF_MOD_STRCT;
+		} else
+			d = diff_alloc(q, DIFF_SAME_INSERT);
+
+		if (d == NULL)
+			return 0;
+		d->strct_pair.into = einto;
+		d->strct_pair.from = efrom;
+	}
+
 	TAILQ_FOREACH(iinto, &einto->fq, entries) {
 		TAILQ_FOREACH(ifrom, &efrom->fq, entries)
 			if (strcasecmp(iinto->name, ifrom->name) == 0)
@@ -866,13 +933,16 @@ ort_diff_roles(struct diffq *q,
 		} else if (r->parent == NULL)
 			continue;
 
-		d = diff_alloc(q, ort_diff_role(q, r, rr) ? 
-			DIFF_SAME_ROLE : DIFF_MOD_ROLE);
+		if (!ort_diff_role(q, r, rr)) {
+			type = DIFF_MOD_ROLES;
+			d = diff_alloc(q, DIFF_MOD_ROLE);
+		} else
+			d = diff_alloc(q, DIFF_SAME_ROLE);
+
 		if (d == NULL)
 			return 0;
 		d->role_pair.into = rr;
 		d->role_pair.from = r;
-		type = DIFF_MOD_ROLES;
 	}
 
 	TAILQ_FOREACH(rr, &into->arq, allentries) {

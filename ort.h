@@ -448,15 +448,10 @@ struct	update {
 	TAILQ_ENTRY(update) entries;
 };
 
-/*
- * Simply an insertion.
- * There's nothing complicated here: it indicates that a structure can
- * have the "insert" operation.
- */
 struct	insert {
-	struct rolemap	*rolemap; /* roles assigned to function */
-	struct strct	*parent; /* up-reference */
-	struct pos	 pos; /* parse point */
+	struct rolemap	*rolemap;
+	struct strct	*parent;
+	struct pos	 pos;
 };
 
 struct	strct {
@@ -474,7 +469,7 @@ struct	strct {
 	struct uniqueq	   nq;
 	struct rolemapq	   rq;
 	struct insert	  *ins;
-	struct rolemap	  *arolemap;
+	struct rolemap	  *arolemap; /* during linkage (XXX: remove) */
 	unsigned int	   flags;
 #define	STRCT_HAS_QUEUE	   0x01
 #define	STRCT_HAS_ITERATOR 0x02
@@ -531,6 +526,7 @@ enum	difftype {
 	DIFF_ADD_EITEM,
 	DIFF_ADD_ENM,
 	DIFF_ADD_FIELD,
+	DIFF_ADD_INSERT,
 	DIFF_ADD_ROLE,
 	DIFF_ADD_ROLES,
 	DIFF_ADD_STRCT,
@@ -540,6 +536,7 @@ enum	difftype {
 	DIFF_DEL_EITEM,
 	DIFF_DEL_ENM,
 	DIFF_DEL_FIELD,
+	DIFF_DEL_INSERT,
 	DIFF_DEL_ROLE,
 	DIFF_DEL_ROLES,
 	DIFF_DEL_STRCT,
@@ -568,6 +565,8 @@ enum	difftype {
 	DIFF_MOD_FIELD_REFERENCE,
 	DIFF_MOD_FIELD_TYPE,
 	DIFF_MOD_FIELD_VALIDS,
+	DIFF_MOD_INSERT,
+	DIFF_MOD_INSERT_ROLEMAP,
 	DIFF_MOD_ROLE,
 	DIFF_MOD_ROLE_CHILDREN,
 	DIFF_MOD_ROLE_COMMENT,
@@ -580,6 +579,7 @@ enum	difftype {
 	DIFF_SAME_EITEM,
 	DIFF_SAME_ENM,
 	DIFF_SAME_FIELD,
+	DIFF_SAME_INSERT,
 	DIFF_SAME_ROLE,
 	DIFF_SAME_ROLES,
 	DIFF_SAME_STRCT,

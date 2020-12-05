@@ -55,13 +55,13 @@ static	const char *difftypes[DIFF__MAX] = {
 	NULL, /* DIFF_MOD_BITF_COMMENT */
 	NULL, /* DIFF_MOD_BITF_LABELS */
 	NULL, /* DIFF_MOD_BITIDX */
-	NULL, /* DIFF_MOD_BITIDX_COMMENT */
-	NULL, /* DIFF_MOD_BITIDX_LABELS */
-	NULL, /* DIFF_MOD_BITIDX_VALUE */
+	"comment", /* DIFF_MOD_BITIDX_COMMENT */
+	"labels", /* DIFF_MOD_BITIDX_LABELS */
+	"value", /* DIFF_MOD_BITIDX_VALUE */
 	NULL, /* DIFF_MOD_EITEM */
-	NULL, /* DIFF_MOD_EITEM_COMMENT */
-	NULL, /* DIFF_MOD_EITEM_LABELS */
-	NULL, /* DIFF_MOD_EITEM_VALUE */
+	"comment", /* DIFF_MOD_EITEM_COMMENT */
+	"labels", /* DIFF_MOD_EITEM_LABELS */
+	"value", /* DIFF_MOD_EITEM_VALUE */
 	NULL, /* DIFF_MOD_ENM */
 	NULL, /* DIFF_MOD_ENM_COMMENT */
 	NULL, /* DIFF_MOD_ENM_LABELS */
@@ -79,9 +79,9 @@ static	const char *difftypes[DIFF__MAX] = {
 	NULL, /* DIFF_MOD_INSERT */
 	NULL, /* DIFF_MOD_INSERT_ROLEMAP */
 	NULL, /* DIFF_MOD_ROLE */
-	NULL, /* DIFF_MOD_ROLE_CHILDREN */
-	NULL, /* DIFF_MOD_ROLE_COMMENT */
-	NULL, /* DIFF_MOD_ROLE_PARENT */
+	"children", /* DIFF_MOD_ROLE_CHILDREN */
+	"comment", /* DIFF_MOD_ROLE_COMMENT */
+	"parent", /* DIFF_MOD_ROLE_PARENT */
 	NULL, /* DIFF_MOD_ROLES */
 	NULL, /* DIFF_MOD_STRCT */
 	NULL, /* DIFF_MOD_STRCT_COMMENT */
@@ -339,34 +339,31 @@ static int
 ort_write_diff_bitidx(FILE *f, const struct diffq *q, const struct diff *d)
 {
 	const struct diff	*dd;
-	int			 rc;
 
 	assert(d->type == DIFF_MOD_BITIDX);
 
-	TAILQ_FOREACH(dd, q, entries) {
-		rc = 1;
+	TAILQ_FOREACH(dd, q, entries)
 		switch (dd->type) {
 		case DIFF_MOD_BITIDX_COMMENT:
-			if (dd->bitidx_pair.into != d->bitidx_pair.into)
-				break;
-			rc = ort_write_bitidx_mod(f, "comment", dd);
-			break;
 		case DIFF_MOD_BITIDX_LABELS:
-			if (dd->bitidx_pair.into != d->bitidx_pair.into)
-				break;
-			rc = ort_write_bitidx_mod(f, "labels", dd);
-			break;
 		case DIFF_MOD_BITIDX_VALUE:
-			if (dd->bitidx_pair.into != d->bitidx_pair.into)
+			if (dd->bitidx_pair.into != 
+			     d->bitidx_pair.into &&
+			    dd->bitidx_pair.from != 
+			     d->bitidx_pair.from)
 				break;
-			rc = ort_write_bitidx_mod(f, "value", dd);
+			assert(dd->bitidx_pair.into ==
+				d->bitidx_pair.into);
+			assert(dd->bitidx_pair.from ==
+				d->bitidx_pair.from);
+			assert(difftypes[dd->type] != NULL);
+			if (ort_write_bitidx_mod
+			    (f, difftypes[dd->type], dd) < 0)
+				return 0;
 			break;
 		default:
 			break;
 		}
-		if (rc < 0)
-			return 0;
-	}
 
 	return 1;
 }
@@ -397,6 +394,9 @@ ort_write_diff_insert(FILE *f, const struct diffq *q, const struct diff *d)
 	return 1;
 }
 
+/*
+ * Return zero on failure, non-zero on success.
+ */
 static int
 ort_write_diff_field(FILE *f, const struct diffq *q, const struct diff *d)
 {
@@ -435,42 +435,43 @@ ort_write_diff_field(FILE *f, const struct diffq *q, const struct diff *d)
 	return 1;
 }
 
+/*
+ * Return zero on failure, non-zero on success.
+ */
 static int
 ort_write_diff_eitem(FILE *f, const struct diffq *q, const struct diff *d)
 {
 	const struct diff	*dd;
-	int			 rc;
 
 	assert(d->type == DIFF_MOD_EITEM);
 
-	TAILQ_FOREACH(dd, q, entries) {
-		rc = 1;
+	TAILQ_FOREACH(dd, q, entries)
 		switch (dd->type) {
 		case DIFF_MOD_EITEM_COMMENT:
-			if (dd->eitem_pair.into != d->eitem_pair.into)
-				break;
-			rc = ort_write_eitem_mod(f, "comment", dd);
-			break;
 		case DIFF_MOD_EITEM_LABELS:
-			if (dd->eitem_pair.into != d->eitem_pair.into)
-				break;
-			rc = ort_write_eitem_mod(f, "labels", dd);
-			break;
 		case DIFF_MOD_EITEM_VALUE:
-			if (dd->eitem_pair.into != d->eitem_pair.into)
+			if (dd->eitem_pair.into != d->eitem_pair.into &&
+			    dd->eitem_pair.from != d->eitem_pair.from)
 				break;
-			rc = ort_write_eitem_mod(f, "value", dd);
+			assert(dd->eitem_pair.into == 
+				d->eitem_pair.into);
+			assert(dd->eitem_pair.from == 
+				d->eitem_pair.from);
+			assert(difftypes[dd->type] != NULL);
+			if (ort_write_eitem_mod
+			    (f, difftypes[dd->type], dd) < 0)
+				return 0;
 			break;
 		default:
 			break;
 		}
-		if (rc < 0)
-			return 0;
-	}
 
 	return 1;
 }
 
+/*
+ * Return zero on failure, non-zero on success.
+ */
 static int
 ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 {
@@ -483,34 +484,28 @@ ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 		rc = 1;
 		switch (dd->type) {
 		case DIFF_ADD_INSERT:
-			if (dd->strct != d->strct_pair.into)
-				break;
-			rc = ort_write_insert(f, 1, dd);
+			if (dd->strct == d->strct_pair.into)
+				rc = ort_write_insert(f, 1, dd);
 			break;
 		case DIFF_ADD_FIELD:
-			if (dd->field->parent != d->strct_pair.into)
-				break;
-			rc = ort_write_field(f, 1, dd);
+			if (dd->field->parent == d->strct_pair.into)
+				rc = ort_write_field(f, 1, dd);
 			break;
 		case DIFF_ADD_UNIQUE:
-			if (dd->unique->parent != d->strct_pair.into)
-				break;
-			rc = ort_write_unique(f, 1, dd);
+			if (dd->unique->parent == d->strct_pair.into)
+				rc = ort_write_unique(f, 1, dd);
 			break;
 		case DIFF_DEL_FIELD:
-			if (dd->field->parent != d->strct_pair.from)
-				break;
-			rc = ort_write_field(f, 0, dd);
+			if (dd->field->parent == d->strct_pair.from)
+				rc = ort_write_field(f, 0, dd);
 			break;
 		case DIFF_DEL_INSERT:
-			if (dd->strct != d->strct_pair.from)
-				break;
-			rc = ort_write_insert(f, 0, dd);
+			if (dd->strct == d->strct_pair.from)
+				rc = ort_write_insert(f, 0, dd);
 			break;
 		case DIFF_DEL_UNIQUE:
-			if (dd->unique->parent != d->strct_pair.from)
-				break;
-			rc = ort_write_unique(f, 0, dd);
+			if (dd->unique->parent == d->strct_pair.from)
+				rc = ort_write_unique(f, 0, dd);
 			break;
 		case DIFF_MOD_FIELD:
 			if (dd->field_pair.into->parent != 
@@ -528,9 +523,8 @@ ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 				return 0;
 			break;
 		case DIFF_MOD_STRCT_COMMENT:
-			if (dd->strct_pair.into != d->strct_pair.into)
-				break;
-			rc = ort_write_strct_mod(f, "comment", dd);
+			if (dd->strct_pair.into == d->strct_pair.into)
+				rc = ort_write_strct_mod(f, "comment", dd);
 			break;
 		case DIFF_SAME_FIELD:
 			if (dd->field_pair.into->parent != 
@@ -548,6 +542,9 @@ ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 	return 1;
 }
 
+/*
+ * Return zero on failure, non-zero on success.
+ */
 static int
 ort_write_diff_bitf(FILE *f, const struct diffq *q, const struct diff *d)
 {
@@ -603,6 +600,9 @@ ort_write_diff_bitf(FILE *f, const struct diffq *q, const struct diff *d)
 	return 1;
 }
 
+/*
+ * Return zero on failure, non-zero on success.
+ */
 static int
 ort_write_diff_enm(FILE *f, const struct diffq *q, const struct diff *d)
 {
@@ -740,34 +740,29 @@ static int
 ort_write_diff_role(FILE *f, const struct diffq *q, const struct diff *d)
 {
 	const struct diff	*dd;
-	int			 rc;
 
 	assert(d->type == DIFF_MOD_ROLE);
 
-	TAILQ_FOREACH(dd, q, entries) {
-		rc = 1;
+	TAILQ_FOREACH(dd, q, entries)
 		switch (dd->type) {
 		case DIFF_MOD_ROLE_COMMENT:
-			if (dd->role_pair.into != d->role_pair.into)
-				break;
-			rc = ort_write_role_mod(f, "comment", dd);
-			break;
 		case DIFF_MOD_ROLE_PARENT:
-			if (dd->role_pair.into != d->role_pair.into)
-				break;
-			rc = ort_write_role_mod(f, "parent", dd);
-			break;
 		case DIFF_MOD_ROLE_CHILDREN:
-			if (dd->role_pair.into != d->role_pair.into)
+			if (dd->role_pair.into != d->role_pair.into &&
+			    dd->role_pair.from != d->role_pair.from)
 				break;
-			rc = ort_write_role_mod(f, "children", dd);
+			assert(dd->role_pair.into == 
+				d->role_pair.into);
+			assert(dd->role_pair.from == 
+				d->role_pair.from);
+			assert(difftypes[dd->type] != NULL);
+			if (ort_write_role_mod
+			    (f, difftypes[dd->type], dd) < 0)
+				return 0;
 			break;
 		default:
 			break;
 		}
-		if (rc < 0)
-			return 0;
-	}
 
 	return 1;
 }

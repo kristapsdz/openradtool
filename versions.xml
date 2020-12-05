@@ -9,9 +9,10 @@
 		</header>
 		<aside>
 			<p>
-				Export role changes in
+				Export changes to the <code>roles</code> statement in
 				<a href="ort_diff.3.html">ort_diff(3)</a>
 				results.
+				Do the same for <code>insert</code> statements.
 			</p>
 		</aside>
 	</article>

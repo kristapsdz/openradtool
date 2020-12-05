@@ -30,6 +30,72 @@
 
 #include "ort.h"
 
+static	const char *difftypes[DIFF__MAX] = {
+	NULL, /* DIFF_ADD_BITF */
+	NULL, /* DIFF_ADD_BITIDX */
+	NULL, /* DIFF_ADD_EITEM */
+	NULL, /* DIFF_ADD_ENM */
+	NULL, /* DIFF_ADD_FIELD */
+	NULL, /* DIFF_ADD_INSERT */
+	NULL, /* DIFF_ADD_ROLE */
+	NULL, /* DIFF_ADD_ROLES */
+	NULL, /* DIFF_ADD_STRCT */
+	NULL, /* DIFF_ADD_UNIQUE */
+	NULL, /* DIFF_DEL_BITF */
+	NULL, /* DIFF_DEL_BITIDX */
+	NULL, /* DIFF_DEL_EITEM */
+	NULL, /* DIFF_DEL_ENM */
+	NULL, /* DIFF_DEL_FIELD */
+	NULL, /* DIFF_DEL_INSERT */
+	NULL, /* DIFF_DEL_ROLE */
+	NULL, /* DIFF_DEL_ROLES */
+	NULL, /* DIFF_DEL_STRCT */
+	NULL, /* DIFF_DEL_UNIQUE */
+	NULL, /* DIFF_MOD_BITF */
+	NULL, /* DIFF_MOD_BITF_COMMENT */
+	NULL, /* DIFF_MOD_BITF_LABELS */
+	NULL, /* DIFF_MOD_BITIDX */
+	NULL, /* DIFF_MOD_BITIDX_COMMENT */
+	NULL, /* DIFF_MOD_BITIDX_LABELS */
+	NULL, /* DIFF_MOD_BITIDX_VALUE */
+	NULL, /* DIFF_MOD_EITEM */
+	NULL, /* DIFF_MOD_EITEM_COMMENT */
+	NULL, /* DIFF_MOD_EITEM_LABELS */
+	NULL, /* DIFF_MOD_EITEM_VALUE */
+	NULL, /* DIFF_MOD_ENM */
+	NULL, /* DIFF_MOD_ENM_COMMENT */
+	NULL, /* DIFF_MOD_ENM_LABELS */
+	NULL, /* DIFF_MOD_FIELD */
+	"actions", /* DIFF_MOD_FIELD_ACTIONS */
+	"bitf", /* DIFF_MOD_FIELD_BITF */
+	"comment", /* DIFF_MOD_FIELD_COMMENT */
+	"def", /* DIFF_MOD_FIELD_DEF */
+	"enum", /* DIFF_MOD_FIELD_ENM */
+	"flags", /* DIFF_MOD_FIELD_FLAGS */
+	"ref", /* DIFF_MOD_FIELD_REFERENCE */
+	"rolemap", /* DIFF_MOD_FIELD_ROLEMAP */
+	"type", /* DIFF_MOD_FIELD_TYPE */
+	"valids", /* DIFF_MOD_FIELD_VALIDS */
+	NULL, /* DIFF_MOD_INSERT */
+	NULL, /* DIFF_MOD_INSERT_ROLEMAP */
+	NULL, /* DIFF_MOD_ROLE */
+	NULL, /* DIFF_MOD_ROLE_CHILDREN */
+	NULL, /* DIFF_MOD_ROLE_COMMENT */
+	NULL, /* DIFF_MOD_ROLE_PARENT */
+	NULL, /* DIFF_MOD_ROLES */
+	NULL, /* DIFF_MOD_STRCT */
+	NULL, /* DIFF_MOD_STRCT_COMMENT */
+	NULL, /* DIFF_SAME_BITF */
+	NULL, /* DIFF_SAME_BITIDX */
+	NULL, /* DIFF_SAME_EITEM */
+	NULL, /* DIFF_SAME_ENM */
+	NULL, /* DIFF_SAME_FIELD */
+	NULL, /* DIFF_SAME_INSERT */
+	NULL, /* DIFF_SAME_ROLE */
+	NULL, /* DIFF_SAME_ROLES */
+	NULL, /* DIFF_SAME_STRCT */
+};
+
 static int
 ort_write_one(FILE *f, int add, const char *name, const struct pos *pos)
 {
@@ -335,64 +401,36 @@ static int
 ort_write_diff_field(FILE *f, const struct diffq *q, const struct diff *d)
 {
 	const struct diff	*dd;
-	int			 rc;
 
 	assert(d->type == DIFF_MOD_FIELD);
 
-	TAILQ_FOREACH(dd, q, entries) {
-		rc = 1;
+	TAILQ_FOREACH(dd, q, entries)
 		switch (dd->type) {
 		case DIFF_MOD_FIELD_ACTIONS:
-			if (dd->field_pair.into != d->field_pair.into)
-				break;
-			rc = ort_write_field_mod(f, "actions", dd);
-			break;
 		case DIFF_MOD_FIELD_BITF:
-			if (dd->field_pair.into != d->field_pair.into)
-				break;
-			rc = ort_write_field_mod(f, "bitf", dd);
-			break;
 		case DIFF_MOD_FIELD_COMMENT:
-			if (dd->field_pair.into != d->field_pair.into)
-				break;
-			rc = ort_write_field_mod(f, "comment", dd);
-			break;
 		case DIFF_MOD_FIELD_DEF:
-			if (dd->field_pair.into != d->field_pair.into)
-				break;
-			rc = ort_write_field_mod(f, "def", dd);
-			break;
 		case DIFF_MOD_FIELD_ENM:
-			if (dd->field_pair.into != d->field_pair.into)
-				break;
-			rc = ort_write_field_mod(f, "enum", dd);
-			break;
 		case DIFF_MOD_FIELD_FLAGS:
-			if (dd->field_pair.into != d->field_pair.into)
-				break;
-			rc = ort_write_field_mod(f, "flags", dd);
-			break;
 		case DIFF_MOD_FIELD_REFERENCE:
-			if (dd->field_pair.into != d->field_pair.into)
-				break;
-			rc = ort_write_field_mod(f, "ref", dd);
-			break;
+		case DIFF_MOD_FIELD_ROLEMAP:
 		case DIFF_MOD_FIELD_TYPE:
-			if (dd->field_pair.into != d->field_pair.into)
-				break;
-			rc = ort_write_field_mod(f, "type", dd);
-			break;
 		case DIFF_MOD_FIELD_VALIDS:
-			if (dd->field_pair.into != d->field_pair.into)
+			if (dd->field_pair.into != d->field_pair.into &&
+			    dd->field_pair.from != d->field_pair.from)
 				break;
-			rc = ort_write_field_mod(f, "valids", dd);
+			assert(dd->field_pair.into == 
+				d->field_pair.into);
+			assert(dd->field_pair.from == 
+				d->field_pair.from);
+			assert(difftypes[dd->type] != NULL);
+			if (ort_write_field_mod
+			    (f, difftypes[dd->type], dd) < 0)
+				return 0;
 			break;
 		default:
 			break;
 		}
-		if (rc < 0)
-			return 0;
-	}
 
 	return 1;
 }

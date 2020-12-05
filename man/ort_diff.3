@@ -318,6 +318,7 @@ This stipulates that one or more of
 .Dv DIFF_MOD_FIELD_ENM ,
 .Dv DIFF_MOD_FIELD_FLAGS ,
 .Dv DIFF_MOD_FIELD_REFERENCE ,
+.Dv DIFF_MOD_FIELD_ROLEMAP ,
 .Dv DIFF_MOD_FIELD_TYPE ,
 or
 .Dv DIFF_MOD_FIELD_VALIDS
@@ -396,6 +397,15 @@ and
 There are three reasons this might occur: gaining or losing reference status,
 source of a local reference changing, target of a local or remote reference
 changing.
+.It Dv DIFF_MOD_FIELD_ROLEMAP
+The
+.Va rolemap
+field of a
+.Vt "struct field"
+changed between
+.Fa from
+and
+.Fa into .
 .It Dv DIFF_MOD_FIELD_TYPE
 The
 .Va type
@@ -625,6 +635,7 @@ Set by
 .Dv DIFF_MOD_FIELD_ENM ,
 .Dv DIFF_MOD_FIELD_FLAGS ,
 .Dv DIFF_MOD_FIELD_REFERENCE ,
+.Dv DIFF_MOD_FIELD_ROLEMAP ,
 .Dv DIFF_MOD_FIELD_TYPE ,
 .Dv DIFF_MOD_FIELD_VALIDS ,
 and

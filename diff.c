@@ -272,6 +272,14 @@ ort_diff_field(struct diffq *q,
 
 	assert(strcasecmp(ifrom->name, iinto->name) == 0);
 
+	if (!ort_check_rolemap_roles(ifrom->rolemap, iinto->rolemap)) {
+		if ((d = diff_alloc(q, DIFF_MOD_FIELD_ROLEMAP)) == NULL)
+			return -1;
+		d->field_pair.from = ifrom;
+		d->field_pair.into = iinto;
+		type = DIFF_MOD_FIELD;
+	}
+
 	if (ifrom->type != iinto->type) {
 		if ((d = diff_alloc(q, DIFF_MOD_FIELD_TYPE)) == NULL)
 			return -1;

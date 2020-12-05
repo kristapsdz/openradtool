@@ -1,0 +1,12 @@
+roles {
+	role foo;
+	role bar;
+};
+
+struct foo {
+	field bar;
+	field id int rowid;
+	roles foo {
+		noexport id;
+	};
+};

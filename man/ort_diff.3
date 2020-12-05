@@ -84,6 +84,11 @@ A
 .Vt "struct field"
 was added to
 .Fa into .
+.It Dv DIFF_ADD_INSERT
+A
+.Vt "struct insert"
+was added to
+.Fa into .
 .It Dv DIFF_ADD_ROLE
 A
 .Vt "struct role"
@@ -125,6 +130,11 @@ was removed from
 .It Dv DIFF_DEL_FIELD
 A
 .Vt "struct field"
+was removed from
+.Fa from .
+.It Dv DIFF_DEL_INSERT
+A
+.Vt "struct insert"
 was removed from
 .Fa from .
 .It Dv DIFF_DEL_ROLE
@@ -404,6 +414,25 @@ changed between
 .Fa from
 and
 .Fa into .
+.It Dv DIFF_MOD_INSERT
+A
+.Vt "struct insert"
+changed between
+.Fa from
+and
+.Fa into .
+This stipulates that
+.Dv DIFF_MOD_INSERT_ROLEMAP
+will also be set for the given object.
+.It Dv DIFF_MOD_INSERT_ROLEMAP
+One or more roles in the
+.Va rolemap
+queue of a
+.Vt "struct insert"
+changed between
+.Fa from
+and
+.Fa into .
 .It Dv DIFF_MOD_ROLE
 A
 .Vt "struct role"
@@ -466,10 +495,13 @@ and
 .Fa into .
 This stipulates that one or more of
 .Dv DIFF_ADD_FIELD ,
+.Dv DIFF_ADD_INSERT ,
 .Dv DIFF_ADD_UNIQUE ,
 .Dv DIFF_DEL_FIELD ,
+.Dv DIFF_DEL_INSERT ,
 .Dv DIFF_DEL_UNIQUE ,
 .Dv DIFF_MOD_FIELD ,
+.Dv DIFF_MOD_INSERT ,
 or
 .Dv DIFF_MOD_STRCT_COMMENT ,
 will also be set for the given object.
@@ -627,13 +659,18 @@ and
 .Dv DIFF_SAME_ROLE .
 .It Va "const struct strct *strct"
 Set by
-.Dv DIFF_ADD_STRCT
+.Dv DIFF_ADD_INSERT ,
+.Dv DIFF_ADD_STRCT ,
+.Dv DIFF_DEL_INSERT .
 and
 .Dv DIFF_DEL_STRCT .
 .It Va "struct diff_strct strct_pair"
 Set by
+.Dv DIFF_MOD_INSERT ,
+.Dv DIFF_MOD_INSERT_ROLEMAP ,
 .Dv DIFF_MOD_STRCT ,
 .Dv DIFF_MOD_STRCT_COMMENT ,
+.Dv DIFF_SAME_INSERT ,
 and
 .Dv DIFF_SAME_FIELD .
 .It Va "const struct unique *unique"
@@ -645,15 +682,7 @@ and
 .El
 .Pp
 A configuration that has not changed at all will consists solely of
-.Dv DIFF_SAME_BITF ,
-.Dv DIFF_SAME_BITIDX ,
-.Dv DIFF_SAME_ENM ,
-.Dv DIFF_SAME_EITEM ,
-.Dv DIFF_SAME_FIELD ,
-.Dv DIFF_SAME_ROLE ,
-.Dv DIFF_SAME_ROLES ,
-and
-.Dv DIFF_SAME_STRCT
+.Dv DIFF_SAME_xxxx
 entries.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT

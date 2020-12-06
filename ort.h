@@ -531,6 +531,7 @@ enum	difftype {
 	DIFF_ADD_ROLES,
 	DIFF_ADD_STRCT,
 	DIFF_ADD_UNIQUE,
+	DIFF_ADD_UPDATE,
 	DIFF_DEL_BITF,
 	DIFF_DEL_BITIDX,
 	DIFF_DEL_EITEM,
@@ -541,6 +542,7 @@ enum	difftype {
 	DIFF_DEL_ROLES,
 	DIFF_DEL_STRCT,
 	DIFF_DEL_UNIQUE,
+	DIFF_DEL_UPDATE,
 	DIFF_MOD_BITF,
 	DIFF_MOD_BITF_COMMENT,
 	DIFF_MOD_BITF_LABELS,
@@ -575,6 +577,10 @@ enum	difftype {
 	DIFF_MOD_ROLES,
 	DIFF_MOD_STRCT,
 	DIFF_MOD_STRCT_COMMENT,
+	DIFF_MOD_UPDATE,
+	DIFF_MOD_UPDATE_COMMENT,
+	DIFF_MOD_UPDATE_PARAMS,
+	DIFF_MOD_UPDATE_ROLEMAP,
 	DIFF_SAME_BITF,
 	DIFF_SAME_BITIDX,
 	DIFF_SAME_EITEM,
@@ -584,6 +590,7 @@ enum	difftype {
 	DIFF_SAME_ROLE,
 	DIFF_SAME_ROLES,
 	DIFF_SAME_STRCT,
+	DIFF_SAME_UPDATE,
 	DIFF__MAX
 };
 
@@ -610,6 +617,11 @@ struct	diff_bitidx {
 struct	diff_field {
 	const struct field	*from;
 	const struct field	*into;
+};
+
+struct	diff_update {
+	const struct update	*from;
+	const struct update	*into;
 };
 
 struct	diff_role {
@@ -640,6 +652,8 @@ struct	diff {
 		const struct strct	*strct;
 		struct diff_strct	 strct_pair; 
 		const struct unique	*unique;
+		struct diff_update	 update_pair;
+		const struct update	*update;
 	};
 	TAILQ_ENTRY(diff) 	 	 entries;
 };

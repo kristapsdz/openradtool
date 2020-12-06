@@ -117,6 +117,26 @@ ort_check_labels(const struct labelq *from, const struct labelq *into)
 }
 
 /*
+ * See if two urefs are the same.
+ * Return zero on dissimilar, non-zero on similar.
+ */
+static int
+ort_check_urefs(const struct uref *from, const struct uref *into)
+{
+
+	if (strcasecmp(from->field->name, into->field->name))
+		return 0;
+	if (strcasecmp
+	    (from->field->parent->name, into->field->parent->name))
+		return 0;
+	if (from->op != into->op)
+		return 0;
+	if (from->mod != into->mod)
+		return 0;
+	return 1;
+}
+
+/*
  * Make sure that validations queues contain the same constraints.
  * If the fields have changed type, then the queues are considered
  * different if non-empty.
@@ -578,6 +598,214 @@ ort_has_unique(struct diffq *q,
 }
 
 /*
+ * Return <0 on failure, 0 on dissimilar, >0 on similar.
+ */
+static int
+ort_diff_update(struct diffq *q,
+	const struct update *from, const struct update *into)
+{
+	size_t			 fromsz = 0, intosz = 0;
+	struct diff		*d;
+	const struct uref	*fref, *iref;
+	int			 rc = 1;
+
+	/*
+	 * First check if we've changed any of the constraint or
+	 * modifier parameters, which we collectively just call
+	 * parameters.
+	 * Only let one of these 
+	 */
+
+	TAILQ_FOREACH(fref, &from->mrq, entries)
+		fromsz++;
+	TAILQ_FOREACH(iref, &into->mrq, entries)
+		intosz++;
+	if (fromsz != intosz) {
+		d = diff_alloc(q, DIFF_MOD_UPDATE_PARAMS);
+		if (d == NULL)
+			return -1;
+		d->update_pair.from = from;
+		d->update_pair.into = into;
+		rc = 0;
+	}
+
+	TAILQ_FOREACH(fref, &from->crq, entries)
+		fromsz++;
+	TAILQ_FOREACH(iref, &into->crq, entries)
+		intosz++;
+	if (fromsz != intosz && rc) {
+		d = diff_alloc(q, DIFF_MOD_UPDATE_PARAMS);
+		if (d == NULL)
+			return -1;
+		d->update_pair.from = from;
+		d->update_pair.into = into;
+		rc = 0;
+	}
+
+	TAILQ_FOREACH(fref, &from->mrq, entries) {
+		TAILQ_FOREACH(iref, &into->mrq, entries)
+			if (ort_check_urefs(fref, iref))
+				break;
+		if (iref != NULL || !rc)
+			continue;
+		d = diff_alloc(q, DIFF_MOD_UPDATE_PARAMS);
+		if (d == NULL)
+			return -1;
+		d->update_pair.from = from;
+		d->update_pair.into = into;
+		rc = 0;
+	}
+
+	TAILQ_FOREACH(fref, &from->crq, entries) {
+		TAILQ_FOREACH(iref, &into->crq, entries)
+			if (ort_check_urefs(fref, iref))
+				break;
+		if (iref != NULL || !rc)
+			continue;
+		d = diff_alloc(q, DIFF_MOD_UPDATE_PARAMS);
+		if (d == NULL)
+			return -1;
+		d->update_pair.from = from;
+		d->update_pair.into = into;
+		rc = 0;
+	}
+
+	/* Comments. */
+
+	if (!ort_check_comment(from->doc, into->doc)) {
+		d = diff_alloc(q, DIFF_MOD_UPDATE_COMMENT);
+		if (d == NULL)
+			return -1;
+		d->update_pair.from = from;
+		d->update_pair.into = into;
+		rc = 0;
+	}
+
+	/* Rolemap. */
+
+	if (!ort_check_rolemap_roles(from->rolemap, into->rolemap)) {
+		d = diff_alloc(q, DIFF_MOD_UPDATE_ROLEMAP);
+		if (d == NULL)
+			return -1;
+		d->update_pair.from = from;
+		d->update_pair.into = into;
+		rc = 0;
+	}
+
+	return rc;
+}
+
+/*
+ * Return >0 on failure, 0 if dissimilar, >0 if similar.
+ */
+static int
+ort_diff_strct_updateq(struct diffq *q,
+	const struct updateq *fromq, const struct updateq *intoq)
+{
+	const struct update	*fdel, *idel;
+	struct diff		*d;
+	int			 rc = 1, c;
+
+	TAILQ_FOREACH(fdel, fromq, entries) {
+		if (fdel->name == NULL)
+			continue;
+		TAILQ_FOREACH(idel, intoq, entries)
+			if (idel->name != NULL &&
+			    strcasecmp(fdel->name, idel->name) == 0)
+				break;
+		if (idel == NULL) {
+			d = diff_alloc(q, DIFF_DEL_UPDATE);
+			if (d == NULL)
+				return -1;
+			d->update = fdel;
+			rc = 0;
+			continue;
+		}
+		if ((c = ort_diff_update(q, fdel, idel)) < 0)
+			return -1;
+		if (c == 0) {
+			d = diff_alloc(q, DIFF_MOD_UPDATE);
+			if (d == NULL)
+				return -1;
+			d->update_pair.from = fdel;
+			d->update_pair.into = idel;
+			rc = 0;
+		} else {
+			d = diff_alloc(q, DIFF_SAME_UPDATE);
+			if (d == NULL)
+				return -1;
+			d->update_pair.from = fdel;
+			d->update_pair.into = idel;
+		}
+	}
+
+	TAILQ_FOREACH(idel, intoq, entries) {
+		if (idel->name == NULL)
+			continue;
+		TAILQ_FOREACH(fdel, fromq, entries)
+			if (fdel->name != NULL &&
+			    strcasecmp(fdel->name, idel->name) == 0)
+				break;
+		if (fdel == NULL) {
+			d = diff_alloc(q, DIFF_ADD_UPDATE);
+			if (d == NULL)
+				return -1;
+			d->update = idel;
+			rc = 0;
+		}
+	}
+
+	return rc;
+}
+
+/*
+ * Return >0 on failure, 0 if modified, >0 if same.
+ */
+static int
+ort_diff_strct_insert(struct diffq *q,
+	const struct strct *from, const struct strct *into)
+{
+	const struct insert	*fins = from->ins, *iins = into->ins;
+	struct diff		*d;
+
+	if (fins == NULL && iins == NULL)
+		return 1;
+
+	if (fins == NULL && iins != NULL) {
+		if ((d = diff_alloc(q, DIFF_ADD_INSERT)) == NULL)
+			return -1;
+		d->strct = into;
+		return 0;
+	} else if (fins != NULL && iins == NULL) {
+		if ((d = diff_alloc(q, DIFF_DEL_INSERT)) == NULL)
+			return -1;
+		d->strct = from;
+		return 0;
+	} 
+
+	assert(fins != NULL && iins != NULL);
+
+	if (ort_check_rolemap_roles(fins->rolemap, iins->rolemap)) {
+		if ((d = diff_alloc(q, DIFF_SAME_INSERT)) == NULL)
+			return -1;
+		d->strct_pair.into = into;
+		d->strct_pair.from = from;
+		return 1;
+	}
+
+	if ((d = diff_alloc(q, DIFF_MOD_INSERT_ROLEMAP)) == NULL)
+		return -1;
+	d->strct_pair.into = into;
+	d->strct_pair.from = from;
+	if ((d = diff_alloc(q, DIFF_MOD_INSERT)) == NULL)
+		return -1;
+	d->strct_pair.into = into;
+	d->strct_pair.from = from;
+
+	return 0;
+}
+
+/*
  * Return zero on failure, non-zero on success.
  */
 static int
@@ -590,34 +818,28 @@ ort_diff_strct(struct diffq *q,
 	int			 rc;
 	enum difftype		 type = DIFF_SAME_STRCT;
 
-	if (efrom->ins == NULL && einto->ins != NULL) {
-		if ((d = diff_alloc(q, DIFF_ADD_INSERT)) == NULL)
-			return 0;
-		d->strct = einto;
-		type = DIFF_MOD_STRCT;
-	} else if (efrom->ins != NULL && einto->ins == NULL) {
-		if ((d = diff_alloc(q, DIFF_DEL_INSERT)) == NULL)
-			return 0;
-		d->strct = efrom;
-		type = DIFF_MOD_STRCT;
-	} else if (efrom->ins != NULL && einto->ins != NULL) {
-		if (!ort_check_rolemap_roles
-		    (efrom->ins->rolemap, einto->ins->rolemap)) {
-			d = diff_alloc(q, DIFF_MOD_INSERT_ROLEMAP);
-			if (d == NULL)
-				return 0;
-			d->strct_pair.into = einto;
-			d->strct_pair.from = efrom;
-			d = diff_alloc(q, DIFF_MOD_INSERT);
-			type = DIFF_MOD_STRCT;
-		} else
-			d = diff_alloc(q, DIFF_SAME_INSERT);
+	/* Deletes and updates. */
 
-		if (d == NULL)
-			return 0;
-		d->strct_pair.into = einto;
-		d->strct_pair.from = efrom;
-	}
+	if ((rc = ort_diff_strct_updateq
+	    (q, &efrom->uq, &einto->uq)) < 0)
+		return 0;
+	else if (rc == 0)
+		type = DIFF_MOD_STRCT;
+
+	if ((rc = ort_diff_strct_updateq
+	    (q, &efrom->dq, &einto->dq)) < 0)
+		return 0;
+	else if (rc == 0)
+		type = DIFF_MOD_STRCT;
+
+	/* Insertions. */
+
+	if ((rc = ort_diff_strct_insert(q, efrom, einto)) < 0)
+		return 0;
+	else if (rc == 0)
+		type = DIFF_MOD_STRCT;
+
+	/* Field add/del/mod. */
 
 	TAILQ_FOREACH(iinto, &einto->fq, entries) {
 		TAILQ_FOREACH(ifrom, &efrom->fq, entries)
@@ -641,6 +863,8 @@ ort_diff_strct(struct diffq *q,
 		}
 	}
 
+	/* Unique add/del. */
+
 	TAILQ_FOREACH(u, &einto->nq, entries) {
 		if (ort_has_unique(q, u, efrom))
 			continue;
@@ -658,6 +882,8 @@ ort_diff_strct(struct diffq *q,
 		d->unique = u;
 		type = DIFF_MOD_STRCT;
 	}
+
+	/* Comment. */
 
 	if (!ort_check_comment(efrom->doc, einto->doc)) {
 		d = diff_alloc(q, DIFF_MOD_STRCT_COMMENT);

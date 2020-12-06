@@ -1,0 +1,8 @@
+--- regress/diff/update-mod-params-rolemap.old.ort
++++ regress/diff/update-mod-params-rolemap.new.ort
+@@ strcts @@
+@@ strct regress/diff/update-mod-params-rolemap.old.ort:5:10 -> regress/diff/update-mod-params-rolemap.new.ort:5:10 @@
+@@ update regress/diff/update-mod-params-rolemap.old.ort:8:7 -> regress/diff/update-mod-params-rolemap.new.ort:8:7 @@
+! update rolemap regress/diff/update-mod-params-rolemap.old.ort:8:7 -> regress/diff/update-mod-params-rolemap.new.ort:8:7
+  field regress/diff/update-mod-params-rolemap.old.ort:6:10 -> regress/diff/update-mod-params-rolemap.new.ort:6:10
+  field regress/diff/update-mod-params-rolemap.old.ort:7:10 -> regress/diff/update-mod-params-rolemap.new.ort:7:10

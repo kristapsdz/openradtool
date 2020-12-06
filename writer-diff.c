@@ -41,6 +41,7 @@ static	const char *difftypes[DIFF__MAX] = {
 	NULL, /* DIFF_ADD_ROLES */
 	NULL, /* DIFF_ADD_STRCT */
 	NULL, /* DIFF_ADD_UNIQUE */
+	NULL, /* DIFF_ADD_UPDATE */
 	NULL, /* DIFF_DEL_BITF */
 	NULL, /* DIFF_DEL_BITIDX */
 	NULL, /* DIFF_DEL_EITEM */
@@ -51,6 +52,7 @@ static	const char *difftypes[DIFF__MAX] = {
 	NULL, /* DIFF_DEL_ROLES */
 	NULL, /* DIFF_DEL_STRCT */
 	NULL, /* DIFF_DEL_UNIQUE */
+	NULL, /* DIFF_DEL_UPDATE */
 	NULL, /* DIFF_MOD_BITF */
 	NULL, /* DIFF_MOD_BITF_COMMENT */
 	NULL, /* DIFF_MOD_BITF_LABELS */
@@ -85,6 +87,10 @@ static	const char *difftypes[DIFF__MAX] = {
 	NULL, /* DIFF_MOD_ROLES */
 	NULL, /* DIFF_MOD_STRCT */
 	NULL, /* DIFF_MOD_STRCT_COMMENT */
+	NULL, /* DIFF_MOD_UPDATE */
+	"comment", /* DIFF_MOD_UPDATE_COMMENT */
+	"params", /* DIFF_MOD_UPDATE_PARAMS */
+	"rolemap", /* DIFF_MOD_UPDATE_ROLEMAP */
 	NULL, /* DIFF_SAME_BITF */
 	NULL, /* DIFF_SAME_BITIDX */
 	NULL, /* DIFF_SAME_EITEM */
@@ -94,6 +100,7 @@ static	const char *difftypes[DIFF__MAX] = {
 	NULL, /* DIFF_SAME_ROLE */
 	NULL, /* DIFF_SAME_ROLES */
 	NULL, /* DIFF_SAME_STRCT */
+	NULL, /* DIFF_SAME_UPDATE */
 };
 
 static int
@@ -336,6 +343,29 @@ ort_write_eitem_pair(FILE *f, int chnge, const struct diff *d)
 }
 
 static int
+ort_write_update(FILE *f, int add, const struct diff *d)
+{
+
+	return ort_write_one(f, add, "update", &d->update->pos);
+}
+
+static int
+ort_write_update_mod(FILE *f, const char *name, const struct diff *d)
+{
+
+	return ort_write_mod(f, name, "update",
+		&d->update_pair.from->pos, &d->update_pair.into->pos);
+}
+
+static int
+ort_write_update_pair(FILE *f, int chnge, const struct diff *d)
+{
+
+	return ort_write_pair(f, chnge, "update",
+		&d->update_pair.from->pos, &d->update_pair.into->pos);
+}
+
+static int
 ort_write_diff_bitidx(FILE *f, const struct diffq *q, const struct diff *d)
 {
 	const struct diff	*dd;
@@ -368,6 +398,45 @@ ort_write_diff_bitidx(FILE *f, const struct diffq *q, const struct diff *d)
 	return 1;
 }
 
+/*
+ * Return zero on failure, non-zero on success.
+ */
+static int
+ort_write_diff_update(FILE *f, const struct diffq *q, const struct diff *d)
+{
+	const struct diff	*dd;
+
+	assert(d->type == DIFF_MOD_UPDATE);
+
+	TAILQ_FOREACH(dd, q, entries)
+		switch (dd->type) {
+		case DIFF_MOD_UPDATE_COMMENT:
+		case DIFF_MOD_UPDATE_PARAMS:
+		case DIFF_MOD_UPDATE_ROLEMAP:
+			if (dd->update_pair.into != 
+			     d->update_pair.into &&
+			    dd->update_pair.from != 
+			     d->update_pair.from)
+				break;
+			assert(dd->update_pair.into ==
+				d->update_pair.into);
+			assert(dd->update_pair.from ==
+				d->update_pair.from);
+			assert(difftypes[dd->type] != NULL);
+			if (ort_write_update_mod
+			    (f, difftypes[dd->type], dd) < 0)
+				return 0;
+			break;
+		default:
+			break;
+		}
+
+	return 1;
+}
+
+/*
+ * Return zero on failure, non-zero on success.
+ */
 static int
 ort_write_diff_insert(FILE *f, const struct diffq *q, const struct diff *d)
 {
@@ -495,6 +564,10 @@ ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 			if (dd->unique->parent == d->strct_pair.into)
 				rc = ort_write_unique(f, 1, dd);
 			break;
+		case DIFF_ADD_UPDATE:
+			if (dd->update->parent == d->strct_pair.into)
+				rc = ort_write_update(f, 1, dd);
+			break;
 		case DIFF_DEL_FIELD:
 			if (dd->field->parent == d->strct_pair.from)
 				rc = ort_write_field(f, 0, dd);
@@ -506,6 +579,10 @@ ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 		case DIFF_DEL_UNIQUE:
 			if (dd->unique->parent == d->strct_pair.from)
 				rc = ort_write_unique(f, 0, dd);
+			break;
+		case DIFF_DEL_UPDATE:
+			if (dd->update->parent == d->strct_pair.from)
+				rc = ort_write_update(f, 0, dd);
 			break;
 		case DIFF_MOD_FIELD:
 			if (dd->field_pair.into->parent != 
@@ -525,6 +602,14 @@ ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 		case DIFF_MOD_STRCT_COMMENT:
 			if (dd->strct_pair.into == d->strct_pair.into)
 				rc = ort_write_strct_mod(f, "comment", dd);
+			break;
+		case DIFF_MOD_UPDATE:
+			if (dd->update_pair.into->parent != 
+			    d->strct_pair.into)
+				break;
+			rc = ort_write_update_pair(f, 1, dd);
+			if (!ort_write_diff_update(f, q, dd))
+				return 0;
 			break;
 		case DIFF_SAME_FIELD:
 			if (dd->field_pair.into->parent != 

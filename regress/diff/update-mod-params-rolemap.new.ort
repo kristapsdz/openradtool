@@ -1,0 +1,12 @@
+roles {
+	role foo;
+};
+
+struct foo {
+	field foo;
+	field bar;
+	update foo: foo, bar: name xyzzy;
+	roles foo {
+		update xyzzy;
+	};
+};

@@ -107,6 +107,12 @@ A
 .Vt "struct unique"
 was added to
 .Fa into .
+.It Dv DIFF_ADD_UPDATE
+A
+.Vt "struct update"
+was added to
+.Fa into .
+This is raised for both update and delete types.
 .It Dv DIFF_DEL_BITF
 A
 .Vt "struct bitf"
@@ -155,6 +161,12 @@ A
 .Vt "struct unique"
 was removed from
 .Fa from .
+.It Dv DIFF_DEL_UPDATE
+A
+.Vt "struct update"
+was removed from
+.Fa from .
+This is raised for both update and delete types.
 .It Dv DIFF_MOD_BITF
 A
 .Vt "struct bitf"
@@ -507,19 +519,69 @@ This stipulates that one or more of
 .Dv DIFF_ADD_FIELD ,
 .Dv DIFF_ADD_INSERT ,
 .Dv DIFF_ADD_UNIQUE ,
+.Dv DIFF_ADD_UPDATE ,
 .Dv DIFF_DEL_FIELD ,
 .Dv DIFF_DEL_INSERT ,
 .Dv DIFF_DEL_UNIQUE ,
+.Dv DIFF_DEL_UPDATE ,
 .Dv DIFF_MOD_FIELD ,
 .Dv DIFF_MOD_INSERT ,
-or
 .Dv DIFF_MOD_STRCT_COMMENT ,
+or
+.Dv DIFF_MOD_UPDATE
 will also be set for the given object.
 .It Dv DIFF_MOD_STRCT_COMMENT
 The
 .Va doc
 field of a
 .Vt "struct strct"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_UPDATE
+A
+.Vt "struct update"
+changed between
+.Fa from
+and
+.Fa into .
+This is raised for both update and delete types.
+It will only apply to those with a
+.Va name
+that is not
+.Dv NULL .
+This stipulates that one or more of
+.Dv DIFF_MOD_UPDATE_COMMENT ,
+.Dv DIFF_MOD_UPDATE_PARAMS ,
+or
+.Dv DIFF_MOD_UPDATE_ROLEMAP
+will also be set for the given object.
+.It Dv DIFF_MOD_UPDATE_COMMENT
+The
+.Va doc
+field of a
+.Vt "struct update"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_UPDATE_PARAMS
+One or more fields in the
+.Va crq
+or
+.Va mrq
+queue of a
+.Vt "struct update"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_UPDATE_ROLEMAP
+One or more roles in the
+.Va rolemap
+queue of a
+.Vt "struct update"
 changed between
 .Fa from
 and
@@ -558,6 +620,11 @@ did not change.
 The
 .Vt "struct strct"
 did not change.
+.It Dv DIFF_SAME_UPDATE
+The
+.Vt "struct update"
+did not change.
+This is raised for both update and delete types.
 .El
 .Pp
 The returned structure is a queue of
@@ -689,6 +756,19 @@ Set by
 .Dv DIFF_ADD_UNIQUE
 and
 .Dv DIFF_DEL_UNIQUE .
+.It Va "const struct update *update"
+Set by
+.Dv DIFF_ADD_UPDATE
+and
+.Dv DIFF_DEL_UPDATE .
+.It Va "struct diff_update update_pair"
+Set by
+.Dv DIFF_MOD_UPDATE ,
+.Dv DIFF_MOD_UPDATE_COMMENT ,
+.Dv DIFF_MOD_UPDATE_PARAMS ,
+.Dv DIFF_MOD_UPDATE_ROLEMAP ,
+and
+.Dv DIFF_SAME_UPDATE .
 .El
 .El
 .Pp

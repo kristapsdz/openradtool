@@ -1,0 +1,9 @@
+--- regress/diff/update-mod-anon-params.old.ort
++++ regress/diff/update-mod-anon-params.new.ort
+@@ strcts @@
+@@ strct regress/diff/update-mod-anon-params.old.ort:1:10 -> regress/diff/update-mod-anon-params.new.ort:1:10 @@
+- update regress/diff/update-mod-anon-params.old.ort:5:7
++ update regress/diff/update-mod-anon-params.new.ort:5:7
+  field regress/diff/update-mod-anon-params.old.ort:2:10 -> regress/diff/update-mod-anon-params.new.ort:2:10
+  field regress/diff/update-mod-anon-params.old.ort:3:10 -> regress/diff/update-mod-anon-params.new.ort:3:10
+  field regress/diff/update-mod-anon-params.old.ort:4:10 -> regress/diff/update-mod-anon-params.new.ort:4:10

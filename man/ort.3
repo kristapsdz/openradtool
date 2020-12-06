@@ -619,6 +619,70 @@ or
 .Dv ROLEMAP_UPDATE ,
 the deletion or update to receive the assignment.
 .El
+.Ss Updates
+Data may be modified or deleted as defined by
+.Vt struct update ,
+used in
+.Va uq
+and
+.Va dq ,
+respectively, in
+.Vt struct strct .
+.Bl -tag -width Ds -offset indent
+.It Va struct urefq mrq
+Fields that are to be modified (always non-empty in this case), or empty
+for deletion.
+.It Va struct urefq crq
+Constrain what to update or delete by these fields.
+.It Va char *name
+The name of the operation or
+.Dv NULL
+if anonymous.
+.It Va char *doc
+If not
+.Dv NULL ,
+free-form documentation.
+.It Va enum upt type
+Either
+.Dv UP_MODIFY
+to modify data or
+.Dv UP_DELETE
+to delete.
+.It Va struct pos pos
+Parse point.
+.It Va struct strct *parent
+Parent containing the operation.
+.It Va struct rolemap *rolemap
+If not
+.Dv NULL ,
+roles allowed to perform the operation.
+.It Va unsigned int flags
+Set to
+.Dv UPDATE_ALL
+if the operation is an update and all modifier fields were specified by
+leaving the modifier field empty during configuration.
+.El
+.Pp
+Fields by which operations are constrained or modified are defined in
+.Vt struct uref :
+.Bl -tag -width Ds -offset indent
+.It Va enum optype op
+The way in which a field will be constrained.
+This is only applicable to
+.Dv UP_DELETE
+references.
+.It Va enum modtype mod
+How a field will be modified.
+This is only applicable to
+.Dv UP_MODIFY
+references.
+.It Va struct field *field
+The field doing the constraining or modifying.
+.It Va struct pos pos
+Parse point.
+.It Va struct update *parent
+Parent containing the reference.
+.El
 .Ss Inserts
 New data may be inserted as defined by
 .Vt struct insert ,

@@ -553,6 +553,7 @@ that is not
 .Dv NULL .
 This stipulates that one or more of
 .Dv DIFF_MOD_UPDATE_COMMENT ,
+.Dv DIFF_MOD_UPDATE_FLAGS ,
 .Dv DIFF_MOD_UPDATE_PARAMS ,
 or
 .Dv DIFF_MOD_UPDATE_ROLEMAP
@@ -560,6 +561,15 @@ will also be set for the given object.
 .It Dv DIFF_MOD_UPDATE_COMMENT
 The
 .Va doc
+field of a
+.Vt "struct update"
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_UPDATE_FLAGS
+The
+.Va flags
 field of a
 .Vt "struct update"
 changed between
@@ -765,6 +775,7 @@ and
 Set by
 .Dv DIFF_MOD_UPDATE ,
 .Dv DIFF_MOD_UPDATE_COMMENT ,
+.Dv DIFF_MOD_UPDATE_FLAGS ,
 .Dv DIFF_MOD_UPDATE_PARAMS ,
 .Dv DIFF_MOD_UPDATE_ROLEMAP ,
 and

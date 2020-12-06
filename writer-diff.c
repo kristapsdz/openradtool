@@ -89,6 +89,7 @@ static	const char *difftypes[DIFF__MAX] = {
 	NULL, /* DIFF_MOD_STRCT_COMMENT */
 	NULL, /* DIFF_MOD_UPDATE */
 	"comment", /* DIFF_MOD_UPDATE_COMMENT */
+	"flags", /* DIFF_MOD_UPDATE_FLAGS */
 	"params", /* DIFF_MOD_UPDATE_PARAMS */
 	"rolemap", /* DIFF_MOD_UPDATE_ROLEMAP */
 	NULL, /* DIFF_SAME_BITF */
@@ -411,6 +412,7 @@ ort_write_diff_update(FILE *f, const struct diffq *q, const struct diff *d)
 	TAILQ_FOREACH(dd, q, entries)
 		switch (dd->type) {
 		case DIFF_MOD_UPDATE_COMMENT:
+		case DIFF_MOD_UPDATE_FLAGS:
 		case DIFF_MOD_UPDATE_PARAMS:
 		case DIFF_MOD_UPDATE_ROLEMAP:
 			if (dd->update_pair.into != 

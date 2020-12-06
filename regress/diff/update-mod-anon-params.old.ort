@@ -1,0 +1,6 @@
+struct foo {
+	field aaa int;
+	field bbb int;
+	field ccc int;
+	update aaa: bbb;
+};

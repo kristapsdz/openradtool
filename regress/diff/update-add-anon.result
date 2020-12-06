@@ -1,0 +1,6 @@
+--- regress/diff/update-add-anon.old.ort
++++ regress/diff/update-add-anon.new.ort
+@@ strcts @@
+@@ strct regress/diff/update-add-anon.old.ort:1:10 -> regress/diff/update-add-anon.new.ort:1:10 @@
++ update regress/diff/update-add-anon.new.ort:3:7
+  field regress/diff/update-add-anon.old.ort:2:10 -> regress/diff/update-add-anon.new.ort:2:10

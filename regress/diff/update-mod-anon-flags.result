@@ -1,0 +1,8 @@
+--- regress/diff/update-mod-anon-flags.old.ort
++++ regress/diff/update-mod-anon-flags.new.ort
+@@ strcts @@
+@@ strct regress/diff/update-mod-anon-flags.old.ort:1:10 -> regress/diff/update-mod-anon-flags.new.ort:1:10 @@
+- update regress/diff/update-mod-anon-flags.old.ort:4:7
++ update regress/diff/update-mod-anon-flags.new.ort:4:7
+  field regress/diff/update-mod-anon-flags.old.ort:2:10 -> regress/diff/update-mod-anon-flags.new.ort:2:10
+  field regress/diff/update-mod-anon-flags.old.ort:3:10 -> regress/diff/update-mod-anon-flags.new.ort:3:10

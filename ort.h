@@ -387,15 +387,12 @@ struct	search {
 	TAILQ_ENTRY(search) entries;
 };
 
-/*
- * An update or delete reference.
- */
 struct	uref {
-	enum optype	  op; /* for constraints, SQL operator */
-	enum modtype	  mod; /* for modifiers */
-	struct field	 *field; /* resolved field */
-	struct pos	  pos; /* position in parse */
-	struct update	 *parent; /* up-reference */
+	enum optype	  op;
+	enum modtype	  mod;
+	struct field	 *field;
+	struct pos	  pos;
+	struct update	 *parent;
 	TAILQ_ENTRY(uref) entries;
 };
 
@@ -421,30 +418,23 @@ struct	unique {
 	TAILQ_ENTRY(unique) entries;
 };
 
-/*
- * Type of modifier.
- */
 enum	upt {
-	UP_MODIFY = 0, /* generate an "update" entry */
-	UP_DELETE, /* generate a "delete" entry */
+	UP_MODIFY = 0,
+	UP_DELETE,
 	UP__MAX
 };
 
-/*
- * A single update clause consisting of multiple fields to be modified
- * depending upon the constraint fields.
- */
 struct	update {
-	struct urefq	    mrq; /* modified fields or empty for del */
-	struct urefq	    crq; /* constraint chain */
-	char		   *name; /* named or NULL */
-	char		   *doc; /* documentation */
-	enum upt	    type; /* type of update */
-	struct pos	    pos; /* parse point */
-	struct strct	   *parent; /* up-reference */
-	struct rolemap	   *rolemap; /* roles assigned to function */
+	struct urefq	    mrq;
+	struct urefq	    crq;
+	char		   *name;
+	char		   *doc;
+	enum upt	    type;
+	struct pos	    pos;
+	struct strct	   *parent;
+	struct rolemap	   *rolemap;
 	unsigned int	    flags;
-#define	UPDATE_ALL	    0x01 /* UP_MODIFY for all w/"set" */
+#define	UPDATE_ALL	    0x01
 	TAILQ_ENTRY(update) entries;
 };
 
@@ -579,6 +569,7 @@ enum	difftype {
 	DIFF_MOD_STRCT_COMMENT,
 	DIFF_MOD_UPDATE,
 	DIFF_MOD_UPDATE_COMMENT,
+	DIFF_MOD_UPDATE_FLAGS,
 	DIFF_MOD_UPDATE_PARAMS,
 	DIFF_MOD_UPDATE_ROLEMAP,
 	DIFF_SAME_BITF,

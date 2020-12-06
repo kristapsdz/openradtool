@@ -10,9 +10,9 @@
 		<aside>
 			<p>
 				Export changes to the <code>roles</code> statement in
-				<a href="ort_diff.3.html">ort_diff(3)</a>
-				results.
-				Do the same for <code>insert</code> statements.
+				<a href="ort_diff.3.html">ort_diff(3)</a> field results.
+				Also add full support for the <code>insert</code>,
+				<code>update</code>, and <code>delete</code> statements.
 			</p>
 		</aside>
 	</article>

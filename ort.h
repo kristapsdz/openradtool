@@ -256,13 +256,10 @@ struct	rolemap {
 	TAILQ_ENTRY(rolemap) entries;
 };
 
-/*
- * A role reference.
- */
 struct	rref {
-	struct role	 *role; /* role in question */
-	struct pos	  pos; /* parse point */
-	struct rolemap	 *parent; /* which operation */
+	struct role	 *role;
+	struct pos	  pos;
+	struct rolemap	 *parent;
 	TAILQ_ENTRY(rref) entries;
 };
 
@@ -396,25 +393,17 @@ struct	uref {
 	TAILQ_ENTRY(uref) entries;
 };
 
-/*
- * A single field in the local structure that will be part of a unique
- * chain of fields.
- */
 struct	nref {
-	struct field	 *field; /* resolved field */
-	struct pos	  pos; /* position in parse */
-	struct unique	 *parent; /* up-reference */
+	struct field	 *field;
+	struct pos	  pos;
+	struct unique	 *parent;
 	TAILQ_ENTRY(nref) entries;
 };
 
-/*
- * Define a sequence of fields in the given structure that combine to
- * form a unique clause.
- */
 struct	unique {
-	struct nrefq	    nq; /* constraint chain */
-	struct strct	   *parent; /* up-reference */
-	struct pos	    pos; /* position in parse */
+	struct nrefq	    nq;
+	struct strct	   *parent;
+	struct pos	    pos;
 	TAILQ_ENTRY(unique) entries;
 };
 

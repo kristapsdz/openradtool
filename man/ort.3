@@ -387,6 +387,22 @@ this is
 otherwise, it is
 .Va size_t len .
 .El
+.Pp
+Unique data is stipulated on a per-field basis with
+.Dv FIELD_UNIQUE
+or using
+.Vt struct unique
+for the concatenation of multiple fields.
+.Bl -tag -width Ds -offset indent
+.It Va struct nrefq nq
+A queue whose objects consist primarily of
+.Va field ,
+a field in the unique set.
+.It Va struct strct *parent
+The encompassing structure.
+.It Va struct pos pos
+Parse position.
+.El
 .Ss User-defined Data Types
 The data in
 .Vt "struct field"

@@ -1005,8 +1005,15 @@ ort_diff_searchq(struct diffq *q,
 		}
 		if ((c = ort_diff_search(q, sfrom, sinto)) < 0)
 			return -1;
-		else if (c == 0)
+		if (c == 0) {
 			rc = 0;
+			d = diff_alloc(q, DIFF_MOD_SEARCH);
+		} else
+			d = diff_alloc(q, DIFF_SAME_SEARCH);
+		if (d == NULL)
+			return -1;
+		d->search_pair.from = sfrom;
+		d->search_pair.into = sinto;
 	}
 
 	TAILQ_FOREACH(sinto, &into->sq, entries) {

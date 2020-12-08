@@ -347,15 +347,11 @@ enum	stype {
 	STYPE__MAX
 };
 
-/*
- * A "distinct" clause set of fields.
- * This is set for search fields that are returning distinct rows.
- */
 struct	dstnct {
-	char		*fname; /* canonical (dotted) name */
-	struct pos	 pos; /* parse point */
-	struct strct	*strct; /* resolved struct */
-	struct search	*parent; /* search entry */
+	char		*fname;
+	struct pos	 pos;
+	struct strct	*strct;
+	struct search	*parent;
 };
 
 struct	search {

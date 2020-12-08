@@ -824,6 +824,23 @@ but using underscores instead of periods.
 .It Va struct alias *alias
 Resolved alias.
 .El
+.Pp
+The
+.Fa dst
+field of type
+.Vt struct dstnct
+allows results to be returned from unique sub-structures (referenced
+structures).
+.Bl -tag -width Ds -offset indent
+.It Va char *fname
+The canonical dotted name.
+If this is a single dot only, it refers to the current structure.
+.It Va struct pos pos
+.It Va struct strct *strct
+The reference that must be unique.
+.It Va struct search *parent
+The encompassing query.
+.El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

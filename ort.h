@@ -508,6 +508,7 @@ enum	difftype {
 	DIFF_ADD_INSERT,
 	DIFF_ADD_ROLE,
 	DIFF_ADD_ROLES,
+	DIFF_ADD_SEARCH,
 	DIFF_ADD_STRCT,
 	DIFF_ADD_UNIQUE,
 	DIFF_ADD_UPDATE,
@@ -519,6 +520,7 @@ enum	difftype {
 	DIFF_DEL_INSERT,
 	DIFF_DEL_ROLE,
 	DIFF_DEL_ROLES,
+	DIFF_DEL_SEARCH,
 	DIFF_DEL_STRCT,
 	DIFF_DEL_UNIQUE,
 	DIFF_DEL_UPDATE,
@@ -554,6 +556,16 @@ enum	difftype {
 	DIFF_MOD_ROLE_COMMENT,
 	DIFF_MOD_ROLE_PARENT,
 	DIFF_MOD_ROLES,
+	DIFF_MOD_SEARCH,
+	DIFF_MOD_SEARCH_AGGR,
+	DIFF_MOD_SEARCH_COMMENT,
+	DIFF_MOD_SEARCH_DISTINCT,
+	DIFF_MOD_SEARCH_GROUP,
+	DIFF_MOD_SEARCH_LIMIT,
+	DIFF_MOD_SEARCH_OFFSET,
+	DIFF_MOD_SEARCH_ORDER,
+	DIFF_MOD_SEARCH_PARAMS,
+	DIFF_MOD_SEARCH_ROLEMAP,
 	DIFF_MOD_STRCT,
 	DIFF_MOD_STRCT_COMMENT,
 	DIFF_MOD_UPDATE,
@@ -569,6 +581,7 @@ enum	difftype {
 	DIFF_SAME_INSERT,
 	DIFF_SAME_ROLE,
 	DIFF_SAME_ROLES,
+	DIFF_SAME_SEARCH,
 	DIFF_SAME_STRCT,
 	DIFF_SAME_UPDATE,
 	DIFF__MAX
@@ -614,6 +627,11 @@ struct	diff_strct {
 	const struct strct	*into;
 };
 
+struct	diff_search {
+	const struct search	*from;
+	const struct search	*into;
+};
+
 struct	diff {
 	enum difftype	   	 	 type;
 	union {
@@ -629,6 +647,8 @@ struct	diff {
 		struct diff_eitem	 eitem_pair; 
 		const struct role	*role;
 		struct diff_role	 role_pair; 
+		const struct search	*search;
+		struct diff_search	 search_pair; 
 		const struct strct	*strct;
 		struct diff_strct	 strct_pair; 
 		const struct unique	*unique;

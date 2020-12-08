@@ -39,6 +39,7 @@ static	const char *difftypes[DIFF__MAX] = {
 	NULL, /* DIFF_ADD_INSERT */
 	NULL, /* DIFF_ADD_ROLE */
 	NULL, /* DIFF_ADD_ROLES */
+	NULL, /* DIFF_ADD_SEARCH */
 	NULL, /* DIFF_ADD_STRCT */
 	NULL, /* DIFF_ADD_UNIQUE */
 	NULL, /* DIFF_ADD_UPDATE */
@@ -50,6 +51,7 @@ static	const char *difftypes[DIFF__MAX] = {
 	NULL, /* DIFF_DEL_INSERT */
 	NULL, /* DIFF_DEL_ROLE */
 	NULL, /* DIFF_DEL_ROLES */
+	NULL, /* DIFF_DEL_SEARCH */
 	NULL, /* DIFF_DEL_STRCT */
 	NULL, /* DIFF_DEL_UNIQUE */
 	NULL, /* DIFF_DEL_UPDATE */
@@ -85,6 +87,16 @@ static	const char *difftypes[DIFF__MAX] = {
 	"comment", /* DIFF_MOD_ROLE_COMMENT */
 	"parent", /* DIFF_MOD_ROLE_PARENT */
 	NULL, /* DIFF_MOD_ROLES */
+	NULL, /* DIFF_MOD_SEARCH */
+	"aggr", /* DIFF_MOD_SEARCH_AGGR */
+	"comment", /* DIFF_MOD_SEARCH_COMMENT */
+	"distinct", /* DIFF_MOD_SEARCH_DISTINCT */
+	"group", /* DIFF_MOD_SEARCH_GROUP */
+	"limit", /* DIFF_MOD_SEARCH_LIMIT */
+	"offset", /* DIFF_MOD_SEARCH_OFFSET */
+	"order", /* DIFF_MOD_SEARCH_ORDER */
+	"params", /* DIFF_MOD_SEARCH_PARAMS */
+	"rolemap", /* DIFF_MOD_SEARCH_ROLEMAP */
 	NULL, /* DIFF_MOD_STRCT */
 	NULL, /* DIFF_MOD_STRCT_COMMENT */
 	NULL, /* DIFF_MOD_UPDATE */
@@ -100,6 +112,7 @@ static	const char *difftypes[DIFF__MAX] = {
 	NULL, /* DIFF_SAME_INSERT */
 	NULL, /* DIFF_SAME_ROLE */
 	NULL, /* DIFF_SAME_ROLES */
+	NULL, /* DIFF_SAME_SEARCH */
 	NULL, /* DIFF_SAME_STRCT */
 	NULL, /* DIFF_SAME_UPDATE */
 };
@@ -143,6 +156,29 @@ ort_write_unique(FILE *f, int add, const struct diff *d)
 }
 
 static int
+ort_write_search(FILE *f, int add, const struct diff *d)
+{
+
+	return ort_write_one(f, add, "search", &d->search->pos);
+}
+
+static int
+ort_write_search_mod(FILE *f, const struct diff *d)
+{
+
+	return ort_write_mod(f, difftypes[d->type], "search",
+		&d->search_pair.from->pos, &d->search_pair.into->pos);
+}
+
+static int
+ort_write_search_pair(FILE *f, int chnge, const struct diff *d)
+{
+
+	return ort_write_pair(f, chnge, "search",
+		&d->search_pair.from->pos, &d->search_pair.into->pos);
+}
+
+static int
 ort_write_field(FILE *f, int add, const struct diff *d)
 {
 
@@ -150,10 +186,10 @@ ort_write_field(FILE *f, int add, const struct diff *d)
 }
 
 static int
-ort_write_field_mod(FILE *f, const char *name, const struct diff *d)
+ort_write_field_mod(FILE *f, const struct diff *d)
 {
 
-	return ort_write_mod(f, name, "field",
+	return ort_write_mod(f, difftypes[d->type], "field",
 		&d->field_pair.from->pos, &d->field_pair.into->pos);
 }
 
@@ -328,10 +364,10 @@ ort_write_eitem(FILE *f, int add, const struct diff *d)
 }
 
 static int
-ort_write_eitem_mod(FILE *f, const char *name, const struct diff *d)
+ort_write_eitem_mod(FILE *f, const struct diff *d)
 {
 
-	return ort_write_mod(f, name, "eitem",
+	return ort_write_mod(f, difftypes[d->type], "eitem",
 		&d->eitem_pair.from->pos, &d->eitem_pair.into->pos);
 }
 
@@ -469,34 +505,34 @@ ort_write_diff_insert(FILE *f, const struct diffq *q, const struct diff *d)
  * Return zero on failure, non-zero on success.
  */
 static int
-ort_write_diff_field(FILE *f, const struct diffq *q, const struct diff *d)
+ort_write_diff_search(FILE *f,
+	const struct diffq *q, const struct diff *d)
 {
 	const struct diff	*dd;
 
-	assert(d->type == DIFF_MOD_FIELD);
-
+	assert(d->type == DIFF_MOD_SEARCH);
 	TAILQ_FOREACH(dd, q, entries)
 		switch (dd->type) {
-		case DIFF_MOD_FIELD_ACTIONS:
-		case DIFF_MOD_FIELD_BITF:
-		case DIFF_MOD_FIELD_COMMENT:
-		case DIFF_MOD_FIELD_DEF:
-		case DIFF_MOD_FIELD_ENM:
-		case DIFF_MOD_FIELD_FLAGS:
-		case DIFF_MOD_FIELD_REFERENCE:
-		case DIFF_MOD_FIELD_ROLEMAP:
-		case DIFF_MOD_FIELD_TYPE:
-		case DIFF_MOD_FIELD_VALIDS:
-			if (dd->field_pair.into != d->field_pair.into &&
-			    dd->field_pair.from != d->field_pair.from)
+		case DIFF_MOD_SEARCH_AGGR:
+		case DIFF_MOD_SEARCH_COMMENT:
+		case DIFF_MOD_SEARCH_DISTINCT:
+		case DIFF_MOD_SEARCH_GROUP:
+		case DIFF_MOD_SEARCH_LIMIT:
+		case DIFF_MOD_SEARCH_OFFSET:
+		case DIFF_MOD_SEARCH_ORDER:
+		case DIFF_MOD_SEARCH_PARAMS:
+		case DIFF_MOD_SEARCH_ROLEMAP:
+			if (dd->search_pair.into != 
+			     d->search_pair.into &&
+			    dd->search_pair.from != 
+			     d->search_pair.from)
 				break;
-			assert(dd->field_pair.into == 
-				d->field_pair.into);
-			assert(dd->field_pair.from == 
-				d->field_pair.from);
+			assert(dd->search_pair.into == 
+				d->search_pair.into);
+			assert(dd->search_pair.from == 
+				d->search_pair.from);
 			assert(difftypes[dd->type] != NULL);
-			if (ort_write_field_mod
-			    (f, difftypes[dd->type], dd) < 0)
+			if (ort_write_search_mod(f, dd) < 0)
 				return 0;
 			break;
 		default:
@@ -510,27 +546,69 @@ ort_write_diff_field(FILE *f, const struct diffq *q, const struct diff *d)
  * Return zero on failure, non-zero on success.
  */
 static int
-ort_write_diff_eitem(FILE *f, const struct diffq *q, const struct diff *d)
+ort_write_diff_field(FILE *f,
+	const struct diffq *q, const struct diff *d)
+{
+	const struct diff	*dd;
+
+	TAILQ_FOREACH(dd, q, entries)
+		switch (dd->type) {
+		case DIFF_MOD_FIELD_ACTIONS:
+		case DIFF_MOD_FIELD_BITF:
+		case DIFF_MOD_FIELD_COMMENT:
+		case DIFF_MOD_FIELD_DEF:
+		case DIFF_MOD_FIELD_ENM:
+		case DIFF_MOD_FIELD_FLAGS:
+		case DIFF_MOD_FIELD_REFERENCE:
+		case DIFF_MOD_FIELD_ROLEMAP:
+		case DIFF_MOD_FIELD_TYPE:
+		case DIFF_MOD_FIELD_VALIDS:
+			if (dd->field_pair.into != 
+			     d->field_pair.into &&
+			    dd->field_pair.from != 
+			     d->field_pair.from)
+				break;
+			assert(dd->field_pair.into == 
+				d->field_pair.into);
+			assert(dd->field_pair.from == 
+				d->field_pair.from);
+			assert(difftypes[dd->type] != NULL);
+			if (ort_write_field_mod(f, dd) < 0)
+				return 0;
+			break;
+		default:
+			break;
+		}
+
+	return 1;
+}
+
+/*
+ * Return zero on failure, non-zero on success.
+ */
+static int
+ort_write_diff_eitem(FILE *f,
+	const struct diffq *q, const struct diff *d)
 {
 	const struct diff	*dd;
 
 	assert(d->type == DIFF_MOD_EITEM);
-
 	TAILQ_FOREACH(dd, q, entries)
 		switch (dd->type) {
 		case DIFF_MOD_EITEM_COMMENT:
 		case DIFF_MOD_EITEM_LABELS:
 		case DIFF_MOD_EITEM_VALUE:
-			if (dd->eitem_pair.into != d->eitem_pair.into &&
-			    dd->eitem_pair.from != d->eitem_pair.from)
+			if (dd->eitem_pair.into != 
+			     d->eitem_pair.into &&
+			    dd->eitem_pair.from != 
+			     d->eitem_pair.from)
 				break;
 			assert(dd->eitem_pair.into == 
 				d->eitem_pair.into);
 			assert(dd->eitem_pair.from == 
 				d->eitem_pair.from);
 			assert(difftypes[dd->type] != NULL);
-			if (ort_write_eitem_mod
-			    (f, difftypes[dd->type], dd) < 0)
+			if (ort_write_eitem_mod(f, dd) < 0)
 				return 0;
 			break;
 		default:
@@ -562,6 +640,10 @@ ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 			if (dd->field->parent == d->strct_pair.into)
 				rc = ort_write_field(f, 1, dd);
 			break;
+		case DIFF_ADD_SEARCH:
+			if (dd->search->parent == d->strct_pair.into)
+				rc = ort_write_search(f, 1, dd);
+			break;
 		case DIFF_ADD_UNIQUE:
 			if (dd->unique->parent == d->strct_pair.into)
 				rc = ort_write_unique(f, 1, dd);
@@ -577,6 +659,10 @@ ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 		case DIFF_DEL_INSERT:
 			if (dd->strct == d->strct_pair.from)
 				rc = ort_write_insert(f, 0, dd);
+			break;
+		case DIFF_DEL_SEARCH:
+			if (dd->search->parent == d->strct_pair.from)
+				rc = ort_write_search(f, 0, dd);
 			break;
 		case DIFF_DEL_UNIQUE:
 			if (dd->unique->parent == d->strct_pair.from)
@@ -599,6 +685,14 @@ ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 				break;
 			rc = ort_write_insert_pair(f, 1, dd);
 			if (!ort_write_diff_insert(f, q, dd))
+				return 0;
+			break;
+		case DIFF_MOD_SEARCH:
+			if (dd->search_pair.into->parent != 
+			    d->strct_pair.into)
+				break;
+			rc = ort_write_search_pair(f, 1, dd);
+			if (!ort_write_diff_search(f, q, dd))
 				return 0;
 			break;
 		case DIFF_MOD_STRCT_COMMENT:

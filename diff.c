@@ -118,21 +118,18 @@ ort_check_labels(const struct labelq *from, const struct labelq *into)
 
 /*
  * See if two urefs are the same.
+ * No need to check field->parent, as we know we're in the same struct.
  * Return zero on dissimilar, non-zero on similar.
  */
 static int
 ort_check_urefs(const struct uref *from, const struct uref *into)
 {
 
-	if (strcasecmp(from->field->name, into->field->name))
+	if (strcasecmp(from->field->name, into->field->name) ||
+	    from->op != into->op ||
+	    from->mod != into->mod)
 		return 0;
-	if (strcasecmp
-	    (from->field->parent->name, into->field->parent->name))
-		return 0;
-	if (from->op != into->op)
-		return 0;
-	if (from->mod != into->mod)
-		return 0;
+
 	return 1;
 }
 
@@ -271,6 +268,8 @@ ort_diff_bitidx(struct diffq *q,
 }
 
 /*
+ * Emits DIFF_MOD_FIELD with depending DIFF_MOD_FIELD_xxxx or
+ * DIFF_SAME_FIELD.
  * Return <0 on failure, 0 if the same, >0 if modified.
  */
 static int
@@ -278,17 +277,10 @@ ort_diff_field(struct diffq *q,
 	const struct field *ifrom, const struct field *iinto)
 {
 	struct diff	*d;
-	enum difftype	 type = DIFF_SAME_FIELD;
-	int		 diff;
+	int		 diff, rc = 1;
 
 	assert(iinto != NULL);
-
-	if (ifrom == NULL) {
-		if ((d = diff_alloc(q, DIFF_ADD_FIELD)) == NULL)
-			return -1;
-		d->field = iinto;
-		return 1;
-	}
+	assert(ifrom != NULL);
 
 	assert(strcasecmp(ifrom->name, iinto->name) == 0);
 
@@ -297,7 +289,7 @@ ort_diff_field(struct diffq *q,
 			return -1;
 		d->field_pair.from = ifrom;
 		d->field_pair.into = iinto;
-		type = DIFF_MOD_FIELD;
+		rc = 0;
 	}
 
 	if (ifrom->type != iinto->type) {
@@ -305,7 +297,7 @@ ort_diff_field(struct diffq *q,
 			return -1;
 		d->field_pair.from = ifrom;
 		d->field_pair.into = iinto;
-		type = DIFF_MOD_FIELD;
+		rc = 0;
 	}
 
 	if (ifrom->actdel != iinto->actdel ||
@@ -314,7 +306,7 @@ ort_diff_field(struct diffq *q,
 			return -1;
 		d->field_pair.from = ifrom;
 		d->field_pair.into = iinto;
-		type = DIFF_MOD_FIELD;
+		rc = 0;
 	}
 
 	if (ifrom->flags != iinto->flags) {
@@ -322,7 +314,7 @@ ort_diff_field(struct diffq *q,
 			return -1;
 		d->field_pair.from = ifrom;
 		d->field_pair.into = iinto;
-		type = DIFF_MOD_FIELD;
+		rc = 0;
 	}
 
 	if (ifrom->bitf != NULL && iinto->bitf != NULL &&
@@ -332,7 +324,7 @@ ort_diff_field(struct diffq *q,
 			return -1;
 		d->field_pair.from = ifrom;
 		d->field_pair.into = iinto;
-		type = DIFF_MOD_FIELD;
+		rc = 0;
 	}
 
 	if (ifrom->enm != NULL && iinto->enm != NULL &&
@@ -342,7 +334,7 @@ ort_diff_field(struct diffq *q,
 			return -1;
 		d->field_pair.from = ifrom;
 		d->field_pair.into = iinto;
-		type = DIFF_MOD_FIELD;
+		rc = 0;
 	}
 
 	/* Only raise this if we already have defaults in both. */
@@ -386,7 +378,7 @@ ort_diff_field(struct diffq *q,
 				return -1;
 			d->field_pair.from = ifrom;
 			d->field_pair.into = iinto;
-			type = DIFF_MOD_FIELD;
+			rc = 0;
 		}
 	}
 
@@ -412,7 +404,7 @@ ort_diff_field(struct diffq *q,
 			return -1;
 		d->field_pair.from = ifrom;
 		d->field_pair.into = iinto;
-		type = DIFF_MOD_FIELD;
+		rc = 0;
 	}
 
 	if (!ort_check_fvalids(ifrom, iinto)) {
@@ -420,7 +412,7 @@ ort_diff_field(struct diffq *q,
 			return -1;
 		d->field_pair.from = ifrom;
 		d->field_pair.into = iinto;
-		type = DIFF_MOD_FIELD;
+		rc = 0;
 	}
 
 	if (!ort_check_comment(ifrom->doc, iinto->doc)) {
@@ -428,14 +420,15 @@ ort_diff_field(struct diffq *q,
 			return -1;
 		d->field_pair.from = ifrom;
 		d->field_pair.into = iinto;
-		type = DIFF_MOD_FIELD;
+		rc = 0;
 	}
 
-	if ((d = diff_alloc(q, type)) == NULL)
+	d = diff_alloc(q, rc ? DIFF_SAME_FIELD : DIFF_MOD_FIELD);
+	if (d == NULL)
 		return -1;
 	d->field_pair.from = ifrom;
 	d->field_pair.into = iinto;
-	return type == DIFF_SAME_FIELD ? 0 : 1;
+	return rc;
 }
 
 /*
@@ -598,6 +591,43 @@ ort_has_unique(struct diffq *q,
 }
 
 /*
+ * Order-preserving check for updateq.  Emits DIFF_MOD_UPDATE_PARAMS if
+ * "q" is not NULL.
+ * Return <0 on failure, 0 on dissimilar, >0 on similar.
+ */
+static int
+ort_diff_urefq(struct diffq *q,
+	const struct update *from, const struct update *into,
+	const struct urefq *fromq, const struct urefq *intoq)
+{
+	const struct uref	*fref, *iref;
+	struct diff		*d;
+	int			 rc = 1;
+
+	iref = TAILQ_FIRST(intoq);
+	TAILQ_FOREACH(fref, fromq, entries) {
+		if (iref == NULL || !ort_check_urefs(iref, fref)) {
+			rc = 0;
+			break;
+		}
+		iref = TAILQ_NEXT(iref, entries);
+	}
+
+	if (rc == 1 && (iref != NULL || iref != fref))
+		rc = 0;
+
+	if (rc == 0 && q != NULL) {
+		d = diff_alloc(q, DIFF_MOD_UPDATE_PARAMS);
+		if (d == NULL)
+			return -1;
+		d->update_pair.from = from;
+		d->update_pair.into = into;
+	}
+
+	return rc;
+}
+
+/*
  * If "q" is non-NULL, emit modification diffs; otherwise, this just
  * checks whether the update clauses are the same.
  * Return <0 on failure, 0 on dissimilar, >0 on similar.
@@ -606,79 +636,22 @@ static int
 ort_diff_update(struct diffq *q, 
 	const struct update *from, const struct update *into)
 {
-	size_t			 fromsz = 0, intosz = 0;
 	struct diff		*d;
-	const struct uref	*fref, *iref;
-	int			 rc = 1;
+	int			 rc = 1, c;
 
-	/*
-	 * First check if we've changed any of the constraint or
-	 * modifier parameters, which we collectively just call
-	 * parameters.
-	 * Only let one of these 
-	 */
+	/* Both mrq and crq must be order-preserving and similar. */
 
-	TAILQ_FOREACH(fref, &from->mrq, entries)
-		fromsz++;
-	TAILQ_FOREACH(iref, &into->mrq, entries)
-		intosz++;
-	if (fromsz != intosz) {
-		if (q != NULL) {
-			d = diff_alloc(q, DIFF_MOD_UPDATE_PARAMS);
-			if (d == NULL)
-				return -1;
-			d->update_pair.from = from;
-			d->update_pair.into = into;
-		}
+	c = ort_diff_urefq(q, from, into, &from->mrq, &into->mrq);
+	if (c < 0)
+		return -1;
+	else if (c == 0)
 		rc = 0;
-	}
 
-	TAILQ_FOREACH(fref, &from->crq, entries)
-		fromsz++;
-	TAILQ_FOREACH(iref, &into->crq, entries)
-		intosz++;
-	if (fromsz != intosz && rc) {
-		if (q != NULL) {
-			d = diff_alloc(q, DIFF_MOD_UPDATE_PARAMS);
-			if (d == NULL)
-				return -1;
-			d->update_pair.from = from;
-			d->update_pair.into = into;
-		}
+	c = ort_diff_urefq(q, from, into, &from->crq, &into->crq);
+	if (c < 0)
+		return -1;
+	else if (c == 0)
 		rc = 0;
-	}
-
-	TAILQ_FOREACH(fref, &from->mrq, entries) {
-		TAILQ_FOREACH(iref, &into->mrq, entries)
-			if (ort_check_urefs(fref, iref))
-				break;
-		if (iref != NULL || !rc)
-			continue;
-		if (q != NULL) {
-			d = diff_alloc(q, DIFF_MOD_UPDATE_PARAMS);
-			if (d == NULL)
-				return -1;
-			d->update_pair.from = from;
-			d->update_pair.into = into;
-		}
-		rc = 0;
-	}
-
-	TAILQ_FOREACH(fref, &from->crq, entries) {
-		TAILQ_FOREACH(iref, &into->crq, entries)
-			if (ort_check_urefs(fref, iref))
-				break;
-		if (iref != NULL || !rc)
-			continue;
-		if (q != NULL) {
-			d = diff_alloc(q, DIFF_MOD_UPDATE_PARAMS);
-			if (d == NULL)
-				return -1;
-			d->update_pair.from = from;
-			d->update_pair.into = into;
-		}
-		rc = 0;
-	}
 
 	/* Comments. */
 
@@ -835,6 +808,290 @@ ort_diff_strct_updateq(struct diffq *q,
 }
 
 /*
+ * See if the sentq are the same.
+ * FIXME: this should check order preservation.
+ * Return zero if not the same, non-zero if the same.
+ */
+static int
+ort_check_sentq(const struct sentq *from, const struct sentq *into)
+{
+	const struct sent	*sfrom, *sinto;
+	size_t			 fromsz = 0, intosz = 0;
+
+	TAILQ_FOREACH(sfrom, from, entries)
+		fromsz++;
+	TAILQ_FOREACH(sinto, into, entries)
+		intosz++;
+	if (fromsz != intosz)
+		return 0;
+
+	TAILQ_FOREACH(sfrom, from, entries) {
+		TAILQ_FOREACH(sinto, into, entries)
+			if (sfrom->op == sinto->op &&
+			    strcmp(sfrom->fname, sinto->fname) == 0)
+				break;
+		if (sinto == NULL)
+			return 0;
+	}
+
+	return 1;
+}
+
+/*
+ * Check ordering.
+ * FIXME: this should check order preservation.
+ * Return zero if not the same, non-zero if the same.
+ */
+static int
+ort_check_ordq(const struct ordq *from, const struct ordq *into)
+{
+	const struct ord	*ofrom, *ontio;
+	size_t			 fromsz = 0, intosz = 0;
+
+	TAILQ_FOREACH(ofrom, from, entries)
+		fromsz++;
+	TAILQ_FOREACH(ontio, into, entries)
+		intosz++;
+	if (fromsz != intosz)
+		return 0;
+
+	TAILQ_FOREACH(ofrom, from, entries) {
+		TAILQ_FOREACH(ontio, into, entries)
+			if (ofrom->op == ontio->op &&
+			    strcmp(ofrom->fname, ontio->fname) == 0)
+				break;
+		if (ontio == NULL)
+			return 0;
+	}
+
+	return 1;
+}
+
+/*
+ * Emit DIFF_MOD_SEARCH_xxxx if "q" is not NULL.
+ * Return <0 on failure, 0 if dissimilar, >0 if similar.
+ */
+static int
+ort_diff_search(struct diffq *q,
+	const struct search *from, const struct search *into)
+{
+	int		 rc = 1;
+	struct diff	*d;
+
+	assert(from->type == into->type);
+
+	if (!ort_check_sentq(&from->sntq, &into->sntq)) {
+		if (q != NULL) {
+			d = diff_alloc(q, DIFF_MOD_SEARCH_PARAMS);
+			if (d == NULL)
+				return -1;
+			d->search_pair.from = from;
+			d->search_pair.into = into;
+		}
+		rc = 0;
+	}
+
+	if (!ort_check_ordq(&from->ordq, &into->ordq)) {
+		if (q != NULL) {
+			d = diff_alloc(q, DIFF_MOD_SEARCH_ORDER);
+			if (d == NULL)
+				return -1;
+			d->search_pair.from = from;
+			d->search_pair.into = into;
+		}
+		rc = 0;
+	}
+
+	if ((from->aggr != NULL && into->aggr == NULL) ||
+	    (from->aggr == NULL && into->aggr != NULL) ||
+	    (from->aggr != NULL && into->aggr != NULL &&
+	     ((from->aggr->op != into->aggr->op) ||
+	      strcmp(from->aggr->fname, into->aggr->fname)))) {
+		if (q != NULL) {
+			d = diff_alloc(q, DIFF_MOD_SEARCH_AGGR);
+			if (d == NULL)
+				return -1;
+			d->search_pair.from = from;
+			d->search_pair.into = into;
+		}
+		rc = 0;
+	}
+
+	if ((from->group != NULL && into->group == NULL) ||
+	    (from->group == NULL && into->group != NULL) ||
+	    (from->group != NULL && into->group != NULL &&
+	     strcmp(from->group->fname, into->group->fname))) {
+		if (q != NULL) {
+			d = diff_alloc(q, DIFF_MOD_SEARCH_GROUP);
+			if (d == NULL)
+				return -1;
+			d->search_pair.from = from;
+			d->search_pair.into = into;
+		}
+		rc = 0;
+	}
+
+	if ((from->dst != NULL && into->dst == NULL) ||
+	    (from->dst == NULL && into->dst != NULL) ||
+	    (from->dst != NULL && into->dst != NULL &&
+	     strcmp(from->dst->fname, into->dst->fname))) {
+		if (q != NULL) {
+			d = diff_alloc(q, DIFF_MOD_SEARCH_DISTINCT);
+			if (d == NULL)
+				return -1;
+			d->search_pair.from = from;
+			d->search_pair.into = into;
+		}
+		rc = 0;
+	}
+
+	if (!ort_check_comment(from->doc, into->doc)) {
+		if (q != NULL) {
+			d = diff_alloc(q, DIFF_MOD_SEARCH_COMMENT);
+			if (d == NULL)
+				return -1;
+			d->search_pair.from = from;
+			d->search_pair.into = into;
+		}
+		rc = 0;
+	}
+
+	if (from->limit != into->limit) {
+		if (q != NULL) {
+			d = diff_alloc(q, DIFF_MOD_SEARCH_LIMIT);
+			if (d == NULL)
+				return -1;
+			d->search_pair.from = from;
+			d->search_pair.into = into;
+		}
+		rc = 0;
+	}
+
+	if (from->offset != into->offset) {
+		if (q != NULL) {
+			d = diff_alloc(q, DIFF_MOD_SEARCH_OFFSET);
+			if (d == NULL)
+				return -1;
+			d->search_pair.from = from;
+			d->search_pair.into = into;
+		}
+		rc = 0;
+	}
+
+	if (!ort_check_rolemap_roles(from->rolemap, into->rolemap)) {
+		if (q != NULL) {
+			d = diff_alloc(q, DIFF_MOD_SEARCH_ROLEMAP);
+			if (d == NULL)
+				return -1;
+			d->search_pair.from = from;
+			d->search_pair.into = into;
+		}
+		rc = 0;
+	}
+
+	return rc;
+}
+
+/*
+ * Emit DIFF_ADD_SEARCH or DIFF_DEL_SEARCH, using ort_diff_search() for
+ * same or mod testing.
+ * Returns <0 on failure, 0 on dissimilar, >0 on similar.
+ */
+static int
+ort_diff_searchq(struct diffq *q,
+	const struct strct *from, const struct strct *into)
+{
+	const struct search	*sfrom, *sinto;
+	struct diff		*d;
+	int			 rc = 1, c;
+
+	TAILQ_FOREACH(sfrom, &from->sq, entries) {
+		if (sfrom->name == NULL)
+			continue;
+		TAILQ_FOREACH(sinto, &into->sq, entries)
+			if (sinto->name != NULL &&
+			    sinto->type == sfrom->type &&
+			    strcasecmp(sinto->name, sfrom->name) == 0)
+				break;
+		if (sinto == NULL) {
+			d = diff_alloc(q, DIFF_DEL_SEARCH);
+			if (d == NULL)
+				return -1;
+			d->search = sfrom;
+			rc = 0;
+			continue;
+		}
+		if ((c = ort_diff_search(q, sfrom, sinto)) < 0)
+			return -1;
+		else if (c == 0)
+			rc = 0;
+	}
+
+	TAILQ_FOREACH(sinto, &into->sq, entries) {
+		if (sinto->name == NULL)
+			continue;
+		TAILQ_FOREACH(sfrom, &from->sq, entries)
+			if (sfrom->name != NULL &&
+			    sinto->type == sfrom->type &&
+			    strcasecmp(sinto->name, sfrom->name) == 0)
+				break;
+		if (sfrom == NULL) {
+			d = diff_alloc(q, DIFF_ADD_SEARCH);
+			if (d == NULL)
+				return -1;
+			d->search = sfrom;
+			rc = 0;
+		}
+	}
+
+	TAILQ_FOREACH(sfrom, &from->sq, entries) {
+		if (sfrom->name != NULL)
+			continue;
+		TAILQ_FOREACH(sinto, &into->sq, entries) {
+			if (sinto->name != NULL ||
+			    sinto->type != sfrom->type)
+				continue;
+			c = ort_diff_search(q, sfrom, sinto);
+			if (c < 0)
+				return -1;
+			else if (c > 0)
+				break;
+		}
+		if (sinto == NULL) {
+			d = diff_alloc(q, DIFF_DEL_SEARCH);
+			if (d == NULL)
+				return -1;
+			d->search = sfrom;
+			rc = 0;
+		}
+	}
+
+	TAILQ_FOREACH(sinto, &into->sq, entries) {
+		if (sinto->name != NULL)
+			continue;
+		TAILQ_FOREACH(sfrom, &from->sq, entries) {
+			if (sfrom->name != NULL ||
+			    sfrom->type != sinto->type)
+				continue;
+			c = ort_diff_search(q, sfrom, sinto);
+			if (c < 0)
+				return -1;
+			else if (c > 0)
+				break;
+		}
+		if (sfrom == NULL) {
+			d = diff_alloc(q, DIFF_ADD_SEARCH);
+			if (d == NULL)
+				return -1;
+			d->search = sfrom;
+			rc = 0;
+		}
+	}
+
+	return rc;
+}
+
+/*
  * Return >0 on failure, 0 if modified, >0 if same.
  */
 static int
@@ -882,17 +1139,71 @@ ort_diff_strct_insert(struct diffq *q,
 }
 
 /*
+ * Emit DIFF_ADD_FIELD and DIFF_DEL_FIELD, using ort_diff_field() for
+ * same or different fields.
+ * Return <0 on failure, 0 on dissimilar, >0 on similar.
+ */
+static int
+ort_diff_fields(struct diffq *q,
+	const struct strct *from, const struct strct *into)
+{
+	const struct field	*ifrom, *iinto;
+	struct diff		*d;
+	int			 rc = 1, c;
+
+	TAILQ_FOREACH(iinto, &into->fq, entries) {
+		TAILQ_FOREACH(ifrom, &from->fq, entries)
+			if (strcasecmp(iinto->name, ifrom->name) == 0)
+				break;
+		if (ifrom == NULL) {
+			d = diff_alloc(q, DIFF_ADD_FIELD);
+			if (d == NULL)
+				return -1;
+			d->field = iinto;
+			rc = 0;
+			continue;
+		}
+		if ((c = ort_diff_field(q, ifrom, iinto)) < 0)
+			return -1;
+		else if (c == 0)
+			rc = 0;
+	}
+
+	TAILQ_FOREACH(ifrom, &from->fq, entries) {
+		TAILQ_FOREACH(iinto, &into->fq, entries)
+			if (strcasecmp(iinto->name, ifrom->name) == 0)
+				break;
+		if (iinto == NULL) {
+			d = diff_alloc(q, DIFF_DEL_FIELD);
+			if (d == NULL)
+				return -1;
+			d->field = ifrom;
+			rc = 0;
+		}
+	}
+
+	return rc;
+}
+
+/*
+ * Emit DIFF_MOD_STRCT or DIFF_SAME_STRCT along with all subtypes.
  * Return zero on failure, non-zero on success.
  */
 static int
 ort_diff_strct(struct diffq *q,
 	const struct strct *efrom, const struct strct *einto)
 {
-	const struct field	*ifrom, *iinto;
 	const struct unique	*u;
 	struct diff		*d;
 	int			 rc;
 	enum difftype		 type = DIFF_SAME_STRCT;
+
+	/* All query types. */
+
+	if ((rc = ort_diff_searchq(q, efrom, einto)) < 0)
+		return 0;
+	else if (rc == 0)
+		type = DIFF_MOD_STRCT;
 
 	/* Deletes and updates. */
 
@@ -917,27 +1228,10 @@ ort_diff_strct(struct diffq *q,
 
 	/* Field add/del/mod. */
 
-	TAILQ_FOREACH(iinto, &einto->fq, entries) {
-		TAILQ_FOREACH(ifrom, &efrom->fq, entries)
-			if (strcasecmp(iinto->name, ifrom->name) == 0)
-				break;
-		if ((rc = ort_diff_field(q, ifrom, iinto)) < 0)
-			return 0;
-		else if (rc > 0)
-			type = DIFF_MOD_STRCT;
-	}
-
-	TAILQ_FOREACH(ifrom, &efrom->fq, entries) {
-		TAILQ_FOREACH(iinto, &einto->fq, entries)
-			if (strcasecmp(iinto->name, ifrom->name) == 0)
-				break;
-		if (iinto == NULL) {
-			if ((d = diff_alloc(q, DIFF_DEL_FIELD)) == NULL)
-				return 0;
-			d->field = ifrom;
-			type = DIFF_MOD_STRCT;
-		}
-	}
+	if ((rc = ort_diff_fields(q, efrom, einto)) < 0)
+		return 0;
+	else if (rc == 0)
+		type = DIFF_MOD_STRCT;
 
 	/* Unique add/del. */
 
@@ -1082,6 +1376,8 @@ ort_diff_bitfs(struct diffq *q,
 }
 
 /*
+ * Emit DIFF_ADD_STRCT or DIFF_DEL_STRCT, else ort_diff_strct() to see
+ * if they're different.
  * Return zero on failure, non-zero on success.
  */
 static int
@@ -1095,9 +1391,9 @@ ort_diff_strcts(struct diffq *q,
 		TAILQ_FOREACH(efrom, &from->sq, entries)
 			if (strcasecmp(efrom->name, einto->name) == 0)
 				break;
-
 		if (efrom == NULL) {
-			if ((d = diff_alloc(q, DIFF_ADD_STRCT)) == NULL)
+			d = diff_alloc(q, DIFF_ADD_STRCT);
+			if (d == NULL)
 				return 0;
 			d->strct = einto;
 		} else if (!ort_diff_strct(q, efrom, einto))
@@ -1109,7 +1405,8 @@ ort_diff_strcts(struct diffq *q,
 			if (strcasecmp(efrom->name, einto->name) == 0)
 				break;
 		if (einto == NULL) {
-			if ((d = diff_alloc(q, DIFF_DEL_STRCT)) == NULL)
+			d = diff_alloc(q, DIFF_DEL_STRCT);
+			if (d == NULL)
 				return 0;
 			d->strct = efrom;
 		}
@@ -1119,17 +1416,17 @@ ort_diff_strcts(struct diffq *q,
 }
 
 /*
- * Check whether two roles are different, meaning their parent or
- * children have changed in any way.
- * Return zero on failure (different), non-zero on success.
+ * Emit DIFF_MOD_ROLE_xxx if roles differ.
+ * Return <0 on failure, on if dissimilar, >0 if similar.
  */
 static int
-ort_diff_role(struct diffq *q, const struct role *rfrom, const struct role *rinto)
+ort_diff_role(struct diffq *q,
+	const struct role *rfrom, const struct role *rinto)
 {
 	const struct role	*cfrom, *cinto;
 	size_t			 fsz = 0, isz = 0;
 	struct diff		*d;
-	int			 nchange = 1;
+	int			 rc = 1;
 
 	/* 
 	 * If a parent is NULL, that will never change (only our
@@ -1139,19 +1436,21 @@ ort_diff_role(struct diffq *q, const struct role *rfrom, const struct role *rint
 
 	if (rfrom->parent != NULL && rinto->parent != NULL &&
 	    strcasecmp(rfrom->parent->name, rinto->parent->name)) {
-		if ((d = diff_alloc(q, DIFF_MOD_ROLE_PARENT)) == NULL)
-			return 0;
+		d = diff_alloc(q, DIFF_MOD_ROLE_PARENT);
+		if (d == NULL)
+			return -1;
 		d->role_pair.from = rfrom;
 		d->role_pair.into = rinto;
-		nchange = 0;
+		rc = 0;
 	}
 
 	if (!ort_check_comment(rfrom->doc, rinto->doc)) {
-		if ((d = diff_alloc(q, DIFF_MOD_ROLE_COMMENT)) == NULL)
-			return 0;
+		d = diff_alloc(q, DIFF_MOD_ROLE_COMMENT);
+		if (d == NULL)
+			return -1;
 		d->role_pair.from = rfrom;
 		d->role_pair.into = rinto;
-		nchange = 0;
+		rc = 0;
 	}
 
 	/* 
@@ -1168,10 +1467,10 @@ ort_diff_role(struct diffq *q, const struct role *rfrom, const struct role *rint
 	if (fsz != isz) {
 		d = diff_alloc(q, DIFF_MOD_ROLE_CHILDREN);
 		if (d == NULL)
-			return 0;
+			return -1;
 		d->role_pair.from = rfrom;
 		d->role_pair.into = rinto;
-		nchange = 0;
+		rc = 0;
 	} else
 		TAILQ_FOREACH(cfrom, &rfrom->subrq, entries) {
 			TAILQ_FOREACH(cinto, &rinto->subrq, entries)
@@ -1182,32 +1481,84 @@ ort_diff_role(struct diffq *q, const struct role *rfrom, const struct role *rint
 				continue;
 			d = diff_alloc(q, DIFF_MOD_ROLE_CHILDREN);
 			if (d == NULL)
-				return 0;
+				return -1;
 			d->role_pair.from = rfrom;
 			d->role_pair.into = rinto;
-			nchange = 0;
+			rc = 0;
 			break;
 		}
 
-	return nchange;
+	return rc;
 }
 
 /*
- * Delve into the top-level roles statement.  If the role block has just
- * arrived or left, use a top-level DIFF_xxx_ROLE statement and that's
- * it (don't delete individual roles).  A role added or deleted means
- * what it sounds like.  A role modified means its parent or children
- * have changed.  So an additional role usually means three changes:
- * adding the role, the parent of the role changing, any children of the
- * role changing.
+ * Emit DIFF_DEL_ROLE, DIFF_ADD_ROLE.  Use ort_diff_role() for
+ * DIFF_MOD_ROLE and DIFF_SAME_ROLE.
+ * Return <0 on failure, 0 on dissimilar, >0 on similar.
+ */
+static int
+ort_diff_roleq(struct diffq *q,
+	const struct config *from, const struct config *into)
+{
+	const struct role	*rinto, *rfrom;
+	struct diff		*d;
+	int			 rc = 1, c;
+
+	TAILQ_FOREACH(rfrom, &from->arq, allentries) {
+		TAILQ_FOREACH(rinto, &into->arq, allentries)
+			if (strcasecmp(rfrom->name, rinto->name) == 0)
+				break;
+		if (rinto == NULL) {
+			d = diff_alloc(q, DIFF_DEL_ROLE);
+			if (d == NULL)
+				return -1;
+			d->role = rfrom;
+			rc = 0;
+			continue;
+		} else if (rfrom->parent == NULL)
+			continue;
+
+		if ((c = ort_diff_role(q, rfrom, rinto)) < 0)
+			return -1;
+		if (c == 0) {
+			rc = 0;
+			d = diff_alloc(q, DIFF_MOD_ROLE);
+		} else
+			d = diff_alloc(q, DIFF_SAME_ROLE);
+
+		if (d == NULL)
+			return -1;
+		d->role_pair.into = rinto;
+		d->role_pair.from = rfrom;
+	}
+
+	TAILQ_FOREACH(rinto, &into->arq, allentries) {
+		TAILQ_FOREACH(rfrom, &from->arq, allentries)
+			if (strcasecmp(rfrom->name, rinto->name) == 0)
+				break;
+		if (rfrom == NULL) {
+			d = diff_alloc(q, DIFF_ADD_ROLE);
+			if (d == NULL)
+				return -1;
+			d->role = rinto;
+			rc = 0;
+		}
+	}
+
+	return rc;
+}
+
+/*
+ * Emit DIFF_ADD_ROLES or DIFF_DEL_ROLES.  Use ort_diff_roleq() for
+ * DIFF_SAME_ROLES or DIFF_MOD_ROLES.
+ * Return zero on failure, non-zero on success.
  */
 static int
 ort_diff_roles(struct diffq *q, 
 	const struct config *from, const struct config *into)
 {
-	const struct role	*r, *rr;
 	struct diff		*d;
-	enum difftype		 type = DIFF_SAME_ROLES;
+	int			 rc;
 
 	/* Do nothing if no roles in either. */
 
@@ -1220,7 +1571,6 @@ ort_diff_roles(struct diffq *q,
 		d->role = TAILQ_FIRST(&into->arq);
 		return 1;
 	}
-	
 	if (!TAILQ_EMPTY(&from->arq) && TAILQ_EMPTY(&into->arq)) {
 		if ((d = diff_alloc(q, DIFF_DEL_ROLES)) == NULL)
 			return 0;
@@ -1228,47 +1578,10 @@ ort_diff_roles(struct diffq *q,
 		return 1;
 	}
 
-	/* Only do same/mod for non-virtual roles. */
-
-	TAILQ_FOREACH(r, &from->arq, allentries) {
-		TAILQ_FOREACH(rr, &into->arq, allentries)
-			if (strcasecmp(r->name, rr->name) == 0)
-				break;
-		if (rr == NULL) {
-			if ((d = diff_alloc(q, DIFF_DEL_ROLE)) == NULL)
-				return 0;
-			d->role = r;
-			type = DIFF_MOD_ROLES;
-			continue;
-		} else if (r->parent == NULL)
-			continue;
-
-		if (!ort_diff_role(q, r, rr)) {
-			type = DIFF_MOD_ROLES;
-			d = diff_alloc(q, DIFF_MOD_ROLE);
-		} else
-			d = diff_alloc(q, DIFF_SAME_ROLE);
-
-		if (d == NULL)
-			return 0;
-		d->role_pair.into = rr;
-		d->role_pair.from = r;
-	}
-
-	TAILQ_FOREACH(rr, &into->arq, allentries) {
-		TAILQ_FOREACH(r, &from->arq, allentries)
-			if (strcasecmp(r->name, rr->name) == 0)
-				break;
-		if (r == NULL) {
-			if ((d = diff_alloc(q, DIFF_ADD_ROLE)) == NULL)
-				return 0;
-			d->role = rr;
-			type = DIFF_MOD_ROLES;
-			continue;
-		}
-	}
-
-	if ((d = diff_alloc(q, type)) == NULL)
+	if ((rc = ort_diff_roleq(q, from, into)) < 0)
+		return 0;
+	d = diff_alloc(q, rc ? DIFF_SAME_ROLES : DIFF_MOD_ROLES);
+	if (d == NULL)
 		return 0;
 	d->role_pair.into = TAILQ_FIRST(&into->arq);
 	d->role_pair.from = TAILQ_FIRST(&from->arq);

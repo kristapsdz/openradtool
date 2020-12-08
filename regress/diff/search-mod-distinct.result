@@ -1,0 +1,15 @@
+--- regress/diff/search-mod-distinct.old.ort
++++ regress/diff/search-mod-distinct.new.ort
+@@ strcts @@
+  strct regress/diff/search-mod-distinct.old.ort:5:10 -> regress/diff/search-mod-distinct.new.ort:5:10
+  strct regress/diff/search-mod-distinct.old.ort:1:10 -> regress/diff/search-mod-distinct.new.ort:1:10
+@@ strct regress/diff/search-mod-distinct.old.ort:9:10 -> regress/diff/search-mod-distinct.new.ort:9:10 @@
+@@ search regress/diff/search-mod-distinct.old.ort:17:8 -> regress/diff/search-mod-distinct.new.ort:17:8 @@
+! search distinct regress/diff/search-mod-distinct.old.ort:17:8 -> regress/diff/search-mod-distinct.new.ort:17:8
+  field regress/diff/search-mod-distinct.old.ort:10:10 -> regress/diff/search-mod-distinct.new.ort:10:10
+  field regress/diff/search-mod-distinct.old.ort:11:10 -> regress/diff/search-mod-distinct.new.ort:11:10
+  field regress/diff/search-mod-distinct.old.ort:12:12 -> regress/diff/search-mod-distinct.new.ort:12:12
+  field regress/diff/search-mod-distinct.old.ort:13:12 -> regress/diff/search-mod-distinct.new.ort:13:12
+  field regress/diff/search-mod-distinct.old.ort:14:10 -> regress/diff/search-mod-distinct.new.ort:14:10
+  field regress/diff/search-mod-distinct.old.ort:15:10 -> regress/diff/search-mod-distinct.new.ort:15:10
+  field regress/diff/search-mod-distinct.old.ort:16:10 -> regress/diff/search-mod-distinct.new.ort:16:10

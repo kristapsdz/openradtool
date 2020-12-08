@@ -1,0 +1,18 @@
+struct bar {
+	field id int rowid;
+};
+
+struct baz {
+	field id int rowid;
+};
+
+struct foo {
+	field bar struct barid;
+	field baz struct bazid;
+	field barid:bar.id;
+	field bazid:baz.id;
+	field aaa;
+	field bbb;
+	field ccc;
+	iterate aaa, bbb: name xyzzy distinct bar;
+};

@@ -1,11 +1,11 @@
-.SUFFIXES: .dot .svg .1 .1.html .5 .5.html .in.pc .pc
+.SUFFIXES: .dot .svg .1 .1.html .5 .5.html .in.pc .pc .3 .3.html
 .PHONY: regress
 
 include Makefile.configure
 
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 11
-VERSION_BUILD	 = 3
+VERSION_BUILD	 = 4
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = compats.o \
 		   config.o \
@@ -58,6 +58,15 @@ HTMLS		 = archive.html \
 		   man/ort-sql.1.html \
 		   man/ort-sqldiff.1.html \
 		   man/ort-xliff.1.html \
+		   man/ort.3.html \
+		   man/ort_config_alloc.3.html \
+		   man/ort_config_free.3.html \
+		   man/ort_diff.3.html \
+		   man/ort_diff_free.3.html \
+		   man/ort_parse_close.3.html \
+		   man/ort_parse_file.3.html \
+		   man/ort_write_diff_file.3.html \
+		   man/ort_write_file.3.html \
 		   man/ort.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/openradtool
 MAN3S		 = man/ort.3 \
@@ -390,10 +399,7 @@ db.db: db.sql
 
 $(LIBOBJS) $(OBJS): config.h $(GENHEADERS) $(HEADERS)
 
-.5.5.html:
-	mandoc -Ostyle=https://bsd.lv/css/mandoc.css -Thtml $< >$@
-
-.1.1.html:
+.5.5.html .3.3.html .1.1.html:
 	mandoc -Ostyle=https://bsd.lv/css/mandoc.css -Thtml $< >$@
 
 .dot.svg:

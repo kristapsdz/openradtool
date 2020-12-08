@@ -263,22 +263,15 @@ struct	rref {
 	TAILQ_ENTRY(rref) entries;
 };
 
-/*
- * A search entity.
- * For example, in a set of search criteria "user.company.name, userid",
- * this would be one of "user.company.name" or "userid".
- * One or more "struct sent" consist of a single "struct search".
- *
- */
 struct	sent {
-	struct pos	  pos; /* parse point */
-	struct search	 *parent; /* up-reference */
-	struct field	 *field; /* target of search entity */
-	enum optype	  op; /* operator */
-	char		 *name; /* fname w/o last field or NULL */
-	char		 *fname; /* dot-form lowercase of all fields */
-	char		 *uname; /* fname but with underscores */
-	struct alias	 *alias; /* resolved alias */
+	struct pos	  pos;
+	struct search	 *parent;
+	struct field	 *field;
+	enum optype	  op;
+	char		 *name;
+	char		 *fname;
+	char		 *uname;
+	struct alias	 *alias;
 	TAILQ_ENTRY(sent) entries;
 };
 

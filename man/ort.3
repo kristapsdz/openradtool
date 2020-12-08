@@ -785,6 +785,45 @@ This may be only
 if the query will return a single result.
 (That is, it queries unique values.)
 .El
+.Pp
+Search parameters are listed in a queue of
+.Vt struct sent .
+The queue may have multiple parameters of the same
+.Fa field ,
+as there may be multiple ways of indirecting to the same field.
+.Bl -tag -width Ds -offset indent
+.It Va struct pos pos
+Parse position.
+.It Va struct search *parent
+The encompassing search component.
+.It Va struct field *field
+The field upon which to search.
+There can be multiple similar
+.Va field
+entries in one queue, as different foreign references may indirectly
+reference the same field.
+Use
+.Va fname
+for uniqueness checks.
+.It Va enum optype op
+The type of search constraint.
+.It Va char *name
+Like
+.Va fname ,
+but not including the last field and trailing period.
+This is
+.Dv NULL
+if within the same structure as
+.Va parent .
+.It Va char *fname
+Lowercase, dot-separated field lookup.
+.It Va char *uname
+Like
+.Fa fname ,
+but using underscores instead of periods.
+.It Va struct alias *alias
+Resolved alias.
+.El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

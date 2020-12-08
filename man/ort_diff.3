@@ -97,6 +97,11 @@ was added to
 .It Dv DIFF_ADD_ROLES
 Roles were added to
 .Fa into .
+.It Dv DIFF_ADD_SEARCH
+A
+.Vt "struct search"
+was added to
+.Fa into .
 .It Dv DIFF_ADD_STRCT
 A
 .Vt "struct strct"
@@ -150,6 +155,11 @@ was removed from
 .Fa from .
 .It Dv DIFF_DEL_ROLES
 All roles were removed from
+.Fa from .
+.It Dv DIFF_DEL_SEARCH
+A
+.Vt "struct search"
+was removed from
 .Fa from .
 .It Dv DIFF_DEL_STRCT
 A
@@ -508,6 +518,108 @@ This stipulates that one or more of
 or
 .Dv DIFF_MOD_ROLE
 will also be set for the given object.
+.It Dv DIFF_MOD_SEARCH
+A
+.Vt "struct search"
+changed between
+.Fa from
+and
+.Fa into .
+This stipulates that one or more of
+.Dv DIFF_MOD_SEARCH_AGGR ,
+.Dv DIFF_MOD_SEARCH_COMMENT ,
+.Dv DIFF_MOD_SEARCH_DISTINCT ,
+.Dv DIFF_MOD_SEARCH_GROUP ,
+.Dv DIFF_MOD_SEARCH_LIMIT ,
+.Dv DIFF_MOD_SEARCH_OFFSET ,
+.Dv DIFF_MOD_SEARCH_ORDER ,
+.Dv DIFF_MOD_SEARCH_PARAMS ,
+or
+.Dv DIFF_MOD_SEARCH_ROLEMAP
+will also be set for the given object.
+.It Dv DIFF_MOD_SEARCH_AGGR
+The
+.Va aggr
+field of a
+.Vt struct search
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_SEARCH_COMMENT
+The
+.Va doc
+field of a
+.Vt struct search
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_SEARCH_DISTINCT
+The
+.Va dst
+field of a
+.Vt struct search
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_SEARCH_GROUP
+The
+.Va group
+field of a
+.Vt struct search
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_SEARCH_LIMIT
+The
+.Va limit
+field of a
+.Vt struct search
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_SEARCH_OFFSET
+The
+.Va offset
+field of a
+.Vt struct search
+changed between
+.Fa from
+and
+.Fa into .
+.It Dv DIFF_MOD_SEARCH_ORDER
+The
+.Va ordq
+queue of a
+.Vt struct search
+changed between
+.Fa from
+and
+.Fa into .
+This includes changing of the parameter order or number of parameters.
+.It Dv DIFF_MOD_SEARCH_PARAMS
+The
+.Va sntq
+queue of a
+.Vt struct search
+changed between
+.Fa from
+and
+.Fa into .
+This includes changing of the parameter order or number of parameters.
+.It Dv DIFF_MOD_SEARCH_ROLEMAP
+The
+.Va rolemap
+queue of a
+.Vt struct search
+changed between
+.Fa from
+and
+.Fa into .
 .It Dv DIFF_MOD_STRCT
 A
 .Vt "struct strct"
@@ -518,14 +630,17 @@ and
 This stipulates that one or more of
 .Dv DIFF_ADD_FIELD ,
 .Dv DIFF_ADD_INSERT ,
+.Dv DIFF_ADD_SEARCH ,
 .Dv DIFF_ADD_UNIQUE ,
 .Dv DIFF_ADD_UPDATE ,
 .Dv DIFF_DEL_FIELD ,
 .Dv DIFF_DEL_INSERT ,
+.Dv DIFF_DEL_STRCT ,
 .Dv DIFF_DEL_UNIQUE ,
 .Dv DIFF_DEL_UPDATE ,
 .Dv DIFF_MOD_FIELD ,
 .Dv DIFF_MOD_INSERT ,
+.Dv DIFF_MOD_SEARCH ,
 .Dv DIFF_MOD_STRCT_COMMENT ,
 or
 .Dv DIFF_MOD_UPDATE
@@ -626,6 +741,10 @@ and they did not change.
 .It Dv DIFF_SAME_ROLE
 The
 .Vt "struct role"
+did not change.
+.It Dv DIFF_SAME_SEARCH
+The
+.Vt "struct search"
 did not change.
 .It Dv DIFF_SAME_STRCT
 The
@@ -746,6 +865,24 @@ Also set by
 .Dv DIFF_MOD_ROLE_PARENT ,
 and
 .Dv DIFF_SAME_ROLE .
+.It Va "const struct search *search"
+Set by
+.Dv DIFF_ADD_SEARCH ,
+and
+.Dv DIFF_DEL_SEARCH .
+.It Va "struct diff_search search_pair"
+Set by
+.Dv DIFF_MOD_SEARCH ,
+.Dv DIFF_MOD_SEARCH_AGGR ,
+.Dv DIFF_MOD_SEARCH_COMMENT ,
+.Dv DIFF_MOD_SEARCH_DISTINCT ,
+.Dv DIFF_MOD_SEARCH_GROUP ,
+.Dv DIFF_MOD_SEARCH_LIMIT ,
+.Dv DIFF_MOD_SEARCH_OFFSET ,
+.Dv DIFF_MOD_SEARCH_ORDER ,
+.Dv DIFF_MOD_SEARCH_PARAMS ,
+and
+.Dv DIFF_MOD_SEARCH_ROLEMAP .
 .It Va "const struct strct *strct"
 Set by
 .Dv DIFF_ADD_INSERT ,

@@ -518,6 +518,26 @@ regress: all
 		set -e ; \
 	done ; \
 	rm -f $$tmp ; \
+	for f in regress/diff/*.ort ; do \
+		set +e ; \
+		printf "$$f -> $$f (cross-check)... " ; \
+		./ort-diff $$f $$f >$$tmp 2>/dev/null ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (did not execute)" ; \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		val=`cat $$tmp | wc -l | sed 's! !!g'` ; \
+		if [ $$val -ne 2 ]; then \
+			echo "fail (output)" ; \
+			cat $$tmp ; \
+			rm $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+		set -e ; \
+	done ; \
+	rm -f $$tmp ; \
 	for f in regress/sqldiff/*.result ; do \
 		new=regress/sqldiff/`basename $$f .result`.new.ort ; \
 		old=regress/sqldiff/`basename $$f .result`.old.ort ; \

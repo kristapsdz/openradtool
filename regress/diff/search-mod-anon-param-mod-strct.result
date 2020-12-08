@@ -1,0 +1,12 @@
+--- regress/diff/search-mod-anon-param-mod-strct.old.ort
++++ regress/diff/search-mod-anon-param-mod-strct.new.ort
+@@ strcts @@
+  strct regress/diff/search-mod-anon-param-mod-strct.old.ort:1:10 -> regress/diff/search-mod-anon-param-mod-strct.new.ort:1:10
+  strct regress/diff/search-mod-anon-param-mod-strct.old.ort:5:10 -> regress/diff/search-mod-anon-param-mod-strct.new.ort:5:10
+@@ strct regress/diff/search-mod-anon-param-mod-strct.old.ort:11:10 -> regress/diff/search-mod-anon-param-mod-strct.new.ort:11:10 @@
+- search regress/diff/search-mod-anon-param-mod-strct.old.ort:17:7
++ search regress/diff/search-mod-anon-param-mod-strct.new.ort:17:7
+  field regress/diff/search-mod-anon-param-mod-strct.old.ort:12:10 -> regress/diff/search-mod-anon-param-mod-strct.new.ort:12:10
+  field regress/diff/search-mod-anon-param-mod-strct.old.ort:13:10 -> regress/diff/search-mod-anon-param-mod-strct.new.ort:13:10
+  field regress/diff/search-mod-anon-param-mod-strct.old.ort:15:12 -> regress/diff/search-mod-anon-param-mod-strct.new.ort:15:12
+  field regress/diff/search-mod-anon-param-mod-strct.old.ort:16:12 -> regress/diff/search-mod-anon-param-mod-strct.new.ort:16:12

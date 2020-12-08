@@ -1,0 +1,14 @@
+roles {
+	role foo;
+	role bar;
+};
+
+struct foo {
+	field aaa;
+	field bbb;
+	field ccc;
+	search aaa, bbb: name xyzzy;
+	roles foo {
+		search xyzzy;
+	};
+};

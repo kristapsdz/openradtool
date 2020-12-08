@@ -1,0 +1,9 @@
+--- regress/diff/search-mod-rolemap.old.ort
++++ regress/diff/search-mod-rolemap.new.ort
+@@ strcts @@
+@@ strct regress/diff/search-mod-rolemap.old.ort:6:10 -> regress/diff/search-mod-rolemap.new.ort:6:10 @@
+@@ search regress/diff/search-mod-rolemap.old.ort:10:7 -> regress/diff/search-mod-rolemap.new.ort:10:7 @@
+! search rolemap regress/diff/search-mod-rolemap.old.ort:10:7 -> regress/diff/search-mod-rolemap.new.ort:10:7
+  field regress/diff/search-mod-rolemap.old.ort:7:10 -> regress/diff/search-mod-rolemap.new.ort:7:10
+  field regress/diff/search-mod-rolemap.old.ort:8:10 -> regress/diff/search-mod-rolemap.new.ort:8:10
+  field regress/diff/search-mod-rolemap.old.ort:9:10 -> regress/diff/search-mod-rolemap.new.ort:9:10

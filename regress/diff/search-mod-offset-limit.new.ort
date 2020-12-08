@@ -1,0 +1,6 @@
+struct foo {
+	field aaa;
+	field bbb;
+	field ccc;
+	list aaa, bbb: name xyzzy limit 4, 3;
+};

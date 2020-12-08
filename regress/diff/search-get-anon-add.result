@@ -1,0 +1,8 @@
+--- regress/diff/search-get-anon-add.old.ort
++++ regress/diff/search-get-anon-add.new.ort
+@@ strcts @@
+@@ strct regress/diff/search-get-anon-add.old.ort:1:10 -> regress/diff/search-get-anon-add.new.ort:1:10 @@
++ search regress/diff/search-get-anon-add.new.ort:5:7
+  field regress/diff/search-get-anon-add.old.ort:2:10 -> regress/diff/search-get-anon-add.new.ort:2:10
+  field regress/diff/search-get-anon-add.old.ort:3:10 -> regress/diff/search-get-anon-add.new.ort:3:10
+  field regress/diff/search-get-anon-add.old.ort:4:10 -> regress/diff/search-get-anon-add.new.ort:4:10

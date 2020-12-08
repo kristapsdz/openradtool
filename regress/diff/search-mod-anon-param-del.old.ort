@@ -1,0 +1,6 @@
+struct foo {
+	field aaa;
+	field bbb;
+	field ccc;
+	search aaa, bbb, ccc;
+};

@@ -1,0 +1,9 @@
+--- regress/diff/search-mod-param-add.old.ort
++++ regress/diff/search-mod-param-add.new.ort
+@@ strcts @@
+@@ strct regress/diff/search-mod-param-add.old.ort:1:10 -> regress/diff/search-mod-param-add.new.ort:1:10 @@
+@@ search regress/diff/search-mod-param-add.old.ort:5:7 -> regress/diff/search-mod-param-add.new.ort:5:7 @@
+! search params regress/diff/search-mod-param-add.old.ort:5:7 -> regress/diff/search-mod-param-add.new.ort:5:7
+  field regress/diff/search-mod-param-add.old.ort:2:10 -> regress/diff/search-mod-param-add.new.ort:2:10
+  field regress/diff/search-mod-param-add.old.ort:3:10 -> regress/diff/search-mod-param-add.new.ort:3:10
+  field regress/diff/search-mod-param-add.old.ort:4:10 -> regress/diff/search-mod-param-add.new.ort:4:10

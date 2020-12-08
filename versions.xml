@@ -3,9 +3,9 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
-			<h3>0.11.2</h3>
+			<h3>0.11.3</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2020-12-03">2020-12-03</time>
+			<time datetime="2020-12-08">2020-12-08</time>
 		</header>
 		<aside>
 			<p>
@@ -17,6 +17,11 @@
 				This completes full difference coverage.
 				All (or near enough) of these differences are encoded in the
 				regression suite.
+			</p>
+			<p>
+				While doing all this, push plenty of documentation from the header
+				file into
+				<a href="ort.3.html">ort(3)</a>.
 			</p>
 		</aside>
 	</article>

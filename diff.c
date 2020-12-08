@@ -808,63 +808,45 @@ ort_diff_strct_updateq(struct diffq *q,
 }
 
 /*
- * See if the sentq are the same.
- * FIXME: this should check order preservation.
+ * See if the sentq are the same (must be order-preserving).
  * Return zero if not the same, non-zero if the same.
  */
 static int
 ort_check_sentq(const struct sentq *from, const struct sentq *into)
 {
 	const struct sent	*sfrom, *sinto;
-	size_t			 fromsz = 0, intosz = 0;
 
-	TAILQ_FOREACH(sfrom, from, entries)
-		fromsz++;
-	TAILQ_FOREACH(sinto, into, entries)
-		intosz++;
-	if (fromsz != intosz)
-		return 0;
-
+	sinto = TAILQ_FIRST(into);
 	TAILQ_FOREACH(sfrom, from, entries) {
-		TAILQ_FOREACH(sinto, into, entries)
-			if (sfrom->op == sinto->op &&
-			    strcmp(sfrom->fname, sinto->fname) == 0)
-				break;
-		if (sinto == NULL)
+		if (sinto == NULL || 
+		    sfrom->op != sinto->op ||
+		    strcmp(sfrom->fname, sinto->fname))
 			return 0;
+		sinto = TAILQ_NEXT(sinto, entries);
 	}
 
-	return 1;
+	return sinto == NULL && sinto == sfrom;
 }
 
 /*
- * Check ordering.
- * FIXME: this should check order preservation.
+ * Check ordering (must be order-preserving).
  * Return zero if not the same, non-zero if the same.
  */
 static int
 ort_check_ordq(const struct ordq *from, const struct ordq *into)
 {
-	const struct ord	*ofrom, *ontio;
-	size_t			 fromsz = 0, intosz = 0;
+	const struct ord	*ofrom, *ointo;
 
-	TAILQ_FOREACH(ofrom, from, entries)
-		fromsz++;
-	TAILQ_FOREACH(ontio, into, entries)
-		intosz++;
-	if (fromsz != intosz)
-		return 0;
-
+	ointo = TAILQ_FIRST(into);
 	TAILQ_FOREACH(ofrom, from, entries) {
-		TAILQ_FOREACH(ontio, into, entries)
-			if (ofrom->op == ontio->op &&
-			    strcmp(ofrom->fname, ontio->fname) == 0)
-				break;
-		if (ontio == NULL)
+		if (ointo == NULL || 
+		    ofrom->op != ointo->op ||
+		    strcmp(ofrom->fname, ointo->fname))
 			return 0;
+		ointo = TAILQ_NEXT(ointo, entries);
 	}
 
-	return 1;
+	return ointo == NULL && ointo == ofrom;
 }
 
 /*
@@ -1039,7 +1021,7 @@ ort_diff_searchq(struct diffq *q,
 			d = diff_alloc(q, DIFF_ADD_SEARCH);
 			if (d == NULL)
 				return -1;
-			d->search = sfrom;
+			d->search = sinto;
 			rc = 0;
 		}
 	}
@@ -1083,7 +1065,7 @@ ort_diff_searchq(struct diffq *q,
 			d = diff_alloc(q, DIFF_ADD_SEARCH);
 			if (d == NULL)
 				return -1;
-			d->search = sfrom;
+			d->search = sinto;
 			rc = 0;
 		}
 	}

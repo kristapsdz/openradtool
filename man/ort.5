@@ -535,7 +535,7 @@ Documents the query using the quoted string.
 Return only distinct rows of the sub-structure indicated by
 .Ar term ,
 or if only a period
-.Pq Dq \& ,
+.Pq Dq \&. ,
 the current structure.
 This does not work with
 .Cm null
@@ -547,6 +547,11 @@ or
 for
 .Cm password
 types in these queries.
+Use
+.Cm grouprow
+for individual columns: the
+.Cm distinct
+keyword works for an entire row.
 .It Cm grouprow Ar field ["." field]*
 Groups results by the given column.
 This collapses all rows with the same value for the given column into a

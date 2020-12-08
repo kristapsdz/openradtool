@@ -81,7 +81,8 @@ static	const char *difftypes[DIFF__MAX] = {
 	"type", /* DIFF_MOD_FIELD_TYPE */
 	"valids", /* DIFF_MOD_FIELD_VALIDS */
 	NULL, /* DIFF_MOD_INSERT */
-	NULL, /* DIFF_MOD_INSERT_ROLEMAP */
+	"params", /* DIFF_MOD_INSERT_PARAMS */
+	"rolemap", /* DIFF_MOD_INSERT_ROLEMAP */
 	NULL, /* DIFF_MOD_ROLE */
 	"children", /* DIFF_MOD_ROLE_CHILDREN */
 	"comment", /* DIFF_MOD_ROLE_COMMENT */
@@ -209,10 +210,10 @@ ort_write_insert(FILE *f, int add, const struct diff *d)
 }
 
 static int
-ort_write_insert_mod(FILE *f, const char *name, const struct diff *d)
+ort_write_insert_mod(FILE *f, const struct diff *d)
 {
 
-	return ort_write_mod(f, name, "insert",
+	return ort_write_mod(f, difftypes[d->type], "insert",
 		&d->strct_pair.from->ins->pos, 
 		&d->strct_pair.into->ins->pos);
 }
@@ -486,10 +487,19 @@ ort_write_diff_insert(FILE *f, const struct diffq *q, const struct diff *d)
 	TAILQ_FOREACH(dd, q, entries) {
 		rc = 1;
 		switch (dd->type) {
+		case DIFF_MOD_INSERT_PARAMS:
 		case DIFF_MOD_INSERT_ROLEMAP:
-			if (dd->strct_pair.into != d->strct_pair.into)
+			if (dd->strct_pair.into != 
+			     d->strct_pair.into &&
+			    dd->strct_pair.from != 
+			     d->strct_pair.from)
 				break;
-			rc = ort_write_insert_mod(f, "rolemap", dd);
+			assert(dd->strct_pair.into ==
+				d->strct_pair.into);
+			assert(dd->strct_pair.from ==
+				d->strct_pair.from);
+			assert(difftypes[dd->type] != NULL);
+			rc = ort_write_insert_mod(f, dd);
 			break;
 		default:
 			break;

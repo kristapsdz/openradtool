@@ -1,0 +1,6 @@
+struct foo {
+	field bbb;
+	field aaa;
+	field ccc;
+	insert;
+};

@@ -454,8 +454,12 @@ changed between
 and
 .Fa into .
 This stipulates that
+.Dv DIFF_MOD_INSERT_PARAMS
+or
 .Dv DIFF_MOD_INSERT_ROLEMAP
 will also be set for the given object.
+.It Dv DIFF_MOD_INSERT_PARAMS
+The structure's fields have changed by name.
 .It Dv DIFF_MOD_INSERT_ROLEMAP
 One or more roles in the
 .Va rolemap
@@ -893,6 +897,7 @@ and
 .It Va "struct diff_strct strct_pair"
 Set by
 .Dv DIFF_MOD_INSERT ,
+.Dv DIFF_MOD_INSERT_PARAMS ,
 .Dv DIFF_MOD_INSERT_ROLEMAP ,
 .Dv DIFF_MOD_STRCT ,
 .Dv DIFF_MOD_STRCT_COMMENT ,

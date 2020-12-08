@@ -1,0 +1,8 @@
+--- regress/diff/insert-mod-params-del.old.ort
++++ regress/diff/insert-mod-params-del.new.ort
+@@ strcts @@
+@@ strct regress/diff/insert-mod-params-del.old.ort:1:10 -> regress/diff/insert-mod-params-del.new.ort:1:10 @@
+@@ insert regress/diff/insert-mod-params-del.old.ort:4:7 -> regress/diff/insert-mod-params-del.new.ort:3:7 @@
+! insert params regress/diff/insert-mod-params-del.old.ort:4:7 -> regress/diff/insert-mod-params-del.new.ort:3:7
+  field regress/diff/insert-mod-params-del.old.ort:2:10 -> regress/diff/insert-mod-params-del.new.ort:2:10
+- field regress/diff/insert-mod-params-del.old.ort:3:10

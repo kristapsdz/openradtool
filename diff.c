@@ -1086,6 +1086,22 @@ ort_diff_searchq(struct diffq *q,
 	return rc;
 }
 
+static int
+ort_check_insert_order(const struct strct *from, const struct strct *into)
+{
+	const struct field	*iinto, *ifrom;
+
+	iinto = TAILQ_FIRST(&into->fq);
+	TAILQ_FOREACH(ifrom, &from->fq, entries) {
+		if (iinto == NULL ||
+		    strcasecmp(ifrom->name, iinto->name))
+			return 0;
+		iinto = TAILQ_NEXT(iinto, entries);
+	}
+
+	return iinto == NULL && iinto == ifrom;
+}
+
 /*
  * Return >0 on failure, 0 if modified, >0 if same.
  */
@@ -1095,6 +1111,7 @@ ort_diff_strct_insert(struct diffq *q,
 {
 	const struct insert	*fins = from->ins, *iins = into->ins;
 	struct diff		*d;
+	int			 rc = 1;
 
 	if (fins == NULL && iins == NULL)
 		return 1;
@@ -1113,24 +1130,30 @@ ort_diff_strct_insert(struct diffq *q,
 
 	assert(fins != NULL && iins != NULL);
 
-	if (ort_check_rolemap_roles(fins->rolemap, iins->rolemap)) {
-		if ((d = diff_alloc(q, DIFF_SAME_INSERT)) == NULL)
+	if (!ort_check_rolemap_roles(fins->rolemap, iins->rolemap)) {
+		d = diff_alloc(q, DIFF_MOD_INSERT_ROLEMAP);
+		if (d == NULL)
 			return -1;
 		d->strct_pair.into = into;
 		d->strct_pair.from = from;
-		return 1;
+		rc = 0;
 	}
 
-	if ((d = diff_alloc(q, DIFF_MOD_INSERT_ROLEMAP)) == NULL)
-		return -1;
-	d->strct_pair.into = into;
-	d->strct_pair.from = from;
-	if ((d = diff_alloc(q, DIFF_MOD_INSERT)) == NULL)
-		return -1;
-	d->strct_pair.into = into;
-	d->strct_pair.from = from;
+	if (!ort_check_insert_order(from, into)) {
+		d = diff_alloc(q, DIFF_MOD_INSERT_PARAMS);
+		if (d == NULL)
+			return -1;
+		d->strct_pair.into = into;
+		d->strct_pair.from = from;
+		rc = 0;
+	}
 
-	return 0;
+	d = diff_alloc(q, rc ? DIFF_SAME_INSERT : DIFF_MOD_INSERT);
+	if (d == NULL)
+		return -1;
+	d->strct_pair.into = into;
+	d->strct_pair.from = from;
+	return rc;
 }
 
 /*

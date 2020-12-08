@@ -1,0 +1,8 @@
+--- regress/diff/search-same.old.ort
++++ regress/diff/search-same.new.ort
+@@ strcts @@
+@@ strct regress/diff/search-same.old.ort:1:10 -> regress/diff/search-same.new.ort:1:10 @@
+  search regress/diff/search-same.old.ort:5:7 -> regress/diff/search-same.new.ort:4:7
+  field regress/diff/search-same.old.ort:2:10 -> regress/diff/search-same.new.ort:2:10
+  field regress/diff/search-same.old.ort:3:10 -> regress/diff/search-same.new.ort:3:10
+- field regress/diff/search-same.old.ort:4:10

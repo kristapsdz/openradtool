@@ -713,6 +713,18 @@ ort_write_diff_strct(FILE *f, const struct diffq *q, const struct diff *d)
 				break;
 			rc = ort_write_field_pair(f, 0, dd);
 			break;
+		case DIFF_SAME_SEARCH:
+			if (dd->search_pair.into->parent != 
+			    d->strct_pair.into)
+				break;
+			rc = ort_write_search_pair(f, 0, dd);
+			break;
+		case DIFF_SAME_UPDATE:
+			if (dd->update_pair.into->parent != 
+			    d->strct_pair.into)
+				break;
+			rc = ort_write_update_pair(f, 0, dd);
+			break;
 		default:
 			break;
 		}

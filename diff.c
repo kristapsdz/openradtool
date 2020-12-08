@@ -1052,7 +1052,13 @@ ort_diff_searchq(struct diffq *q,
 				return -1;
 			d->search = sfrom;
 			rc = 0;
+			continue;
 		}
+		d = diff_alloc(q, DIFF_SAME_SEARCH);
+		if (d == NULL)
+			return -1;
+		d->search_pair.from = sfrom;
+		d->search_pair.into = sinto;
 	}
 
 	TAILQ_FOREACH(sinto, &into->sq, entries) {

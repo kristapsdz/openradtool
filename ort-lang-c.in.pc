@@ -1,0 +1,13 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=@LIBDIR@
+includedir=@INCLUDEDIR@
+
+Name: ort C output library
+Description: ort code generator library
+URL: https://kristaps.bsd.lv/openradtool
+Version: @VERSION@
+Requires: ort = @VERSION@
+Libs.private: 
+Libs: -L${libdir} -lort-lang-c
+Cflags: -I${includedir}

@@ -17,7 +17,19 @@
 #ifndef ORT_LANG_C_H
 #define ORT_LANG_C_H
 
-void	gen_c_header(const struct config *, const char *, int, int, int, int, int);
+struct	ort_lang_c {
+	const char		*guard;
+	const char		*header;
+	unsigned int		 flags;
+#define ORT_LANG_C_CORE	 	 0x01
+#define	ORT_LANG_C_JSON_KCGI	 0x02
+#define	ORT_LANG_C_JSON_JSMN	 0x04
+#define	ORT_LANG_C_VALID_KCGI	 0x08
+#define ORT_LANG_C_DB_SQLBOX	 0x10
+};
+
+int	ort_lang_c_header(const struct ort_lang_c *,
+		const struct config *, FILE *);
 int	gen_c_source(const struct config *, int, int, int, int, const char *, const char *, const int *);
 
 #endif /* !ORT_LANG_C_H */

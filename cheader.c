@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017--2020 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -39,41 +39,44 @@
 int
 main(int argc, char *argv[])
 {
-	const char	 *guard = "DB_H";
-	struct config	 *cfg = NULL;
-	int		  c, json = 0, valids = 0, rc = 0,
-			  dbin = 1, dstruct = 1,
-			  jsonparse = 0;
-	FILE		**confs = NULL;
-	size_t		  i, confsz;
+	struct ort_lang_c	  args;
+	struct config		 *cfg = NULL;
+	int			  c, rc = 0;
+	FILE			**confs = NULL;
+	size_t		  	  i, confsz;
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 
+	memset(&args, 0, sizeof(struct ort_lang_c));
+
+	args.flags = ORT_LANG_C_CORE | ORT_LANG_C_DB_SQLBOX;
+	args.guard = "DB_H";
+
 	while ((c = getopt(argc, argv, "g:jJN:sv")) != -1)
 		switch (c) {
 		case 'g':
-			guard = optarg;
+			args.guard = optarg[0] == '\0' ? NULL : optarg;
 			break;
 		case 'j':
-			json = 1;
+			args.flags |= ORT_LANG_C_JSON_KCGI;
 			break;
 		case 'J':
-			jsonparse = 1;
+			args.flags |= ORT_LANG_C_JSON_JSMN;
 			break;
 		case 'N':
 			if (strchr(optarg, 'b') != NULL)
-				dstruct = 0;
+				args.flags &= ~ORT_LANG_C_CORE;
 			if (strchr(optarg, 'd') != NULL)
-				dbin = 0;
+				args.flags &= ~ORT_LANG_C_DB_SQLBOX;
 			break;
 		case 's':
 			/* Ignore. */
 			break;
 		case 'v':
-			valids = 1;
+			args.flags |= ORT_LANG_C_VALID_KCGI;
 			break;
 		default:
 			goto usage;
@@ -109,8 +112,7 @@ main(int argc, char *argv[])
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
-		gen_c_header(cfg, guard, json, jsonparse,
-			valids, dbin, dstruct);
+		ort_lang_c_header(&args, cfg, stdout);
 
 out:
 	for (i = 0; i < confsz; i++)

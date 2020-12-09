@@ -1,0 +1,128 @@
+.\"	$Id$
+.\"
+.\" Copyright (c) 2020 Kristaps Dzonsons <kristaps@bsd.lv>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate$
+.Dt ORT_LANG_C_HEADER 3
+.Os
+.Sh NAME
+.Nm ort_lang_c_header
+.Nd allocate openradtool configuration
+.Sh LIBRARY
+.Lb libort-lang-c
+.Sh SYNOPSIS
+.In sys/queue.h
+.In stdio.h
+.In ort.h
+.In ort-lang-c.h
+.Ft int
+.Fo ort_lang_c_header
+.Fa "const struct ort_lang_c *args"
+.Fa "const struct config *cfg"
+.Fa "FILE *f"
+.Fc
+.Sh DESCRIPTION
+Outputs a C header file from the parsed configuration
+.Fa cfg
+to
+.Fa f
+with the parameters in
+.Fa args .
+The arguments recgnised in
+.Fa args
+are as follows:
+.Bl -tag -width Ds -offset indent
+.It Va const char *guard
+If
+.Dv NULL ,
+the header file will not include an ifdef/endif guard for double
+inclusion.
+Otherwise, the given string will be used as a guard.
+It is not checked for being a proper CPP macro.
+.It Va unsigned int flags
+The bit-field of components to output.
+.El
+.Pp
+The following components are output if specified:
+.Bl -tag -width Ds -offset indent
+.It Dv ORT_LANG_C_CORE
+Core data model structures, enumerations, and bitfields.
+.It Dv ORT_LANG_C_JSON_KCGI
+Functions for outputting content as JSON objects.
+Uses
+.Xr kcgijson 3
+to manage the JSON encoding and output.
+.It Dv ORT_LANG_C_JSON_JSMN
+Functions for parsing JSON objects into content.
+.It Dv ORT_LANG_C_VALID_KCGI
+Functions for validating input from a
+.Xr kcgi 3
+context.
+.It Dv ORT_LANG_C_DB_SQLBOX
+Functions for manipulating the database with
+.Xr sqlbox 3 .
+.El
+.Pp
+The generated content is in ISO C.
+Include paths for the generated content depend upon the included
+components:
+.Xr kcgi 3
+is required for
+.Dv ORT_LANG_C_JSON_KCGI
+and
+.Dv ORT_LANG_C_VALID_KCGI .
+.\" The following requests should be uncommented and used where appropriate.
+.\" .Sh CONTEXT
+.\" For section 9 functions only.
+.Sh RETURN VALUES
+Returns zero on failure, non-zero on success.
+.\" For sections 2, 3, and 9 function return values only.
+.\" .Sh ENVIRONMENT
+.\" For sections 1, 6, 7, and 8 only.
+.\" .Sh FILES
+.\" .Sh EXIT STATUS
+.\" For sections 1, 6, and 8 only.
+.Sh EXAMPLES
+A simple scenario of creating a configuration, parsing standard input,
+linking, then performing some task is as follows.
+.Bd -literal -offset indent
+struct config *cfg;
+struct ort_lang_c args;
+
+memset(&args, 0, sizeof(struct ort_lang_c));
+args.flags = ORT_LANG_C_CORE;
+
+if ((cfg = ort_config_alloc()) == NULL)
+  err(1, NULL);
+if (!ort_parse_file(cfg, stdin, "<stdin>"))
+  errx(1, "failed parsing");
+if (!ort_parse_close(cfg))
+  errx(1, "failed linking");
+if (!ort_lang_c_header(&args, cfg, stdout))
+  errx(1, "failed output");
+
+ort_config_free(cfg);
+.Ed
+.\" .Sh DIAGNOSTICS
+.\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
+.\" .Sh ERRORS
+.\" For sections 2, 3, 4, and 9 errno settings only.
+.Sh SEE ALSO
+.Xr ort 3
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh CAVEATS
+.\" .Sh BUGS

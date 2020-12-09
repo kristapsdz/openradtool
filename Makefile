@@ -27,6 +27,8 @@ LIBS		 = libort.a \
 		   libort-lang-nodejs.a \
 		   libort-lang-javascript.a \
 		   libort-lang-sql.a
+PKGCONFIGS	 = ort.pc \
+		   ort-lang-c.pc
 OBJS		 = audit.o \
 		   cheader.o \
 		   csource.o \
@@ -63,6 +65,7 @@ HTMLS		 = archive.html \
 		   man/ort_config_free.3.html \
 		   man/ort_diff.3.html \
 		   man/ort_diff_free.3.html \
+		   man/ort_lang_c_header.3.html \
 		   man/ort_parse_close.3.html \
 		   man/ort_parse_file.3.html \
 		   man/ort_write_diff_file.3.html \
@@ -74,6 +77,7 @@ MAN3S		 = man/ort.3 \
 		   man/ort_config_free.3 \
 		   man/ort_diff.3  \
 		   man/ort_diff_free.3  \
+		   man/ort_lang_c_header.3 \
 		   man/ort_parse_close.3 \
 		   man/ort_parse_file.3 \
 		   man/ort_write_file.3 \
@@ -93,15 +97,16 @@ MAN1S		 = man/ort.1 \
 		   man/ort-xliff.1
 GENHEADERS	 = paths.h \
 		   version.h
-HEADERS 	 = extern.h \
+PUBHEADERS	 = ort.h \
+		   ort-lang-c.h
+HEADERS 	 = $(PUBHEADERS) \
+		   extern.h \
 		   lang-c.h \
 		   lang.h \
 		   linker.h \
-		   ort-lang-c.h \
 		   ort-lang-javascript.h \
 		   ort-lang-nodejs.h \
 		   ort-lang-sql.h \
-		   ort.h \
 		   parser.h
 DOTAREXEC	 = configure
 DOTAR		 = $(HEADERS) \
@@ -198,7 +203,7 @@ PKG_REGRESS	 = sqlbox kcgi-regress kcgi-json libcurl
 LIBS_REGRESS	!= pkg-config --libs $(PKG_REGRESS) 2>/dev/null || echo ""
 CFLAGS_REGRESS	!= pkg-config --cflags $(PKG_REGRESS) 2>/dev/null || echo ""
 
-all: $(BINS) ort.pc
+all: $(BINS) $(LIBS) $(PKGCONFIGS)
 
 afl::
 	$(MAKE) clean
@@ -315,9 +320,9 @@ install: all
 	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_DATA) b64_ntop.c jsmn.c gensalt.c $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_DATA) ortPrivate.ts $(DESTDIR)$(SHAREDIR)/openradtool
-	$(INSTALL_DATA) ort.h $(DESTDIR)$(INCLUDEDIR)
-	$(INSTALL_LIB) libort.a $(DESTDIR)$(LIBDIR)
-	$(INSTALL_DATA) ort.pc $(DESTDIR)$(LIBDIR)/pkgconfig
+	$(INSTALL_DATA) $(PUBHEADERS) $(DESTDIR)$(INCLUDEDIR)
+	$(INSTALL_LIB) $(LIBS) $(DESTDIR)$(LIBDIR)
+	$(INSTALL_DATA) $(PKGCONFIGS) $(DESTDIR)$(LIBDIR)/pkgconfig
 	$(INSTALL_PROGRAM) $(BINS) $(DESTDIR)$(BINDIR)
 
 openradtool.tar.gz.sha512: openradtool.tar.gz
@@ -491,7 +496,7 @@ clean:
 	rm -f $(BINS) $(GENHEADERS) $(LIBOBJS) $(OBJS) $(LIBS) test test.o
 	rm -f db.c db.h db.o db.sql db.ts db.node.ts db.update.sql db.db db.trans.ort
 	rm -f openradtool.tar.gz openradtool.tar.gz.sha512
-	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml ort.pc
+	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml $(PKGCONFIGS)
 	rm -f db.ort.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
 
 # Remove both what can be built and what's built by ./configure.

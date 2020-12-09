@@ -52,119 +52,144 @@ static	const char *const optypes[OPTYPE__MAX] = {
 };
 
 /*
- * Emit as uppercase.
+ * Emit all characters as uppercase.
+ * Return zero on failure, non-zero on success.
  */
-static void
-gen_upper(const char *cp)
+static int
+gen_upper(FILE *f, const char *cp)
 {
 
 	for ( ; *cp != '\0'; cp++)
-		putchar(toupper((unsigned char)*cp));
+		if (fputc(toupper((unsigned char)*cp), f) == EOF)
+			return 0;
+	return 1;
 }
 
 /*
- * Generate the C API for a given field.
+ * Generate the structure field and documentation for a given field.
+ * Return zero on failure, non-zero on success.
  */
-static void
-gen_strct_field(const struct field *p)
+static int
+gen_field(FILE *f, const struct field *p)
 {
+	int	 c = 0;
 
-	if (NULL != p->doc)
-		print_commentt(1, COMMENT_C, p->doc);
+	print_commentt(1, COMMENT_C, p->doc);
 
 	switch (p->type) {
-	case (FTYPE_STRUCT):
-		printf("\tstruct %s %s;\n", 
+	case FTYPE_STRUCT:
+		c = fprintf(f, "\tstruct %s %s;\n", 
 			p->ref->target->parent->name, p->name);
 		break;
-	case (FTYPE_REAL):
-		printf("\tdouble\t %s;\n", p->name);
+	case FTYPE_REAL:
+		c = fprintf(f, "\tdouble\t %s;\n", p->name);
 		break;
-	case (FTYPE_BLOB):
-		printf("\tvoid\t*%s;\n"
-		       "\tsize_t\t %s_sz;\n",
+	case FTYPE_BLOB:
+		c = fprintf(f, "\tvoid\t*%s;\n\tsize_t\t %s_sz;\n",
 		       p->name, p->name);
 		break;
-	case (FTYPE_DATE):
-	case (FTYPE_EPOCH):
-		printf("\ttime_t\t %s;\n", p->name);
+	case FTYPE_DATE:
+	case FTYPE_EPOCH:
+		c = fprintf(f, "\ttime_t\t %s;\n", p->name);
 		break;
-	case (FTYPE_BIT):
-	case (FTYPE_BITFIELD):
-	case (FTYPE_INT):
-		printf("\tint64_t\t %s;\n", p->name);
+	case FTYPE_BIT:
+	case FTYPE_BITFIELD:
+	case FTYPE_INT:
+		c = fprintf(f, "\tint64_t\t %s;\n", p->name);
 		break;
-	case (FTYPE_TEXT):
-		/* FALLTHROUGH */
-	case (FTYPE_EMAIL):
-		/* FALLTHROUGH */
-	case (FTYPE_PASSWORD):
-		printf("\tchar\t*%s;\n", p->name);
+	case FTYPE_TEXT:
+	case FTYPE_EMAIL:
+	case FTYPE_PASSWORD:
+		c = fprintf(f, "\tchar\t*%s;\n", p->name);
 		break;
-	case (FTYPE_ENUM):
-		printf("\tenum %s %s;\n", 
+	case FTYPE_ENUM:
+		c = fprintf(f, "\tenum %s %s;\n", 
 			p->enm->name, p->name);
 		break;
 	default:
 		break;
 	}
+
+	return c >= 0;
 }
 
-static void
-gen_bitfield(const struct bitf *b)
+/*
+ * Emit bit-field values.
+ * These are either the field index (BITI) or the mask (BITF).
+ * Return zero on failure, non-zero on success.
+ */
+static int
+gen_bitfield(FILE *f, const struct bitf *b)
 {
-	const struct bitidx *bi;
-	int64_t		     maxvalue = -INT64_MAX;
+	const struct bitidx	*bi;
+	int64_t			 maxv = -INT64_MAX;
+	enum cmtt		 c = COMMENT_C;
 
-	print_commentt(0, COMMENT_C_FRAG_OPEN, b->doc);
-	print_commentt(0, COMMENT_C_FRAG_CLOSE,
+	if (b->doc != NULL) {
+		print_commentt(0, COMMENT_C_FRAG_OPEN, b->doc);
+		c = COMMENT_C_FRAG_CLOSE;
+	}
+	print_commentt(0, c,
 		"This defines the bit indices for this bit-field.\n"
 		"The BITI fields are the bit indices (0--63) and "
 		"the BITF fields are the masked integer values.");
 
-	printf("enum\t%s {\n", b->name);
-	TAILQ_FOREACH(bi, &b->bq, entries) {
-		if (NULL != bi->doc)
-			print_commentt(1, COMMENT_C, bi->doc);
-		printf("\tBITI_");
-		gen_upper(b->name);
-		printf("_%s = %" PRId64 ",\n", bi->name, bi->value);
-		printf("\tBITF_");
-		gen_upper(b->name);
-		printf("_%s = (1U << %" PRId64 "),\n",
-			bi->name, bi->value);
-		if (bi->value > maxvalue)
-			maxvalue = bi->value;
-	}
-	printf("\tBITI_");
-	gen_upper(b->name);
-	printf("__MAX = %" PRId64 ",\n", maxvalue + 1);
-	puts("};\n"
-	     "");
+	if (fprintf(f, "enum\t%s {\n", b->name) < 0)
+		return 0;
 
+	TAILQ_FOREACH(bi, &b->bq, entries) {
+		print_commentt(1, COMMENT_C, bi->doc);
+		if (fputs("\tBITI_", f) == EOF)
+			return 0;
+		if (!gen_upper(f, b->name))
+			return 0;
+		if (fprintf(f, "_%s = %" PRId64 ",\n\tBITF_", 
+		    bi->name, bi->value) < 0)
+			return 0;
+		if (!gen_upper(f, b->name))
+			return 0;
+		if (fprintf(f, "_%s = (1U << %" PRId64 "),\n", 
+		    bi->name, bi->value) < 0)
+			return 0;
+		if (bi->value > maxv)
+			maxv = bi->value;
+	}
+
+	if (fputs("\tBITI_", f) == EOF)
+		return 0;
+	if (!gen_upper(f, b->name))
+		return 0;
+	if (fprintf(f, "__MAX = %" PRId64 ",\n};\n\n", maxv + 1) < 0)
+		return 0;
+
+	return 1;
 }
 
 /*
  * Generate our enumerations.
  */
-static void
-gen_enum(const struct enm *e)
+static int
+gen_enum(FILE *f, const struct enm *e)
 {
 	const struct eitem *ei;
 
-	if (NULL != e->doc)
-		print_commentt(0, COMMENT_C, e->doc);
-	printf("enum\t%s {\n", e->name);
+	print_commentt(0, COMMENT_C, e->doc);
+
+	if (fprintf(f, "enum\t%s {\n", e->name) < 0)
+		return 0;
+
 	TAILQ_FOREACH(ei, &e->eq, entries) {
-		if (NULL != ei->doc)
-			print_commentt(1, COMMENT_C, ei->doc);
-		putchar('\t');
-		gen_upper(e->name);
-		printf("_%s = %" PRId64 "%s\n", ei->name, ei->value, 
-			TAILQ_NEXT(ei, entries) ? "," : "");
+		print_commentt(1, COMMENT_C, ei->doc);
+		if (fputc('\t', f) == EOF)
+			return 0;
+		if (!gen_upper(f, e->name))
+			return 0;
+		if (fprintf(f, "_%s = %" PRId64 "%s\n", ei->name, 
+		    ei->value, TAILQ_NEXT(ei, entries) ? "," : "") < 0)
+			return 0;
 	}
-	puts("};\n"
-	     "");
+
+	return fputs("};\n\n", f) != EOF;
 }
 
 /*
@@ -172,69 +197,82 @@ gen_enum(const struct enm *e)
  * This generates the TAILQ_ENTRY listing if the structure has any
  * listings declared on it.
  */
-static void
-gen_struct(const struct config *cfg, const struct strct *p)
+static int
+gen_struct(FILE *f, const struct config *cfg, const struct strct *p)
 {
-	const struct field *f;
+	const struct field *fd;
 
-	if (NULL != p->doc)
-		print_commentt(0, COMMENT_C, p->doc);
+	print_commentt(0, COMMENT_C, p->doc);
 
-	printf("struct\t%s {\n", p->name);
+	if (fprintf(f, "struct\t%s {\n", p->name) < 0)
+		return 0;
 
-	TAILQ_FOREACH(f, &p->fq, entries)
-		gen_strct_field(f);
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT == f->type &&
-		    FIELD_NULL & f->ref->source->flags) {
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if (!gen_field(f, fd))
+			return 0;
+
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type == FTYPE_STRUCT &&
+		    (fd->ref->source->flags & FIELD_NULL)) {
 			print_commentv(1, COMMENT_C,
 				"Non-zero if \"%s\" has been set "
-				"from \"%s\".", f->name, 
-				f->ref->source->name);
-			printf("\tint has_%s;\n", f->name);
+				"from \"%s\".", fd->name, 
+				fd->ref->source->name);
+			if (fprintf(f, "\tint has_%s;\n", fd->name) < 0)
+				return 0;
 			continue;
-		} else if ( ! (FIELD_NULL & f->flags))
+		} else if (!(fd->flags & FIELD_NULL))
 			continue;
+
 		print_commentv(1, COMMENT_C,
 			"Non-zero if \"%s\" field is null/unset.",
-			f->name);
-		printf("\tint has_%s;\n", f->name);
+			fd->name);
+		if (fprintf(f, "\tint has_%s;\n", fd->name) < 0)
+			return 0;
 	}
 
-	if (STRCT_HAS_QUEUE & p->flags)
-		printf("\tTAILQ_ENTRY(%s) _entries;\n", p->name);
+	if ((p->flags & STRCT_HAS_QUEUE) &&
+	    fprintf(f, "\tTAILQ_ENTRY(%s) _entries;\n", p->name) < 0)
+		return 0;
 
 	if (!TAILQ_EMPTY(&cfg->rq)) {
 		print_commentt(1, COMMENT_C,
 			"Private data used for role analysis.");
-		puts("\tstruct ort_store *priv_store;");
+		if (fputs("\tstruct ort_store *priv_store;\n", f) == EOF)
+			return 0;
 	}
-	puts("};\n"
-	     "");
 
-	if (STRCT_HAS_QUEUE & p->flags) {
+	if (fputs("};\n\n", f) == EOF)
+		return 0;
+
+	if (p->flags & STRCT_HAS_QUEUE) {
 		print_commentv(0, COMMENT_C, 
 			"Queue of %s for listings.", p->name);
-		printf("TAILQ_HEAD(%s_q, %s);\n\n", p->name, p->name);
+		if (fprintf(f, "TAILQ_HEAD(%s_q, %s);\n\n", 
+		    p->name, p->name) < 0)
+			return 0;
 	}
 
-	if (STRCT_HAS_ITERATOR & p->flags) {
+	if (p->flags & STRCT_HAS_ITERATOR) {
 		print_commentv(0, COMMENT_C, 
 			"Callback of %s for iteration.\n"
 			"The arg parameter is the opaque pointer "
 			"passed into the iterate function.",
 			p->name);
-		printf("typedef void (*%s_cb)"
-		       "(const struct %s *v, void *arg);\n\n", 
-		       p->name, p->name);
+		if (fprintf(f, "typedef void (*%s_cb)(const struct %s "
+		    "*v, void *arg);\n\n", p->name, p->name) < 0)
+			return 0;
 	}
+
+	return 1;
 }
 
 /*
  * Generate update/delete functions for a structure.
+ * Returns zero on failure, non-zero on success.
  */
-static void
-gen_func_update(const struct config *cfg, const struct update *up)
+static int
+gen_update(FILE *f, const struct config *cfg, const struct update *up)
 {
 	const struct uref	*ref;
 	enum cmtt		 ct = COMMENT_C_FRAG_OPEN;
@@ -253,7 +291,7 @@ gen_func_update(const struct config *cfg, const struct update *up)
 			"Update fields in struct %s.\n"
 			"Updated fields:", up->parent->name);
 		TAILQ_FOREACH(ref, &up->mrq, entries)
-			if (FTYPE_PASSWORD == ref->field->type) 
+			if (ref->field->type == FTYPE_PASSWORD) 
 				print_commentv(0, COMMENT_C_FRAG,
 					"\tv%zu: %s (password)", 
 					pos++, ref->field->name);
@@ -286,20 +324,21 @@ gen_func_update(const struct config *cfg, const struct update *up)
 		"Returns zero on constraint violation, "
 		"non-zero on success.");
 	print_func_db_update(up, 1);
-	puts("");
+
+	return fputs("", f) != EOF;
 }
 
 /*
  * Generate a custom search function declaration.
  */
-static void
-gen_func_search(const struct config *cfg, const struct search *s)
+static int
+gen_search(FILE *f, const struct config *cfg, const struct search *s)
 {
-	const struct sent  *sent;
-	const struct strct *rc;
-	size_t	 	    pos = 1;
+	const struct sent	*sent;
+	const struct strct	*rc;
+	size_t			 pos = 1;
 
-	rc = NULL != s->dst ? s->dst->strct : s->parent;
+	rc = s->dst != NULL ? s->dst->strct : s->parent;
 
 	if (s->doc != NULL)
 		print_commentt(0, COMMENT_C_FRAG_OPEN, s->doc);
@@ -338,7 +377,7 @@ gen_func_search(const struct config *cfg, const struct search *s)
 			"invoke any database modifications or risk "
 			"deadlock.");
 
-	if ((rc->flags & STRCT_HAS_NULLREFS))
+	if (rc->flags & STRCT_HAS_NULLREFS)
 		print_commentt(0, COMMENT_C_FRAG,
 			"This search involves nested null structure "
 			"linking, which involves multiple database "
@@ -384,32 +423,35 @@ gen_func_search(const struct config *cfg, const struct search *s)
 			"retrieved data.");
 
 	print_func_db_search(s, 1);
-	puts("");
+
+	return fputs("", f) != EOF;
 }
 
 /*
  * Generate the function declarations for a given structure.
  */
-static void
-gen_funcs_dbin(const struct config *cfg, const struct strct *p)
+static int
+gen_database(FILE *f, const struct config *cfg, const struct strct *p)
 {
-	const struct search *s;
-	const struct field *f;
-	const struct update *u;
-	size_t	 pos;
+	const struct search	*s;
+	const struct field	*fd;
+	const struct update	*u;
+	size_t			 pos;
 
 	print_commentt(0, COMMENT_C,
 	       "Clear resources and free \"p\".\n"
 	       "Has no effect if \"p\" is NULL.");
 	print_func_db_free(p, 1);
-	puts("");
+	if (fputs("\n", f) == EOF)
+		return 0;
 
 	if (STRCT_HAS_QUEUE & p->flags) {
 		print_commentv(0, COMMENT_C,
 		     "Unfill and free all queue members.\n"
 		     "Has no effect if \"q\" is NULL.");
 		print_func_db_freeq(p, 1);
-		puts("");
+		if (fputs("\n", f) == EOF)
+			return 0;
 	}
 
 	if (p->ins != NULL) {
@@ -418,35 +460,41 @@ gen_funcs_dbin(const struct config *cfg, const struct strct *p)
 			"Only native (and non-rowid) fields may "
 			"be set.");
 		pos = 1;
-		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (f->type == FTYPE_STRUCT ||
-			    (f->flags & FIELD_ROWID))
+		TAILQ_FOREACH(fd, &p->fq, entries) {
+			if (fd->type == FTYPE_STRUCT ||
+			    (fd->flags & FIELD_ROWID))
 				continue;
-			if (f->type == FTYPE_PASSWORD)
+			if (fd->type == FTYPE_PASSWORD)
 				print_commentv(0, COMMENT_C_FRAG,
 					"\tv%zu: %s (pre-hashed password)", 
-					pos++, f->name);
+					pos++, fd->name);
 			else
 				print_commentv(0, COMMENT_C_FRAG,
-					"\tv%zu: %s", pos++, f->name);
+					"\tv%zu: %s", pos++, fd->name);
 		}
 		print_commentt(0, COMMENT_C_FRAG_CLOSE,
 			"Returns the new row's identifier on "
 			"success or <0 otherwise.");
 		print_func_db_insert(p, 1);
-		puts("");
+		if (fputs("\n", f) == EOF)
+			return 0;
 	}
 
 	TAILQ_FOREACH(s, &p->sq, entries)
-		gen_func_search(cfg, s);
+		if (!gen_search(f, cfg, s))
+			return 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
-		gen_func_update(cfg, u);
+		if (!gen_update(f, cfg, u))
+			return 0;
 	TAILQ_FOREACH(u, &p->dq, entries)
-		gen_func_update(cfg, u);
+		if (!gen_update(f, cfg, u))
+			return 0;
+
+	return 1;
 }
 
-static void
-gen_funcs_json_parse(const struct config *cfg, const struct strct *p)
+static int
+gen_funcs_json_parse(FILE *f, const struct config *cfg, const struct strct *p)
 {
 
 	print_commentt(0, COMMENT_C,
@@ -456,7 +504,8 @@ gen_funcs_json_parse(const struct config *cfg, const struct strct *p)
 		"Returns 0 on parse failure, <0 on memory allocation "
 		"failure, or the count of tokens parsed on success.");
 	print_func_json_parse(p, 1);
-	puts("");
+	if (fputs("\n", f) == EOF)
+		return 0;
 
 	print_commentv(0, COMMENT_C,
 		"Deserialise the parsed JSON buffer \"buf\", which "
@@ -468,25 +517,28 @@ gen_funcs_json_parse(const struct config *cfg, const struct strct *p)
 		"failure, or the count of tokens parsed on success.",
 		p->name);
 	print_func_json_parse_array(p, 1);
-	puts("");
+	if (fputs("\n", f) == EOF)
+		return 0;
 
 	print_commentv(0, COMMENT_C,
 		"Free an array from jsmn_%s_array(). "
 		"Frees the pointer as well.\n"
 		"May be passed NULL.", p->name);
 	print_func_json_free_array(p, 1);
-	puts("");
+	if (fputs("\n", f) == EOF)
+		return 0;
 
 	print_commentv(0, COMMENT_C,
 		"Clear memory from jsmn_%s(). "
 		"Does not touch the pointer itself.\n"
 		"May be passed NULL.", p->name);
 	print_func_json_clear(p, 1);
-	puts("");
+
+	return fputs("\n", f) != EOF;
 }
 
-static void
-gen_funcs_json(const struct config *cfg, const struct strct *p)
+static int
+gen_json_out(FILE *f, const struct config *cfg, const struct strct *p)
 {
 
 	print_commentv(0, COMMENT_C,
@@ -497,7 +549,9 @@ gen_funcs_json(const struct config *cfg, const struct strct *p)
 		"See json_%s_obj() for the full object.",
 		p->name, p->name);
 	print_func_json_data(p, 1);
-	puts("");
+	if (fputs("\n", f) == EOF)
+		return 0;
+
 	print_commentv(0, COMMENT_C,
 		"Emit the JSON key-value pair for the "
 		"object:\n"
@@ -505,7 +559,9 @@ gen_funcs_json(const struct config *cfg, const struct strct *p)
 		"See json_%s_data() for the data.",
 		p->name, p->name);
 	print_func_json_obj(p, 1);
-	puts("");
+	if (fputs("\n", f) == EOF)
+		return 0;
+
 	if (STRCT_HAS_QUEUE & p->flags) {
 		print_commentv(0, COMMENT_C,
 			"Emit the JSON key-value pair for the "
@@ -514,7 +570,8 @@ gen_funcs_json(const struct config *cfg, const struct strct *p)
 			"See json_%s_data() for the data.",
 			p->name, p->name);
 		print_func_json_array(p, 1);
-		puts("");
+		if (fputs("\n", f) == EOF)
+			return 0;
 	}
 	if (STRCT_HAS_ITERATOR & p->flags) {
 		print_commentv(0, COMMENT_C,
@@ -526,49 +583,59 @@ gen_funcs_json(const struct config *cfg, const struct strct *p)
 			"to be a kjsonreq as if were invoked "
 			"from an iterator.", p->name);
 		print_func_json_iterate(p, 1);
-		puts("");
+		if (fputs("\n", f) == EOF)
+			return 0;
 	}
+
+	return 1;
 }
 
-static void
-gen_funcs_valids(const struct config *cfg, const struct strct *p)
+static int
+gen_valids(FILE *f, const struct config *cfg, const struct strct *p)
 {
-	const struct field *f;
+	const struct field	*fd;
 
-	TAILQ_FOREACH(f, &p->fq, entries) {
+	TAILQ_FOREACH(fd, &p->fq, entries) {
 		print_commentv(0, COMMENT_C,
 			"Validation routines for the %s "
 			"field in struct %s.", 
-			f->name, p->name);
-		print_func_valid(f, 1);
-		puts("");
+			fd->name, p->name);
+		print_func_valid(fd, 1);
+		if (fputs("\n", f) == EOF)
+			return 0;
 	}
+
+	return 1;
 }
 
 /*
  * List valid keys for all native fields of a structure.
  */
-static void
-gen_valid_enums(const struct strct *p)
+static int
+gen_valid_enums(FILE *f, const struct strct *p)
 {
-	const struct field *f;
-	const char	*cp;
+	const struct field	*fd;
 
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT == f->type)
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type == FTYPE_STRUCT)
 			continue;
-		printf("\tVALID_");
-		for (cp = p->name; '\0' != *cp; cp++)
-			putchar(toupper((int)*cp));
-		putchar('_');
-		for (cp = f->name; '\0' != *cp; cp++)
-			putchar(toupper((int)*cp));
-		puts(",");
+		if (fputs("\tVALID_", f) == EOF)
+			return 0;
+		if (!gen_upper(f, p->name))
+			return 0;
+		if (fputc('_', f) == EOF)
+			return 0;
+		if (!gen_upper(f, fd->name))
+			return 0;
+		if (fputs(",\n", f) == EOF)
+			return 0;
 	}
+
+	return 1;
 }
 
-static void
-gen_func_trans(const struct config *cfg)
+static int
+gen_transaction(FILE *f, const struct config *cfg)
 {
 
 	print_commentt(0, COMMENT_C,
@@ -589,21 +656,27 @@ gen_func_trans(const struct config *cfg)
 		"same but with the \"mode\" being explicit in the "
 		"name and not needing to be specified.");
 	print_func_db_trans_open(1);
-	puts("");
-	puts("#define DB_TRANS_OPEN_IMMEDIATE(_ctx, _id) \\\n"
-		"\tdb_trans_open((_ctx), (_id), 1)\n"
-	     "#define DB_TRANS_OPEN_DEFERRED(_ctx, _id)\\\n"
-	     	"\tdb_trans_open((_ctx), (_id), 0)\n"
-	     "#define DB_TRANS_OPEN_EXCLUSIVE(_ctx, _id)\\\n"
-	        "\tdb_trans_open((_ctx), (_id), -1)\n");
+	if (fputs("\n", f) == EOF)
+		return 0;
+
+	if (fputs("#define DB_TRANS_OPEN_IMMEDIATE(_ctx, _id) \\\n"
+		  "\tdb_trans_open((_ctx), (_id), 1)\n"
+		  "#define DB_TRANS_OPEN_DEFERRED(_ctx, _id)\\\n"
+		  "\tdb_trans_open((_ctx), (_id), 0)\n"
+		  "#define DB_TRANS_OPEN_EXCLUSIVE(_ctx, _id)\\\n"
+		  "\tdb_trans_open((_ctx), (_id), -1)\n\n", f) == EOF)
+		return 0;
+
 	print_commentt(0, COMMENT_C,
 		"Roll-back an open transaction.");
 	print_func_db_trans_rollback(1);
-	puts("");
+	if (fputs("\n", f) == EOF)
+		return 0;
+
 	print_commentt(0, COMMENT_C,
 		"Commit an open transaction.");
 	print_func_db_trans_commit(1);
-	puts("");
+	return fputs("\n", f) != EOF;
 }
 
 /*
@@ -613,13 +686,15 @@ gen_func_trans(const struct config *cfg)
  * This changes the documentation for db_open, but we keep the
  * documentation for db_close to be symmetric.
  */
-static void
-gen_func_open(const struct config *cfg)
+static int
+gen_func_open(FILE *f, const struct config *cfg)
 {
 
 	print_commentt(0, COMMENT_C,
 		"Forward declaration of opaque pointer.");
-	puts("struct ort;\n");
+	if (fputs("struct ort;\n\n", f) == EOF)
+		return 0;
+
 	print_commentt(0, COMMENT_C,
 		"Set the argument given to the logging function "
 		"specified to db_open_logging().\n"
@@ -632,7 +707,9 @@ gen_func_open(const struct config *cfg)
 		"Set length to zero to unset the logging function "
 		"callback argument.");
 	print_func_db_set_logging(1);
-	puts("");
+	if (fputs("\n", f) == EOF)
+		return 0;
+
 	print_commentt(0, COMMENT_C,
 		"Allocate and open the database in \"file\".\n"
 		"Returns an opaque pointer or NULL on "
@@ -648,7 +725,9 @@ gen_func_open(const struct config *cfg)
 		"Subsequent this function, all database "
 		"operations take place over IPC.");
 	print_func_db_open(1);
-	puts("");
+	if (fputs("\n", f) == EOF)
+		return 0;
+
 	print_commentt(0, COMMENT_C,
 		"Like db_open() but accepts a function for "
 		"logging.\n"
@@ -664,11 +743,11 @@ gen_func_open(const struct config *cfg)
 		"See db_logging_data() to set the pointer "
 		"after initialisation.");
 	print_func_db_open_logging(1);
-	puts("");
+	return fputs("\n", f) != EOF;
 }
 
-static void
-gen_func_roles(const struct config *cfg)
+static int
+gen_roles(FILE *f, const struct config *cfg)
 {
 
 	print_commentt(0, COMMENT_C,
@@ -682,12 +761,14 @@ gen_func_roles(const struct config *cfg)
 		"The only exceptions are when leaving ROLE_default "
 		"or when entering ROLE_none.");
 	print_func_db_role(1);
-	puts("");
+	if (fputs("\n", f) == EOF)
+		return 0;
 
 	print_commentt(0, COMMENT_C,
 		"Get the current role.");
 	print_func_db_role_current(1);
-	puts("");
+	if (fputs("\n", f) == EOF)
+		return 0;
 
 	print_commentt(0, COMMENT_C,
 		"Get the role stored into \"s\".\n"
@@ -695,19 +776,18 @@ gen_func_roles(const struct config *cfg)
 		"stored role is created, such as when a \"search\" "
 		"query function is called.");
 	print_func_db_role_stored(1);
-	puts("");
+	return fputs("\n", f) != EOF;
 }
 
-
-static void
-gen_func_close(const struct config *cfg)
+static int
+gen_close(FILE *f, const struct config *cfg)
 {
 
 	print_commentt(0, COMMENT_C,
 		"Close the context opened by db_open().\n"
 		"Has no effect if \"p\" is NULL.");
 	print_func_db_close(1);
-	puts("");
+	return fputs("\n", f) != EOF;
 }
 
 /*
@@ -715,16 +795,17 @@ gen_func_close(const struct config *cfg)
  * role.  Don't print out anything for the "all" role, which may never
  * be entered.
  */
-static void
-gen_role(const struct role *r, int *nf)
+static int
+gen_role(FILE *f, const struct role *r, int *nf)
 {
 
 	if (strcmp(r->name, "all") == 0)
-		return;
+		return 1;
 
-	if (*nf)
-		puts(",");
-	else
+	if (*nf) {
+		if (fputc(',', f) == EOF)
+			return 0;
+	} else
 		*nf = 1;
 
 	if (strcmp(r->name, "default") == 0)
@@ -737,7 +818,7 @@ gen_role(const struct role *r, int *nf)
 		print_commentt(1, COMMENT_C,
 			"Role that isn't allowed to do anything.");
 
-	printf("\tROLE_%s", r->name);
+	return fprintf(f, "\tROLE_%s", r->name) >= 0;
 }
 
 int
@@ -752,24 +833,24 @@ ort_lang_c_header(const struct ort_lang_c *args,
 
 	/* If the guard is NULL, we don't emit any guarding. */
 
-	if (args->guard != NULL)
-		printf("#ifndef %s\n"
-		       "#define %s\n"
-		       "\n", args->guard, args->guard);
+	if (args->guard != NULL && fprintf(f, 
+	    "#ifndef %s\n#define %s\n\n", args->guard, args->guard) < 0)
+		return 0;
 
 	print_commentv(0, COMMENT_C, 
 	       "WARNING: automatically generated by "
 	       "%s " VERSION ".\n"
 	       "DO NOT EDIT!", getprogname());
-	puts("");
+	if (fputc('\n', f) == EOF)
+		return 0;
 
-	printf("#ifndef KWBP_VERSION\n"
-	       "# define KWBP_VERSION \"%s\"\n"
-	       "#endif\n"
-	       "#ifndef KWBP_VSTAMP\n"
-	       "# define KWBP_VSTAMP %lld\n"
-	       "#endif\n"
-	       "\n", VERSION, (long long)VSTAMP);
+	if (fprintf(f, "#ifndef KWBP_VERSION\n"
+	            "# define KWBP_VERSION \"%s\"\n"
+	            "#endif\n"
+	            "#ifndef KWBP_VSTAMP\n"
+	            "# define KWBP_VSTAMP %lld\n"
+	            "#endif\n" "\n", VERSION, (long long)VSTAMP) < 0)
+		return 0;
 	
 	if ((args->flags & ORT_LANG_C_DB_SQLBOX) && 
 	    !TAILQ_EMPTY(&cfg->rq)) {
@@ -779,21 +860,21 @@ ort_lang_c_header(const struct ort_lang_c *args,
 			"the system is set to ROLE_default.\n"
 			"Roles may then be set using the "
 			"ort_role() function.");
-		puts("enum\tort_role {");
+		if (fputs("enum\tort_role {\n", f) == EOF)
+			return 0;
 		TAILQ_FOREACH(r, &cfg->arq, allentries)
-			gen_role(r, &i);
-		puts("\n"
-		     "};\n"
-		     "");
+			gen_role(f, r, &i);
+		if (fputs("\n};\n\n", f) == EOF)
+			return 0;
 	}
 
 	if (args->flags & ORT_LANG_C_CORE) {
 		TAILQ_FOREACH(e, &cfg->eq, entries)
-			gen_enum(e);
+			gen_enum(f, e);
 		TAILQ_FOREACH(bf, &cfg->bq, entries)
-			gen_bitfield(bf);
+			gen_bitfield(f, bf);
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_struct(cfg, p);
+			gen_struct(f, cfg, p);
 	}
 
 	if (args->flags & ORT_LANG_C_VALID_KCGI) {
@@ -802,12 +883,12 @@ ort_lang_c_header(const struct ort_lang_c *args,
 			"These are as VALID_XXX_YYY, where XXX is "
 			"the structure and YYY is the field.\n"
 			"Only native types are listed.");
-		puts("enum\tvalid_keys {");
+		if (fputs("enum\tvalid_keys {\n", f) == EOF)
+			return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_valid_enums(p);
-		puts("\tVALID__MAX");
-		puts("};\n"
-		     "");
+			gen_valid_enums(f, p);
+		if (fputs("\tVALID__MAX\n};\n\n", f) == EOF)
+			return 0;
 		print_commentt(0, COMMENT_C,
 			"Validation fields.\n"
 			"Pass this directly into khttp_parse(3) "
@@ -816,69 +897,69 @@ ort_lang_c_header(const struct ort_lang_c *args,
 			"where \"xxx\" is the struct and \"yyy\" "
 			"the field, and can be used standalone.\n"
 			"The form inputs are named \"xxx-yyy\".");
-		puts("extern const struct kvalid "
-		      "valid_keys[VALID__MAX];\n"
-		      "");
+		if (fputs("extern const struct kvalid "
+			   "valid_keys[VALID__MAX];\n\n", f) == EOF)
+			return 0;
 	}
 
 	if (args->flags & ORT_LANG_C_JSON_JSMN) {
 		print_commentt(0, COMMENT_C,
 			"Possible error returns from jsmn_parse(), "
 			"if returning a <0 error code.");
-		puts("enum jsmnerr_t {\n"
-		     "\tJSMN_ERROR_NOMEM = -1,\n"
-		     "\tJSMN_ERROR_INVAL = -2,\n"
-		     "\tJSMN_ERROR_PART = -3\n"
-		     "};\n"
-		     "");
+		if (fputs("enum jsmnerr_t {\n"
+		          "\tJSMN_ERROR_NOMEM = -1,\n"
+		          "\tJSMN_ERROR_INVAL = -2,\n"
+		          "\tJSMN_ERROR_PART = -3\n"
+		          "};\n\n", f) == EOF)
+			return 0;
 		print_commentt(0, COMMENT_C,
 			"Type of JSON token");
-		puts("typedef enum {\n"
-		     "\tJSMN_UNDEFINED = 0,\n"
-		     "\tJSMN_OBJECT = 1,\n"
-		     "\tJSMN_ARRAY = 2,\n"
-		     "\tJSMN_STRING = 3,\n"
-		     "\tJSMN_PRIMITIVE = 4\n"
-		     "} jsmntype_t;\n"
-		     "");
+		if (fputs("typedef enum {\n"
+		          "\tJSMN_UNDEFINED = 0,\n"
+		          "\tJSMN_OBJECT = 1,\n"
+		          "\tJSMN_ARRAY = 2,\n"
+		          "\tJSMN_STRING = 3,\n"
+		          "\tJSMN_PRIMITIVE = 4\n"
+		          "} jsmntype_t;\n\n", f) == EOF)
+			return 0;
 		print_commentt(0, COMMENT_C,
 			"JSON token description.");
-		puts("typedef struct {\n"
-		     "\tjsmntype_t type;\n"
-		     "\tint start;\n"
-		     "\tint end;\n"
-		     "\tint size;\n"
-		     "} jsmntok_t;\n"
-		     "");
+		if (fputs("typedef struct {\n"
+		          "\tjsmntype_t type;\n"
+		          "\tint start;\n"
+		          "\tint end;\n"
+		          "\tint size;\n"
+		          "} jsmntok_t;\n\n", f) == EOF)
+			return 0;
 		print_commentt(0, COMMENT_C,
 			"JSON parser. Contains an array of token "
 			"blocks available. Also stores the string "
 			"being parsed now and current position in "
 			"that string.");
-		puts("typedef struct {\n"
-		     "\tunsigned int pos;\n"
-		     "\tunsigned int toknext;\n"
-		     "\tint toksuper;\n"
-		     "} jsmn_parser;\n"
-		     "");
+		if (fputs("typedef struct {\n"
+		          "\tunsigned int pos;\n"
+		          "\tunsigned int toknext;\n"
+		          "\tint toksuper;\n"
+		          "} jsmn_parser;\n\n", f) == EOF)
+			return 0;
 	}
 
-	puts("__BEGIN_DECLS\n"
-	     "");
+	if (fputs("__BEGIN_DECLS\n\n", f) == EOF)
+		return 0;
 
 	if (args->flags & ORT_LANG_C_DB_SQLBOX) {
-		gen_func_open(cfg);
-		gen_func_trans(cfg);
-		gen_func_close(cfg);
+		gen_func_open(f, cfg);
+		gen_transaction(f, cfg);
+		gen_close(f, cfg);
 		if (!TAILQ_EMPTY(&cfg->rq))
-			gen_func_roles(cfg);
+			gen_roles(f, cfg);
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_funcs_dbin(cfg, p);
+			gen_database(f, cfg, p);
 	}
 
 	if (args->flags & ORT_LANG_C_JSON_KCGI)
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_funcs_json(cfg, p);
+			gen_json_out(f, cfg, p);
 	if (args->flags & ORT_LANG_C_JSON_JSMN) {
 		print_commentt(0, COMMENT_C,
 			"Check whether the current token in a "
@@ -888,13 +969,15 @@ ort_lang_c_header(const struct ort_lang_c *args,
 			"equality.\n"
 			"Returns non-zero on equality, zero "
 			"otherwise.");
-		puts("int jsmn_eq(const char *json,\n"
-		     "\tconst jsmntok_t *tok, const char *s);\n"
-		     "");
+		if (fputs("int jsmn_eq(const char *json,\n"
+		          "\tconst jsmntok_t *tok, "
+			  "const char *s);\n\n", f) == EOF)
+			return 0;
 		print_commentt(0, COMMENT_C,
 			"Initialise a JSON parser sequence \"p\".");
-		puts("void jsmn_init(jsmn_parser *p);\n"
-		     "");
+		if (fputs("void jsmn_init"
+			  "(jsmn_parser *p);\n\n", f) == EOF)
+			return 0;
 		print_commentt(0, COMMENT_C,
 			"Parse a buffer \"buf\" of length \"sz\" "
 			"into tokens \"toks\" of length \"toksz\" "
@@ -904,21 +987,24 @@ ort_lang_c_header(const struct ort_lang_c *args,
 			"in enum jsmnerr_t).\n"
 			"If passed NULL \"toks\", simply computes "
 			"the number of tokens required.");
-		puts("int jsmn_parse(jsmn_parser *p, const char *buf,\n"
-		     "\tsize_t sz, jsmntok_t *toks, "
-		      "unsigned int toksz);\n"
-		     "");
+		if (fputs("int jsmn_parse(jsmn_parser *p, "
+			  "const char *buf,\n"
+			  "\tsize_t sz, jsmntok_t *toks, "
+		          "unsigned int toksz);\n\n", f) == EOF)
+			return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_funcs_json_parse(cfg, p);
+			gen_funcs_json_parse(f, cfg, p);
 	}
 	if (args->flags & ORT_LANG_C_VALID_KCGI)
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_funcs_valids(cfg, p);
+			gen_valids(f, cfg, p);
 
-	puts("__END_DECLS");
+	if (fputs("__END_DECLS\n", f) == EOF)
+		return 0;
 
-	if (args->guard != NULL)
-		puts("\n#endif");
+	if (args->guard != NULL &&
+	    fputs("\n#endif\n", f) == EOF)
+		return 0;
 
 	return 1;
 }

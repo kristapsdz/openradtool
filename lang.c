@@ -170,6 +170,9 @@ print_commentt(size_t tabs, enum cmtt type, const char *cp)
 {
 	size_t	maxcol, i;
 
+	if (cp == NULL)
+		return;
+
 	maxcol = (tabs >= 4) ? 40 : MAXCOLS - (tabs * 4);
 
 	/*

@@ -2403,24 +2403,6 @@ gen_valid_struct(const struct strct *p)
 	}
 }
 
-static int
-genfile(const char *file, int fd)
-{
-	ssize_t	 ssz;
-	char	 buf[BUFSIZ];
-
-	print_commentv(0, COMMENT_C,
-		"File imported from %s.", file);
-
-	while ((ssz = read(fd, buf, sizeof(buf))) > 0)
-		fwrite(buf, 1, ssz, stdout);
-
-	if (ssz < 0)
-		warn("%s", file);
-
-	return 0 == ssz;
-}
-
 /*
  * Generate the schema for a given table.
  * This macro accepts a single parameter that's given to all of the
@@ -2451,8 +2433,7 @@ gen_alias_builder(const struct strct *p)
  */
 int
 ort_lang_c_source(const struct ort_lang_c *args,
-	const struct config *cfg, FILE *f, 
-	const char *incls, const int *exs)
+	const struct config *cfg, FILE *f, const char *incls)
 {
 	const struct strct 	*p;
 	const struct search	*s;
@@ -2571,13 +2552,12 @@ ort_lang_c_source(const struct ort_lang_c *args,
 	}
 
 #ifndef __OpenBSD__
-	if ( ! genfile(FILE_GENSALT, exs[EX_GENSALT]))
-		return 0;
+	puts(args->ext_gensalt);
 #endif
-	if (need_b64 && ! genfile(FILE_B64_NTOP, exs[EX_B64_NTOP]))
-		return 0;
-	if (args->flags & ORT_LANG_C_JSON_JSMN && ! genfile(FILE_JSMN, exs[EX_JSMN]))
-		return 0;
+	if (need_b64)
+		puts(args->ext_b64_ntop);
+	if (args->flags & ORT_LANG_C_JSON_JSMN)
+		puts(args->ext_jsmn);
 
 	if (args->flags & ORT_LANG_C_DB_SQLBOX) {
 		print_commentt(0, COMMENT_C,

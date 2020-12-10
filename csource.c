@@ -19,7 +19,8 @@
 #if HAVE_SYS_QUEUE
 # include <sys/queue.h>
 #endif
-# include <sys/param.h>
+#include <sys/param.h>
+#include <sys/stat.h>
 
 #include <assert.h>
 #include <ctype.h>
@@ -40,11 +41,44 @@
 #include "ort-lang-c.h"
 #include "lang-c.h"
 
-static	const char *const externals[EX__MAX] = {
-	FILE_GENSALT, /* EX_GENSALT */
-	FILE_B64_NTOP, /* EX_B64_NTOP */
-	FILE_JSMN /* EX_JSMN */
-};
+/*
+ * Read a file into memory.
+ * If the file contains NUL characters, these will prematurely end the
+ * file when printed, as it's interpreted as a string.
+ * Return the file contents (never fails).
+ */
+static char *
+readfile(const char *dir, const char *fname)
+{
+	int		 fd;
+	ssize_t		 ssz;
+	size_t		 sz;
+	struct stat	 st;
+	char		 file[MAXPATHLEN];
+	char		*buf;
+
+	sz = snprintf(file, sizeof(file), "%s/%s", dir, fname);
+	if (sz < 0 || (size_t)sz >= sizeof(file))
+		errx(1, "%s/%s: too long", dir, fname);
+
+	if ((fd = open(file, O_RDONLY, 0)) == -1)
+		err(1, "%s", file);
+	if (fstat(fd, &st) == -1)
+		err(1, "%s", file);
+
+	/* FIXME: overflow check. */
+
+	sz = st.st_size;
+	if ((buf = malloc(sz + 1)) == NULL)
+		err(1, NULL);
+
+	if ((ssz = read(fd, buf, sz)) < 0)
+		err(1, "%s", file);
+
+	buf[sz] = '\0';
+	close(fd);
+	return buf;
+}
 
 int
 main(int argc, char *argv[])
@@ -55,16 +89,16 @@ main(int argc, char *argv[])
 	int			  c, rc = 0;
 	FILE			**confs = NULL;
 	size_t			  i, confsz;
-	int			  exs[EX__MAX], sz;
-	char			  buf[MAXPATHLEN];
+	char			 *ext_gensalt, *ext_jsmn, *ext_b64_ntop;
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
-		err(EXIT_FAILURE, "pledge");
+		err(1, "pledge");
 #endif
 
 	memset(&args, 0, sizeof(struct ort_lang_c));
 	args.header = "db.h";
+	args.flags = ORT_LANG_C_DB_SQLBOX;
 
 	while ((c = getopt(argc, argv, "h:I:jJN:sS:v")) != -1)
 		switch (c) {
@@ -113,20 +147,14 @@ main(int argc, char *argv[])
 				err(EXIT_FAILURE, "%s", argv[i]);
 	}
 
-	/* 
-	 * Open all of the source files we might optionally embed in the
-	 * output source code.
-	 */
+	/* Files we might embed in source. */
 
-	for (i = 0; i < EX__MAX; i++) {
-		sz = snprintf(buf, sizeof(buf), 
-			"%s/%s", sharedir, externals[i]);
-		if (sz < 0 || (size_t)sz >= sizeof(buf))
-			errx(EXIT_FAILURE, "%s/%s: too long",
-				sharedir, externals[i]);
-		if ((exs[i] = open(buf, O_RDONLY, 0)) == -1)
-			err(EXIT_FAILURE, "%s/%s", sharedir, externals[i]);
-	}
+	args.ext_gensalt = ext_gensalt = 
+		readfile(sharedir, "gensalt.c");
+	args.ext_b64_ntop = ext_b64_ntop = 
+		readfile(sharedir, "b64_ntop.c");
+	args.ext_jsmn = ext_jsmn = 
+		readfile(sharedir, "jsmn.c");
 
 #if HAVE_PLEDGE
 	if (pledge("stdio", NULL) == -1)
@@ -144,17 +172,19 @@ main(int argc, char *argv[])
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
-		rc = ort_lang_c_source(&args, cfg, stdout, incls, exs);
+		rc = ort_lang_c_source(&args, cfg, stdout, incls);
 
 out:
-	for (i = 0; i < EX__MAX; i++)
-		if (close(exs[i]) == -1)
-			warn("%s: close", externals[i]);
 	for (i = 0; i < confsz; i++)
 		if (fclose(confs[i]) == EOF)
 			warn("%s: close", argv[i]);
+
 	free(confs);
+	free(ext_gensalt);
+	free(ext_b64_ntop);
+	free(ext_jsmn);
 	ort_config_free(cfg);
+
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 

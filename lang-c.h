@@ -17,13 +17,6 @@
 #ifndef LANG_C_H
 #define LANG_C_H
 
-enum	external {
-	EX_GENSALT, /* gensalt.c */
-	EX_B64_NTOP, /* b64_ntop.c */
-	EX_JSMN, /* jsmn.c */
-	EX__MAX
-};
-
 /*
  * Determines whether we should generate allocation functions used by
  * queries: if we have no queries, don't generate these functions.

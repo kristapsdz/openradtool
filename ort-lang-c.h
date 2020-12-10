@@ -26,12 +26,15 @@ struct	ort_lang_c {
 #define	ORT_LANG_C_JSON_JSMN	 0x04
 #define	ORT_LANG_C_VALID_KCGI	 0x08
 #define ORT_LANG_C_DB_SQLBOX	 0x10
+	const char		*ext_b64_ntop;
+	const char		*ext_jsmn;
+	const char		*ext_gensalt;
 };
 
 int	ort_lang_c_header(const struct ort_lang_c *,
 		const struct config *, FILE *);
 int	ort_lang_c_source(const struct ort_lang_c *, 
 		const struct config *, FILE *f, 
-		const char *, const int *);
+		const char *);
 
 #endif /* !ORT_LANG_C_H */

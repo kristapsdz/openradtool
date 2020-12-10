@@ -1082,7 +1082,8 @@ terms:
 /*
  * Parse a search clause as follows:
  *
- *  "search" [ search_terms ]* [":" search_params ]? ";"
+ *  ["search"|"list"|"iterate"|"count"] [ search_terms ]* 
+ *  [":" search_params ]? ";"
  *
  * The optional terms (searchable field) parts are parsed in
  * parse_config_search_terms().
@@ -1104,11 +1105,6 @@ parse_struct_search(struct parse *p, struct strct *s, enum stype stype)
 	TAILQ_INIT(&srch->sntq);
 	TAILQ_INIT(&srch->ordq);
 	TAILQ_INSERT_TAIL(&s->sq, srch, entries);
-
-	if (stype == STYPE_LIST)
-		s->flags |= STRCT_HAS_QUEUE;
-	else if (stype == STYPE_ITERATE)
-		s->flags |= STRCT_HAS_ITERATOR;
 
 	/*
 	 * If we have an identifier up next, then consider it the
@@ -1134,6 +1130,21 @@ parse_struct_search(struct parse *p, struct strct *s, enum stype stype)
 
 	if (p->lasttype == TOK_COLON)
 		parse_config_search_params(p, srch);
+
+	/*
+	 * If we have no distinct, then mark our struct as needing the
+	 * queue or iterator functionality.
+	 * If we're returning distinct results, then the queue or
+	 * iterator status are for the referenced structure, which we'll
+	 * set when linking.
+	 */
+
+	if (srch->dst == NULL || srch->dst->strct == s) {
+		if (stype == STYPE_LIST)
+			s->flags |= STRCT_HAS_QUEUE;
+		else if (stype == STYPE_ITERATE)
+			s->flags |= STRCT_HAS_ITERATOR;
+	}
 }
 
 /*

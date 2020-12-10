@@ -186,6 +186,18 @@ resolve_struct_distinct(struct config *cfg, struct struct_distinct *r)
 	}
 
 	r->result->strct = f->ref->target->parent;
+
+	/*
+	 * If the parent search is for an iterator or list, we need to
+	 * set the iterator/list bits on the structure that will be
+	 * returned by the query.
+	 */
+
+	if (r->result->parent->type == STYPE_LIST)
+		r->result->strct->flags |= STRCT_HAS_QUEUE;
+	else if (r->result->parent->type == STYPE_ITERATE)
+		r->result->strct->flags |= STRCT_HAS_ITERATOR;
+
 	return 1;
 }
 

@@ -586,6 +586,23 @@ regress: all
 	if [ "$(LIBS_REGRESS)" == "" ]; then \
 		echo "regress/c: ignoring (no sqlbox library)" 1>&2 ; \
 	else \
+		for f in regress/*.ort ; do \
+			hf=`basename $$f`.h ; \
+			./ort-c-header -vJj $$f > $$f.h ; \
+			./ort-c-source -S. -h $$hf -vJj $$f > $$f.c ; \
+			set +e ; \
+			$(CC) $(CFLAGS) $(CFLAGS_SQLBOX) -o /dev/null -c $$f.c 2>/dev/null ; \
+			if [ $$? -ne 0 ] ; then \
+				echo "$$f (compile check): fail" ; \
+				$(CC) $(CFLAGS) $(CFLAGS_SQLBOX) -o /dev/null -c $$f.c ; \
+				set -e ; \
+				rm -f $$f.h $$f.c ; \
+				exit 1 ; \
+			fi ; \
+			rm $$f.h $$f.c ; \
+			set -e ; \
+			echo "$$f (compile check): pass" ; \
+		done ; \
 		for f in regress/c/*.ort ; do \
 			rr=regress/c/regress.c ; \
 			bf=regress/c/`basename $$f .ort` ; \

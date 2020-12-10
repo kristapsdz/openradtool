@@ -67,8 +67,8 @@ static	const char *const optypes[OPTYPE__MAX] = {
  * FIXME: make sure that text we're ommitting doesn't clobber the
  * comment epilogue, like having star-slash in the text of a C comment.
  */
-static void
-print_comment(const char *doc, size_t tabs, 
+static int
+print_comment(FILE *f, const char *doc, size_t tabs, 
 	const char *pre, const char *in, const char *post)
 {
 	const char	*cp, *cpp;
@@ -88,16 +88,20 @@ print_comment(const char *doc, size_t tabs,
 
 	if (pre != NULL) {
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		puts(pre);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, "%s\n", pre) < 0)
+			return 0;
 	}
 
 	/* Emit the documentation matter. */
 
 	if (doc != NULL) {
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("%s", in);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fputs(in, f) == EOF)
+			return 0;
 
 		for (curcol = 0, cp = doc; *cp != '\0'; cp++) {
 			/*
@@ -107,10 +111,13 @@ print_comment(const char *doc, size_t tabs,
 			 */
 
 			if (*cp == '\n') {
-				putchar('\n');
+				if (fputc('\n', f) == EOF)
+					return 0;
 				for (i = 0; i < tabs; i++)
-					putchar('\t');
-				printf("%s", in);
+					if (fputc('\t', f) == EOF)
+						return 0;
+				if (fputs(in, f) == EOF)
+					return 0;
 				last = *cp;
 				curcol = 0;
 				continue;
@@ -134,44 +141,55 @@ print_comment(const char *doc, size_t tabs,
 					if (isspace((unsigned char)*cpp))
 						break;
 				if (curcol + (cpp - cp) > maxcol) {
-					putchar('\n');
+					if (fputc('\n', f) == EOF)
+						return 0;
 					for (i = 0; i < tabs; i++)
-						putchar('\t');
-					printf("%s", in);
+						if (fputc('\t', f) == EOF)
+							return 0;
+					if (fputs(in, f) == EOF)
+						return 0;
 					curcol = 0;
 				}
 			}
 
-			putchar(*cp);
+			if (fputc(*cp, f) == EOF)
+				return 0;
 			last = *cp;
 			curcol++;
 		}
 
 		/* Newline-terminate. */
 
-		if (last != '\n')
-			putchar('\n');
+		if (last != '\n' && fputc('\n', f) == EOF)
+			return 0;
 	}
 
 	/* Epilogue material. */
 
 	if (post != NULL) {
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		puts(post);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, "%s\n", post) < 0)
+			return 0;
 	}
+
+	return 1;
 }
 
 /*
- * Print comments with a fixed string.
+ * Print comment on a line of its own.
+ * If "cp" is NULL, this does nothing.
+ * Returns zero on failure, non-zero on success.
  */
-void
-print_commentt(size_t tabs, enum cmtt type, const char *cp)
+int
+gen_comment(FILE *f, size_t tabs, enum cmtt type, const char *cp)
 {
-	size_t	maxcol, i;
+	size_t	 maxcol, i;
+	int	 c;
 
 	if (cp == NULL)
-		return;
+		return 1;
 
 	maxcol = (tabs >= 4) ? 40 : MAXCOLS - (tabs * 4);
 
@@ -185,53 +203,63 @@ print_commentt(size_t tabs, enum cmtt type, const char *cp)
 	if (type == COMMENT_C && cp != NULL && tabs >= 1 && 
 	    strchr(cp, '\n') == NULL && strlen(cp) < maxcol) {
 		for (i = 0; i < tabs; i++) 
-			putchar('\t');
-		printf("/* %s */\n", cp);
-		return;
+			if (fputc('\t', f) == EOF)
+				return 0;
+		return printf("/* %s */\n", cp) > 0;
 	}
-
-	/*
-	 * If we're a two-tab JavaScript comment, emit the whole
-	 * production on one line.
-	 * FIXME: make sure the comment doesn't have the end-of-comment
-	 * marker itself.
-	 */
-
-#if 0
-	if (type == COMMENT_JS && cp != NULL && tabs == 2 && 
-	    strchr(cp, '\n') == NULL && strlen(cp) < maxcol) {
-		printf("\t\t/** %s */\n", cp);
-		return;
-	}
-#endif
 
 	/* Multi-line (or sufficiently long) comment. */
 
 	switch (type) {
 	case COMMENT_C:
-		print_comment(cp, tabs, "/*", " * ", " */");
+		c = print_comment(f, cp, tabs, "/*", " * ", " */");
 		break;
 	case COMMENT_JS:
-		print_comment(cp, tabs, "/**", " * ", " */");
+		c = print_comment(f, cp, tabs, "/**", " * ", " */");
 		break;
 	case COMMENT_C_FRAG_CLOSE:
 	case COMMENT_JS_FRAG_CLOSE:
-		print_comment(cp, tabs, NULL, " * ", " */");
+		c = print_comment(f, cp, tabs, NULL, " * ", " */");
 		break;
 	case COMMENT_C_FRAG_OPEN:
-		print_comment(cp, tabs, "/*", " * ", NULL);
+		c = print_comment(f, cp, tabs, "/*", " * ", NULL);
 		break;
 	case COMMENT_JS_FRAG_OPEN:
-		print_comment(cp, tabs, "/**", " * ", NULL);
+		c = print_comment(f, cp, tabs, "/**", " * ", NULL);
 		break;
 	case COMMENT_C_FRAG:
 	case COMMENT_JS_FRAG:
-		print_comment(cp, tabs, NULL, " * ", NULL);
+		c = print_comment(f, cp, tabs, NULL, " * ", NULL);
 		break;
 	case COMMENT_SQL:
-		print_comment(cp, tabs, NULL, "-- ", NULL);
+		c = print_comment(f, cp, tabs, NULL, "-- ", NULL);
 		break;
 	}
+
+	return c;
+}
+
+int
+gen_commentv(FILE *f, size_t tabs, enum cmtt t, const char *fmt, ...)
+{
+	va_list	 ap;
+	char	*cp;
+	int	 c;
+
+	va_start(ap, fmt);
+	if (vasprintf(&cp, fmt, ap) == -1)
+		return 0;
+	va_end(ap);
+	c = gen_comment(f, tabs, t, cp);
+	free(cp);
+	return c;
+}
+
+void
+print_commentt(size_t tabs, enum cmtt type, const char *cp)
+{
+
+	gen_comment(stdout, tabs, type, cp);
 }
 
 /*

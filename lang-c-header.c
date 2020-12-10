@@ -74,7 +74,8 @@ gen_field(FILE *f, const struct field *p)
 {
 	int	 c = 0;
 
-	print_commentt(1, COMMENT_C, p->doc);
+	if (!gen_comment(f, 1, COMMENT_C, p->doc))
+		return 0;
 
 	switch (p->type) {
 	case FTYPE_STRUCT:
@@ -126,19 +127,23 @@ gen_bitfield(FILE *f, const struct bitf *b)
 	enum cmtt		 c = COMMENT_C;
 
 	if (b->doc != NULL) {
-		print_commentt(0, COMMENT_C_FRAG_OPEN, b->doc);
+		if (!gen_comment(f, 0, COMMENT_C_FRAG_OPEN, b->doc))
+			return 0;
 		c = COMMENT_C_FRAG_CLOSE;
 	}
-	print_commentt(0, c,
-		"This defines the bit indices for this bit-field.\n"
-		"The BITI fields are the bit indices (0--63) and "
-		"the BITF fields are the masked integer values.");
+
+	if (!gen_comment(f, 0, c,
+	    "This defines the bit indices for this bit-field.\n"
+	    "The BITI fields are the bit indices (0--63) and "
+	    "the BITF fields are the masked integer values."))
+		return 0;
 
 	if (fprintf(f, "enum\t%s {\n", b->name) < 0)
 		return 0;
 
 	TAILQ_FOREACH(bi, &b->bq, entries) {
-		print_commentt(1, COMMENT_C, bi->doc);
+		if (!gen_comment(f, 1, COMMENT_C, bi->doc))
+			return 0;
 		if (fputs("\tBITI_", f) == EOF)
 			return 0;
 		if (!gen_upper(f, b->name))
@@ -173,13 +178,15 @@ gen_enum(FILE *f, const struct enm *e)
 {
 	const struct eitem *ei;
 
-	print_commentt(0, COMMENT_C, e->doc);
+	if (!gen_comment(f, 0, COMMENT_C, e->doc))
+		return 0;
 
 	if (fprintf(f, "enum\t%s {\n", e->name) < 0)
 		return 0;
 
 	TAILQ_FOREACH(ei, &e->eq, entries) {
-		print_commentt(1, COMMENT_C, ei->doc);
+		if (!gen_comment(f, 1, COMMENT_C, ei->doc))
+			return 0;
 		if (fputc('\t', f) == EOF)
 			return 0;
 		if (!gen_upper(f, e->name))
@@ -202,7 +209,8 @@ gen_struct(FILE *f, const struct config *cfg, const struct strct *p)
 {
 	const struct field *fd;
 
-	print_commentt(0, COMMENT_C, p->doc);
+	if (!gen_comment(f, 0, COMMENT_C, p->doc))
+		return 0;
 
 	if (fprintf(f, "struct\t%s {\n", p->name) < 0)
 		return 0;
@@ -214,19 +222,21 @@ gen_struct(FILE *f, const struct config *cfg, const struct strct *p)
 	TAILQ_FOREACH(fd, &p->fq, entries) {
 		if (fd->type == FTYPE_STRUCT &&
 		    (fd->ref->source->flags & FIELD_NULL)) {
-			print_commentv(1, COMMENT_C,
-				"Non-zero if \"%s\" has been set "
-				"from \"%s\".", fd->name, 
-				fd->ref->source->name);
+			if (!gen_commentv(f, 1, COMMENT_C,
+			    "Non-zero if \"%s\" has been set "
+			    "from \"%s\".", fd->name, 
+			    fd->ref->source->name))
+				return 0;
 			if (fprintf(f, "\tint has_%s;\n", fd->name) < 0)
 				return 0;
 			continue;
 		} else if (!(fd->flags & FIELD_NULL))
 			continue;
 
-		print_commentv(1, COMMENT_C,
-			"Non-zero if \"%s\" field is null/unset.",
-			fd->name);
+		if (!gen_commentv(f, 1, COMMENT_C,
+		    "Non-zero if \"%s\" field is null/unset.",
+		    fd->name))
+			return 0;
 		if (fprintf(f, "\tint has_%s;\n", fd->name) < 0)
 			return 0;
 	}
@@ -236,8 +246,9 @@ gen_struct(FILE *f, const struct config *cfg, const struct strct *p)
 		return 0;
 
 	if (!TAILQ_EMPTY(&cfg->rq)) {
-		print_commentt(1, COMMENT_C,
-			"Private data used for role analysis.");
+		if (!gen_comment(f, 1, COMMENT_C,
+		    "Private data used for role analysis."))
+			return 0;
 		if (fputs("\tstruct ort_store *priv_store;\n", f) == EOF)
 			return 0;
 	}
@@ -246,19 +257,21 @@ gen_struct(FILE *f, const struct config *cfg, const struct strct *p)
 		return 0;
 
 	if (p->flags & STRCT_HAS_QUEUE) {
-		print_commentv(0, COMMENT_C, 
-			"Queue of %s for listings.", p->name);
+		if (!gen_commentv(f, 0, COMMENT_C, 
+		    "Queue of %s for listings.", p->name))
+			return 0;
 		if (fprintf(f, "TAILQ_HEAD(%s_q, %s);\n\n", 
 		    p->name, p->name) < 0)
 			return 0;
 	}
 
 	if (p->flags & STRCT_HAS_ITERATOR) {
-		print_commentv(0, COMMENT_C, 
-			"Callback of %s for iteration.\n"
-			"The arg parameter is the opaque pointer "
-			"passed into the iterate function.",
-			p->name);
+		if (!gen_commentv(f, 0, COMMENT_C, 
+		    "Callback of %s for iteration.\n"
+		    "The arg parameter is the opaque pointer "
+		    "passed into the iterate function.",
+		    p->name))
+			return 0;
 		if (fprintf(f, "typedef void (*%s_cb)(const struct %s "
 		    "*v, void *arg);\n\n", p->name, p->name) < 0)
 			return 0;
@@ -279,50 +292,62 @@ gen_update(FILE *f, const struct config *cfg, const struct update *up)
 	size_t			 pos = 1;
 
 	if (up->doc != NULL) {
-		print_commentt(0, COMMENT_C_FRAG_OPEN, up->doc);
-		print_commentt(0, COMMENT_C_FRAG, "");
+		if (!gen_comment(f, 0, COMMENT_C_FRAG_OPEN, up->doc))
+			return 0;
 		ct = COMMENT_C_FRAG;
 	}
 
 	/* Only update functions have this part. */
 
 	if (up->type == UP_MODIFY) {
-		print_commentv(0, ct,
-			"Update fields in struct %s.\n"
-			"Updated fields:", up->parent->name);
+		if (!gen_commentv(f, 0, ct,
+		    "Update fields in struct %s.\n"
+		    "Updated fields:", up->parent->name))
+			return 0;
 		TAILQ_FOREACH(ref, &up->mrq, entries)
-			if (ref->field->type == FTYPE_PASSWORD) 
-				print_commentv(0, COMMENT_C_FRAG,
-					"\tv%zu: %s (password)", 
-					pos++, ref->field->name);
-			else
-				print_commentv(0, COMMENT_C_FRAG,
-					"\tv%zu: %s", 
-					pos++, ref->field->name);
-	} else
-		print_commentv(0, ct, 
-			"Delete fields in struct %s.\n",
-			up->parent->name);
+			if (ref->field->type == FTYPE_PASSWORD)  {
+				if (!gen_commentv(f, 0, COMMENT_C_FRAG,
+				    "\tv%zu: %s (password)", 
+				    pos++, ref->field->name))
+					return 0;
+			} else {
+				if (!gen_commentv(f, 0, COMMENT_C_FRAG,
+				    "\tv%zu: %s", 
+				    pos++, ref->field->name))
+					return 0;
+			}
+	} else {
+		if (!gen_commentv(f, 0, ct, 
+		    "Delete fields in struct %s.\n",
+		    up->parent->name))
+			return 0;
+	}
 
-	print_commentt(0, COMMENT_C_FRAG, "Constraint fields:");
+	if (!gen_comment(f, 0, COMMENT_C_FRAG, "Constraint fields:"))
+		return 0;
 
 	TAILQ_FOREACH(ref, &up->crq, entries)
-		if (ref->op == OPTYPE_NOTNULL) 
-			print_commentv(0, COMMENT_C_FRAG,
-				"\t%s (not an argument: "
-				"checked not null)", ref->field->name);
-		else if (ref->op == OPTYPE_ISNULL) 
-			print_commentv(0, COMMENT_C_FRAG,
-				"\t%s (not an argument: "
-				"checked null)", ref->field->name);
-		else
-			print_commentv(0, COMMENT_C_FRAG,
-				"\tv%zu: %s (%s)", pos++, 
-				ref->field->name, optypes[ref->op]);
+		if (ref->op == OPTYPE_NOTNULL) {
+			if (!gen_commentv(f, 0, COMMENT_C_FRAG, 
+			    "\t%s (not an argument: "
+			    "checked not null)", ref->field->name))
+				return 0;
+		} else if (ref->op == OPTYPE_ISNULL) {
+			if (!gen_commentv(f, 0, COMMENT_C_FRAG,
+			    "\t%s (not an argument: "
+			    "checked null)", ref->field->name))
+				return 0;
+		} else {
+			if (!gen_commentv(f, 0, COMMENT_C_FRAG,
+			     "\tv%zu: %s (%s)", pos++, 
+			     ref->field->name, optypes[ref->op]))
+				return 0;
+		}
 
-	print_commentt(0, COMMENT_C_FRAG_CLOSE,
-		"Returns zero on constraint violation, "
-		"non-zero on success.");
+	if (!gen_comment(f, 0, COMMENT_C_FRAG_CLOSE,
+	    "Returns zero on constraint violation, "
+	    "non-zero on success."))
+		return 0;
 	print_func_db_update(up, 1);
 
 	return fputs("", f) != EOF;
@@ -340,90 +365,110 @@ gen_search(FILE *f, const struct config *cfg, const struct search *s)
 
 	rc = s->dst != NULL ? s->dst->strct : s->parent;
 
-	if (s->doc != NULL)
-		print_commentt(0, COMMENT_C_FRAG_OPEN, s->doc);
-	else if (s->type == STYPE_SEARCH)
-		print_commentv(0, COMMENT_C_FRAG_OPEN,
-			"Search for a specific %s.", rc->name);
-	else if (s->type == STYPE_LIST)
-		print_commentv(0, COMMENT_C_FRAG_OPEN,
-			"Search for a set of %s.", rc->name);
-	else if (s->type == STYPE_COUNT)
-		print_commentv(0, COMMENT_C_FRAG_OPEN,
-			"Count results of a search in %s.", rc->name);
-	else
-		print_commentv(0, COMMENT_C_FRAG_OPEN,
-			"Iterate over results in %s.", rc->name);
-
-	if (s->dst != NULL) {
-		print_commentv(0, COMMENT_C_FRAG,
-			"This %s distinct query results.",
-			s->type == STYPE_ITERATE ?
-			"iterates over" : 
-			s->type == STYPE_COUNT ? 
-			"counts" : "returns");
-		if (s->dst->strct != s->parent) 
-			print_commentv(0, COMMENT_C_FRAG,
-				"The results are limited "
-				"to the nested structure of \"%s\" "
-				"within %s.", s->dst->fname,
-				s->parent->name);
+	if (s->doc != NULL) {
+		if (!gen_comment(f, 0, COMMENT_C_FRAG_OPEN, s->doc))
+			return 0;
+	} else if (s->type == STYPE_SEARCH) {
+		if (!gen_commentv(f, 0, COMMENT_C_FRAG_OPEN,
+		    "Search for a specific %s.", rc->name))
+			return 0;
+	} else if (s->type == STYPE_LIST) {
+		if (!gen_commentv(f, 0, COMMENT_C_FRAG_OPEN,
+		    "Search for a set of %s.", rc->name))
+			return 0;
+	} else if (s->type == STYPE_COUNT) {
+		if (!gen_commentv(f, 0, COMMENT_C_FRAG_OPEN,
+		    "Count results of a search in %s.", rc->name))
+			return 0;
+	} else {
+		if (!gen_commentv(f, 0, COMMENT_C_FRAG_OPEN,
+		    "Iterate over results in %s.", rc->name))
+			return 0;
 	}
 
-	if (s->type == STYPE_ITERATE)
-		print_commentt(0, COMMENT_C_FRAG,
-			"This callback function is called during an "
-			"implicit transaction: thus, it should not "
-			"invoke any database modifications or risk "
-			"deadlock.");
+	if (s->dst != NULL) {
+		if (!gen_commentv(f, 0, COMMENT_C_FRAG,
+		    "This %s distinct query results.",
+		    s->type == STYPE_ITERATE ?
+		    "iterates over" : 
+		    s->type == STYPE_COUNT ? 
+		    "counts" : "returns"))
+			return 0;
+		if (s->dst->strct != s->parent) 
+			if (!gen_commentv(f, 0, COMMENT_C_FRAG,
+			    "The results are limited "
+			    "to the nested structure of \"%s\" "
+			    "within %s.", s->dst->fname,
+			    s->parent->name))
+				return 0;
+	}
 
-	if (rc->flags & STRCT_HAS_NULLREFS)
-		print_commentt(0, COMMENT_C_FRAG,
-			"This search involves nested null structure "
-			"linking, which involves multiple database "
-			"calls per invocation.\n"
-			"Use this sparingly!");
-	print_commentv(0, COMMENT_C_FRAG,
-		"Queries on the following fields in struct %s:",
-		s->parent->name);
+	if (s->type == STYPE_ITERATE && !gen_comment
+	    (f, 0, COMMENT_C_FRAG,
+	     "This callback function is called during an "
+	     "implicit transaction: thus, it should not "
+	     "invoke any database modifications or risk "
+	     "deadlock."))
+		return 0;
+
+	if ((rc->flags & STRCT_HAS_NULLREFS) && !gen_comment
+	    (f, 0, COMMENT_C_FRAG,
+	     "This search involves nested null structure "
+	     "linking, which involves multiple database "
+	     "calls per invocation.\n"
+	     "Use this sparingly!"))
+		return 0;
+
+	if (!gen_commentv(f, 0, COMMENT_C_FRAG,
+	    "Queries on the following fields in struct %s:",
+	    s->parent->name))
+		return 0;
 
 	TAILQ_FOREACH(sent, &s->sntq, entries)
-		if (sent->op == OPTYPE_NOTNULL)
-			print_commentv(0, COMMENT_C_FRAG,
-				"\t%s (not an argument: "
-				"checked not null)", sent->fname);
-		else if (sent->op == OPTYPE_ISNULL)
-			print_commentv(0, COMMENT_C_FRAG,
-				"\t%s (not an argument: "
-				"checked is null)", sent->fname);
-		else
-			print_commentv(0, COMMENT_C_FRAG,
-				"\tv%zu: %s (%s%s)", pos++, 
-				sent->fname, 
-				sent->field->type == FTYPE_PASSWORD ?
-				"pre-hashed password, " : "",
-				optypes[sent->op]);
+		if (sent->op == OPTYPE_NOTNULL) {
+			if (!gen_commentv(f, 0, COMMENT_C_FRAG,
+			    "\t%s (not an argument: "
+			    "checked not null)", sent->fname))
+				return 0;
+		} else if (sent->op == OPTYPE_ISNULL) {
+			if (!gen_commentv(f, 0, COMMENT_C_FRAG,
+			    "\t%s (not an argument: "
+			    "checked is null)", sent->fname))
+				return 0;
+		} else {
+			if (!gen_commentv(f, 0, COMMENT_C_FRAG,
+			    "\tv%zu: %s (%s%s)", pos++, 
+			    sent->fname, 
+			    sent->field->type == FTYPE_PASSWORD ?
+			    "pre-hashed password, " : "",
+			    optypes[sent->op]))
+				return 0;
+		}
 
-	if (s->type == STYPE_SEARCH)
-		print_commentv(0, COMMENT_C_FRAG_CLOSE,
-			"Returns a pointer or NULL on fail.\n"
-			"Free the pointer with db_%s_free().",
-			rc->name);
-	else if (s->type == STYPE_LIST)
-		print_commentv(0, COMMENT_C_FRAG_CLOSE,
-			"Always returns a queue pointer.\n"
-			"Free this with db_%s_freeq().",
-			rc->name);
-	else if (s->type == STYPE_COUNT)
-		print_commentt(0, COMMENT_C_FRAG_CLOSE,
-			"Returns the count of results.");
-	else
-		print_commentv(0, COMMENT_C_FRAG_CLOSE,
-			"Invokes the given callback with "
-			"retrieved data.");
+	if (s->type == STYPE_SEARCH) {
+		if (!gen_commentv(f, 0, COMMENT_C_FRAG_CLOSE,
+		    "Returns a pointer or NULL on fail.\n"
+		    "Free the pointer with db_%s_free().",
+		    rc->name))
+			return 0;
+	} else if (s->type == STYPE_LIST) {
+		if (!gen_commentv(f, 0, COMMENT_C_FRAG_CLOSE,
+		    "Always returns a queue pointer.\n"
+		    "Free this with db_%s_freeq().",
+		    rc->name))
+			return 0;
+	} else if (s->type == STYPE_COUNT) {
+		if (!gen_comment(f, 0, COMMENT_C_FRAG_CLOSE,
+		    "Returns the count of results."))
+			return 0;
+	} else {
+		if (!gen_comment(f, 0, COMMENT_C_FRAG_CLOSE,
+		    "Invokes the given callback with "
+		    "retrieved data."))
+			return 0;
+	}
 
 	print_func_db_search(s, 1);
-
 	return fputs("", f) != EOF;
 }
 
@@ -438,43 +483,51 @@ gen_database(FILE *f, const struct config *cfg, const struct strct *p)
 	const struct update	*u;
 	size_t			 pos;
 
-	print_commentt(0, COMMENT_C,
-	       "Clear resources and free \"p\".\n"
-	       "Has no effect if \"p\" is NULL.");
+	if (!gen_comment(f, 0, COMMENT_C,
+	    "Clear resources and free \"p\".\n"
+	    "Has no effect if \"p\" is NULL."))
+		return 0;
+
 	print_func_db_free(p, 1);
 	if (fputs("\n", f) == EOF)
 		return 0;
 
 	if (STRCT_HAS_QUEUE & p->flags) {
-		print_commentv(0, COMMENT_C,
-		     "Unfill and free all queue members.\n"
-		     "Has no effect if \"q\" is NULL.");
+		if (!gen_comment(f, 0, COMMENT_C,
+		    "Unfill and free all queue members.\n"
+		    "Has no effect if \"q\" is NULL."))
+			return 0;
 		print_func_db_freeq(p, 1);
 		if (fputs("\n", f) == EOF)
 			return 0;
 	}
 
 	if (p->ins != NULL) {
-		print_commentt(0, COMMENT_C_FRAG_OPEN,
-			"Insert a new row into the database.\n"
-			"Only native (and non-rowid) fields may "
-			"be set.");
+		if (!gen_comment(f, 0, COMMENT_C_FRAG_OPEN,
+		    "Insert a new row into the database.\n"
+		    "Only native (and non-rowid) fields may "
+		    "be set."))
+			return 0;
 		pos = 1;
 		TAILQ_FOREACH(fd, &p->fq, entries) {
 			if (fd->type == FTYPE_STRUCT ||
 			    (fd->flags & FIELD_ROWID))
 				continue;
-			if (fd->type == FTYPE_PASSWORD)
-				print_commentv(0, COMMENT_C_FRAG,
-					"\tv%zu: %s (pre-hashed password)", 
-					pos++, fd->name);
-			else
-				print_commentv(0, COMMENT_C_FRAG,
-					"\tv%zu: %s", pos++, fd->name);
+			if (fd->type == FTYPE_PASSWORD) {
+				if (!gen_commentv(f, 0, COMMENT_C_FRAG,
+				    "\tv%zu: %s (pre-hashed password)", 
+				    pos++, fd->name))
+					return 0;
+			} else {
+				if (!gen_commentv(f, 0, COMMENT_C_FRAG,
+				    "\tv%zu: %s", pos++, fd->name))
+					return 0;
+			}
 		}
-		print_commentt(0, COMMENT_C_FRAG_CLOSE,
-			"Returns the new row's identifier on "
-			"success or <0 otherwise.");
+		if (!gen_comment(f, 0, COMMENT_C_FRAG_CLOSE,
+		    "Returns the new row's identifier on "
+		    "success or <0 otherwise."))
+			return 0;
 		print_func_db_insert(p, 1);
 		if (fputs("\n", f) == EOF)
 			return 0;
@@ -497,41 +550,45 @@ static int
 gen_funcs_json_parse(FILE *f, const struct config *cfg, const struct strct *p)
 {
 
-	print_commentt(0, COMMENT_C,
-		"Deserialise the parsed JSON buffer \"buf\", which "
-		"need not be NUL terminated, with parse tokens "
-		"\"t\" of length \"toksz\", into \"p\".\n"
-		"Returns 0 on parse failure, <0 on memory allocation "
-		"failure, or the count of tokens parsed on success.");
+	if (!gen_comment(f, 0, COMMENT_C,
+	    "Deserialise the parsed JSON buffer \"buf\", which "
+	    "need not be NUL terminated, with parse tokens "
+	    "\"t\" of length \"toksz\", into \"p\".\n"
+	    "Returns 0 on parse failure, <0 on memory allocation "
+	    "failure, or the count of tokens parsed on success."))
+		return 0;
 	print_func_json_parse(p, 1);
 	if (fputs("\n", f) == EOF)
 		return 0;
 
-	print_commentv(0, COMMENT_C,
-		"Deserialise the parsed JSON buffer \"buf\", which "
-		"need not be NUL terminated, with parse tokens "
-		"\"t\" of length \"toksz\", into an array \"p\" "
-		"allocated with \"sz\" elements.\n"
-		"The array must be freed with jsmn_%s_free_array().\n"
-		"Returns 0 on parse failure, <0 on memory allocation "
-		"failure, or the count of tokens parsed on success.",
-		p->name);
+	if (!gen_commentv(f, 0, COMMENT_C,
+	    "Deserialise the parsed JSON buffer \"buf\", which "
+	    "need not be NUL terminated, with parse tokens "
+	    "\"t\" of length \"toksz\", into an array \"p\" "
+	    "allocated with \"sz\" elements.\n"
+	    "The array must be freed with jsmn_%s_free_array().\n"
+	    "Returns 0 on parse failure, <0 on memory allocation "
+	    "failure, or the count of tokens parsed on success.",
+	    p->name))
+		return 0;
 	print_func_json_parse_array(p, 1);
 	if (fputs("\n", f) == EOF)
 		return 0;
 
-	print_commentv(0, COMMENT_C,
-		"Free an array from jsmn_%s_array(). "
-		"Frees the pointer as well.\n"
-		"May be passed NULL.", p->name);
+	if (!gen_commentv(f, 0, COMMENT_C,
+	    "Free an array from jsmn_%s_array(). "
+	    "Frees the pointer as well.\n"
+	    "May be passed NULL.", p->name))
+		return 0;
 	print_func_json_free_array(p, 1);
 	if (fputs("\n", f) == EOF)
 		return 0;
 
-	print_commentv(0, COMMENT_C,
-		"Clear memory from jsmn_%s(). "
-		"Does not touch the pointer itself.\n"
-		"May be passed NULL.", p->name);
+	if (!gen_commentv(f, 0, COMMENT_C,
+	    "Clear memory from jsmn_%s(). "
+	    "Does not touch the pointer itself.\n"
+	    "May be passed NULL.", p->name))
+		return 0;
 	print_func_json_clear(p, 1);
 
 	return fputs("\n", f) != EOF;
@@ -541,47 +598,51 @@ static int
 gen_json_out(FILE *f, const struct config *cfg, const struct strct *p)
 {
 
-	print_commentv(0, COMMENT_C,
-		"Print out the fields of a %s in JSON "
-		"including nested structures.\n"
-		"Omits any password entries or those "
-		"marked \"noexport\".\n"
-		"See json_%s_obj() for the full object.",
-		p->name, p->name);
+	if (!gen_commentv(f, 0, COMMENT_C,
+	    "Print out the fields of a %s in JSON "
+	    "including nested structures.\n"
+	    "Omits any password entries or those "
+	    "marked \"noexport\".\n"
+	    "See json_%s_obj() for the full object.",
+	    p->name, p->name))
+		return 0;
 	print_func_json_data(p, 1);
 	if (fputs("\n", f) == EOF)
 		return 0;
 
-	print_commentv(0, COMMENT_C,
-		"Emit the JSON key-value pair for the "
-		"object:\n"
-		"\t\"%s\" : { [data]+ }\n"
-		"See json_%s_data() for the data.",
-		p->name, p->name);
+	if (!gen_commentv(f, 0, COMMENT_C,
+	    "Emit the JSON key-value pair for the "
+	    "object:\n"
+	    "\t\"%s\" : { [data]+ }\n"
+	    "See json_%s_data() for the data.",
+	    p->name, p->name))
+		return 0;
 	print_func_json_obj(p, 1);
 	if (fputs("\n", f) == EOF)
 		return 0;
 
 	if (STRCT_HAS_QUEUE & p->flags) {
-		print_commentv(0, COMMENT_C,
-			"Emit the JSON key-value pair for the "
-			"array:\n"
-			"\t\"%s_q\" : [ [{data}]+ ]\n"
-			"See json_%s_data() for the data.",
-			p->name, p->name);
+		if (!gen_commentv(f, 0, COMMENT_C,
+		    "Emit the JSON key-value pair for the "
+		    "array:\n"
+		    "\t\"%s_q\" : [ [{data}]+ ]\n"
+		    "See json_%s_data() for the data.",
+		    p->name, p->name))
+			return 0;
 		print_func_json_array(p, 1);
 		if (fputs("\n", f) == EOF)
 			return 0;
 	}
 	if (STRCT_HAS_ITERATOR & p->flags) {
-		print_commentv(0, COMMENT_C,
-			"Emit the object as a standalone "
-			"part of (presumably) an array:\n"
-			"\t\"{ data }\n"
-			"See json_%s_data() for the data.\n"
-			"The \"void\" argument is taken "
-			"to be a kjsonreq as if were invoked "
-			"from an iterator.", p->name);
+		if (!gen_commentv(f, 0, COMMENT_C,
+		    "Emit the object as a standalone "
+		    "part of (presumably) an array:\n"
+		    "\t\"{ data }\n"
+		    "See json_%s_data() for the data.\n"
+		    "The \"void\" argument is taken "
+		    "to be a kjsonreq as if were invoked "
+		    "from an iterator.", p->name))
+			return 0;
 		print_func_json_iterate(p, 1);
 		if (fputs("\n", f) == EOF)
 			return 0;
@@ -596,10 +657,10 @@ gen_valids(FILE *f, const struct config *cfg, const struct strct *p)
 	const struct field	*fd;
 
 	TAILQ_FOREACH(fd, &p->fq, entries) {
-		print_commentv(0, COMMENT_C,
-			"Validation routines for the %s "
-			"field in struct %s.", 
-			fd->name, p->name);
+		if (!gen_commentv(f, 0, COMMENT_C,
+		    "Validation routines for the %s "
+		    "field in struct %s.", fd->name, p->name))
+			return 0;
 		print_func_valid(fd, 1);
 		if (fputs("\n", f) == EOF)
 			return 0;
@@ -638,23 +699,24 @@ static int
 gen_transaction(FILE *f, const struct config *cfg)
 {
 
-	print_commentt(0, COMMENT_C,
-		"Open a transaction with identifier \"id\".\n"
-		"If \"mode\" is 0, the transaction is opened in "
-		"\"deferred\" mode, meaning that the database is "
-		"read-locked (no writes allowed) on the first read "
-		"operation, and write-locked on the first write "
-		"(only the current process can write).\n"
-		"If \"mode\" is >0, the transaction immediately "
-		"starts a write-lock.\n"
-		"If \"mode\" is <0, the transaction starts in a "
-		"write-pending, where no other locks can be held "
-		"at the same time.\n"
-		"The DB_TRANS_OPEN_IMMEDIATE, "
-		"DB_TRANS_OPEN_DEFERRED, and "
-		"DB_TRANS_OPEN_EXCLUSIVE macros accomplish the "
-		"same but with the \"mode\" being explicit in the "
-		"name and not needing to be specified.");
+	if (!gen_comment(f, 0, COMMENT_C,
+	    "Open a transaction with identifier \"id\".\n"
+	    "If \"mode\" is 0, the transaction is opened in "
+	    "\"deferred\" mode, meaning that the database is "
+	    "read-locked (no writes allowed) on the first read "
+	    "operation, and write-locked on the first write "
+	    "(only the current process can write).\n"
+	    "If \"mode\" is >0, the transaction immediately "
+	    "starts a write-lock.\n"
+	    "If \"mode\" is <0, the transaction starts in a "
+	    "write-pending, where no other locks can be held "
+	    "at the same time.\n"
+	    "The DB_TRANS_OPEN_IMMEDIATE, "
+	    "DB_TRANS_OPEN_DEFERRED, and "
+	    "DB_TRANS_OPEN_EXCLUSIVE macros accomplish the "
+	    "same but with the \"mode\" being explicit in the "
+	    "name and not needing to be specified."))
+		return 0;
 	print_func_db_trans_open(1);
 	if (fputs("\n", f) == EOF)
 		return 0;
@@ -667,14 +729,16 @@ gen_transaction(FILE *f, const struct config *cfg)
 		  "\tdb_trans_open((_ctx), (_id), -1)\n\n", f) == EOF)
 		return 0;
 
-	print_commentt(0, COMMENT_C,
-		"Roll-back an open transaction.");
+	if (!gen_comment(f, 0, COMMENT_C,
+	    "Roll-back an open transaction."))
+		return 0;
 	print_func_db_trans_rollback(1);
 	if (fputs("\n", f) == EOF)
 		return 0;
 
-	print_commentt(0, COMMENT_C,
-		"Commit an open transaction.");
+	if (!gen_comment(f, 0, COMMENT_C,
+	    "Commit an open transaction."))
+		return 0;
 	print_func_db_trans_commit(1);
 	return fputs("\n", f) != EOF;
 }
@@ -690,58 +754,62 @@ static int
 gen_func_open(FILE *f, const struct config *cfg)
 {
 
-	print_commentt(0, COMMENT_C,
-		"Forward declaration of opaque pointer.");
+	if (!gen_comment(f, 0, COMMENT_C,
+	    "Forward declaration of opaque pointer."))
+		return 0;
 	if (fputs("struct ort;\n\n", f) == EOF)
 		return 0;
 
-	print_commentt(0, COMMENT_C,
-		"Set the argument given to the logging function "
-		"specified to db_open_logging().\n"
-		"Has no effect if no logging function has been "
-		"set.\n"
-		"The buffer is copied into a child process, so "
-		"serialised objects may not have any pointers "
-		"in the current address space or they will fail "
-		"(at best).\n"
-		"Set length to zero to unset the logging function "
-		"callback argument.");
+	if (!gen_comment(f, 0, COMMENT_C,
+	    "Set the argument given to the logging function "
+	    "specified to db_open_logging().\n"
+	    "Has no effect if no logging function has been "
+	    "set.\n"
+	    "The buffer is copied into a child process, so "
+	    "serialised objects may not have any pointers "
+	    "in the current address space or they will fail "
+	    "(at best).\n"
+	    "Set length to zero to unset the logging function "
+	    "callback argument."))
+		return 0;
 	print_func_db_set_logging(1);
 	if (fputs("\n", f) == EOF)
 		return 0;
 
-	print_commentt(0, COMMENT_C,
-		"Allocate and open the database in \"file\".\n"
-		"Returns an opaque pointer or NULL on "
-		"memory exhaustion.\n"
-		"The returned pointer must be closed with "
-		"db_close().\n"
-		"See db_open_logging() for the equivalent "
-		"function that accepts logging callbacks.\n"
-		"This function starts a child with fork(), "
-		"the child of which opens the database, so "
-		"a constraint environment (e.g., with pledge) "
-		"must take this into account.\n"
-		"Subsequent this function, all database "
-		"operations take place over IPC.");
+	if (!gen_comment(f, 0, COMMENT_C,
+	    "Allocate and open the database in \"file\".\n"
+	    "Returns an opaque pointer or NULL on "
+	    "memory exhaustion.\n"
+	    "The returned pointer must be closed with "
+	    "db_close().\n"
+	    "See db_open_logging() for the equivalent "
+	    "function that accepts logging callbacks.\n"
+	    "This function starts a child with fork(), "
+	    "the child of which opens the database, so "
+	    "a constraint environment (e.g., with pledge) "
+	    "must take this into account.\n"
+	    "Subsequent this function, all database "
+	    "operations take place over IPC."))
+		return 0;
 	print_func_db_open(1);
 	if (fputs("\n", f) == EOF)
 		return 0;
 
-	print_commentt(0, COMMENT_C,
-		"Like db_open() but accepts a function for "
-		"logging.\n"
-		"If both are provided, the \"long\" form overrides "
-		"the \"short\" form.\n"
-		"The logging function is run both in a child "
-		"and parent process, so it must not have side "
-		"effects.\n"
-		"The optional pointer is passed to the long "
-		"form logging function and is inherited by the "
-		"child process as-is, without being copied "
-		"by value.\n"
-		"See db_logging_data() to set the pointer "
-		"after initialisation.");
+	if (!gen_comment(f, 0, COMMENT_C,
+	    "Like db_open() but accepts a function for "
+	    "logging.\n"
+	    "If both are provided, the \"long\" form overrides "
+	    "the \"short\" form.\n"
+	    "The logging function is run both in a child "
+	    "and parent process, so it must not have side "
+	    "effects.\n"
+	    "The optional pointer is passed to the long "
+	    "form logging function and is inherited by the "
+	    "child process as-is, without being copied "
+	    "by value.\n"
+	    "See db_logging_data() to set the pointer "
+	    "after initialisation."))
+		return 0;
 	print_func_db_open_logging(1);
 	return fputs("\n", f) != EOF;
 }
@@ -750,31 +818,33 @@ static int
 gen_roles(FILE *f, const struct config *cfg)
 {
 
-	print_commentt(0, COMMENT_C,
-		"Drop into a new role.\n"
-		"If the role is the same as the current one, "
-		"this is a noop.\n"
-		"We can only refine roles (i.e., descend the "
-		"role tree), not ascend or move laterally.\n"
-		"Attempting to do so causes abort(2) to be "
-		"called.\n"
-		"The only exceptions are when leaving ROLE_default "
-		"or when entering ROLE_none.");
+	if (!gen_comment(f, 0, COMMENT_C,
+	    "Drop into a new role.\n"
+	    "If the role is the same as the current one, "
+	    "this is a noop.\n"
+	    "We can only refine roles (i.e., descend the "
+	    "role tree), not ascend or move laterally.\n"
+	    "Attempting to do so causes abort(2) to be "
+	    "called.\n"
+	    "The only exceptions are when leaving ROLE_default "
+	    "or when entering ROLE_none."))
+		return 0;
 	print_func_db_role(1);
 	if (fputs("\n", f) == EOF)
 		return 0;
 
-	print_commentt(0, COMMENT_C,
-		"Get the current role.");
+	if (!gen_comment(f, 0, COMMENT_C, "Get the current role."))
+		return 0;
 	print_func_db_role_current(1);
 	if (fputs("\n", f) == EOF)
 		return 0;
 
-	print_commentt(0, COMMENT_C,
-		"Get the role stored into \"s\".\n"
-		"This role is set when the object containing the "
-		"stored role is created, such as when a \"search\" "
-		"query function is called.");
+	if (!gen_comment(f, 0, COMMENT_C,
+	    "Get the role stored into \"s\".\n"
+	    "This role is set when the object containing the "
+	    "stored role is created, such as when a \"search\" "
+	    "query function is called."))
+		return 0;
 	print_func_db_role_stored(1);
 	return fputs("\n", f) != EOF;
 }
@@ -783,9 +853,10 @@ static int
 gen_close(FILE *f, const struct config *cfg)
 {
 
-	print_commentt(0, COMMENT_C,
-		"Close the context opened by db_open().\n"
-		"Has no effect if \"p\" is NULL.");
+	if (!gen_comment(f, 0, COMMENT_C,
+	    "Close the context opened by db_open().\n"
+	    "Has no effect if \"p\" is NULL."))
+		return 0;
 	print_func_db_close(1);
 	return fputs("\n", f) != EOF;
 }
@@ -808,15 +879,18 @@ gen_role(FILE *f, const struct role *r, int *nf)
 	} else
 		*nf = 1;
 
-	if (strcmp(r->name, "default") == 0)
-		print_commentt(1, COMMENT_C,
-			"The default role.\n"
-			"This is assigned when db_open() is called.\n"
-			"It should be limited only to those "
-			"functions required to narrow the role.");
-	else if (strcmp(r->name, "none") == 0)
-		print_commentt(1, COMMENT_C,
-			"Role that isn't allowed to do anything.");
+	if (strcmp(r->name, "default") == 0) {
+		if (!gen_comment(f, 1, COMMENT_C,
+		    "The default role.\n"
+		    "This is assigned when db_open() is called.\n"
+		    "It should be limited only to those "
+		    "functions required to narrow the role."))
+			return 0;
+	} else if (strcmp(r->name, "none") == 0) {
+		if (!gen_comment(f, 1, COMMENT_C,
+		    "Role that isn't allowed to do anything."))
+			return 0;
+	}
 
 	return fprintf(f, "\tROLE_%s", r->name) >= 0;
 }
@@ -837,10 +911,10 @@ ort_lang_c_header(const struct ort_lang_c *args,
 	    "#ifndef %s\n#define %s\n\n", args->guard, args->guard) < 0)
 		return 0;
 
-	print_commentv(0, COMMENT_C, 
-	       "WARNING: automatically generated by "
-	       "%s " VERSION ".\n"
-	       "DO NOT EDIT!", getprogname());
+	if (!gen_commentv(f, 0, COMMENT_C, 
+	    "WARNING: automatically generated by %s %s.\n"
+	    "DO NOT EDIT!", __func__, VERSION))
+		return 0;
 	if (fputc('\n', f) == EOF)
 		return 0;
 
@@ -854,12 +928,13 @@ ort_lang_c_header(const struct ort_lang_c *args,
 	
 	if ((args->flags & ORT_LANG_C_DB_SQLBOX) && 
 	    !TAILQ_EMPTY(&cfg->rq)) {
-		print_commentt(0, COMMENT_C,
-			"Our roles for access control.\n"
-			"When the database is first opened, "
-			"the system is set to ROLE_default.\n"
-			"Roles may then be set using the "
-			"ort_role() function.");
+		if (!gen_comment(f, 0, COMMENT_C,
+		    "Our roles for access control.\n"
+		    "When the database is first opened, "
+		    "the system is set to ROLE_default.\n"
+		    "Roles may then be set using the "
+		    "ort_role() function."))
+			return 0;
 		if (fputs("enum\tort_role {\n", f) == EOF)
 			return 0;
 		TAILQ_FOREACH(r, &cfg->arq, allentries)
@@ -878,42 +953,46 @@ ort_lang_c_header(const struct ort_lang_c *args,
 	}
 
 	if (args->flags & ORT_LANG_C_VALID_KCGI) {
-		print_commentt(0, COMMENT_C,
-			"All of the fields we validate.\n"
-			"These are as VALID_XXX_YYY, where XXX is "
-			"the structure and YYY is the field.\n"
-			"Only native types are listed.");
+		if (!gen_comment(f, 0, COMMENT_C,
+		    "All of the fields we validate.\n"
+		    "These are as VALID_XXX_YYY, where XXX is "
+		    "the structure and YYY is the field.\n"
+		    "Only native types are listed."))
+			return 0;
 		if (fputs("enum\tvalid_keys {\n", f) == EOF)
 			return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			gen_valid_enums(f, p);
 		if (fputs("\tVALID__MAX\n};\n\n", f) == EOF)
 			return 0;
-		print_commentt(0, COMMENT_C,
-			"Validation fields.\n"
-			"Pass this directly into khttp_parse(3) "
-			"to use them as-is.\n"
-			"The functions are \"valid_xxx_yyy\", "
-			"where \"xxx\" is the struct and \"yyy\" "
-			"the field, and can be used standalone.\n"
-			"The form inputs are named \"xxx-yyy\".");
+		if (!gen_comment(f, 0, COMMENT_C,
+		    "Validation fields.\n"
+		    "Pass this directly into khttp_parse(3) "
+		    "to use them as-is.\n"
+		    "The functions are \"valid_xxx_yyy\", "
+		    "where \"xxx\" is the struct and \"yyy\" "
+		    "the field, and can be used standalone.\n"
+		    "The form inputs are named \"xxx-yyy\"."))
+			return 0;
 		if (fputs("extern const struct kvalid "
 			   "valid_keys[VALID__MAX];\n\n", f) == EOF)
 			return 0;
 	}
 
 	if (args->flags & ORT_LANG_C_JSON_JSMN) {
-		print_commentt(0, COMMENT_C,
-			"Possible error returns from jsmn_parse(), "
-			"if returning a <0 error code.");
+		if (!gen_comment(f, 0, COMMENT_C,
+		    "Possible error returns from jsmn_parse(), "
+		    "if returning a <0 error code."))
+			return 0;
 		if (fputs("enum jsmnerr_t {\n"
 		          "\tJSMN_ERROR_NOMEM = -1,\n"
 		          "\tJSMN_ERROR_INVAL = -2,\n"
 		          "\tJSMN_ERROR_PART = -3\n"
 		          "};\n\n", f) == EOF)
 			return 0;
-		print_commentt(0, COMMENT_C,
-			"Type of JSON token");
+		if (!gen_comment(f, 0, COMMENT_C, 
+		    "Type of JSON token"))
+			return 0;
 		if (fputs("typedef enum {\n"
 		          "\tJSMN_UNDEFINED = 0,\n"
 		          "\tJSMN_OBJECT = 1,\n"
@@ -922,8 +1001,9 @@ ort_lang_c_header(const struct ort_lang_c *args,
 		          "\tJSMN_PRIMITIVE = 4\n"
 		          "} jsmntype_t;\n\n", f) == EOF)
 			return 0;
-		print_commentt(0, COMMENT_C,
-			"JSON token description.");
+		if (!gen_comment(f, 0, COMMENT_C,
+		    "JSON token description."))
+			return 0;
 		if (fputs("typedef struct {\n"
 		          "\tjsmntype_t type;\n"
 		          "\tint start;\n"
@@ -931,11 +1011,12 @@ ort_lang_c_header(const struct ort_lang_c *args,
 		          "\tint size;\n"
 		          "} jsmntok_t;\n\n", f) == EOF)
 			return 0;
-		print_commentt(0, COMMENT_C,
-			"JSON parser. Contains an array of token "
-			"blocks available. Also stores the string "
-			"being parsed now and current position in "
-			"that string.");
+		if (!gen_comment(f, 0, COMMENT_C,
+		    "JSON parser. Contains an array of token "
+		    "blocks available. Also stores the string "
+		    "being parsed now and current position in "
+		    "that string."))
+			return 0;
 		if (fputs("typedef struct {\n"
 		          "\tunsigned int pos;\n"
 		          "\tunsigned int toknext;\n"
@@ -961,32 +1042,35 @@ ort_lang_c_header(const struct ort_lang_c *args,
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			gen_json_out(f, cfg, p);
 	if (args->flags & ORT_LANG_C_JSON_JSMN) {
-		print_commentt(0, COMMENT_C,
-			"Check whether the current token in a "
-			"JSON parse sequence \"tok\" parsed from "
-			"\"json\" is equal to a string.\n"
-			"Usually used when checking for key "
-			"equality.\n"
-			"Returns non-zero on equality, zero "
-			"otherwise.");
+		if (!gen_comment(f, 0, COMMENT_C,
+		    "Check whether the current token in a "
+		    "JSON parse sequence \"tok\" parsed from "
+		    "\"json\" is equal to a string.\n"
+		    "Usually used when checking for key "
+		    "equality.\n"
+		    "Returns non-zero on equality, zero "
+		    "otherwise."))
+			return 0;
 		if (fputs("int jsmn_eq(const char *json,\n"
 		          "\tconst jsmntok_t *tok, "
 			  "const char *s);\n\n", f) == EOF)
 			return 0;
-		print_commentt(0, COMMENT_C,
-			"Initialise a JSON parser sequence \"p\".");
+		if (!gen_comment(f, 0, COMMENT_C,
+		    "Initialise a JSON parser sequence \"p\"."))
+			return 0;
 		if (fputs("void jsmn_init"
 			  "(jsmn_parser *p);\n\n", f) == EOF)
 			return 0;
-		print_commentt(0, COMMENT_C,
-			"Parse a buffer \"buf\" of length \"sz\" "
-			"into tokens \"toks\" of length \"toksz\" "
-			"with parser \"p\".\n"
-			"Returns the number of tokens parsed or "
-			"<0 on failure (possible errors described "
-			"in enum jsmnerr_t).\n"
-			"If passed NULL \"toks\", simply computes "
-			"the number of tokens required.");
+		if (!gen_comment(f, 0, COMMENT_C,
+		    "Parse a buffer \"buf\" of length \"sz\" "
+		    "into tokens \"toks\" of length \"toksz\" "
+		    "with parser \"p\".\n"
+		    "Returns the number of tokens parsed or "
+		    "<0 on failure (possible errors described "
+		    "in enum jsmnerr_t).\n"
+		    "If passed NULL \"toks\", simply computes "
+		    "the number of tokens required."))
+			return 0;
 		if (fputs("int jsmn_parse(jsmn_parser *p, "
 			  "const char *buf,\n"
 			  "\tsize_t sz, jsmntok_t *toks, "

@@ -37,6 +37,10 @@ enum	langt {
 	LANG_C
 };
 
+int	 gen_comment(FILE *, size_t, enum cmtt, const char *);
+int	 gen_commentv(FILE *, size_t, enum cmtt, const char *, ...)
+		__attribute__((format(printf, 4, 5)));
+
 void	 print_commentt(size_t, enum cmtt, const char *);
 void	 print_commentv(size_t, enum cmtt, const char *, ...)
 		__attribute__((format(printf, 3, 4)));

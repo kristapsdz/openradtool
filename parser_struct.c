@@ -1120,8 +1120,13 @@ parse_struct_search(struct parse *p, struct strct *s, enum stype stype)
 			parse_config_search_terms(p, srch);
 		}
 	} else {
-		if (p->lasttype == TOK_SEMICOLON || PARSE_STOP(p))
+		if (p->lasttype == TOK_SEMICOLON || PARSE_STOP(p)) {
+			if (stype == STYPE_LIST)
+				s->flags |= STRCT_HAS_QUEUE;
+			else if (stype == STYPE_ITERATE)
+				s->flags |= STRCT_HAS_ITERATOR;
 			return;
+		} 
 		if (p->lasttype != TOK_COLON) {
 			parse_errx(p, "expected field identifier");
 			return;

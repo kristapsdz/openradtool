@@ -2450,20 +2450,20 @@ gen_alias_builder(const struct strct *p)
  * or failure to open a template file).
  */
 int
-gen_c_source(const struct config *cfg, int json, int jsonparse,
-	int valids, int dbin, const char *header, 
+ort_lang_c_source(const struct ort_lang_c *args,
+	const struct config *cfg, FILE *f, 
 	const char *incls, const int *exs)
 {
 	const struct strct 	*p;
 	const struct search	*s;
-	const char		*start;
+	const char		*start, *cp;
 	size_t			 sz;
 	int			 need_kcgi = 0, 
 				 need_kcgijson = 0, 
 				 need_sqlbox = 0,
 				 need_b64 = 0;
 	struct filldepq		 fq;
-	struct filldep		*f;
+	struct filldep		*fd;
 
 #if !HAVE_B64_NTOP
 	need_b64 = 1;
@@ -2506,7 +2506,7 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 			if (STRCT_HAS_BLOB & p->flags) {
 				print_commentt(0, COMMENT_C,
 					"Required for b64_ntop().");
-				if ( ! jsonparse)
+				if (!(args->flags & ORT_LANG_C_JSON_JSMN))
 					puts("#include <ctype.h>");
 				puts("#include <netinet/in.h>\n"
 				     "#include <resolv.h>");
@@ -2515,14 +2515,17 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 	} else
 		puts("#include <ctype.h> /* b64_ntop() */");
 
-	if (dbin || strchr(incls, 'd'))
+	if (strchr(incls, 'd') != NULL ||
+	    (args->flags & ORT_LANG_C_DB_SQLBOX))
 		need_sqlbox = 1;
-	if (valids || strchr(incls, 'v'))
+	if (strchr(incls, 'v') != NULL ||
+	    (args->flags & ORT_LANG_C_VALID_KCGI))
 		need_kcgi = 1;
-	if (json || strchr(incls, 'j'))
+	if (strchr(incls, 'j') != NULL ||
+	    (args->flags & ORT_LANG_C_JSON_KCGI))
 		need_kcgi = need_kcgijson = 1;
 
-	if (jsonparse) {
+	if (args->flags & ORT_LANG_C_JSON_JSMN) {
 		if ( ! need_b64)
 			puts("#include <ctype.h>");
 		puts("#include <inttypes.h>");
@@ -2546,26 +2549,26 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 	if (need_kcgijson)
 		puts("#include <kcgijson.h>");
 
-	if (NULL == header)
-		header = "db.h";
+	puts("");
 
-	puts("");
-	while ('\0' != *header) {
-		while (isspace((unsigned char)*header))
-			header++;
-		if ('\0' == *header)
-			continue;
-		start = header;
-		for (sz = 0; '\0' != *header; sz++, header++)
-			if (',' == *header ||
-			    isspace((unsigned char)*header))
-				break;
-		if (sz)
-			printf("#include \"%.*s\"\n", (int)sz, start);
-		while (',' == *header)
-			header++;
+	if ((cp = args->header) != NULL) {
+		while (*cp != '\0') {
+			while (isspace((unsigned char)*cp))
+				cp++;
+			if (*cp == '\0')
+				continue;
+			start = cp;
+			for (sz = 0; '\0' != *cp; sz++, cp++)
+				if (*cp == ',' ||
+				    isspace((unsigned char)*cp))
+					break;
+			if (sz)
+				printf("#include \"%.*s\"\n", (int)sz, start);
+			while (',' == *cp)
+				cp++;
+		}
+		puts("");
 	}
-	puts("");
 
 #ifndef __OpenBSD__
 	if ( ! genfile(FILE_GENSALT, exs[EX_GENSALT]))
@@ -2573,10 +2576,10 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 #endif
 	if (need_b64 && ! genfile(FILE_B64_NTOP, exs[EX_B64_NTOP]))
 		return 0;
-	if (jsonparse && ! genfile(FILE_JSMN, exs[EX_JSMN]))
+	if (args->flags & ORT_LANG_C_JSON_JSMN && ! genfile(FILE_JSMN, exs[EX_JSMN]))
 		return 0;
 
-	if (dbin) {
+	if (args->flags & ORT_LANG_C_DB_SQLBOX) {
 		print_commentt(0, COMMENT_C,
 			"All SQL statements we'll later "
 			"define in \"stmts\".");
@@ -2646,7 +2649,7 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 	 * All of the functions have been defined in the header file.
 	 */
 
-	if (valids) {
+	if (args->flags & ORT_LANG_C_VALID_KCGI) {
 		puts("const struct kvalid valid_keys[VALID__MAX] = {");
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			gen_valid_struct(p);
@@ -2662,7 +2665,7 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 		"in the associated header file.");
 	puts("");
 
-	if (dbin) {
+	if (args->flags & ORT_LANG_C_DB_SQLBOX) {
 		gen_func_trans(cfg);
 		if (!gen_func_open(cfg))
 			return 0;
@@ -2687,11 +2690,15 @@ gen_c_source(const struct config *cfg, int json, int jsonparse,
 				err(EXIT_FAILURE, NULL);
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		gen_funcs(cfg, p, json, jsonparse, valids, dbin, &fq);
+		gen_funcs(cfg, p, 
+			args->flags & ORT_LANG_C_JSON_KCGI, 
+			args->flags & ORT_LANG_C_JSON_JSMN, 
+			args->flags & ORT_LANG_C_VALID_KCGI, 
+			args->flags & ORT_LANG_C_DB_SQLBOX, &fq);
 
-	while ((f = TAILQ_FIRST(&fq)) != NULL) {
-		TAILQ_REMOVE(&fq, f, entries);
-		free(f);
+	while ((fd = TAILQ_FIRST(&fq)) != NULL) {
+		TAILQ_REMOVE(&fq, fd, entries);
+		free(fd);
 	}
 
 	return 1;

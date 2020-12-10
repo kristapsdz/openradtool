@@ -30,6 +30,8 @@ struct	ort_lang_c {
 
 int	ort_lang_c_header(const struct ort_lang_c *,
 		const struct config *, FILE *);
-int	gen_c_source(const struct config *, int, int, int, int, const char *, const char *, const int *);
+int	ort_lang_c_source(const struct ort_lang_c *, 
+		const struct config *, FILE *f, 
+		const char *, const int *);
 
 #endif /* !ORT_LANG_C_H */

@@ -49,38 +49,42 @@ static	const char *const externals[EX__MAX] = {
 int
 main(int argc, char *argv[])
 {
-	const char	 *header = NULL, *incls = NULL, 
-	     		 *sharedir = SHAREDIR;
-	struct config	 *cfg = NULL;
-	int		  c, json = 0, jsonparse = 0, valids = 0,
-			  dbin = 1, rc = 0;
-	FILE		**confs = NULL;
-	size_t		  i, confsz;
-	int		  exs[EX__MAX], sz;
-	char		  buf[MAXPATHLEN];
+	struct ort_lang_c	  args;
+	const char		 *incls = NULL, *sharedir = SHAREDIR;
+	struct config		 *cfg = NULL;
+	int			  c, rc = 0;
+	FILE			**confs = NULL;
+	size_t			  i, confsz;
+	int			  exs[EX__MAX], sz;
+	char			  buf[MAXPATHLEN];
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 
+	memset(&args, 0, sizeof(struct ort_lang_c));
+	args.header = "db.h";
+
 	while ((c = getopt(argc, argv, "h:I:jJN:sS:v")) != -1)
 		switch (c) {
 		case 'h':
-			header = optarg;
+			args.header = optarg;
+			if (*optarg == '\0')
+				args.header = NULL;
 			break;
 		case 'I':
 			incls = optarg;
 			break;
 		case 'j':
-			json = 1;
+			args.flags |= ORT_LANG_C_JSON_KCGI;
 			break;
 		case 'J':
-			jsonparse = 1;
+			args.flags |= ORT_LANG_C_JSON_JSMN;
 			break;
 		case 'N':
 			if (strchr(optarg, 'd') != NULL)
-				dbin = 0;
+				args.flags &= ~ORT_LANG_C_DB_SQLBOX;
 			break;
 		case 's':
 			/* Ignore. */
@@ -89,7 +93,7 @@ main(int argc, char *argv[])
 			sharedir = optarg;
 			break;
 		case 'v':
-			valids = 1;
+			args.flags |= ORT_LANG_C_VALID_KCGI;
 			break;
 		default:
 			goto usage;
@@ -140,8 +144,7 @@ main(int argc, char *argv[])
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
-		rc = gen_c_source(cfg, json, jsonparse, 
-			valids, dbin, header, incls, exs);
+		rc = ort_lang_c_source(&args, cfg, stdout, incls, exs);
 
 out:
 	for (i = 0; i < EX__MAX; i++)

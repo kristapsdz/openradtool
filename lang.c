@@ -547,6 +547,8 @@ print_sql_stmts(size_t tabs, const struct strct *p, enum langt lang)
 		if (NULL != s->aggr && NULL != s->group) {
 			assert(s->aggr->field->parent == 
 			       s->group->field->parent);
+			if (rc == 0)
+				printf(" %c", delim);
 			putchar('\n');
 			for (i = 0; i < tabs + 1; i++)
 				putchar('\t');
@@ -567,6 +569,7 @@ print_sql_stmts(size_t tabs, const struct strct *p, enum langt lang)
 				AGGR_MAXROW == s->aggr->op ?  "<" : ">",
 				s->aggr->field->name,
 				delim);
+			rc = 1;
 		}
 
 		if (!hastrail) {

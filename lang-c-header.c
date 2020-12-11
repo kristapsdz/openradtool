@@ -919,11 +919,11 @@ ort_lang_c_header(const struct ort_lang_c *args,
 		return 0;
 
 	if (fprintf(f, "#ifndef KWBP_VERSION\n"
-	            "# define KWBP_VERSION \"%s\"\n"
-	            "#endif\n"
-	            "#ifndef KWBP_VSTAMP\n"
-	            "# define KWBP_VSTAMP %lld\n"
-	            "#endif\n" "\n", VERSION, (long long)VSTAMP) < 0)
+            "# define KWBP_VERSION \"%s\"\n"
+            "#endif\n"
+            "#ifndef KWBP_VSTAMP\n"
+            "# define KWBP_VSTAMP %lld\n"
+            "#endif\n\n", VERSION, (long long)VSTAMP) < 0)
 		return 0;
 	
 	if ((args->flags & ORT_LANG_C_DB_SQLBOX) && 

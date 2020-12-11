@@ -137,6 +137,9 @@ static	const char *const validbins[VALIDATE__MAX] = {
 	"!=", /* VALIDATE_EQ */
 };
 
+static	int print_src(FILE *, size_t, const char *, ...)
+	__attribute__((format(printf, 3, 4)));
+
 /*
  * Print the line of source code given by "fmt" and varargs.
  * This is indented according to "indent", which changes depending on
@@ -144,8 +147,8 @@ static	const char *const validbins[VALIDATE__MAX] = {
  * This is useful when printing the same text with different
  * indentations (e.g., when being surrounded by a conditional).
  */
-static void
-print_src(size_t indent, const char *fmt, ...)
+static int
+print_src(FILE *f, size_t indent, const char *fmt, ...)
 {
 	va_list	 ap;
 	char	*cp;
@@ -155,27 +158,28 @@ print_src(size_t indent, const char *fmt, ...)
 	va_start(ap, fmt);
 	ret = vasprintf(&cp, fmt, ap);
 	va_end(ap);
-	if (-1 == ret)
-		return;
+	if (ret == -1)
+		return 0;
 
-	for (pos = 0; '\0' != cp[pos]; pos++) {
-		if (0 == pos || '\n' == cp[pos]) {
-			if (pos && '{' == cp[pos - 1])
+	for (pos = 0; cp[pos] != '\0'; pos++) {
+		if (pos == 0 || cp[pos] == '\n') {
+			if (pos > 0 && cp[pos - 1] == '{')
 				indent++;
-			if ('}' == cp[pos + 1])
+			if (cp[pos + 1] == '}')
 				indent--;
-			if (pos)
-				putchar('\n');
+			if (pos > 0 && fputc('\n', f) == EOF)
+				return 0;
 			for (i = 0; i < indent; i++)
-				putchar('\t');
+				if (fputc('\t', f) == EOF)
+					return 0;
 		} 
 
-		if ('\n' != cp[pos])
-			putchar(cp[pos]);
+		if (cp[pos] != '\n' && fputc(cp[pos], f) == EOF)
+			return 0;
 	} 
 
-	putchar('\n');
 	free(cp);
+	return fputc('\n', f) != EOF;
 }
 
 /*
@@ -184,77 +188,100 @@ print_src(size_t indent, const char *fmt, ...)
  * password does NOT match the given type, TRUE if the password does
  * match the given type.
  */
-static void
-gen_print_checkpass(int ptr, size_t pos, const char *name,
-	enum optype type, const struct field *f)
+static int
+gen_checkpass(FILE *f, int ptr, size_t pos,
+	const char *name, enum optype type, const struct field *fd)
 {
 	const char	*s = ptr ? "->" : ".";
 
 	assert(type == OPTYPE_EQUAL || type == OPTYPE_NEQUAL);
 
-	printf("(%s", type == OPTYPE_NEQUAL ? "!(" : "");
+	if (fprintf(f, "(%s", type == OPTYPE_NEQUAL ? "!(" : "") < 0)
+		return 0;
 
-	if (f->flags & FIELD_NULL) {
-		printf("(v%zu == NULL && p%shas_%s) ||\n\t\t    "
-			"(v%zu != NULL && !p%shas_%s) ||\n\t\t    "
-			"(v%zu != NULL && p%shas_%s && ",
-			pos, s, name, pos, s, name, pos, s, name);
+	if (fd->flags & FIELD_NULL) {
+		if (fprintf(f, 
+		    "(v%zu == NULL && p%shas_%s) ||\n\t\t    "
+		    "(v%zu != NULL && !p%shas_%s) ||\n\t\t    "
+		    "(v%zu != NULL && p%shas_%s && ",
+		    pos, s, name, pos, s, name, pos, s, name) < 0)
+			return 0;
 #ifdef __OpenBSD__
-		printf("crypt_checkpass(v%zu, p%s%s) == -1)", 
-			pos, s, name);
+		if (fprintf(f, 
+		    "crypt_checkpass(v%zu, p%s%s) == -1)", 
+		    pos, s, name) < 0)
+			return 0;
 #else
-		printf("strcmp(crypt(v%zu, p%s%s), p%s%s) != 0)", 
-			pos, s, name, s, name);
+		if (fprintf(f, 
+		    "strcmp(crypt(v%zu, p%s%s), p%s%s) != 0)", 
+		    pos, s, name, s, name) < 0)
+			return 0;
 #endif
 	} else {
-		printf("v%zu == NULL || ", pos);
+		if (fprintf(f, "v%zu == NULL || ", pos) < 0)
+			return 0;
 #ifdef __OpenBSD__
-		printf("crypt_checkpass(v%zu, p%s%s) == -1", 
-			pos, s, name);
+		if (fprintf(f, 
+		    "crypt_checkpass(v%zu, p%s%s) == -1", 
+		    pos, s, name) < 0)
+			return 0;
 #else
-		printf("strcmp(crypt(v%zu, p%s%s), p%s%s) != 0", 
-			pos, s, name, s, name);
+		if (fprintf(f,
+		    "strcmp(crypt(v%zu, p%s%s), p%s%s) != 0", 
+		    pos, s, name, s, name) < 0)
+			return 0;
 #endif
 	}
 
-	printf("%s)", type == OPTYPE_NEQUAL ? ")" : "");
+	return fprintf(f, "%s)", 
+		type == OPTYPE_NEQUAL ? ")" : "") > 0;
 }
 
-static void
-gen_print_newpass(int ptr, size_t pos, size_t npos)
+static int
+gen_newpass(FILE *f, int ptr, size_t pos, size_t npos)
 {
 
 #ifdef __OpenBSD__
-	printf("\tcrypt_newhash(%sv%zu, \"blowfish,a\", "
-		"hash%zu, sizeof(hash%zu));\n",
-		ptr ? "*" : "", npos, pos, pos);
+	if (fprintf(f,
+	    "\tcrypt_newhash(%sv%zu, \"blowfish,a\", "
+	    "hash%zu, sizeof(hash%zu));\n",
+	    ptr ? "*" : "", npos, pos, pos) < 0)
+		return 0;
 #else
-	printf("\tstrncpy(hash%zu, crypt(%sv%zu, _gensalt()), "
-		"sizeof(hash%zu));\n",
-		pos, ptr ? "*" : "", npos, pos);
+	if (fprintf(f,
+	    "\tstrncpy(hash%zu, crypt(%sv%zu, _gensalt()), "
+	    "sizeof(hash%zu));\n",
+	    pos, ptr ? "*" : "", npos, pos) < 0)
+		return 0;
 #endif
+	return 1;
 }
 
 /*
  * When accepting only given roles, print the roles rooted at "r".
  * Don't print out the ROLE_all, but continue through it.
  */
-static void
-gen_role(const struct role *r)
+static int
+gen_role(FILE *f, const struct role *r)
 {
-	const struct role *rr;
+	const struct role	*rr;
 
-	if (strcmp(r->name, "all"))
-		printf("\tcase ROLE_%s:\n", r->name);
+	if (strcmp(r->name, "all") != 0)
+		if (fprintf(f, "\tcase ROLE_%s:\n", r->name) < 0)
+			return 0;
+
 	TAILQ_FOREACH(rr, &r->subrq, entries)
-		gen_role(rr);
+		if (!gen_role(f, rr))
+			return 0;
+
+	return 1;
 }
 
 /*
  * Fill an individual field from the database.
  */
-static void
-gen_strct_fill_field(const struct field *f)
+static int
+gen_fill_data(FILE *f, const struct field *fd)
 {
 	size_t	 indent;
 
@@ -264,16 +291,16 @@ gen_strct_fill_field(const struct field *f)
 	 * We'll change this in db_xxx_reffind.
 	 */
 
-	if (f->type == FTYPE_STRUCT &&
-	    (f->ref->source->flags & FIELD_NULL)) {
-		printf("\tp->has_%s = 0;\n", f->name);
-		return;
-	} else if (f->type == FTYPE_STRUCT)
-		return;
+	if (fd->type == FTYPE_STRUCT &&
+	    (fd->ref->source->flags & FIELD_NULL))
+		return fprintf(f, "\tp->has_%s = 0;\n", fd->name) > 0;
+	else if (fd->type == FTYPE_STRUCT)
+		return 1;
 
-	if ((f->flags & FIELD_NULL))
-		print_src(1, "p->has_%s = set->ps[*pos].type != "
-			"SQLBOX_PARM_NULL;", f->name);
+	if ((fd->flags & FIELD_NULL) && !print_src(f, 1, 
+	     "p->has_%s = set->ps[*pos].type != "
+	     "SQLBOX_PARM_NULL;", fd->name))
+		return 0;
 
 	/*
 	 * Blob types need to have space allocated (and the space
@@ -282,50 +309,57 @@ gen_strct_fill_field(const struct field *f)
 	 * it into its own conditional block for clarity.
 	 */
 
-	if ((f->flags & FIELD_NULL)) {
-		printf("\tif (p->has_%s) {\n", f->name);
+	if ((fd->flags & FIELD_NULL)) {
+		if (fprintf(f, "\tif (p->has_%s) {\n", fd->name) < 0)
+			return 0;
 		indent = 2;
 	} else
 		indent = 1;
 
-	switch (f->type) {
+	switch (fd->type) {
 	case FTYPE_BLOB:
-		print_src(indent, 
-			"if (%s(&set->ps[(*pos)++],\n"
-			"    &p->%s, &p->%s_sz) == -1)\n"
-		        "\texit(EXIT_FAILURE);",
-			coltypes[f->type], f->name, f->name);
+		if (!print_src(f, indent, 
+		    "if (%s(&set->ps[(*pos)++],\n"
+		    "    &p->%s, &p->%s_sz) == -1)\n"
+		    "\texit(EXIT_FAILURE);", coltypes[fd->type], 
+		    fd->name, fd->name))
+			return 0;
 		break;
 	case FTYPE_DATE:
 	case FTYPE_ENUM:
 	case FTYPE_EPOCH:
-		print_src(indent,
-			"if (%s(&set->ps[(*pos)++], &tmpint) == -1)\n"
-		        "\texit(EXIT_FAILURE);\n"
-			"p->%s = tmpint;",
-			coltypes[f->type], f->name);
+		if (!print_src(f, indent,
+		    "if (%s(&set->ps[(*pos)++], &tmpint) == -1)\n"
+		    "\texit(EXIT_FAILURE);\n"
+		    "p->%s = tmpint;",
+		    coltypes[fd->type], fd->name))
+			return 0;
 		break;
 	case FTYPE_BIT:
 	case FTYPE_BITFIELD:
 	case FTYPE_INT:
 	case FTYPE_REAL:
-		print_src(indent,
-			"if (%s(&set->ps[(*pos)++], &p->%s) == -1)\n"
-		        "\texit(EXIT_FAILURE);",
-			coltypes[f->type], f->name);
+		if (!print_src(f, indent,
+		    "if (%s(&set->ps[(*pos)++], &p->%s) == -1)\n"
+		    "\texit(EXIT_FAILURE);",
+		    coltypes[fd->type], fd->name))
+			return 0;
 		break;
 	default:
-		print_src(indent,
-			"if (%s\n"
-			"    (&set->ps[(*pos)++], &p->%s, NULL) == -1)\n"
-		        "\texit(EXIT_FAILURE);",
-			coltypes[f->type], f->name);
+		if (!print_src(f, indent,
+		    "if (%s\n"
+		    "    (&set->ps[(*pos)++], &p->%s, NULL) == -1)\n"
+		    "\texit(EXIT_FAILURE);",
+		    coltypes[fd->type], fd->name))
+			return 0;
 		break;
 	}
 
-	if ((f->flags & FIELD_NULL))
-		puts("\t} else\n"
-		     "\t\t(*pos)++;");
+	if ((fd->flags & FIELD_NULL) &&
+	    fputs("\t} else\n\t\t(*pos)++;\n", f) == EOF)
+		return 0;
+
+	return 1;
 }
 
 /*
@@ -350,26 +384,36 @@ query_count_bindfuncs(enum ftype t, enum optype type)
  * query_count_bindfuncs() to see if we should skip the binding.
  * Returns zero if we did not print a binding 1 otherwise.
  */
-static size_t
-update_gen_bindfunc(enum ftype t, size_t idx, size_t pos,
-	int ptr, size_t tabs, enum optype type)
+static int
+update_gen_bindfunc(FILE *f, enum ftype t, size_t idx,
+	size_t pos, int ptr, size_t tabs, enum optype type)
 {
 	size_t	 i;
 
-	if (!query_count_bindfuncs(t, type))
+	if (query_count_bindfuncs(t, type) == 0)
 		return 0;
+
 	for (i = 0; i < tabs; i++)
-		putchar('\t');
-	printf("parms[%zu].%s = %sv%zu;\n", 
-		idx - 1, bindvars[t], ptr ? "*" : "", pos);
+		if (fputc('\t', f) == EOF)
+			return -1;
+	if (fprintf(f, "parms[%zu].%s = %sv%zu;\n", 
+	    idx - 1, bindvars[t], ptr ? "*" : "", pos) < 0)
+		return -1;
+
 	for (i = 0; i < tabs; i++)
-		putchar('\t');
-	printf("parms[%zu].type = %s;\n", 
-		idx - 1, bindtypes[t]);
+		if (fputc('\t', f) == EOF)
+			return -1;
+	if (fprintf(f, "parms[%zu].type = %s;\n", 
+	    idx - 1, bindtypes[t]) < 0)
+		return -1;
+
 	if (t == FTYPE_BLOB) {
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("parms[%zu].sz = v%zu_sz;\n", idx - 1, pos);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, "parms[%zu].sz = v%zu_sz;\n", 
+		    idx - 1, pos) < 0)
+			return -1;
 	}
 	return 1;
 }
@@ -378,12 +422,12 @@ update_gen_bindfunc(enum ftype t, size_t idx, size_t pos,
  * Like update_gen_bindfunc() but with a fixed number of tabs and never
  * being a pointer.
  */
-static size_t
-query_gen_bindfunc(enum ftype t,
+static int
+query_gen_bindfunc(FILE *f, enum ftype t,
 	size_t idx, size_t pos, enum optype type)
 {
 
-	return update_gen_bindfunc(t, idx, pos, 0, 1, type);
+	return update_gen_bindfunc(f, t, idx, pos, 0, 1, type);
 }
 
 /*
@@ -391,30 +435,36 @@ query_gen_bindfunc(enum ftype t,
  * Accepts an additional "hpos", which is the index of the current
  * "hash" variable as emitted.
  */
-static void
-update_gen_bindhash(size_t pos, size_t hpos, size_t tabs)
+static int
+update_gen_bindhash(FILE *f, size_t pos, size_t hpos, size_t tabs)
 {
 	size_t	 i;
 
 	for (i = 0; i < tabs; i++)
-		putchar('\t');
-	printf("parms[%zu].sparm = hash%zu;\n", pos - 1, hpos);
+		if (fputc('\t', f) == EOF)
+			return 0;
+	if (fprintf(f, "parms[%zu].sparm = "
+	    "hash%zu;\n", pos - 1, hpos) < 0)
+		return 0;
 	for (i = 0; i < tabs; i++)
-		putchar('\t');
-	printf("parms[%zu].type = SQLBOX_PARM_STRING;\n", pos - 1);
+		if (fputc('\t', f) == EOF)
+			return 0;
+	return fprintf(f, "parms[%zu].type = "
+		"SQLBOX_PARM_STRING;\n", pos - 1) > 0;
 }
 
 /*
  * Print out a search function for an STYPE_ITERATE.
  * This calls a function pointer with the retrieved data.
  */
-static void
-gen_strct_func_iter(const struct config *cfg,
+static int
+gen_iterator(FILE *f, const struct config *cfg,
 	const struct search *s, size_t num)
 {
 	const struct sent	*sent;
 	const struct strct 	*retstr;
 	size_t			 pos, idx, parms = 0;
+	int			 c;
 
 	retstr = s->dst != NULL ? s->dst->strct : s->parent;
 
@@ -428,49 +478,57 @@ gen_strct_func_iter(const struct config *cfg,
 	/* Emit top of the function w/optional static parameters. */
 
 	print_func_db_search(s, 0);
-	printf("\n"
-	       "{\n"
-	       "\tstruct %s p;\n"
-	       "\tconst struct sqlbox_parmset *res;\n"
-	       "\tstruct sqlbox *db = ctx->db;\n",
-	       retstr->name);
-	if (parms > 0)
-		printf("\tstruct sqlbox_parm parms[%zu];\n", parms);
+	if (fprintf(f, "\n"
+  	    "{\n"
+	    "\tstruct %s p;\n"
+	    "\tconst struct sqlbox_parmset *res;\n"
+	    "\tstruct sqlbox *db = ctx->db;\n",
+	    retstr->name) < 0)
+		return 0;
+	if (parms > 0 && fprintf(f, 
+	    "\tstruct sqlbox_parm parms[%zu];\n", parms) < 0)
+		return 0;
 
 	/* Emit parameter binding. */
 
-	puts("");
-	if (parms > 0)
-		puts("\tmemset(parms, 0, sizeof(parms));");
+	if (fputc('\n', f) == EOF)
+		return 0;
+	if (parms > 0 &&
+	    fputs("\tmemset(parms, 0, sizeof(parms));\n", f) == EOF)
+		return 0;
 
 	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries)
 		if (OPTYPE_ISBINARY(sent->op)) {
-			pos += query_gen_bindfunc
-				(sent->field->type, idx, pos, sent->op);
+			c = query_gen_bindfunc(f, 
+				sent->field->type, idx, pos, sent->op);
+			if (c < 0)
+				return 0;
+			pos += (size_t)c;
 			idx++;
 		}
 
-	/* Stipulate multiple returned entries. */
+	/* 
+	 * Stipulate multiple returned entries.
+	 * Step til none left. 
+	 */
 
-	puts("");
-	printf("\tif (!sqlbox_prepare_bind_async\n"
-	       "\t    (db, 0, STMT_%s_BY_SEARCH_%zu,\n"
-	       "\t     %zu, %s, SQLBOX_STMT_MULTI))\n"
-	       "\t	exit(EXIT_FAILURE);\n",
-	       s->parent->name, num, parms,
-	       parms > 0 ? "parms" : "NULL");
+	if (fprintf(f, "\n"
+	    "\tif (!sqlbox_prepare_bind_async\n"
+	    "\t    (db, 0, STMT_%s_BY_SEARCH_%zu,\n"
+	    "\t     %zu, %s, SQLBOX_STMT_MULTI))\n"
+	    "\t\texit(EXIT_FAILURE);\n"
+	    "\twhile ((res = sqlbox_step(db, 0)) "
+	    "!= NULL && res->psz) {\n"
+	    "\t\tdb_%s_fill_r(ctx, &p, res, NULL);\n",
+	    s->parent->name, num, parms,
+	    parms > 0 ? "parms" : "NULL", retstr->name) < 0)
+		return 0;
 
-	/* Step til none left. */
-
-	printf("\twhile ((res = sqlbox_step(db, 0)) "
-			"!= NULL && res->psz) {\n"
-	       "\t\tdb_%s_fill_r(ctx, &p, res, NULL);\n",
-	       retstr->name);
-	if ((retstr->flags & STRCT_HAS_NULLREFS))
-	       printf("\t\tdb_%s_reffind(%s&p, db);\n", 
-		     retstr->name,
-		     (!TAILQ_EMPTY(&cfg->rq)) ? "ctx, " : "");
+	if ((retstr->flags & STRCT_HAS_NULLREFS) && fprintf(f,
+	     "\t\tdb_%s_reffind(%s&p, db);\n", retstr->name, 
+	     !TAILQ_EMPTY(&cfg->rq) ? "ctx, " : "") < 0)
+		return 0;
 
 	/* Conditional post-query password check. */
 
@@ -484,39 +542,43 @@ gen_strct_func_iter(const struct config *cfg,
 			pos++;
 			continue;
 		}
-		printf("\t\tif ");
-		gen_print_checkpass(0, pos,
-			sent->fname, sent->op, sent->field);
-		printf(" {\n"
-		       "\t\t\tdb_%s_unfill_r(&p);\n"
-		       "\t\t\tcontinue;\n"
-		       "\t\t}\n",
-		       s->parent->name);
+		if (fputs("\t\tif ", f) == EOF)
+			return 0;
+		if (!gen_checkpass(f, 0, pos, 
+		    sent->fname, sent->op, sent->field))
+			return 0;
+		if (fprintf(f, " {\n"
+		    "\t\t\tdb_%s_unfill_r(&p);\n"
+		    "\t\t\tcontinue;\n"
+		    "\t\t}\n",
+		    s->parent->name) < 0)
+			return 0;
 		pos++;
 	}
 
-	printf("\t\t(*cb)(&p, arg);\n"
-	       "\t\tdb_%s_unfill_r(&p);\n"
+	return fprintf(f, "\t\t(*cb)(&p, arg);\n"
+		"\t\tdb_%s_unfill_r(&p);\n"
 	       "\t}\n"
 	       "\tif (res == NULL)\n"
 	       "\t\texit(EXIT_FAILURE);\n"
 	       "\tif (!sqlbox_finalise(db, 0))\n"
 	       "\t\texit(EXIT_FAILURE);\n"
 	       "}\n"
-	       "\n", retstr->name);
+	       "\n", retstr->name) > 0;
 }
 
 /*
  * Print out a search function for an STYPE_LIST.
  * This searches for a multiplicity of values.
  */
-static void
-gen_strct_func_list(const struct config *cfg, 
+static int
+gen_list(FILE *f, const struct config *cfg, 
 	const struct search *s, size_t num)
 {
 	const struct sent	*sent;
 	const struct strct	*retstr;
 	size_t	 		 pos, parms = 0, idx;
+	int			 c;
 
 	retstr = s->dst != NULL ? s->dst->strct : s->parent;
 
@@ -530,65 +592,75 @@ gen_strct_func_list(const struct config *cfg,
 	/* Emit top of the function w/optional static parameters. */
 
 	print_func_db_search(s, 0);
-	printf("\n"
-	       "{\n"
-	       "\tstruct %s *p;\n"
-	       "\tstruct %s_q *q;\n"
-	       "\tconst struct sqlbox_parmset *res;\n"
-	       "\tstruct sqlbox *db = ctx->db;\n",
-	       retstr->name, retstr->name);
-	if (parms > 0)
-		printf("\tstruct sqlbox_parm parms[%zu];\n", parms);
+	if (fprintf(f, "\n"
+	    "{\n"
+	    "\tstruct %s *p;\n"
+	    "\tstruct %s_q *q;\n"
+	    "\tconst struct sqlbox_parmset *res;\n"
+	    "\tstruct sqlbox *db = ctx->db;\n",
+	    retstr->name, retstr->name) < 0)
+		return 0;
+	if (parms > 0 && fprintf(f, 
+	    "\tstruct sqlbox_parm parms[%zu];\n", parms) < 0)
+		return 0;
+	if (fputc('\n', f) == EOF)
+		return 0;
+	if (parms > 0 && fputs
+	    ("\tmemset(parms, 0, sizeof(parms));\n", f) == EOF)
+		return 0;
 
-	puts("");
-	if (parms > 0)
-		puts("\tmemset(parms, 0, sizeof(parms));");
-
-	printf("\tq = malloc(sizeof(struct %s_q));\n"
-	       "\tif (q == NULL) {\n"
-	       "\t\tperror(NULL);\n"
-	       "\t\texit(EXIT_FAILURE);\n"
-	       "\t}\n"
-	       "\tTAILQ_INIT(q);\n"
-	       "\n", retstr->name);
+	if (fprintf(f, "\tq = malloc(sizeof(struct %s_q));\n"
+	    "\tif (q == NULL) {\n"
+	    "\t\tperror(NULL);\n"
+	    "\t\texit(EXIT_FAILURE);\n"
+	    "\t}\n"
+	    "\tTAILQ_INIT(q);\n"
+	    "\n", retstr->name) < 0)
+		return 0;
 
 	/* Emit parameter binding. */
 
 	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries)
 		if (OPTYPE_ISBINARY(sent->op)) {
-			idx += query_gen_bindfunc
-				(sent->field->type, idx, pos, sent->op);
+			c = query_gen_bindfunc(f, 
+				sent->field->type, idx, pos, sent->op);
+			if (c < 0)
+				return 0;
+			idx += (size_t)c;
 			pos++;
 		}
-	if (pos > 1)
-		puts("");
 
-	/* Stipulate multiple returned entries. */
+	if (pos > 1 && fputc('\n', f) == EOF)
+		return 0;
 
-	printf("\tif (!sqlbox_prepare_bind_async\n"
-	       "\t    (db, 0, STMT_%s_BY_SEARCH_%zu,\n"
-	       "\t     %zu, %s, SQLBOX_STMT_MULTI))\n"
-	       "\t	exit(EXIT_FAILURE);\n",
-	       s->parent->name, num, parms,
-	       parms > 0 ? "parms" : "NULL");
+	/* 
+	 * Stipulate multiple returned entries.
+	 * Step til none left.
+	 */
 
-	/* Step til none left. */
+	if (fprintf(f, 
+	    "\tif (!sqlbox_prepare_bind_async\n"
+	    "\t    (db, 0, STMT_%s_BY_SEARCH_%zu,\n"
+	    "\t     %zu, %s, SQLBOX_STMT_MULTI))\n"
+	    "\t	exit(EXIT_FAILURE);\n"
+	    "\twhile ((res = sqlbox_step(db, 0)) != NULL "
+	    "&& res->psz) {\n"
+	    "\t\tp = malloc(sizeof(struct %s));\n"
+	    "\t\tif (p == NULL) {\n"
+	    "\t\t\tperror(NULL);\n"
+	    "\t\t\texit(EXIT_FAILURE);\n"
+	    "\t\t}\n"
+	    "\t\tdb_%s_fill_r(ctx, p, res, NULL);\n",
+	    s->parent->name, num, parms,
+	    parms > 0 ? "parms" : "NULL",
+	    retstr->name, retstr->name) < 0)
+		return 0;
 
-	printf("\twhile ((res = sqlbox_step(db, 0)) != NULL "
-			"&& res->psz) {\n"
-	       "\t\tp = malloc(sizeof(struct %s));\n"
-	       "\t\tif (p == NULL) {\n"
-	       "\t\t\tperror(NULL);\n"
-	       "\t\t\texit(EXIT_FAILURE);\n"
-	       "\t\t}\n"
-	       "\t\tdb_%s_fill_r(ctx, p, res, NULL);\n",
-	       retstr->name, retstr->name);
-	if (STRCT_HAS_NULLREFS & retstr->flags)
-	       printf("\t\tdb_%s_reffind(%sp, db);\n",
-		      retstr->name,
-		      (!TAILQ_EMPTY(&cfg->rq)) ? 
-		      "ctx, " : "");
+	if (retstr->flags & STRCT_HAS_NULLREFS && fprintf(f, 
+            "\t\tdb_%s_reffind(%sp, db);\n", retstr->name,
+	    !TAILQ_EMPTY(&cfg->rq) ? "ctx, " : "") < 0)
+		return 0;
 
 	/* Conditional post-query password check. */
 
@@ -602,27 +674,29 @@ gen_strct_func_list(const struct config *cfg,
 			pos++;
 			continue;
 		}
-		printf("\t\tif ");
-		gen_print_checkpass(1, pos,
-			sent->fname, sent->op, sent->field);
-		printf(" {\n"
-		       "\t\t\tdb_%s_free(p);\n"
-		       "\t\t\tp = NULL;\n"
-		       "\t\t\tcontinue;\n"
-		       "\t\t}\n",
-		       s->parent->name);
+		if (fputs("\t\tif ", f) == EOF)
+			return 0;
+		if (!gen_checkpass(f, 1, pos, 
+		    sent->fname, sent->op, sent->field))
+			return 0;
+		if (fprintf(f, " {\n"
+		    "\t\t\tdb_%s_free(p);\n"
+		    "\t\t\tp = NULL;\n"
+		    "\t\t\tcontinue;\n"
+		    "\t\t}\n",
+		    s->parent->name) < 0)
+			return 0;
 		pos++;
 	}
 
-	puts("\t\tTAILQ_INSERT_TAIL(q, p, _entries);\n"
+	return fputs("\t\tTAILQ_INSERT_TAIL(q, p, _entries);\n"
 	     "\t}\n"
 	     "\tif (res == NULL)\n"
 	     "\t\texit(EXIT_FAILURE);\n"
 	     "\tif (!sqlbox_finalise(db, 0))\n"
 	     "\t\texit(EXIT_FAILURE);\n"
 	     "\treturn q;\n"
-	     "}\n"
-	     "");
+	     "}\n\n", f) != EOF;
 }
 
 /*
@@ -632,31 +706,35 @@ gen_strct_func_list(const struct config *cfg,
 static size_t
 gen_func_role_count(const struct role *role)
 {
-	size_t	 i = 0;
-	const struct role *r;
+	size_t			 i = 0;
+	const struct role	*r;
 
-	if (strcmp(role->name, "all"))
+	if (strcmp(role->name, "all") != 0)
 		i++;
 	TAILQ_FOREACH(r, &role->subrq, entries)
 		i += gen_func_role_count(r);
-	return(i);
+	return i;
 }
 
-static void
-gen_func_roles(const struct role *r)
+static int
+gen_func_roles(FILE *f, const struct role *r)
 {
 	const struct role	*rr;
 
 	if (r->parent != NULL &&
 	    strcmp(r->parent->name, "all") && 
 	    strcmp(r->parent->name, "none"))
-		printf("\tif (!sqlbox_role_hier_child"
-			 "(hier, ROLE_%s, ROLE_%s))\n"
-		       "\t\tgoto err;\n",
-		       r->parent->name, r->name);
+		if (fprintf(f, "\tif (!sqlbox_role_hier_child"
+		    "(hier, ROLE_%s, ROLE_%s))\n"
+		    "\t\tgoto err;\n",
+		    r->parent->name, r->name) < 0)
+			return 0;
 
 	TAILQ_FOREACH(rr, &r->subrq, entries)
-		gen_func_roles(rr);
+		if (!gen_func_roles(f, rr))
+			return 0;
+
+	return 1;
 }
 
 /*
@@ -664,15 +742,16 @@ gen_func_roles(const struct role *r)
  * enumeration in "stmt".
  * This does nothing if we're doing the "all" or "none" role.
  */
-static void
-gen_func_role_stmt(const struct role *r, const char *stmt)
+static int
+gen_func_role_stmt(FILE *f, const struct role *r, const char *stmt)
 {
 
 	if (strcmp(r->name, "all") == 0 ||
 	    strcmp(r->name, "none") == 0)
-		return;
-	printf("\tif (!sqlbox_role_hier_stmt(hier, ROLE_%s, %s))\n"
-	       "\t\tgoto err;\n", r->name, stmt);
+		return 1;
+	return fprintf(f, "\tif (!sqlbox_role_hier_stmt"
+		"(hier, ROLE_%s, %s))\n\t\tgoto err;\n", 
+		r->name, stmt) > 0;
 }
 
 /*
@@ -680,15 +759,20 @@ gen_func_role_stmt(const struct role *r, const char *stmt)
  * This means that we print for the immediate children of the "all"
  * role and let the hierarchical algorithm handle the rest.
  */
-static void
-gen_func_role_stmts_all(const struct config *cfg, const char *stmt)
+static int
+gen_func_role_stmts_all(FILE *f,
+	const struct config *cfg, const char *stmt)
 {
 	const struct role	*r, *rr;
 
-	TAILQ_FOREACH(r, &cfg->rq, entries)
-		if (strcmp(r->name, "all") == 0)
-			TAILQ_FOREACH(rr, &r->subrq, entries)
-				gen_func_role_stmt(rr, stmt);
+	TAILQ_FOREACH(r, &cfg->rq, entries) {
+		if (strcmp(r->name, "all") != 0)
+			continue;
+		TAILQ_FOREACH(rr, &r->subrq, entries)
+			if (!gen_func_role_stmt(f, rr, stmt))
+				return 0;
+	}
+	return 1;
 }
 
 /*
@@ -697,12 +781,12 @@ gen_func_role_stmts_all(const struct config *cfg, const char *stmt)
  * failure, and 0 otherwise (success, no statements).
  */
 static int
-gen_func_role_stmts(const struct config *cfg, const struct strct *p)
+gen_func_role_stmts(FILE *f, const struct config *cfg, const struct strct *p)
 {
 	const struct rref	*rs;
 	const struct search 	*s;
 	const struct update 	*u;
-	const struct field 	*f;
+	const struct field 	*fd;
 	size_t	 		 pos, shown = 0;
 	char			*buf;
 
@@ -711,12 +795,13 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 	 * needs to be figured out by a recursive scan.
 	 */
 
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if ((f->flags & (FIELD_ROWID|FIELD_UNIQUE))) {
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if ((fd->flags & (FIELD_ROWID|FIELD_UNIQUE))) {
 			if (asprintf(&buf, "STMT_%s_BY_UNIQUE_%s",
-			    p->name, f->name) < 0)
+			    p->name, fd->name) < 0)
 				return -1;
-			gen_func_role_stmts_all(cfg, buf);
+			if (!gen_func_role_stmts_all(f, cfg, buf))
+				return -1;
 			shown++;
 			free(buf);
 		}
@@ -732,10 +817,11 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 		    p->name, pos - 1) < 0)
 			return -1;
 		TAILQ_FOREACH(rs, &s->rolemap->rq, entries)
-			if (strcmp(rs->role->name, "all") == 0)
-				gen_func_role_stmts_all(cfg, buf);
-			else
-				gen_func_role_stmt(rs->role, buf);
+			if (strcmp(rs->role->name, "all") == 0) {
+				if (!gen_func_role_stmts_all(f, cfg, buf))
+					return -1;
+			} else if (!gen_func_role_stmt(f, rs->role, buf))
+				return -1;
 		shown++;
 		free(buf);
 	}
@@ -746,10 +832,11 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 		if (asprintf(&buf, "STMT_%s_INSERT", p->name) < 0)
 			return -1;
 		TAILQ_FOREACH(rs, &p->ins->rolemap->rq, entries)
-			if (strcmp(rs->role->name, "all") == 0)
-				gen_func_role_stmts_all(cfg, buf);
-			else
-				gen_func_role_stmt(rs->role, buf);
+			if (strcmp(rs->role->name, "all") == 0) {
+				if (!gen_func_role_stmts_all(f, cfg, buf))
+					return -1;
+			} else if (!gen_func_role_stmt(f, rs->role, buf))
+				return -1;
 		shown++;
 		free(buf);
 	}
@@ -765,10 +852,11 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 		    p->name, pos - 1) < 0)
 			return -1;
 		TAILQ_FOREACH(rs, &u->rolemap->rq, entries)
-			if (strcmp(rs->role->name, "all") == 0)
-				gen_func_role_stmts_all(cfg, buf);
-			else
-				gen_func_role_stmt(rs->role, buf);
+			if (strcmp(rs->role->name, "all") == 0) {
+				if (!gen_func_role_stmts_all(f, cfg, buf))
+					return -1;
+			} else if (!gen_func_role_stmt(f, rs->role, buf))
+				return -1;
 		shown++;
 		free(buf);
 	}
@@ -784,10 +872,11 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
 		    p->name, pos - 1) < 0)
 			return -1;
 		TAILQ_FOREACH(rs, &u->rolemap->rq, entries)
-			if (strcmp(rs->role->name, "all") == 0)
-				gen_func_role_stmts_all(cfg, buf);
-			else
-				gen_func_role_stmt(rs->role, buf);
+			if (strcmp(rs->role->name, "all") == 0) {
+				if (gen_func_role_stmts_all(f, cfg, buf))
+					return -1;
+			} else if (!gen_func_role_stmt(f, rs->role, buf))
+				return -1;
 		shown++;
 		free(buf);
 	}
@@ -801,7 +890,7 @@ gen_func_role_stmts(const struct config *cfg, const struct strct *p)
  * Returns TRUE on success, FALSE on memory allocation failure.
  */
 static int
-gen_func_open(const struct config *cfg)
+gen_open(FILE *f, const struct config *cfg)
 {
 	const struct role 	*r;
 	const struct strct 	*p;
@@ -809,18 +898,22 @@ gen_func_open(const struct config *cfg)
 	int			 c;
 
 	print_func_db_set_logging(0);
-	puts("{\n"
-	     "\n"
-	     "\tif (!sqlbox_msg_set_dat(ort->db, arg, sz))\n"
-	     "\t\texit(EXIT_FAILURE);\n"
-	     "}\n");
+	if (fputs("{\n"
+	    "\n"
+	    "\tif (!sqlbox_msg_set_dat(ort->db, arg, sz))\n"
+	    "\t\texit(EXIT_FAILURE);\n"
+	    "}\n\n", f) == EOF)
+		return 0;
+
 	print_func_db_open(0);
-	puts("{\n"
-	     "\n"
-	     "\treturn db_open_logging(file, NULL, NULL, NULL);\n"
-	     "}\n");
+	if (fputs("{\n"
+	    "\n"
+	    "\treturn db_open_logging(file, NULL, NULL, NULL);\n"
+	    "}\n\n", f) == EOF)
+		return 0;
+
 	print_func_db_open_logging(0);
-	puts("{\n"
+	if (fputs("{\n"
 	     "\tsize_t i;\n"
 	     "\tstruct ort *ctx = NULL;\n"
 	     "\tstruct sqlbox_cfg cfg;\n"
@@ -829,25 +922,28 @@ gen_func_open(const struct config *cfg)
 	     "\tstruct sqlbox_src srcs[1] = {\n"
 	     "\t\t{ .fname = (char *)file,\n"
 	     "\t\t  .mode = SQLBOX_SRC_RW }\n"
-	     "\t};");
-	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tstruct sqlbox_role_hier *hier = NULL;");
-	puts("\n"
-	     "\tmemset(&cfg, 0, sizeof(struct sqlbox_cfg));\n"
-	     "\tcfg.msg.func = log;\n"
-	     "\tcfg.msg.func_short = log_short;\n"
-	     "\tcfg.msg.dat = log_arg;\n"
-	     "\tcfg.srcs.srcs = srcs;\n"
-	     "\tcfg.srcs.srcsz = 1;\n"
-	     "\tcfg.stmts.stmts = pstmts;\n"
-	     "\tcfg.stmts.stmtsz = STMT__MAX;\n"
-	     "\n"
-	     "\tfor (i = 0; i < STMT__MAX; i++)\n"
-	     "\t\tpstmts[i].stmt = (char *)stmts[i];\n"
-	     "\n"
-	     "\tctx = malloc(sizeof(struct ort));\n"
-	     "\tif (ctx == NULL)\n"
-	     "\t\tgoto err;\n");
+	     "\t};\n", f) == EOF)
+		return 0;
+	if (!TAILQ_EMPTY(&cfg->rq) && fputs
+	    ("\tstruct sqlbox_role_hier *hier = NULL;\n", f) == EOF)
+		return 0;
+	if (fputs("\n"
+	    "\tmemset(&cfg, 0, sizeof(struct sqlbox_cfg));\n"
+	    "\tcfg.msg.func = log;\n"
+	    "\tcfg.msg.func_short = log_short;\n"
+	    "\tcfg.msg.dat = log_arg;\n"
+	    "\tcfg.srcs.srcs = srcs;\n"
+	    "\tcfg.srcs.srcsz = 1;\n"
+	    "\tcfg.stmts.stmts = pstmts;\n"
+	    "\tcfg.stmts.stmtsz = STMT__MAX;\n"
+	    "\n"
+	    "\tfor (i = 0; i < STMT__MAX; i++)\n"
+	    "\t\tpstmts[i].stmt = (char *)stmts[i];\n"
+	    "\n"
+	    "\tctx = malloc(sizeof(struct ort));\n"
+	    "\tif (ctx == NULL)\n"
+	    "\t\tgoto err;\n\n", f) == EOF)
+		return 0;
 
 	if (!TAILQ_EMPTY(&cfg->rq)) {
 		/*
@@ -860,12 +956,14 @@ gen_func_open(const struct config *cfg)
 		TAILQ_FOREACH(r, &cfg->rq, entries)
 			i += gen_func_role_count(r);
 		assert(i > 0);
-		printf("\thier = sqlbox_role_hier_alloc(%zu);\n"
-		       "\tif (hier == NULL)\n"
-		       "\t\tgoto err;\n"
-		       "\n", i);
+		if (fprintf(f, "\thier = sqlbox_role_hier_alloc(%zu);\n"
+		    "\tif (hier == NULL)\n"
+		    "\t\tgoto err;\n"
+		    "\n", i) < 0)
+			return 0;
 
-		print_commentt(1, COMMENT_C, "Assign roles.");
+		if (!gen_comment(f, 1, COMMENT_C, "Assign roles."))
+			return 0;
 
 		/* 
 		 * FIXME: the default role should only be able to open
@@ -874,76 +972,86 @@ gen_func_open(const struct config *cfg)
 		 * that's not a permission it needs.
 		 */
 
-		puts("\n"
-		     "\tif (!sqlbox_role_hier_sink(hier, ROLE_none))\n"
-		     "\t\tgoto err;\n"
-		     "\tif (!sqlbox_role_hier_start(hier, ROLE_default))\n"
-		     "\t\tgoto err;\n"
-		     "\tif (!sqlbox_role_hier_src(hier, ROLE_default, 0))\n"
-		     "\t\tgoto err;");
+		if (fputs("\n"
+		    "\tif (!sqlbox_role_hier_sink(hier, ROLE_none))\n"
+		    "\t\tgoto err;\n"
+		    "\tif (!sqlbox_role_hier_start(hier, ROLE_default))\n"
+		    "\t\tgoto err;\n"
+		    "\tif (!sqlbox_role_hier_src(hier, ROLE_default, 0))\n"
+		    "\t\tgoto err;\n", f) == EOF)
+			return 0;
 
 		TAILQ_FOREACH(r, &cfg->rq, entries)
-			gen_func_roles(r);
-
-		puts("");
-		TAILQ_FOREACH(p, &cfg->sq, entries) {
-			print_commentv(1, COMMENT_C, 
-				"White-listing fields and "
-				"operations for structure \"%s\".",
-				p->name);
-			puts("");
-			if ((c = gen_func_role_stmts(cfg, p)) < 0)
+			if (!gen_func_roles(f, r))
 				return 0;
-			else if (c > 0)
-				puts("");
+
+		if (fputc('\n', f) == EOF)
+			return 0;
+		TAILQ_FOREACH(p, &cfg->sq, entries) {
+			if (!gen_commentv(f, 1, COMMENT_C, 
+			    "White-listing fields and "
+			    "operations for structure \"%s\".",
+			    p->name))
+				return 0;
+			if (fputc('\n', f) == EOF)
+				return 0;
+			if ((c = gen_func_role_stmts(f, cfg, p)) < 0)
+				return 0;
+			else if (c > 0 && fputc('\n', f) == EOF)
+				return 0;
 		}
-		printf("\tif (!sqlbox_role_hier_gen"
-			"(hier, &cfg.roles, ROLE_default))\n"
-		       "\t\tgoto err;\n\n");
+		if (fputs("\tif (!sqlbox_role_hier_gen"
+		    "(hier, &cfg.roles, ROLE_default))\n"
+		    "\t\tgoto err;\n\n", f) == EOF)
+			return 0;
 	}
 
-	puts("\tif ((db = sqlbox_alloc(&cfg)) == NULL)\n"
-	     "\t\tgoto err;\n"
-	     "\tctx->db = db;");
+	if (fputs("\tif ((db = sqlbox_alloc(&cfg)) == NULL)\n"
+	    "\t\tgoto err;\n"
+	    "\tctx->db = db;\n", f) == EOF)
+		return 0;
 
-	if (!TAILQ_EMPTY(&cfg->rq))
-	        puts("\tctx->role = ROLE_default;\n"
-		     "\n"
-		     "\tsqlbox_role_hier_gen_free(&cfg.roles);\n"
-		     "\tsqlbox_role_hier_free(hier);\n"
-		     "\thier = NULL;\n");
-	else
-		puts("");
+	if (!TAILQ_EMPTY(&cfg->rq)) {
+	        if (fputs("\tctx->role = ROLE_default;\n"
+		    "\n"
+		    "\tsqlbox_role_hier_gen_free(&cfg.roles);\n"
+		    "\tsqlbox_role_hier_free(hier);\n"
+		    "\thier = NULL;\n\n", f) == EOF)
+			return 0;
+	} else if (fputc('\n', f) == EOF)
+		return 0;
 
-	print_commentv(1, COMMENT_C, 
-		"Now actually open the database.\n"
-		"If this succeeds, then we're good to go.");
+	if (!gen_comment(f, 1, COMMENT_C, 
+	    "Now actually open the database.\n"
+	    "If this succeeds, then we're good to go."))
+		return 0;
 
-	puts("\n"
-	     "\tif (sqlbox_open_async(db, 0))\n"
-	     "\t\treturn ctx;\n"
-	     "err:");
+	if (fputs("\n"
+	    "\tif (sqlbox_open_async(db, 0))\n"
+	    "\t\treturn ctx;\n"
+	    "err:\n", f) == EOF)
+		return 0;
 
-	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tsqlbox_role_hier_gen_free(&cfg.roles);\n"
-	     	     "\tsqlbox_role_hier_free(hier);");
+	if (!TAILQ_EMPTY(&cfg->rq) && fputs
+	    ("\tsqlbox_role_hier_gen_free(&cfg.roles);\n"
+	     "\tsqlbox_role_hier_free(hier);\n", f) == EOF)
+		return 0;
 
-	puts("\tsqlbox_free(db);\n"
+	return fputs("\tsqlbox_free(db);\n"
 	     "\tfree(ctx);\n"
 	     "\treturn NULL;\n"
-	     "}\n"
-	     "");
-	return 1;
+	     "}\n\n", f) != EOF;
 }
 
-static void
-gen_func_rolecases(const struct role *r)
+static int
+gen_func_rolecases(FILE *f, const struct role *r)
 {
-	const struct role *rp, *rr;
+	const struct role	*rp, *rr;
 
 	assert(NULL != r->parent);
 
-	printf("\tcase ROLE_%s:\n", r->name);
+	if (fprintf(f, "\tcase ROLE_%s:\n", r->name) < 0)
+		return 0;
 
 	/*
 	 * If our parent is "all", then there's nowhere we can
@@ -953,133 +1061,149 @@ gen_func_rolecases(const struct role *r)
 	 */
 
 	if (0 == strcmp(r->parent->name, "all")) {
-		puts("\t\tabort();\n"
-		     "\t\t/* NOTREACHED */");
+		if (fputs("\t\tabort();\n"
+		    "\t\t/* NOTREACHED */\n", f) == EOF)
+			return 0;
 		TAILQ_FOREACH(rr, &r->subrq, entries)
-			gen_func_rolecases(rr);
-		return;
+			if (!gen_func_rolecases(f, rr))
+				return 0;
+		return 1;
 	}
 
 	/* Here, we can transition into lesser privileges. */
 
-	puts("\t\tswitch (r) {");
-	for (rp = r->parent; strcmp(rp->name, "all"); rp = rp->parent)
-		printf("\t\tcase ROLE_%s:\n", rp->name);
+	if (fputs("\t\tswitch (r) {\n", f) == EOF)
+		return 0;
 
-	puts("\t\t\tctx->role = r;\n"
-	     "\t\t\treturn;\n"
-	     "\t\tdefault:\n"
-	     "\t\t\tabort();\n"
-	     "\t\t}\n"
-	     "\t\tbreak;");
+	for (rp = r->parent; strcmp(rp->name, "all"); rp = rp->parent)
+		if (fprintf(f, "\t\tcase ROLE_%s:\n", rp->name) < 0)
+			return 0;
+
+	if (fputs("\t\t\tctx->role = r;\n"
+	    "\t\t\treturn;\n"
+	    "\t\tdefault:\n"
+	    "\t\t\tabort();\n"
+	    "\t\t}\n"
+	    "\t\tbreak;\n", f) == EOF)
+		return 0;
 
 	TAILQ_FOREACH(rr, &r->subrq, entries)
-		gen_func_rolecases(rr);
+		if (!gen_func_rolecases(f, rr))
+			return 0;
+
+	return 1;
 }
 
-static void
-gen_func_role_transitions(const struct config *cfg)
+static int
+gen_func_role_transitions(FILE *f, const struct config *cfg)
 {
-	const struct role *r, *rr;
+	const struct role	*r, *rr;
 
 	TAILQ_FOREACH(r, &cfg->rq, entries)
-		if (0 == strcmp(r->name, "all"))
+		if (strcmp(r->name, "all") == 0)
 			break;
-	assert(NULL != r);
+	assert(r != NULL);
 
 	print_func_db_role(0);
-	puts("{\n"
-	     "\tif (!sqlbox_role(ctx->db, r))\n"
-	     "\t\texit(EXIT_FAILURE);\n"
-	     "\tif (r == ctx->role)\n"
-	     "\t\treturn;\n"
-	     "\tif (ctx->role == ROLE_none)\n"
-	     "\t\tabort();\n"
-	     "\n"
-	     "\tswitch (ctx->role) {\n"
-	     "\tcase ROLE_default:\n"
-	     "\t\tctx->role = r;\n"
-	     "\t\treturn;");
+	if (fputs("{\n"
+	    "\tif (!sqlbox_role(ctx->db, r))\n"
+	    "\t\texit(EXIT_FAILURE);\n"
+	    "\tif (r == ctx->role)\n"
+	    "\t\treturn;\n"
+	    "\tif (ctx->role == ROLE_none)\n"
+	    "\t\tabort();\n"
+	    "\n"
+	    "\tswitch (ctx->role) {\n"
+	    "\tcase ROLE_default:\n"
+	    "\t\tctx->role = r;\n"
+	    "\t\treturn;\n", f) == EOF)
+		return 0;
 	TAILQ_FOREACH(rr, &r->subrq, entries)
-		gen_func_rolecases(rr);
-	puts("\tdefault:\n"
-	     "\t\tabort();\n"
-	     "\t}\n"
-	     "}\n");
+		if (!gen_func_rolecases(f, rr))
+			return 0;
+	if (fputs("\tdefault:\n"
+	    "\t\tabort();\n"
+	    "\t}\n"
+	    "}\n\n", f) == EOF)
+		return 0;
+
 	print_func_db_role_current(0);
-	puts("{\n"
-	     "\treturn ctx->role;\n"
-	     "}\n");
+	if (fputs("{\n"
+	    "\treturn ctx->role;\n"
+	    "}\n\n", f) == EOF)
+		return 0;
+
 	print_func_db_role_stored(0);
-	puts("{\n"
+	return fputs("{\n"
 	     "\treturn s->role;\n"
-	     "}\n");
+	     "}\n\n", f) != EOF;
 }
 
-static void
-gen_func_trans(const struct config *cfg)
+static int
+gen_func_trans(FILE *f, const struct config *cfg)
 {
 
 	print_func_db_trans_open(0);
-	puts("{\n"
-	     "\tstruct sqlbox *db = ctx->db;\n"
-	     "\tint c;\n"
-	     "\n"
-	     "\tif (mode < 0)\n"
-	     "\t\tc = sqlbox_trans_exclusive(db, 0, id);\n"
-	     "\telse if (mode > 0)\n"
-	     "\t\tc = sqlbox_trans_immediate(db, 0, id);\n"
-	     "\telse\n"
-	     "\t\tc = sqlbox_trans_deferred(db, 0, id);\n"
-	     "\tif (!c)\n"
-	     "\t\texit(EXIT_FAILURE);\n"
-	     "}\n"
-	     "");
+	if (fputs("{\n"
+	    "\tstruct sqlbox *db = ctx->db;\n"
+	    "\tint c;\n"
+	    "\n"
+	    "\tif (mode < 0)\n"
+	    "\t\tc = sqlbox_trans_exclusive(db, 0, id);\n"
+	    "\telse if (mode > 0)\n"
+	    "\t\tc = sqlbox_trans_immediate(db, 0, id);\n"
+	    "\telse\n"
+	    "\t\tc = sqlbox_trans_deferred(db, 0, id);\n"
+	    "\tif (!c)\n"
+	    "\t\texit(EXIT_FAILURE);\n"
+	    "}\n\n", f) == EOF)
+		return 0;
+
 	print_func_db_trans_rollback(0);
-	puts("{\n"
-	     "\tstruct sqlbox *db = ctx->db;\n"
-	     "\n"
-	     "\tif (!sqlbox_trans_rollback(db, 0, id))\n"
-	     "\t\texit(EXIT_FAILURE);\n"
-	     "}\n"
-	     "");
+	if (fputs("{\n"
+	    "\tstruct sqlbox *db = ctx->db;\n"
+	    "\n"
+	    "\tif (!sqlbox_trans_rollback(db, 0, id))\n"
+	    "\t\texit(EXIT_FAILURE);\n"
+	    "}\n\n", f) == EOF)
+		return 0;
+
 	print_func_db_trans_commit(0);
-	puts("{\n"
+	return fputs("{\n"
 	     "\tstruct sqlbox *db = ctx->db;\n"
 	     "\n"
 	     "\tif (!sqlbox_trans_commit(db, 0, id))\n"
 	     "\t\texit(EXIT_FAILURE);\n"
-	     "}\n"
-	     "");
+	     "}\n\n", f) != EOF;
 }
 
 /*
  * Close and free the database context.
  * This is sensitive to whether we have roles.
  */
-static void
-gen_func_close(const struct config *cfg)
+static int
+gen_func_close(FILE *f, const struct config *cfg)
 {
 
 	print_func_db_close(0);
-	puts("{\n"
+	return fputs("{\n"
 	     "\tif (p == NULL)\n"
 	     "\t\treturn;\n"
              "\tsqlbox_free(p->db);\n"
 	     "\tfree(p);\n"
-	     "}\n"
-	     "");
+	     "}\n\n", f) != EOF;
 }
 
 /*
  * Print out a counting/search function for an STYPE_COUNT.
  */
-static void
-gen_strct_func_count(const struct config *cfg,
+static int
+gen_count(FILE *f, const struct config *cfg,
 	const struct search *s, size_t num)
 {
-	const struct sent  *sent;
-	size_t	 	    pos, parms = 0, idx;
+	const struct sent	*sent;
+	size_t			 pos, parms = 0, idx;
+	int			 c;
 
 	/* Count all possible parameters to bind. */
 
@@ -1089,57 +1213,61 @@ gen_strct_func_count(const struct config *cfg,
 				(sent->field->type, sent->op);
 
 	print_func_db_search(s, 0);
-	puts("\n"
-	     "{\n"
-	     "\tconst struct sqlbox_parmset *res;\n"
-	     "\tint64_t val;\n"
-	     "\tstruct sqlbox *db = ctx->db;");
-	if (parms > 0)
-		printf("\tstruct sqlbox_parm parms[%zu];\n", parms);
+	if (fputs("\n"
+	    "{\n"
+	    "\tconst struct sqlbox_parmset *res;\n"
+	    "\tint64_t val;\n"
+	    "\tstruct sqlbox *db = ctx->db;\n", f) == EOF)
+		return 0;
+	if (parms > 0 && fprintf(f, 
+	    "\tstruct sqlbox_parm parms[%zu];\n", parms) < 0)
+		return 0;
 
 	/* Emit parameter binding. */
 
-	puts("");
+	if (fputc('\n', f) == EOF)
+		return 0;
 	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
 		if (OPTYPE_ISBINARY(sent->op)) {
-			idx += query_gen_bindfunc
-				(sent->field->type, idx, pos, sent->op);
+			c = query_gen_bindfunc(f, 
+				sent->field->type, idx, pos, sent->op);
+			if (c < 0)
+				return 0;
+			idx += (size_t)c;
 			pos++;
 		}
 
 	/* A single returned entry. */
 
-	puts("");
-	printf("\tif (!sqlbox_prepare_bind_async\n"
-	       "\t    (db, 0, STMT_%s_BY_SEARCH_%zu, %zu, %s, 0))\n"
-	       "\t	exit(EXIT_FAILURE);\n",
-	       s->parent->name, num, parms,
-	       parms > 0 ? "parms" : "NULL");
-
-	printf("\tif ((res = sqlbox_step(db, 0)) == NULL)\n"
-	     "\t\texit(EXIT_FAILURE);\n"
-	     "\telse if (res->psz != 1)\n"
-	     "\t\texit(EXIT_FAILURE);\n"
-	     "\tif (sqlbox_parm_int(&res->ps[0], &val) == -1)\n"
-	     "\t\texit(EXIT_FAILURE);\n"
-	     "\tsqlbox_finalise(db, 0);\n"
-	     "\treturn (uint64_t)val;\n"
-	     "}\n"
-	     "");
+	return fprintf(f, "\n"
+		"\tif (!sqlbox_prepare_bind_async\n"
+		"\t    (db, 0, STMT_%s_BY_SEARCH_%zu, %zu, %s, 0))\n"
+		"\t	exit(EXIT_FAILURE);\n"
+		"\tif ((res = sqlbox_step(db, 0)) == NULL)\n"
+		"\t\texit(EXIT_FAILURE);\n"
+		"\telse if (res->psz != 1)\n"
+		"\t\texit(EXIT_FAILURE);\n"
+		"\tif (sqlbox_parm_int(&res->ps[0], &val) == -1)\n"
+		"\t\texit(EXIT_FAILURE);\n"
+		"\tsqlbox_finalise(db, 0);\n"
+		"\treturn (uint64_t)val;\n"
+		"}\n\n", s->parent->name, num, parms,
+		parms > 0 ? "parms" : "NULL") > 0;
 }
 
 /*
  * Print out a search function for an STYPE_SEARCH.
  * This searches for a singular value.
  */
-static void
-gen_strct_func_srch(const struct config *cfg,
+static int
+gen_search(FILE *f, const struct config *cfg,
 	const struct search *s, size_t num)
 {
 	const struct sent	*sent;
 	const struct strct	*retstr;
 	size_t			 pos, parms = 0, idx;
+	int			 c;
 
 	retstr = s->dst != NULL ? s->dst->strct : s->parent;
 
@@ -1151,49 +1279,57 @@ gen_strct_func_srch(const struct config *cfg,
 				(sent->field->type, sent->op);
 
 	print_func_db_search(s, 0);
-	printf("\n"
-	       "{\n"
-	       "\tstruct %s *p = NULL;\n"
-	       "\tconst struct sqlbox_parmset *res;\n"
-	       "\tstruct sqlbox *db = ctx->db;\n",
-	       retstr->name);
-	if (parms > 0)
-		printf("\tstruct sqlbox_parm parms[%zu];\n", parms);
+	if (fprintf(f, "\n"
+	    "{\n"
+	    "\tstruct %s *p = NULL;\n"
+	    "\tconst struct sqlbox_parmset *res;\n"
+	    "\tstruct sqlbox *db = ctx->db;\n",
+	    retstr->name) < 0)
+		return 0;
+	if (parms > 0 && fprintf(f, 
+	    "\tstruct sqlbox_parm parms[%zu];\n", parms) < 0)
+		return 0;
 
 	/* Emit parameter binding. */
 
-	puts("");
-	if (parms > 0)
-		puts("\tmemset(parms, 0, sizeof(parms));");
+	if (fputc('\n', f) == EOF)
+		return 0;
+	if (parms > 0 && fputs
+	    ("\tmemset(parms, 0, sizeof(parms));\n", f) == EOF)
+		return 0;
 
 	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
 		if (OPTYPE_ISBINARY(sent->op)) {
-			idx += query_gen_bindfunc
-				(sent->field->type, idx, pos, sent->op);
+			c = query_gen_bindfunc(f, 
+				sent->field->type, idx, pos, sent->op);
+			if (c < 0)
+				return 0;
+			idx += (size_t)c;
 			pos++;
 		} 
-	puts("");
 
-	printf("\tif (!sqlbox_prepare_bind_async\n"
-	       "\t    (db, 0, STMT_%s_BY_SEARCH_%zu, %zu, %s, 0))\n"
-	       "\t	exit(EXIT_FAILURE);\n",
-	       s->parent->name, num, parms,
-	       parms > 0 ? "parms" : "NULL");
+	if (fprintf(f, "\n"
+	    "\tif (!sqlbox_prepare_bind_async\n"
+	    "\t    (db, 0, STMT_%s_BY_SEARCH_%zu, %zu, %s, 0))\n"
+	    "\t	exit(EXIT_FAILURE);\n"
+	    "\tif ((res = sqlbox_step(db, 0)) != NULL "
+	    "&& res->psz) {\n"
+	    "\t\tp = malloc(sizeof(struct %s));\n"
+	    "\t\tif (p == NULL) {\n"
+	    "\t\t\tperror(NULL);\n"
+	    "\t\t\texit(EXIT_FAILURE);\n"
+	    "\t\t}\n"
+	    "\t\tdb_%s_fill_r(ctx, p, res, NULL);\n",
+	    s->parent->name, num, parms,
+	    parms > 0 ? "parms" : "NULL",
+	    retstr->name, retstr->name) < 0)
+		return 0;
 
-	printf("\tif ((res = sqlbox_step(db, 0)) != NULL "
-			"&& res->psz) {\n"
-	       "\t\tp = malloc(sizeof(struct %s));\n"
-	       "\t\tif (p == NULL) {\n"
-	       "\t\t\tperror(NULL);\n"
-	       "\t\t\texit(EXIT_FAILURE);\n"
-	       "\t\t}\n"
-	       "\t\tdb_%s_fill_r(ctx, p, res, NULL);\n",
-	       retstr->name, retstr->name);
-	if (STRCT_HAS_NULLREFS & retstr->flags)
-	       printf("\t\tdb_%s_reffind(%sp, db);\n",
-		      retstr->name,
-	 	      (!TAILQ_EMPTY(&cfg->rq)) ? "ctx, " : "");
+	if (retstr->flags & STRCT_HAS_NULLREFS && fprintf(f, 
+	    "\t\tdb_%s_reffind(%sp, db);\n", retstr->name,
+	    !TAILQ_EMPTY(&cfg->rq) ? "ctx, " : "") < 0)
+		return 0;
 
 	/* Conditional post-query password check. */
 
@@ -1207,25 +1343,27 @@ gen_strct_func_srch(const struct config *cfg,
 			pos++;
 			continue;
 		}
-		printf("\t\tif ");
-		gen_print_checkpass(1, pos,
-			sent->fname, sent->op, sent->field);
-		printf(" {\n"
-		       "\t\t\tdb_%s_free(p);\n"
-		       "\t\t\tp = NULL;\n"
-		       "\t\t}\n", 
-		       s->parent->name);
+		if (fputs("\t\tif ", f) == EOF)
+			return 0;
+		if (!gen_checkpass(f, 1, pos,
+		    sent->fname, sent->op, sent->field))
+			return 0;
+		if (fprintf(f, " {\n"
+		    "\t\t\tdb_%s_free(p);\n"
+		    "\t\t\tp = NULL;\n"
+		    "\t\t}\n", 
+		    s->parent->name) < 0)
+			return 0;
 		pos++;
 	}
 
-	puts("\t}\n"
-	     "\tif (res == NULL)\n"
-	     "\t\texit(EXIT_FAILURE);\n"
-	     "\tif (!sqlbox_finalise(db, 0))\n"
-	     "\t\texit(EXIT_FAILURE);\n"
-	     "\treturn p;\n"
-	     "}\n"
-	     "");
+	return fputs("\t}\n"
+		"\tif (res == NULL)\n"
+		"\t\texit(EXIT_FAILURE);\n"
+		"\tif (!sqlbox_finalise(db, 0))\n"
+		"\t\texit(EXIT_FAILURE);\n"
+		"\treturn p;\n"
+		"}\n\n", f) != EOF;
 }
 
 /*
@@ -1233,15 +1371,15 @@ gen_strct_func_srch(const struct config *cfg,
  * This must have STRCT_HAS_QUEUE defined in its flags, otherwise the
  * function does nothing.
  */
-static void
-gen_func_freeq(const struct strct *p)
+static int
+gen_freeq(FILE *f, const struct strct *p)
 {
 
-	if ( ! (STRCT_HAS_QUEUE & p->flags))
-		return;
+	if (!(p->flags & STRCT_HAS_QUEUE))
+		return 1;
 
 	print_func_db_freeq(p, 0);
-	printf("\n"
+	return fprintf(f, "\n"
 	       "{\n"
 	       "\tstruct %s *p;\n\n"
 	       "\tif (q == NULL)\n"
@@ -1253,65 +1391,75 @@ gen_func_freeq(const struct strct *p)
 	       "\tfree(q);\n"
 	       "}\n"
 	       "\n", 
-	       p->name, p->name);
+	       p->name, p->name) > 0;
 }
 
 /*
  * Generate the "insert" function.
  * This does nothing if we don't have an insert function.
  */
-static void
-gen_func_insert(const struct config *cfg, const struct strct *p)
+static int
+gen_insert(FILE *f, const struct config *cfg, const struct strct *p)
 {
-	const struct field	*f;
+	const struct field	*fd;
 	size_t			 hpos, idx, parms = 0, tabs, pos;
 
 	if (p->ins == NULL)
-		return;
+		return 1;
 
 	/* Count non-struct non-rowid parameters to bind. */
 
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if (f->type != FTYPE_STRUCT && 
-		    !(f->flags & FIELD_ROWID))
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if (fd->type != FTYPE_STRUCT && 
+		    !(fd->flags & FIELD_ROWID))
 			parms++;
 
 	print_func_db_insert(p, 0);
-	puts("\n"
-	     "{\n"
-	     "\tint rc;\n"
-	     "\tint64_t id = -1;\n"
-	     "\tstruct sqlbox *db = ctx->db;");
-	if (parms > 0)
-		printf("\tstruct sqlbox_parm parms[%zu];\n", parms);
+	if (fputs("\n"
+	    "{\n"
+	    "\tint rc;\n"
+	    "\tint64_t id = -1;\n"
+	    "\tstruct sqlbox *db = ctx->db;\n", f) == EOF)
+		return 0;
+
+	if (parms > 0 && fprintf(f, 
+	    "\tstruct sqlbox_parm parms[%zu];\n", parms) < 0)
+		return 0;
 
 	/* Start by generating password hashes. */
 
 	hpos = 1;
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if (f->type == FTYPE_PASSWORD)
-			printf("\tchar hash%zu[64];\n", hpos++);
-	puts("");
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if (fd->type == FTYPE_PASSWORD && fprintf(f , 
+		    "\tchar hash%zu[64];\n", hpos++) < 0)
+			return 0;
+
+	if (fputc('\n', f) == EOF)
+		return 0;
 
 	hpos = idx = 1;
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->type == FTYPE_STRUCT ||
-		    (f->flags & FIELD_ROWID))
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type == FTYPE_STRUCT ||
+		    (fd->flags & FIELD_ROWID))
 			continue;
-		if (f->type != FTYPE_PASSWORD) {
+		if (fd->type != FTYPE_PASSWORD) {
 			idx++;
 			continue;
 		}
-		if ((f->flags & FIELD_NULL))
-			printf("\tif (v%zu != NULL)\n\t", idx);
-		gen_print_newpass((f->flags & FIELD_NULL), hpos, idx);
+		if ((fd->flags & FIELD_NULL) && fprintf(f, 
+		    "\tif (v%zu != NULL)\n\t", idx) < 0)
+			return 0;
+		if (!gen_newpass(f,
+		    fd->flags & FIELD_NULL, hpos, idx))
+			return 0;
 		hpos++;
 		idx++;
 	}
-	if (hpos > 1)
-		puts("");
-	if (parms > 0)
-		puts("\tmemset(parms, 0, sizeof(parms));");
+	if (hpos > 1 && fputc('\n', f) == EOF)
+		return 0;
+	if (parms > 0 &&
+	    fputs("\tmemset(parms, 0, sizeof(parms));\n", f) == EOF)
+		return 0;
 
 	/* 
 	 * Advance hash position (hpos), index in parameters array
@@ -1319,16 +1467,18 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 	 */
 
 	hpos = pos = idx = 1;
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->type == FTYPE_STRUCT ||
-		    (f->flags & FIELD_ROWID))
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type == FTYPE_STRUCT ||
+		    (fd->flags & FIELD_ROWID))
 			continue;
+
 		tabs = 1;
-		if (f->flags & FIELD_NULL) {
-			printf("\tif (v%zu == NULL) {\n"
-			       "\t\tparms[%zu].type = "
-					"SQLBOX_PARM_NULL;\n"
-			       "\t} else {\n", pos, idx - 1);
+		if (fd->flags & FIELD_NULL) {
+			if (fprintf(f, "\tif (v%zu == NULL) {\n"
+		  	    "\t\tparms[%zu].type = "
+			    "SQLBOX_PARM_NULL;\n"
+			    "\t} else {\n", pos, idx - 1) < 0)
+				return 0;
 			tabs++;
 		}
 
@@ -1337,117 +1487,132 @@ gen_func_insert(const struct config *cfg, const struct strct *p)
 		 * we know that it will be printed.
 		 */
 
-		if (f->type == FTYPE_PASSWORD)
-			update_gen_bindhash(idx, hpos++, tabs);
-		else
-			update_gen_bindfunc(f->type, idx, pos,
-				(f->flags & FIELD_NULL), 
-				tabs, OPTYPE_EQUAL /* XXX */);
-		if ((f->flags & FIELD_NULL))
-			puts("\t}");
+		if (fd->type == FTYPE_PASSWORD) {
+			if (!update_gen_bindhash(f, idx, hpos++, tabs))
+				return 0;
+		} else {
+			if (update_gen_bindfunc(f, fd->type, idx, pos,
+			    (fd->flags & FIELD_NULL), tabs, 
+			    OPTYPE_EQUAL /* XXX */) < 0)
+				return 0;
+		}
+
+		if ((fd->flags & FIELD_NULL) &&
+		    fputs("\t}\n", f) == EOF)
+			return 0;
 		idx++;
 		pos++;
 	}
-	if (parms > 0)
-		puts("");
+	if (parms > 0 && fputc('\n', f) == EOF)
+		return 0;
 
-	printf("\trc = sqlbox_exec(db, 0, STMT_%s_INSERT, \n"
-	       "\t     %zu, %s, SQLBOX_STMT_CONSTRAINT);\n"
-	       "\tif (rc == SQLBOX_CODE_ERROR)\n"
-	       "\t\texit(EXIT_FAILURE);\n"
-	       "\telse if (rc != SQLBOX_CODE_OK)\n"
-	       "\t\treturn (-1);\n"
-	       "\tif (!sqlbox_lastid(db, 0, &id))\n"
-	       "\t\texit(EXIT_FAILURE);\n"
-	       "\treturn id;\n"
-	       "}\n"
-	       "\n",
-	       p->name, parms,
-	       parms > 0 ? "parms" : "NULL");
+	return fprintf(f, 
+		"\trc = sqlbox_exec(db, 0, STMT_%s_INSERT, \n"
+		"\t     %zu, %s, SQLBOX_STMT_CONSTRAINT);\n"
+		"\tif (rc == SQLBOX_CODE_ERROR)\n"
+		"\t\texit(EXIT_FAILURE);\n"
+		"\telse if (rc != SQLBOX_CODE_OK)\n"
+		"\t\treturn (-1);\n"
+		"\tif (!sqlbox_lastid(db, 0, &id))\n"
+		"\t\texit(EXIT_FAILURE);\n"
+		"\treturn id;\n"
+		"}\n\n", p->name, parms,
+	       parms > 0 ? "parms" : "NULL") > 0;
 }
 
 /*
  * Generate the "free" function.
  */
-static void
-gen_func_free(const struct strct *p)
+static int
+gen_free(FILE *f, const struct strct *p)
 {
 
 	print_func_db_free(p, 0);
-	printf("\n"
-	       "{\n"
-	       "\tdb_%s_unfill_r(p);\n"
-	       "\tfree(p);\n"
-	       "}\n"
-	       "\n", 
-	       p->name);
+	return fprintf(f, "\n{\n"
+		"\tdb_%s_unfill_r(p);\n"
+		"\tfree(p);\n"
+		"}\n\n", p->name) > 0;
 }
 
 /*
  * Generate the "unfill" function.
  */
-static void
-gen_func_unfill(const struct config *cfg, const struct strct *p)
+static int
+gen_unfill(FILE *f, const struct config *cfg, const struct strct *p)
 {
-	const struct field *f;
+	const struct field	*fd;
 
-	print_commentt(0, COMMENT_C,
-	       "Free resources from \"p\" and all nested objects.\n"
-	       "Does not free the \"p\" pointer itself.\n"
-	       "Has no effect if \"p\" is NULL.");
+	if (!gen_comment(f, 0, COMMENT_C,
+	    "Free resources from \"p\" and all nested objects.\n"
+	    "Does not free the \"p\" pointer itself.\n"
+	    "Has no effect if \"p\" is NULL."))
+		return 0;
 
-	printf("static void\n"
-	       "db_%s_unfill(struct %s *p)\n",
-	       p->name, p->name);
-	puts("{\n"
-	     "\tif (p == NULL)\n"
-	     "\t\treturn;");
-	TAILQ_FOREACH(f, &p->fq, entries)
-		switch(f->type) {
-		case (FTYPE_BLOB):
-		case (FTYPE_PASSWORD):
-		case (FTYPE_TEXT):
-		case (FTYPE_EMAIL):
-			printf("\tfree(p->%s);\n", f->name);
+	if (fprintf(f, 
+  	    "static void\n"
+	    "db_%s_unfill(struct %s *p)\n"
+	    "{\n"
+	    "\tif (p == NULL)\n"
+	    "\t\treturn;\n", p->name, p->name) < 0)
+		return 0;
+
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		switch(fd->type) {
+		case FTYPE_BLOB:
+		case FTYPE_PASSWORD:
+		case FTYPE_TEXT:
+		case FTYPE_EMAIL:
+			if (fprintf(f, 
+			    "\tfree(p->%s);\n", fd->name) < 0)
+				return 0;
 			break;
 		default:
 			break;
 		}
-	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tfree(p->priv_store);");
-	puts("}\n"
-	     "");
+
+	if (!TAILQ_EMPTY(&cfg->rq) &&
+	    fputs("\tfree(p->priv_store);\n", f) == EOF)
+		return 0;
+
+	return fputs("}\n\n", f) != EOF;
 }
 
 /*
  * Generate the nested "unfill" function.
  */
-static void
-gen_func_unfill_r(const struct strct *p)
+static int
+gen_unfill_r(FILE *f, const struct strct *p)
 {
-	const struct field *f;
+	const struct field	*fd;
 
-	printf("static void\n"
-	       "db_%s_unfill_r(struct %s *p)\n"
-	       "{\n"
-	       "\tif (p == NULL)\n"
-	       "\t\treturn;\n"
-	       "\tdb_%s_unfill(p);\n",
-	       p->name, p->name, p->name);
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_STRUCT != f->type)
+	if (fprintf(f, "static void\n"
+	    "db_%s_unfill_r(struct %s *p)\n"
+	    "{\n"
+	    "\tif (p == NULL)\n"
+	    "\t\treturn;\n"
+	    "\tdb_%s_unfill(p);\n",
+	    p->name, p->name, p->name) < 0)
+		return 0;
+
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type != FTYPE_STRUCT)
 			continue;
-		if (FIELD_NULL & f->ref->source->flags)
-			printf("\tif (p->has_%s)\n"
-			       "\t\tdb_%s_unfill_r(&p->%s);\n",
-				f->ref->source->name, 
-				f->ref->target->parent->name, f->name);
-		else
-			printf("\tdb_%s_unfill_r(&p->%s);\n",
-				f->ref->target->parent->name, f->name);
+		if (fd->ref->source->flags & FIELD_NULL) {
+			if (fprintf(f, "\tif (p->has_%s)\n"
+			    "\t\tdb_%s_unfill_r(&p->%s);\n",
+			    fd->ref->source->name, 
+			    fd->ref->target->parent->name, 
+			    fd->name) < 0)
+				return 0;
+		} else {
+			if (fprintf(f, "\tdb_%s_unfill_r(&p->%s);\n",
+			    fd->ref->target->parent->name, 
+			    fd->name) < 0)
+				return 0;
+		}
 	}
-	puts("}\n"
-	     "");
+
+	return fputs("}\n\n", f) != EOF;
 }
 
 /*
@@ -1458,65 +1623,73 @@ gen_func_unfill_r(const struct strct *p)
  * This is only done for structures that have (or have nested)
  * structures with null foreign keys.
  */
-static void
-gen_func_reffind(const struct config *cfg, const struct strct *p)
+static int
+gen_reffind(FILE *f, const struct config *cfg, const struct strct *p)
 {
-	const struct field *f;
+	const struct field	*fd;
 
 	if (!(p->flags & STRCT_HAS_NULLREFS))
-		return;
+		return 1;
 
 	/* 
 	 * Do we have any null-ref fields in this?
 	 * (They might be in target references.)
 	 */
 
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if ((f->type == FTYPE_STRUCT) &&
-		    (f->ref->source->flags & FIELD_NULL))
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if ((fd->type == FTYPE_STRUCT) &&
+		    (fd->ref->source->flags & FIELD_NULL))
 			break;
 
-	printf("static void\n"
-	       "db_%s_reffind(%sstruct %s *p, struct sqlbox *db)\n"
-	       "{\n", p->name, (!TAILQ_EMPTY(&cfg->rq)) ? 
-	       "struct ort *ctx, " : "", p->name);
-	if (f != NULL)
-		puts("\tconst struct sqlbox_parmset *res;\n"
-		     "\tstruct sqlbox_parm parm;");
+	if (fprintf(f, "static void\n"
+	    "db_%s_reffind(%sstruct %s *p, struct sqlbox *db)\n"
+	    "{\n", p->name, (!TAILQ_EMPTY(&cfg->rq)) ? 
+	    "struct ort *ctx, " : "", p->name) < 0)
+		return 0;
 
-	puts("");
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->type != FTYPE_STRUCT)
+	if (fd != NULL && fputs
+	    ("\tconst struct sqlbox_parmset *res;\n"
+	     "\tstruct sqlbox_parm parm;\n", f) == EOF)
+		return 0;
+
+	if (fputc('\n', f) == EOF)
+		return 0;
+
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type != FTYPE_STRUCT)
 			continue;
-		if ((f->ref->source->flags & FIELD_NULL))
-			printf("\tif (p->has_%s) {\n"
-			       "\t\tparm.type = SQLBOX_PARM_INT;\n"
-			       "\t\tparm.iparm = p->%s;\n"
-			       "\t\tif (!sqlbox_prepare_bind_async\n"
-			       "\t\t    (db, 0, STMT_%s_BY_UNIQUE_%s, 1, &parm, 0))\n"
-			       "\t\t\texit(EXIT_FAILURE);\n"
-			       "\t\tif ((res = sqlbox_step(db, 0)) == NULL)\n"
-			       "\t\t\texit(EXIT_FAILURE);\n"
-			       "\t\tdb_%s_fill_r(ctx, &p->%s, res, NULL);\n"
-			       "\t\tif (!sqlbox_finalise(db, 0))\n"
-			       "\t\t\texit(EXIT_FAILURE);\n"
-			       "\t\tp->has_%s = 1;\n"
-			       "\t}\n",
-			       f->ref->source->name,
-			       f->ref->source->name,
-			       f->ref->target->parent->name,
-			       f->ref->target->name,
-			       f->ref->target->parent->name,
-			       f->name, f->name);
-		if (!(f->ref->target->parent->flags & 
+		if ((fd->ref->source->flags & FIELD_NULL))
+			if (fprintf(f, "\tif (p->has_%s) {\n"
+			    "\t\tparm.type = SQLBOX_PARM_INT;\n"
+			    "\t\tparm.iparm = p->%s;\n"
+			    "\t\tif (!sqlbox_prepare_bind_async\n"
+			    "\t\t    (db, 0, STMT_%s_BY_UNIQUE_%s, 1, &parm, 0))\n"
+			    "\t\t\texit(EXIT_FAILURE);\n"
+			    "\t\tif ((res = sqlbox_step(db, 0)) == NULL)\n"
+			    "\t\t\texit(EXIT_FAILURE);\n"
+			    "\t\tdb_%s_fill_r(ctx, &p->%s, res, NULL);\n"
+			    "\t\tif (!sqlbox_finalise(db, 0))\n"
+			    "\t\t\texit(EXIT_FAILURE);\n"
+			    "\t\tp->has_%s = 1;\n"
+			    "\t}\n",
+			    fd->ref->source->name,
+			    fd->ref->source->name,
+			    fd->ref->target->parent->name,
+			    fd->ref->target->name,
+			    fd->ref->target->parent->name,
+			    fd->name, fd->name) < 0)
+				return 0;
+		if (!(fd->ref->target->parent->flags & 
 		    STRCT_HAS_NULLREFS))
 			continue;
-		printf("\tdb_%s_reffind(%s&p->%s, db);\n", 
-			f->ref->target->parent->name, 
-			(!TAILQ_EMPTY(&cfg->rq)) ? 
-			"ctx, " : "", f->name);
+		if (fprintf(f, "\tdb_%s_reffind(%s&p->%s, db);\n", 
+		    fd->ref->target->parent->name, 
+		    (!TAILQ_EMPTY(&cfg->rq)) ? 
+		    "ctx, " : "", fd->name) < 0)
+			return 0;
 	}
-	puts("}\n");
+
+	return fputs("}\n\n", f) != EOF;
 }
 
 /*
@@ -1524,38 +1697,42 @@ gen_func_reffind(const struct config *cfg, const struct strct *p)
  * This simply calls to the underlying "fill" function for all
  * strutcures in the object.
  */
-static void
-gen_func_fill_r(const struct config *cfg, const struct strct *p)
+static int
+gen_fill_r(FILE *f, const struct config *cfg, const struct strct *p)
 {
-	const struct field *f;
+	const struct field	*fd;
 
-	printf("static void\n"
-	       "db_%s_fill_r(struct ort *ctx, struct %s *p,\n"
-	       "\tconst struct sqlbox_parmset *res, size_t *pos)\n"
-	       "{\n"
-	       "\tsize_t i = 0;\n"
-	       "\n"
-	       "\tif (pos == NULL)\n"
-	       "\t\tpos = &i;\n"
-	       "\tdb_%s_fill(ctx, p, res, pos);\n",
-	       p->name, p->name, p->name);
+	if (fprintf(f, "static void\n"
+	    "db_%s_fill_r(struct ort *ctx, struct %s *p,\n"
+	    "\tconst struct sqlbox_parmset *res, size_t *pos)\n"
+	    "{\n"
+	    "\tsize_t i = 0;\n"
+	    "\n"
+	    "\tif (pos == NULL)\n"
+	    "\t\tpos = &i;\n"
+	    "\tdb_%s_fill(ctx, p, res, pos);\n",
+	    p->name, p->name, p->name) < 0)
+		return 0;
 
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if (f->type == FTYPE_STRUCT &&
-		    !(f->ref->source->flags & FIELD_NULL))
-			printf("\tdb_%s_fill_r(ctx, &p->%s, "
-				"res, pos);\n", 
-				f->ref->target->parent->name, f->name);
-	puts("}\n");
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if (fd->type == FTYPE_STRUCT &&
+		    !(fd->ref->source->flags & FIELD_NULL))
+			if (fprintf(f, "\tdb_%s_fill_r(ctx, "
+			    "&p->%s, res, pos);\n", 
+			    fd->ref->target->parent->name, 
+			    fd->name) < 0)
+				return 0;
+
+	return fputs("}\n\n", f) != EOF;
 }
 
 /*
  * Generate the "fill" function.
  */
-static void
-gen_func_fill(const struct config *cfg, const struct strct *p)
+static int
+gen_fill(FILE *f, const struct config *cfg, const struct strct *p)
 {
-	const struct field	*f;
+	const struct field	*fd;
 	int	 		 needint = 0;
 
 	/*
@@ -1564,53 +1741,62 @@ gen_func_fill(const struct config *cfg, const struct strct *p)
 	 * epochs which may be 32 bits on some willy wonka systems.
 	 */
 
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if (f->type == FTYPE_ENUM || 
-		    f->type == FTYPE_DATE ||
-		    f->type == FTYPE_EPOCH)
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if (fd->type == FTYPE_ENUM || 
+		    fd->type == FTYPE_DATE ||
+		    fd->type == FTYPE_EPOCH) {
 			needint = 1;
+			break;
+		}
 
-	print_commentv(0, COMMENT_C, 
-	       "Fill in a %s from an open statement \"stmt\".\n"
-	       "This starts grabbing results from \"pos\", "
-	       "which may be NULL to start from zero.\n"
-	       "This follows DB_SCHEMA_%s's order for columns.",
-	       p->name, p->name);
-	printf("static void\n"
-	       "db_%s_fill(struct ort *ctx, struct %s *p, "
-		"const struct sqlbox_parmset *set, size_t *pos)\n",
-	       p->name, p->name);
-	puts("{\n"
-	     "\tsize_t i = 0;");
-	if (needint)
-		puts("\tint64_t tmpint;");
-	puts("\n"
+	if (!gen_commentv(f, 0, COMMENT_C, 
+	    "Fill in a %s from an open statement \"stmt\".\n"
+	    "This starts grabbing results from \"pos\", "
+	    "which may be NULL to start from zero.\n"
+	    "This follows DB_SCHEMA_%s's order for columns.",
+	    p->name, p->name))
+		return 0;
+	if (fprintf(f, "static void\n"
+	    "db_%s_fill(struct ort *ctx, struct %s *p, "
+	    "const struct sqlbox_parmset *set, size_t *pos)\n"
+	    "{\n"
+	    "\tsize_t i = 0;\n",
+	    p->name, p->name) < 0)
+		return 0;
+	if (needint && fputs("\tint64_t tmpint;\n", f) == EOF)
+		return 0;
+	if (fputs("\n"
 	     "\tif (pos == NULL)\n"
 	     "\t\tpos = &i;\n"
-	     "\tmemset(p, 0, sizeof(*p));");
-	TAILQ_FOREACH(f, &p->fq, entries)
-		gen_strct_fill_field(f);
+	     "\tmemset(p, 0, sizeof(*p));\n", f) == EOF)
+		return 0;
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if (!gen_fill_data(f, fd))
+			return 0;
 	if (!TAILQ_EMPTY(&cfg->rq)) {
-		puts("\tp->priv_store = malloc"
-		      "(sizeof(struct ort_store));\n"
-		     "\tif (p->priv_store == NULL) {\n"
-		     "\t\tperror(NULL);\n"
-		     "\t\texit(EXIT_FAILURE);\n"
-		     "\t}\n"
-		     "\tp->priv_store->role = ctx->role;");
+		if (fputs("\tp->priv_store = malloc"
+		    "(sizeof(struct ort_store));\n"
+		    "\tif (p->priv_store == NULL) {\n"
+		    "\t\tperror(NULL);\n"
+		    "\t\texit(EXIT_FAILURE);\n"
+		    "\t}\n"
+		    "\tp->priv_store->role = ctx->role;\n", f) == EOF)
+			return 0;
 	}
-	puts("}\n");
+
+	return fputs("}\n\n", f) != EOF;
 }
 
 /*
  * Generate an update or delete function.
  */
-static void
-gen_func_update(const struct config *cfg,
+static int
+gen_update(FILE *f, const struct config *cfg,
 	const struct update *up, size_t num)
 {
 	const struct uref	*ref;
 	size_t	 		 pos, idx, hpos, parms = 0, tabs;
+	int			 c;
 
 	/* Count all possible (modify & constrain) parameters. */
 
@@ -1627,12 +1813,14 @@ gen_func_update(const struct config *cfg,
 	/* Emit function prologue. */
 
 	print_func_db_update(up, 0);
-	puts("\n"
-	     "{\n"
-	     "\tenum sqlbox_code c;\n"
-	     "\tstruct sqlbox *db = ctx->db;");
-	if (parms > 0)
-		printf("\tstruct sqlbox_parm parms[%zu];\n", parms);
+	if (fputs("\n"
+	    "{\n"
+	    "\tenum sqlbox_code c;\n"
+	    "\tstruct sqlbox *db = ctx->db;\n", f) == EOF)
+		return 0;
+	if (parms > 0 && fprintf
+	    (f, "\tstruct sqlbox_parm parms[%zu];\n", parms) < 0)
+		return 0;
 
 	/* 
 	 * Handle case of hashing first.
@@ -1645,27 +1833,32 @@ gen_func_update(const struct config *cfg,
 	TAILQ_FOREACH(ref, &up->mrq, entries)
 		if (ref->field->type == FTYPE_PASSWORD &&
 		    ref->mod != MODTYPE_STRSET)
-			printf("\tchar hash%zu[64];\n", hpos++);
-	puts("");
+			if (fprintf(f, 
+			    "\tchar hash%zu[64];\n", hpos++) < 0)
+				return 0;
+	if (fputc('\n', f) == EOF)
+		return 0;
 
 	idx = hpos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
 		if (ref->field->type == FTYPE_PASSWORD &&
 		    ref->mod != MODTYPE_STRSET) {
 			if ((ref->field->flags & FIELD_NULL))
-				printf("\tif (v%zu != NULL)\n"
-				       "\t", idx);
-			gen_print_newpass
-				((ref->field->flags & FIELD_NULL), 
-				 hpos, idx);
+				if (fprintf(f, 
+				    "\tif (v%zu != NULL)\n\t", idx) < 0)
+					return 0;
+			if (!gen_newpass(f, 
+			    (ref->field->flags & FIELD_NULL), hpos, idx))
+				return 0;
 			hpos++;
 		} 
 		idx++;
 	}
-	if (hpos > 1)
-		puts("");
-	if (parms > 0)
-		puts("\tmemset(parms, 0, sizeof(parms));");
+	if (hpos > 1 && fputc('\n', f) == EOF)
+		return 0;
+	if (parms > 0 &&
+	    fputs("\tmemset(parms, 0, sizeof(parms));\n", f) == EOF)
+		return 0;
 
 	/*
 	 * Advance hash position (hpos), index in parameters array
@@ -1676,11 +1869,12 @@ gen_func_update(const struct config *cfg,
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
 		tabs = 1;
 		if ((ref->field->flags & FIELD_NULL)) {
-			printf("\tif (v%zu == NULL)\n"
-			       "\t\tparms[%zu].type = "
-				"SQLBOX_PARM_NULL;\n"
-			       "\telse {\n"
-			       "\t", idx, idx - 1);
+			if (fprintf(f, "\tif (v%zu == NULL)\n"
+			    "\t\tparms[%zu].type = "
+			    "SQLBOX_PARM_NULL;\n"
+			    "\telse {\n"
+			    "\t", idx, idx - 1) < 0)
+				return 0;
 			tabs++;
 		}
 
@@ -1690,15 +1884,20 @@ gen_func_update(const struct config *cfg,
 		 */
 
 		if (ref->field->type == FTYPE_PASSWORD &&
-		    ref->mod != MODTYPE_STRSET)
-			update_gen_bindhash(idx, hpos++, tabs);
-		else
-			update_gen_bindfunc
-				(ref->field->type, idx, pos,
-				 (ref->field->flags & FIELD_NULL), 
-				 tabs, OPTYPE_STREQ /* XXX */);
-		if ((ref->field->flags & FIELD_NULL))
-			puts("\t}");
+		    ref->mod != MODTYPE_STRSET) {
+			if (!update_gen_bindhash(f, idx, hpos++, tabs))
+				return 0;
+		} else {
+			if (update_gen_bindfunc
+			    (f, ref->field->type, idx, pos,
+			     (ref->field->flags & FIELD_NULL), 
+			     tabs, OPTYPE_STREQ /* XXX */) < 0)
+				return 0;
+		}
+
+		if (ref->field->flags & FIELD_NULL)
+			if (fputs("\t}\n", f) == EOF)
+				return 0;
 		pos++;
 		idx++;
 	}
@@ -1712,15 +1911,19 @@ gen_func_update(const struct config *cfg,
 		assert(ref->field->type != FTYPE_STRUCT);
 		if (OPTYPE_ISUNARY(ref->op))
 			continue;
-		idx += update_gen_bindfunc
-			(ref->field->type, idx, pos, 0, 1, ref->op);
+		c = update_gen_bindfunc(f,
+			ref->field->type, idx, pos, 0, 1, ref->op);
+		if (c < 0)
+			return 0;
+		idx += (size_t)c;
 		pos++;
 	}
 
-	puts("");
+	if (fputc('\n', f) == EOF)
+		return 0;
 
-	if (up->type == UP_MODIFY)
-		printf("\tc = sqlbox_exec\n"
+	if (up->type == UP_MODIFY) {
+		if (fprintf(f, "\tc = sqlbox_exec\n"
 		       "\t\t(db, 0, STMT_%s_UPDATE_%zu,\n"
 		       "\t\t %zu, %s, SQLBOX_STMT_CONSTRAINT);\n"
 		       "\tif (c == SQLBOX_CODE_ERROR)\n"
@@ -1729,17 +1932,21 @@ gen_func_update(const struct config *cfg,
 		       "}\n"
 		       "\n",
 		       up->parent->name, num, parms, 
-		       parms > 0 ? "parms" : "NULL");
-	else
-		printf("\tc = sqlbox_exec\n"
+		       parms > 0 ? "parms" : "NULL") < 0)
+			return 0;
+	} else {
+		if (fprintf(f, "\tc = sqlbox_exec\n"
 		       "\t\t(db, 0, STMT_%s_DELETE_%zu, %zu, %s, 0);\n"
 		       "\tif (c != SQLBOX_CODE_OK)\n"
 		       "\t\texit(EXIT_FAILURE);\n"
 		       "}\n"
 		       "\n",
 		       up->parent->name, num, parms, 
-		       parms > 0 ? "parms" : "NULL");
+		       parms > 0 ? "parms" : "NULL") < 0)
+			return 0;
+	}
 
+	return 1;
 }
 
 /*
@@ -1747,33 +1954,42 @@ gen_func_update(const struct config *cfg,
  * in failure of the validation.
  * Assume that the basic type validation has passed.
  */
-static void
-gen_func_valid_types(const struct field *f, const struct fvalid *v)
+static int
+gen_func_valid_types(FILE *f,
+	const struct field *fd, const struct fvalid *v)
 {
 
 	assert(v->type < VALIDATE__MAX);
-	switch (f->type) {
+	switch (fd->type) {
 	case FTYPE_BIT:
 	case FTYPE_ENUM:
 	case FTYPE_BITFIELD:
 	case FTYPE_DATE:
 	case FTYPE_EPOCH:
 	case FTYPE_INT:
-		printf("\tif (p->parsed.i %s %" PRId64 ")\n"
-		       "\t\treturn 0;\n",
-		       validbins[v->type], v->d.value.integer);
+		if (fprintf(f, 
+		    "\tif (p->parsed.i %s %" PRId64 ")\n"
+		    "\t\treturn 0;\n",
+		    validbins[v->type], v->d.value.integer) < 0)
+			return 0;
 		break;
 	case FTYPE_REAL:
-		printf("\tif (p->parsed.d %s %g)\n"
-		       "\t\treturn 0;\n",
-		       validbins[v->type], v->d.value.decimal);
+		if (fprintf(f, 
+		    "\tif (p->parsed.d %s %g)\n"
+		    "\t\treturn 0;\n",
+		    validbins[v->type], v->d.value.decimal) < 0)
+			return 0;
 		break;
 	default:
-		printf("\tif (p->valsz %s %zu)\n"
-		       "\t\treturn 0;\n",
-		       validbins[v->type], v->d.value.len);
+		if (fprintf(f,
+		    "\tif (p->valsz %s %zu)\n"
+		    "\t\treturn 0;\n",
+		    validbins[v->type], v->d.value.len) < 0)
+			return 0;
 		break;
 	}
+
+	return 1;
 }
 
 /*
@@ -1782,81 +1998,54 @@ gen_func_valid_types(const struct field *f, const struct fvalid *v)
  * validate, and non-enumerations without limits use the native kcgi(3)
  * validator function.
  */
-static void
-gen_func_valids(const struct strct *p)
+static int
+gen_valids(FILE *f, const struct strct *p)
 {
-	const struct field	*f;
+	const struct field	*fd;
 	const struct fvalid	*v;
 	const struct eitem	*ei;
 
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->type == FTYPE_STRUCT || f->type == FTYPE_BLOB)
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type == FTYPE_STRUCT || 
+		    fd->type == FTYPE_BLOB)
 			continue;
-		if (f->type != FTYPE_ENUM && TAILQ_EMPTY(&f->fvq))
+		if (fd->type != FTYPE_ENUM && 
+		    TAILQ_EMPTY(&fd->fvq))
 			continue;
 
-		assert(validtypes[f->type] != NULL);
-		print_func_valid(f, 0);
-		printf("{\n"
-		       "\tif (!%s(p))\n"
-		       "\t\treturn 0;\n", validtypes[f->type]);
+		assert(validtypes[fd->type] != NULL);
+
+		print_func_valid(fd, 0);
+		if (fprintf(f, "{\n"
+		    "\tif (!%s(p))\n"
+		    "\t\treturn 0;\n", validtypes[fd->type]) < 0)
+			return 0;
 
 		/* Enumeration: check against knowns. */
 
-		if (f->type == FTYPE_ENUM) {
-			puts("\tswitch(p->parsed.i) {");
-			TAILQ_FOREACH(ei, &f->enm->eq, entries)
-				printf("\tcase %" PRId64 ":\n",
-					ei->value);
-			puts("\t\tbreak;\n"
-			     "\tdefault:\n"
-			     "\t\treturn 0;\n"
-			     "\t}");
+		if (fd->type == FTYPE_ENUM) {
+			if (fputs("\tswitch"
+			    "(p->parsed.i) {\n", f) == EOF)
+				return 0;
+			TAILQ_FOREACH(ei, &fd->enm->eq, entries)
+				if (fprintf(f, "\tcase %" PRId64 
+				    ":\n", ei->value) < 0)
+					return 0;
+			if (fputs("\t\tbreak;\n"
+			    "\tdefault:\n"
+			    "\t\treturn 0;\n"
+			    "\t}\n", f) == EOF)
+				return 0;
 		}
 
-		TAILQ_FOREACH(v, &f->fvq, entries) 
-			gen_func_valid_types(f, v);
-		puts("\treturn 1;\n"
-		     "}\n");
-	}
-}
-
-static void
-gen_func_json_obj(const struct strct *p)
-{
-
-	print_func_json_obj(p, 0);
-	printf("{\n"
-	       "\tkjson_objp_open(r, \"%s\");\n"
-	       "\tjson_%s_data(r, p);\n"
-	       "\tkjson_obj_close(r);\n"
-	       "}\n\n", p->name, p->name);
-
-	if (STRCT_HAS_QUEUE & p->flags) {
-		print_func_json_array(p, 0);
-		printf("{\n"
-		       "\tstruct %s *p;\n"
-		       "\n"
-		       "\tkjson_arrayp_open(r, \"%s_q\");\n"
-		       "\tTAILQ_FOREACH(p, q, _entries) {\n"
-		       "\t\tkjson_obj_open(r);\n"
-		       "\t\tjson_%s_data(r, p);\n"
-		       "\t\tkjson_obj_close(r);\n"
-		       "\t}\n"
-		       "\tkjson_array_close(r);\n"
-		       "}\n\n", p->name, p->name, p->name);
+		TAILQ_FOREACH(v, &fd->fvq, entries) 
+			if (!gen_func_valid_types(f, fd, v))
+				return 0;
+		if (fputs("\treturn 1;\n}\n\n", f) == EOF)
+			return 0;
 	}
 
-	if (STRCT_HAS_ITERATOR & p->flags) {
-		print_func_json_iterate(p, 0);
-		printf("{\n"
-		       "\tstruct kjsonreq *r = arg;\n"
-		       "\n"
-		       "\tkjson_obj_open(r);\n"
-		       "\tjson_%s_data(r, p);\n"
-		       "\tkjson_obj_close(r);\n"
-		       "}\n\n", p->name);
-	}
+	return 1;
 }
 
 /*
@@ -1864,8 +2053,9 @@ gen_func_json_obj(const struct strct *p)
  * This needs to handle whether the field is a blob, might be null, is a
  * structure, and so on.
  */
-static void
-gen_field_json_data(const struct field *f, size_t *pos, int *sp)
+static int
+gen_functions_json_out_data(FILE *f,
+	const struct field *fd, size_t *pos, int *sp)
 {
 	char		 	 tabs[] = "\t\t";
 	const struct rref	*rs;
@@ -1873,243 +2063,248 @@ gen_field_json_data(const struct field *f, size_t *pos, int *sp)
 
 	*sp = 0;
 
-	if (f->flags & FIELD_NOEXPORT) {
-		if (!hassp)
-			puts("");
-		print_commentv(1, COMMENT_C, "Omitting %s: "
-			"marked no export.", f->name);
-		puts("");
+	if (fd->flags & FIELD_NOEXPORT) {
+		if (!hassp && fputc('\n', f) == EOF)
+			return 0;
+		if (!gen_commentv(f, 1, COMMENT_C,
+		    "Omitting %s: marked no export.", fd->name))
+			return 0;
+		if (fputc('\n', f) == EOF)
+			return 0;
 		*sp = 1;
-		return;
-	} else if (f->type == FTYPE_PASSWORD) {
-		if (!hassp)
-			puts("");
-		print_commentv(1, COMMENT_C, "Omitting %s: "
-			"is a password hash.", f->name);
-		puts("");
+		return 1;
+	} else if (fd->type == FTYPE_PASSWORD) {
+		if (!hassp && fputc('\n', f) == EOF)
+			return 0;
+		if (!gen_commentv(f, 1, COMMENT_C, 
+		    "Omitting %s: is a password hash.", fd->name))
+			return 0;
+		if (fputc('\n', f) == EOF)
+			return 0;
 		*sp = 1;
-		return;
+		return 1;
 	}
 
-	if (f->rolemap != NULL) {
-		if (!hassp)
-			puts("");
-		puts("\tswitch (db_role_stored(p->priv_store)) {");
-		TAILQ_FOREACH(rs, &f->rolemap->rq, entries)
-			gen_role(rs->role);
-		print_commentt(2, COMMENT_C, 
-			"Don't export field to noted roles.");
-		puts("\t\tbreak;\n"
-		     "\tdefault:");
+	if (fd->rolemap != NULL) {
+		if (!hassp && fputc('\n', f) == EOF)
+			return 0;
+		if (fputs("\tswitch (db_role_stored"
+		    "(p->priv_store)) {\n", f) == EOF)
+			return 0;
+		TAILQ_FOREACH(rs, &fd->rolemap->rq, entries)
+			if (!gen_role(f, rs->role))
+				return 0;
+		if (!gen_comment(f, 2, COMMENT_C, 
+		    "Don't export field to noted roles."))
+			return 0;
+		if (fputs("\t\tbreak;\n\tdefault:\n", f) == EOF)
+			return 0;
 		*sp = 1;
 	} else
 		tabs[1] = '\0';
 
-	if (f->type != FTYPE_STRUCT) {
-		if (f->flags & FIELD_NULL) {
-			if (!hassp && !*sp)
-				puts("");
-			printf("%sif (!p->has_%s)\n"
+	if (fd->type != FTYPE_STRUCT) {
+		if (fd->flags & FIELD_NULL) {
+			if (!hassp && !*sp && fputc('\n', f) == EOF)
+				return 0;
+			if (fprintf(f, "%sif (!p->has_%s)\n"
 			       "%s\tkjson_putnullp(r, \"%s\");\n"
 			       "%selse\n"
-			       "%s\t", tabs, f->name, tabs, 
-			       f->name, tabs, tabs);
-		} else
-			printf("%s", tabs);
+			       "%s\t", tabs, fd->name, tabs, 
+			       fd->name, tabs, tabs) < 0)
+				return 0;
+		} else if (fputs(tabs, f) == EOF)
+			return 0;
 
-		if (f->type == FTYPE_BLOB)
-			printf("%s(r, \"%s\", buf%zu);\n",
-				puttypes[f->type], 
-				f->name, ++(*pos));
-		else
-			printf("%s(r, \"%s\", p->%s);\n", 
-				puttypes[f->type], 
-				f->name, f->name);
-		if ((f->flags & FIELD_NULL) && !*sp) {
-			puts("");
+		if (fd->type == FTYPE_BLOB) {
+			if (fprintf(f, "%s(r, \"%s\", buf%zu);\n",
+			    puttypes[fd->type], 
+			    fd->name, ++(*pos)) < 0)
+				return 0;
+		} else {
+			if (fprintf(f, "%s(r, \"%s\", p->%s);\n", 
+			    puttypes[fd->type], 
+			    fd->name, fd->name) < 0)
+				return 0;
+		}
+		if ((fd->flags & FIELD_NULL) && !*sp) {
+			if (fputc('\n', f) == EOF)
+				return 0;
 			*sp = 1;
 		}
-	} else if (f->ref->source->flags & FIELD_NULL) {
-		if (!hassp && !*sp)
-			puts("");
-		printf("%sif (p->has_%s) {\n"
-		       "%s\tkjson_objp_open(r, \"%s\");\n"
-		       "%s\tjson_%s_data(r, &p->%s);\n"
-		       "%s\tkjson_obj_close(r);\n"
-		       "%s} else\n"
-		       "%s\tkjson_putnullp(r, \"%s\");\n",
-			tabs, f->name, tabs, f->name,
-			tabs, f->ref->target->parent->name, f->name, 
-			tabs, tabs, tabs, f->name);
+	} else if (fd->ref->source->flags & FIELD_NULL) {
+		if (!hassp && !*sp && fputc('\n', f) == EOF)
+			return 0;
+		if (fprintf(f, "%sif (p->has_%s) {\n"
+		    "%s\tkjson_objp_open(r, \"%s\");\n"
+		    "%s\tjson_%s_data(r, &p->%s);\n"
+		    "%s\tkjson_obj_close(r);\n"
+		    "%s} else\n"
+		    "%s\tkjson_putnullp(r, \"%s\");\n",
+		    tabs, fd->name, tabs, fd->name,
+		    tabs, fd->ref->target->parent->name, fd->name, 
+		    tabs, tabs, tabs, fd->name) < 0)
+			return 0;
 		if (!*sp) {
-			puts("");
+			if (fputc('\n', f) == EOF)
+				return 0;
 			*sp = 1;
 		}
 	} else
-		printf("%skjson_objp_open(r, \"%s\");\n"
-		       "%sjson_%s_data(r, &p->%s);\n"
-		       "%skjson_obj_close(r);\n",
-			tabs, f->name, tabs, 
-			f->ref->target->parent->name, f->name, tabs);
+		if (fprintf(f, "%skjson_objp_open(r, \"%s\");\n"
+		    "%sjson_%s_data(r, &p->%s);\n"
+		    "%skjson_obj_close(r);\n",
+		    tabs, fd->name, tabs, 
+		    fd->ref->target->parent->name, fd->name, tabs) < 0)
+			return 0;
 
-	if (f->rolemap != NULL) {
-		puts("\t\tbreak;\n"
-		     "\t}\n");
+	if (fd->rolemap != NULL) {
+		if (fputs("\t\tbreak;\n\t}\n\n", f) == EOF)
+			return 0;
 		*sp = 1;
 	}
+
+	return 1;
 }
 
-#if 0
-/*
- * Count the maximum number of JSON tokens that can be exported by any
- * given structure.
- * Each key-pair has two, the whole object has one, and each sub-struct
- * is recursively examined.
- */
-static size_t
-count_json_tokens_r(const struct strct *p)
+static int
+gen_functions_json_in(FILE *f, const struct strct *p)
 {
-	const struct field *f;
-	size_t	 tok = 0;
-
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if ( ! (FIELD_NOEXPORT & f->flags) &&
-		    FTYPE_STRUCT == f->type)
-			tok += count_json_tokens_r
-				(f->ref->target->parent);
-		else if ( ! (FIELD_NOEXPORT & f->flags))
-			tok += 2;
-
-	return 1 + tok;
-}
-#endif
-
-static void
-gen_func_json_parse(const struct strct *p)
-{
-	int		 hasenum = 0, hasstruct = 0, hasblob = 0;
-	const struct field *f;
+	const struct field	*fd;
+	int			 hasenum = 0, hasstruct = 0, 
+				 hasblob = 0;
 
 	/* Whether we need conversion space. */
 
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FIELD_NOEXPORT & f->flags)
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->flags & FIELD_NOEXPORT)
 			continue;
-		if (FTYPE_ENUM == f->type) 
+		if (fd->type == FTYPE_ENUM)
 			hasenum = 1;
-		else if (FTYPE_BLOB == f->type) 
+		else if (fd->type == FTYPE_BLOB)
 			hasblob = 1;
-		else if (FTYPE_STRUCT == f->type) 
+		else if (fd->type == FTYPE_STRUCT)
 			hasstruct = 1;
 	}
 
 	print_func_json_parse(p, 0);
-	puts("{\n"
-	     "\tint i;\n"
-	     "\tsize_t j;");
-	if (hasenum)
-		puts("\tint64_t tmpint;");
-	if (hasblob || hasstruct)
-		puts("\tint rc;");
-	if (hasblob)
-		puts("\tchar *tmpbuf;");
+	if (fputs("{\n"
+	    "\tint i;\n"
+	    "\tsize_t j;\n", f) == EOF)
+		return 0;
+	if (hasenum && fputs("\tint64_t tmpint;\n", f) == EOF)
+		return 0;
+	if ((hasblob || hasstruct) && fputs("\tint rc;\n", f) == EOF)
+		return 0;
+	if (hasblob && fputs("\tchar *tmpbuf;\n", f) == EOF)
+		return 0;
 
-	puts("\n"
-	     "\tif (toksz < 1 || t[0].type != JSMN_OBJECT)\n"
-	     "\t\treturn 0;\n"
-	     "\n"
-	     "\tfor (i = 0, j = 0; i < t[0].size; i++) {");
+	if (fputs("\n"
+	    "\tif (toksz < 1 || t[0].type != JSMN_OBJECT)\n"
+	    "\t\treturn 0;\n\n"
+	    "\tfor (i = 0, j = 0; i < t[0].size; i++) {\n", f) == EOF)
+		return 0;
 
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FIELD_NOEXPORT & f->flags)
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->flags & FIELD_NOEXPORT)
 			continue;
-		printf("\t\tif (jsmn_eq(buf, &t[j+1], \"%s\")) {\n"
-		       "\t\t\tj++;\n", f->name);
+		if (fprintf(f, "\t\tif "
+		    "(jsmn_eq(buf, &t[j+1], \"%s\")) {\n"
+		    "\t\t\tj++;\n", fd->name) < 0)
+			return 0;
 
 		/* Check correct kind of token. */
 
-		if (FIELD_NULL & f->flags)
-			printf("\t\t\tif (t[j+1].type == "
-				"JSMN_PRIMITIVE &&\n"
-			       "\t\t\t    buf[t[j+1].start] == \'n\') {\n"
-			       "\t\t\t\tp->has_%s = 0;\n"
-			       "\t\t\t\tj++;\n"
-			       "\t\t\t\tcontinue;\n"
-			       "\t\t\t} else\n"
-			       "\t\t\t\tp->has_%s = 1;\n",
-			       f->name, f->name);
+		if ((fd->flags & FIELD_NULL) && fprintf
+		    (f, "\t\t\tif (t[j+1].type == "
+		     "JSMN_PRIMITIVE &&\n"
+		     "\t\t\t    buf[t[j+1].start] == \'n\') {\n"
+		     "\t\t\t\tp->has_%s = 0;\n"
+		     "\t\t\t\tj++;\n"
+		     "\t\t\t\tcontinue;\n"
+		     "\t\t\t} else\n"
+		     "\t\t\t\tp->has_%s = 1;\n",
+		     fd->name, fd->name) < 0)
+			return 0;
 
-		switch (f->type) {
+		switch (fd->type) {
 		case FTYPE_DATE:
 		case FTYPE_ENUM:
 		case FTYPE_EPOCH:
 		case FTYPE_INT:
 		case FTYPE_REAL:
-			puts("\t\t\tif ((t[j+1].type != JSMN_STRING && "
+			if (fputs("\t\t\tif ((t[j+1].type != JSMN_STRING && "
 			       "t[j+1].type != JSMN_PRIMITIVE) ||\n"
 			     "\t\t\t    (buf[t[j+1].start] != \'-\' &&\n"
 			     "\t\t\t    !isdigit((unsigned int)"
 			      "buf[t[j+1].start])))\n"
-			     "\t\t\t\treturn 0;");
+			     "\t\t\t\treturn 0;\n", f) == EOF)
+				return 0;
 			break;
 		case FTYPE_BIT:
 		case FTYPE_BITFIELD:
-			puts("\t\t\tif ((t[j+1].type != JSMN_STRING && "
+			if (fputs("\t\t\tif ((t[j+1].type != JSMN_STRING && "
 			       "t[j+1].type != JSMN_PRIMITIVE) ||\n"
 			     "\t\t\t    !isdigit((unsigned int)"
 			      "buf[t[j+1].start]))\n"
-			     "\t\t\t\treturn 0;");
+			     "\t\t\t\treturn 0;\n", f) == EOF)
+				return 0;
 			break;
 		case FTYPE_BLOB:
 		case FTYPE_TEXT:
 		case FTYPE_PASSWORD:
 		case FTYPE_EMAIL:
-			puts("\t\t\tif (t[j+1].type != JSMN_STRING)\n"
-			     "\t\t\t\treturn 0;");
+			if (fputs("\t\t\tif (t[j+1].type != JSMN_STRING)\n"
+			     "\t\t\t\treturn 0;\n", f) == EOF)
+				return 0;
 			break;
 		case FTYPE_STRUCT:
-			puts("\t\t\tif (t[j+1].type != JSMN_OBJECT)\n"
-			     "\t\t\t\treturn 0;");
+			if (fputs("\t\t\tif (t[j+1].type != JSMN_OBJECT)\n"
+			     "\t\t\t\treturn 0;\n", f) == EOF)
+				return 0;
 			break;
 		default:
 			abort();
 		}
 
-		switch (f->type) {
+		switch (fd->type) {
 		case FTYPE_BIT:
 		case FTYPE_BITFIELD:
 		case FTYPE_DATE:
 		case FTYPE_EPOCH:
 		case FTYPE_INT:
-			printf("\t\t\tif (!jsmn_parse_int("
+			if (fprintf(f, "\t\t\tif (!jsmn_parse_int("
 				"buf + t[j+1].start,\n"
 			       "\t\t\t    t[j+1].end - t[j+1].start, "
 			        "&p->%s))\n"
 			       "\t\t\t\treturn 0;\n"
 			       "\t\t\tj++;\n",
-			       f->name);
+			       fd->name) < 0)
+				return 0;
 			break;
 		case FTYPE_ENUM:
-			printf("\t\t\tif (!jsmn_parse_int("
+			if (fprintf(f, "\t\t\tif (!jsmn_parse_int("
 				"buf + t[j+1].start,\n"
 			       "\t\t\t    t[j+1].end - t[j+1].start, "
 			        "&tmpint))\n"
 			       "\t\t\t\treturn 0;\n"
 			       "\t\t\tp->%s = tmpint;\n"
 			       "\t\t\tj++;\n",
-			       f->name);
+			       fd->name) < 0)
+				return 0;
 			break;
 		case FTYPE_REAL:
-			printf("\t\t\tif (!jsmn_parse_real("
+			if (fprintf(f, "\t\t\tif (!jsmn_parse_real("
 				"buf + t[j+1].start,\n"
 			       "\t\t\t    t[j+1].end - t[j+1].start, "
 			        "&p->%s))\n"
 			       "\t\t\t\treturn 0;\n"
 			       "\t\t\tj++;\n",
-			       f->name);
+			       fd->name) < 0)
+				return 0;
 			break;
 		case FTYPE_BLOB:
-			printf("\t\t\ttmpbuf = strndup\n"
+			if (fprintf(f, "\t\t\ttmpbuf = strndup\n"
 			       "\t\t\t\t(buf + t[j+1].start,\n"
 			       "\t\t\t\t t[j+1].end - t[j+1].start);\n"
 			       "\t\t\tif (tmpbuf == NULL)\n"
@@ -2126,88 +2321,105 @@ gen_func_json_parse(const struct strct *p)
 			       "\t\t\tif (rc < 0)\n"
 			       "\t\t\t\treturn -1;\n"
 			       "\t\t\tp->%s_sz = rc;\n"
-			       "\t\t\tj++;\n",
-			       f->name, f->name, f->name, f->name);
+			       "\t\t\tj++;\n", fd->name, fd->name, 
+			       fd->name, fd->name) < 0)
+				return 0;
 			break;
 		case FTYPE_TEXT:
 		case FTYPE_PASSWORD:
 		case FTYPE_EMAIL:
-			printf("\t\t\tp->%s = strndup\n"
+			if (fprintf(f, "\t\t\tp->%s = strndup\n"
 			       "\t\t\t\t(buf + t[j+1].start,\n"
 			       "\t\t\t\t t[j+1].end - t[j+1].start);\n"
 			       "\t\t\tif (p->%s == NULL)\n"
 			       "\t\t\t\treturn -1;\n"
-			       "\t\t\tj++;\n",
-			       f->name, f->name);
+			       "\t\t\tj++;\n", 
+			       fd->name, fd->name) < 0)
+				return 0;
 			break;
 		case FTYPE_STRUCT:
-			printf("\t\t\trc = jsmn_%s\n"
+			if (fprintf(f, "\t\t\trc = jsmn_%s\n"
 			       "\t\t\t\t(&p->%s, buf,\n"
 			       "\t\t\t\t &t[j+1], toksz - j);\n"
 			       "\t\t\tif (rc <= 0)\n"
 			       "\t\t\t\treturn rc;\n"
 			       "\t\t\tj += rc;\n",
-			       f->ref->target->parent->name,
-			       f->name);
+			       fd->ref->target->parent->name,
+			       fd->name) < 0)
+				return 0;
 			break;
 		default:
 			abort();
 		}
-		printf("\t\t\tcontinue;\n"
-		       "\t\t}\n");
+
+		if (fputs("\t\t\tcontinue;\n\t\t}\n", f) == EOF)
+			return 0;
 	}
 
-	puts("");
-	print_commentt(2, COMMENT_C,
-		"Anything else is unexpected.");
+	if (fputc('\n', f) == EOF)
+		return 0;
+	if (!gen_comment(f, 2, COMMENT_C,
+	    "Anything else is unexpected."))
+		return 0;
 
-	puts("\n"
+	if (fputs("\n"
 	     "\t\treturn 0;\n"
 	     "\t}\n"
 	     "\treturn j+1;\n"
-	     "}\n"
-	     "");
+	     "}\n\n", f) == EOF)
+		return 0;
 
 	print_func_json_clear(p, 0);
-	puts("\n"
+	if (fputs("\n"
 	     "{\n"
 	     "\tif (p == NULL)\n"
-	     "\t\treturn;");
-	TAILQ_FOREACH(f, &p->fq, entries)
-		switch(f->type) {
-		case (FTYPE_BLOB):
-		case (FTYPE_PASSWORD):
-		case (FTYPE_TEXT):
-		case (FTYPE_EMAIL):
-			printf("\tfree(p->%s);\n", f->name);
+	     "\t\treturn;\n", f) == EOF)
+		return 0;
+
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		switch(fd->type) {
+		case FTYPE_BLOB:
+		case FTYPE_PASSWORD:
+		case FTYPE_TEXT:
+		case FTYPE_EMAIL:
+			if (fprintf(f,
+			    "\tfree(p->%s);\n", fd->name) < 0)
+				return 0;
 			break;
-		case (FTYPE_STRUCT):
-			if (FIELD_NULL & f->ref->source->flags)
-				printf("\tif (p->has_%s)\n"
-				       "\t\tjsmn_%s_clear(&p->%s);\n",
-					f->ref->source->name, 
-					f->ref->target->parent->name, f->name);
-			else
-				printf("\tjsmn_%s_clear(&p->%s);\n",
-					f->ref->target->parent->name, f->name);
+		case FTYPE_STRUCT:
+			if (fd->ref->source->flags & FIELD_NULL) {
+				if (fprintf(f, "\tif (p->has_%s)\n"
+			            "\t\tjsmn_%s_clear(&p->%s);\n",
+				    fd->ref->source->name, 
+				    fd->ref->target->parent->name, 
+				    fd->name) < 0)
+					return 0;
+				break;
+			}
+			if (fprintf(f, "\tjsmn_%s_clear(&p->%s);\n",
+			    fd->ref->target->parent->name, 
+			    fd->name) < 0)
+				return 0;
 			break;
 		default:
 			break;
 		}
-	puts("}\n"
-	     "");
+
+	if (fputs("}\n\n", f) == EOF)
+		return 0;
 
 	print_func_json_free_array(p, 0);
-	printf("{\n"
+	if (fprintf(f, "{\n"
 	       "\tsize_t i;\n"
 	       "\tfor (i = 0; i < sz; i++)\n"
 	       "\t\tjsmn_%s_clear(&p[i]);\n"
 	       "\tfree(p);\n"
 	       "}\n"
-	       "\n", p->name);
+	       "\n", p->name) < 0)
+		return 0;
 
 	print_func_json_parse_array(p, 0);
-	printf("{\n"
+	if (fprintf(f, "{\n"
 	       "\tsize_t i, j;\n"
 	       "\tint rc;\n"
 	       "\n"
@@ -2229,19 +2441,22 @@ gen_func_json_parse(const struct strct *p)
 	       "\t}\n"
 	       "\treturn j + 1;\n"
 	       "}\n"
-	       "\n", p->name, p->name);
+	       "\n", p->name, p->name) < 0)
+	       return 0;
+
+	return 1;
 }
 
-static void
-gen_func_json_data(const struct strct *p)
+static int
+gen_functions_json_out(FILE *f, const struct strct *p)
 {
-	const struct field *f;
-	size_t	 pos;
-	int	 sp;
+	const struct field	*fd;
+	size_t		 	 pos;
+	int			 sp;
 
 	print_func_json_data(p, 0);
-	puts("\n"
-	     "{");
+	if (fputs("\n{\n", f) == EOF)
+		return 0;
 
 	/* 
 	 * Declare our base64 buffers. 
@@ -2250,133 +2465,191 @@ gen_func_json_data(const struct strct *p)
 	 */
 
 	pos = 0;
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if (FTYPE_BLOB == f->type &&
-		    ! (FIELD_NOEXPORT & f->flags)) 
-			printf("\tchar *buf%zu;\n", ++pos);
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if (fd->type == FTYPE_BLOB &&
+		    !(fd->flags & FIELD_NOEXPORT) &&
+		    fprintf(f, "\tchar *buf%zu;\n", ++pos) < 0)
+			return 0;
 
 	if (pos > 0) {
-		puts("\tsize_t sz;\n");
-		print_commentt(1, COMMENT_C,
-			"We need to base64 encode the binary "
-			"buffers prior to serialisation.\n"
-			"Allocate space for these buffers and do "
-			"so now.\n"
-			"We\'ll free the buffers at the epilogue "
-			"of the function.");
-		puts("");
+		if (fputs("\tsize_t sz;\n\n", f) == EOF)
+			return 0;
+		if (!gen_comment(f, 1, COMMENT_C,
+		    "We need to base64 encode the binary "
+		    "buffers prior to serialisation.\n"
+		    "Allocate space for these buffers and do "
+		    "so now.\n"
+		    "We\'ll free the buffers at the epilogue "
+		    "of the function."))
+			return 0;
+		if (fputc('\n', f) == EOF)
+			return 0;
 	}
 
 	pos = 0;
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FTYPE_BLOB != f->type || 
-		    FIELD_NOEXPORT & f->flags)
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type != FTYPE_BLOB || 
+		    (fd->flags & FIELD_NOEXPORT))
 			continue;
 		pos++;
-		printf("\tsz = (p->%s_sz + 2) / 3 * 4 + 1;\n"
-		       "\tbuf%zu = malloc(sz);\n"
-		       "\tif (buf%zu == NULL) {\n"
-		       "\t\tperror(NULL);\n"
-		       "\t\texit(EXIT_FAILURE);\n"
-		       "\t}\n", f->name, pos, pos);
-		if (FIELD_NULL & f->flags)
-			printf("\tif (p->has_%s)\n"
-			       "\t", f->name);
-		printf("\tb64_ntop(p->%s, p->%s_sz, buf%zu, sz);\n",
-		       f->name, f->name, pos);
+		if (fprintf(f, "\tsz = (p->%s_sz + 2) / 3 * 4 + 1;\n"
+		    "\tbuf%zu = malloc(sz);\n"
+		    "\tif (buf%zu == NULL) {\n"
+		    "\t\tperror(NULL);\n"
+		    "\t\texit(EXIT_FAILURE);\n"
+		    "\t}\n", fd->name, pos, pos) < 0)
+			return 0;
+		if ((fd->flags & FIELD_NULL) &&
+		    fprintf(f, "\tif (p->has_%s)\n\t", fd->name) < 0)
+			return 0;
+		if (fprintf(f, "\tb64_ntop(p->%s, p->%s_sz, "
+		    "buf%zu, sz);\n", fd->name, fd->name, pos) < 0)
+			return 0;
 	}
 
-	if ((sp = (pos > 0)))
-		puts("");
+	if ((sp = (pos > 0)) && fputc('\n', f) == EOF)
+		return 0;
 
 	pos = 0;
-	TAILQ_FOREACH(f, &p->fq, entries)
-		gen_field_json_data(f, &pos, &sp);
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		gen_functions_json_out_data(f, fd, &pos, &sp);
 
 	/* Free our temporary base64 buffers. */
 
 	pos = 0;
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (FIELD_NOEXPORT & f->flags)
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->flags & FIELD_NOEXPORT)
 			continue;
-		if (FTYPE_BLOB == f->type && 0 == pos)
-			puts("");
-		if (FTYPE_BLOB == f->type) 
-			printf("\tfree(buf%zu);\n", ++pos);
+		if (fd->type == FTYPE_BLOB && 
+		    pos == 0 && fputc('\n', f) == EOF)
+			return 0;
+		if (fd->type == FTYPE_BLOB &&
+		    fprintf(f, "\tfree(buf%zu);\n", ++pos) < 0)
+			return 0;
 	}
 
-	puts("}\n"
-	     "");
+	if (fputs("}\n\n", f) == EOF)
+		return 0;
+
+	print_func_json_obj(p, 0);
+	if (fprintf(f, "{\n"
+	    "\tkjson_objp_open(r, \"%s\");\n"
+	    "\tjson_%s_data(r, p);\n"
+	    "\tkjson_obj_close(r);\n"
+	    "}\n\n", p->name, p->name) < 0)
+		return 0;
+
+	if (p->flags & STRCT_HAS_QUEUE) {
+		print_func_json_array(p, 0);
+		if (fprintf(f, "{\n"
+		    "\tstruct %s *p;\n"
+		    "\n"
+		    "\tkjson_arrayp_open(r, \"%s_q\");\n"
+		    "\tTAILQ_FOREACH(p, q, _entries) {\n"
+		    "\t\tkjson_obj_open(r);\n"
+		    "\t\tjson_%s_data(r, p);\n"
+		    "\t\tkjson_obj_close(r);\n"
+		    "\t}\n"
+		    "\tkjson_array_close(r);\n"
+		    "}\n\n", p->name, p->name, p->name) < 0)
+			return 0;
+	}
+
+	if (p->flags & STRCT_HAS_ITERATOR) {
+		print_func_json_iterate(p, 0);
+		if (fprintf(f, "{\n"
+		    "\tstruct kjsonreq *r = arg;\n"
+		    "\n"
+		    "\tkjson_obj_open(r);\n"
+		    "\tjson_%s_data(r, p);\n"
+		    "\tkjson_obj_close(r);\n"
+		    "}\n\n", p->name) < 0)
+			return 0;
+	}
+
+	return 1;
 }
 
 /*
  * Generate all of the functions we've defined in our header for the
  * given structure "s".
  */
-static void
-gen_funcs(const struct config *cfg, const struct strct *p, 
+static int
+gen_functions(FILE *f, const struct config *cfg, const struct strct *p, 
 	int json, int jsonparse, int valids, int dbin,
 	const struct filldepq *fq)
 {
 	const struct search 	*s;
 	const struct update 	*u;
-	const struct filldep	*f;
+	const struct filldep	*fd;
 	size_t	 		 pos;
 
-	f = get_filldep(fq, p);
+	fd = get_filldep(fq, p);
 
 	if (dbin) {
-		if (f != NULL)
-			gen_func_fill(cfg, p);
-		if (f != NULL && (f->need & FILLDEP_FILL_R))
-			gen_func_fill_r(cfg, p);
-		gen_func_unfill(cfg, p);
-		gen_func_unfill_r(p);
-		gen_func_reffind(cfg, p);
-		gen_func_free(p);
-		gen_func_freeq(p);
-		gen_func_insert(cfg, p);
+		if (fd != NULL && !gen_fill(f, cfg, p))
+			return 0;
+		if (fd != NULL && 
+		   (fd->need & FILLDEP_FILL_R) && 
+		   !gen_fill_r(f, cfg, p))
+			return 0;
+		if (!gen_unfill(f, cfg, p))
+			return 0;
+		if (!gen_unfill_r(f, p))
+			return 0;
+		if (!gen_reffind(f, cfg, p))
+			return 0;
+		if (!gen_free(f, p))
+			return 0;
+		if (!gen_freeq(f, p))
+			return 0;
+		if (!gen_insert(f, cfg, p))
+			return 0;
 	}
 
-	if (json) {
-		gen_func_json_data(p);
-		gen_func_json_obj(p);
-	}
-
-	if (jsonparse) 
-		gen_func_json_parse(p);
-
-	if (valids)
-		gen_func_valids(p);
+	if (json && !gen_functions_json_out(f, p))
+		return 0;
+	if (jsonparse && !gen_functions_json_in(f, p))
+		return 0;
+	if (valids && !gen_valids(f, p))
+		return 0;
 
 	if (dbin) {
 		pos = 0;
 		TAILQ_FOREACH(s, &p->sq, entries)
-			if (s->type == STYPE_SEARCH)
-				gen_strct_func_srch(cfg, s, pos++);
-			else if (s->type == STYPE_LIST)
-				gen_strct_func_list(cfg, s, pos++);
-			else if (s->type == STYPE_COUNT)
-				gen_strct_func_count(cfg, s, pos++);
-			else
-				gen_strct_func_iter(cfg, s, pos++);
+			if (s->type == STYPE_SEARCH) {
+				if (!gen_search(f, cfg, s, pos++))
+					return 0;
+			} else if (s->type == STYPE_LIST) {
+				if (!gen_list(f, cfg, s, pos++))
+					return 0;
+			} else if (s->type == STYPE_COUNT) {
+				if (!gen_count(f, cfg, s, pos++))
+					return 0;
+			} else
+				if (!gen_iterator(f, cfg, s, pos++))
+					return 0;
 		pos = 0;
 		TAILQ_FOREACH(u, &p->uq, entries)
-			gen_func_update(cfg, u, pos++);
+			if (!gen_update(f, cfg, u, pos++))
+				return 0;
 		pos = 0;
 		TAILQ_FOREACH(u, &p->dq, entries)
-			gen_func_update(cfg, u, pos++);
+			if (!gen_update(f, cfg, u, pos++))
+				return 0;
 	}
+
+	return 1;
 }
 
 /*
  * Generate a single "struct kvalid" with the given validation function
  * and the form name, which we have as "struct-field".
  */
-static void
-gen_valid_struct(const struct strct *p)
+static int
+gen_valid(FILE *f, const struct strct *p)
 {
-	const struct field *f;
+	const struct field	*fd;
 
 	/*
 	 * Don't generate an entry for structs.
@@ -2384,23 +2657,28 @@ gen_valid_struct(const struct strct *p)
 	 * Non-enums without limits use the default function.
 	 */
 
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->type == FTYPE_BLOB) {
-			printf("\t{ NULL, \"%s-%s\" },\n", 
-				p->name, f->name);
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type == FTYPE_BLOB) {
+			if (fprintf(f, "\t{ NULL, \"%s-%s\" },\n",
+			    p->name, fd->name) < 0)
+				return 0;
 			continue;
-		} else if (f->type == FTYPE_STRUCT)
+		} else if (fd->type == FTYPE_STRUCT)
 			continue;
 
-		if (f->type != FTYPE_ENUM && TAILQ_EMPTY(&f->fvq)) {
-			printf("\t{ %s, \"%s-%s\" },\n", 
-				validtypes[f->type], p->name, f->name);
+		if (fd->type != FTYPE_ENUM && TAILQ_EMPTY(&fd->fvq)) {
+			if (fprintf(f, "\t{ %s, \"%s-%s\" },\n",
+			    validtypes[fd->type], p->name, 
+			    fd->name) < 0)
+				return 0;
 			continue;
 		}
-		printf("\t{ valid_%s_%s, \"%s-%s\" },\n",
-			p->name, f->name,
-			p->name, f->name);
+		if (fprintf(f, "\t{ valid_%s_%s, \"%s-%s\" },\n",
+		    p->name, fd->name, p->name, fd->name) < 0)
+			return 0;
 	}
+
+	return 1;
 }
 
 /*
@@ -2409,21 +2687,26 @@ gen_valid_struct(const struct strct *p)
  * members so that a later SELECT can use INNER JOIN xxx AS yyy and have
  * multiple joins on the same table.
  */
-static void
-gen_alias_builder(const struct strct *p)
+static int
+gen_schema(FILE *f, const struct strct *p)
 {
-	const struct field	*f;
+	const struct field	*fd;
 	const char		*s = "";
 
-	printf("#define DB_SCHEMA_%s(_x) \\", p->name);
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->type == FTYPE_STRUCT)
+	if (fprintf(f, "#define DB_SCHEMA_%s(_x) \\", p->name) < 0)
+		return 0;
+
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type == FTYPE_STRUCT)
 			continue;
-		puts(s);
-		printf("\t#_x \".%s\"", f->name);
+		if (fprintf(f, "%s\n", s) < 0)
+			return 0;
+		if (fprintf(f, "\t#_x \".%s\"", fd->name) < 0)
+			return 0;
 		s = " \",\" \\";
 	}
-	puts("");
+
+	return fputc('\n', f) != EOF;
 }
 
 /*
@@ -2452,49 +2735,59 @@ ort_lang_c_source(const struct ort_lang_c *args,
 	if (incls == NULL)
 		incls = "";
 
-	print_commentv(0, COMMENT_C, 
-		"WARNING: automatically generated by "
-		"%s " VERSION ".\n"
-		"DO NOT EDIT!", getprogname());
+	if (!gen_commentv(f, 0, COMMENT_C, 
+	    "WARNING: automatically generated by ort %s.\n"
+	    "DO NOT EDIT!", VERSION))
+		return 0;
 
 #if defined(__linux__)
-	puts("#define _GNU_SOURCE\n"
-	     "#define _DEFAULT_SOURCE");
+	if (fputs("#define _GNU_SOURCE\n"
+	    "#define _DEFAULT_SOURCE\n", f) == EOF)
+		return 0;
 #endif
 #if defined(__sun)
-	puts("#ifndef _XOPEN_SOURCE\n"
-	     "# define _XOPEN_SOURCE\n"
-	     "#endif\n"
-	     "#define _XOPEN_SOURCE_EXTENDED 1\n"
-	     "#ifndef __EXTENSIONS__\n"
-	     "# define __EXTENSIONS__\n"
-	     "#endif");
+	if (fputs("#ifndef _XOPEN_SOURCE\n"
+	    "# define _XOPEN_SOURCE\n"
+	    "#endif\n"
+	    "#define _XOPEN_SOURCE_EXTENDED 1\n"
+	    "#ifndef __EXTENSIONS__\n"
+	    "# define __EXTENSIONS__\n"
+	    "#endif\n", f) == EOF)
+		return 0;
 #endif
 
 	/* Start with all headers we'll need. */
 
-	/* FIXME: HAVE_SYS_QUEUE pulled in from compat. */
+	/* FIXME: HAVE_SYS_QUEUE pulled in from compat for Linux. */
 
-	if (need_b64)
-		puts("#include <sys/types.h> /* b64_ntop() */");
+	if (need_b64 && fputs
+ 	    ("#include <sys/types.h> /* b64_ntop() */\n", f) == EOF)
+		return 0;
 
-	puts("#include <sys/queue.h>\n"
-	     "\n"
-	     "#include <assert.h>");
+	if (fputs("#include <sys/queue.h>\n\n"
+	    "#include <assert.h>\n", f) == EOF)
+		return 0;
 
-	if ( ! need_b64) {
-		TAILQ_FOREACH(p, &cfg->sq, entries) 
-			if (STRCT_HAS_BLOB & p->flags) {
-				print_commentt(0, COMMENT_C,
-					"Required for b64_ntop().");
-				if (!(args->flags & ORT_LANG_C_JSON_JSMN))
-					puts("#include <ctype.h>");
-				puts("#include <netinet/in.h>\n"
-				     "#include <resolv.h>");
-				break;
-			}
-	} else
-		puts("#include <ctype.h> /* b64_ntop() */");
+	if (!need_b64) {
+		TAILQ_FOREACH(p, &cfg->sq, entries)  {
+			if (!(p->flags & STRCT_HAS_BLOB))
+				continue;
+			if (!gen_comment(f, 0, COMMENT_C,
+			     "Required for b64_ntop()."))
+				return 0;
+			if (!(args->flags & ORT_LANG_C_JSON_JSMN))
+				if (fputs("#include "
+				    "<ctype.h>\n", f) == EOF)
+					return 0;
+			if (fputs("#include <netinet/in.h>\n"
+			    "#include <resolv.h>\n", f) == EOF)
+				return 0;
+			break;
+		}
+	} else 
+		if (fputs("#include <ctype.h> "
+		    "/* b64_ntop() */\n", f) == EOF)
+			return 0;
 
 	if (strchr(incls, 'd') != NULL ||
 	    (args->flags & ORT_LANG_C_DB_SQLBOX))
@@ -2507,30 +2800,37 @@ ort_lang_c_source(const struct ort_lang_c *args,
 		need_kcgi = need_kcgijson = 1;
 
 	if (args->flags & ORT_LANG_C_JSON_JSMN) {
-		if ( ! need_b64)
-			puts("#include <ctype.h>");
-		puts("#include <inttypes.h>");
+		if (!need_b64 && 
+		    fputs("#include <ctype.h>\n", f) == EOF)
+			return 0;
+		if (fputs("#include <inttypes.h>\n", f) == EOF)
+			return 0;
 	}
 
-	if (need_kcgi)
-		puts("#include <stdarg.h>");
+	if (need_kcgi &&
+	    fputs("#include <stdarg.h>\n", f) == EOF)
+		return 0;
 
-	puts("#include <stdio.h>\n"
-	     "#include <stdint.h> /* int64_t */\n"
-	     "#include <stdlib.h>\n"
-	     "#include <string.h>\n"
-	     "#include <time.h> /* _XOPEN_SOURCE and gmtime_r()*/\n"
-	     "#include <unistd.h>\n"
-	     "");
+	if (fputs("#include <stdio.h>\n"
+	    "#include <stdint.h> /* int64_t */\n"
+	    "#include <stdlib.h>\n"
+	    "#include <string.h>\n"
+	    "#include <time.h> /* _XOPEN_SOURCE and gmtime_r()*/\n"
+	    "#include <unistd.h>\n\n", f) == EOF)
+		return 0;
 
-	if (need_sqlbox)
-		puts("#include <sqlbox.h>");
-	if (need_kcgi)
-		puts("#include <kcgi.h>");
-	if (need_kcgijson)
-		puts("#include <kcgijson.h>");
+	if (need_sqlbox &&
+	    fputs("#include <sqlbox.h>\n", f) == EOF)
+		return 0;
+	if (need_kcgi &&
+	    fputs("#include <kcgi.h>\n", f) == EOF)
+		return 0;
+	if (need_kcgijson &&
+	    fputs("#include <kcgijson.h>\n", f) == EOF)
+		return 0;
 
-	puts("");
+	if (fputc('\n', f) == EOF)
+		return 0;
 
 	if ((cp = args->header) != NULL) {
 		while (*cp != '\0') {
@@ -2543,84 +2843,108 @@ ort_lang_c_source(const struct ort_lang_c *args,
 				if (*cp == ',' ||
 				    isspace((unsigned char)*cp))
 					break;
-			if (sz)
-				printf("#include \"%.*s\"\n", (int)sz, start);
-			while (',' == *cp)
+			if (sz && fprintf(f, 
+			    "#include \"%.*s\"\n", (int)sz, start) < 0)
+				return 0;
+			while (*cp == ',')
 				cp++;
 		}
-		puts("");
+		if (fputc('\n', f) == EOF)
+			return 0;
 	}
 
 #ifndef __OpenBSD__
-	puts(args->ext_gensalt);
+	if (fprintf(f, "%s\n", args->ext_gensalt) < 0)
+		return 0;
 #endif
-	if (need_b64)
-		puts(args->ext_b64_ntop);
-	if (args->flags & ORT_LANG_C_JSON_JSMN)
-		puts(args->ext_jsmn);
+
+	if (need_b64 &&
+	    fprintf(f, "%s\n", args->ext_b64_ntop) < 0)
+		return 0;
+	if ((args->flags & ORT_LANG_C_JSON_JSMN) &&
+	    fprintf(f, "%s\n", args->ext_jsmn) < 0)
+		return 0;
 
 	if (args->flags & ORT_LANG_C_DB_SQLBOX) {
-		print_commentt(0, COMMENT_C,
-			"All SQL statements we'll later "
-			"define in \"stmts\".");
-		puts("enum\tstmt {");
+		if (!gen_comment(f, 0, COMMENT_C,
+		    "All SQL statements we'll later "
+		    "define in \"stmts\"."))
+			return 0;
+		if (fputs("enum\tstmt {\n", f) == EOF)
+			return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			print_sql_enums(1, p, LANG_C);
-		puts("\tSTMT__MAX\n"
-		     "};\n"
-		     "");
+		if (fputs("\tSTMT__MAX\n};\n\n", f) == EOF)
+			return 0;
 
-		print_commentt(0, COMMENT_C,
-			"Definition of our opaque \"ort\", "
-			"which contains role information.");
-		puts("struct\tort {");
-		print_commentt(1, COMMENT_C,
-			"Hidden database connection");
-		puts("\tstruct sqlbox *db;");
+		if (!gen_comment(f, 0, COMMENT_C,
+		    "Definition of our opaque \"ort\", "
+		    "which contains role information."))
+			return 0;
+		if (fputs("struct\tort {\n", f) == EOF)
+			return 0;
+		if (!gen_comment(f, 1, COMMENT_C,
+		    "Hidden database connection"))
+			return 0;
+		if (fputs("\tstruct sqlbox *db;\n", f) == EOF)
+			return 0;
 
 		if (!TAILQ_EMPTY(&cfg->rq)) {
-			print_commentt(1, COMMENT_C,
-				"Current RBAC role.");
-			puts("\tenum ort_role role;\n"
-			     "};\n");
-			print_commentt(0, COMMENT_C,
-				"A saved role state attached to "
-				"generated objects.\n"
-				"We'll use this to make sure that "
-				"we shouldn't export data that "
-				"we've kept unexported in a given "
-				"role (at the time of acquisition).");
-			puts("struct\tort_store {");
-			print_commentt(1, COMMENT_C,
-				"Role at the time of acquisition.");
-			puts("\tenum ort_role role;");
+			if (!gen_comment(f, 1, COMMENT_C,
+			    "Current RBAC role."))
+				return 0;
+			if (fputs("\tenum ort_role "
+			    "role;\n};\n\n", f) == EOF)
+				return 0;
+			if (!gen_comment(f, 0, COMMENT_C,
+			    "A saved role state attached to "
+			    "generated objects.\n"
+			    "We'll use this to make sure that "
+			    "we shouldn't export data that "
+			    "we've kept unexported in a given "
+			    "role (at the time of acquisition)."))
+				return 0;
+			if (fputs("struct\tort_store {\n", f) == EOF)
+				return 0;
+			if (!gen_comment(f, 1, COMMENT_C,
+			    "Role at the time of acquisition."))
+				return 0;
+			if (fputs("\tenum ort_role role;\n", f) == EOF)
+				return 0;
 		}
 
-		puts("};\n");
+		if (fputs("};\n\n", f) == EOF)
+			return 0;
 
-		print_commentt(0, COMMENT_C, 
-			"Table columns.\n"
-			"The macro accepts a table name because "
-			"we use AS statements a lot.\n"
-			"This is because tables can appear multiple "
-			"times in a single query and need aliasing.");
+		if (!gen_comment(f, 0, COMMENT_C, 
+		    "Table columns.\n"
+		    "The macro accepts a table name because "
+		    "we use AS statements a lot.\n"
+		    "This is because tables can appear multiple "
+		    "times in a single query and need aliasing."))
+			return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_alias_builder(p);
-		puts("");
+			if (!gen_schema(f, p))
+				return 0;
+		if (fputc('\n', f) == EOF)
+			return 0;
 
-		print_commentt(0, COMMENT_C,
-			"Our full set of SQL statements.\n"
-			"We define these beforehand because "
-			"that's how sqlbox(3) handles statement "
-			"generation.\n"
-			"Notice the \"AS\" part: this allows "
-			"for multiple inner joins without "
-			"ambiguity.");
-		puts("static\tconst char *const stmts[STMT__MAX] = {");
+		if (!gen_comment(f, 0, COMMENT_C,
+		    "Our full set of SQL statements.\n"
+		    "We define these beforehand because "
+		    "that's how sqlbox(3) handles statement "
+		    "generation.\n"
+		    "Notice the \"AS\" part: this allows "
+		    "for multiple inner joins without "
+		    "ambiguity."))
+			return 0;
+		if (fputs("static\tconst char "
+		    "*const stmts[STMT__MAX] = {\n", f) == EOF)
+			return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			print_sql_stmts(1, p, LANG_C);
-		puts("};");
-		puts("");
+		if (fputs("};\n\n", f) == EOF)
+			return 0;
 	}
 
 	/*
@@ -2630,28 +2954,36 @@ ort_lang_c_source(const struct ort_lang_c *args,
 	 */
 
 	if (args->flags & ORT_LANG_C_VALID_KCGI) {
-		puts("const struct kvalid valid_keys[VALID__MAX] = {");
+		if (fputs("const struct kvalid "
+		    "valid_keys[VALID__MAX] = {\n", f) == EOF)
+			return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_valid_struct(p);
-		puts("};\n"
-		     "");
+			if (!gen_valid(f, p))
+				return 0;
+		if (fputs("};\n\n", f) == EOF)
+			return 0;
 	}
 
 	/* Define our functions. */
 
-	print_commentt(0, COMMENT_C,
-		"Finally, all of the functions we'll use.\n"
-		"All of the non-static functions are documented "
-		"in the associated header file.");
-	puts("");
+	if (!gen_comment(f, 0, COMMENT_C,
+	    "Finally, all of the functions we'll use.\n"
+	    "All of the non-static functions are documented "
+	    "in the associated header file."))
+		return 0;
+	if (fputc('\n', f) == EOF)
+		return 0;
 
 	if (args->flags & ORT_LANG_C_DB_SQLBOX) {
-		gen_func_trans(cfg);
-		if (!gen_func_open(cfg))
+		if (!gen_func_trans(f, cfg))
 			return 0;
-		gen_func_close(cfg);
-		if (!TAILQ_EMPTY(&cfg->rq))
-			gen_func_role_transitions(cfg);
+		if (!gen_open(f, cfg))
+			return 0;
+		if (!gen_func_close(f, cfg))
+			return 0;
+		if (!TAILQ_EMPTY(&cfg->rq) &&
+		    !gen_func_role_transitions(f, cfg))
+			return 0;
 	}
 
 	/*
@@ -2667,10 +2999,10 @@ ort_lang_c_source(const struct ort_lang_c *args,
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		TAILQ_FOREACH(s, &p->sq, entries)
 			if (!gen_filldep(&fq, p, FILLDEP_FILL_R))
-				err(EXIT_FAILURE, NULL);
+				return 0;
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		gen_funcs(cfg, p, 
+		gen_functions(f, cfg, p, 
 			args->flags & ORT_LANG_C_JSON_KCGI, 
 			args->flags & ORT_LANG_C_JSON_JSMN, 
 			args->flags & ORT_LANG_C_VALID_KCGI, 

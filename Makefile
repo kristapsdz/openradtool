@@ -300,10 +300,7 @@ version.h: Makefile
 	  echo "#define VSTAMP `echo $$((($(VERSION_BUILD)+1)+($(VERSION_MINOR)+1)*100+($(VERSION_MAJOR)+1)*10000))`" ; ) >$@
 
 paths.h: Makefile
-	( echo "#define SHAREDIR \"$(SHAREDIR)/openradtool\"" ; \
-	  echo "#define FILE_GENSALT \"gensalt.c\"" ; \
-	  echo "#define FILE_B64_NTOP \"b64_ntop.c\"" ; \
-	  echo "#define FILE_JSMN \"jsmn.c\"" ; ) >$@
+	echo "#define SHAREDIR \"$(SHAREDIR)/openradtool\"" >$@
 
 install: all
 	mkdir -p $(DESTDIR)$(BINDIR)

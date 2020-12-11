@@ -1,6 +1,6 @@
 /*	$Id$ */
 /*
- * Copyright (c) 2017 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2017, 2020 Kristaps Dzonsons <kristaps@bsd.lv>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -115,7 +115,7 @@ gen_field(FILE *f, const struct field *p)
 }
 
 /*
- * Emit bit-field values.
+ * Generate user-defined bit-field enumration.
  * These are either the field index (BITI) or the mask (BITF).
  * Return zero on failure, non-zero on success.
  */
@@ -171,7 +171,8 @@ gen_bitfield(FILE *f, const struct bitf *b)
 }
 
 /*
- * Generate our enumerations.
+ * Generate user-defined enumeration.
+ * Return zero on failure, non-zero on success.
  */
 static int
 gen_enum(FILE *f, const struct enm *e)
@@ -203,6 +204,7 @@ gen_enum(FILE *f, const struct enm *e)
  * Generate the C API for a given structure.
  * This generates the TAILQ_ENTRY listing if the structure has any
  * listings declared on it.
+ * Return zero on failure, non-zero on success.
  */
 static int
 gen_struct(FILE *f, const struct config *cfg, const struct strct *p)
@@ -354,7 +356,8 @@ gen_update(FILE *f, const struct config *cfg, const struct update *up)
 }
 
 /*
- * Generate a custom search function declaration.
+ * Generate query (list, iterate, etc.) function declaration.
+ * Returns zero on failure, non-zero on success.
  */
 static int
 gen_search(FILE *f, const struct config *cfg, const struct search *s)
@@ -473,7 +476,8 @@ gen_search(FILE *f, const struct config *cfg, const struct search *s)
 }
 
 /*
- * Generate the function declarations for a given structure.
+ * Top-level functions for interfacing with the database.
+ * Returns zero on failure, non-zero on success.
  */
 static int
 gen_database(FILE *f, const struct config *cfg, const struct strct *p)
@@ -546,6 +550,10 @@ gen_database(FILE *f, const struct config *cfg, const struct strct *p)
 	return 1;
 }
 
+/*
+ * Emit sections for JSMN parsing of JSON.
+ * Return zero on failure, non-zero on success.
+ */
 static int
 gen_json_parse(FILE *f, const struct config *cfg, const struct strct *p)
 {
@@ -594,6 +602,10 @@ gen_json_parse(FILE *f, const struct config *cfg, const struct strct *p)
 	return fputs("\n", f) != EOF;
 }
 
+/*
+ * Emit functions for JSON output via kcgi.
+ * Return zero on failure, non-zero on success.
+ */
 static int
 gen_json_out(FILE *f, const struct config *cfg, const struct strct *p)
 {
@@ -633,6 +645,7 @@ gen_json_out(FILE *f, const struct config *cfg, const struct strct *p)
 		if (fputs("\n", f) == EOF)
 			return 0;
 	}
+
 	if (STRCT_HAS_ITERATOR & p->flags) {
 		if (!gen_commentv(f, 0, COMMENT_C,
 		    "Emit the object as a standalone "
@@ -651,6 +664,10 @@ gen_json_out(FILE *f, const struct config *cfg, const struct strct *p)
 	return 1;
 }
 
+/*
+ * Generate the validation function for all fields in the structure.
+ * Return zero on failure, non-zero on success.
+ */
 static int
 gen_valids(FILE *f, const struct config *cfg, const struct strct *p)
 {
@@ -670,7 +687,8 @@ gen_valids(FILE *f, const struct config *cfg, const struct strct *p)
 }
 
 /*
- * List valid keys for all native fields of a structure.
+ * Generate validation enum names for the structure.
+ * Return zero on failure, non-zero on success.
  */
 static int
 gen_valid_enums(FILE *f, const struct strct *p)
@@ -695,6 +713,10 @@ gen_valid_enums(FILE *f, const struct strct *p)
 	return 1;
 }
 
+/*
+ * Generate database transaction functions.
+ * Return zero on failure, non-zero on success.
+ */
 static int
 gen_transaction(FILE *f, const struct config *cfg)
 {
@@ -744,11 +766,8 @@ gen_transaction(FILE *f, const struct config *cfg)
 }
 
 /*
- * We need to handle several different facets here: if the
- * system is operating in RBAC mode and whether the database is
- * being opened in split-process mode.
- * This changes the documentation for db_open, but we keep the
- * documentation for db_close to be symmetric.
+ * Generate open and logging open (and auxiliary) functions.
+ * Return zero on failure, non-zero on success.
  */
 static int
 gen_open(FILE *f, const struct config *cfg)
@@ -814,6 +833,10 @@ gen_open(FILE *f, const struct config *cfg)
 	return fputs("\n", f) != EOF;
 }
 
+/*
+ * Generate auxiliary role functions.
+ * Return zero on failure, non-zero on success.
+ */
 static int
 gen_roles(FILE *f, const struct config *cfg)
 {
@@ -849,6 +872,10 @@ gen_roles(FILE *f, const struct config *cfg)
 	return fputs("\n", f) != EOF;
 }
 
+/*
+ * Generate the database close function.
+ * Return zero on failure, non-zero on success.
+ */
 static int
 gen_close(FILE *f, const struct config *cfg)
 {
@@ -862,9 +889,9 @@ gen_close(FILE *f, const struct config *cfg)
 }
 
 /*
- * List a role as ROLE_xxx, where "xxx" is the lowercased name of the
- * role.  Don't print out anything for the "all" role, which may never
- * be entered.
+ * Generate "r" as ROLE_xxx, where "xxx" is the lowercased name of the
+ * role.  Don't print out anything for the "all" role.
+ * Return zero on failure, non-zero on success.
  */
 static int
 gen_role(FILE *f, const struct role *r, int *nf)

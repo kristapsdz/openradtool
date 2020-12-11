@@ -547,7 +547,7 @@ gen_database(FILE *f, const struct config *cfg, const struct strct *p)
 }
 
 static int
-gen_funcs_json_parse(FILE *f, const struct config *cfg, const struct strct *p)
+gen_json_parse(FILE *f, const struct config *cfg, const struct strct *p)
 {
 
 	if (!gen_comment(f, 0, COMMENT_C,
@@ -751,7 +751,7 @@ gen_transaction(FILE *f, const struct config *cfg)
  * documentation for db_close to be symmetric.
  */
 static int
-gen_func_open(FILE *f, const struct config *cfg)
+gen_open(FILE *f, const struct config *cfg)
 {
 
 	if (!gen_comment(f, 0, COMMENT_C,
@@ -938,18 +938,22 @@ ort_lang_c_header(const struct ort_lang_c *args,
 		if (fputs("enum\tort_role {\n", f) == EOF)
 			return 0;
 		TAILQ_FOREACH(r, &cfg->arq, allentries)
-			gen_role(f, r, &i);
+			if (!gen_role(f, r, &i))
+				return 0;
 		if (fputs("\n};\n\n", f) == EOF)
 			return 0;
 	}
 
 	if (args->flags & ORT_LANG_C_CORE) {
 		TAILQ_FOREACH(e, &cfg->eq, entries)
-			gen_enum(f, e);
+			if (!gen_enum(f, e))
+				return 0;
 		TAILQ_FOREACH(bf, &cfg->bq, entries)
-			gen_bitfield(f, bf);
+			if (!gen_bitfield(f, bf))
+				return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_struct(f, cfg, p);
+			if (!gen_struct(f, cfg, p))
+				return 0;
 	}
 
 	if (args->flags & ORT_LANG_C_VALID_KCGI) {
@@ -962,7 +966,8 @@ ort_lang_c_header(const struct ort_lang_c *args,
 		if (fputs("enum\tvalid_keys {\n", f) == EOF)
 			return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_valid_enums(f, p);
+			if (!gen_valid_enums(f, p))
+				return 0;
 		if (fputs("\tVALID__MAX\n};\n\n", f) == EOF)
 			return 0;
 		if (!gen_comment(f, 0, COMMENT_C,
@@ -1029,18 +1034,24 @@ ort_lang_c_header(const struct ort_lang_c *args,
 		return 0;
 
 	if (args->flags & ORT_LANG_C_DB_SQLBOX) {
-		gen_func_open(f, cfg);
-		gen_transaction(f, cfg);
-		gen_close(f, cfg);
+		if (!gen_open(f, cfg))
+			return 0;
+		if (!gen_transaction(f, cfg))
+			return 0;
+		if (!gen_close(f, cfg))
+			return 0;
 		if (!TAILQ_EMPTY(&cfg->rq))
-			gen_roles(f, cfg);
+			if (!gen_roles(f, cfg))
+				return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_database(f, cfg, p);
+			if (!gen_database(f, cfg, p))
+				return 0;
 	}
 
 	if (args->flags & ORT_LANG_C_JSON_KCGI)
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_json_out(f, cfg, p);
+			if (!gen_json_out(f, cfg, p))
+				return 0;
 	if (args->flags & ORT_LANG_C_JSON_JSMN) {
 		if (!gen_comment(f, 0, COMMENT_C,
 		    "Check whether the current token in a "
@@ -1077,11 +1088,13 @@ ort_lang_c_header(const struct ort_lang_c *args,
 		          "unsigned int toksz);\n\n", f) == EOF)
 			return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_funcs_json_parse(f, cfg, p);
+			if (!gen_json_parse(f, cfg, p))
+				return 0;
 	}
 	if (args->flags & ORT_LANG_C_VALID_KCGI)
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			gen_valids(f, cfg, p);
+			if (!gen_valids(f, cfg, p))
+				return 0;
 
 	if (fputs("__END_DECLS\n", f) == EOF)
 		return 0;

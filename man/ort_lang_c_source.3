@@ -32,7 +32,6 @@
 .Fa "const struct ort_lang_c *args"
 .Fa "const struct config *cfg"
 .Fa "FILE *f"
-.Fa "const char *incls"
 .Fc
 .Sh DESCRIPTION
 Outputs a C source file from the parsed configuration
@@ -54,6 +53,14 @@ a comma-separated list of non-system header files to include.
 White-space surrounding the commas is discarded.
 .It Va unsigned int flags
 The bit-field of components to output.
+Possible values are described in the next section.
+.It Va unsigned int includes
+A list of components defined in the header files in
+.Va header ,
+but not generated with
+.Va flags .
+This allows for the correct depending headers to be generated.
+Possible values are described in the next section.
 .It Va const char *ext_b64_ntop
 The
 .Fn b64_ntop

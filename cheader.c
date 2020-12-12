@@ -112,7 +112,8 @@ main(int argc, char *argv[])
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
-		ort_lang_c_header(&args, cfg, stdout);
+		if (!(rc = ort_lang_c_header(&args, cfg, stdout)))
+			warn(NULL);
 
 out:
 	for (i = 0; i < confsz; i++)

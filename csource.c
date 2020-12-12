@@ -84,7 +84,7 @@ int
 main(int argc, char *argv[])
 {
 	struct ort_lang_c	  args;
-	const char		 *incls = NULL, *sharedir = SHAREDIR;
+	const char		 *sharedir = SHAREDIR;
 	struct config		 *cfg = NULL;
 	int			  c, rc = 0;
 	FILE			**confs = NULL;
@@ -108,7 +108,12 @@ main(int argc, char *argv[])
 				args.header = NULL;
 			break;
 		case 'I':
-			incls = optarg;
+			if (strchr(optarg, 'd') != NULL)
+				args.includes |= ORT_LANG_C_DB_SQLBOX;
+			if (strchr(optarg, 'v') != NULL)
+				args.includes |= ORT_LANG_C_VALID_KCGI;
+			if (strchr(optarg, 'j') != NULL)
+				args.includes |= ORT_LANG_C_JSON_KCGI;
 			break;
 		case 'j':
 			args.flags |= ORT_LANG_C_JSON_KCGI;
@@ -172,7 +177,8 @@ main(int argc, char *argv[])
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
-		rc = ort_lang_c_source(&args, cfg, stdout, incls);
+		if (!(rc = ort_lang_c_source(&args, cfg, stdout)))
+			warn(NULL);
 
 out:
 	for (i = 0; i < confsz; i++)
@@ -191,8 +197,8 @@ usage:
 		"usage: %s "
 		"[-jJv] "
 		"[-h header[,header...] "
-		"[-I bjJv] "
-		"[-N b] "
+		"[-I jJv] "
+		"[-N d] "
 		"[config...]\n",
 		getprogname());
 	return EXIT_FAILURE;

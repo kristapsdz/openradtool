@@ -9,6 +9,36 @@
 		</header>
 		<aside>
 			<p>
+				Make sure that <code>distinct</code> on a
+				<code>list</code> or <code>iterate</code> correctly declare the
+				required macros in
+				<a href="ort-c-header.3.html">ort-c-header(1)</a>.
+				Found by the expanded regression suite.
+			</p>
+			<p>
+				Fix how <code>grouprow</code> queries, which use 
+				<code>LEFT OUTER JOIN</code>, don't prematurely terminate quoted
+				strings.  Found by the expanded regression suite.
+			</p>
+			<p>
+				Export library to build C source.
+				This has its own 
+				<a href="https://man.openbsd.org/pkg-config">pkg-config(1)</a> 
+				entry and uses the
+				<a href="ort_lang_c_source.3.html">ort_lang_c_source(3)</a> and
+				<a href="ort_lang_c_header.3.html">ort_lang_c_header(3)</a>
+				functions.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
+			<h3>0.11.4</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-12-08">2020-12-08</time>
+		</header>
+		<aside>
+			<p>
 				Export changes to the <code>roles</code> statement in
 				<a href="ort_diff.3.html">ort_diff(3)</a> field results.
 				Also add full support for the <code>insert</code>;

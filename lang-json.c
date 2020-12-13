@@ -32,6 +32,21 @@
 #include "lang.h"
 #include "ort-lang-json.h"
 
+static const char *const ftypes[FTYPE__MAX] = {
+	"bit", /* FTYPE_BIT */
+	"date", /* FTYPE_DATE */
+	"epoch", /* FTYPE_EPOCH */
+	"int", /* FTYPE_INT */
+	"real", /* FTYPE_REAL */
+	"blob", /* FTYPE_BLOB */
+	"text", /* FTYPE_TEXT */
+	"password", /* FTYPE_PASSWORD */
+	"email", /* FTYPE_EMAIL */
+	"struct", /* FTYPE_STRUCT */
+	"enum", /* FTYPE_ENUM */
+	"bitfield", /* FTYPE_BITFIELD */
+};
+
 static int
 gen_ws(FILE *f, size_t sz)
 {
@@ -43,19 +58,46 @@ gen_ws(FILE *f, size_t sz)
 	return 1;
 }
 
+/*
+ * Format the string according to the JSON specification.
+ * Note about escaping the double-quote: in ort(3), double-quotes are
+ * already escaped, so we need not do so again here.
+ * Return zero on failure, non-zero on sucess.
+ */
 static int
 gen_string(FILE *f, const char *cp)
 {
+	int	 rc;
 
-	if (fputc('\'', f) == EOF)
+	if (fputc('\"', f) == EOF)
 		return 0;
 	for ( ; *cp != '\0'; cp++) {
-		if (*cp == '\'' && fputc('\\', f) == EOF)
-			return 0;
-		if (fputc(*cp, f) == EOF)
+		switch (*cp) {
+		case '\b':
+			rc = fputs("\\b", f) != EOF;
+			break;
+		case '\f':
+			rc = fputs("\\f", f) != EOF;
+			break;
+		case '\r':
+			rc = fputs("\\r", f) != EOF;
+			break;
+		case '\n':
+			rc = fputs("\\n", f) != EOF;
+			break;
+		case '\t':
+			rc = fputs("\\t", f) != EOF;
+			break;
+		default:
+			if (*cp < ' ')
+				rc = fprintf(f, "\\u%.4u", *cp) > 0;
+			else
+				rc = fputc(*cp, f) != EOF;
+		}
+		if (!rc)
 			return 0;
 	}
-	return fputc('\'', f) != EOF;
+	return fputc('\"', f) != EOF;
 }
 
 static int
@@ -65,11 +107,11 @@ gen_pos(FILE *f, size_t tabs, const struct pos *pos)
 	assert(pos != NULL);
 	if (!gen_ws(f, tabs))
 		return 0;
-	if (fputs("\'pos\': {\n", f) == EOF)
+	if (fputs("\"pos\": {\n", f) == EOF)
 		return 0;
 	if (!gen_ws(f, tabs + 1))
 		return 0;
-	if (fputs("\'fname\': ", f) == EOF)
+	if (fputs("\"fname\": ", f) == EOF)
 		return 0;
 	if (!gen_string(f, pos->fname))
 		return 0;
@@ -77,11 +119,11 @@ gen_pos(FILE *f, size_t tabs, const struct pos *pos)
 		return 0;
 	if (!gen_ws(f, tabs + 1))
 		return 0;
-	if (fprintf(f, "\'line\': %zu,\n", pos->line) == EOF)
+	if (fprintf(f, "\"line\": %zu,\n", pos->line) == EOF)
 		return 0;
 	if (!gen_ws(f, tabs + 1))
 		return 0;
-	if (fprintf(f, "\'column\': %zu\n", pos->column) == EOF)
+	if (fprintf(f, "\"column\": %zu\n", pos->column) == EOF)
 		return 0;
 	if (!gen_ws(f, tabs))
 		return 0;
@@ -95,13 +137,13 @@ gen_label(FILE *f, size_t tabs, const char *name,
 
 	if (!gen_ws(f, tabs))
 		return 0;
-	if (fprintf(f, "\'%s\': {\n", name) < 0)
+	if (fprintf(f, "\"%s\": {\n", name) < 0)
 		return 0;
 	if (!gen_pos(f, tabs + 1, &l->pos))
 		return 0;
 	if (!gen_ws(f, tabs + 1))
 		return 0;
-	if (fputs("\'value\': ", f) == EOF)
+	if (fputs("\"value\": ", f) == EOF)
 		return 0;
 	if (!gen_string(f, l->label))
 		return 0;
@@ -121,7 +163,7 @@ gen_labelq(FILE *f, size_t tabs, const char *name,
 
 	if (!gen_ws(f, tabs))
 		return 0;
-	if (fprintf(f, "\'%s\': ", name) < 0)
+	if (fprintf(f, "\"%s\": ", name) < 0)
 		return 0;
 	if (TAILQ_EMPTY(q))
 		return fputs("null,\n", f) != EOF;
@@ -142,7 +184,7 @@ gen_labelq(FILE *f, size_t tabs, const char *name,
 
 	if (!gen_ws(f, tabs))
 		return 0;
-	return fputs("}\n", f) != EOF;
+	return fputs("},\n", f) != EOF;
 }
 
 static int
@@ -151,7 +193,7 @@ gen_doc(FILE *f, size_t tabs, const char *doc)
 
 	if (!gen_ws(f, tabs))
 		return 0;
-	if (fputs("\'doc\': ", f) == EOF)
+	if (fputs("\"doc\": ", f) == EOF)
 		return 0;
 	if (doc == NULL)
 		return fputs("null,\n", f) != EOF;
@@ -172,13 +214,13 @@ gen_eitem(FILE *f, const struct eitem *ei, const struct config *cfg)
 		return 0;
 	if (!gen_ws(f, 5))
 		return 0;
-	if (fputs("\'value\': ", f) == EOF)
+	if (fputs("\"value\": ", f) == EOF)
 		return 0;
 	if (ei->flags & EITEM_AUTO) {
 		if (fputs("null", f) == EOF)
 			return 0;
 	} else
-		if (fprintf(f, "\'%" PRId64 "\'", ei->value) < 0)
+		if (fprintf(f, "\"%" PRId64 "\"", ei->value) < 0)
 			return 0;
 	return fputc('\n', f) != EOF;
 }
@@ -196,12 +238,12 @@ gen_enm(FILE *f, const struct enm *enm, const struct config *cfg)
 		return 0;
 	if (!gen_ws(f, 3))
 		return 0;
-	if (fputs("\'items\': {\n", f) == EOF)
+	if (fputs("\"items\": {\n", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(ei, &enm->eq, entries) {
 		if (!gen_ws(f, 4))
 			return 0;
-		if (fprintf(f, "\'%s\': {\n", ei->name) < 0)
+		if (fprintf(f, "\"%s\": {\n", ei->name) < 0)
 			return 0;
 		if (!gen_eitem(f, ei, cfg))
 			return 0;
@@ -227,7 +269,7 @@ gen_enms(FILE *f, const struct config *cfg)
 
 	if (!gen_ws(f, 1))
 		return 0;
-	if (fputs("\'enums\': ", f) == EOF)
+	if (fputs("\"enums\": ", f) == EOF)
 		return 0;
 
 	if (TAILQ_EMPTY(&cfg->eq))
@@ -238,7 +280,7 @@ gen_enms(FILE *f, const struct config *cfg)
 	TAILQ_FOREACH(enm, &cfg->eq, entries) {
 		if (!gen_ws(f, 2))
 			return 0;
-		if (fprintf(f, "\'%s\': {\n", enm->name) < 0)
+		if (fprintf(f, "\"%s\": {\n", enm->name) < 0)
 			return 0;
 		if (!gen_enm(f, enm, cfg))
 			return 0;
@@ -255,50 +297,52 @@ gen_enms(FILE *f, const struct config *cfg)
 
 	if (!gen_ws(f, 1))
 		return 0;
-	return fputs("}\n", f) != EOF;
+	return fputs("},\n", f) != EOF;
 }
 
 static int
-gen_bitidx(FILE *f, const struct bitidx *bi, const struct config *cfg)
+gen_bitidx(FILE *f, size_t tabs,
+	const struct bitidx *bi, const struct config *cfg)
 {
 
-	if (!gen_pos(f, 5, &bi->pos))
+	if (!gen_pos(f, tabs, &bi->pos))
 		return 0;
-	if (!gen_doc(f, 5, bi->doc))
+	if (!gen_doc(f, tabs, bi->doc))
 		return 0;
-	if (!gen_labelq(f, 5, "labels", &bi->labels, cfg))
+	if (!gen_labelq(f, tabs, "labels", &bi->labels, cfg))
 		return 0;
-	if (!gen_ws(f, 5))
+	if (!gen_ws(f, tabs))
 		return 0;
-	return fprintf(f, "\'value\': "
-		"\'%" PRId64 "\'\n", bi->value) > 0;
+	return fprintf(f, "\"value\": "
+		"\"%" PRId64 "\"\n", bi->value) > 0;
 }
 
 static int
-gen_bitf(FILE *f, const struct bitf *bitf, const struct config *cfg)
+gen_bitf(FILE *f, size_t tabs,
+	const struct bitf *bitf, const struct config *cfg)
 {
 	const struct bitidx	*bi;
 
-	if (!gen_pos(f, 3, &bitf->pos))
+	if (!gen_pos(f, tabs, &bitf->pos))
 		return 0;
-	if (!gen_doc(f, 3, bitf->doc))
+	if (!gen_doc(f, tabs, bitf->doc))
 		return 0;
-	if (!gen_labelq(f, 3, "labelsNull", &bitf->labels_null, cfg))
+	if (!gen_labelq(f, tabs, "labelsNull", &bitf->labels_null, cfg))
 		return 0;
-	if (!gen_labelq(f, 3, "labelsUnset", &bitf->labels_unset, cfg))
+	if (!gen_labelq(f, tabs, "labelsUnset", &bitf->labels_unset, cfg))
 		return 0;
-	if (!gen_ws(f, 3))
+	if (!gen_ws(f, tabs))
 		return 0;
-	if (fputs("\'items\': {\n", f) == EOF)
+	if (fputs("\"items\": {\n", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(bi, &bitf->bq, entries) {
-		if (!gen_ws(f, 4))
+		if (!gen_ws(f, tabs + 1))
 			return 0;
-		if (fprintf(f, "\'%s\': {\n", bi->name) < 0)
+		if (fprintf(f, "\"%s\": {\n", bi->name) < 0)
 			return 0;
-		if (!gen_bitidx(f, bi, cfg))
+		if (!gen_bitidx(f, tabs + 2, bi, cfg))
 			return 0;
-		if (!gen_ws(f, 4))
+		if (!gen_ws(f, tabs + 1))
 			return 0;
 		if (fputc('}', f) == EOF)
 			return 0;
@@ -308,7 +352,7 @@ gen_bitf(FILE *f, const struct bitf *bitf, const struct config *cfg)
 		if (fputc('\n', f) == EOF)
 			return 0;
 	}
-	if (!gen_ws(f, 3))
+	if (!gen_ws(f, tabs))
 		return 0;
 	return fputs("}\n", f) != EOF;
 }
@@ -320,7 +364,7 @@ gen_bitfs(FILE *f, const struct config *cfg)
 
 	if (!gen_ws(f, 1))
 		return 0;
-	if (fputs("\'bitfs\': ", f) == EOF)
+	if (fputs("\"bitfs\": ", f) == EOF)
 		return 0;
 
 	if (TAILQ_EMPTY(&cfg->bq))
@@ -331,9 +375,9 @@ gen_bitfs(FILE *f, const struct config *cfg)
 	TAILQ_FOREACH(bitf, &cfg->bq, entries) {
 		if (!gen_ws(f, 2))
 			return 0;
-		if (fprintf(f, "\'%s\': {\n", bitf->name) < 0)
+		if (fprintf(f, "\"%s\": {\n", bitf->name) < 0)
 			return 0;
-		if (!gen_bitf(f, bitf, cfg))
+		if (!gen_bitf(f, 3, bitf, cfg))
 			return 0;
 		if (!gen_ws(f, 2))
 			return 0;
@@ -357,7 +401,7 @@ gen_role(FILE *f, size_t tabs, const struct role *r)
 
 	if (!gen_ws(f, tabs))
 		return 0;
-	if (fprintf(f, "\'%s\': {\n", r->name) < 0)
+	if (fprintf(f, "\"%s\": {\n", r->name) < 0)
 		return 0;
 	if (!gen_pos(f, tabs + 1, &r->pos))
 		return 0;
@@ -365,7 +409,7 @@ gen_role(FILE *f, size_t tabs, const struct role *r)
 		return 0;
 	if (!gen_ws(f, tabs + 1))
 		return 0;
-	if (fputs("\'children\': ", f) == EOF)
+	if (fputs("\"children\": ", f) == EOF)
 		return 0;
 
 	if (!TAILQ_EMPTY(&r->subrq)) {
@@ -400,7 +444,7 @@ gen_roles(FILE *f, const struct config *cfg)
 
 	if (!gen_ws(f, 1))
 		return 0;
-	if (fputs("\'roles\': ", f) == EOF)
+	if (fputs("\"roles\": ", f) == EOF)
 		return 0;
 
 	if (TAILQ_EMPTY(&cfg->rq))
@@ -428,11 +472,170 @@ gen_roles(FILE *f, const struct config *cfg)
 	return fputs("},\n", f) != EOF;
 }
 
+static int
+gen_field(FILE *f, size_t tabs, const struct field *fd)
+{
+
+	if (!gen_pos(f, tabs, &fd->pos))
+		return 0;
+	if (!gen_doc(f, tabs, fd->doc))
+		return 0;
+	if (fd->enm != NULL) {
+		if (!gen_ws(f, tabs))
+			return 0;
+		if (fprintf(f, 
+		    "\"enm\": \"%s\"\n", fd->enm->name) < 0)
+			return 0;
+	}
+	if (fd->bitf != NULL) {
+		if (!gen_ws(f, tabs))
+			return 0;
+		if (fprintf(f, 
+		    "\"bitf\": \"%s\"\n", fd->bitf->name) < 0)
+			return 0;
+	}
+	if (fd->ref != NULL) {
+		if (!gen_ws(f, tabs))
+			return 0;
+		if (fputs("\"ref\": {\n", f) == EOF)
+			return 0;
+		if (!gen_ws(f, tabs + 1))
+			return 0;
+		if (fprintf(f, "\"target\": "
+		    "{ \"strct\": \"%s\", \"field\": \"%s\" },\n",
+		    fd->ref->target->parent->name,
+		    fd->ref->target->name) < 0)
+			return 0;
+		if (!gen_ws(f, tabs + 1))
+			return 0;
+		if (fprintf(f, "\"source\": "
+		    "{ \"strct\": \"%s\", \"field\": \"%s\" }\n",
+		    fd->ref->source->parent->name,
+		    fd->ref->source->name) < 0)
+			return 0;
+		if (!gen_ws(f, tabs))
+			return 0;
+		if (fputs("},\n", f) == EOF)
+			return 0;
+	}
+
+	if (!gen_ws(f, tabs))
+		return 0;
+	if (fputs("\"def\": \n", f) == EOF)
+		return 0;
+	if (fd->flags & FIELD_HASDEF) {
+		switch (fd->type) {
+		case FTYPE_BIT:
+		case FTYPE_BITFIELD:
+		case FTYPE_DATE:
+		case FTYPE_EPOCH:
+		case FTYPE_INT:
+			if (fprintf
+		  	    (f, "\"%" PRId64 "\"", fd->def.integer) < 0)
+				return 0;
+			break;
+		case FTYPE_REAL:
+			if (fprintf(f, "\"%g\"", fd->def.decimal) < 0)
+				return 0;
+			break;
+		case FTYPE_EMAIL:
+		case FTYPE_TEXT:
+			if (!gen_string(f, fd->def.string))
+				return 0;
+			break;
+		case FTYPE_ENUM:
+			if (fprintf
+			    (f, "\"%s\"", fd->def.eitem->name) < 0)
+				return 0;
+			break;
+		default:
+			abort();
+			break;
+		}
+	} else
+		if (fputs("null,\n", f) == EOF)
+			return 0;
+
+	if (!gen_ws(f, tabs))
+		return 0;
+	if (fprintf(f, "\"type\": \"%s\"\n", ftypes[fd->type]) < 0)
+		return 0;
+	return 1;
+}
+
+static int
+gen_strct(FILE *f, size_t tabs, const struct strct *s)
+{
+	const struct field	*fd;
+
+	if (!gen_pos(f, tabs, &s->pos))
+		return 0;
+	if (!gen_doc(f, tabs, s->doc))
+		return 0;
+	if (!gen_ws(f, tabs))
+		return 0;
+	if (fputs("\"fields\": {\n", f) == EOF)
+		return 0;
+
+	TAILQ_FOREACH(fd, &s->fq, entries) {
+		if (!gen_ws(f, tabs + 1))
+			return 0;
+		if (fprintf(f, "\"%s\": {\n", fd->name) < 0)
+			return 0;
+		if (!gen_field(f, tabs + 2, fd))
+			return 0;
+		if (!gen_ws(f, tabs + 1))
+			return 0;
+		if (fputc('}', f) == EOF)
+			return 0;
+		if (TAILQ_NEXT(fd, entries) && fputc(',', f) == EOF)
+			return 0;
+		if (fputc('\n', f) == EOF)
+			return 0;
+	}
+
+	if (!gen_ws(f, tabs))
+		return 0;
+	return fputs("}\n", f) != EOF;
+}
+
+static int
+gen_strcts(FILE *f, const struct config *cfg)
+{
+	const struct strct	*s;
+
+	if (!gen_ws(f, 1))
+		return 0;
+	if (fputs("\"strcts\": {\n", f) == EOF)
+		return 0;
+
+	TAILQ_FOREACH(s, &cfg->sq, entries) {
+		if (!gen_ws(f, 2))
+			return 0;
+		if (fprintf(f, "\"%s\": {\n", s->name) < 0)
+			return 0;
+		if (!gen_strct(f, 3, s))
+			return 0;
+		if (!gen_ws(f, 2))
+			return 0;
+		if (fputc('}', f) == EOF)
+			return 0;
+		if (TAILQ_NEXT(s, entries) && fputc(',', f) == EOF)
+			return 0;
+		if (fputc('\n', f) == EOF)
+			return 0;
+	}
+
+	if (!gen_ws(f, 1))
+		return 0;
+	return fputs("}\n", f) != EOF;
+}
+
 int
 ort_lang_json(const struct config *cfg, FILE *f)
 {
 
-	if (fputs("{\n", f) == EOF)
+	if (fputs("{ \"config\": {\n", f) == EOF)
 		return 0;
 	if (!gen_roles(f, cfg))
 		return 0;
@@ -440,6 +643,8 @@ ort_lang_json(const struct config *cfg, FILE *f)
 		return 0;
 	if (!gen_bitfs(f, cfg))
 		return 0;
-	return fputs("}\n", f) != EOF;
+	if (!gen_strcts(f, cfg))
+		return 0;
+	return fputs("} }\n", f) != EOF;
 }
 

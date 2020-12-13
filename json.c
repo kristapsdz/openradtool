@@ -19,14 +19,11 @@
 #if HAVE_SYS_QUEUE
 # include <sys/queue.h>
 #endif
-#include <sys/param.h>
 
 #include <assert.h>
 #if HAVE_ERR
 # include <err.h>
 #endif
-#include <fcntl.h>
-#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,7 +44,7 @@ main(int argc, char *argv[])
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
-		err(EXIT_FAILURE, "pledge");
+		err(1, "pledge");
 #endif
 
 	if (getopt(argc, argv, "") != -1)
@@ -60,18 +57,19 @@ main(int argc, char *argv[])
 	/* Read in all of our files now so we can repledge. */
 
 	if (confsz > 0) {
-		if ((confs = calloc(confsz, sizeof(FILE *))) == NULL)
-			err(EXIT_FAILURE, "calloc");
+		confs = calloc(confsz, sizeof(FILE *));
+		if (confs == NULL)
+			err(1, "calloc");
 		for (i = 0; i < confsz; i++) {
 			confs[i] = fopen(argv[i], "r");
 			if (confs[i] == NULL)
-				err(EXIT_FAILURE, "%s: open", argv[i]);
+				err(1, "%s", argv[i]);
 		}
 	}
 
 #if HAVE_PLEDGE
 	if (pledge("stdio", NULL) == -1)
-		err(EXIT_FAILURE, "pledge");
+		err(1, "pledge");
 #endif
 
 	if ((cfg = ort_config_alloc()) == NULL)
@@ -93,8 +91,8 @@ out:
 
 	free(confs);
 	ort_config_free(cfg);
-	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
+	return !rc;
 usage:
 	fprintf(stderr, "usage: %s [config...]\n", getprogname());
-	return EXIT_FAILURE;
+	return 1;
 }

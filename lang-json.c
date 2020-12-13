@@ -391,7 +391,7 @@ gen_bitfs(FILE *f, const struct config *cfg)
 	}
 	if (!gen_ws(f, 1))
 		return 0;
-	return fputs("}\n", f) != EOF;
+	return fputs("},\n", f) != EOF;
 }
 
 static int
@@ -484,14 +484,14 @@ gen_field(FILE *f, size_t tabs, const struct field *fd)
 		if (!gen_ws(f, tabs))
 			return 0;
 		if (fprintf(f, 
-		    "\"enm\": \"%s\"\n", fd->enm->name) < 0)
+		    "\"enm\": \"%s\",\n", fd->enm->name) < 0)
 			return 0;
 	}
 	if (fd->bitf != NULL) {
 		if (!gen_ws(f, tabs))
 			return 0;
 		if (fprintf(f, 
-		    "\"bitf\": \"%s\"\n", fd->bitf->name) < 0)
+		    "\"bitf\": \"%s\",\n", fd->bitf->name) < 0)
 			return 0;
 	}
 	if (fd->ref != NULL) {
@@ -521,7 +521,7 @@ gen_field(FILE *f, size_t tabs, const struct field *fd)
 
 	if (!gen_ws(f, tabs))
 		return 0;
-	if (fputs("\"def\": \n", f) == EOF)
+	if (fputs("\"def\": ", f) == EOF)
 		return 0;
 	if (fd->flags & FIELD_HASDEF) {
 		switch (fd->type) {
@@ -552,6 +552,8 @@ gen_field(FILE *f, size_t tabs, const struct field *fd)
 			abort();
 			break;
 		}
+		if (fputs(",\n", f) == EOF)
+			return 0;
 	} else
 		if (fputs("null,\n", f) == EOF)
 			return 0;

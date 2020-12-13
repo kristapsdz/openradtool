@@ -14,9 +14,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef ORT_LANG_NODEJS
-#define ORT_LANG_NODEJS
+#ifndef ORT_LANG_JSON_H
+#define ORT_LANG_JSON_H
 
-int	 gen_nodejs(const struct config *, FILE *f);
+int	ort_lang_json(const struct config *, FILE *);
 
-#endif
+#endif /* !ORT_LANG_JSON_H */

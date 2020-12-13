@@ -26,6 +26,7 @@ LIBS		 = libort.a \
 		   libort-lang-c.a \
 		   libort-lang-nodejs.a \
 		   libort-lang-javascript.a \
+		   libort-lang-json.a \
 		   libort-lang-sql.a
 PKGCONFIGS	 = ort.pc \
 		   ort-lang-c.pc
@@ -37,12 +38,14 @@ OBJS		 = audit.o \
 		   lang-c-source.o \
 		   lang-c.o \
 		   lang-javascript.o \
+		   lang-json.o \
 		   lang-nodejs.o \
 		   lang-sql.o \
 		   main.o \
 		   maindiff.o \
 		   nodejs.o \
 		   javascript.o \
+		   json.o \
 		   sql.o \
 		   sqldiff.o \
 		   xliff.o
@@ -107,6 +110,7 @@ HEADERS 	 = $(PUBHEADERS) \
 		   lang.h \
 		   linker.h \
 		   ort-lang-javascript.h \
+		   ort-lang-json.h \
 		   ort-lang-nodejs.h \
 		   ort-lang-sql.h \
 		   parser.h
@@ -125,11 +129,13 @@ DOTAR		 = $(HEADERS) \
 		   diff.c \
 		   gensalt.c \
 		   javascript.c \
+		   json.c \
 		   jsmn.c \
 		   lang-c-header.c \
 		   lang-c-source.c \
 		   lang-c.c \
 		   lang-javascript.c \
+		   lang-json.c \
 		   lang-nodejs.c \
 		   lang-sql.c \
 		   lang.c \
@@ -178,6 +184,7 @@ BINS		 = ort \
 		   ort-c-source \
 		   ort-diff \
 		   ort-javascript \
+		   ort-json \
 		   ort-nodejs \
 		   ort-sql \
 		   ort-sqldiff \
@@ -224,14 +231,17 @@ libort.a: $(LIBOBJS)
 libort-lang-c.a: lang-c.o lang-c-source.o lang-c-header.o lang.o
 	$(AR) rs $@ lang-c.o lang-c-source.o lang-c-header.o lang.o
 
+libort-lang-javascript.a: lang-javascript.o lang.o
+	$(AR) rs $@ lang-javascript.o lang.o
+
+libort-lang-json.a: lang-json.o
+	$(AR) rs $@ lang-json.o
+
 libort-lang-nodejs.a: lang-nodejs.o lang.o
 	$(AR) rs $@ lang-nodejs.o lang.o
 
 libort-lang-sql.a: lang-sql.o lang.o
 	$(AR) rs $@ lang-sql.o lang.o
-
-libort-lang-javascript.a: lang-javascript.o lang.o
-	$(AR) rs $@ lang-javascript.o lang.o
 
 ort-nodejs: nodejs.o libort-lang-nodejs.a libort.a
 	$(CC) -o $@ nodejs.o libort-lang-nodejs.a libort.a $(LDFLAGS) $(LDADD)
@@ -244,6 +254,9 @@ ort-c-header: cheader.o libort-lang-c.a libort.a
 
 ort-javascript: javascript.o libort-lang-javascript.a libort.a
 	$(CC) -o $@ javascript.o libort-lang-javascript.a libort.a $(LDFLAGS) $(LDADD)
+
+ort-json: json.o libort-lang-json.a libort.a
+	$(CC) -o $@ json.o libort-lang-json.a libort.a $(LDFLAGS) $(LDADD)
 
 ort-sql: sql.o libort-lang-sql.a libort.a
 	$(CC) -o $@ sql.o libort-lang-sql.a libort.a $(LDFLAGS) $(LDADD)

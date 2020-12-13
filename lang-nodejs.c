@@ -619,8 +619,8 @@ gen_modifier(const struct config *cfg,
 /*
  * Generate a query function.
  */
-static void
-gen_query(const struct config *cfg,
+static int
+gen_query(FILE *f, const struct config *cfg,
 	const struct search *s, size_t num)
 {
 	const struct sent	*sent;
@@ -645,61 +645,73 @@ gen_query(const struct config *cfg,
 
 	/* Print per-query-type method documentation. */
 
-	puts("");
-	if (s->doc != NULL)
-		print_commentt(1, COMMENT_JS_FRAG_OPEN, s->doc);
-	else if (s->type == STYPE_SEARCH)
-		print_commentv(1, COMMENT_JS_FRAG_OPEN,
-			"Search for a specific {@link ortns.%s}.", 
-			rs->name);
-	else if (s->type == STYPE_LIST)
-		print_commentv(1, COMMENT_JS_FRAG_OPEN,
-			"Search for a set of {@link ortns.%s}.", 
-			rs->name);
-	else if (s->type == STYPE_COUNT)
-		print_commentv(1, COMMENT_JS_FRAG_OPEN,
-			"Search result count of {@link ortns.%s}.", 
-			rs->name);
-	else
-		print_commentv(1, COMMENT_JS_FRAG_OPEN,
-			"Iterate results in {@link ortns.%s}.", 
-			rs->name);
+	if (fputc('\n', f) == EOF)
+		return 0;
+
+	if (s->doc != NULL) {
+		if (!gen_comment(f, 1, COMMENT_JS_FRAG_OPEN, s->doc))
+			return 0;
+	} else if (s->type == STYPE_SEARCH) {
+		if (!gen_commentv(f, 1, COMMENT_JS_FRAG_OPEN,
+		    "Search for a specific {@link ortns.%s}.", 
+		    rs->name))
+			return 0;
+	} else if (s->type == STYPE_LIST) {
+		if (!gen_commentv(f, 1, COMMENT_JS_FRAG_OPEN,
+		    "Search for a set of {@link ortns.%s}.", 
+		    rs->name))
+			return 0;
+	} else if (s->type == STYPE_COUNT) {
+		if (!gen_commentv(f, 1, COMMENT_JS_FRAG_OPEN,
+		    "Search result count of {@link ortns.%s}.", 
+		    rs->name))
+			return 0;
+	} else
+		if (!gen_commentv(f, 1, COMMENT_JS_FRAG_OPEN,
+		    "Iterate results in {@link ortns.%s}.", 
+		    rs->name))
+			return 0;
 
 	if (s->dst != NULL) {
-		print_commentv(1, COMMENT_JS_FRAG,
-			"This %s distinct query results.",
-			s->type == STYPE_ITERATE ? "iterates over" : 
-			s->type == STYPE_COUNT ? "counts" : "returns");
+		if (!gen_commentv(f, 1, COMMENT_JS_FRAG,
+		    "This %s distinct query results.",
+		    s->type == STYPE_ITERATE ? "iterates over" : 
+		    s->type == STYPE_COUNT ? "counts" : "returns"))
+			return 0;
 		if (s->dst->strct != s->parent) 
-			print_commentv(1, COMMENT_JS_FRAG,
-				"The results are limited to "
-				"{@link ortns.%s.%s}.", 
-				s->parent->name, s->dst->fname);
+			if (!gen_commentv(f, 1, COMMENT_JS_FRAG,
+			    "The results are limited to "
+			    "{@link ortns.%s.%s}.", 
+			    s->parent->name, s->dst->fname))
+				return 0;
 	}
 
 	if (s->type == STYPE_ITERATE)
-		print_commentt(1, COMMENT_JS_FRAG,
-			"This callback function is called during an "
-			"implicit transaction: thus, it should not "
-			"invoke any database modifications or risk "
-			"deadlock.");
+		if (!gen_comment(f, 1, COMMENT_JS_FRAG,
+		    "This callback function is called during an "
+		    "implicit transaction: thus, it should not "
+		    "invoke any database modifications or risk "
+		    "deadlock."))
+			return 0;
 	if (rs->flags & STRCT_HAS_NULLREFS)
-		print_commentt(1, COMMENT_JS_FRAG,
-			"This search involves nested null structure "
-			"linking, which involves multiple database "
-			"calls per invocation. Use this sparingly!");
+		if (!gen_comment(f, 1, COMMENT_JS_FRAG,
+		    "This search involves nested null structure "
+		    "linking, which involves multiple database "
+		    "calls per invocation. Use this sparingly!"))
+			return 0;
 
 	if (hasunary) { 
-		print_commentt(1, COMMENT_JS_FRAG,
-			"The following fields are constrained by "
-			"unary operations: ");
+		if (!gen_comment(f, 1, COMMENT_JS_FRAG,
+		    "The following fields are constrained by "
+		    "unary operations: "))
+			return 0;
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
 			if (!OPTYPE_ISUNARY(sent->op))
 				continue;
-			print_commentv(1, COMMENT_JS_FRAG,
-				"%s (checked %s null)", sent->fname, 
-				sent->op == OPTYPE_NOTNULL ?
-				"not" : "is");
+			if (!gen_commentv(f, 1, COMMENT_JS_FRAG,
+			    "%s (checked %s null)", sent->fname, 
+			    sent->op == OPTYPE_NOTNULL ? "not" : "is"))
+				return 0;
 		}
 	}
 
@@ -707,30 +719,38 @@ gen_query(const struct config *cfg,
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
 		if (OPTYPE_ISUNARY(sent->op))
 			continue;
-		if (sent->field->type == FTYPE_PASSWORD)
-			print_commentv(1, COMMENT_JS_FRAG,
-				"@param v%zu %s (hashed password)", 
-				pos++, sent->fname);
-		else
-			print_commentv(1, COMMENT_JS_FRAG,
-				"@param v%zu %s", pos++, sent->fname);
+		if (sent->field->type == FTYPE_PASSWORD) {
+			if (!gen_commentv(f, 1, COMMENT_JS_FRAG,
+			    "@param v%zu %s (hashed password)", 
+			    pos++, sent->fname))
+				return 0;
+		} else
+			if (!gen_commentv(f, 1, COMMENT_JS_FRAG,
+			    "@param v%zu %s", pos++, sent->fname))
+				return 0;
 	}
 
 	if (s->type == STYPE_ITERATE)
-		print_commentt(1, COMMENT_JS_FRAG_CLOSE,
-			"@param cb Callback with retrieved data.");
+		if (!gen_comment(f, 1, COMMENT_JS_FRAG_CLOSE,
+		    "@param cb Callback with retrieved data."))
+			return 0;
 
-	if (s->type == STYPE_SEARCH)
-		print_commentt(1, COMMENT_JS_FRAG_CLOSE,
-			"@return Result or null if no results found.");
-	else if (s->type == STYPE_LIST)
-		print_commentt(1, COMMENT_JS_FRAG_CLOSE,
-			"@return Result of null if no results found.");
-	else if (s->type == STYPE_COUNT)
-		print_commentt(1, COMMENT_JS_FRAG_CLOSE,
-			"@return Count of results.");
+	if (s->type == STYPE_SEARCH) {
+		if (!gen_comment(f, 1, COMMENT_JS_FRAG_CLOSE,
+		    "@return Result or null if no results found."))
+			return 0;
+	} else if (s->type == STYPE_LIST) {
+		if (!gen_comment(f, 1, COMMENT_JS_FRAG_CLOSE,
+		    "@return Result of null if no results found."))
+			return 0;
+	} else if (s->type == STYPE_COUNT)
+		if (!gen_comment(f, 1, COMMENT_JS_FRAG_CLOSE,
+		    "@return Count of results."))
+			return 0;
 
-	putchar('\t');
+	if (fputc('\t', f) == EOF)
+		return 0;
+
 	col = 8 + xprintf("db_%s_%s", 
 		s->parent->name, stypes[s->type]);
 
@@ -885,11 +905,15 @@ gen_query(const struct config *cfg,
 		break;
 	}
 
-	puts("\t}");
+	return fputs("\t}\n", f) != EOF;
 }
 
-static void
-gen_api(const struct config *cfg, const struct strct *p)
+/*
+ * Generate the database functions for a structure.
+ * Return zero on failure, non-zero on success.
+ */
+static int
+gen_api(FILE *f, const struct config *cfg, const struct strct *p)
 {
 	const struct search	*s;
 	const struct update	*u;
@@ -902,98 +926,133 @@ gen_api(const struct config *cfg, const struct strct *p)
 		gen_insert(p);
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
-		gen_query(cfg, s, pos++);
+		if (!gen_query(f, cfg, s, pos++))
+			return 0;
 	pos = 0;
 	TAILQ_FOREACH(u, &p->dq, entries)
 		gen_modifier(cfg, u, pos++);
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
 		gen_modifier(cfg, u, pos++);
+
+	return 1;
 }
 
-static void
-gen_enm(const struct enm *p, size_t pos)
+/*
+ * Generate an enumeration.
+ * Return zero on failure, non-zero on success.
+ */
+static int
+gen_enm(FILE *f, const struct enm *p, size_t pos)
 {
 	const struct eitem	*ei;
 
-	if (pos)
-		puts("");
-	if (p->doc != NULL)
-		print_commentt(1, COMMENT_JS, p->doc);
+	if (pos > 0 && fputc('\n', f) == EOF)
+		return 0;
+	if (!gen_comment(f, 1, COMMENT_JS, p->doc))
+		return 0;
 
-	printf("\texport enum %s {\n", p->name);
+	if (fprintf(f, "\texport enum %s {\n", p->name) < 0)
+		return 0;
+
 	TAILQ_FOREACH(ei, &p->eq, entries) {
-		if (ei->doc != NULL)
-			print_commentt(2, COMMENT_JS, ei->doc);
-		printf("\t\t%s = \'%" PRId64 "\'", 
-			ei->name, ei->value);
+		if (!gen_comment(f, 2, COMMENT_JS, ei->doc))
+			return 0;
+		if (fprintf(f, "\t\t%s = \'%" PRId64 "\'", 
+		    ei->name, ei->value) < 0)
+			return 0;
 		if (TAILQ_NEXT(ei, entries) != NULL)
-			putchar(',');
-		puts("");
+			if (fputc(',', f) == EOF)
+				return 0;
+		if (fputc('\n', f) == EOF)
+			return 0;
 	}
-	puts("\t}");
+
+	return fputs("\t}\n", f) != EOF;
 }
 
-static void
-gen_strct(const struct strct *p, size_t pos)
+/*
+ * Generate the interface for the structure and its export routines.
+ * Return zero on failure, non-zero on success.
+ */
+static int
+gen_strct(FILE *f, const struct strct *p, size_t pos)
 {
-	const struct field	*f;
+	const struct field	*fd;
 	const struct rref	*r;
 	const char		*tab;
 
-	if (pos)
-		puts("");
-	if (p->doc != NULL)
-		print_commentt(1, COMMENT_JS, p->doc);
+	if (pos > 0 && fputc('\n', f) == EOF)
+		return 0;
+	if (!gen_comment(f, 1, COMMENT_JS, p->doc))
+		return 0;
+	if (fprintf(f, "\texport interface %sData {\n", p->name) < 0)
+		return 0;
 
-	printf("\texport interface %sData {\n", p->name);
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->doc != NULL)
-			print_commentt(2, COMMENT_JS, f->doc);
-		printf("\t\t%s: ", f->name);
-		if (f->type == FTYPE_STRUCT)
-			printf("ortns.%sData", 
-				f->ref->target->parent->name);
-		else if (f->type == FTYPE_ENUM)
-			printf("ortns.%s", f->enm->name);
-		else
-			printf("%s", ftypes[f->type]);
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (!gen_comment(f, 2, COMMENT_JS, fd->doc))
+			return 0;
+		if (fprintf(f, "\t\t%s: ", fd->name) < 0)
+			return 0;
+		if (fd->type == FTYPE_STRUCT) {
+			if (fprintf(f, "ortns.%sData", 
+			    fd->ref->target->parent->name) < 0)
+				return 0;
+		} else if (fd->type == FTYPE_ENUM) {
+			if (fprintf(f, "ortns.%s", 
+			    fd->enm->name) < 0)
+				return 0;
+		} else {
+			if (fprintf(f, "%s", ftypes[fd->type]) < 0)
+				return 0;
+		}
 
-		if (f->flags & FIELD_NULL ||
-		    (f->type == FTYPE_STRUCT &&
-		     (f->ref->source->flags & FIELD_NULL)))
-			printf("|null");
+		if (fd->flags & FIELD_NULL ||
+		    (fd->type == FTYPE_STRUCT &&
+		     (fd->ref->source->flags & FIELD_NULL)))
+			if (fputs("|null", f) == EOF)
+				return 0;
 
-		puts(";");
+		if (fputs(";\n", f) == EOF)
+			return 0;
 	}
-	puts("\t}\n");
 
-	printf("\tfunction db_export_%s"
-		"(role: string, obj: %sData): any\n"
-	       "\t{\n"
-	       "\t\tconst res: any = {}\n"
-	       "\n", p->name, p->name);
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->flags & FIELD_NOEXPORT) {
-			print_commentv(2, COMMENT_JS,
-				"Don't output %s: noexport.", f->name);
+	if (fputs("\t}\n\n", f) == EOF)
+		return 0;
+
+	if (fprintf(f, "\tfunction db_export_%s"
+	    "(role: string, obj: %sData): any\n"
+	    "\t{\n"
+	    "\t\tconst res: any = {}\n"
+	    "\n", p->name, p->name) < 0)
+		return 0;
+
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->flags & FIELD_NOEXPORT) {
+			if (!gen_commentv(f, 2, COMMENT_JS,
+			    "Don't output %s: noexport.", fd->name))
+				return 0;
 			continue;
-		} else if (f->type == FTYPE_PASSWORD) {
-			print_commentv(2, COMMENT_JS,
-				"Don't output %s: password.", f->name);
+		} else if (fd->type == FTYPE_PASSWORD) {
+			if (!gen_commentv(f, 2, COMMENT_JS,
+			    "Don't output %s: password.", fd->name))
+				return 0;
 			continue;
 		}
 
 		tab = "";
-		if (f->rolemap != NULL) {
+		if (fd->rolemap != NULL) {
 			tab = "\t";
-			puts("\t\tswitch (role) {");
-			TAILQ_FOREACH(r, &f->rolemap->rq, entries)
+			if (fputs("\t\tswitch (role) {\n", f) == EOF)
+				return 0;
+			TAILQ_FOREACH(r, &fd->rolemap->rq, entries)
 				gen_role(r->role, 2);
-			print_commentt(3, COMMENT_JS, 
-				"Don't export field to noted roles.");
-			puts("\t\t\tbreak;\n"
-			     "\t\tdefault:");
+			if (!gen_comment(f, 3, COMMENT_JS, 
+			    "Don't export field to noted roles."))
+				return 0;
+			if (fputs("\t\t\tbreak;\n"
+			    "\t\tdefault:\n", f) == EOF)
+				return 0;
 		}
 		
 		/*
@@ -1003,108 +1062,126 @@ gen_strct(const struct strct *p, size_t pos)
 		 * (to preserve 64-bit-ness).
 		 */
 
-		if (f->type == FTYPE_STRUCT) {
-	     		if (f->ref->source->flags & FIELD_NULL)
-				printf("%s\t\tres[\'%s\'] = "
-					"(obj[\'%s\'] === null) ?\n"
-				       "%s\t\t\tnull : db_export_%s"
-				       "(role, obj[\'%s\'])\n",
-				       tab, f->name, f->name, tab,
-				       f->ref->target->parent->name,
-				       f->name);
-			else
-				printf("%s\t\tres[\'%s\'] = "
-					"db_export_%s"
-					"(role, obj[\'%s\'])\n",
-				       tab, f->name, 
-				       f->ref->target->parent->name,
-				       f->name);
+		if (fd->type == FTYPE_STRUCT) {
+	     		if (fd->ref->source->flags & FIELD_NULL) {
+				if (fprintf(f, "%s\t\tres[\'%s\'] = "
+				    "(obj[\'%s\'] === null) ?\n"
+				    "%s\t\t\tnull : db_export_%s"
+				    "(role, obj[\'%s\'])\n",
+				    tab, fd->name, fd->name, tab,
+				    fd->ref->target->parent->name,
+				    fd->name) < 0)
+					return 0;
+			} else {
+				if (fprintf(f, "%s\t\tres[\'%s\'] = "
+				    "db_export_%s"
+				    "(role, obj[\'%s\'])\n",
+				    tab, fd->name, 
+				    fd->ref->target->parent->name,
+				    fd->name) < 0)
+					return 0;
+			}
 		} else {
-			switch (f->type) {
+			switch (fd->type) {
 			case FTYPE_BIT:
 			case FTYPE_DATE:
 			case FTYPE_EPOCH:
 			case FTYPE_INT:
 			case FTYPE_REAL:
 			case FTYPE_BITFIELD:
-				if (!(f->flags & FIELD_NULL)) {
-					printf("%s\t\tres[\'%s\'] = "
-						"obj[\'%s\']."
-						"toString();\n", tab, 
-						f->name, f->name);
+				if (!(fd->flags & FIELD_NULL)) {
+					if (fprintf(f, 
+					    "%s\t\tres[\'%s\'] = "
+					    "obj[\'%s\']."
+					    "toString();\n", tab, 
+					    fd->name, fd->name) < 0)
+						return 0;
 					break;
 				}
-				printf("%s\t\tres[\'%s\'] = "
-					"(obj[\'%s\'] === null) ?\n"
-				       "%s\t\t\tnull : "
-				       "obj[\'%s\'].toString();\n", 
-				       tab, f->name, f->name, 
-				       tab, f->name);
+				if (fprintf(f, "%s\t\tres[\'%s\'] = "
+				    "(obj[\'%s\'] === null) ?\n"
+				    "%s\t\t\tnull : "
+				    "obj[\'%s\'].toString();\n", 
+				    tab, fd->name, fd->name, 
+				    tab, fd->name) < 0)
+					return 0;
 				break;
 			case FTYPE_BLOB:
-				if (!(f->flags & FIELD_NULL)) {
-					printf("%s\t\tres[\'%s\'] = new "
-						"obj[\'%s\'].toString"
-						"(\'base64\');\n", 
-						tab, f->name, f->name);
+				if (!(fd->flags & FIELD_NULL)) {
+					if (fprintf(f, 
+					    "%s\t\tres[\'%s\'] = new "
+					    "obj[\'%s\'].toString"
+					    "(\'base64\');\n", tab, 
+					    fd->name, fd->name) < 0)
+						return 0;
 					break;
 				}
-				printf("%s\t\tres[\'%s\'] = "
-					"(obj[\'%s\'] === null) ?\n"
-				       "%s\t\t\tnull : "
-				       "obj[\'%s\'].toString"
-				       "(\'base64\');\n", 
-				       tab, f->name, f->name, 
-				       tab, f->name);
+				if (fprintf(f, "%s\t\tres[\'%s\'] = "
+				    "(obj[\'%s\'] === null) ?\n"
+				    "%s\t\t\tnull : "
+				    "obj[\'%s\'].toString"
+				    "(\'base64\');\n", 
+				    tab, fd->name, fd->name, 
+				    tab, fd->name) < 0)
+					return 0;
 				break;
 			default:
-				printf("%s\t\tres[\'%s\'] = "
-					"obj[\'%s\'];\n",
-					tab, f->name, f->name);
+				if (fprintf(f, "%s\t\tres[\'%s\'] = "
+				    "obj[\'%s\'];\n",
+				    tab, fd->name, fd->name) < 0)
+					return 0;
 				break;
 			}
 		}
 
-		if (f->rolemap != NULL) 
-			puts("\t\t\tbreak;\n"
-			      "\t\t}");
+		if (fd->rolemap != NULL &&
+		    fputs("\t\t\tbreak;\n\t\t}\n", f) == EOF)
+			return 0;
 	}
-	puts("\n"
-	     "\t\treturn res;\n"
-	     "\t}\n");
 
-	print_commentv(1, COMMENT_JS,
-		"Class instance of {@link ortns.%sData}.",
-		p->name);
-	printf("\texport class %s {\n"
-	       "\t\treadonly #role: string;\n"
-	       "\t\treadonly obj: ortns.%sData;\n"
-	       "\n", p->name, p->name);
+	if (fputs("\n"
+	    "\t\treturn res;\n"
+	    "\t}\n\n", f) == EOF)
+		return 0;
 
-	print_commentv(2, COMMENT_JS,
-		"A {@link ortns.%sData} as extracted from the database "
-		"in a particular role.\n"
-		"@param role The role in which this was extracted "
-		"from the database. When exported, this role will be "
-		"checked for permission to export.\n"
-		"@param obj The raw data.", p->name);
-	printf("\t\tconstructor(role: string, obj: ortns.%sData)\n"
-	       "\t\t{\n"
-	       "\t\t\tthis.#role = role;\n"
-	       "\t\t\tthis.obj = obj;\n"
-	       "\t\t}\n"
-	       "\n", p->name);
+	if (!gen_commentv(f, 1, COMMENT_JS,
+	    "Class instance of {@link ortns.%sData}.",
+	    p->name))
+		return 0;
+	if (fprintf(f, "\texport class %s {\n"
+	    "\t\treadonly #role: string;\n"
+	    "\t\treadonly obj: ortns.%sData;\n"
+	    "\n", p->name, p->name) < 0)
+		return 0;
 
-	print_commentv(2, COMMENT_JS,
-		"Export the contained {@link ortns.%sData} respecting "
-		"fields not exported, roles, etc.  It's safe to call "
-		"`JSON.stringify()` on the returned object to write "
-		"responses.", p->name);
-	printf("\t\texport(): any\n"
+	if (!gen_commentv(f, 2, COMMENT_JS,
+	    "A {@link ortns.%sData} as extracted from the database "
+	    "in a particular role.\n"
+	    "@param role The role in which this was extracted "
+	    "from the database. When exported, this role will be "
+	    "checked for permission to export.\n"
+	    "@param obj The raw data.", p->name))
+		return 0;
+	if (fprintf(f, "\t\tconstructor(role: string, obj: ortns.%sData)\n"
+	    "\t\t{\n"
+	    "\t\t\tthis.#role = role;\n"
+	    "\t\t\tthis.obj = obj;\n"
+	    "\t\t}\n"
+	    "\n", p->name) < 0)
+		return 0;
+
+	if (!gen_commentv(f, 2, COMMENT_JS,
+	    "Export the contained {@link ortns.%sData} respecting "
+	    "fields not exported, roles, etc.  It's safe to call "
+	    "`JSON.stringify()` on the returned object to write "
+	    "responses.", p->name))
+		return 0;
+
+	return fprintf(f, "\t\texport(): any\n"
 	       "\t\t{\n"
 	       "\t\t\treturn db_export_%s(this.#role, this.obj);\n"
 	       "\t\t}\n"
-	       "\t}\n", p->name);
+	       "\t}\n", p->name) > 0;
 }
 
 /*
@@ -1112,67 +1189,86 @@ gen_strct(const struct strct *p, size_t pos)
  * "ortns" namespace.
  * It's divided primarily into data within interfaces and classes that
  * encapsulate that data and contain role information.
+ * Return zero on failure, non-zero on success.
  */
-static void
-gen_ortns(const struct config *cfg)
+static int
+gen_ortns(FILE *f, const struct config *cfg)
 {
 	const struct strct	*p;
 	const struct enm	*e;
 	size_t			 i = 0;
 
-	puts("");
-	print_commentt(0, COMMENT_JS,
-		"Namespace for data interfaces and representative "
-		"classes.  The interfaces are for the data itself, "
-		"while the classes manage roles and metadata.");
-	puts("export namespace ortns {");
+	if (fputc('\n', f) == EOF)
+		return 0;
+	if (!gen_comment(f, 0, COMMENT_JS,
+	    "Namespace for data interfaces and representative "
+	    "classes.  The interfaces are for the data itself, "
+	    "while the classes manage roles and metadata."))
+		return 0;
+	if (fputs("export namespace ortns {\n", f) == EOF)
+		return 0;
 	TAILQ_FOREACH(e, &cfg->eq, entries)
-		gen_enm(e, i++);
+		if (gen_enm(f, e, i++))
+			return 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		gen_strct(p, i++);
-	puts("}");
+		if (!gen_strct(f, p, i++))
+			return 0;
+	return fputs("}\n", f) != EOF;
 }
 
 /*
  * Output the class for managing a single connection.
  * This is otherwise defined as a single sequence of role transitions.
+ * Return zero on failure, non-zero on success.
  */
-static void
-gen_ortdb(void)
+static int
+gen_ortdb(FILE *f)
 {
-	puts("");
-	print_commentt(0, COMMENT_JS,
-		"Primary database object. "
-		"Only one of these should exist per running node.js "
-		"server.");
-	puts("export class ortdb {\n"
-	     "\tdb: Database.Database;");
-	print_commentt(1, COMMENT_JS,
-		"The ort-nodejs version used to produce this file.");
-	printf("\treadonly version: string = \'%s\';\n", VERSION);
-	print_commentt(1, COMMENT_JS,
-		"The numeric (monotonically increasing) ort-nodejs "
-		"version used to produce this file.");
-	printf("\treadonly vstamp: number = %lld;\n"
-	       "\n", (long long)VSTAMP);
-	print_commentt(1, COMMENT_JS,
-		"@param dbname The file-name of the database "
-		"relative to the running application.");
-	puts("\tconstructor(dbname: string) {\n"
-	     "\t\tthis.db = new Database(dbname);\n"
-	     "\t\tthis.db.defaultSafeIntegers(true);\n"
-	     "\t}\n");
-	print_commentt(1, COMMENT_JS,
-		"Create a connection to the database. "
-		"This should be called for each sequence "
-		"representing a single operator. "
-		"In web applications, for example, this should "
-		"be called for each request.");
-	puts("\tconnect(): ortctx\n"
+
+	if (fputc('\n', f) == EOF)
+		return 0;
+	if (!gen_comment(f, 0, COMMENT_JS,
+	    "Primary database object. "
+	    "Only one of these should exist per running node.js "
+	    "server."))
+		return 0;
+	if (fputs("export class ortdb {\n"
+	    "\tdb: Database.Database;\n", f) == EOF)
+		return 0;
+	if (!gen_comment(f, 1, COMMENT_JS,
+	    "The ort-nodejs version used to produce this file."))
+		return 0;
+	if (fprintf(f, "\treadonly version: "
+	    "string = \'%s\';\n", VERSION) < 0)
+		return 0;
+	if (!gen_comment(f, 1, COMMENT_JS,
+	    "The numeric (monotonically increasing) ort-nodejs "
+	    "version used to produce this file."))
+		return 0;
+	if (fprintf(f, "\treadonly vstamp: number = %lld;\n"
+	    "\n", (long long)VSTAMP) < 0)
+		return 0;
+	if (!gen_comment(f, 1, COMMENT_JS,
+	    "@param dbname The file-name of the database "
+	    "relative to the running application."))
+		return 0;
+	if (fputs("\tconstructor(dbname: string) {\n"
+	    "\t\tthis.db = new Database(dbname);\n"
+	    "\t\tthis.db.defaultSafeIntegers(true);\n"
+	    "\t}\n\n", f) == EOF)
+		return 0;
+	if (!gen_comment(f, 1, COMMENT_JS,
+	    "Create a connection to the database. "
+	    "This should be called for each sequence "
+	    "representing a single operator. "
+	    "In web applications, for example, this should "
+	    "be called for each request."))
+		return 0;
+	return fputs("\tconnect(): ortctx\n"
 	     "\t{\n"
 	     "\t\treturn new ortctx(this);\n"
 	     "\t}\n"
-	     "}");
+	     "}\n", f) != EOF;
 }
 
 /*
@@ -1180,86 +1276,105 @@ gen_ortdb(void)
  * This macro accepts a single parameter that's given to all of the
  * members so that a later SELECT can use INNER JOIN xxx AS yyy and have
  * multiple joins on the same table.
+ * Return zero on failure, non-zero on success.
  */
-static void
-gen_alias_builder(const struct strct *p)
+static int
+gen_alias_builder(FILE *f, const struct strct *p)
 {
-	const struct field	*f, *last = NULL;
+	const struct field	*fd, *last = NULL;
 	int			 first = 1;
 
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if (f->type != FTYPE_STRUCT)
-			last = f;
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if (fd->type != FTYPE_STRUCT)
+			last = fd;
 
 	assert(last != NULL);
-	printf("\n"
-	       "\tfunction ort_schema_%s(v: string): string\n"
-	       "\t{\n"
-	       "\t\treturn ", p->name);
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->type == FTYPE_STRUCT)
+	if (fprintf(f, "\n"
+	    "\tfunction ort_schema_%s(v: string): string\n"
+	    "\t{\n"
+	    "\t\treturn ", p->name) < 0)
+		return 0;
+
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type == FTYPE_STRUCT)
 			continue;
-		if (!first)
-			fputs("\t\t       ", stdout);
-		printf("v + \'.%s\'", f->name);
-		if (f != last)
-			puts(" + \',\' +");
-		else
-			puts(";");
+		if (!first &&
+		    fputs("\t\t       ", f) == EOF)
+			return 0;
+		if (fprintf(f, "v + \'.%s\'", fd->name) < 0)
+			return 0;
+		if (fd != last) {
+			if (fputs(" + \',\' +\n", f) == EOF)
+				return 0;
+		} else {
+			if (fputs(";\n", f) == EOF)
+				return 0;
+		}
 		first = 0;
 	}
-	puts("\t}");
+
+	return fputs("\t}\n", f) != EOF;
 }
 
 /*
  * For any given role, emit all of the possible transitions from the
  * current role into all possible roles, then all of the transitions
  * from the roles "beneath" the current role.
+ * Return zero on failure, non-zero on success.
  */
-static void
-gen_ortctx_dbrole_role(const struct role *r)
+static int
+gen_ortctx_dbrole_role(FILE *f, const struct role *r)
 {
 	const struct role	*rr;
 
-	printf("\t\tcase '%s':\n"
-	       "\t\t\tswitch(newrole) {\n",
-	       r->name);
+	if (fprintf(f, "\t\tcase '%s':\n"
+	    "\t\t\tswitch(newrole) {\n", r->name) < 0)
+		return 0;
+
 	gen_role(r, 3);
-	puts("\t\t\t\tthis.#role = newrole;\n"
-	     "\t\t\t\treturn;\n"
-	     "\t\t\tdefault:\n"
-	     "\t\t\t\tbreak;\n"
-	     "\t\t\t}\n"
-	     "\t\t\tbreak;");
+	if (fputs("\t\t\t\tthis.#role = newrole;\n"
+	    "\t\t\t\treturn;\n"
+	    "\t\t\tdefault:\n"
+	    "\t\t\t\tbreak;\n"
+	    "\t\t\t}\n"
+	    "\t\t\tbreak;\n", f) == EOF)
+		return 0;
+
 	TAILQ_FOREACH(rr, &r->subrq, entries)
-		gen_ortctx_dbrole_role(rr);
+		if (!gen_ortctx_dbrole_role(f, rr))
+			return 0;
+
+	return 1;
 }
 
 /*
  * Generate the dbRole role transition function.
+ * Return zero on failure, non-zero on success.
  */
-static void
-gen_ortctx_dbrole(const struct config *cfg)
+static int
+gen_ortctx_dbrole(FILE *f, const struct config *cfg)
 {
 	const struct role	*r, *rr;
 
 	if (TAILQ_EMPTY(&cfg->rq))
-		return;
+		return 1;
 
-	puts("\n"
-	     "\tdb_role(newrole: string): void\n"
-	     "\t{\n"
-	     "\t\tif (this.#role === 'none')\n"
-	     "\t\t\tprocess.abort();\n"
-	     "\t\tif (newrole === 'all')\n"
-	     "\t\t\tprocess.abort();\n");
+	if (fputs("\n"
+	    "\tdb_role(newrole: string): void\n"
+	    "\t{\n"
+	    "\t\tif (this.#role === 'none')\n"
+	    "\t\t\tprocess.abort();\n"
+	    "\t\tif (newrole === 'all')\n"
+	    "\t\t\tprocess.abort();\n\n", f) == EOF)
+		return 0;
 
 	/* All possible descents from current into encompassed role. */
 
-	puts("\t\tswitch (this.#role) {\n"
-	     "\t\tcase 'default':\n"
-	     "\t\t\tthis.#role = newrole;\n"
-	     "\t\t\treturn;");
+	if (fputs("\t\tswitch (this.#role) {\n"
+	    "\t\tcase 'default':\n"
+	    "\t\t\tthis.#role = newrole;\n"
+	    "\t\t\treturn;\n", f) == EOF)
+		return 0;
 
 	TAILQ_FOREACH(r, &cfg->rq, entries)
 		if (strcmp(r->name, "all") == 0)
@@ -1267,122 +1382,144 @@ gen_ortctx_dbrole(const struct config *cfg)
 
 	assert(r != NULL);
 	TAILQ_FOREACH(rr, &r->subrq, entries) 
-		gen_ortctx_dbrole_role(rr);
+		if (!gen_ortctx_dbrole_role(f, rr))
+			return 0;
 
-	puts("\t\tdefault:\n"
+	return fputs("\t\tdefault:\n"
 	     "\t\t\tbreak;\n"
 	     "\t\t}\n"
 	     "\n"
 	     "\t\tprocess.abort();\n"
-	     "\t}");
+	     "\t}\n", f) != EOF;
 }
 
 /*
  * Output the data access portion of the data model entirely within a
  * single class.
+ * Return zero on failure, non-zero on success.
  */
-static void
-gen_ortctx(const struct config *cfg)
+static int
+gen_ortctx(FILE *f, const struct config *cfg)
 {
 	const struct strct	*p;
 
-	puts("\n"
-	     "namespace ortstmt {\n"
-	     "\texport enum ortstmt {");
+	if (fputs("\n"
+	    "namespace ortstmt {\n"
+	    "\texport enum ortstmt {\n", f) == EOF)
+		return 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		print_sql_enums(2, p, LANG_JS);
-	puts("\t}\n"
-	     "\n"
-	     "\texport function stmtBuilder(idx: ortstmt): string\n"
-	     "\t{\n"
-	     "\t\treturn ortstmts[idx];\n"
-	     "\t}\n"
-	     "\n"
-	     "\tconst ortstmts: readonly string[] = [");
+	if (fputs("\t}\n\n", f) == EOF)
+		return 0;
+
+	/* Convert enums to statements. */
+
+	if (fputs("\texport function stmtBuilder(idx: ortstmt): string\n"
+	    "\t{\n"
+	    "\t\treturn ortstmts[idx];\n"
+	    "\t}\n"
+	    "\n"
+	    "\tconst ortstmts: readonly string[] = [\n", f) == EOF)
+		return 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		print_sql_stmts(2, p, LANG_JS);
-	puts("\t];");
+	if (fputs("\t];\n", f) == EOF)
+		return 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		gen_alias_builder(p);
-	puts("}\n");
+		if (!gen_alias_builder(f, p))
+			return 0;
+	if (fputs("}\n\n", f) == EOF)
+		return 0;
 
-	puts("");
-	print_commentt(0, COMMENT_JS,
-		"Manages all access to the database. "
-		"This object should be used for the lifetime of a "
-		"single \'request\', such as a request for a web "
-		"application.");
-	puts("export class ortctx {\n"
-	     "\t#role: string = 'default';\n"
-	     "\treadonly #o: ortdb;\n"
-	     "\n"
-	     "\tconstructor(o: ortdb) {\n"
-	     "\t\tthis.#o = o;\n"
-	     "\t}\n");
+	/* ortctx */
+
+	if (!gen_comment(f, 0, COMMENT_JS,
+	    "Manages all access to the database. "
+	    "This object should be used for the lifetime of a "
+	    "single \'request\', such as a request for a web "
+	    "application."))
+		return 0;
+
+	if (fputs("export class ortctx {\n"
+	    "\t#role: string = 'default';\n"
+	    "\treadonly #o: ortdb;\n"
+	    "\n"
+	    "\tconstructor(o: ortdb) {\n"
+	    "\t\tthis.#o = o;\n"
+	    "\t}\n\n", f) == EOF)
+		return 0;
+
 	if (!TAILQ_EMPTY(&cfg->rq))
-		puts("\tdb_role_current(): string\n"
-		     "\t{\n"
-		     "\t\treturn this.#role;\n"
-		     "\t}\n");
-	puts("\tdb_trans_open_immediate(id: number): void\n"
-	     "\t{\n"
-	     "\t\tthis.#o.db.exec(\'BEGIN TRANSACTION IMMEDIATE\');\n"
-	     "\t}\n"
-	     "\n"
-	     "\tdb_trans_open_deferred(id: number): void\n"
-	     "\t{\n"
-	     "\t\tthis.#o.db.exec(\'BEGIN TRANSACTION DEFERRED\');\n"
-	     "\t}\n"
-	     "\n"
-	     "\tdb_trans_open_exclusive(id: number): void\n"
-	     "\t{\n"
-	     "\t\tthis.#o.db.exec(\'BEGIN TRANSACTION EXCLUSIVE\');\n"
-	     "\t}\n"
-	     "\n"
-	     "\tdb_trans_rollback(id: number): void\n"
-	     "\t{\n"
-	     "\t\tthis.#o.db.exec(\'ROLLBACK TRANSACTION\');\n"
-	     "\t}\n"
-	     "\n"
-	     "\tdb_trans_commit(id: number): void\n"
-	     "\t{\n"
-	     "\t\tthis.#o.db.exec(\'COMMIT TRANSACTION\');\n"
-	     "\t}");
-	gen_ortctx_dbrole(cfg);
+		if (fputs("\tdb_role_current(): string\n"
+		    "\t{\n"
+		    "\t\treturn this.#role;\n"
+		    "\t}\n\n", f) == EOF)
+			return 0;
+
+	if (fputs("\tdb_trans_open_immediate(id: number): void\n"
+	    "\t{\n"
+	    "\t\tthis.#o.db.exec(\'BEGIN TRANSACTION IMMEDIATE\');\n"
+	    "\t}\n\n"
+	    "\tdb_trans_open_deferred(id: number): void\n"
+	    "\t{\n"
+	    "\t\tthis.#o.db.exec(\'BEGIN TRANSACTION DEFERRED\');\n"
+	    "\t}\n\n"
+	    "\tdb_trans_open_exclusive(id: number): void\n"
+	    "\t{\n"
+	    "\t\tthis.#o.db.exec(\'BEGIN TRANSACTION EXCLUSIVE\');\n"
+	    "\t}\n\n"
+	    "\tdb_trans_rollback(id: number): void\n"
+	    "\t{\n"
+	    "\t\tthis.#o.db.exec(\'ROLLBACK TRANSACTION\');\n"
+	    "\t}\n\n"
+	    "\tdb_trans_commit(id: number): void\n"
+	    "\t{\n"
+	    "\t\tthis.#o.db.exec(\'COMMIT TRANSACTION\');\n"
+	    "\t}\n", f) == EOF)
+	    	return 0;
+
+	if (!gen_ortctx_dbrole(f, cfg))
+		return 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		gen_api(cfg, p);
-	puts("}");
+		if (!gen_api(f, cfg, p))
+			return 0;
+	return fputs("}\n", f) != EOF;
 }
 
-/*
- * Top-level generator.
- */
-void
-gen_nodejs(const struct config *cfg)
+int
+gen_nodejs(const struct config *cfg, FILE *f)
 {
 
-	print_commentv(0, COMMENT_JS, 
-	       "WARNING: automatically generated by "
-	       "%s " VERSION ".\n"
-	       "DO NOT EDIT!\n"
-	       "@packageDocumentation", getprogname());
+	if (!gen_commentv(f, 0, COMMENT_JS, 
+	    "WARNING: automatically generated by ort %s.\n"
+	    "DO NOT EDIT!\n"
+	    "@packageDocumentation", VERSION))
+		return 0;
 
-	puts("\n"
-	     "import bcrypt from 'bcrypt';\n"
-	     "import Database from 'better-sqlite3';");
+	if (fputs("\n"
+	    "import bcrypt from 'bcrypt';\n"
+	    "import Database from 'better-sqlite3';\n", f) == EOF)
+		return 0;
 
-	gen_ortns(cfg);
-	gen_ortdb();
-	gen_ortctx(cfg);
+	if (!gen_ortns(f, cfg))
+		return 0;
+	if (!gen_ortdb(f))
+		return 0;
+	if (!gen_ortctx(f, cfg))
+		return 0;
 
-	puts("");
-	print_commentt(0, COMMENT_JS,
-		"Instance an application-wide context. "
-		"This should only be called once per server, with "
-		"the {@link ortdb.connect} method used for "
-		"sequences of operations.");
-	puts("export function ort(dbname: string): ortdb\n"
+	if (fputc('\n', f) == EOF)
+		return 0;
+
+	if (!gen_comment(f, 0, COMMENT_JS,
+	    "Instance an application-wide context. "
+	    "This should only be called once per server, with "
+	    "the {@link ortdb.connect} method used for "
+	    "sequences of operations."))
+		return 0;
+
+	return fputs("export function ort(dbname: string): ortdb\n"
 	     "{\n"
 	     "\treturn new ortdb(dbname);\n"
-	     "}");
+	     "}\n", f) != EOF;
 }

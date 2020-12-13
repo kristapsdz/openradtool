@@ -19,12 +19,13 @@
 #if HAVE_SYS_QUEUE
 # include <sys/queue.h>
 #endif
+#include <sys/param.h>
 
 #include <assert.h>
-#include <ctype.h>
 #if HAVE_ERR
 # include <err.h>
 #endif
+#include <fcntl.h>
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -32,15 +33,15 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "version.h"
 #include "ort.h"
-#include "ort-lang-nodejs.h"
+#include "ort-lang-json.h"
+#include "paths.h"
 
 int
 main(int argc, char *argv[])
 {
 	struct config	 *cfg = NULL;
-	int		  c, rc = 0;
+	int		  rc = 0;
 	FILE		**confs = NULL;
 	size_t		  i, confsz;
 
@@ -49,7 +50,7 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	if ((c = getopt(argc, argv, "")) != -1)
+	if (getopt(argc, argv, "") != -1)
 		goto usage;
 
 	argc -= optind;
@@ -60,13 +61,13 @@ main(int argc, char *argv[])
 
 	if (confsz > 0) {
 		if ((confs = calloc(confsz, sizeof(FILE *))) == NULL)
-			err(EXIT_FAILURE, NULL);
-		for (i = 0; i < confsz; i++)
-			if ((confs[i] = fopen(argv[i], "r")) == NULL)
-				err(EXIT_FAILURE, "%s", argv[i]);
+			err(EXIT_FAILURE, "calloc");
+		for (i = 0; i < confsz; i++) {
+			confs[i] = fopen(argv[i], "r");
+			if (confs[i] == NULL)
+				err(EXIT_FAILURE, "%s: open", argv[i]);
+		}
 	}
-
-	/* No more opening files. */
 
 #if HAVE_PLEDGE
 	if (pledge("stdio", NULL) == -1)
@@ -75,27 +76,25 @@ main(int argc, char *argv[])
 
 	if ((cfg = ort_config_alloc()) == NULL)
 		goto out;
-
 	for (i = 0; i < confsz; i++)
 		if (!ort_parse_file(cfg, confs[i], argv[i]))
 			goto out;
-
 	if (confsz == 0 && !ort_parse_file(cfg, stdin, "<stdin>"))
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
-		if (!(rc = gen_nodejs(cfg, stdout)))
+		if (!(rc = ort_lang_json(cfg, stdout)))
 			warn(NULL);
+
 out:
 	for (i = 0; i < confsz; i++)
 		if (fclose(confs[i]) == EOF)
 			warn("%s", argv[i]);
+
 	free(confs);
 	ort_config_free(cfg);
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
-	fprintf(stderr, 
-		"usage: %s [config]\n",
-		getprogname());
+	fprintf(stderr, "usage: %s [config...]\n", getprogname());
 	return EXIT_FAILURE;
 }

@@ -737,10 +737,14 @@ gen_strcts(FILE *f, const struct config *cfg)
 }
 
 int
-ort_lang_json(const struct config *cfg, FILE *f)
+ort_lang_json(const struct ort_lang_json *args,
+	const struct config *cfg, FILE *f)
 {
 
-	if (fputs("{ \"config\": {\n", f) == EOF)
+	if (!(args->flags & ORT_LANG_JSON_FRAGMENT) &&
+	    fputs("{ ", f) == EOF)
+		return 0;
+	if (fputs("\"config\": {\n", f) == EOF)
 		return 0;
 	if (!gen_roles(f, cfg))
 		return 0;
@@ -750,6 +754,9 @@ ort_lang_json(const struct config *cfg, FILE *f)
 		return 0;
 	if (!gen_strcts(f, cfg))
 		return 0;
-	return fputs("} }\n", f) != EOF;
+	if (!(args->flags & ORT_LANG_JSON_FRAGMENT) &&
+	    fputs("} ", f) == EOF)
+		return 0;
+	return fputs("}\n", f) != EOF;
 }
 

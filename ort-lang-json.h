@@ -17,6 +17,12 @@
 #ifndef ORT_LANG_JSON_H
 #define ORT_LANG_JSON_H
 
-int	ort_lang_json(const struct config *, FILE *);
+struct ort_lang_json {
+	unsigned int	 	flags;
+#define	ORT_LANG_JSON_FRAGMENT	0x01
+};
+
+int	ort_lang_json(const struct ort_lang_json *,
+		const struct config *, FILE *);
 
 #endif /* !ORT_LANG_JSON_H */

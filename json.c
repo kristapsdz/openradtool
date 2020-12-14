@@ -37,15 +37,18 @@
 int
 main(int argc, char *argv[])
 {
-	struct config	 *cfg = NULL;
-	int		  rc = 0;
-	FILE		**confs = NULL;
-	size_t		  i, confsz;
+	struct config		 *cfg = NULL;
+	int			  rc = 0;
+	FILE			**confs = NULL;
+	size_t			  i, confsz;
+	struct ort_lang_json	  args;
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
 		err(1, "pledge");
 #endif
+
+	memset(&args, 0, sizeof(struct ort_lang_json));
 
 	if (getopt(argc, argv, "") != -1)
 		goto usage;
@@ -81,7 +84,7 @@ main(int argc, char *argv[])
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
-		if (!(rc = ort_lang_json(cfg, stdout)))
+		if (!(rc = ort_lang_json(&args, cfg, stdout)))
 			warn(NULL);
 
 out:

@@ -132,7 +132,7 @@ namespace ort {
 		strcts: strctSet;
 	}
 
-	interface ortConfig {
+	export interface ortConfig {
 		config: config;
 	}
 }

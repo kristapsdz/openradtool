@@ -29,7 +29,8 @@ LIBS		 = libort.a \
 		   libort-lang-json.a \
 		   libort-lang-sql.a
 PKGCONFIGS	 = ort.pc \
-		   ort-lang-c.pc
+		   ort-lang-c.pc \
+		   ort-lang-json.pc
 OBJS		 = audit.o \
 		   cheader.o \
 		   csource.o \
@@ -103,7 +104,8 @@ MAN1S		 = man/ort.1 \
 GENHEADERS	 = paths.h \
 		   version.h
 PUBHEADERS	 = ort.h \
-		   ort-lang-c.h
+		   ort-lang-c.h \
+		   ort-lang-json.h
 HEADERS 	 = $(PUBHEADERS) \
 		   extern.h \
 		   lang-c.h \
@@ -331,7 +333,7 @@ install: all
 	$(INSTALL_MAN) $(MAN5S) $(DESTDIR)$(MANDIR)/man5
 	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_DATA) b64_ntop.c jsmn.c gensalt.c $(DESTDIR)$(SHAREDIR)/openradtool
-	$(INSTALL_DATA) ortPrivate.ts $(DESTDIR)$(SHAREDIR)/openradtool
+	$(INSTALL_DATA) ortPrivate.ts ort-json.ts $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_DATA) $(PUBHEADERS) $(DESTDIR)$(INCLUDEDIR)
 	$(INSTALL_LIB) $(LIBS) $(DESTDIR)$(LIBDIR)
 	$(INSTALL_DATA) $(PKGCONFIGS) $(DESTDIR)$(LIBDIR)/pkgconfig

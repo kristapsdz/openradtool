@@ -69,6 +69,14 @@ namespace ort {
 		[name: string]: roleObj;
 	}
 
+	interface validObj {
+		type: 'eq'|'le'|'gt'|'lt'|'ge';
+		/*
+		 * Depends on field type.
+		 */
+		limit: string;
+	}
+
 	interface fieldObj {
 		pos: posObj;
 		doc: string|null;
@@ -88,6 +96,10 @@ namespace ort {
 		 * The interpretation of this depends upon the type.
 		 */
 		def: string|null;
+		/**
+		 * Empty for no valids.
+		 */
+		valids: validObj[];
 	}
 
 	interface fieldSet {

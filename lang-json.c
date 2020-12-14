@@ -47,6 +47,14 @@ static const char *const ftypes[FTYPE__MAX] = {
 	"bitfield", /* FTYPE_BITFIELD */
 };
 
+static const char *const vtypes[VALIDATE__MAX] = {
+	"ge", /* VALIDATE_GE */
+	"le", /* VALIDATE_LE */
+	"gt", /* VALIDATE_GT */
+	"lt", /* VALIDATE_LT */
+	"eq", /* VALIDATE_EQ */
+};
+
 static const char *const upacts[UPACT__MAX] = {
 	"none", /* UPACT_NONE */
 	"restrict", /* UPACT_RESTRICT */
@@ -504,6 +512,7 @@ gen_roles(FILE *f, const struct config *cfg)
 static int
 gen_field(FILE *f, size_t tabs, const struct field *fd)
 {
+	struct fvalid	*fv;
 
 	if (!gen_pos(f, tabs, &fd->pos))
 		return 0;
@@ -601,6 +610,57 @@ gen_field(FILE *f, size_t tabs, const struct field *fd)
 		return 0;
 	if (fputs(",\n", f) == EOF)
 		return 0;
+
+	if (!gen_ws(f, tabs))
+		return 0;
+	if (fputs("\"valids\": [", f) == EOF)
+		return 0;	
+	if (!TAILQ_EMPTY(&fd->fvq) && fputc('\n', f) == EOF)
+		return 0;	
+	TAILQ_FOREACH(fv, &fd->fvq, entries) {
+		if (!gen_ws(f, tabs + 1))
+			return 0;
+		if (fprintf(f, "{ \"type\": \"%s\", \"limit\": \"", 
+		    vtypes[fv->type]) < 0)
+			return 0;
+		switch (fd->type) {
+		case FTYPE_BIT:
+		case FTYPE_DATE:
+		case FTYPE_EPOCH:
+		case FTYPE_INT:
+			if (fprintf(f, "%" PRId64, 
+			    fv->d.value.integer) < 0)
+				return 0;
+			break;
+		case FTYPE_REAL:
+			if (fprintf(f, "%g", 
+			    fv->d.value.decimal) < 0)
+				return 0;
+			break;
+		case FTYPE_BLOB:
+		case FTYPE_EMAIL:
+		case FTYPE_TEXT:
+		case FTYPE_PASSWORD:
+			if (fprintf(f, "%zu", 
+			    fv->d.value.len) < 0)
+				return 0;
+			break;
+		default:
+			abort();
+		}
+		if (fputs("\"}", f) == EOF)
+			return 0;
+		if (TAILQ_NEXT(fv, entries) != NULL &&
+		    fputc(',', f) == EOF)
+			return 0;
+		if (fputc('\n', f) == EOF)
+			return 0;
+	}
+	if (!TAILQ_EMPTY(&fd->fvq) && !gen_ws(f, tabs))
+		return 0;
+	if (fputs("],\n", f) == EOF)
+		return 0;
+
 	if (!gen_ws(f, tabs))
 		return 0;
 	if (fprintf(f, "\"type\": \"%s\"\n", ftypes[fd->type]) < 0)

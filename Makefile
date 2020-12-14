@@ -29,7 +29,6 @@ LIBS		 = libort.a \
 		   libort-lang-json.a \
 		   libort-lang-sql.a
 PKGCONFIGS	 = ort.pc \
-		   ort-lang-c.pc \
 		   ort-lang-json.pc
 OBJS		 = audit.o \
 		   cheader.o \
@@ -104,13 +103,13 @@ MAN1S		 = man/ort.1 \
 GENHEADERS	 = paths.h \
 		   version.h
 PUBHEADERS	 = ort.h \
-		   ort-lang-c.h \
 		   ort-lang-json.h
 HEADERS 	 = $(PUBHEADERS) \
 		   extern.h \
 		   lang-c.h \
 		   lang.h \
 		   linker.h \
+		   ort-lang-c.h \
 		   ort-lang-javascript.h \
 		   ort-lang-json.h \
 		   ort-lang-nodejs.h \

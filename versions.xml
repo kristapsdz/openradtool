@@ -20,15 +20,6 @@
 				<code>LEFT OUTER JOIN</code>, don't prematurely terminate quoted
 				strings.  Found by the expanded regression suite.
 			</p>
-			<p>
-				Export library to build C source.
-				This has its own 
-				<a href="https://man.openbsd.org/pkg-config">pkg-config(1)</a> 
-				entry and uses the
-				<a href="ort_lang_c_source.3.html">ort_lang_c_source(3)</a> and
-				<a href="ort_lang_c_header.3.html">ort_lang_c_header(3)</a>
-				functions.
-			</p>
 		</aside>
 	</article>
 	<article data-sblg-article="1" data-sblg-tags="version">

@@ -510,6 +510,7 @@ clean:
 	rm -f openradtool.tar.gz openradtool.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml $(PKGCONFIGS)
 	rm -f db.ort.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
+	rm -f ort-json.schema
 
 # Remove both what can be built and what's built by ./configure.
 
@@ -519,209 +520,229 @@ distclean: clean
 regress: all
 	@tmp=`mktemp` ; \
 	MALLOC_OPTIONS=S ; \
+	set +e ; \
+	echo "=== ort output tests === " ; \
+	for f in regress/*.result ; do \
+		bf=`basename $$f .result`.ort ; \
+		printf "ort: regress/$$bf... " ; \
+		./ort regress/$$bf >$$tmp 2>/dev/null ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (did not execute)" ; \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		diff -w $$tmp $$f >/dev/null 2>&1 ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (output)" ; \
+			diff -wu $$tmp $$f ; \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+	done ; \
+	echo "=== ort bad syntax tests === " ; \
+	for f in regress/*.nresult ; do \
+		printf "ort: `basename $$f`... " ; \
+		./ort $$f >/dev/null 2>&1 ; \
+		if [ $$? -eq 0 ] ; then \
+			echo "fail (did not error out)" ; \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+	done ; \
+	echo "=== ort-sql output tests === " ; \
+	for f in regress/sql/*.result ; do \
+		bf=regress/sql/`basename $$f .result`.ort ; \
+		printf "ort-sql: $$bf... " ; \
+		./ort-sql $$bf >$$tmp 2>/dev/null ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (did not execute)" ; \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		diff -w $$tmp $$f >/dev/null 2>&1 ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (output)" ; \
+			diff -wu $$tmp $$f ; \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+	done ; \
+	echo "=== ort-diff output tests === " ; \
 	for f in regress/diff/*.result ; do \
+		fn=`basename $$f .result`.{old,new}.ort ; \
 		new=regress/diff/`basename $$f .result`.new.ort ; \
 		old=regress/diff/`basename $$f .result`.old.ort ; \
-		set +e ; \
-		printf "$$old -> $$new... " ; \
+		printf "ort-diff: regress/diff/$$fn... " ; \
 		./ort-diff $$old $$new >$$tmp 2>/dev/null ; \
 		if [ $$? -ne 0 ] ; then \
 			echo "fail (did not execute)" ; \
-			rm $$tmp ; \
+			rm -f $$tmp ; \
 			exit 1 ; \
 		fi ; \
 		diff -w $$tmp $$f >/dev/null 2>&1 ; \
 		if [ $$? -ne 0 ] ; then \
-			echo "fail (output)" ; \
+			echo "fail (output check)" ; \
 			diff -wu $$tmp $$f ; \
-			rm $$tmp ; \
+			rm -f $$tmp ; \
 			exit 1 ; \
 		fi ; \
 		echo "pass" ; \
-		set -e ; \
 	done ; \
-	rm -f $$tmp ; \
+	echo "=== ort-diff identity tests === " ; \
 	for f in regress/diff/*.ort ; do \
-		set +e ; \
-		printf "$$f -> $$f (cross-check)... " ; \
+		printf "ort-diff: $$f... " ; \
 		./ort-diff $$f $$f >$$tmp 2>/dev/null ; \
 		if [ $$? -ne 0 ] ; then \
 			echo "fail (did not execute)" ; \
-			rm $$tmp ; \
+			rm -f $$tmp ; \
 			exit 1 ; \
 		fi ; \
 		val=`cat $$tmp | wc -l | sed 's! !!g'` ; \
-		if [ $$val -ne 2 ]; then \
-			echo "fail (output)" ; \
+		if [ $$val -ne 2 ] ; then \
+			echo "fail (output check)" ; \
 			cat $$tmp ; \
-			rm $$tmp ; \
+			rm -f $$tmp ; \
 			exit 1 ; \
 		fi ; \
 		echo "pass" ; \
-		set -e ; \
 	done ; \
-	rm -f $$tmp ; \
+	echo "=== ort-sqldiff output tests === " ; \
 	for f in regress/sqldiff/*.result ; do \
+		fn=`basename $$f .result`.{old,new}.ort ; \
 		new=regress/sqldiff/`basename $$f .result`.new.ort ; \
 		old=regress/sqldiff/`basename $$f .result`.old.ort ; \
-		set +e ; \
-		printf "$$old -> $$new... " ; \
+		printf "ort-sqldiff: regress/sqldiff/$$fn... " ; \
 		./ort-sqldiff $$old $$new >$$tmp 2>/dev/null ; \
 		if [ $$? -ne 0 ] ; then \
 			echo "fail (did not execute)" ; \
-			rm $$tmp ; \
+			rm -f $$tmp ; \
 			exit 1 ; \
 		fi ; \
 		diff -w $$tmp $$f >/dev/null 2>&1 ; \
 		if [ $$? -ne 0 ] ; then \
-			echo "fail (output)" ; \
+			echo "fail (output check)" ; \
 			diff -wu $$tmp $$f ; \
-			rm $$tmp ; \
+			rm -f $$tmp ; \
 			exit 1 ; \
 		fi ; \
 		echo "pass" ; \
-		set -e ; \
 	done ; \
-	rm -f $$tmp ; \
+	echo "=== ort-sqldiff failing tests === " ; \
 	for old in regress/sqldiff/*.old.nresult ; do \
+		fn=`basename $$old .old.nresult`.{old,new}.nresult ; \
 		new=regress/sqldiff/`basename $$old .old.nresult`.new.nresult ; \
-		set +e ; \
-		printf "$$old -> $$new... " ; \
+		printf "ort-sqldiff: regress/sqldiff/$$fn... " ; \
 		./ort-sqldiff $$old $$new >/dev/null 2>&1 ; \
 		if [ $$? -eq 0 ] ; then \
 			echo "fail (did not error out)" ; \
+			rm -f $$tmp ; \
 			exit 1 ; \
 		fi ; \
 		echo "pass" ; \
-		set -e ; \
 	done ; \
 	if [ "$(LIBS_REGRESS)" == "" ]; then \
-		echo "regress/c: ignoring (no sqlbox library)" 1>&2 ; \
+		echo "!!! skipping ort-c-{header,source} compile tests !!! " ; \
+		echo "!!! skipping ort-c-{header,source,sql} run tests !!! " ; \
 	else \
+		echo "=== ort-c-{header,source} compile tests === " ; \
 		for f in regress/*.ort ; do \
 			hf=`basename $$f`.h ; \
-			./ort-c-header -vJj $$f > $$f.h ; \
-			./ort-c-source -S. -h $$hf -vJj $$f > $$f.c ; \
-			set +e ; \
+			./ort-c-header -vJj $$f > $$f.h 2>/dev/null ; \
+			./ort-c-source -S. -h $$hf -vJj $$f > $$f.c 2>/dev/null ; \
+			printf "$(CC): $$f... " ; \
 			$(CC) $(CFLAGS) $(CFLAGS_SQLBOX) -o /dev/null -c $$f.c 2>/dev/null ; \
 			if [ $$? -ne 0 ] ; then \
-				echo "$$f (compile check): fail" ; \
+				echo "fail (compile check)" ; \
 				$(CC) $(CFLAGS) $(CFLAGS_SQLBOX) -o /dev/null -c $$f.c ; \
-				set -e ; \
-				rm -f $$f.h $$f.c ; \
+				rm -f $$f.h $$f.c $$tmp ; \
 				exit 1 ; \
 			fi ; \
-			rm $$f.h $$f.c ; \
-			set -e ; \
-			echo "$$f (compile check): pass" ; \
+			rm -f $$f.h $$f.c ; \
+			echo "pass" ; \
 		done ; \
+		echo "=== ort-c-{header,source,sql} run tests === " ; \
 		for f in regress/c/*.ort ; do \
 			rr=regress/c/regress.c ; \
 			bf=regress/c/`basename $$f .ort` ; \
 			cf=regress/c/`basename $$f .ort`.c ; \
 			hf=`basename $$f`.h ; \
-			./ort-c-header -vJj $$f > $$f.h ; \
-			./ort-c-source -S. -h $$hf -vJj $$f > $$f.c ; \
-			./ort-sql $$f | sqlite3 $$tmp ; \
-			set +e ; \
+			rm -f $$tmp ; \
+			./ort-c-header -vJj $$f > $$f.h 2>/dev/null ; \
+			./ort-c-source -S. -h $$hf -vJj $$f > $$f.c 2>/dev/null ; \
+			./ort-sql $$f | sqlite3 $$tmp 2>/dev/null ; \
+			printf "$(CC): $$f... " ; \
 			$(CC) $(CFLAGS_REGRESS) $(CFLAGS) -o $$bf \
 				$$f.c $$cf $$rr $(LIBS_REGRESS) \
 				$(LDADD_CRYPT) 2>/dev/null ; \
 			if [ $$? -ne 0 ] ; then \
-				echo "$$f: fail (did not compile)" ; \
+				echo "fail (did not compile)" ; \
 				$(CC) $(CFLAGS_REGRESS) $(CFLAGS) -o $$bf \
 					$$f.c $$cf $$rr $(LIBS_REGRESS) \
 					$(LDADD_CRYPT) ; \
-				set -e ; \
 				rm -f $$f.h $$f.c $$bf $$tmp ; \
 				exit 1 ; \
 			fi ; \
-			rm $$f.h $$f.c ; \
+			rm -f $$f.h $$f.c ; \
+			printf "$$bf... " ; \
 			./$$bf 2>/dev/null 1>/dev/null $$tmp ; \
 			if [ $$? -ne 0 ] ; then \
-				set -e ; \
-				echo "$$f: fail" ; \
-				rm $$bf $$tmp ; \
+				echo "fail" ; \
+				rm -f $$bf $$tmp ; \
 				exit 1 ; \
 			fi ; \
-			rm $$bf $$tmp ; \
-			set -e ; \
-			echo "$$f: pass" ; \
+			rm -f $$bf ; \
+			echo "pass" ; \
 		done ; \
 	fi ; \
-	for f in regress/*.result ; do \
-		bf=`basename $$f .result`.ort ; \
-		set +e ; \
-		printf "$$bf... " ; \
-		./ort regress/$$bf >$$tmp 2>/dev/null ; \
-		if [ $$? -ne 0 ] ; then \
-			echo "fail (did not execute)" ; \
-			rm $$tmp ; \
-			exit 1 ; \
-		fi ; \
-		diff -w $$tmp $$f >/dev/null 2>&1 ; \
-		if [ $$? -ne 0 ] ; then \
-			echo "fail (output)" ; \
-			diff -wu $$tmp $$f ; \
-			rm $$tmp ; \
-			exit 1 ; \
-		fi ; \
-		echo "pass" ; \
-		set -e ; \
-	done ; \
-	for f in regress/*.nresult ; do \
-		set +e ; \
-		printf "`basename $$f`... " ; \
-		./ort $$f >/dev/null 2>&1 ; \
-		if [ $$? -eq 0 ] ; then \
-			echo "fail (did not error out)" ; \
-			exit 1 ; \
-		fi ; \
-		echo "pass" ; \
-		set -e ; \
-	done ; \
-	for f in regress/sql/*.result ; do \
-		bf=regress/sql/`basename $$f .result`.ort ; \
-		set +e ; \
-		printf "$$bf... " ; \
-		./ort-sql $$bf >$$tmp 2>/dev/null ; \
-		if [ $$? -ne 0 ] ; then \
-			echo "fail (did not execute)" ; \
-			rm $$tmp ; \
-			exit 1 ; \
-		fi ; \
-		diff -w $$tmp $$f >/dev/null 2>&1 ; \
-		if [ $$? -ne 0 ] ; then \
-			echo "fail (output)" ; \
-			diff -wu $$tmp $$f ; \
-			rm $$tmp ; \
-			exit 1 ; \
-		fi ; \
-		echo "pass" ; \
-		set -e ; \
-	done ; \
-	rm $$tmp ; \
+	echo "=== ort-javascript output tests === " ; \
 	for f in regress/javascript/*.ort ; do \
-		set +e ; \
-		printf "$$f... " ; \
+		printf "ort-javascript: $$f... " ; \
 		./ort-javascript -S. $$f >/dev/null 2>/dev/null ; \
 		if [ $$? -ne 0 ] ; then \
 			echo "fail (did not execute)" ; \
 			./ort-javascript -S. $$f >/dev/null ; \
+			rm -f $$tmp ; \
 			exit 1 ; \
 		fi ; \
 		echo "pass" ; \
-		set -e ; \
 	done ; \
-	set +e ; \
 	if [ ! -f "node_modules/.bin/ts-node" ]; then \
-		set -e ; \
-		echo "regress/javascript: run npm install for these tests" 1>&2 ; \
-		echo "regress/javascript: ignoring (no ts-node)" 1>&2 ; \
+		echo "!!! skipping ort-javascript run tests !!! " ; \
 	else \
-		set -e ; \
+		echo "=== ort-javascript run tests === " ; \
 		node_modules/.bin/ts-node --skip-project regress/javascript/regress-runner.ts ; \
-	fi
+	fi ; \
+	if [ ! -f "node_modules/.bin/typescript-json-schema" ]; then \
+		echo "!!! skipping ort-json output tests !!! " ; \
+	else \
+		node_modules/.bin/typescript-json-schema --strictNullChecks ort-json.ts ortConfig > ort-json.schema ; \
+		which jsonschema-3 >/dev/null 2>&1 ; \
+		if [ $$? -eq 0 ]; then \
+			for f in regress/*.ort ; do \
+				printf "ort-json: $$f... " ; \
+				./ort-json $$f > $$tmp 2>/dev/null ; \
+				if [ $$? -ne 0 ]; then \
+					echo "fail (did not execute)" ; \
+					rm -f $$tmp ; \
+					exit 1 ; \
+				fi ; \
+				jsonschema-3 -i $$tmp ort-json.schema >/dev/null 2>&1; \
+				if [ $$? -ne 0 ]; then \
+					echo "fail" ; \
+					jsonschema-3 -i $$tmp ort-json.schema ; \
+					rm -f $$tmp ; \
+					exit 1 ; \
+				fi ; \
+				echo "pass" ; \
+			done ; \
+		else \
+			echo "!!! skipping ort-json output tests !!! " ; \
+		fi ; \
+	fi ; \
+	rm -f $$tmp
 
 .in.pc.pc:
 	sed -e "s!@PREFIX@!$(PREFIX)!g" \

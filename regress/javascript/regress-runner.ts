@@ -67,7 +67,7 @@ for (i = 0; i < files.length; i++) {
 		func = new Function('fs', 'JSDOM', 'fname', xpiled);
 		result = func(fs, JSDOM, xmlname);
 	} catch (error) {
-		console.log(tsname + '... fail');
+		console.log('ts-node: ' + tsname + '... fail');
 		const cat = spawnSync('cat', ['-n', '-'], {
 			'input': xpiled
 		});
@@ -82,7 +82,7 @@ for (i = 0; i < files.length; i++) {
 	 */
 
 	try {
-		process.stdout.write(tsname + '... ');
+		process.stdout.write('ts-node: ' + tsname + '... ');
 		execFileSync('diff', ['-w', '-u', resname, '-'], {
 			'input': result
 		});

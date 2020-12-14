@@ -47,6 +47,14 @@ static const char *const ftypes[FTYPE__MAX] = {
 	"bitfield", /* FTYPE_BITFIELD */
 };
 
+static const char *const upacts[UPACT__MAX] = {
+	"none", /* UPACT_NONE */
+	"restrict", /* UPACT_RESTRICT */
+	"nullify", /* UPACT_NULLIFY */
+	"cascade", /* UPACT_CASCADE */
+	"default", /* UPACT_DEFAULT */
+};
+
 static int
 gen_ws(FILE *f, size_t sz)
 {
@@ -98,6 +106,27 @@ gen_string(FILE *f, const char *cp)
 			return 0;
 	}
 	return fputc('\"', f) != EOF;
+}
+
+static int
+gen_rolemap(FILE *f, const struct rolemap *map)
+{
+	const struct rref	*ref;
+
+	if (fputs("\"rolemap\": ", f) == EOF)
+		return 0;
+	if (map == NULL)
+		return fputs("null", f) != EOF;
+	if (fputc('[', f) == EOF)
+		return 0;
+	TAILQ_FOREACH(ref, &map->rq, entries) {
+		if (fprintf(f, "\"%s\"", ref->role->name) < 0)
+			return 0;
+		if (TAILQ_NEXT(ref, entries) != NULL &&
+		    fputs(", ", f) == EOF)
+			return 0;
+	}
+	return fputc(']', f) != EOF;
 }
 
 static int
@@ -558,6 +587,20 @@ gen_field(FILE *f, size_t tabs, const struct field *fd)
 		if (fputs("null,\n", f) == EOF)
 			return 0;
 
+	if (!gen_ws(f, tabs))
+		return 0;
+	if (fprintf(f, "\"actdel\": \"%s\",\n", upacts[fd->actdel]) < 0)
+		return 0;
+	if (!gen_ws(f, tabs))
+		return 0;
+	if (fprintf(f, "\"actup\": \"%s\",\n", upacts[fd->actup]) < 0)
+		return 0;
+	if (!gen_ws(f, tabs))
+		return 0;
+	if (!gen_rolemap(f, fd->rolemap))
+		return 0;
+	if (fputs(",\n", f) == EOF)
+		return 0;
 	if (!gen_ws(f, tabs))
 		return 0;
 	if (fprintf(f, "\"type\": \"%s\"\n", ftypes[fd->type]) < 0)

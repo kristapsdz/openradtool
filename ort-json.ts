@@ -1,19 +1,32 @@
 namespace ort {
+	/**
+	 * Same as "struct pos" in ort(3).
+	 */
 	interface posObj {
 		fname: string;
 		column: number;
 		line: number;
 	}
 
+	/**
+	 * Same as "struct label" in ort(3).
+	 */
 	interface labelObj {
 		value: string;
 		pos: posObj;
 	}
 
+	/**
+	 * Label dictionary.
+	 * Key is language.
+	 */
 	interface labelSet {
 		[lang: string]: labelObj;
 	}
 
+	/**
+	 * Same as "struct eitem" in ort(3).
+	 */
 	interface enumItemObj {
 		pos: posObj;
 		doc: string|null;
@@ -25,17 +38,23 @@ namespace ort {
 		[name: string]: enumItemObj;
 	}
 
+	/**
+	 * Same as "struct enm" in ort(3).
+	 */
 	interface enumObj {
 		pos: posObj;
 		doc: string|null;
 		labelsNull: labelSet|null;
-		items: enumItemSet;
+		eq: enumItemSet;
 	}
 
 	interface enumSet {
 		[name: string]: enumObj;
 	}
 
+	/**
+	 * Same as "struct bitidx" in ort(3).
+	 */
 	interface bitIndexObj {
 		pos: posObj;
 		doc: string|null;
@@ -47,12 +66,15 @@ namespace ort {
 		[name: string]: bitIndexObj;
 	}
 
+	/**
+	 * Same as "struct bitf" in ort(3).
+	 */
 	interface bitfObj {
 		pos: posObj;
 		doc: string|null;
 		labelsNull: labelSet|null;
 		labelsUnset: labelSet|null;
-		items: bitIndexSet;
+		bq: bitIndexSet;
 	}
 
 	interface bitfSet {
@@ -69,6 +91,9 @@ namespace ort {
 		[name: string]: roleObj;
 	}
 
+	/**
+	 * Same as "struct fvalid" in ort(3).
+	 */
 	interface validObj {
 		type: 'eq'|'le'|'gt'|'lt'|'ge';
 		/*
@@ -77,6 +102,9 @@ namespace ort {
 		limit: string;
 	}
 
+	/**
+	 * Same as "struct field" in ort(3).
+	 */
 	interface fieldObj {
 		pos: posObj;
 		doc: string|null;
@@ -96,49 +124,67 @@ namespace ort {
 		 * The interpretation of this depends upon the type.
 		 */
 		def: string|null;
-		/**
-		 * Empty for no valids.
-		 */
-		valids: validObj[];
+		fvq: validObj[];
 	}
 
 	interface fieldSet {
 		[name: string]: fieldObj;
 	}
 
+	/**
+	 * Same as "struct insert" in ort(3).
+	 */
 	interface insertObj {
 		pos: posObj;
 		rolemap: string[]|null;
 	}
 
+	/**
+	 * Same as "struct sent" in ort(3).
+	 */
 	interface sentObj {
 		pos: posObj;
 		fname: string;
 		op: 'eq'|'ge'|'gt'|'le'|'lt'|'neq'|'like'|'and'|'or'|'streq'|'strneq'|'isnull'|'notnull';
 	}
 
+	/**
+	 * Same as "struct order" in ort(3).
+	 */
 	interface orderObj {
 		pos: posObj;
 		fname: string;
 		op: 'desc'|'asc';
 	}
 
+	/**
+	 * Same as "struct aggr" in ort(3).
+	 */
 	interface aggrObj {
 		pos: posObj;
 		fname: string;
 		op: 'minrow'|'maxrow';
 	}
 
+	/**
+	 * Same as "struct group" in ort(3).
+	 */
 	interface groupObj {
 		pos: posObj;
 		fname: string;
 	}
 
+	/**
+	 * Same as "struct dstct" in ort(3).
+	 */
 	interface dstnctObj {
 		pos: posObj;
 		fname: string;
 	}
 
+	/**
+	 * Same as "struct search" in ort(3).
+	 */
 	interface searchObj {
 		pos: posObj;
 		doc: string|null;
@@ -155,8 +201,12 @@ namespace ort {
 		 * Order is significant because it dictates the parameter
 		 * order in the API.
 		 */
-		params: sentObj[];
-		order: orderObj[];
+		snq: sentObj[];
+		/**
+		 * Order is significant because it dictates the order in
+		 * which SQL provides its filters.
+		 */
+		ordq: orderObj[];
 		aggr: aggrObj|null;
 		group: groupObj|null;
 		dst: dstnctObj|null;
@@ -168,10 +218,19 @@ namespace ort {
 	}
 
 	interface searchClassObj {
+		/**
+		 * Have a user-provided name.
+		 */
 		named: searchSet;
+		/**
+		 * Defined by search parameters: not named.
+		 */
 		anon: searchObj[];
 	}
 
+	/**
+	 * Same as "struct strct" in ort(3).
+	 */
 	interface strctObj {
 		pos: posObj;
 		doc: string|null;
@@ -180,6 +239,11 @@ namespace ort {
 		 */
 		fields: fieldSet;
 		insert: insertObj|null;
+		/**
+		 * Unlike "strct" in ort(3), which has all searches
+		 * under a common "sq", we split between named and
+		 * anonymous searches beneath this object.
+		 */
 		searches: searchClassObj;
 	}
 
@@ -187,9 +251,12 @@ namespace ort {
 		[name: string]: strctObj;
 	}
 
+	/**
+	 * Same as "struct config" in ort(3).
+	 */
 	interface config {
-		enums: enumSet|null;
-		bitfs: bitfSet|null;
+		eq: enumSet|null;
+		bq: bitfSet|null;
 		/**
 		 * This is an emtpy set for RBAC w/o explicit roles.
 		 */
@@ -197,7 +264,7 @@ namespace ort {
 		/**
 		 * Never an empty set.
 		 */
-		strcts: strctSet;
+		sq: strctSet;
 	}
 
 	export interface ortConfig {

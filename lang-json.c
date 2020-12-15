@@ -32,6 +32,27 @@
 #include "lang.h"
 #include "ort-lang-json.h"
 
+static const char *const ordtypes[] = {
+	"asc", /* ORDTYPE_ASC */
+	"desc", /* ORDTYPE_DESC */
+};
+
+static const char *const optypes[OPTYPE__MAX] = {
+	"eq", /* OPTYPE_EQUAL */
+	"ge", /* OPTYPE_GE */
+	"gt", /* OPTYPE_GT */
+	"le", /* OPTYPE_LE */
+	"lt", /* OPTYPE_LT */
+	"neq", /* OPTYPE_NEQUAL */
+	"like", /* OPTYPE_LIKE */
+	"and", /* OPTYPE_AND */
+	"or", /* OPTYPE_OR */
+	"streq", /* OPTYPE_STREQ */
+	"strneq", /* OPTYPE_STRNEQ */
+	"isnull", /* OPTYPE_ISNULL */
+	"notnull", /* OPTYPE_NOTNULL */
+};
+
 static const char *const ftypes[FTYPE__MAX] = {
 	"bit", /* FTYPE_BIT */
 	"date", /* FTYPE_DATE */
@@ -534,8 +555,34 @@ gen_insert(FILE *f, const struct insert *insert)
 }
 
 static int
+gen_order(FILE *f, const struct ord *o)
+{
+	if (fputs(" {", f) == EOF)
+		return 0;
+	if (!gen_pos(f, &o->pos))
+		return 0;
+	return fprintf(f, 
+		" \"fname\": \"%s\", \"optype\": \"%s\" }", 
+		o->fname, ordtypes[o->op]) > 0;
+}
+
+static int
+gen_sent(FILE *f, const struct sent *s)
+{
+	if (fputs(" {", f) == EOF)
+		return 0;
+	if (!gen_pos(f, &s->pos))
+		return 0;
+	return fprintf(f, 
+		" \"fname\": \"%s\", \"optype\": \"%s\" }", 
+		s->fname, optypes[s->op]) > 0;
+}
+
+static int
 gen_search(FILE *f, int *first, const struct search *s)
 {
+	const struct sent	*sent;
+	const struct ord	*ord;
 
 	if (*first == 0) {
 		if (fputc(',', f) == EOF)
@@ -553,11 +600,30 @@ gen_search(FILE *f, int *first, const struct search *s)
 		return 0;
 	if (!gen_rolemap(f, 1, s->rolemap))
 		return 0;
-	return fprintf(f, 
-		" \"limit\": \"%" PRId64 "\","
-		" \"offset\": \"%" PRId64 "\","
-		" \"type\": \"%s\" }", 
-		s->limit, s->offset, stypes[s->type]) > 0;
+	if (fprintf(f, 
+	    " \"limit\": \"%" PRId64 "\","
+	    " \"offset\": \"%" PRId64 "\", \"type\": \"%s\",", 
+	    s->limit, s->offset, stypes[s->type]) < 0)
+		return 0;
+	if (fputs(" \"params\": [", f) == EOF)
+		return 0;
+	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		if (!gen_sent(f, sent))
+			return 0;
+		if (TAILQ_NEXT(sent, entries) != NULL && 
+		    fputc(',', f) == EOF)
+			return 0;
+	}
+	if (fputs(" ], \"order\": [", f) == EOF)
+		return 0;
+	TAILQ_FOREACH(ord, &s->ordq, entries) {
+		if (!gen_order(f, ord))
+			return 0;
+		if (TAILQ_NEXT(ord, entries) != NULL && 
+		    fputc(',', f) == EOF)
+			return 0;
+	}
+	return fputs(" ] }", f) != EOF;
 }
 
 static int

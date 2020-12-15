@@ -111,6 +111,18 @@ namespace ort {
 		rolemap: string[]|null;
 	}
 
+	interface sentObj {
+		pos: posObj;
+		fname: string;
+		optype: 'eq'|'ge'|'gt'|'le'|'lt'|'neq'|'like'|'and'|'or'|'streq'|'strneq'|'isnull'|'notnull';
+	}
+
+	interface orderObj {
+		pos: posObj;
+		fname: string;
+		optype: 'desc'|'asc';
+	}
+
 	interface searchObj {
 		pos: posObj;
 		doc: string|null;
@@ -123,6 +135,12 @@ namespace ort {
 		 * Numeric string. 
 		 */
 		offset: string;
+		/**
+		 * Order is significant because it dictates the parameter
+		 * order in the API.
+		 */
+		params: sentObj[];
+		order: orderObj[];
 		type: 'search'|'iterate'|'list'|'count';
 	}
 

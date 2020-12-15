@@ -106,6 +106,35 @@ namespace ort {
 		[name: string]: fieldObj;
 	}
 
+	interface insertObj {
+		pos: posObj;
+		rolemap: string[]|null;
+	}
+
+	interface searchObj {
+		pos: posObj;
+		doc: string|null;
+		rolemap: string[]|null;
+		/**
+		 * Numeric string. 
+		 */
+		limit: string;
+		/**
+		 * Numeric string. 
+		 */
+		offset: string;
+		type: 'search'|'iterate'|'list'|'count';
+	}
+
+	interface searchSet {
+		[name: string]: searchObj;
+	}
+
+	interface searchClassObj {
+		named: searchSet;
+		anon: searchObj[];
+	}
+
 	interface strctObj {
 		pos: posObj;
 		doc: string|null;
@@ -113,6 +142,8 @@ namespace ort {
 		 * Never an empty set.
 		 */
 		fields: fieldSet;
+		insert: insertObj|null;
+		searches: searchClassObj;
 	}
 
 	interface strctSet {

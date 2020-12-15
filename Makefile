@@ -714,12 +714,15 @@ regress: all
 		echo "!!! skipping ort-javascript run tests !!! " ; \
 	else \
 		echo "=== ort-javascript run tests === " ; \
-		node_modules/.bin/ts-node --skip-project regress/javascript/regress-runner.ts ; \
+		node_modules/.bin/ts-node --skip-project \
+			regress/javascript/regress-runner.ts ; \
 	fi ; \
 	if [ ! -f "node_modules/.bin/typescript-json-schema" ]; then \
 		echo "!!! skipping ort-json output tests !!! " ; \
 	else \
-		node_modules/.bin/typescript-json-schema --strictNullChecks ort-json.ts ortConfig > ort-json.schema ; \
+		node_modules/.bin/typescript-json-schema \
+			--strictNullChecks ort-json.ts \
+			ort.ortConfig > ort-json.schema ; \
 		which jsonschema-3 >/dev/null 2>&1 ; \
 		if [ $$? -eq 0 ]; then \
 			for f in regress/*.ort ; do \
@@ -730,7 +733,8 @@ regress: all
 					rm -f $$tmp ; \
 					exit 1 ; \
 				fi ; \
-				jsonschema-3 -i $$tmp ort-json.schema >/dev/null 2>&1; \
+				jsonschema-3 -i $$tmp \
+					ort-json.schema >/dev/null 2>&1; \
 				if [ $$? -ne 0 ]; then \
 					echo "fail" ; \
 					jsonschema-3 -i $$tmp ort-json.schema ; \

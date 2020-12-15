@@ -63,6 +63,13 @@ static const char *const upacts[UPACT__MAX] = {
 	"default", /* UPACT_DEFAULT */
 };
 
+static const char *const stypes[STYPE__MAX] = {
+	"count", /* STYPE_COUNT */
+	"search", /* STYPE_SEARCH */
+	"list", /* STYPE_LIST */
+	"iterate", /* STYPE_ITERATE */
+};
+
 static int
 gen_ws(FILE *f, size_t sz)
 {
@@ -117,24 +124,33 @@ gen_string(FILE *f, const char *cp)
 }
 
 static int
-gen_rolemap(FILE *f, const struct rolemap *map)
+gen_rolemap(FILE *f, size_t tabs, int comma, const struct rolemap *map)
 {
 	const struct rref	*ref;
 
+	if (!gen_ws(f, tabs))
+		return 0;
 	if (fputs("\"rolemap\": ", f) == EOF)
 		return 0;
-	if (map == NULL)
-		return fputs("null", f) != EOF;
-	if (fputc('[', f) == EOF)
-		return 0;
-	TAILQ_FOREACH(ref, &map->rq, entries) {
-		if (fprintf(f, "\"%s\"", ref->role->name) < 0)
+	if (map == NULL) {
+		if (fputs("null", f) == EOF)
 			return 0;
-		if (TAILQ_NEXT(ref, entries) != NULL &&
-		    fputs(", ", f) == EOF)
+	} else {
+		if (fputc('[', f) == EOF)
+			return 0;
+		TAILQ_FOREACH(ref, &map->rq, entries) {
+			if (fprintf(f, "\"%s\"", ref->role->name) < 0)
+				return 0;
+			if (TAILQ_NEXT(ref, entries) != NULL &&
+			    fputs(", ", f) == EOF)
+				return 0;
+		}
+		if (fputc(']', f) == EOF)
 			return 0;
 	}
-	return fputc(']', f) != EOF;
+	if (comma && fputc(',', f) == EOF)
+		return 0;
+	return fputc('\n', f) != EOF;
 }
 
 static int
@@ -604,13 +620,8 @@ gen_field(FILE *f, size_t tabs, const struct field *fd)
 		return 0;
 	if (fprintf(f, "\"actup\": \"%s\",\n", upacts[fd->actup]) < 0)
 		return 0;
-	if (!gen_ws(f, tabs))
+	if (!gen_rolemap(f, tabs, 1, fd->rolemap))
 		return 0;
-	if (!gen_rolemap(f, fd->rolemap))
-		return 0;
-	if (fputs(",\n", f) == EOF)
-		return 0;
-
 	if (!gen_ws(f, tabs))
 		return 0;
 	if (fputs("\"valids\": [", f) == EOF)
@@ -669,19 +680,81 @@ gen_field(FILE *f, size_t tabs, const struct field *fd)
 }
 
 static int
+gen_insert(FILE *f, size_t tabs, const struct insert *insert)
+{
+
+	if (insert != NULL) {
+		if (fputs("{\n", f) == EOF)
+			return 0;
+		if (!gen_pos(f, tabs + 1, &insert->pos))
+			return 0;
+		if (!gen_rolemap(f, tabs + 1, 0, insert->rolemap))
+			return 0;
+		if (!gen_ws(f, tabs))
+			return 0;
+		if (fputc('}', f) == EOF)
+			return 0;
+	} else if (fputs("null", f) == EOF)
+		return 0;
+
+	return fputs(",\n", f) != EOF;
+}
+
+static int
+gen_search(FILE *f, int *first, size_t tabs, const struct search *s)
+{
+
+	if (*first == 0) {
+		if (fputs(",\n", f) == EOF)
+			return 0;
+	} else
+		*first = 0;
+
+	if (!gen_ws(f, tabs))
+		return 0;
+	if (s->name != NULL && fprintf(f, "\"%s\": ", s->name) < 0)
+		return 0;
+	if (fputs("{\n", f) == EOF)
+		return 0;
+	if (!gen_pos(f, tabs + 1, &s->pos))
+		return 0;
+	if (!gen_doc(f, tabs + 1, s->doc))
+		return 0;
+	if (!gen_rolemap(f, tabs + 1, 1, s->rolemap))
+		return 0;
+	if (!gen_ws(f, tabs + 1))
+		return 0;
+	if (fprintf(f, "\"limit\": \"%" PRId64 "\",\n", s->limit) < 0)
+		return 0;
+	if (!gen_ws(f, tabs + 1))
+		return 0;
+	if (fprintf(f, "\"offset\": \"%" PRId64 "\",\n", s->offset) < 0)
+		return 0;
+	if (!gen_ws(f, tabs + 1))
+		return 0;
+	if (fprintf(f, "\"type\": \"%s\"\n", stypes[s->type]) < 0)
+		return 0;
+	if (!gen_ws(f, tabs))
+		return 0;
+	return fputc('}', f) != EOF;
+}
+
+static int
 gen_strct(FILE *f, size_t tabs, const struct strct *s)
 {
 	const struct field	*fd;
+	const struct search	*sr;
+	int			 first;
 
 	if (!gen_pos(f, tabs, &s->pos))
 		return 0;
 	if (!gen_doc(f, tabs, s->doc))
 		return 0;
+
 	if (!gen_ws(f, tabs))
 		return 0;
 	if (fputs("\"fields\": {\n", f) == EOF)
 		return 0;
-
 	TAILQ_FOREACH(fd, &s->fq, entries) {
 		if (!gen_ws(f, tabs + 1))
 			return 0;
@@ -698,10 +771,58 @@ gen_strct(FILE *f, size_t tabs, const struct strct *s)
 		if (fputc('\n', f) == EOF)
 			return 0;
 	}
+	if (!gen_ws(f, tabs))
+		return 0;
+	if (fputs("},\n", f) == EOF)
+		return 0;
 
 	if (!gen_ws(f, tabs))
 		return 0;
-	return fputs("}\n", f) != EOF;
+	if (fputs("\"insert\": ", f) == EOF)
+		return 0;
+	if (!gen_insert(f, tabs, s->ins))
+		return 0;
+
+	if (!gen_ws(f, tabs))
+		return 0;
+	if (fputs("\"searches\": {\n", f) == EOF)
+		return 0;
+	if (!gen_ws(f, tabs + 1))
+		return 0;
+	if (fputs("\"named\": {\n", f) == EOF)
+		return 0;
+	first = 1;
+	TAILQ_FOREACH(sr, &s->sq, entries)
+		if (sr->name != NULL &&
+		    !gen_search(f, &first, tabs + 2, sr))
+			return 0;
+	if (first == 0 && fputc('\n', f) == EOF)
+		return 0;
+	if (!gen_ws(f, tabs + 1))
+		return 0;
+	if (fputs("},\n", f) == EOF)
+		return 0;
+	if (!gen_ws(f, tabs + 1))
+		return 0;
+	if (fputs("\"anon\": [\n", f) == EOF)
+		return 0;
+	first = 1;
+	TAILQ_FOREACH(sr, &s->sq, entries)
+		if (sr->name == NULL &&
+		    !gen_search(f, &first, tabs + 2, sr))
+			return 0;
+	if (first == 0 && fputc('\n', f) == EOF)
+		return 0;
+	if (!gen_ws(f, tabs + 1))
+		return 0;
+	if (fputs("]\n", f) == EOF)
+		return 0;
+	if (!gen_ws(f, tabs))
+		return 0;
+	if (fputs("}\n", f) == EOF)
+		return 0;
+
+	return 1;
 }
 
 static int

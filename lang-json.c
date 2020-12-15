@@ -37,6 +37,11 @@ static const char *const ordtypes[] = {
 	"desc", /* ORDTYPE_DESC */
 };
 
+static const char *const aggrtypes[] = {
+	"maxrow", /* AGGR_MAXROW */
+	"minrow", /* AGGR_MINROW */
+};
+
 static const char *const optypes[OPTYPE__MAX] = {
 	"eq", /* OPTYPE_EQUAL */
 	"ge", /* OPTYPE_GE */
@@ -332,7 +337,7 @@ gen_bitf(FILE *f, const struct bitf *bitf, const struct config *cfg)
 	if (fputs(" \"items\": {", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(bi, &bitf->bq, entries) {
-		if (fprintf(f, " \"%s\": {\n", bi->name) < 0)
+		if (fprintf(f, " \"%s\": {", bi->name) < 0)
 			return 0;
 		if (!gen_bitidx(f, bi, cfg))
 			return 0;
@@ -354,7 +359,7 @@ gen_bitfs(FILE *f, const struct config *cfg)
 	if (fputs(" \"bitfs\": ", f) == EOF)
 		return 0;
 	if (TAILQ_EMPTY(&cfg->bq))
-		return fputs("null,\n", f) != EOF;
+		return fputs("null,", f) != EOF;
 	if (fputc('{', f) == EOF)
 		return 0;
 
@@ -557,25 +562,68 @@ gen_insert(FILE *f, const struct insert *insert)
 static int
 gen_order(FILE *f, const struct ord *o)
 {
+
 	if (fputs(" {", f) == EOF)
 		return 0;
 	if (!gen_pos(f, &o->pos))
 		return 0;
 	return fprintf(f, 
-		" \"fname\": \"%s\", \"optype\": \"%s\" }", 
+		" \"fname\": \"%s\", \"op\": \"%s\" }", 
 		o->fname, ordtypes[o->op]) > 0;
 }
 
 static int
 gen_sent(FILE *f, const struct sent *s)
 {
+
 	if (fputs(" {", f) == EOF)
 		return 0;
 	if (!gen_pos(f, &s->pos))
 		return 0;
 	return fprintf(f, 
-		" \"fname\": \"%s\", \"optype\": \"%s\" }", 
+		" \"fname\": \"%s\", \"op\": \"%s\" }", 
 		s->fname, optypes[s->op]) > 0;
+}
+
+static int
+gen_group(FILE *f, const struct group *g)
+{
+
+	if (g == NULL)
+		return fputs(" null,", f) != EOF;
+	if (fputs(" {", f) == EOF)
+		return 0;
+	if (!gen_pos(f, &g->pos))
+		return 0;
+	return fprintf(f, " \"fname\": \"%s\" },", g->fname) > 0;
+}
+
+static int
+gen_distinct(FILE *f, const struct dstnct *d)
+{
+
+	if (d == NULL)
+		return fputs(" null", f) != EOF;
+	if (fputs(" {", f) == EOF)
+		return 0;
+	if (!gen_pos(f, &d->pos))
+		return 0;
+	return fprintf(f, " \"fname\": \"%s\" }", d->fname) > 0;
+}
+
+static int
+gen_aggr(FILE *f, const struct aggr *a)
+{
+
+	if (a == NULL)
+		return fputs(" null,", f) != EOF;
+	if (fputs(" {", f) == EOF)
+		return 0;
+	if (!gen_pos(f, &a->pos))
+		return 0;
+	return fprintf(f, 
+		" \"fname\": \"%s\", \"op\": \"%s\" },", 
+		a->fname, aggrtypes[a->op]) > 0;
 }
 
 static int
@@ -623,7 +671,19 @@ gen_search(FILE *f, int *first, const struct search *s)
 		    fputc(',', f) == EOF)
 			return 0;
 	}
-	return fputs(" ] }", f) != EOF;
+	if (fputs(" ], \"aggr\": ", f) == EOF)
+		return 0;
+	if (!gen_aggr(f, s->aggr))
+		return 0;
+	if (fputs(" \"group\": ", f) == EOF)
+		return 0;
+	if (!gen_group(f, s->group))
+		return 0;
+	if (fputs(" \"dst\": ", f) == EOF)
+		return 0;
+	if (!gen_distinct(f, s->dst))
+		return 0;
+	return fputs(" }", f) != EOF;
 }
 
 static int
@@ -675,7 +735,7 @@ gen_strcts(FILE *f, const struct config *cfg)
 {
 	const struct strct	*s;
 
-	if (fputs(" \"strcts\": {\n", f) == EOF)
+	if (fputs(" \"strcts\": {", f) == EOF)
 		return 0;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries) {

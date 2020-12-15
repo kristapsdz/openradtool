@@ -114,13 +114,29 @@ namespace ort {
 	interface sentObj {
 		pos: posObj;
 		fname: string;
-		optype: 'eq'|'ge'|'gt'|'le'|'lt'|'neq'|'like'|'and'|'or'|'streq'|'strneq'|'isnull'|'notnull';
+		op: 'eq'|'ge'|'gt'|'le'|'lt'|'neq'|'like'|'and'|'or'|'streq'|'strneq'|'isnull'|'notnull';
 	}
 
 	interface orderObj {
 		pos: posObj;
 		fname: string;
-		optype: 'desc'|'asc';
+		op: 'desc'|'asc';
+	}
+
+	interface aggrObj {
+		pos: posObj;
+		fname: string;
+		op: 'minrow'|'maxrow';
+	}
+
+	interface groupObj {
+		pos: posObj;
+		fname: string;
+	}
+
+	interface dstnctObj {
+		pos: posObj;
+		fname: string;
 	}
 
 	interface searchObj {
@@ -141,6 +157,9 @@ namespace ort {
 		 */
 		params: sentObj[];
 		order: orderObj[];
+		aggr: aggrObj|null;
+		group: groupObj|null;
+		dst: dstnctObj|null;
 		type: 'search'|'iterate'|'list'|'count';
 	}
 

@@ -70,17 +70,6 @@ static const char *const stypes[STYPE__MAX] = {
 	"iterate", /* STYPE_ITERATE */
 };
 
-static int
-gen_ws(FILE *f, size_t sz)
-{
-	size_t	 i;
-
-	for (i = 0; i < sz; i++)
-		if (fputc('\t', f) == EOF)
-			return 0;
-	return 1;
-}
-
 /*
  * Format the string according to the JSON specification.
  * Note about escaping the double-quote: in ort(3), double-quotes are
@@ -92,7 +81,7 @@ gen_string(FILE *f, const char *cp)
 {
 	int	 rc;
 
-	if (fputc('\"', f) == EOF)
+	if (fputs(" \"", f) == EOF)
 		return 0;
 	for ( ; *cp != '\0'; cp++) {
 		switch (*cp) {
@@ -124,13 +113,11 @@ gen_string(FILE *f, const char *cp)
 }
 
 static int
-gen_rolemap(FILE *f, size_t tabs, int comma, const struct rolemap *map)
+gen_rolemap(FILE *f, int comma, const struct rolemap *map)
 {
 	const struct rref	*ref;
 
-	if (!gen_ws(f, tabs))
-		return 0;
-	if (fputs("\"rolemap\": ", f) == EOF)
+	if (fputs( "\"rolemap\": ", f) == EOF)
 		return 0;
 	if (map == NULL) {
 		if (fputs("null", f) == EOF)
@@ -139,143 +126,102 @@ gen_rolemap(FILE *f, size_t tabs, int comma, const struct rolemap *map)
 		if (fputc('[', f) == EOF)
 			return 0;
 		TAILQ_FOREACH(ref, &map->rq, entries) {
-			if (fprintf(f, "\"%s\"", ref->role->name) < 0)
+			if (fprintf(f, " \"%s\"", ref->role->name) < 0)
 				return 0;
 			if (TAILQ_NEXT(ref, entries) != NULL &&
-			    fputs(", ", f) == EOF)
+			    fputc(',', f) == EOF)
 				return 0;
 		}
-		if (fputc(']', f) == EOF)
+		if (fputs(" ]", f) == EOF)
 			return 0;
 	}
-	if (comma && fputc(',', f) == EOF)
-		return 0;
-	return fputc('\n', f) != EOF;
+
+	return comma ? fputc(',', f) != EOF : 1;
 }
 
 static int
-gen_pos(FILE *f, size_t tabs, const struct pos *pos)
+gen_pos(FILE *f, const struct pos *pos)
 {
 
-	assert(pos != NULL);
-	if (!gen_ws(f, tabs))
-		return 0;
-	if (fputs("\"pos\": {\n", f) == EOF)
-		return 0;
-	if (!gen_ws(f, tabs + 1))
-		return 0;
-	if (fputs("\"fname\": ", f) == EOF)
+	if (fputs(" \"pos\": { \"fname\": ", f) == EOF)
 		return 0;
 	if (!gen_string(f, pos->fname))
 		return 0;
-	if (fputs(",\n", f) == EOF)
-		return 0;
-	if (!gen_ws(f, tabs + 1))
-		return 0;
-	if (fprintf(f, "\"line\": %zu,\n", pos->line) == EOF)
-		return 0;
-	if (!gen_ws(f, tabs + 1))
-		return 0;
-	if (fprintf(f, "\"column\": %zu\n", pos->column) == EOF)
-		return 0;
-	if (!gen_ws(f, tabs))
-		return 0;
-	return fputs("},\n", f) != EOF;
+	return fprintf(f, ", \"line\": %zu, \"column\": %zu },", 
+		pos->column, pos->line) > 0;
 }
 
 static int
-gen_label(FILE *f, size_t tabs, const char *name,
+gen_label(FILE *f, const char *name,
 	const struct label *l, const struct config *cfg)
 {
 
-	if (!gen_ws(f, tabs))
+	if (fprintf(f, " \"%s\": {", name) < 0)
 		return 0;
-	if (fprintf(f, "\"%s\": {\n", name) < 0)
+	if (!gen_pos(f, &l->pos))
 		return 0;
-	if (!gen_pos(f, tabs + 1, &l->pos))
-		return 0;
-	if (!gen_ws(f, tabs + 1))
-		return 0;
-	if (fputs("\"value\": ", f) == EOF)
+	if (fputs(" \"value\":", f) == EOF)
 		return 0;
 	if (!gen_string(f, l->label))
 		return 0;
-	if (fputc('\n', f) == EOF)
-		return 0;
-	if (!gen_ws(f, tabs))
-		return 0;
-	return fputs("}", f) != EOF;
+	return fputs(" }", f) != EOF;
 }
 
 static int
-gen_labelq(FILE *f, size_t tabs, const char *name,
+gen_labelq(FILE *f, const char *name,
 	const struct labelq *q, const struct config *cfg)
 {
 	const struct label	*l;
 	const char		*lang;
 
-	if (!gen_ws(f, tabs))
-		return 0;
-	if (fprintf(f, "\"%s\": ", name) < 0)
+	if (fprintf(f, " \"%s\": ", name) < 0)
 		return 0;
 	if (TAILQ_EMPTY(q))
-		return fputs("null,\n", f) != EOF;
-
-	if (fputs("{\n", f) == EOF)
+		return fputs("null,", f) != EOF;
+	if (fputc('{', f) == EOF)
 		return 0;
 	TAILQ_FOREACH(l, q, entries) {
 		lang = cfg->langs[l->lang][0] == '\0' ?
 			"_default" : cfg->langs[l->lang];
-		if (!gen_label(f, tabs + 1, lang, l, cfg))
+		if (!gen_label(f, lang, l, cfg))
 			return 0;
 		if (TAILQ_NEXT(l, entries) != NULL && 
 		    fputc(',', f) == EOF)
 			return 0;
-		if (fputc('\n', f) == EOF)
-			return 0;
 	}
 
-	if (!gen_ws(f, tabs))
-		return 0;
-	return fputs("},\n", f) != EOF;
+	return fputs(" },", f) != EOF;
 }
 
 static int
-gen_doc(FILE *f, size_t tabs, const char *doc)
+gen_doc(FILE *f, const char *doc)
 {
 
-	if (!gen_ws(f, tabs))
-		return 0;
-	if (fputs("\"doc\": ", f) == EOF)
+	if (fputs(" \"doc\": ", f) == EOF)
 		return 0;
 	if (doc == NULL)
-		return fputs("null,\n", f) != EOF;
+		return fputs("null,", f) != EOF;
 	if (!gen_string(f, doc))
 		return 0;
-	return fputs(",\n", f) != EOF;
+	return fputc(',', f) != EOF;
 }
 
 static int
 gen_eitem(FILE *f, const struct eitem *ei, const struct config *cfg)
 {
 
-	if (!gen_pos(f, 5, &ei->pos))
+	if (!gen_pos(f, &ei->pos))
 		return 0;
-	if (!gen_doc(f, 5, ei->doc))
+	if (!gen_doc(f, ei->doc))
 		return 0;
-	if (!gen_labelq(f, 5, "labels", &ei->labels, cfg))
+	if (!gen_labelq(f, "labels", &ei->labels, cfg))
 		return 0;
-	if (!gen_ws(f, 5))
+	if (fputs(" \"value\": ", f) == EOF)
 		return 0;
-	if (fputs("\"value\": ", f) == EOF)
-		return 0;
-	if (ei->flags & EITEM_AUTO) {
-		if (fputs("null", f) == EOF)
-			return 0;
-	} else
-		if (fprintf(f, "\"%" PRId64 "\"", ei->value) < 0)
-			return 0;
-	return fputc('\n', f) != EOF;
+	if (ei->flags & EITEM_AUTO)
+		return fputs("null", f) != EOF;
+
+	return fprintf(f, "\"%" PRId64 "\"", ei->value) > 0;
 }
 
 static int
@@ -283,36 +229,28 @@ gen_enm(FILE *f, const struct enm *enm, const struct config *cfg)
 {
 	const struct eitem	*ei;
 
-	if (!gen_pos(f, 3, &enm->pos))
+	if (!gen_pos(f, &enm->pos))
 		return 0;
-	if (!gen_doc(f, 3, enm->doc))
+	if (!gen_doc(f, enm->doc))
 		return 0;
-	if (!gen_labelq(f, 3, "labelsNull", &enm->labels_null, cfg))
+	if (!gen_labelq(f, "labelsNull", &enm->labels_null, cfg))
 		return 0;
-	if (!gen_ws(f, 3))
-		return 0;
-	if (fputs("\"items\": {\n", f) == EOF)
+
+	if (fputs(" \"items\": {", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(ei, &enm->eq, entries) {
-		if (!gen_ws(f, 4))
-			return 0;
-		if (fprintf(f, "\"%s\": {\n", ei->name) < 0)
+		if (fprintf(f, " \"%s\": {", ei->name) < 0)
 			return 0;
 		if (!gen_eitem(f, ei, cfg))
 			return 0;
-		if (!gen_ws(f, 4))
+		if (fputs(" }", f) == EOF)
 			return 0;
-		if (fputc('}', f) == EOF)
-			return 0;
-		if (TAILQ_NEXT(ei, entries) != NULL)
-			if (fputc(',', f) == EOF)
-				return 0;
-		if (fputc('\n', f) == EOF)
+		if (TAILQ_NEXT(ei, entries) != NULL &&
+		    fputc(',', f) == EOF)
 			return 0;
 	}
-	if (!gen_ws(f, 3))
-		return 0;
-	return fputs("}\n", f) != EOF;
+
+	return fputs(" }", f) != EOF;
 }
 
 static int
@@ -320,94 +258,71 @@ gen_enms(FILE *f, const struct config *cfg)
 {
 	const struct enm	*enm;
 
-	if (!gen_ws(f, 1))
+	if (fputs(" \"enums\": ", f) == EOF)
 		return 0;
-	if (fputs("\"enums\": ", f) == EOF)
-		return 0;
-
 	if (TAILQ_EMPTY(&cfg->eq))
-		return fputs("null,\n", f) != EOF;
-
-	if (fputs("{\n", f) == EOF)
+		return fputs("null,", f) != EOF;
+	if (fputc('{', f) == EOF)
 		return 0;
+
 	TAILQ_FOREACH(enm, &cfg->eq, entries) {
-		if (!gen_ws(f, 2))
-			return 0;
-		if (fprintf(f, "\"%s\": {\n", enm->name) < 0)
+		if (fprintf(f, " \"%s\": {", enm->name) < 0)
 			return 0;
 		if (!gen_enm(f, enm, cfg))
 			return 0;
-		if (!gen_ws(f, 2))
+		if (fputs(" }", f) == EOF)
 			return 0;
-		if (fputc('}', f) == EOF)
-			return 0;
-		if (TAILQ_NEXT(enm, entries) != NULL)
-			if (fputc(',', f) == EOF)
-				return 0;
-		if (fputc('\n', f) == EOF)
+		if (TAILQ_NEXT(enm, entries) != NULL &&
+		    fputc(',', f) == EOF)
 			return 0;
 	}
 
-	if (!gen_ws(f, 1))
-		return 0;
-	return fputs("},\n", f) != EOF;
+	return fputs(" },", f) != EOF;
 }
 
 static int
-gen_bitidx(FILE *f, size_t tabs,
-	const struct bitidx *bi, const struct config *cfg)
+gen_bitidx(FILE *f, const struct bitidx *bi, const struct config *cfg)
 {
 
-	if (!gen_pos(f, tabs, &bi->pos))
+	if (!gen_pos(f, &bi->pos))
 		return 0;
-	if (!gen_doc(f, tabs, bi->doc))
+	if (!gen_doc(f, bi->doc))
 		return 0;
-	if (!gen_labelq(f, tabs, "labels", &bi->labels, cfg))
+	if (!gen_labelq(f, "labels", &bi->labels, cfg))
 		return 0;
-	if (!gen_ws(f, tabs))
-		return 0;
-	return fprintf(f, "\"value\": "
-		"\"%" PRId64 "\"\n", bi->value) > 0;
+	return fprintf(f, " \"value\": "
+		"\"%" PRId64 "\"", bi->value) > 0;
 }
 
 static int
-gen_bitf(FILE *f, size_t tabs,
-	const struct bitf *bitf, const struct config *cfg)
+gen_bitf(FILE *f, const struct bitf *bitf, const struct config *cfg)
 {
 	const struct bitidx	*bi;
 
-	if (!gen_pos(f, tabs, &bitf->pos))
+	if (!gen_pos(f, &bitf->pos))
 		return 0;
-	if (!gen_doc(f, tabs, bitf->doc))
+	if (!gen_doc(f, bitf->doc))
 		return 0;
-	if (!gen_labelq(f, tabs, "labelsNull", &bitf->labels_null, cfg))
+	if (!gen_labelq(f, "labelsNull", &bitf->labels_null, cfg))
 		return 0;
-	if (!gen_labelq(f, tabs, "labelsUnset", &bitf->labels_unset, cfg))
+	if (!gen_labelq(f, "labelsUnset", &bitf->labels_unset, cfg))
 		return 0;
-	if (!gen_ws(f, tabs))
-		return 0;
-	if (fputs("\"items\": {\n", f) == EOF)
+
+	if (fputs(" \"items\": {", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(bi, &bitf->bq, entries) {
-		if (!gen_ws(f, tabs + 1))
+		if (fprintf(f, " \"%s\": {\n", bi->name) < 0)
 			return 0;
-		if (fprintf(f, "\"%s\": {\n", bi->name) < 0)
+		if (!gen_bitidx(f, bi, cfg))
 			return 0;
-		if (!gen_bitidx(f, tabs + 2, bi, cfg))
+		if (fputs(" }", f) == EOF)
 			return 0;
-		if (!gen_ws(f, tabs + 1))
-			return 0;
-		if (fputc('}', f) == EOF)
-			return 0;
-		if (TAILQ_NEXT(bi, entries) != NULL)
-			if (fputc(',', f) == EOF)
-				return 0;
-		if (fputc('\n', f) == EOF)
+		if (TAILQ_NEXT(bi, entries) != NULL &&
+		    fputc(',', f) == EOF)
 			return 0;
 	}
-	if (!gen_ws(f, tabs))
-		return 0;
-	return fputs("}\n", f) != EOF;
+
+	return fputs(" }", f) != EOF;
 }
 
 static int
@@ -415,79 +330,59 @@ gen_bitfs(FILE *f, const struct config *cfg)
 {
 	const struct bitf	*bitf;
 
-	if (!gen_ws(f, 1))
+	if (fputs(" \"bitfs\": ", f) == EOF)
 		return 0;
-	if (fputs("\"bitfs\": ", f) == EOF)
-		return 0;
-
 	if (TAILQ_EMPTY(&cfg->bq))
 		return fputs("null,\n", f) != EOF;
-
-	if (fputs("{\n", f) == EOF)
+	if (fputc('{', f) == EOF)
 		return 0;
+
 	TAILQ_FOREACH(bitf, &cfg->bq, entries) {
-		if (!gen_ws(f, 2))
+		if (fprintf(f, " \"%s\": {", bitf->name) < 0)
 			return 0;
-		if (fprintf(f, "\"%s\": {\n", bitf->name) < 0)
+		if (!gen_bitf(f, bitf, cfg))
 			return 0;
-		if (!gen_bitf(f, 3, bitf, cfg))
+		if (fputs(" }", f) == EOF)
 			return 0;
-		if (!gen_ws(f, 2))
-			return 0;
-		if (fputc('}', f) == EOF)
-			return 0;
-		if (TAILQ_NEXT(bitf, entries) != NULL)
-			if (fputc(',', f) == EOF)
-				return 0;
-		if (fputc('\n', f) == EOF)
+		if (TAILQ_NEXT(bitf, entries) != NULL &&
+		    fputc(',', f) == EOF)
 			return 0;
 	}
-	if (!gen_ws(f, 1))
-		return 0;
-	return fputs("},\n", f) != EOF;
+
+	return fputs(" },", f) != EOF;
 }
 
 static int
-gen_role(FILE *f, size_t tabs, const struct role *r)
+gen_role(FILE *f, const struct role *r)
 {
 	const struct role	*rr;
 
-	if (!gen_ws(f, tabs))
+	if (fprintf(f, " \"%s\": {", r->name) < 0)
 		return 0;
-	if (fprintf(f, "\"%s\": {\n", r->name) < 0)
+	if (!gen_pos(f, &r->pos))
 		return 0;
-	if (!gen_pos(f, tabs + 1, &r->pos))
+	if (!gen_doc(f, r->doc))
 		return 0;
-	if (!gen_doc(f, tabs + 1, r->doc))
-		return 0;
-	if (!gen_ws(f, tabs + 1))
-		return 0;
-	if (fputs("\"children\": ", f) == EOF)
+	if (fputs(" \"children\":", f) == EOF)
 		return 0;
 
 	if (!TAILQ_EMPTY(&r->subrq)) {
-		if (fputs("{\n", f) == EOF)
+		if (fputs(" {", f) == EOF)
 			return 0;
 		TAILQ_FOREACH(rr, &r->subrq, entries) {
-			if (!gen_role(f, tabs + 2, rr))
+			if (!gen_role(f,  rr))
 				return 0;
 			if (TAILQ_NEXT(rr, entries) != NULL &&
 			    fputc(',', f) == EOF)
 				return 0;
-			if (fputc('\n', f) == EOF)
-				return 0;
 		}
-		if (!gen_ws(f, tabs + 1))
-			return 0;
-		if (fputs("}\n", f) == EOF)
+		if (fputs(" }", f) == EOF)
 			return 0;
 	} else
-		if (fputs("null\n", f) == EOF)
+		if (fputs(" null", f) == EOF)
 			return 0;
 
-	if (!gen_ws(f, tabs))
-		return 0;
-	return fputc('}', f) != EOF;
+	return fputs(" }", f) != EOF;
 }
 
 static int
@@ -495,87 +390,50 @@ gen_roles(FILE *f, const struct config *cfg)
 {
 	const struct role	*r, *rr;
 
-	if (!gen_ws(f, 1))
+	if (fputs(" \"roles\": ", f) == EOF)
 		return 0;
-	if (fputs("\"roles\": ", f) == EOF)
-		return 0;
-
 	if (TAILQ_EMPTY(&cfg->rq))
-		return fputs("null,\n", f) != EOF;
-	if (fputs("{\n", f) == EOF)
+		return fputs("null,", f) != EOF;
+	if (fputc('{', f) == EOF)
 		return 0;
-
 	TAILQ_FOREACH(r, &cfg->rq, entries) {
 		if (strcasecmp(r->name, "all"))
 			continue;
 		TAILQ_FOREACH(rr, &r->subrq, entries) {
-			if (!gen_role(f, 2, rr))
+			if (!gen_role(f, rr))
 				return 0;
 			if (TAILQ_NEXT(rr, entries) != NULL &&
 			    fputc(',', f) == EOF)
-				return 0;
-			if (fputc('\n', f) == EOF)
 				return 0;
 		}
 		break;
 	}
 
-	if (!gen_ws(f, 1))
-		return 0;
-	return fputs("},\n", f) != EOF;
+	return fputs(" },", f) != EOF;
 }
 
 static int
-gen_field(FILE *f, size_t tabs, const struct field *fd)
+gen_field(FILE *f, const struct field *fd)
 {
 	struct fvalid	*fv;
 
-	if (!gen_pos(f, tabs, &fd->pos))
+	if (!gen_pos(f, &fd->pos))
 		return 0;
-	if (!gen_doc(f, tabs, fd->doc))
+	if (!gen_doc(f, fd->doc))
 		return 0;
-	if (fd->enm != NULL) {
-		if (!gen_ws(f, tabs))
-			return 0;
-		if (fprintf(f, 
-		    "\"enm\": \"%s\",\n", fd->enm->name) < 0)
-			return 0;
-	}
-	if (fd->bitf != NULL) {
-		if (!gen_ws(f, tabs))
-			return 0;
-		if (fprintf(f, 
-		    "\"bitf\": \"%s\",\n", fd->bitf->name) < 0)
-			return 0;
-	}
-	if (fd->ref != NULL) {
-		if (!gen_ws(f, tabs))
-			return 0;
-		if (fputs("\"ref\": {\n", f) == EOF)
-			return 0;
-		if (!gen_ws(f, tabs + 1))
-			return 0;
-		if (fprintf(f, "\"target\": "
-		    "{ \"strct\": \"%s\", \"field\": \"%s\" },\n",
-		    fd->ref->target->parent->name,
-		    fd->ref->target->name) < 0)
-			return 0;
-		if (!gen_ws(f, tabs + 1))
-			return 0;
-		if (fprintf(f, "\"source\": "
-		    "{ \"strct\": \"%s\", \"field\": \"%s\" }\n",
-		    fd->ref->source->parent->name,
-		    fd->ref->source->name) < 0)
-			return 0;
-		if (!gen_ws(f, tabs))
-			return 0;
-		if (fputs("},\n", f) == EOF)
-			return 0;
-	}
-
-	if (!gen_ws(f, tabs))
+	if (fd->enm != NULL &&
+	    fprintf(f, " \"enm\": \"%s\",", fd->enm->name) < 0)
 		return 0;
-	if (fputs("\"def\": ", f) == EOF)
+	if (fd->bitf != NULL &&
+	    fprintf(f, " \"bitf\": \"%s\",", fd->bitf->name) < 0)
+		return 0;
+	if (fd->ref != NULL && fprintf(f, " \"ref\": {"
+	    " \"target\": { \"strct\": \"%s\", \"field\": \"%s\" },"
+	    " \"source\": { \"strct\": \"%s\", \"field\": \"%s\" } },",
+	    fd->ref->target->parent->name, fd->ref->target->name,
+	    fd->ref->source->parent->name, fd->ref->source->name) < 0)
+		return 0;
+	if (fputs(" \"def\": ", f) == EOF)
 		return 0;
 	if (fd->flags & FIELD_HASDEF) {
 		switch (fd->type) {
@@ -606,32 +464,19 @@ gen_field(FILE *f, size_t tabs, const struct field *fd)
 			abort();
 			break;
 		}
-		if (fputs(",\n", f) == EOF)
-			return 0;
-	} else
-		if (fputs("null,\n", f) == EOF)
-			return 0;
+	} else if (fputs("null", f) == EOF)
+		return 0;
 
-	if (!gen_ws(f, tabs))
+	if (fprintf(f, ","
+	    " \"actdel\": \"%s\", \"actup\": \"%s\",", 
+	    upacts[fd->actdel], upacts[fd->actup]) < 0)
 		return 0;
-	if (fprintf(f, "\"actdel\": \"%s\",\n", upacts[fd->actdel]) < 0)
+	if (!gen_rolemap(f, 1, fd->rolemap))
 		return 0;
-	if (!gen_ws(f, tabs))
-		return 0;
-	if (fprintf(f, "\"actup\": \"%s\",\n", upacts[fd->actup]) < 0)
-		return 0;
-	if (!gen_rolemap(f, tabs, 1, fd->rolemap))
-		return 0;
-	if (!gen_ws(f, tabs))
-		return 0;
-	if (fputs("\"valids\": [", f) == EOF)
-		return 0;	
-	if (!TAILQ_EMPTY(&fd->fvq) && fputc('\n', f) == EOF)
+	if (fputs(" \"valids\": [", f) == EOF)
 		return 0;	
 	TAILQ_FOREACH(fv, &fd->fvq, entries) {
-		if (!gen_ws(f, tabs + 1))
-			return 0;
-		if (fprintf(f, "{ \"type\": \"%s\", \"limit\": \"", 
+		if (fprintf(f, " { \"type\": \"%s\", \"limit\": \"", 
 		    vtypes[fv->type]) < 0)
 			return 0;
 		switch (fd->type) {
@@ -664,165 +509,99 @@ gen_field(FILE *f, size_t tabs, const struct field *fd)
 		if (TAILQ_NEXT(fv, entries) != NULL &&
 		    fputc(',', f) == EOF)
 			return 0;
-		if (fputc('\n', f) == EOF)
-			return 0;
 	}
-	if (!TAILQ_EMPTY(&fd->fvq) && !gen_ws(f, tabs))
-		return 0;
-	if (fputs("],\n", f) == EOF)
-		return 0;
 
-	if (!gen_ws(f, tabs))
-		return 0;
-	if (fprintf(f, "\"type\": \"%s\"\n", ftypes[fd->type]) < 0)
-		return 0;
-	return 1;
+	return fprintf(f, " ], \"type\": \"%s\"", ftypes[fd->type]) > 0;
 }
 
 static int
-gen_insert(FILE *f, size_t tabs, const struct insert *insert)
+gen_insert(FILE *f, const struct insert *insert)
 {
 
 	if (insert != NULL) {
-		if (fputs("{\n", f) == EOF)
+		if (fputs(" {", f) == EOF)
 			return 0;
-		if (!gen_pos(f, tabs + 1, &insert->pos))
+		if (!gen_pos(f, &insert->pos))
 			return 0;
-		if (!gen_rolemap(f, tabs + 1, 0, insert->rolemap))
+		if (!gen_rolemap(f, 0, insert->rolemap))
 			return 0;
-		if (!gen_ws(f, tabs))
+		if (fputs(" }", f) == EOF)
 			return 0;
-		if (fputc('}', f) == EOF)
-			return 0;
-	} else if (fputs("null", f) == EOF)
+	} else if (fputs(" null", f) == EOF)
 		return 0;
 
-	return fputs(",\n", f) != EOF;
+	return fputc(',', f) != EOF;
 }
 
 static int
-gen_search(FILE *f, int *first, size_t tabs, const struct search *s)
+gen_search(FILE *f, int *first, const struct search *s)
 {
 
 	if (*first == 0) {
-		if (fputs(",\n", f) == EOF)
+		if (fputc(',', f) == EOF)
 			return 0;
 	} else
 		*first = 0;
 
-	if (!gen_ws(f, tabs))
+	if (s->name != NULL && fprintf(f, " \"%s\":", s->name) < 0)
 		return 0;
-	if (s->name != NULL && fprintf(f, "\"%s\": ", s->name) < 0)
+	if (fputs(" {", f) == EOF)
 		return 0;
-	if (fputs("{\n", f) == EOF)
+	if (!gen_pos(f, &s->pos))
 		return 0;
-	if (!gen_pos(f, tabs + 1, &s->pos))
+	if (!gen_doc(f, s->doc))
 		return 0;
-	if (!gen_doc(f, tabs + 1, s->doc))
+	if (!gen_rolemap(f, 1, s->rolemap))
 		return 0;
-	if (!gen_rolemap(f, tabs + 1, 1, s->rolemap))
-		return 0;
-	if (!gen_ws(f, tabs + 1))
-		return 0;
-	if (fprintf(f, "\"limit\": \"%" PRId64 "\",\n", s->limit) < 0)
-		return 0;
-	if (!gen_ws(f, tabs + 1))
-		return 0;
-	if (fprintf(f, "\"offset\": \"%" PRId64 "\",\n", s->offset) < 0)
-		return 0;
-	if (!gen_ws(f, tabs + 1))
-		return 0;
-	if (fprintf(f, "\"type\": \"%s\"\n", stypes[s->type]) < 0)
-		return 0;
-	if (!gen_ws(f, tabs))
-		return 0;
-	return fputc('}', f) != EOF;
+	return fprintf(f, 
+		" \"limit\": \"%" PRId64 "\","
+		" \"offset\": \"%" PRId64 "\","
+		" \"type\": \"%s\" }", 
+		s->limit, s->offset, stypes[s->type]) > 0;
 }
 
 static int
-gen_strct(FILE *f, size_t tabs, const struct strct *s)
+gen_strct(FILE *f, const struct strct *s)
 {
 	const struct field	*fd;
 	const struct search	*sr;
 	int			 first;
 
-	if (!gen_pos(f, tabs, &s->pos))
+	if (!gen_pos(f, &s->pos))
 		return 0;
-	if (!gen_doc(f, tabs, s->doc))
+	if (!gen_doc(f, s->doc))
 		return 0;
-
-	if (!gen_ws(f, tabs))
-		return 0;
-	if (fputs("\"fields\": {\n", f) == EOF)
+	if (fputs(" \"fields\": {", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(fd, &s->fq, entries) {
-		if (!gen_ws(f, tabs + 1))
+		if (fprintf(f, " \"%s\": {", fd->name) < 0)
 			return 0;
-		if (fprintf(f, "\"%s\": {\n", fd->name) < 0)
+		if (!gen_field(f, fd))
 			return 0;
-		if (!gen_field(f, tabs + 2, fd))
-			return 0;
-		if (!gen_ws(f, tabs + 1))
-			return 0;
-		if (fputc('}', f) == EOF)
+		if (fputs(" }", f) == EOF)
 			return 0;
 		if (TAILQ_NEXT(fd, entries) && fputc(',', f) == EOF)
 			return 0;
-		if (fputc('\n', f) == EOF)
-			return 0;
 	}
-	if (!gen_ws(f, tabs))
+	if (fputs(" }, \"insert\":", f) == EOF)
 		return 0;
-	if (fputs("},\n", f) == EOF)
+	if (!gen_insert(f, s->ins))
 		return 0;
-
-	if (!gen_ws(f, tabs))
-		return 0;
-	if (fputs("\"insert\": ", f) == EOF)
-		return 0;
-	if (!gen_insert(f, tabs, s->ins))
-		return 0;
-
-	if (!gen_ws(f, tabs))
-		return 0;
-	if (fputs("\"searches\": {\n", f) == EOF)
-		return 0;
-	if (!gen_ws(f, tabs + 1))
-		return 0;
-	if (fputs("\"named\": {\n", f) == EOF)
+	if (fputs(" \"searches\": { \"named\": {", f) == EOF)
 		return 0;
 	first = 1;
 	TAILQ_FOREACH(sr, &s->sq, entries)
 		if (sr->name != NULL &&
-		    !gen_search(f, &first, tabs + 2, sr))
+		    !gen_search(f, &first, sr))
 			return 0;
-	if (first == 0 && fputc('\n', f) == EOF)
-		return 0;
-	if (!gen_ws(f, tabs + 1))
-		return 0;
-	if (fputs("},\n", f) == EOF)
-		return 0;
-	if (!gen_ws(f, tabs + 1))
-		return 0;
-	if (fputs("\"anon\": [\n", f) == EOF)
+	if (fputs(" }, \"anon\": [", f) == EOF)
 		return 0;
 	first = 1;
 	TAILQ_FOREACH(sr, &s->sq, entries)
 		if (sr->name == NULL &&
-		    !gen_search(f, &first, tabs + 2, sr))
+		    !gen_search(f, &first, sr))
 			return 0;
-	if (first == 0 && fputc('\n', f) == EOF)
-		return 0;
-	if (!gen_ws(f, tabs + 1))
-		return 0;
-	if (fputs("]\n", f) == EOF)
-		return 0;
-	if (!gen_ws(f, tabs))
-		return 0;
-	if (fputs("}\n", f) == EOF)
-		return 0;
-
-	return 1;
+	return fputs(" ] }", f) != EOF;
 }
 
 static int
@@ -830,31 +609,21 @@ gen_strcts(FILE *f, const struct config *cfg)
 {
 	const struct strct	*s;
 
-	if (!gen_ws(f, 1))
-		return 0;
-	if (fputs("\"strcts\": {\n", f) == EOF)
+	if (fputs(" \"strcts\": {\n", f) == EOF)
 		return 0;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
-		if (!gen_ws(f, 2))
+		if (fprintf(f, " \"%s\": {", s->name) < 0)
 			return 0;
-		if (fprintf(f, "\"%s\": {\n", s->name) < 0)
+		if (!gen_strct(f, s))
 			return 0;
-		if (!gen_strct(f, 3, s))
-			return 0;
-		if (!gen_ws(f, 2))
-			return 0;
-		if (fputc('}', f) == EOF)
+		if (fputs(" }", f) == EOF)
 			return 0;
 		if (TAILQ_NEXT(s, entries) && fputc(',', f) == EOF)
 			return 0;
-		if (fputc('\n', f) == EOF)
-			return 0;
 	}
 
-	if (!gen_ws(f, 1))
-		return 0;
-	return fputs("}\n", f) != EOF;
+	return fputs(" }", f) != EOF;
 }
 
 int
@@ -865,7 +634,7 @@ ort_lang_json(const struct ort_lang_json *args,
 	if (!(args->flags & ORT_LANG_JSON_FRAGMENT) &&
 	    fputs("{ ", f) == EOF)
 		return 0;
-	if (fputs("\"config\": {\n", f) == EOF)
+	if (fputs("\"config\": {", f) == EOF)
 		return 0;
 	if (!gen_roles(f, cfg))
 		return 0;
@@ -876,7 +645,7 @@ ort_lang_json(const struct ort_lang_json *args,
 	if (!gen_strcts(f, cfg))
 		return 0;
 	if (!(args->flags & ORT_LANG_JSON_FRAGMENT) &&
-	    fputs("} ", f) == EOF)
+	    fputs(" }", f) == EOF)
 		return 0;
 	return fputs("}\n", f) != EOF;
 }

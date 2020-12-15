@@ -42,6 +42,14 @@ static const char *const aggrtypes[] = {
 	"minrow", /* AGGR_MINROW */
 };
 
+static const char *const modtypes[MODTYPE__MAX] = {
+	"concat", /* MODTYPE_CONCAT */
+	"dec", /* MODTYPE_DEC */
+	"inc", /* MODTYPE_INC */
+	"set", /* MODTYPE_SET */
+	"strset", /* MODTYPE_STRSET */
+};
+
 static const char *const optypes[OPTYPE__MAX] = {
 	"eq", /* OPTYPE_EQUAL */
 	"ge", /* OPTYPE_GE */
@@ -138,6 +146,10 @@ gen_string(FILE *f, const char *cp)
 	return fputc('\"', f) != EOF;
 }
 
+/*
+ * Generate "rolemap": string[]|null w/comma if comma.
+ * Return zero on failure, non-zero on success.
+ */
 static int
 gen_rolemap(FILE *f, int comma, const struct rolemap *map)
 {
@@ -145,10 +157,7 @@ gen_rolemap(FILE *f, int comma, const struct rolemap *map)
 
 	if (fputs( "\"rolemap\": ", f) == EOF)
 		return 0;
-	if (map == NULL) {
-		if (fputs("null", f) == EOF)
-			return 0;
-	} else {
+	if (map != NULL) {
 		if (fputc('[', f) == EOF)
 			return 0;
 		TAILQ_FOREACH(ref, &map->rq, entries) {
@@ -160,11 +169,16 @@ gen_rolemap(FILE *f, int comma, const struct rolemap *map)
 		}
 		if (fputs(" ]", f) == EOF)
 			return 0;
-	}
+	} else if (fputs("null", f) == EOF)
+		return 0;
 
 	return comma ? fputc(',', f) != EOF : 1;
 }
 
+/*
+ * Emit posObj w/comma.
+ * Return zero on failure, non-zero on success
+ */
 static int
 gen_pos(FILE *f, const struct pos *pos)
 {
@@ -177,6 +191,11 @@ gen_pos(FILE *f, const struct pos *pos)
 		pos->column, pos->line) > 0;
 }
 
+/*
+ * Emit "name": { labelObj } w/o comma.
+ * The name is the language key.
+ * Return zero on failure, non-zero on success
+ */
 static int
 gen_label(FILE *f, const char *name,
 	const struct label *l, const struct config *cfg)
@@ -737,6 +756,80 @@ gen_search(FILE *f, int *first, const struct search *s)
 }
 
 /*
+ * Emit { urefObj } w/o comma.
+ * Return zero on failure, non-zero on success.
+ */
+static int
+gen_uref(FILE *f, const struct uref *ref)
+{
+
+	if (fputs(" {", f) == EOF)
+		return 0;
+	if (!gen_pos(f, &ref->pos))
+		return 0;
+	return fprintf(f,
+		" \"field\": \"%s\", \"op\": \"%s\","
+		" \"mod\": \"%s\" }", ref->field->name,
+		optypes[ref->op], modtypes[ref->mod]) > 0;
+}
+
+/*
+ * Emit "name": { updateObj } w/o comma.
+ * As an exception to the norm, start with a comma depending upon
+ * "first".
+ * This is to ease iteration through the queue.
+ * Return zero on failure, non-zero on success.
+ */
+static int
+gen_update(FILE *f, int *first, const struct update *u)
+{
+	const struct uref	*ref;
+
+	if (*first == 0) {
+		if (fputc(',', f) == EOF)
+			return 0;
+	} else
+		*first = 0;
+
+	if (u->name != NULL && fprintf(f, " \"%s\":", u->name) < 0)
+		return 0;
+	if (fputs(" {", f) == EOF)
+		return 0;
+	if (!gen_pos(f, &u->pos))
+		return 0;
+	if (!gen_doc(f, u->doc))
+		return 0;
+	if (fputs(" \"mrq\": [", f) == EOF)
+		return 0;
+	TAILQ_FOREACH(ref, &u->mrq, entries) {
+		if (!gen_uref(f, ref))
+			return 0;
+		if (TAILQ_NEXT(ref, entries) != NULL &&
+		    fputc(',', f) == EOF)
+			return 0;
+	}
+	if (fputs(" ], \"crq\": [", f) == EOF)
+		return 0;
+	TAILQ_FOREACH(ref, &u->crq, entries) {
+		if (!gen_uref(f, ref))
+			return 0;
+		if (TAILQ_NEXT(ref, entries) != NULL &&
+		    fputc(',', f) == EOF)
+			return 0;
+	}
+	if (fprintf(f, "], \"flags\": [") < 0)
+		return 0;
+	if (u->flags & UPDATE_ALL)
+		if (fputs(" \"all\"", f) == EOF)
+			return 0;
+	if (fputs(" ], ", f) == EOF)
+		return 0;
+	if (!gen_rolemap(f, 0, u->rolemap))
+		return 0;
+	return fputs(" }", f) != EOF;
+}
+
+/*
  * Emit "name": { strctObj } w/o comma.
  * Return zero on failure, non-zero on success.
  */
@@ -745,6 +838,7 @@ gen_strct(FILE *f, const struct strct *s)
 {
 	const struct field	*fd;
 	const struct search	*sr;
+	const struct update	*up;
 	int			 first;
 
 	if (fprintf(f, " \"%s\": {", s->name) < 0)
@@ -766,6 +860,41 @@ gen_strct(FILE *f, const struct strct *s)
 		return 0;
 	if (!gen_insert(f, s->ins))
 		return 0;
+
+	if (fputs(" \"uq\": { \"named\": {", f) == EOF)
+		return 0;
+	first = 1;
+	TAILQ_FOREACH(up, &s->uq, entries)
+		if (up->name != NULL &&
+		    !gen_update(f, &first, up))
+			return 0;
+	if (fputs(" }, \"anon\": [", f) == EOF)
+		return 0;
+	first = 1;
+	TAILQ_FOREACH(up, &s->uq, entries)
+		if (up->name == NULL &&
+		    !gen_update(f, &first, up))
+			return 0;
+	if (fputs(" ] },", f) == EOF)
+		return 0;
+
+	if (fputs(" \"dq\": { \"named\": {", f) == EOF)
+		return 0;
+	first = 1;
+	TAILQ_FOREACH(up, &s->dq, entries)
+		if (up->name != NULL &&
+		    !gen_update(f, &first, up))
+			return 0;
+	if (fputs(" }, \"anon\": [", f) == EOF)
+		return 0;
+	first = 1;
+	TAILQ_FOREACH(up, &s->dq, entries)
+		if (up->name == NULL &&
+		    !gen_update(f, &first, up))
+			return 0;
+	if (fputs(" ] },", f) == EOF)
+		return 0;
+
 	if (fputs(" \"sq\": { \"named\": {", f) == EOF)
 		return 0;
 	first = 1;
@@ -797,7 +926,8 @@ gen_strcts(FILE *f, const struct strctq *q)
 	TAILQ_FOREACH(s, q, entries) {
 		if (!gen_strct(f, s))
 			return 0;
-		if (TAILQ_NEXT(s, entries) && fputc(',', f) == EOF)
+		if (TAILQ_NEXT(s, entries) != NULL && 
+		    fputc(',', f) == EOF)
 			return 0;
 	}
 	return fputs(" }", f) != EOF;

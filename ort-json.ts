@@ -228,6 +228,43 @@ namespace ort {
 		anon: searchObj[];
 	}
 
+	interface urefObj {
+		pos: posObj;
+		field: string;
+		op: 'eq'|'ge'|'gt'|'le'|'lt'|'neq'|'like'|'and'|'or'|'streq'|'strneq'|'isnull'|'notnull';
+		mod: 'concat'|'dec'|'inc'|'set'|'strset';
+	}
+
+	/**
+	 * Same as "struct update" in ort(3).
+	 */
+	interface updateObj {
+		pos: posObj;
+		doc: string|null;
+		rolemap: string[]|null;
+		/**
+		 * Can contain "all" to represent UPDATE_ALL.
+		 */
+		flags: string[];
+		mrq: urefObj[];
+		crq: urefObj[];
+	}
+
+	interface updateSet {
+		[name: string]: updateObj;
+	}
+
+	interface updateClassObj {
+		/**
+		 * Have a user-provided name.
+		 */
+		named: updateSet;
+		/**
+		 * Defined by update parameters: not named.
+		 */
+		anon: updateObj[];
+	}
+
 	/**
 	 * Same as "struct strct" in ort(3).
 	 */
@@ -244,7 +281,9 @@ namespace ort {
 		 * under a common "sq", we split between named and
 		 * anonymous searches beneath this object.
 		 */
-		searches: searchClassObj;
+		sq: searchClassObj;
+		uq: updateClassObj;
+		dq: updateClassObj;
 	}
 
 	interface strctSet {

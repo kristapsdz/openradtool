@@ -1,14 +1,13 @@
 Top-level regression test directory.  Driven by `make regress` in the source
 root.
 
-Language-specific regression tests are in subdirectories.  This directory can
-run on any operating system that can compile the openradtool binaries: it has
-no dependencies.
+These regressions are used for a preliminary test of ort(1) to see if it
+produces correct results.  They're also by some front-ends to validate
+their output given corner conditions of the input configuration.
 
-The files in this directory are tested only for being parsed properly
-(or for failing to parse as expected).
+Language-specific regression tests are in subdirectories. 
 
-There are two types of test:
+There are two types of file in this directory:
 
 1. Test files ending in .nresult should fail compilation.
 2. Text files ending in .result have their corresponding .ort files

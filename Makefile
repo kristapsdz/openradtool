@@ -704,6 +704,13 @@ regress: all
 			echo "pass" ; \
 		done ; \
 	fi ; \
+	if [ -f "node_modules/.bin/ts-node" ]; then \
+		echo "=== ort-nodejs compile tests === " ; \
+		node_modules/.bin/ts-node --skip-project \
+			regress/nodejs/regress-runner.ts ; \
+	else \
+		echo "!!! skipping ort-nodejs compile tests !!! " ; \
+	fi ; \
 	echo "=== ort-javascript output tests === " ; \
 	for f in regress/javascript/*.ort ; do \
 		printf "ort-javascript: $$f... " ; \
@@ -716,21 +723,20 @@ regress: all
 		fi ; \
 		echo "pass" ; \
 	done ; \
-	if [ ! -f "node_modules/.bin/ts-node" ]; then \
-		echo "!!! skipping ort-javascript run tests !!! " ; \
-	else \
+	if [ -f "node_modules/.bin/ts-node" ]; then \
 		echo "=== ort-javascript run tests === " ; \
 		node_modules/.bin/ts-node --skip-project \
 			regress/javascript/regress-runner.ts ; \
-	fi ; \
-	if [ ! -f "node_modules/.bin/typescript-json-schema" ]; then \
-		echo "!!! skipping ort-json output tests !!! " ; \
 	else \
+		echo "!!! skipping ort-javascript run tests !!! " ; \
+	fi ; \
+	if [ -f "node_modules/.bin/typescript-json-schema" ]; then \
 		node_modules/.bin/typescript-json-schema \
 			--strictNullChecks ort-json.ts \
 			ort.ortConfig > ort-json.schema ; \
 		which jsonschema-3 >/dev/null 2>&1 ; \
 		if [ $$? -eq 0 ]; then \
+			echo "=== ort-json output tests === " ; \
 			for f in regress/*.ort ; do \
 				printf "ort-json: $$f... " ; \
 				./ort-json $$f > $$tmp 2>/dev/null ; \
@@ -752,6 +758,8 @@ regress: all
 		else \
 			echo "!!! skipping ort-json output tests !!! " ; \
 		fi ; \
+	else \
+		echo "!!! skipping ort-json output tests !!! " ; \
 	fi ; \
 	rm -f $$tmp
 

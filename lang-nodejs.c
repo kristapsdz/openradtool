@@ -931,12 +931,14 @@ gen_query(FILE *f, const struct config *cfg,
 
 	if (s->type == STYPE_ITERATE) {
 		sz = strlen(rs->name) + 25;
+		if (pos > 1 && fputc(',', f) == EOF)
+			return 0;
 		if (col + sz >= 72) {
-			if (fputs(",\n\t\t", f) == EOF)
+			if (fputs("\n\t\t", f) == EOF)
 				return 0;
 			col = 16;
-		} else  {
-			if (fputs(", ", f) == EOF)
+		} else if (pos > 1) {
+			if (fputc(' ', f) == EOF)
 				return 0;
 			col += 2;
 		}
@@ -1021,7 +1023,7 @@ gen_query(FILE *f, const struct config *cfg,
 		pos++;
 	}
 	
-	if (fputc('\n', f) == EOF)
+	if (pos > 1 && fputc('\n', f) == EOF)
 		return 0;
 
 	switch (s->type) {

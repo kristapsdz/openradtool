@@ -1208,7 +1208,7 @@ gen_ortns(FILE *f, const struct config *cfg)
 	if (fputs("export namespace ortns {\n", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(e, &cfg->eq, entries)
-		if (gen_enm(f, e, i++))
+		if (!gen_enm(f, e, i++))
 			return 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		if (!gen_strct(f, p, i++))
@@ -1507,7 +1507,6 @@ gen_nodejs(const struct config *cfg, FILE *f)
 		return 0;
 	if (!gen_ortctx(f, cfg))
 		return 0;
-
 	if (fputc('\n', f) == EOF)
 		return 0;
 

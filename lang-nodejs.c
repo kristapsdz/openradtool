@@ -1,4 +1,3 @@
-
 /*	$Id$ */
 /*
  * Copyright (c) 2020 Kristaps Dzonsons <kristaps@bsd.lv>
@@ -22,16 +21,12 @@
 #endif
 
 #include <assert.h>
-#include <ctype.h>
-#if HAVE_ERR
-# include <err.h>
-#endif
 #include <inttypes.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "version.h"
 #include "ort.h"
@@ -89,200 +84,247 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	"BigInt", /* FTYPE_BITFIELD */
 };
 
-static size_t
-xprintf(const char *fmt, ...) 
-	__attribute__((format(printf, 1, 2)));
-
-static size_t
-xprintf(const char *fmt, ...)
-{
-	va_list	 ap;
-	int	 rc;
-
-	va_start(ap, fmt);
-	rc = vprintf(fmt, ap);
-	va_end(ap);
-
-	return rc > 0 ? rc : 0;
-}
-
 /*
- * Print a variable vNN where NN is position "pos" (from one) with the
+ * Generate variable vNN where NN is position "pos" (from one) with the
  * appropriate type in a method signature.
  * This will start with a comma if not the first variable.
- * Returns the number of columns on the current line.
+ * Return <0 on fail, >0 for columns printed.
  */
-static size_t
-print_var(size_t pos, size_t col, const struct field *f)
+static int
+gen_var(FILE *f, size_t pos, size_t col, const struct field *fd)
 {
+	int	 rc;
 
 	if (pos > 1) {
-		putchar(',');
+		if (fputc(',', f) == EOF)
+			return -1;
 		col++;
 	}
 
 	if (col >= 72) {
-		fputs("\n\t\t", stdout);
+		if (fputs("\n\t\t", f) == EOF)
+			return -1;
 		col = 16;
 	} else if (pos > 1) {
-		putchar(' ');
+		if (fputc(' ', f) == EOF)
+			return -1;
 		col++;
 	}
 
-	col += xprintf("v%zu: ", pos);
-	col += f->type == FTYPE_ENUM ?
-		xprintf("ortns.%s", f->enm->name) :
-		xprintf("%s", ftypes[f->type]);
-	if ((f->flags & FIELD_NULL) ||
-	    (f->type == FTYPE_STRUCT &&
-	     (f->ref->source->flags & FIELD_NULL)))
-		col += xprintf("|null");
+	if ((rc = fprintf(f, "v%zu: ", pos)) < 0)
+		return -1;
+	col += rc;
 
-	return col;
+	rc = fd->type == FTYPE_ENUM ?
+		fprintf(f, "ortns.%s", fd->enm->name) :
+		fprintf(f, "%s", ftypes[fd->type]);
+	if (rc < 0)
+		return -1;
+	col += rc;
+
+	if ((fd->flags & FIELD_NULL) ||
+	    (fd->type == FTYPE_STRUCT &&
+	     (fd->ref->source->flags & FIELD_NULL))) {
+		if ((rc = fprintf(f, "|null")) < 0)
+			return 0;
+		col += rc;
+	}
+
+	assert(col > 0 && col < INT_MAX);
+	return (int)col;
 }
 
-static void
-gen_role(const struct role *r, size_t tabs)
+/*
+ * Generate role name (if not all) and recursively descend.
+ * Return zero on failure, non-zero on success.
+ */
+static int
+gen_role(FILE *f, const struct role *r, size_t tabs)
 {
 	const struct role	*rr;
 	size_t			 i;
 
 	if (strcmp(r->name, "all")) {
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("case '%s\':\n", r->name);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, "case '%s\':\n", r->name) < 0)
+			return 0;
 	}
+
 	TAILQ_FOREACH(rr, &r->subrq, entries)
-		gen_role(rr, tabs);
+		if (!gen_role(f, rr, tabs))
+			return 0;
+	return 1;
 }
 
 /*
  * Recursively generate all roles allowed by this rolemap.
- * Returns non-zero if we wrote something, zero otherwise.
+ * Return <0 on failure, >0 if we wrote something, 0 otherwise.
  */
 static int
-gen_rolemap(const struct rolemap *rm)
+gen_rolemap(FILE *f, const struct rolemap *rm)
 {
 	const struct rref	*rr;
 
 	if (rm == NULL)
 		return 0;
 
-	puts("\t\tswitch (this.#role) {");
+	if (fputs("\t\tswitch (this.#role) {\n", f) == EOF)
+		return 0;
 	TAILQ_FOREACH(rr, &rm->rq, entries)
-		gen_role(rr->role, 2);
-	puts("\t\t\tbreak;\n"
+		if (!gen_role(f, rr->role, 2))
+			return 0;
+
+	return fputs("\t\t\tbreak;\n"
 	     "\t\tdefault:\n"
 	     "\t\t\tprocess.abort();\n"
-	     "\t\t}");
-	return 1;
+	     "\t\t}\n", f) != EOF;
 }
 
-static void
-gen_reffind(const struct strct *p)
+/*
+ * Generate db_xxx_reffind method (if applicable).
+ * Return zero on failure, non-zero on success or non-applicable.
+ */
+static int
+gen_reffind(FILE *f, const struct strct *p)
 {
-	const struct field	*f;
+	const struct field	*fd;
 	size_t			 col;
+	int			 rc;
 
 	if (!(p->flags & STRCT_HAS_NULLREFS))
-		return;
+		return 1;
 
 	/* 
 	 * Do we have any null-ref fields in this?
 	 * (They might be in target references.)
 	 */
 
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if ((f->type == FTYPE_STRUCT) &&
-		    (f->ref->source->flags & FIELD_NULL))
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if ((fd->type == FTYPE_STRUCT) &&
+		    (fd->ref->source->flags & FIELD_NULL))
 			break;
 
-	puts("");
-	putchar('\t');
-	col = 8 + xprintf("private db_%s_reffind", p->name);
+	if (fputs("\n\t", f) == EOF)
+		return 0;
+	if ((rc = fprintf(f, "private db_%s_reffind", p->name)) < 0)
+		return 0;
+	col = 8 + rc;
+
 	if (col >= 72) {
-		fputs("\n\t(", stdout);
+		if (fputs("\n\t(", f) == EOF)
+			return 0;
 		col = 9;
 	} else {
-		putchar('(');
+		if (fputc('(', f) == EOF)
+			return 0;
 		col++;
 	}
 
-	printf("db: ortdb, obj: ortns.%sData): void\n"
-	       "\t{\n", p->name);
+	if (fprintf(f, "db: ortdb, "
+	    "obj: ortns.%sData): void\n\t{\n", p->name) < 0)
+		return 0;
 
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->type != FTYPE_STRUCT)
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type != FTYPE_STRUCT)
 			continue;
-		if (f->ref->source->flags & FIELD_NULL)
-			printf("\t\tif (obj.%s !== null) {\n"
-			       "\t\t\tlet cols: any;\n"
-			       "\t\t\tconst parms: any[] = [];\n"
-			       "\t\t\tconst stmt: Database.Statement =\n"
-			       "\t\t\t\tdb.db.prepare(ortstmt.stmtBuilder\n"
-			       "\t\t\t\t(ortstmt.ortstmt.STMT_%s_BY_UNIQUE_%s));\n"
-			       "\t\t\tstmt.raw(true);\n"
-			       "\t\t\tparms.push(obj.%s);\n"
-		               "\t\t\tcols = stmt.get(parms);\n"
-			       "\t\t\tif (typeof cols === \'undefined\')\n"
-			       "\t\t\t\tthrow \'referenced row not found\';\n"
-			       "\t\t\tobj.%s = this.db_%s_fill\n"
-			       "\t\t\t\t({row: <any[]>cols, pos: 0});\n"
-			       "\t\t}\n",
-			       f->ref->source->name,
-			       f->ref->target->parent->name,
-			       f->ref->target->name,
-			       f->ref->source->name,
-			       f->name,
-			       f->ref->target->parent->name);
-		if (!(f->ref->target->parent->flags & 
+		if (fd->ref->source->flags & FIELD_NULL) {
+			if (fprintf(f, "\t\tif (obj.%s !== null) {\n"
+			    "\t\t\tlet cols: any;\n"
+			    "\t\t\tconst parms: any[] = [];\n"
+			    "\t\t\tconst stmt: Database.Statement =\n"
+			    "\t\t\t\tdb.db.prepare(ortstmt.stmtBuilder\n"
+			    "\t\t\t\t(ortstmt.ortstmt.STMT_%s_BY_UNIQUE_%s));\n"
+			    "\t\t\tstmt.raw(true);\n"
+			    "\t\t\tparms.push(obj.%s);\n"
+		            "\t\t\tcols = stmt.get(parms);\n"
+			    "\t\t\tif (typeof cols === \'undefined\')\n"
+			    "\t\t\t\tthrow \'referenced row not found\';\n"
+			    "\t\t\tobj.%s = this.db_%s_fill\n"
+			    "\t\t\t\t({row: <any[]>cols, pos: 0});\n"
+			    "\t\t}\n",
+			    fd->ref->source->name,
+			    fd->ref->target->parent->name,
+			    fd->ref->target->name,
+			    fd->ref->source->name,
+			    fd->name,
+			    fd->ref->target->parent->name) < 0)
+				return 0;
+		}
+		if (!(fd->ref->target->parent->flags & 
 		    STRCT_HAS_NULLREFS))
 			continue;
-		printf("\t\tthis.db_%s_reffind(db, obj.%s);\n", 
-			f->ref->target->parent->name, f->name);
+		if (fprintf(f, "\t\tthis.db_%s_reffind(db, obj.%s);\n",
+		    fd->ref->target->parent->name, fd->name) < 0)
+			return 0;
 	}
-	puts("\t}");
+
+	return fputs("\t}\n", f) != EOF;
 }
 
-static void
-gen_fill(const struct strct *p)
+/*
+ * Generate db_xxx_fill method.
+ * Return zero on failure, non-zero on success.
+ */
+static int
+gen_fill(FILE *f, const struct strct *p)
 {
 	size_t	 		 col;
-	const struct field	*f;
+	const struct field	*fd;
+	int			 rc;
 
-	puts("");
-	putchar('\t');
-	col = 8 + xprintf("private db_%s_fill", p->name);
+	if (fputs("\n\t", f) == EOF)
+		return 0;
+	if ((rc = fprintf(f, "private db_%s_fill", p->name)) < 0)
+		return 0;
+	col = 8 + rc;
+
 	if (col >= 72) {
-		fputs("\n\t(", stdout);
+		if (fputs("\n\t(", f) == EOF)
+			return 0;
 		col = 9;
 	} else {
-		putchar('(');
+		if (fputc('(', f) == EOF)
+			return 0;
 		col++;
 	}
 
-	col += xprintf("data: {row: any[], pos: number}):");
-	if (col + strlen(p->name) + 13 >= 72)
-		fputs("\n\t\t", stdout);
-	else
-		putchar(' ');
+	if ((rc = fprintf(f, 
+	    "data: {row: any[], pos: number}):")) < 0)
+		return 0;
+	col += rc;
 
-	printf("ortns.%sData\n", p->name);
+	if (col + strlen(p->name) + 13 >= 72) {
+		if (fputs("\n\t\t", f) == EOF)
+			return 0;
+	} else {
+		if (fputc(' ', f) == EOF)
+			return 0;
+	}
 
-	printf("\t{\n"
-	       "\t\tconst obj: ortns.%sData = {\n", p->name);
+	if (fprintf(f, "ortns.%sData\n\t{\n"
+	    "\t\tconst obj: ortns.%sData = {\n", 
+	    p->name, p->name) < 0)
+		return 0;
 
 	col = 0;
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		switch (f->type) {
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		switch (fd->type) {
 		case FTYPE_STRUCT:
-			puts("\t\t\t/* A dummy value for now. */");
-			if (f->ref->source->flags & FIELD_NULL) {
-				printf("\t\t\t'%s': null,\n", f->name);
+			if (fputs("\t\t\t/* A dummy value "
+			    "for now. */\n", f) == EOF)
+				return 0;
+			if (fd->ref->source->flags & FIELD_NULL) {
+				if (fprintf(f, "\t\t\t'%s': "
+				    "null,\n", fd->name) < 0)
+					return 0;
 				break;
 			}
-			printf("\t\t\t'%s': <ortns.%sData>{},\n",
-				f->name, f->ref->target->parent->name);
+			if (fprintf(f, "\t\t\t'%s': "
+			    "<ortns.%sData>{},\n", fd->name, 
+			    fd->ref->target->parent->name) < 0)
+				return 0;
 			break;
 		case FTYPE_ENUM:
 			/*
@@ -290,131 +332,167 @@ gen_fill(const struct strct *p)
 			 * internal representation is 64-bit but numeric
 			 * enumerations are constraint to 53.
 			 */
-			printf("\t\t\t'%s': <ortns.%s%s>",
-				f->name, f->enm->name,
-				(f->flags & FIELD_NULL) ? 
-				"|null" : "");
-			if (f->flags & FIELD_NULL)
-				printf("(data.row[data.pos + %zu] === "
-					"null ?\n\t\t\t\tnull : "
-					"data.row[data.pos + %zu]."
-					"toString()),\n", col, col);
-			else
-				printf("data.row[data.pos + %zu]."
-					"toString(),\n", col);
+			if (fprintf(f, "\t\t\t'%s': <ortns.%s%s>",
+			    fd->name, fd->enm->name,
+			    (fd->flags & FIELD_NULL) ? 
+			    "|null" : "") < 0)
+				return 0;
+			if (fd->flags & FIELD_NULL) {
+				if (fprintf(f, 
+				    "(data.row[data.pos + %zu] === "
+				    "null ?\n\t\t\t\tnull : "
+				    "data.row[data.pos + %zu]."
+				    "toString()),\n", col, col) < 0)
+					return 0;
+			} else {
+				if (fprintf(f, 
+				    "data.row[data.pos + %zu]."
+				    "toString(),\n", col) < 0)
+					return 0;
+			}
 			break;
 		default:
-			assert(ftypes[f->type] != NULL);
-			printf("\t\t\t'%s': <%s%s>"
-				"data.row[data.pos + %zu],\n",
-				f->name, ftypes[f->type],
-				(f->flags & FIELD_NULL) ? 
-				"|null" : "", col);
+			assert(ftypes[fd->type] != NULL);
+			if (fprintf(f, "\t\t\t'%s': <%s%s>"
+			    "data.row[data.pos + %zu],\n",
+			    fd->name, ftypes[fd->type],
+			    (fd->flags & FIELD_NULL) ? 
+			    "|null" : "", col) < 0)
+				return 0;
 			break;
 		}
-		if (f->type != FTYPE_STRUCT)
+		if (fd->type != FTYPE_STRUCT)
 			col++;
 	}
 
-	printf("\t\t};\n"
-	       "\t\tdata.pos += %zu;\n", col);
+	if (fprintf(f, "\t\t};\n"
+	    "\t\tdata.pos += %zu;\n", col) < 0)
+		return 0;
 
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if (f->type == FTYPE_STRUCT &&
-		    !(f->ref->source->flags & FIELD_NULL))
-			printf("\t\tobj.%s = this.db_%s_fill(data);\n",
-				f->name, f->ref->target->parent->name);
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if (fd->type == FTYPE_STRUCT &&
+		    !(fd->ref->source->flags & FIELD_NULL))
+			if (fprintf(f, "\t\tobj.%s = "
+			    "this.db_%s_fill(data);\n", fd->name, 
+			    fd->ref->target->parent->name) < 0)
+				return 0;
 
-	puts("\t\treturn obj;\n"
-	     "\t}");
+	return fputs("\t\treturn obj;\n\t}\n", f) != EOF;
 }
 
 /*
- * Generate the insertion function.
+ * Generate db_xxxx_insert method.
+ * Return zero on failure, non-zero on success.
  */
-static void
-gen_insert(const struct strct *p)
+static int
+gen_insert(FILE *f, const struct strct *p)
 {
-	const struct field	*f;
+	const struct field	*fd;
 	size_t	 	 	 pos = 1, col;
+	int			 rc;
 
-	puts("");
-	print_commentt(1, COMMENT_JS_FRAG_OPEN,
-		"Insert a new row into the database. Only "
-		"native (and non-rowid) fields may be set.");
+	if (fputc('\n', f) == EOF)
+		return 0;
+	if (!gen_comment(f, 1, COMMENT_JS_FRAG_OPEN,
+	    "Insert a new row into the database. Only "
+	    "native (and non-rowid) fields may be set."))
+		return 0;
 
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->type == FTYPE_STRUCT ||
-		    (f->flags & FIELD_ROWID))
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type == FTYPE_STRUCT ||
+		    (fd->flags & FIELD_ROWID))
 			continue;
-		print_commentv(1, COMMENT_JS_FRAG,
-			"@param v%zu %s", pos++, f->name);
+		if (gen_commentv(f, 1, COMMENT_JS_FRAG,
+		    "@param v%zu %s", pos++, fd->name))
+			return 0;
 	}
-	print_commentt(1, COMMENT_JS_FRAG_CLOSE,
-		"@return New row's identifier on success or "
-		"<0 otherwise.");
+	if (!gen_comment(f, 1, COMMENT_JS_FRAG_CLOSE,
+	    "@return New row's identifier on success or "
+	    "<0 otherwise."))
+		return 0;
 
-	putchar('\t');
-	col = 8 + xprintf("db_%s_insert", p->name);
+	if (fputc('\t', f) == EOF)
+		return 0;
+	if ((rc = fprintf(f, "db_%s_insert", p->name)) < 0)
+		return 0;
+	col = 8 + rc;
+
 	if (col >= 72) {
-		fputs("\n\t(", stdout);
+		if (fputs("\n\t(", f) == EOF)
+			return 0;
 		col = 9;
 	} else {
-		putchar('(');
+		if (fputc('(', f) == EOF)
+			return 0;
 		col++;
 	}
 
 	pos = 1;
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if (!(f->type == FTYPE_STRUCT || 
-		      (f->flags & FIELD_ROWID)))
-			col = print_var(pos++, col, f);
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if (!(fd->type == FTYPE_STRUCT || 
+		      (fd->flags & FIELD_ROWID))) {
+			if ((rc = gen_var(f, pos++, col, fd)) < 0)
+				return 0;
+			col = rc;
+		}
 
-	fputs("):", stdout);
+	if (fputs("):", f) == EOF)
+		return 0;
 
-	if (col + 7 >= 72)
-		fputs("\n\t\tBigInt", stdout);
-	else
-		fputs(" BigInt", stdout);
+	if (col + 7 >= 72) {
+		if (fputs("\n\t\tBigInt", f) == EOF)
+			return 0;
+	} else {
+		if (fputs(" BigInt", f) == EOF)
+			return 0;
+	}
 
-	printf("\n"
-	       "\t{\n"
-	       "\t\tconst parms: any[] = [];\n"
-	       "\t\tlet info: Database.RunResult;\n"
-	       "\t\tconst stmt: Database.Statement =\n"
-	       "\t\t\tthis.#o.db.prepare(ortstmt.stmtBuilder\n"
-	       "\t\t\t(ortstmt.ortstmt.STMT_%s_INSERT));\n"
-	       "\n", p->name);
+	if (fprintf(f, "\n"
+	    "\t{\n"
+	    "\t\tconst parms: any[] = [];\n"
+	    "\t\tlet info: Database.RunResult;\n"
+	    "\t\tconst stmt: Database.Statement =\n"
+	    "\t\t\tthis.#o.db.prepare(ortstmt.stmtBuilder\n"
+	    "\t\t\t(ortstmt.ortstmt.STMT_%s_INSERT));\n"
+	    "\n", p->name) < 0)
+		return 0;
 
-	if (gen_rolemap(p->ins->rolemap))
-		puts("");
+	if ((rc = gen_rolemap(f, p->ins->rolemap)) < 0)
+		return 0;
+	else if (rc > 0 && fputc('\n', f) == EOF)
+		return 0;
 
 	pos = 1;
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->type == FTYPE_STRUCT ||
-		    (f->flags & FIELD_ROWID))
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type == FTYPE_STRUCT ||
+		    (fd->flags & FIELD_ROWID))
 			continue;
 
-		if (f->type != FTYPE_PASSWORD) {
-			printf("\t\tparms.push(v%zu);\n", pos++);
+		if (fd->type != FTYPE_PASSWORD) {
+			if (fprintf(f, 
+			    "\t\tparms.push(v%zu);\n", pos++) < 0)
+				return 0;
 			continue;
 		}
 
-		if (f->flags & FIELD_NULL)
-			printf("\t\tif (v%zu === null)\n"
-			       "\t\t\tparms.push(null);\n"
-			       "\t\telse\n"
-			       "\t\t\tparms.push(bcrypt.hashSync"
-				"(v%zu, bcrypt.genSaltSync()));\n", 
-				pos, pos);
-		else
-			printf("\t\tparms.push(bcrypt.hashSync"
-				"(v%zu, bcrypt.genSaltSync()));\n", 
-				pos);
+		if (fd->flags & FIELD_NULL) {
+			if (fprintf(f, "\t\tif (v%zu === null)\n"
+			    "\t\t\tparms.push(null);\n"
+			    "\t\telse\n"
+			    "\t\t\tparms.push(bcrypt.hashSync"
+			    "(v%zu, bcrypt.genSaltSync()));\n", 
+			    pos, pos) < 0)
+				return 0;
+		} else {
+			if (fprintf(f, "\t\tparms.push(bcrypt.hashSync"
+			    "(v%zu, bcrypt.genSaltSync()));\n", 
+			    pos) < 0)
+				return 0;
+		}
 		pos++;
 	}
 
-	puts("\n"
+	return fputs("\n"
 	     "\t\ttry {\n"
 	     "\t\t\tinfo = stmt.run(parms);\n"
 	     "\t\t} catch (er) {\n"
@@ -422,20 +500,21 @@ gen_insert(const struct strct *p)
 	     "\t\t}\n"
 	     "\n"
 	     "\t\treturn BigInt(info.lastInsertRowid);\n"
-	     "\t}");
+	     "\t}\n", f) != EOF;
 }
 
 /*
- * Generate update/delete function.
+ * Generate db_xxx_delete or db_xxx_update method.
+ * Return zero on failure, non-zero on success.
  */
-static void
-gen_modifier(const struct config *cfg,
+static int
+gen_update(FILE *f, const struct config *cfg,
 	const struct update *up, size_t num)
 {
 	const struct uref	*ref;
 	enum cmtt		 ct = COMMENT_JS_FRAG_OPEN;
 	size_t		 	 pos = 1, col;
-	int			 hasunary = 0;
+	int			 hasunary = 0, rc;
 
 	/* Do we document non-parameterised constraints? */
 
@@ -447,47 +526,53 @@ gen_modifier(const struct config *cfg,
 
 	/* Documentation. */
 
-	puts("");
+	if (fputc('\n', f) == EOF)
+		return 0;
 	if (up->doc != NULL) {
-		print_commentt(1, COMMENT_JS_FRAG_OPEN, up->doc);
+		if (!gen_comment(f, 1, COMMENT_JS_FRAG_OPEN, up->doc))
+			return 0;
 		ct = COMMENT_JS_FRAG;
 	}
 
 	if (hasunary) { 
-		print_commentt(1, ct,
-			"The following fields are constrained by "
-			"unary operations: ");
-		TAILQ_FOREACH(ref, &up->crq, entries)
-			if (!OPTYPE_ISUNARY(ref->op)) {
-				print_commentv(1, COMMENT_JS_FRAG,
-					"%s (checked %s null)", 
-					ref->field->name, 
-					ref->op == OPTYPE_NOTNULL ?
-					"not" : "is");
-				ct = COMMENT_JS_FRAG;
-			}
+		if (!gen_comment(f, 1, ct,
+		    "The following fields are constrained by "
+		    "unary operations:"))
+			return 0;
+		TAILQ_FOREACH(ref, &up->crq, entries) {
+			if (OPTYPE_ISUNARY(ref->op))
+				continue;
+			if (!gen_commentv(f, 1, COMMENT_JS_FRAG,
+			    "%s (checked %s null)", ref->field->name, 
+			    ref->op == OPTYPE_NOTNULL ? "not" : "is"))
+				return 0;
+			ct = COMMENT_JS_FRAG;
+		}
 	}
 
 	if (up->type == UP_MODIFY)
 		TAILQ_FOREACH(ref, &up->mrq, entries) {
-			if (ref->field->type == FTYPE_PASSWORD) 
-				print_commentv(1, ct,
-					"@param v%zu update %s "
-					"(hashed)", pos++, 
-					ref->field->name);
-			else
-				print_commentv(1, ct,
-					"@param v%zu update %s",
-					pos++, ref->field->name);
+			if (ref->field->type == FTYPE_PASSWORD) {
+				if (!gen_commentv(f, 1, ct,
+				    "@param v%zu update %s "
+				    "(hashed)", pos++, 
+				    ref->field->name))
+					return 0;
+			} else {
+				if (!gen_commentv(f, 1, ct,
+				    "@param v%zu update %s",
+				    pos++, ref->field->name))
+					return 0;
+			}
 			ct = COMMENT_JS_FRAG;
 		}
 
 	TAILQ_FOREACH(ref, &up->crq, entries)
 		if (!OPTYPE_ISUNARY(ref->op)) {
-			print_commentv(1, ct,
-				"@param v%zu %s (%s)", pos++, 
-				ref->field->name, 
-				optypes[ref->op]);
+			if (!gen_commentv(f, 1, ct,
+			    "@param v%zu %s (%s)", pos++, 
+			    ref->field->name, optypes[ref->op]))
+				return 0;
 			ct = COMMENT_JS_FRAG;
 		}
 
@@ -496,100 +581,148 @@ gen_modifier(const struct config *cfg,
 	else
 		ct = COMMENT_JS_FRAG_CLOSE;
 
-	if (up->type == UP_MODIFY)
-		print_commentt(1, ct,
-			"@return False on constraint violation, "
-			"true on success.");
-	else
-		print_commentt(1, ct, "");
+	if (up->type == UP_MODIFY) {
+		if (!gen_comment(f, 1, ct,
+		    "@return False on constraint violation, "
+		    "true on success."))
+			return 0;
+	} else {
+		if (!gen_comment(f, 1, ct, ""))
+			return 0;
+	}
 
 	/* Method signature. */
 
-	putchar('\t');
-	col = 8 + xprintf("db_%s_%s",
-		up->parent->name, utypes[up->type]);
+	if (fputc('\t', f) == EOF)
+		return 0;
+	if ((rc = fprintf(f, "db_%s_%s",
+	    up->parent->name, utypes[up->type])) < 0)
+		return 0;
+	col = 8 + rc;
 
 	if (up->name == NULL && up->type == UP_MODIFY) {
 		if (!(up->flags & UPDATE_ALL))
-			TAILQ_FOREACH(ref, &up->mrq, entries)
-				col += xprintf("_%s_%s", 
+			TAILQ_FOREACH(ref, &up->mrq, entries) {
+				rc = fprintf(f, "_%s_%s", 
 					ref->field->name, 
 					modtypes[ref->mod]);
+				if (rc < 0)
+					return 0;
+				col += rc;
+			}
 		if (!TAILQ_EMPTY(&up->crq)) {
-			col += xprintf("_by");
-			TAILQ_FOREACH(ref, &up->crq, entries)
-				col += xprintf("_%s_%s", 
+			if ((rc = fprintf(f, "_by")) < 0)
+				return 0;
+			col += rc;
+			TAILQ_FOREACH(ref, &up->crq, entries) {
+				rc = fprintf(f, "_%s_%s", 
 					ref->field->name, 
 					optypes[ref->op]);
+				if (rc < 0)
+					return 0;
+				col += rc;
+			}
 		}
 	} else if (up->name == NULL) {
 		if (!TAILQ_EMPTY(&up->crq)) {
-			col += xprintf("_by");
-			TAILQ_FOREACH(ref, &up->crq, entries)
-				col += xprintf("_%s_%s", 
+			if ((rc = fprintf(f, "_by")) < 0)
+				return 0;
+			col += rc;
+			TAILQ_FOREACH(ref, &up->crq, entries) {
+				rc = fprintf(f, "_%s_%s", 
 					ref->field->name, 
 					optypes[ref->op]);
+				if (rc < 0)
+				col += rc;
+			}
 		}
-	} else 
-		col += xprintf("_%s", up->name);
+	} else {
+		if ((rc = fprintf(f, "_%s", up->name)) < 0)
+			return 0;
+		col += rc;
+	}
 
 	if (col >= 72) {
-		fputs("\n\t(", stdout);
+		if (fputs("\n\t(", f) == EOF)
+			return 0;
 		col = 9;
 	} else {
-		putchar('(');
+		if (fputc('(', f) == EOF)
+			return 0;
 		col++;
 	}
 
 	pos = 1;
-	TAILQ_FOREACH(ref, &up->mrq, entries)
-		col = print_var(pos++, col, ref->field);
+	TAILQ_FOREACH(ref, &up->mrq, entries) {
+		if ((rc = gen_var(f, pos++, col, ref->field)) < 0)
+			return 0;
+		col = rc;
+	}
 	TAILQ_FOREACH(ref, &up->crq, entries)
-		if (!OPTYPE_ISUNARY(ref->op))
-			col = print_var(pos++, col, ref->field);
+		if (!OPTYPE_ISUNARY(ref->op)) {
+			if ((rc = gen_var
+			    (f, pos++, col, ref->field)) < 0)
+				return 0;
+			col = rc;
+		}
 
-	fputs("):", stdout);
-	if (col + 7 >= 72)
-		fputs("\n\t\t", stdout);
-	else
-		putchar(' ');
+	if (fputs("):", f) == EOF)
+		return 0;
+	if (col + 7 >= 72) {
+		if (fputs("\n\t\t", f) == EOF)
+			return 0;
+	} else {
+		if (fputc(' ', f) == EOF)
+			return 0;
+	}
 
-	fputs(up->type == UP_MODIFY ? "boolean" : "void", stdout);
+	if (fputs(up->type == UP_MODIFY ? 
+	    "boolean" : "void", f) == EOF)
+		return 0;
 
 	/* Method body. */
 
-	printf("\n"
-	       "\t{\n"
-	       "\t\tconst parms: any[] = [];\n"
-	       "\t\tlet info: Database.RunResult;\n"
-	       "\t\tconst stmt: Database.Statement =\n"
-	       "\t\t\tthis.#o.db.prepare(ortstmt.stmtBuilder\n"
-	       "\t\t\t(ortstmt.ortstmt.STMT_%s_%s_%zu));\n"
-	       "\n", 
-	       up->parent->name,
-	       up->type == UP_MODIFY ? "UPDATE" : "DELETE",
-	       num);
-	if (gen_rolemap(up->rolemap))
-		puts("");
+	if (fprintf(f, "\n"
+	    "\t{\n"
+	    "\t\tconst parms: any[] = [];\n"
+	    "\t\tlet info: Database.RunResult;\n"
+	    "\t\tconst stmt: Database.Statement =\n"
+	    "\t\t\tthis.#o.db.prepare(ortstmt.stmtBuilder\n"
+	    "\t\t\t(ortstmt.ortstmt.STMT_%s_%s_%zu));\n"
+	    "\n", 
+	    up->parent->name,
+	    up->type == UP_MODIFY ? "UPDATE" : "DELETE",
+	    num) < 0)
+		return 0;
+
+	if ((rc = gen_rolemap(f, up->rolemap)) < 0)
+		return 0;
+	else if (rc > 0 && fputc('\n', f) == EOF)
+		return 0;
 
 	pos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
 		if (ref->field->type != FTYPE_PASSWORD ||
 		    ref->mod == MODTYPE_STRSET) {
-			printf("\t\tparms.push(v%zu);\n", pos++);
+			if (fprintf(f, 
+			    "\t\tparms.push(v%zu);\n", pos++) < 0)
+				return 0;
 			continue;
 		}
-		if (ref->field->flags & FIELD_NULL)
-			printf("\t\tif (v%zu === null)\n"
-			       "\t\t\tparms.push(null);\n"
-			       "\t\telse\n"
-			       "\t\t\tparms.push(bcrypt.hashSync"
-				"(v%zu, bcrypt.genSaltSync()));\n", 
-				pos, pos);
-		else
-			printf("\t\tparms.push(bcrypt.hashSync"
-				"(v%zu, bcrypt.genSaltSync()));\n", 
-				pos);
+		if (ref->field->flags & FIELD_NULL) {
+			if (fprintf(f, "\t\tif (v%zu === null)\n"
+			    "\t\t\tparms.push(null);\n"
+			    "\t\telse\n"
+			    "\t\t\tparms.push(bcrypt.hashSync"
+			    "(v%zu, bcrypt.genSaltSync()));\n", 
+			    pos, pos) < 0)
+				return 0;
+		} else {
+			if (fprintf(f, "\t\tparms.push(bcrypt.hashSync"
+			    "(v%zu, bcrypt.genSaltSync()));\n", 
+			    pos) < 0)
+				return 0;
+		}
 		pos++;
 	}
 
@@ -597,27 +730,32 @@ gen_modifier(const struct config *cfg,
 		assert(ref->field->type != FTYPE_STRUCT);
 		if (OPTYPE_ISUNARY(ref->op))
 			continue;
-		printf("\t\tparms.push(v%zu);\n", pos++);
+		if (fprintf(f, "\t\tparms.push(v%zu);\n", pos++) < 0)
+			return 0;
 	}
 
-	if (up->type == UP_MODIFY)
-		puts("\n"
-		     "\t\ttry {\n"
-		     "\t\t\tinfo = stmt.run(parms);\n"
-		     "\t\t} catch (er) {\n"
-		     "\t\t\treturn false;\n"
-		     "\t\t}\n"
-		     "\n"
-		     "\t\treturn true;");
-	else
-		puts("\n"
-		     "\t\tstmt.run(parms);");
+	if (up->type == UP_MODIFY) {
+		if (fputs("\n"
+		    "\t\ttry {\n"
+		    "\t\t\tinfo = stmt.run(parms);\n"
+		    "\t\t} catch (er) {\n"
+		    "\t\t\treturn false;\n"
+		    "\t\t}\n"
+		    "\n"
+		    "\t\treturn true;\n", f) == EOF)
+			return 0;
+	} else {
+		if (fputs("\n"
+		    "\t\tstmt.run(parms);\n", f) == EOF)
+			return 0;
+	}
 
-	puts("\t}");
+	return fputs("\t}\n", f) != EOF;
 }
 
 /*
- * Generate a query function.
+ * Generate db_xxx_{get,count,list,iterate} method.
+ * Return zero on failure, non-zero on success.
  */
 static int
 gen_query(FILE *f, const struct config *cfg,
@@ -626,7 +764,7 @@ gen_query(FILE *f, const struct config *cfg,
 	const struct sent	*sent;
 	const struct strct	*rs;
 	size_t			 pos, col, sz;
-	int		 	 hasunary = 0;
+	int		 	 hasunary = 0, rc;
 
 	/*
 	 * The "real struct" we'll return is either ourselves or the one
@@ -751,43 +889,65 @@ gen_query(FILE *f, const struct config *cfg,
 	if (fputc('\t', f) == EOF)
 		return 0;
 
-	col = 8 + xprintf("db_%s_%s", 
-		s->parent->name, stypes[s->type]);
+	if ((rc = fprintf(f, "db_%s_%s", 
+	    s->parent->name, stypes[s->type])) < 0)
+		return 0;
+	col = 8 + rc;
 
 	if (s->name == NULL && !TAILQ_EMPTY(&s->sntq)) {
-		col += xprintf("_by");
-		TAILQ_FOREACH(sent, &s->sntq, entries)
-			col += xprintf("_%s_%s", 
-				sent->uname, optypes[sent->op]);
-	} else if (s->name != NULL)
-		col += xprintf("_%s", s->name);
+		if ((rc = fprintf(f, "_by")) < 0)
+			return 0;
+		col += rc;
+		TAILQ_FOREACH(sent, &s->sntq, entries) {
+			if ((rc = fprintf(f, "_%s_%s", 
+			    sent->uname, optypes[sent->op])) < 0)
+				return 0;
+			col += rc;
+		}
+	} else if (s->name != NULL) {
+		if ((rc = fprintf(f, "_%s", s->name)) < 0)
+			return 0;
+		col += rc;
+	}
 
 	if (col >= 72) {
-		fputs("\n\t(", stdout);
+		if (fputs("\n\t(", f) == EOF)
+			return 0;
 		col = 9;
 	} else {
-		putchar('(');
+		if (fputc('(', f) == EOF)
+			return 0;
 		col++;
 	}
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries)
-		if (!OPTYPE_ISUNARY(sent->op))
-			col = print_var(pos++, col, sent->field);
+		if (!OPTYPE_ISUNARY(sent->op)) {
+			if ((rc = gen_var
+			    (f, pos++, col, sent->field)) < 0)
+				return 0;
+			col = rc;
+		}
 
 	if (s->type == STYPE_ITERATE) {
 		sz = strlen(rs->name) + 25;
 		if (col + sz >= 72) {
-			fputs(",\n\t\t", stdout);
+			if (fputs(",\n\t\t", f) == EOF)
+				return 0;
 			col = 16;
 		} else  {
-			fputs(", ", stdout);
+			if (fputs(", ", f) == EOF)
+				return 0;
 			col += 2;
 		}
-		col += xprintf("cb: (res: ortns.%s) => void", rs->name);
+		if ((rc = fprintf(f, "cb: "
+		    "(res: ortns.%s) => void", rs->name)) < 0)
+			return 0;
+		col += rc;
 	}
 
-	fputs("): ", stdout);
+	if (fputs("): ", f) == EOF)
+		return 0;
 
 	if (s->type == STYPE_SEARCH)
 		sz = strlen(rs->name) + 11;
@@ -798,30 +958,39 @@ gen_query(FILE *f, const struct config *cfg,
 	else
 		sz = 6;
 
-	if (col + sz >= 72)
-		fputs("\n\t\t", stdout);
+	if (col + sz >= 72 && fputs("\n\t\t", f) == EOF)
+		return 0;
 
-	if (s->type == STYPE_SEARCH)
-		printf("ortns.%s|null\n", rs->name);
-	else if (s->type == STYPE_LIST)
-		printf("ortns.%s[]\n", rs->name);
-	else if (s->type == STYPE_ITERATE)
-		puts("void");
-	else
-		puts("BigInt");
+	if (s->type == STYPE_SEARCH) {
+		if (fprintf(f, "ortns.%s|null\n", rs->name) < 0)
+			return 0;
+	} else if (s->type == STYPE_LIST) {
+		if (fprintf(f, "ortns.%s[]\n", rs->name) < 0)
+			return 0;
+	} else if (s->type == STYPE_ITERATE) {
+		if (fputs("void\n", f) == EOF)
+			return 0;
+	} else {
+		if (fputs("BigInt\n", f) == EOF)
+			return 0;
+	}
 
-	puts("\t{");
+	if (fputs("\t{\n", f) == EOF)
+		return 0;
 
 	/* Now generate the method body. */
 
-	printf("\t\tconst parms: any[] = [];\n"
-	       "\t\tconst stmt: Database.Statement =\n"
-	       "\t\t\tthis.#o.db.prepare(ortstmt.stmtBuilder\n"
-	       "\t\t\t(ortstmt.ortstmt.STMT_%s_BY_SEARCH_%zu));\n"
-	       "\t\tstmt.raw(true);\n"
-	       "\n", s->parent->name, num);
-	if (gen_rolemap(s->rolemap))
-		puts("");
+	if (fprintf(f, "\t\tconst parms: any[] = [];\n"
+	    "\t\tconst stmt: Database.Statement =\n"
+	    "\t\t\tthis.#o.db.prepare(ortstmt.stmtBuilder\n"
+	    "\t\t\t(ortstmt.ortstmt.STMT_%s_BY_SEARCH_%zu));\n"
+	    "\t\tstmt.raw(true);\n"
+	    "\n", s->parent->name, num) < 0)
+		return 0;
+	if ((rc = gen_rolemap(f, s->rolemap)) < 0)
+		return 0;
+	else if (rc > 0 && fputc('\n', f) == EOF)
+		return 0;
 
 	pos = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
@@ -830,76 +999,100 @@ gen_query(FILE *f, const struct config *cfg,
 		if (sent->field->type != FTYPE_PASSWORD ||
 		    (sent->op == OPTYPE_STREQ ||
 		     sent->op == OPTYPE_STRNEQ)) {
-			printf("\t\tparms.push(v%zu);\n", pos++);
+			if (fprintf(f, 
+			    "\t\tparms.push(v%zu);\n", pos++) < 0)
+				return 0;
 			continue;
 		}
-		if (sent->field->flags & FIELD_NULL)
-			printf("\t\tif (v%zu === null)\n"
-			       "\t\t\tparms.push(null);\n"
-			       "\t\telse\n"
-			       "\t\t\tparms.push(bcrypt.hashSync"
-				"(v%zu, bcrypt.genSaltSync()));\n", 
-				pos, pos);
-		else
-			printf("\t\tparms.push(bcrypt.hashSync"
-				"(v%zu, bcrypt.genSaltSync()));\n", 
-				pos);
+		if (sent->field->flags & FIELD_NULL) {
+			if (fprintf(f, "\t\tif (v%zu === null)\n"
+			    "\t\t\tparms.push(null);\n"
+			    "\t\telse\n"
+			    "\t\t\tparms.push(bcrypt.hashSync"
+			    "(v%zu, bcrypt.genSaltSync()));\n", 
+			    pos, pos) < 0)
+				return 0;
+		} else {
+			if (fprintf(f, "\t\tparms.push(bcrypt.hashSync"
+			    "(v%zu, bcrypt.genSaltSync()));\n", 
+			    pos) < 0)
+				return 0;
+		}
 		pos++;
 	}
 	
-	puts("");
+	if (fputc('\n', f) == EOF)
+		return 0;
 
 	switch (s->type) {
 	case STYPE_SEARCH:
-		printf("\t\tconst cols: any = stmt.get(parms);\n"
-		       "\n"
-		       "\t\tif (typeof cols === 'undefined')\n"
-		       "\t\t\treturn null;\n"
-		       "\t\tconst obj: ortns.%sData = \n"
-		       "\t\t\tthis.db_%s_fill"
-		       	"({row: <any[]>cols, pos: 0});\n",
-		       rs->name, rs->name);
-		if (rs->flags & STRCT_HAS_NULLREFS)
-		       printf("\t\tthis.db_%s_reffind"
-				"(this.#o, obj);\n", rs->name);
-		printf("\t\treturn new ortns.%s(this.#role, obj);\n",
-			rs->name);
+		if (fprintf(f, "\t\tconst cols: any = stmt.get(parms);\n"
+		    "\n"
+		    "\t\tif (typeof cols === 'undefined')\n"
+		    "\t\t\treturn null;\n"
+		    "\t\tconst obj: ortns.%sData = \n"
+		    "\t\t\tthis.db_%s_fill"
+		    "({row: <any[]>cols, pos: 0});\n",
+		    rs->name, rs->name) < 0)
+			return 0;
+		if (rs->flags & STRCT_HAS_NULLREFS) {
+		       if (fprintf(f, "\t\tthis.db_%s_reffind"
+			   "(this.#o, obj);\n", rs->name) < 0)
+			       return 0;
+		}
+		if (fprintf(f, "\t\treturn new "
+	  	    "ortns.%s(this.#role, obj);\n", rs->name) < 0)
+			return 0;
 		break;
 	case STYPE_ITERATE:
-		printf("\t\tfor (const cols of stmt.iterate(parms)) {\n"
-		       "\t\t\tconst obj: ortns.%sData =\n"
-		       "\t\t\t\tthis.db_%s_fill"
-		       	"({row: <any>cols, pos: 0});\n",
-		       rs->name, rs->name);
-		if (rs->flags & STRCT_HAS_NULLREFS)
-			printf("\t\t\tthis.db_%s_reffind"
-				"(this.#o, obj);\n", rs->name);
-		printf("\t\t\tcb(new ortns.%s(this.#role, obj));\n"
-		       "\t\t}\n", rs->name);
+		if (fprintf(f, 
+		    "\t\tfor (const cols of stmt.iterate(parms)) {\n"
+		    "\t\t\tconst obj: ortns.%sData =\n"
+		    "\t\t\t\tthis.db_%s_fill"
+		    "({row: <any>cols, pos: 0});\n",
+		    rs->name, rs->name) < 0)
+			return 0;
+		if (rs->flags & STRCT_HAS_NULLREFS) {
+			if (fprintf(f, "\t\t\tthis.db_%s_reffind"
+			    "(this.#o, obj);\n", rs->name) < 0)
+				return 0;
+		}
+		if (fprintf(f, 
+		    "\t\t\tcb(new ortns.%s(this.#role, obj));\n"
+		    "\t\t}\n", rs->name) < 0)
+			return 0;
 		break;
 	case STYPE_LIST:
-		printf("\t\tconst rows: any[] = stmt.all(parms);\n"
-		       "\t\tconst objs: ortns.%s[] = [];\n"
-		       "\t\tlet i: number;\n"
-		       "\n"
-		       "\t\tfor (i = 0; i < rows.length; i++) {\n"
-		       "\t\t\tconst obj: ortns.%sData =\n"
-		       "\t\t\t\tthis.db_%s_fill"
-		       	"({row: <any[]>rows[i], pos: 0});\n",
-		       rs->name, rs->name, rs->name);
-		if (rs->flags & STRCT_HAS_NULLREFS)
-			printf("\t\t\tthis.db_%s_reffind"
-				"(this.#o, obj);\n", rs->name);
-		printf("\t\t\tobjs.push(new ortns.%s(this.#role, obj));\n"
-		       "\t\t}\n"
-		       "\t\treturn objs;\n", rs->name);
+		if (fprintf(f, 
+		    "\t\tconst rows: any[] = stmt.all(parms);\n"
+		    "\t\tconst objs: ortns.%s[] = [];\n"
+		    "\t\tlet i: number;\n"
+		    "\n"
+		    "\t\tfor (i = 0; i < rows.length; i++) {\n"
+		    "\t\t\tconst obj: ortns.%sData =\n"
+		    "\t\t\t\tthis.db_%s_fill"
+		    "({row: <any[]>rows[i], pos: 0});\n",
+		    rs->name, rs->name, rs->name) < 0)
+			return 0;
+		if (rs->flags & STRCT_HAS_NULLREFS) {
+			if (fprintf(f, "\t\t\tthis.db_%s_reffind"
+			    "(this.#o, obj);\n", rs->name))
+				return 0;
+		}
+		if (fprintf(f, 
+		    "\t\t\tobjs.push(new ortns.%s(this.#role, obj));\n"
+		    "\t\t}\n"
+		    "\t\treturn objs;\n", rs->name) < 0)
+			return 0;
 		break;
 	case STYPE_COUNT:
-		printf("\t\tconst cols: any = stmt.get(parms);\n"
-		       "\n"
-		       "\t\tif (typeof cols === 'undefined')\n"
-		       "\t\t\tthrow \'count returned no result!?\';\n"
-		       "\t\treturn BigInt(cols[0]);\n");
+		if (fprintf(f, 
+		    "\t\tconst cols: any = stmt.get(parms);\n"
+		    "\n"
+		    "\t\tif (typeof cols === 'undefined')\n"
+		    "\t\t\tthrow \'count returned no result!?\';\n"
+		    "\t\treturn BigInt(cols[0]);\n") < 0)
+			return 0;
 		break;
 	default:
 		break;
@@ -919,21 +1112,28 @@ gen_api(FILE *f, const struct config *cfg, const struct strct *p)
 	const struct update	*u;
 	size_t			 pos;
 
-	gen_fill(p);
-	gen_reffind(p);
+	if (!gen_fill(f, p))
+		return 0;
+	if (!gen_reffind(f, p))
+		return 0;
 
-	if (p->ins != NULL)
-		gen_insert(p);
+	if (p->ins != NULL && !gen_insert(f, p))
+		return 0;
+
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
 		if (!gen_query(f, cfg, s, pos++))
 			return 0;
+
 	pos = 0;
 	TAILQ_FOREACH(u, &p->dq, entries)
-		gen_modifier(cfg, u, pos++);
+		if (!gen_update(f, cfg, u, pos++))
+			return 0;
+
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
-		gen_modifier(cfg, u, pos++);
+		if (!gen_update(f, cfg, u, pos++))
+			return 0;
 
 	return 1;
 }
@@ -1046,7 +1246,8 @@ gen_strct(FILE *f, const struct strct *p, size_t pos)
 			if (fputs("\t\tswitch (role) {\n", f) == EOF)
 				return 0;
 			TAILQ_FOREACH(r, &fd->rolemap->rq, entries)
-				gen_role(r->role, 2);
+				if (!gen_role(f, r->role, 2))
+					return 0;
 			if (!gen_comment(f, 3, COMMENT_JS, 
 			    "Don't export field to noted roles."))
 				return 0;
@@ -1185,8 +1386,8 @@ gen_strct(FILE *f, const struct strct *p, size_t pos)
 }
 
 /*
- * This outputs the data structure part of the data model under the
- * "ortns" namespace.
+ * Generates data structure part of the data model under the "ortns"
+ * namespace.
  * It's divided primarily into data within interfaces and classes that
  * encapsulate that data and contain role information.
  * Return zero on failure, non-zero on success.
@@ -1217,7 +1418,7 @@ gen_ortns(FILE *f, const struct config *cfg)
 }
 
 /*
- * Output the class for managing a single connection.
+ * Generate the class for managing a single connection.
  * This is otherwise defined as a single sequence of role transitions.
  * Return zero on failure, non-zero on success.
  */
@@ -1317,9 +1518,9 @@ gen_alias_builder(FILE *f, const struct strct *p)
 }
 
 /*
- * For any given role, emit all of the possible transitions from the
- * current role into all possible roles, then all of the transitions
- * from the roles "beneath" the current role.
+ * Generate all of the possible transitions from the given role into all
+ * possible roles, then all of the transitions from the roles "beneath"
+ * the current role.
  * Return zero on failure, non-zero on success.
  */
 static int
@@ -1331,7 +1532,8 @@ gen_ortctx_dbrole_role(FILE *f, const struct role *r)
 	    "\t\t\tswitch(newrole) {\n", r->name) < 0)
 		return 0;
 
-	gen_role(r, 3);
+	if (!gen_role(f, r, 3))
+		return 0;
 	if (fputs("\t\t\t\tthis.#role = newrole;\n"
 	    "\t\t\t\treturn;\n"
 	    "\t\t\tdefault:\n"
@@ -1394,7 +1596,7 @@ gen_ortctx_dbrole(FILE *f, const struct config *cfg)
 }
 
 /*
- * Output the data access portion of the data model entirely within a
+ * Generate the data access portion of the data model entirely within a
  * single class.
  * Return zero on failure, non-zero on success.
  */

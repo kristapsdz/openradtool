@@ -1,4 +1,8 @@
-/// <reference path="/usr/local/lib/node_modules/@types/node/index.d.ts" />
+/// <reference path="../../node_modules/@types/node/index.d.ts" />
+
+/*
+ * Requires for typescript, file-system, JSDOM, and ort-javascript(1)
+ */
 
 const ts = require('typescript');
 const fs = require('fs');
@@ -7,55 +11,82 @@ const { JSDOM } = jsdom;
 const { execFileSync, spawnSync } = require('child_process');
 
 const basedir: string = 'regress/javascript';
-let i: number;
+
 let result: string;
-let xpiled: string;
-let contents: string;
-let tsname: string;
-let xmlname: string;
-let ortname: string;
-let resname: string;
-let basename: string;
-let func: Function;
-let script: string;
 let files: string[] = fs.readdirSync(basedir);
-let diff;
 
-script = fs.readFileSync(basedir + '/regress.ts').toString();
+/*
+ * This scriptlet just creates a DOM tree from the given file and runs
+ * the test itself.
+ */
 
-/* Allow us to debug specific tests. */
+const script: string = 
+	fs.readFileSync(basedir + '/regress.ts').toString();
 
-if (process.argv.length > 2)
-	files = process.argv.slice(2);
-
-for (i = 0; i < files.length; i++) {
+for (let i = 0; i < files.length; i++) {
 	if (files[i].substring
 	    (files[i].length - 4, files[i].length) !== '.ort')
 		continue;
-	basename = basedir + '/' + 
+
+	/* 
+	 * Examine individual ort(5) configuration.
+	 * Then create our expected filenames.
+	 */
+
+	const basename: string = basedir + '/' + 
 		files[i].substring(0, files[i].length - 4);
 
-	tsname = basename + '.ts';
-	xmlname = basename + '.xml';
-	ortname = basename + '.ort';
-	resname = basename + '.result';
+	const tsname: string = basename + '.ts';
+	const xmlname: string = basename + '.xml';
+	const ortname: string = basename + '.ort';
+	const resname: string = basename + '.result';
 
-	diff = spawnSync('./ort-javascript', ['-S', '.', ortname]);
-	contents = diff.stdout.toString();
-	contents += fs.readFileSync(tsname).toString();
-	contents += script;
+	/* Run ort-javascript on ort(5), catch errors. */
 
-	/* Compile it into JavaScript. */
+	const out = spawnSync('./ort-javascript', ['-S', '.', ortname]);
 
-	xpiled = ts.transpile(contents, {
-		allowsJs: false,
-		alwaysStrict: true,
-		noEmitOnError: true,
-		noImplicitAny: true,
-		noUnusedLocals: true,
-		noUnusedParameters: true,
-		strict: true,
+	if (out.status !== null && out.status !== 0) {
+		console.log('ts-node: ' + ortname + 
+			'... fail (did not execute)');
+		console.log(Error(out.stderr));
+		process.exit(1);
+	}
+
+	const contents: string = 
+		out.stdout.toString() +
+		fs.readFileSync(tsname).toString() +
+		script;
+
+	/* Try to transpile TypeScript of concatenation. */
+
+	const output = ts.transpileModule(contents, {
+		compilerOptions: {
+			allowsJs: false,
+			alwaysStrict: true,
+			noEmitOnError: true,
+			noImplicitAny: true,
+			noUnusedLocals: true,
+			noUnusedParameters: true,
+			strict: true
+		},
+		reportDiagnostics: true,
 	});
+
+	/* If we have diagnostics, fail. */
+
+	if (typeof output.diagnostics !== 'undefined' &&
+	    output.diagnostics.length) {
+		console.log('ts-node: ' + ortname + 
+			    '... fail (transpile)');
+		console.log(ts.formatDiagnosticsWithColorAndContext
+			(output.diagnostics, {
+				getCurrentDirectory: () => '.',
+				getCanonicalFileName: f => '<stdin>',
+				getNewLine: () => '\n'
+			})
+		);
+		process.exit(1);
+	}
 
 	/* 
 	 * Create and invoke a callable function that accepts the
@@ -64,12 +95,13 @@ for (i = 0; i < files.length; i++) {
 	 */
 
 	try {
-		func = new Function('fs', 'JSDOM', 'fname', xpiled);
+		const func: Function = new Function
+			('fs', 'JSDOM', 'fname', output.outputText);
 		result = func(fs, JSDOM, xmlname);
 	} catch (error) {
-		console.log('ts-node: ' + tsname + '... fail');
+		console.log('ts-node: ' + ortname + '... fail');
 		const cat = spawnSync('cat', ['-n', '-'], {
-			'input': xpiled
+			'input': output.outputText
 		});
 		console.log(cat.stdout.toString());
 		console.log(error);
@@ -82,7 +114,7 @@ for (i = 0; i < files.length; i++) {
 	 */
 
 	try {
-		process.stdout.write('ts-node: ' + tsname + '... ');
+		process.stdout.write('ts-node: ' + ortname + '... ');
 		execFileSync('diff', ['-w', '-u', resname, '-'], {
 			'input': result
 		});

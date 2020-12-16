@@ -266,6 +266,14 @@ namespace ort {
 	}
 
 	/**
+	 * Same as "strct unique" in ort(3).
+	 */
+	interface uniqueObj {
+		pos: posObj;
+		nq: string[];
+	}
+
+	/**
 	 * Same as "struct strct" in ort(3).
 	 */
 	interface strctObj {
@@ -284,6 +292,7 @@ namespace ort {
 		sq: searchClassObj;
 		uq: updateClassObj;
 		dq: updateClassObj;
+		dn: uniqueObj[];
 	}
 
 	interface strctSet {

@@ -829,6 +829,27 @@ gen_update(FILE *f, int *first, const struct update *u)
 	return fputs(" }", f) != EOF;
 }
 
+static int
+gen_unique(FILE *f, const struct unique *u)
+{
+	const struct nref	*ref;
+
+	if (fputs(" {", f) == EOF)
+		return 0;
+	if (!gen_pos(f, &u->pos))
+		return 0;
+	if (fputs(" \"nq\": [", f) == EOF)
+		return 0;
+	TAILQ_FOREACH(ref, &u->nq, entries) {
+		if (fprintf(f, " \"%s\"", ref->field->name) < 0)
+			return 0;
+		if (TAILQ_NEXT(ref, entries) != NULL &&
+		    fputc(',', f) == EOF)
+			return 0;
+	}
+	return fputs(" ] }", f) != EOF;
+}
+
 /*
  * Emit "name": { strctObj } w/o comma.
  * Return zero on failure, non-zero on success.
@@ -839,6 +860,7 @@ gen_strct(FILE *f, const struct strct *s)
 	const struct field	*fd;
 	const struct search	*sr;
 	const struct update	*up;
+	const struct unique	*un;
 	int			 first;
 
 	if (fprintf(f, " \"%s\": {", s->name) < 0)
@@ -860,8 +882,16 @@ gen_strct(FILE *f, const struct strct *s)
 		return 0;
 	if (!gen_insert(f, s->ins))
 		return 0;
-
-	if (fputs(" \"uq\": { \"named\": {", f) == EOF)
+	if (fputs(" \"nq\": [ ", f) == EOF)
+		return 0;
+	TAILQ_FOREACH(un, &s->nq, entries) {
+		if (!gen_unique(f, un))
+			return 0;
+		if (TAILQ_NEXT(un, entries) != NULL &&
+		    fputc(',', f) == EOF)
+			return 0;
+	}
+	if (fputs(" ], \"uq\": { \"named\": {", f) == EOF)
 		return 0;
 	first = 1;
 	TAILQ_FOREACH(up, &s->uq, entries)

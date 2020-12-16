@@ -1610,7 +1610,8 @@ gen_ortctx(FILE *f, const struct config *cfg)
 	    "\texport enum ortstmt {\n", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		print_sql_enums(2, p, LANG_JS);
+		if (!gen_sql_enums(f, 2, p, LANG_JS))
+			return 0;
 	if (fputs("\t}\n\n", f) == EOF)
 		return 0;
 
@@ -1624,7 +1625,8 @@ gen_ortctx(FILE *f, const struct config *cfg)
 	    "\tconst ortstmts: readonly string[] = [\n", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		print_sql_stmts(2, p, LANG_JS);
+		if (!gen_sql_stmts(f, 2, p, LANG_JS))
+			return 0;
 	if (fputs("\t];\n", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)

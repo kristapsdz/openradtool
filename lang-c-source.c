@@ -2889,7 +2889,8 @@ ort_lang_c_source(const struct ort_lang_c *args,
 		if (fputs("enum\tstmt {\n", f) == EOF)
 			return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			print_sql_enums(1, p, LANG_C);
+			if (!gen_sql_enums(f, 1, p, LANG_C))
+				return 0;
 		if (fputs("\tSTMT__MAX\n};\n\n", f) == EOF)
 			return 0;
 
@@ -2958,7 +2959,8 @@ ort_lang_c_source(const struct ort_lang_c *args,
 		    "*const stmts[STMT__MAX] = {\n", f) == EOF)
 			return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			print_sql_stmts(1, p, LANG_C);
+			if (!gen_sql_stmts(f, 1, p, LANG_C))
+				return 0;
 		if (fputs("};\n\n", f) == EOF)
 			return 0;
 	}

@@ -40,6 +40,10 @@ enum	langt {
 int	 gen_comment(FILE *, size_t, enum cmtt, const char *);
 int	 gen_commentv(FILE *, size_t, enum cmtt, const char *, ...)
 		__attribute__((format(printf, 4, 5)));
+int	 gen_sql_stmts(FILE *, size_t, const struct strct *, enum langt);
+int	 gen_sql_enums(FILE *, size_t, const struct strct *, enum langt);
+
+/* Deprecated... */
 
 void	 print_commentt(size_t, enum cmtt, const char *);
 void	 print_commentv(size_t, enum cmtt, const char *, ...)

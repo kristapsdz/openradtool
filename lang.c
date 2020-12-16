@@ -284,14 +284,14 @@ print_commentv(size_t tabs, enum cmtt type, const char *fmt, ...)
  * Print all of the columns that a select statement wants.
  * This uses the macro/function for enumerating columns.
  */
-static void
-print_sql_stmt_schema(size_t tabs, enum langt lang,
+static int
+gen_sql_stmt_schema(FILE *f, size_t tabs, enum langt lang,
 	const struct strct *orig, int first, 
 	const struct strct *p, const char *pname, size_t *col)
 {
-	const struct field	*f;
+	const struct field	*fd;
 	const struct alias	*a = NULL;
-	int			 c;
+	int			 rc;
 	char			*name = NULL;
 	char			 delim;
 	const char		*spacer;
@@ -301,18 +301,26 @@ print_sql_stmt_schema(size_t tabs, enum langt lang,
 	spacer = lang == LANG_JS ? "+ " : "";
 
 	if (first) {
-		putchar(delim);
+		if (fputc(delim, f) == EOF)
+			return 0;
 		(*col)++;
-	} else
-		*col += printf("%s%c,%c", spacer, delim, delim);
+	} else {
+		rc = printf("%s%c,%c", spacer, delim, delim);
+		if (rc < 0)
+			return 0;
+		*col += rc;
+	}
 
-	putchar(' ');
+	if (fputc(' ', f) == EOF)
+		return 0;
 	(*col)++;
 
 	if (!first && *col >= 72) {
-		puts("");
+		if (fputc('\n', f) == EOF)
+			return 0;
 		for (i = 0; i < tabs + 1; i++)
-			putchar('\t');
+			if (fputc('\t', f) == EOF)
+				return 0;
 		*col = 8 * (tabs + 1);
 	}
 
@@ -323,24 +331,30 @@ print_sql_stmt_schema(size_t tabs, enum langt lang,
 	 */
 
 	if (lang == LANG_C)
-		*col += printf("DB_SCHEMA_%s(", p->name);
+		rc = fprintf(f, "DB_SCHEMA_%s(", p->name);
 	else
-		*col += printf("+ ort_schema_%s(", p->name);
+		rc = fprintf(f, "+ ort_schema_%s(", p->name);
+	if (rc < 0)
+		return 0;
+	*col += rc;
 
 	if (pname != NULL) {
 		TAILQ_FOREACH(a, &orig->aq, entries)
 			if (strcasecmp(a->name, pname) == 0)
 				break;
 		assert(a != NULL);
-		*col += printf("%s%s%s) ",
+		rc = fprintf(f, "%s%s%s) ",
 			lang == LANG_JS ? "'" : "",
 			a->alias,
 			lang == LANG_JS ? "'" : "");
 	} else
-		*col += printf("%s%s%s) ", 
+		rc = fprintf(f, "%s%s%s) ", 
 			lang == LANG_JS ? "'" : "",
 			p->name,
 			lang == LANG_JS ? "'" : "");
+	if (rc < 0)
+		return 0;
+	*col += rc;
 
 	/*
 	 * Recursive step.
@@ -349,21 +363,24 @@ print_sql_stmt_schema(size_t tabs, enum langt lang,
 	 * descend.
 	 */
 
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->type != FTYPE_STRUCT ||
-		    (f->ref->source->flags & FIELD_NULL))
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type != FTYPE_STRUCT ||
+		    (fd->ref->source->flags & FIELD_NULL))
 			continue;
 
 		if (pname != NULL) {
-			c = asprintf(&name, "%s.%s", pname, f->name);
-			if (c < 0)
-				err(EXIT_FAILURE, NULL);
-		} else if ((name = strdup(f->name)) == NULL)
-			err(EXIT_FAILURE, "strdup");
-		print_sql_stmt_schema(tabs, lang, orig, 0,
-			f->ref->target->parent, name, col);
+			if (asprintf(&name, 
+			    "%s.%s", pname, fd->name) == -1)
+				return 0;
+		} else if ((name = strdup(fd->name)) == NULL)
+			return 0;
+		if (!gen_sql_stmt_schema(f, tabs, lang, orig, 0,
+		    fd->ref->target->parent, name, col))
+			return 0;
 		free(name);
 	}
+
+	return 1;
 }
 
 /*
@@ -373,12 +390,12 @@ print_sql_stmt_schema(size_t tabs, enum langt lang,
  * This is a recursive function and invokes itself for all foreign key
  * referenced structures.
  */
-static void
-print_sql_stmt_join(size_t tabs, enum langt lang,
+static int
+gen_sql_stmt_join(FILE *f, size_t tabs, enum langt lang,
 	const struct strct *orig, const struct strct *p,
 	const struct alias *parent, size_t *count)
 {
-	const struct field	*f;
+	const struct field	*fd;
 	const struct alias	*a;
 	char			*name;
 	char			 delim;
@@ -388,17 +405,17 @@ print_sql_stmt_join(size_t tabs, enum langt lang,
 	delim = lang == LANG_JS ? '\'' : '"';
 	spacer = lang == LANG_JS ? "+ " : "";
 
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->type != FTYPE_STRUCT ||
-		    (f->ref->source->flags & FIELD_NULL))
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type != FTYPE_STRUCT ||
+		    (fd->ref->source->flags & FIELD_NULL))
 			continue;
 
 		if (parent != NULL) {
 			if (asprintf(&name, "%s.%s",
-			    parent->name, f->name) == -1)
-				err(EXIT_FAILURE, NULL);
-		} else if ((name = strdup(f->name)) == NULL)
-			err(EXIT_FAILURE, NULL);
+			    parent->name, fd->name) == -1)
+				return 0;
+		} else if ((name = strdup(fd->name)) == NULL)
+			return 0;
 
 		TAILQ_FOREACH(a, &orig->aq, entries)
 			if (strcasecmp(a->name, name) == 0)
@@ -406,36 +423,44 @@ print_sql_stmt_join(size_t tabs, enum langt lang,
 
 		assert(a != NULL);
 
-		if (*count == 0)
-			printf(" %c", delim);
+		if (*count == 0 && fprintf(f, " %c", delim) < 0)
+			return 0;
 
 		(*count)++;
-		putchar('\n');
+		if (fputc('\n', f) == EOF)
+			return 0;
 		for (i = 0; i < tabs + 1; i++)
-			putchar('\t');
-		printf("%s%cINNER JOIN %s AS %s ON %s.%s=%s.%s %c",
-			spacer, delim,
-			f->ref->target->parent->name, a->alias,
-			a->alias, f->ref->target->name,
-			NULL == parent ? p->name : parent->alias,
-			f->ref->source->name, delim);
-		print_sql_stmt_join(tabs, lang, orig, 
-			f->ref->target->parent, a, count);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, 
+		    "%s%cINNER JOIN %s AS %s ON %s.%s=%s.%s %c",
+		    spacer, delim,
+		    fd->ref->target->parent->name, a->alias,
+		    a->alias, fd->ref->target->name,
+		    NULL == parent ? p->name : parent->alias,
+		    fd->ref->source->name, delim) < 0)
+			return 0;
+		if (!gen_sql_stmt_join(f, tabs, lang, orig, 
+		    fd->ref->target->parent, a, count))
+			return 0;
 		free(name);
 	}
+
+	return 1;
 }
 
-void
-print_sql_stmts(size_t tabs, const struct strct *p, enum langt lang)
+int
+gen_sql_stmts(FILE *f, size_t tabs, 
+	const struct strct *p, enum langt lang)
 {
 	const struct search	*s;
 	const struct sent	*sent;
-	const struct field	*f;
+	const struct field	*fd;
 	const struct update	*up;
 	const struct uref	*ur;
 	const struct ord	*ord;
-	int			 first, hastrail, needquot;
-	size_t			 i, pos, rc, col;
+	int			 first, hastrail, needquot, rc;
+	size_t			 i, pos, nc, col;
 	char			 delim;
 	const char		*spacer;
 
@@ -451,33 +476,49 @@ print_sql_stmts(size_t tabs, const struct strct *p, enum langt lang)
 	 * do this, as otherwise we're just wasting static space.
 	 */
 
-	TAILQ_FOREACH(f, &p->fq, entries)  {
-		if (!(f->flags & (FIELD_ROWID|FIELD_UNIQUE)))
+	TAILQ_FOREACH(fd, &p->fq, entries)  {
+		if (!(fd->flags & (FIELD_ROWID|FIELD_UNIQUE)))
 			continue;
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("/* STMT_%s_BY_UNIQUE_%s */\n", 
-			p->name, f->name);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, "/* STMT_%s_BY_UNIQUE_%s */\n", 
+		    p->name, fd->name) < 0)
+			return 0;
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
+			if (fputc('\t', f) == EOF)
+				return 0;
 		col = tabs * 8;
-		col += printf("%cSELECT ", delim);
-		print_sql_stmt_schema
-			(tabs, lang, p, 1, p, NULL, &col);
+		if ((rc = printf("%cSELECT ", delim)) < 0)
+			return 0;
+		col += rc;
+		if (!gen_sql_stmt_schema(f, 
+		    tabs, lang, p, 1, p, NULL, &col))
+			return 0;
 
-		printf("%s%c FROM %s", spacer, delim, p->name);
-		rc = 0;
-		print_sql_stmt_join(tabs, lang, p, p, NULL, &rc);
-		if (rc > 0) {
-			putchar('\n');
+		if (fprintf(f, "%s%c FROM %s", 
+		    spacer, delim, p->name) < 0)
+			return 0;
+		nc = 0;
+		if (!gen_sql_stmt_join
+		    (f, tabs, lang, p, p, NULL, &nc))
+			return 0;
+		if (nc > 0) {
+			if (fputc('\n', f) == EOF)
+				return 0;
 			for (i = 0; i < tabs + 1; i++)
-				putchar('\t');
-			printf("%s%c", spacer, delim);
-		} else
-			printf(" ");
+				if (fputc('\t', f) == EOF)
+					return 0;
+			if (fprintf(f, "%s%c", spacer, delim) < 0)
+				return 0;
+		} else {
+			if (fputc(' ', f) == EOF)
+				return 0;
+		}
 
-		printf("WHERE %s.%s = ?%c,\n", 
-			p->name, f->name, delim);
+		if (fprintf(f, "WHERE %s.%s = ?%c,\n", 
+		    p->name, fd->name, delim) < 0)
+			return 0;
 	}
 
 	/* Print custom search queries. */
@@ -485,41 +526,54 @@ print_sql_stmts(size_t tabs, const struct strct *p, enum langt lang)
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries) {
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("/* STMT_%s_BY_SEARCH_%zu */\n", p->name, pos++);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, "/* STMT_%s_BY_SEARCH_%zu */\n",
+		    p->name, pos++) < 0)
+			return 0;
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("%cSELECT ", delim);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, "%cSELECT ", delim) < 0)
+			return 0;
 		col = 16;
 		needquot = 0;
 
 		/* 
 		 * Juggle around the possibilities of...
 		 *   select count(*)
-		 *   select count(distinct --print_sql_stmt_schema--)
-		 *   select --print_sql_stmt_schema--
+		 *   select count(distinct --gen_sql_stmt_schema--)
+		 *   select --gen_sql_stmt_schema--
 		 */
 
-		if (s->type == STYPE_COUNT)
-			col += printf("COUNT(");
+		if (s->type == STYPE_COUNT) {
+			if ((rc = printf("COUNT(")) < 0)
+				return 0;
+			col += rc;
+		}
 		if (s->dst) {
-			col += printf("DISTINCT ");
-			print_sql_stmt_schema(tabs, lang, p, 1, 
-				s->dst->strct, s->dst->fname, &col);
+			if ((rc = printf("DISTINCT ")) < 0)
+				return 0;
+			col += rc;
+			if (!gen_sql_stmt_schema(f, tabs, lang, 
+			    p, 1, s->dst->strct, s->dst->fname, &col))
+				return 0;
 			needquot = 1;
 		} else if (s->type != STYPE_COUNT) {
-			print_sql_stmt_schema
-				(tabs, lang, p, 1, p, NULL, &col);
+			if (!gen_sql_stmt_schema(f, tabs, lang,
+			    p, 1, p, NULL, &col))
+				return 0;
 			needquot = 1;
 		} else
-			printf("*");
+			if (fputc('*', f) == EOF)
+				return 0;
 
-		if (needquot)
-			printf("%s%c", spacer, delim);
-		if (s->type == STYPE_COUNT)
-			putchar(')');
-
-		printf(" FROM %s", p->name);
+		if (needquot && fprintf(f, "%s%c", spacer, delim) < 0)
+			return 0;
+		if (s->type == STYPE_COUNT && fputc(')', f) == EOF)
+			return 0;
+		if (fprintf(f, " FROM %s", p->name) < 0)
+			return 0;
 
 		/* 
 		 * Whether anything is coming after the "FROM" clause,
@@ -534,8 +588,10 @@ print_sql_stmts(size_t tabs, const struct strct *p, enum langt lang)
 			(s->type != STYPE_SEARCH && s->limit > 0) ||
 			(s->type != STYPE_SEARCH && s->offset > 0);
 		
-		rc = 0;
-		print_sql_stmt_join(tabs, lang, p, p, NULL, &rc);
+		nc = 0;
+		if (!gen_sql_stmt_join
+		    (f, tabs, lang, p, p, NULL, &nc))
+			return 0;
 
 		/* 
 		 * We need to have a special JOIN command for aggregate
@@ -547,50 +603,58 @@ print_sql_stmts(size_t tabs, const struct strct *p, enum langt lang)
 		if (NULL != s->aggr && NULL != s->group) {
 			assert(s->aggr->field->parent == 
 			       s->group->field->parent);
-			if (rc == 0)
-				printf(" %c", delim);
-			putchar('\n');
+			if (nc == 0 &&
+			    fprintf(f, " %c", delim) < 0)
+				return 0;
+			if (fputc('\n', f) == EOF)
+				return 0;
 			for (i = 0; i < tabs + 1; i++)
-				putchar('\t');
-			printf("%s%cLEFT OUTER JOIN %s as _custom "
-				"ON %s.%s = _custom.%s "
-				"AND %s.%s %s _custom.%s %c",
-				spacer, delim,
-				s->group->field->parent->name, 
-				s->group->alias == NULL ?
-				s->group->field->parent->name : 
-				s->group->alias->alias,
-				s->group->field->name, 
-				s->group->field->name,
-				s->group->alias == NULL ?
-				s->group->field->parent->name : 
-				s->group->alias->alias, 
-				s->aggr->field->name, 
-				AGGR_MAXROW == s->aggr->op ?  "<" : ">",
-				s->aggr->field->name,
-				delim);
-			rc = 1;
+				if (fputc('\t', f) == EOF)
+					return 0;
+			if (fprintf(f, 
+			    "%s%cLEFT OUTER JOIN %s as _custom "
+			    "ON %s.%s = _custom.%s "
+			    "AND %s.%s %s _custom.%s %c",
+			    spacer, delim,
+			    s->group->field->parent->name, 
+			    s->group->alias == NULL ?
+			    s->group->field->parent->name : 
+			    s->group->alias->alias,
+			    s->group->field->name, 
+			    s->group->field->name,
+			    s->group->alias == NULL ?
+			    s->group->field->parent->name : 
+			    s->group->alias->alias, 
+			    s->aggr->field->name, 
+			    AGGR_MAXROW == s->aggr->op ?  "<" : ">",
+			    s->aggr->field->name,
+			    delim) < 0)
+				return 0;
+			nc = 1;
 		}
 
 		if (!hastrail) {
-			if (rc == 0)
-				putchar(delim);
-			puts(",");
+			if (nc == 0 && fputc(delim, f) == EOF)
+				return 0;
+			if (fputs(",\n", f) == EOF)
+				return 0;
 			continue;
 		}
 
-		if (rc > 0)
-			printf("\n");
-		else
-			printf(" %c\n", delim);
+		if (nc == 0 && fprintf(f, " %c", delim) < 0)
+			return 0;
+		if (fputc('\n', f) == EOF)
+			return 0;
 		for (i = 0; i < tabs + 1; i++)
-			putchar('\t');
-
-		printf("%s%c", spacer, delim);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, "%s%c", spacer, delim) < 0)
+			return 0;
 
 		if (!TAILQ_EMPTY(&s->sntq) || 
 		    (s->aggr != NULL && s->group != NULL))
-			printf("WHERE");
+			if (fputs("WHERE", f) == EOF)
+				return 0;
 
 		first = 1;
 
@@ -600,8 +664,9 @@ print_sql_stmts(size_t tabs, const struct strct *p, enum langt lang)
 		 */
 
 		if (s->group != NULL) {
-			printf(" _custom.%s IS NULL", 
-				s->group->field->name);
+			if (fprintf(f, " _custom.%s IS NULL", 
+			    s->group->field->name) < 0)
+				return 0;
 			first = 0;
 		}
 
@@ -613,113 +678,152 @@ print_sql_stmts(size_t tabs, const struct strct *p, enum langt lang)
 			    sent->op != OPTYPE_STREQ &&
 			    sent->op != OPTYPE_STRNEQ)
 				continue;
-			if (!first)
-				printf(" AND");
+			if (!first && fputs(" AND", f) == EOF)
+				return 0;
 			first = 0;
-			if (OPTYPE_ISUNARY(sent->op))
-				printf(" %s.%s %s",
-					sent->alias == NULL ?
-					p->name : sent->alias->alias,
-					sent->field->name, 
-					optypes[sent->op]);
-			else
-				printf(" %s.%s %s ?", 
-					sent->alias == NULL ?
-					p->name : sent->alias->alias,
-					sent->field->name, 
-					optypes[sent->op]);
+			if (OPTYPE_ISUNARY(sent->op)) {
+				if (fprintf(f, " %s.%s %s",
+				    sent->alias == NULL ?
+				    p->name : sent->alias->alias,
+				    sent->field->name, 
+				    optypes[sent->op]) < 0)
+					return 0;
+			} else {
+				if (fprintf(f, " %s.%s %s ?", 
+				    sent->alias == NULL ?
+				    p->name : sent->alias->alias,
+				    sent->field->name, 
+				    optypes[sent->op]) < 0)
+					return 0;
+			}
 		}
 
 		first = 1;
 		if (!TAILQ_EMPTY(&s->ordq))
 			printf(" ORDER BY ");
 		TAILQ_FOREACH(ord, &s->ordq, entries) {
-			if ( ! first)
-				printf(", ");
+			if (!first && fputs(", ", f) == EOF)
+				return 0;
 			first = 0;
-			printf("%s.%s %s",
-				NULL == ord->alias ?
-				p->name : ord->alias->alias,
-				ord->field->name, 
-				ORDTYPE_ASC == ord->op ?
-				"ASC" : "DESC");
+			if (fprintf(f, "%s.%s %s",
+			    NULL == ord->alias ?
+			    p->name : ord->alias->alias,
+			    ord->field->name, 
+			    ORDTYPE_ASC == ord->op ?
+			    "ASC" : "DESC") < 0)
+				return 0;
 		}
 
-		if (STYPE_SEARCH != s->type && s->limit > 0)
-			printf(" LIMIT %" PRId64, s->limit);
-		if (STYPE_SEARCH != s->type && s->offset > 0)
-			printf(" OFFSET %" PRId64, s->offset);
-
-		printf("%c,\n", delim);
+		if (STYPE_SEARCH != s->type && s->limit > 0 &&
+		    fprintf(f, " LIMIT %" PRId64, s->limit) < 0)
+			return 0;
+		if (STYPE_SEARCH != s->type && s->offset > 0 &&
+		    fprintf(f, " OFFSET %" PRId64, s->offset) < 0)
+			return 0;
+		if (fprintf(f, "%c,\n", delim) < 0)
+			return 0;
 	}
 
 	/* Insertion of a new record. */
-	/* FIXME: cols += printf(...) is wrong. */
 
 	if (p->ins != NULL) {
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("/* STMT_%s_INSERT */\n", p->name);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, 
+	  	    "/* STMT_%s_INSERT */\n", p->name) < 0)
+			return 0;
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
+			if (fputc('\t', f) == EOF)
+				return 0;
 
 		col = tabs * 8;
-		col += printf("%cINSERT INTO %s ", delim, p->name);
+		if ((rc = printf(
+		    "%cINSERT INTO %s ", delim, p->name)) < 0)
+			return 0;
+		col += rc;
 
 		first = 1;
-		TAILQ_FOREACH(f, &p->fq, entries) {
-			if (f->type == FTYPE_STRUCT ||
-			    (f->flags & FIELD_ROWID))
+		TAILQ_FOREACH(fd, &p->fq, entries) {
+			if (fd->type == FTYPE_STRUCT ||
+			    (fd->flags & FIELD_ROWID))
 				continue;
-
 			if (col >= 72) {
-				printf("%s%c\n", 
-					first ? "" : ",", delim);
+				if (fprintf(f, "%s%c\n", 
+				    first ? "" : ",", delim) < 0)
+					return 0;
 				for (i = 0; i < tabs + 1; i++)
-					putchar('\t');
-				printf("%s%c%s", spacer,
-					delim, first ? "(" : " ");
+					if (fputc('\t', f) == EOF)
+						return 0;
+				if (fprintf(f, "%s%c%s", spacer, 
+				    delim, first ? "(" : " ") < 0)
+					return 0;
 				col = (tabs + 1) * 8;
-			} else
-				putchar(first ? '(' : ',');
+			} else if (fputc(first ? '(' : ',', f) == EOF)
+				return 0;
 
-			col += 1 + printf("%s", f->name);
+			if ((rc = fprintf(f, "%s", fd->name)) < 0)
+				return 0;
+			col += 1 + rc;
 			first = 0;
 		}
 
 		if (first == 0) {
-			if ((col += printf(") ")) >= 72) {
-				printf("%c\n", delim);
+			if ((rc = fprintf(f, ") ")) < 0)
+				return 0;
+			if ((col += rc) >= 72) {
+				if (fprintf(f, "%c\n", delim) < 0)
+					return 0;
 				for (i = 0; i < tabs + 1; i++)
-					putchar('\t');
+					if (fputc('\t', f) == EOF)
+						return 0;
 				col = (tabs + 1) * 8;
-				col += printf("%s%c", spacer, delim);
+				if ((rc = printf
+				    ("%s%c", spacer, delim)) < 0)
+					return 0;
+				col += rc;
 			}
 
 			first = 1;
-			col += printf("VALUES ");
-			TAILQ_FOREACH(f, &p->fq, entries) {
-				if (f->type == FTYPE_STRUCT ||
-				    (f->flags & FIELD_ROWID))
+			if ((rc = fprintf(f, "VALUES ")) < 0)
+				return 0;
+			col += rc;
+			TAILQ_FOREACH(fd, &p->fq, entries) {
+				if (fd->type == FTYPE_STRUCT ||
+				    (fd->flags & FIELD_ROWID))
 					continue;
 				if (col >= 72) {
-					printf("%s%c\n", 
-						first ? "" : ",", delim);
+					if (fprintf(f, "%s%c\n", 
+					    first ? "" : ",", 
+					    delim) < 0)
+						return 0;
 					for (i = 0; i < tabs + 1; i++)
-						putchar('\t');
+						if (fputc('\t', f) == EOF)
+							return 0;
 					col = (tabs + 1) * 8;
-					col += printf("%s%c%s", spacer,
+					rc = printf("%s%c%s", spacer,
 						delim, first ? "(" : " ");
-				} else
-					putchar(first ? '(' : ',');
+					if (rc < 0)
+						return 0;
+					col += rc;
+				} else {
+					if (fputc(first ? 
+					    '(' : ',', f) == EOF)
+						return 0;
+				}
 
-				putchar('?');
+				if (fputc('?', f) == EOF)
+					return 0;
 				col += 2;
 				first = 0;
 			}
-			printf(")%c,\n", delim);
-		} else
-			printf("DEFAULT VALUES%c,\n", delim);
+			if (fprintf(f, ")%c,\n", delim) < 0)
+				return 0;
+		} else {
+			if (fprintf(f, 
+			    "DEFAULT VALUES%c,\n", delim) < 0)
+				return 0;
+		}
 	}
 	
 	/* 
@@ -731,29 +835,40 @@ print_sql_stmts(size_t tabs, const struct strct *p, enum langt lang)
 	pos = 0;
 	TAILQ_FOREACH(up, &p->uq, entries) {
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("/* STMT_%s_UPDATE_%zu */\n", p->name, pos++);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, 
+		    "/* STMT_%s_UPDATE_%zu */\n", p->name, pos++) < 0)
+			return 0;
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("%cUPDATE %s SET", delim, p->name);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, "%cUPDATE %s SET", delim, p->name) < 0)
+			return 0;
 
 		first = 1;
 		TAILQ_FOREACH(ur, &up->mrq, entries) {
-			putchar(first ? ' ' : ',');
+			if (fputc(first ? ' ' : ',', f) == EOF)
+				return 0;
+
 			first = 0;
 			switch (ur->mod) {
 			case MODTYPE_INC:
-				printf("%s = %s + ?", 
-					ur->field->name, 
-					ur->field->name);
+				if (fprintf(f, "%s = %s + ?", 
+				    ur->field->name, 
+				    ur->field->name) < 0)
+					return 0;
 				break;
 			case MODTYPE_DEC:
-				printf("%s = %s - ?", 
-					ur->field->name, 
-					ur->field->name);
+				if (fprintf(f, "%s = %s - ?", 
+				    ur->field->name, 
+				    ur->field->name) < 0)
+					return 0;
 				break;
 			case MODTYPE_CONCAT:
-				printf("%s = ", ur->field->name);
+				if (fprintf(f, "%s = ", 
+				    ur->field->name) < 0)
+					return 0;
 
 				/*
 				 * If we concatenate a NULL with a
@@ -763,30 +878,47 @@ print_sql_stmts(size_t tabs, const struct strct *p, enum langt lang)
 				 * so that they're always strings.
 				 */
 
-				if ((ur->field->flags & FIELD_NULL))
-					printf("COALESCE(%s,'')",
-						ur->field->name);
-				else
-					printf("%s", ur->field->name);
-				printf(" || ?");
+				if ((ur->field->flags & FIELD_NULL)) {
+					if (fprintf(f, 
+					    "COALESCE(%s,'')",
+					    ur->field->name) < 0)
+						return 0;
+				} else {
+					if (fprintf(f, "%s", 
+					    ur->field->name) < 0)
+						return 0;
+				}
+				if (fputs(" || ?", f) == EOF)
+					return 0;
 				break;
 			default:
-				printf("%s = ?", ur->field->name);
+				if (fprintf(f, "%s = ?", 
+				    ur->field->name) < 0)
+					return 0;
 				break;
 			}
 		}
+
 		first = 1;
 		TAILQ_FOREACH(ur, &up->crq, entries) {
-			printf(" %s ", first ? "WHERE" : "AND");
-			if (OPTYPE_ISUNARY(ur->op))
-				printf("%s %s", ur->field->name, 
-					optypes[ur->op]);
-			else
-				printf("%s %s ?", ur->field->name,
-					optypes[ur->op]);
+			if (fprintf(f, " %s ", 
+			    first ? "WHERE" : "AND") < 0)
+				return 0;
+			if (OPTYPE_ISUNARY(ur->op)) {
+				if (fprintf(f, "%s %s", 
+				    ur->field->name, 
+				    optypes[ur->op]) < 0)
+					return 0;
+			} else {
+				if (fprintf(f, "%s %s ?", 
+				    ur->field->name,
+				    optypes[ur->op]) < 0)
+					return 0;
+			}
 			first = 0;
 		}
-		printf("%c,\n", delim);
+		if (fprintf(f, "%c,\n", delim) < 0)
+			return 0;
 	}
 
 	/* Custom delete queries. */
@@ -794,67 +926,113 @@ print_sql_stmts(size_t tabs, const struct strct *p, enum langt lang)
 	pos = 0;
 	TAILQ_FOREACH(up, &p->dq, entries) {
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("/* STMT_%s_DELETE_%zu */\n", p->name, pos++);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, 
+		    "/* STMT_%s_DELETE_%zu */\n", p->name, pos++) < 0)
+			return 0;
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("%cDELETE FROM %s", delim, p->name);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, "%cDELETE FROM %s", delim, p->name) < 0)
+			return 0;
 
 		first = 1;
 		TAILQ_FOREACH(ur, &up->crq, entries) {
-			printf(" %s ", first ? "WHERE" : "AND");
-			if (OPTYPE_ISUNARY(ur->op))
-				printf("%s %s", ur->field->name, 
-					optypes[ur->op]);
-			else
-				printf("%s %s ?", ur->field->name,
-					optypes[ur->op]);
+			if (fprintf(f, 
+			    " %s ", first ? "WHERE" : "AND") < 0)
+				return 0;
+			if (OPTYPE_ISUNARY(ur->op)) {
+				if (fprintf(f, 
+				    "%s %s", ur->field->name, 
+				    optypes[ur->op]) < 0)
+					return 0;
+			} else {
+				if (fprintf(f, 
+				    "%s %s ?", ur->field->name,
+				    optypes[ur->op]) < 0)
+					return 0;
+			}
 			first = 0;
 		}
-		printf("%c,\n", delim);
+		if (fprintf(f, "%c,\n", delim) < 0)
+			return 0;
 	}
+
+	return 1;
 }
 
 void
-print_sql_enums(size_t tabs, const struct strct *p, enum langt lang)
+print_sql_stmts(size_t tabs, const struct strct *p, enum langt lang)
+{
+
+	gen_sql_stmts(stdout, tabs, p, lang);
+}
+
+int
+gen_sql_enums(FILE *f, size_t tabs,
+	const struct strct *p, enum langt lang)
 {
 	const struct search	*s;
 	const struct update	*u;
-	const struct field	*f;
+	const struct field	*fd;
 	size_t			 i, pos;
 
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if (f->flags & (FIELD_UNIQUE|FIELD_ROWID)) {
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if (fd->flags & (FIELD_UNIQUE|FIELD_ROWID)) {
 			for (i = 0; i < tabs; i++)
-				putchar('\t');
-			printf("STMT_%s_BY_UNIQUE_%s,\n", 
-				p->name, f->name);
+				if (fputc('\t', f) == EOF)
+					return 0;
+			if (fprintf(f, "STMT_%s_BY_UNIQUE_%s,\n", 
+			    p->name, fd->name) < 0)
+				return 0;
 		}
 
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries) {
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("STMT_%s_BY_SEARCH_%zu,\n", p->name, pos++);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, 
+		    "STMT_%s_BY_SEARCH_%zu,\n", p->name, pos++) < 0)
+			return 0;
 	}
 
 	if (p->ins != NULL) {
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("STMT_%s_INSERT,\n", p->name);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, 
+		    "STMT_%s_INSERT,\n", p->name) < 0)
+			return 0;
 	}
 
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries) {
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("STMT_%s_UPDATE_%zu,\n", p->name, pos++);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, 
+		    "STMT_%s_UPDATE_%zu,\n", p->name, pos++) < 0)
+			return 0;
 	}
 
 	pos = 0;
 	TAILQ_FOREACH(u, &p->dq, entries) {
 		for (i = 0; i < tabs; i++)
-			putchar('\t');
-		printf("STMT_%s_DELETE_%zu,\n", p->name, pos++);
+			if (fputc('\t', f) == EOF)
+				return 0;
+		if (fprintf(f, 
+		    "STMT_%s_DELETE_%zu,\n", p->name, pos++) < 0)
+			return 0;
 	}
+
+	return 1;
+}
+
+void
+print_sql_enums(size_t tabs, const struct strct *p, enum langt lang)
+{
+
+	gen_sql_enums(stdout, tabs, p, lang);
 }

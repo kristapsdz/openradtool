@@ -40,7 +40,7 @@ main(int argc, char *argv[])
 	struct config		 *cfg = NULL;
 	int			  rc = 0;
 	FILE			**confs = NULL;
-	size_t			  i, confsz;
+	size_t			  i;
 	struct ort_lang_json	  args;
 
 #if HAVE_PLEDGE
@@ -55,20 +55,16 @@ main(int argc, char *argv[])
 
 	argc -= optind;
 	argv += optind;
-	confsz = (size_t)argc;
 	
 	/* Read in all of our files now so we can repledge. */
 
-	if (confsz > 0) {
-		confs = calloc(confsz, sizeof(FILE *));
-		if (confs == NULL)
-			err(1, "calloc");
-		for (i = 0; i < confsz; i++) {
-			confs[i] = fopen(argv[i], "r");
-			if (confs[i] == NULL)
-				err(1, "%s", argv[i]);
-		}
-	}
+	if (argc > 0 &&
+	    (confs = calloc(argc, sizeof(FILE *))) == NULL)
+		err(1, NULL);
+
+	for (i = 0; i < (size_t)argc; i++)
+		if ((confs[i] = fopen(argv[i], "r")) == NULL)
+			err(1, "%s", argv[i]);
 
 #if HAVE_PLEDGE
 	if (pledge("stdio", NULL) == -1)
@@ -76,23 +72,26 @@ main(int argc, char *argv[])
 #endif
 
 	if ((cfg = ort_config_alloc()) == NULL)
-		goto out;
-	for (i = 0; i < confsz; i++)
+		err(1, NULL);
+
+	for (i = 0; i < (size_t)argc; i++)
 		if (!ort_parse_file(cfg, confs[i], argv[i]))
 			goto out;
-	if (confsz == 0 && !ort_parse_file(cfg, stdin, "<stdin>"))
+
+	if (argc == 0 && !ort_parse_file(cfg, stdin, "<stdin>"))
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
 		if (!(rc = ort_lang_json(&args, cfg, stdout)))
 			warn(NULL);
-
 out:
-	for (i = 0; i < confsz; i++)
-		if (fclose(confs[i]) == EOF)
-			warn("%s", argv[i]);
+	for (i = 0; i < (size_t)argc; i++)
+		fclose(confs[i]);
 
 	free(confs);
+
+	if (cfg != NULL)
+		ort_write_msg_file(stderr, &cfg->mq);
 	ort_config_free(cfg);
 	return !rc;
 usage:

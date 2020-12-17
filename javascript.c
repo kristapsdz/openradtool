@@ -45,7 +45,7 @@ main(int argc, char *argv[])
 	struct config	 *cfg = NULL;
 	int		  c, rc = 0, priv;
 	FILE		**confs = NULL;
-	size_t		  i, confsz;
+	size_t		  i;
 	ssize_t		  sz;
 
 #if HAVE_PLEDGE
@@ -67,18 +67,16 @@ main(int argc, char *argv[])
 
 	argc -= optind;
 	argv += optind;
-	confsz = (size_t)argc;
 	
 	/* Read in all of our files now so we can repledge. */
 
-	if (confsz > 0) {
-		if ((confs = calloc(confsz, sizeof(FILE *))) == NULL)
-			err(EXIT_FAILURE, "calloc");
-		for (i = 0; i < confsz; i++) {
-			confs[i] = fopen(argv[i], "r");
-			if (confs[i] == NULL)
-				err(EXIT_FAILURE, "%s: open", argv[i]);
-		}
+	if (argc > 0 &&
+	    (confs = calloc(argc, sizeof(FILE *))) == NULL)
+		err(EXIT_FAILURE, "calloc");
+
+	for (i = 0; i < (size_t)argc; i++) {
+		if ((confs[i] = fopen(argv[i], "r")) == NULL)
+			err(EXIT_FAILURE, "%s", argv[i]);
 	}
 
 	/* Read our private namespace. */
@@ -96,25 +94,27 @@ main(int argc, char *argv[])
 #endif
 
 	if ((cfg = ort_config_alloc()) == NULL)
-		goto out;
+		err(EXIT_FAILURE, NULL);
 
-	for (i = 0; i < confsz; i++)
+	for (i = 0; i < (size_t)argc; i++)
 		if (!ort_parse_file(cfg, confs[i], argv[i]))
 			goto out;
 
-	if (confsz == 0 && !ort_parse_file(cfg, stdin, "<stdin>"))
+	if (argc == 0 && !ort_parse_file(cfg, stdin, "<stdin>"))
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
 		gen_javascript(cfg, buf, priv);
 
 out:
-	for (i = 0; i < confsz; i++)
-		if (fclose(confs[i]) == EOF)
-			warn("%s", argv[i]);
+	for (i = 0; i < (size_t)argc; i++)
+		fclose(confs[i]);
 
 	close(priv);
 	free(confs);
+
+	if (cfg != NULL)
+		ort_write_msg_file(stderr, &cfg->mq);
 	ort_config_free(cfg);
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:

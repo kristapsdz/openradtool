@@ -44,7 +44,7 @@ main(int argc, char *argv[])
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
-		err(EXIT_FAILURE, "pledge");
+		err(1, "pledge");
 #endif
 
 	if (getopt(argc, argv, "") != -1)
@@ -55,21 +55,19 @@ main(int argc, char *argv[])
 
 	if (argc > 0 &&
 	    (confs = calloc(argc, sizeof(FILE *))) == NULL)
-		err(EXIT_FAILURE, "calloc");
+		err(1, NULL);
 
 	for (i = 0; i < (size_t)argc; i++)
 		if ((confs[i] = fopen(argv[i], "r")) == NULL)
-			err(EXIT_FAILURE, "%s", argv[i]);
+			err(1, "%s", argv[i]);
 
 #if HAVE_PLEDGE
 	if (pledge("stdio", NULL) == -1)
-		err(EXIT_FAILURE, "pledge");
+		err(1, "pledge");
 #endif
 
 	if ((cfg = ort_config_alloc()) == NULL)
-		goto out;
-
-	/* Parse the input files or stdin. */
+		err(1, NULL);
 
 	for (i = 0; i < (size_t)argc; i++)
 		if (!ort_parse_file(cfg, confs[i], argv[i]))
@@ -81,16 +79,18 @@ main(int argc, char *argv[])
 	if ((rc = ort_parse_close(cfg)))
 		if (!(rc = ort_lang_sql(cfg, stdout)))
 			warn(NULL);
+
 out:
 	for (i = 0; i < (size_t)argc; i++)
-		if (fclose(confs[i]) == EOF)
-			warn("%s", argv[i]);
-
+		fclose(confs[i]);
 	free(confs);
+
+	if (cfg != NULL)
+		ort_write_msg_file(stderr, &cfg->mq);
 	ort_config_free(cfg);
-	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
+	return rc ? 0 : 1;
 
 usage:
 	fprintf(stderr, "usage: %s [config...]\n", getprogname());
-	return EXIT_FAILURE;
+	return 1;
 }

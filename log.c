@@ -49,50 +49,22 @@ static void
 ort_log(struct config *cfg, enum msgtype type, 
 	const char *chan, int er, const struct pos *pos, char *msg)
 {
-	void		*pp;
 	struct msg	*m;
 
-	if (cfg != NULL) {
-		pp = reallocarray(cfg->msgs, 
-			cfg->msgsz + 1, sizeof(struct msg));
-		/* Well, shit. */
-		if (NULL == pp) {
-			free(msg);
-			return;
-		}
-		cfg->msgs = pp;
-		m = &cfg->msgs[cfg->msgsz++];
-		memset(m, 0, sizeof(struct msg));
-		m->type = type;
-		m->er = er;
-		m->buf = msg;
-		if (pos != NULL)
-			m->pos = *pos;
+	/* Shit. */
+
+	if ((m = calloc(1, sizeof(struct msg))) == NULL) {
+		free(msg);
+		return;
 	}
 
-	/* Now we also print the message to stderr. */
+	TAILQ_INSERT_HEAD(&cfg->mq, m, entries);
 
-	if (pos != NULL && pos->fname != NULL && pos->line > 0)
-		fprintf(stderr, "%s:%zu:%zu: %s %s: ", 
-			pos->fname, pos->line, pos->column, 
-			chan, msgtypes[type]);
-	else if (pos != NULL && pos->fname != NULL)
-		fprintf(stderr, "%s: %s %s: ", 
-			pos->fname, chan, msgtypes[type]);
-	else 
-		fprintf(stderr, "%s %s: ", chan, msgtypes[type]);
-
-	if (msg != NULL)
-		fputs(msg, stderr);
-
-	if (type == MSGTYPE_FATAL)
-		fprintf(stderr, "%s%s", 
-			msg != NULL ? ": " : "", strerror(er)); 
-
-	fputc('\n', stderr);
-
-	if (cfg == NULL)
-		free(msg);
+	m->type = type;
+	m->er = er;
+	m->buf = msg;
+	if (pos != NULL)
+		m->pos = *pos;
 }
 
 /*
@@ -134,4 +106,44 @@ ort_msg(struct config *cfg, enum msgtype type,
 	va_start(ap, fmt);
 	ort_msgv(cfg, type, chan, er, pos, fmt, ap);
 	va_end(ap);
+}
+
+static int
+gen_msg(FILE *f, const struct msg *m)
+{
+
+	if (m->pos.fname != NULL && m->pos.line > 0) {
+		if (fprintf(f, "%s:%zu:%zu: %s: ", 
+		    m->pos.fname, m->pos.line, m->pos.column, 
+		    msgtypes[m->type]) < 0)
+			return 0;
+	} else if (m->pos.fname != NULL) {
+		if (fprintf(f, "%s: %s: ", 
+		    m->pos.fname, msgtypes[m->type]) < 0)
+			return 0;
+	} else 
+		if (fprintf(f, "%s: ", msgtypes[m->type]) < 0)
+			return 0;
+
+	if (m->buf != NULL && fputs(m->buf, f) == EOF)
+		return 0;
+
+	if (m->type == MSGTYPE_FATAL && fprintf(f, "%s%s", 
+	    m->buf != NULL ? ": " : "", strerror(m->er)) < 0)
+		return 0;
+
+	return fputc('\n', f) != EOF;
+}
+
+
+int
+ort_write_msg_file(FILE *f, const struct msgq *q)
+{
+	const struct msg	 *m;
+
+	TAILQ_FOREACH(m, q, entries)
+		if (!gen_msg(f, m))
+			return 0;
+
+	return 1;
 }

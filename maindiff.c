@@ -82,11 +82,11 @@ main(int argc, char *argv[])
 
 	if (confsz > 0 &&
 	    (confs = calloc(confsz, sizeof(FILE *))) == NULL)
-		err(EXIT_FAILURE, "calloc");
+		err(EXIT_FAILURE, NULL);
 
 	if (dconfsz > 0 &&
 	    (dconfs = calloc(dconfsz, sizeof(FILE *))) == NULL)
-		err(EXIT_FAILURE, "calloc");
+		err(EXIT_FAILURE, NULL);
 
 	for (i = 0; i < dconfsz; i++)
 		if ((dconfs[i] = fopen(argv[i], "r")) == NULL)
@@ -95,11 +95,9 @@ main(int argc, char *argv[])
 	if (i < (size_t)argc && strcmp(argv[i], "-f") == 0)
 		i++;
 
-	for (j = 0; i < (size_t)argc; j++, i++) {
-		assert(j < confsz);
+	for (j = 0; i < (size_t)argc; j++, i++)
 		if ((confs[j] = fopen(argv[i], "r")) == NULL)
 			err(EXIT_FAILURE, "%s", argv[i]);
-	}
 
 #if HAVE_PLEDGE
 	if (pledge("stdio", NULL) == -1)
@@ -110,7 +108,7 @@ main(int argc, char *argv[])
 
 	if ((cfg = ort_config_alloc()) == NULL ||
 	    (dcfg = ort_config_alloc()) == NULL)
-		goto out;
+		err(EXIT_FAILURE, NULL);
 
 	/* Parse the input files themselves. */
 
@@ -142,26 +140,29 @@ main(int argc, char *argv[])
 		goto out;
 	}
 
-	/* Generate output. */
-
 	rc = ort_write_diff_file(stdout, q, 
 		(const char **)&argv[confst], confsz,
 		(const char **)argv, dconfsz);
+	if (rc == 0)
+		warn(NULL);
 out:
 	for (i = 0; i < confsz; i++)
-		if (fclose(confs[i]) == EOF)
-			warn("%s", argv[confst + i]);
+		fclose(confs[i]);
 	for (i = 0; i < dconfsz; i++)
-		if (fclose(dconfs[i]) == EOF)
-			warn("%s", argv[i]);
+		fclose(dconfs[i]);
 
 	free(confs);
 	free(dconfs);
-	ort_config_free(cfg);
-	ort_config_free(dcfg);
 	ort_diff_free(q);
-	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 
+	if (cfg != NULL)
+		ort_write_msg_file(stderr, &cfg->mq);
+	ort_config_free(cfg);
+	if (dcfg != NULL)
+		ort_write_msg_file(stderr, &dcfg->mq);
+	ort_config_free(dcfg);
+
+	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 
 		"usage: %s oldconfig [config...]\n"

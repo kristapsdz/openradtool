@@ -1118,7 +1118,7 @@ main(int argc, char *argv[])
 #endif
 
 	if ((cfg = ort_config_alloc()) == NULL)
-		goto out;
+		err(EXIT_FAILURE, NULL);
 
 	for (i = 0; i < confsz; i++)
 		if ( ! ort_parse_file(cfg, confs[i], argv[i]))
@@ -1139,9 +1139,12 @@ main(int argc, char *argv[])
 
 out:
 	for (i = 0; i < confsz; i++)
-		if (NULL != confs[i] && EOF == fclose(confs[i]))
-			warn("%s", argv[i]);
+		fclose(confs[i]);
+
 	free(confs);
+
+	if (cfg != NULL)
+		ort_write_msg_file(stderr, &cfg->mq);
 	ort_config_free(cfg);
 
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;

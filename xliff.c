@@ -900,7 +900,7 @@ main(int argc, char *argv[])
 		confsz = (size_t)argc;
 		if (confsz > 0 &&
 		    (confs = calloc(confsz, sizeof(FILE *))) == NULL)
-			err(EXIT_FAILURE, "calloc");
+			err(EXIT_FAILURE, NULL);
 		for (i = 0; i < confsz; i++)
 			if ((confs[i] = fopen(argv[i], "r")) == NULL)
 				err(EXIT_FAILURE, "%s", argv[i]);
@@ -914,13 +914,15 @@ main(int argc, char *argv[])
 	/* Create a configuration, parse, link. */
 
 	if ((cfg = ort_config_alloc()) == NULL)
-		goto out;
+		err(EXIT_FAILURE, NULL);
 
 	for (i = 0; i < confsz; i++)
 		if (!ort_parse_file(cfg, confs[i], argv[i]))
 			goto out;
+
 	if (confsz == 0 && !ort_parse_file(cfg, stdin, "<stdin>"))
 		goto out;
+
 	if (!ort_parse_close(cfg))
 		goto out;
 
@@ -939,17 +941,21 @@ main(int argc, char *argv[])
 			(const char **)&argv[xmlstart + i]);
 		break;
 	}
+
+	if (!rc)
+		warn(NULL);
 out:
 	for (i = 0; i < xmlsz; i++)
-		if (close(xmls[i]) == -1)
-			warn("%s", argv[xmlstart + i]);
+		close(xmls[i]);
 	for (i = 0; i < confsz; i++)
-		if (fclose(confs[i]) == EOF)
-			warn("%s", argv[i]);
-
+		fclose(confs[i]);
 	free(confs);
 	free(xmls);
+
+	if (cfg != NULL)
+		ort_write_msg_file(stderr, &cfg->mq);
 	ort_config_free(cfg);
+
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 

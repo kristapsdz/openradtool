@@ -35,67 +35,60 @@ int
 main(int argc, char *argv[])
 {
 	struct config	 *cfg = NULL;
-	size_t		  i, confsz;
+	size_t		  i;
 	int		  rc = 0;
 	FILE		**confs = NULL;
 
 #if HAVE_PLEDGE
-	if (-1 == pledge("stdio rpath", NULL))
-		err(EXIT_FAILURE, "pledge");
+	if (pledge("stdio rpath", NULL) == -1)
+		err(1, "pledge");
 #endif
 
-	if (-1 != getopt(argc, argv, ""))
+	if (getopt(argc, argv, "") != -1)
 		goto usage;
 
 	argc -= optind;
 	argv += optind;
-	confsz = (size_t)argc;
 	
-	/* Read in all of our files now so we can repledge. */
+	if (argc > 0 &&
+	    (confs = calloc(argc, sizeof(FILE *))) == NULL)
+		err(1, NULL);
 
-	if (confsz > 0) {
-		confs = calloc(confsz, sizeof(FILE *));
-		if (NULL == confs)
-			err(EXIT_FAILURE, NULL);
-		for (i = 0; i < confsz; i++) {
-			confs[i] = fopen(argv[i], "r");
-			if (NULL == confs[i]) {
-				warn("%s", argv[i]);
-				goto out;
-			}
-		}
-	}
+	for (i = 0; i < (size_t)argc; i++)
+		if ((confs[i] = fopen(argv[i], "r")) == NULL)
+			err(1, "%s", argv[i]);
 
 #if HAVE_PLEDGE
-	if (-1 == pledge("stdio", NULL))
-		err(EXIT_FAILURE, "pledge");
+	if (pledge("stdio", NULL) == -1)
+		err(1, "pledge");
 #endif
 
 	if ((cfg = ort_config_alloc()) == NULL)
-		goto out;
+		err(1, NULL);
 
-	for (i = 0; i < confsz; i++)
-		if ( ! ort_parse_file(cfg, confs[i], argv[i]))
+	/* From here on out we use the "out" label to bail. */
+
+	for (i = 0; i < (size_t)argc; i++)
+		if (!ort_parse_file(cfg, confs[i], argv[i]))
 			goto out;
 
-	if (0 == confsz && 
-	    ! ort_parse_file(cfg, stdin, "<stdin>"))
+	if (argc == 0 && !ort_parse_file(cfg, stdin, "<stdin>"))
 		goto out;
 
-	/* Only echo output on success. */
-
-	if (0 != (rc = ort_parse_close(cfg)))
-		ort_write_file(stdout, cfg);
-
+	if ((rc = ort_parse_close(cfg)))
+		if (!(rc = ort_write_file(stdout, cfg)))
+			warn(NULL);
 out:
-	for (i = 0; i < confsz; i++)
-		if (NULL != confs[i] && EOF == fclose(confs[i]))
-			warn("%s", argv[i]);
+	for (i = 0; i < (size_t)argc; i++)
+		fclose(confs[i]);
 	free(confs);
+
+	if (cfg != NULL)
+		ort_write_msg_file(stderr, &cfg->mq);
 	ort_config_free(cfg);
 
-	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
+	return rc ? 0 : 1;
 usage:
 	fprintf(stderr, "usage: %s [config...]\n", getprogname());
-	return EXIT_FAILURE;
+	return 1;
 }

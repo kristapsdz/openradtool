@@ -26,6 +26,7 @@ TAILQ_HEAD(enmq, enm);
 TAILQ_HEAD(fieldq, field);
 TAILQ_HEAD(fvalidq, fvalid);
 TAILQ_HEAD(labelq, label);
+TAILQ_HEAD(msgq, msg);
 TAILQ_HEAD(nrefq, nref);
 TAILQ_HEAD(ordq, ord);
 TAILQ_HEAD(rolemapq, rolemap);
@@ -471,6 +472,7 @@ struct	msg {
 	enum msgtype	 type; /* type of message */
 	char		*buf; /* custom buffer or NULL */
 	int		 er; /* if MSGTYPE_FATAL, errno */
+	TAILQ_ENTRY(msg) entries;
 };
 
 struct	config {
@@ -483,8 +485,7 @@ struct	config {
 	size_t		  langsz;
 	char		**fnames;
 	size_t		  fnamesz;
-	struct msg	 *msgs;
-	size_t		  msgsz;
+	struct msgq	  mq;
 	struct config_private *priv;
 };
 
@@ -655,6 +656,7 @@ void		 ort_config_free(struct config *);
 int		 ort_parse_close(struct config *);
 int		 ort_parse_file(struct config *, FILE *, const char *);
 int		 ort_write_file(FILE *, const struct config *);
+int		 ort_write_msg_file(FILE *f, const struct msgq *q);
 struct diffq	*ort_diff(const struct config *, const struct config *);
 void		 ort_diff_free(struct diffq *);
 int		 ort_write_diff_file(FILE *, const struct diffq *,

@@ -345,6 +345,7 @@ ort_config_free(struct config *cfg)
 	struct enm	*e;
 	struct role	*r;
 	struct bitf	*bf;
+	struct msg	*m;
 	struct resolve	*res;
 	size_t		 i;
 
@@ -376,6 +377,12 @@ ort_config_free(struct config *cfg)
 		parse_free_resolve(res);
 	}
 
+	while ((m = TAILQ_FIRST(&cfg->mq)) != NULL) {
+		TAILQ_REMOVE(&cfg->mq, m, entries);
+		free(m->buf);
+		free(m);
+	}
+
 	for (i = 0; i < cfg->langsz; i++)
 		free(cfg->langs[i]);
 	free(cfg->langs);
@@ -383,10 +390,6 @@ ort_config_free(struct config *cfg)
 	for (i = 0; i < cfg->fnamesz; i++)
 		free(cfg->fnames[i]);
 	free(cfg->fnames);
-
-	for (i = 0; i < cfg->msgsz; i++)
-		free(cfg->msgs[i].buf);
-	free(cfg->msgs);
 
 	free(cfg->priv);
 	free(cfg);
@@ -404,15 +407,11 @@ ort_config_alloc(void)
 
 	cfg = calloc(1, sizeof(struct config));
 	if (cfg == NULL) {
-		ort_msg(NULL, MSGTYPE_FATAL, 
-			"config", errno, NULL, NULL);
 		return NULL;
 	}
 
 	cfg->priv = calloc(1, sizeof(struct config_private));
 	if (cfg->priv == NULL) {
-		ort_msg(NULL, MSGTYPE_FATAL, 
-			"config", errno, NULL, NULL);
 		free(cfg);
 		return NULL;
 	}
@@ -421,14 +420,10 @@ ort_config_alloc(void)
 
 	cfg->langsz = 1;
 	if ((cfg->langs = calloc(1, sizeof(char *))) == NULL) {
-		ort_msg(NULL, MSGTYPE_FATAL, 
-			"config", errno, NULL, NULL);
 		free(cfg->priv);
 		free(cfg);
 		return NULL;
 	} else if ((cfg->langs[0] = strdup("")) == NULL) {
-		ort_msg(NULL, MSGTYPE_FATAL, 
-			"config", errno, NULL, NULL);
 		free(cfg->langs);
 		free(cfg->priv);
 		free(cfg);
@@ -436,6 +431,7 @@ ort_config_alloc(void)
 	}
 
 	TAILQ_INIT(&cfg->sq);
+	TAILQ_INIT(&cfg->mq);
 	TAILQ_INIT(&cfg->eq);
 	TAILQ_INIT(&cfg->rq);
 	TAILQ_INIT(&cfg->arq);

@@ -114,15 +114,13 @@ main(int argc, char *argv[])
 		if (!(rc = ort_lang_c_header(&args, cfg, stdout)))
 			warn(NULL);
 out:
+	ort_write_msg_file(stderr, &cfg->mq);
+	ort_config_free(cfg);
+
 	for (i = 0; i < (size_t)argc; i++)
 		fclose(confs[i]);
 
 	free(confs);
-
-	if (cfg != NULL)
-		ort_write_msg_file(stderr, &cfg->mq);
-	ort_config_free(cfg);
-
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 

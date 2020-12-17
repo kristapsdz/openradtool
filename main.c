@@ -62,7 +62,6 @@ main(int argc, char *argv[])
 	if (pledge("stdio", NULL) == -1)
 		err(1, "pledge");
 #endif
-
 	if ((cfg = ort_config_alloc()) == NULL)
 		err(1, NULL);
 
@@ -79,14 +78,13 @@ main(int argc, char *argv[])
 		if (!(rc = ort_write_file(stdout, cfg)))
 			warn(NULL);
 out:
-	for (i = 0; i < (size_t)argc; i++)
-		fclose(confs[i]);
-	free(confs);
-
-	if (cfg != NULL)
-		ort_write_msg_file(stderr, &cfg->mq);
+	ort_write_msg_file(stderr, &cfg->mq);
 	ort_config_free(cfg);
 
+	for (i = 0; i < (size_t)argc; i++)
+		fclose(confs[i]);
+
+	free(confs);
 	return rc ? 0 : 1;
 usage:
 	fprintf(stderr, "usage: %s [config...]\n", getprogname());

@@ -74,10 +74,9 @@ main(int argc, char *argv[])
 	    (confs = calloc(argc, sizeof(FILE *))) == NULL)
 		err(EXIT_FAILURE, "calloc");
 
-	for (i = 0; i < (size_t)argc; i++) {
+	for (i = 0; i < (size_t)argc; i++)
 		if ((confs[i] = fopen(argv[i], "r")) == NULL)
 			err(EXIT_FAILURE, "%s", argv[i]);
-	}
 
 	/* Read our private namespace. */
 
@@ -92,7 +91,6 @@ main(int argc, char *argv[])
 	if (pledge("stdio", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
-
 	if ((cfg = ort_config_alloc()) == NULL)
 		err(EXIT_FAILURE, NULL);
 
@@ -107,15 +105,14 @@ main(int argc, char *argv[])
 		gen_javascript(cfg, buf, priv);
 
 out:
+	ort_write_msg_file(stderr, &cfg->mq);
+	ort_config_free(cfg);
+
 	for (i = 0; i < (size_t)argc; i++)
 		fclose(confs[i]);
 
 	close(priv);
 	free(confs);
-
-	if (cfg != NULL)
-		ort_write_msg_file(stderr, &cfg->mq);
-	ort_config_free(cfg);
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, "usage: %s [-S sharedir] [config...]\n", 

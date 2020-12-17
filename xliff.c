@@ -910,9 +910,6 @@ main(int argc, char *argv[])
 	if (pledge("stdio", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
-
-	/* Create a configuration, parse, link. */
-
 	if ((cfg = ort_config_alloc()) == NULL)
 		err(EXIT_FAILURE, NULL);
 
@@ -945,17 +942,16 @@ main(int argc, char *argv[])
 	if (!rc)
 		warn(NULL);
 out:
+	ort_write_msg_file(stderr, &cfg->mq);
+	ort_config_free(cfg);
+
 	for (i = 0; i < xmlsz; i++)
 		close(xmls[i]);
 	for (i = 0; i < confsz; i++)
 		fclose(confs[i]);
+
 	free(confs);
 	free(xmls);
-
-	if (cfg != NULL)
-		ort_write_msg_file(stderr, &cfg->mq);
-	ort_config_free(cfg);
-
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 

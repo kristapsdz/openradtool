@@ -146,6 +146,11 @@ main(int argc, char *argv[])
 	if (rc == 0)
 		warn(NULL);
 out:
+	ort_write_msg_file(stderr, &cfg->mq);
+	ort_write_msg_file(stderr, &dcfg->mq);
+	ort_config_free(cfg);
+	ort_config_free(dcfg);
+
 	for (i = 0; i < confsz; i++)
 		fclose(confs[i]);
 	for (i = 0; i < dconfsz; i++)
@@ -154,13 +159,6 @@ out:
 	free(confs);
 	free(dconfs);
 	ort_diff_free(q);
-
-	if (cfg != NULL)
-		ort_write_msg_file(stderr, &cfg->mq);
-	ort_config_free(cfg);
-	if (dcfg != NULL)
-		ort_write_msg_file(stderr, &dcfg->mq);
-	ort_config_free(dcfg);
 
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:

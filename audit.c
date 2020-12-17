@@ -1071,46 +1071,41 @@ main(int argc, char *argv[])
 	struct config	 *cfg = NULL;
 	int		  rc = 0;
 	enum op		  op = OP_AUDIT;
-	size_t		  i, confsz;
+	size_t		  i;
 	FILE		**confs = NULL;
 
 #if HAVE_PLEDGE
-	if (-1 == pledge("stdio rpath", NULL))
+	if (pledge("stdio rpath", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	if (0 == strcmp(getprogname(), "ort-audit-gv"))
+	if (strcmp(getprogname(), "ort-audit-gv") == 0)
 		op = OP_AUDIT_GV;
-	else if (0 == strcmp(getprogname(), "ort-audit-json"))
+	else if (strcmp(getprogname(), "ort-audit-json") == 0)
 		op = OP_AUDIT_JSON;
 
-	if (-1 != getopt(argc, argv, ""))
+	if (getopt(argc, argv, "") != -1)
 		goto usage;
 
 	argc -= optind;
 	argv += optind;
-	if (0 == argc)
+
+	if (argc == 0)
 		goto usage;
 	role = argv[0];
+
 	argc--;
 	argv++;
 
-	confsz = (size_t)argc;
-	
 	/* Read in all of our files now so we can repledge. */
 
-	if (confsz > 0) {
-		confs = calloc(confsz, sizeof(FILE *));
-		if (NULL == confs)
-			err(EXIT_FAILURE, NULL);
-		for (i = 0; i < confsz; i++) {
-			confs[i] = fopen(argv[i], "r");
-			if (NULL == confs[i]) {
-				warn("%s", argv[i]);
-				goto out;
-			}
-		}
-	}
+	if (argc > 0 &&
+	    (confs = calloc(argc, sizeof(FILE *))) == NULL)
+		err(EXIT_FAILURE, NULL);
+
+	for (i = 0; i < (size_t)argc; i++)
+		if ((confs[i] = fopen(argv[i], "r")) == NULL)
+			err(EXIT_FAILURE, "%s", argv[i]);
 
 #if HAVE_PLEDGE
 	if (-1 == pledge("stdio", NULL))
@@ -1120,14 +1115,14 @@ main(int argc, char *argv[])
 	if ((cfg = ort_config_alloc()) == NULL)
 		err(EXIT_FAILURE, NULL);
 
-	for (i = 0; i < confsz; i++)
-		if ( ! ort_parse_file(cfg, confs[i], argv[i]))
+	for (i = 0; i < (size_t)argc; i++)
+		if (!ort_parse_file(cfg, confs[i], argv[i]))
 			goto out;
 
-	if (0 == confsz && 
-	    ! ort_parse_file(cfg, stdin, "<stdin>"))
+	if (0 == argc && !ort_parse_file(cfg, stdin, "<stdin>"))
 		goto out;
-	if ( ! ort_parse_close(cfg))
+
+	if (!ort_parse_close(cfg))
 		goto out;
 
 	if (OP_AUDIT == op)
@@ -1137,16 +1132,17 @@ main(int argc, char *argv[])
 	else 
 		rc = gen_audit_gv(cfg, role);
 
+	if (!rc)
+		warn(NULL);
+
 out:
-	for (i = 0; i < confsz; i++)
+	ort_write_msg_file(stderr, &cfg->mq);
+	ort_config_free(cfg);
+
+	for (i = 0; i < (size_t)argc; i++)
 		fclose(confs[i]);
 
 	free(confs);
-
-	if (cfg != NULL)
-		ort_write_msg_file(stderr, &cfg->mq);
-	ort_config_free(cfg);
-
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	if (OP_AUDIT_GV == op)

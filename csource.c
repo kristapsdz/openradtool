@@ -164,9 +164,8 @@ main(int argc, char *argv[])
 	if (pledge("stdio", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
-
 	if ((cfg = ort_config_alloc()) == NULL)
-		goto out;
+		err(EXIT_FAILURE, NULL);
 
 	for (i = 0; i < (size_t)argc; i++)
 		if (!ort_parse_file(cfg, confs[i], argv[i]))
@@ -179,6 +178,9 @@ main(int argc, char *argv[])
 		if (!(rc = ort_lang_c_source(&args, cfg, stdout)))
 			warn(NULL);
 out:
+	ort_write_msg_file(stderr, &cfg->mq);
+	ort_config_free(cfg);
+
 	for (i = 0; i < (size_t)argc; i++)
 		fclose(confs[i]);
 
@@ -186,11 +188,6 @@ out:
 	free(ext_gensalt);
 	free(ext_b64_ntop);
 	free(ext_jsmn);
-
-	if (cfg != NULL)
-		ort_write_msg_file(stderr, &cfg->mq);
-	ort_config_free(cfg);
-
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 

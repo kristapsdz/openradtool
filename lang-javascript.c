@@ -77,20 +77,24 @@ static	const char *types[FTYPE__MAX] = {
  * Escape JavaScript string literal.
  * This escapes backslashes and single apostrophes.
  */
-static void
-gen_label_text(const char *cp)
+static int
+gen_label_text(FILE *f, const char *cp)
 {
 	unsigned char	 c;
 
 	while ((c = *cp++) != '\0')
 		switch (c) {
 		case '\'':
-			printf("\\\'");
+			if (fputs("\\\'", f) == EOF)
+				return 0;
 			break;
 		default:
-			putchar(c);
+			if (fputc(c, f) == EOF)
+				return 0;
 			break;
 		}
+
+	return 1;
 }
 
 /*
@@ -99,8 +103,8 @@ gen_label_text(const char *cp)
  * Each language is represented; if not found, an empty string is used.
  * The default language is called "_default".
  */
-static void
-gen_labels(const struct config *cfg, const struct labelq *q)
+static int
+gen_labels(FILE *f, const struct config *cfg, const struct labelq *q)
 {
 	const struct label *l;
 	size_t		 i;
@@ -112,29 +116,39 @@ gen_labels(const struct config *cfg, const struct labelq *q)
 			break;
 		}
 
-	putchar('{');
+	if (fputc('{', f) == EOF)
+		return 0;
+
 	for (i = 0; i < cfg->langsz; i++) {
 		TAILQ_FOREACH(l, q, entries) 
 			if (l->lang == i)
 				break;
 		if (l != NULL) {
-			printf("%s: \'", i == 0 ? 
-				"_default" : cfg->langs[i]);
-			gen_label_text(l->label);
-			putchar('\'');
+			if (fprintf(f, "%s: \'", i == 0 ? 
+			    "_default" : cfg->langs[i]) < 0)
+				return 0;
+			if (!gen_label_text(f, l->label))
+				return 0;
+			if (fputc('\'', f) == EOF)
+				return 0;
 		} else if (i > 0 && def != NULL) {
-			printf("%s: \'", i == 0 ? 
-				"_default" : cfg->langs[i]);
-			gen_label_text(def);
-			putchar('\'');
+			if (fprintf(f, "%s: \'", i == 0 ? 
+			    "_default" : cfg->langs[i]) < 0)
+				return 0;
+			if (!gen_label_text(f, def))
+				return 0;
+			if (fputc('\'', f) == EOF)
+				return 0;
 		} else
-			printf("%s: \'\'", i == 0 ?
-				"_default" : cfg->langs[i]);
+			if (fprintf(f, "%s: \'\'", i == 0 ?
+			    "_default" : cfg->langs[i]) < 0)
+				return 0;
 
-		if (i < cfg->langsz - 1)
-			printf(", ");
+		if (i < cfg->langsz - 1 && fputs(", ", f) == EOF)
+			return 0;
 	}
-	putchar('}');
+
+	return fputc('}', f) != EOF;
 }
 
 static void
@@ -1043,14 +1057,16 @@ ort_lang_javascript(const struct config *cfg,
 		    "\'ort-null\', false);\n"
 		    "\t\t\t\t_replcllang(e, name, ", f) == EOF)
 			return 0;
-		gen_labels(cfg, &bf->labels_null);
+		if (!gen_labels(f, cfg, &bf->labels_null))
+			return 0;
 		if (fputs(");\n"
 		    "\t\t\t\treturn;\n"
 		    "\t\t\t} else if (vlong === null) {\n"
 		    "\t\t\t\t_classadd(e, \'ort-null\');\n"
 		    "\t\t\t\t_repllang(e, ", f) == EOF)
 			return 0;
-		gen_labels(cfg, &bf->labels_null);
+		if (!gen_labels(f, cfg, &bf->labels_null))
+			return 0;
 		if (fputs(");\n"
 		    "\t\t\t\treturn;\n"
 		    "\t\t\t} else if (vlong.isZero() && name !== null) {\n"
@@ -1058,14 +1074,16 @@ ort_lang_javascript(const struct config *cfg,
 		    "\'ort-unset\', false);\n"
 		    "\t\t\t\t_replcllang(e, name, ", f) == EOF)
 			return 0;
-		gen_labels(cfg, &bf->labels_unset);
+		if (!gen_labels(f, cfg, &bf->labels_unset))
+			return 0;
 		if (fputs(");\n"
 		    "\t\t\t\treturn;\n"
 		    "\t\t\t} else if (vlong.isZero()) {\n"
 		    "\t\t\t\t_classadd(e, \'ort-unset\');\n"
 		    "\t\t\t\t_repllang(e, ", f) == EOF)
 			return 0;
-		gen_labels(cfg, &bf->labels_unset);
+		if (!gen_labels(f, cfg, &bf->labels_unset))
+			return 0;
 		if (fputs(");\n"
 		    "\t\t\t\treturn;\n"
 		    "\t\t\t}\n\n", f) == EOF)
@@ -1079,7 +1097,8 @@ ort_lang_javascript(const struct config *cfg,
 			    "\t\t\t\tconst res: string = _strlang(", 
 			    bf->name, bi->name) < 0)
 				return 0;
-			gen_labels(cfg, &bi->labels);
+			if (!gen_labels(f, cfg, &bi->labels))
+				return 0;
 			if (fputs(");\n"
 			    "\t\t\t\tif (res.length)\n"
 		       	    "\t\t\t\t\ts += "
@@ -1147,14 +1166,16 @@ ort_lang_javascript(const struct config *cfg,
 		    "\'ort-null\', false);\n"
 		    "\t\t\t\t_replcllang(e, name, ", f) == EOF)
 			return 0;
-		gen_labels(cfg, &e->labels_null);
+		if (!gen_labels(f, cfg, &e->labels_null))
+			return 0;
 		if (fputs(");\n"
 		    "\t\t\t\treturn;\n"
 		    "\t\t\t} else if (v === null) {\n"
 		    "\t\t\t\t_classadd(e, \'ort-null\');\n"
 		    "\t\t\t\t_repllang(e, ", f) == EOF)
 			return 0;
-		gen_labels(cfg, &e->labels_null);
+		if (!gen_labels(f, cfg, &e->labels_null))
+			return 0;
 		if (fputs(");\n"
 		    "\t\t\t\treturn;\n"
 		    "\t\t\t}\n"
@@ -1167,7 +1188,8 @@ ort_lang_javascript(const struct config *cfg,
 			    "\t\t\t\ts = _strlang(",
 			    e->name, ei->name) < 0)
 				return 0;
-			gen_labels(cfg, &ei->labels);
+			if (!gen_labels(f, cfg, &ei->labels))
+				return 0;
 			if (fputs(");\n"
 			    "\t\t\t\tbreak;\n", f) == EOF)
 				return 0;

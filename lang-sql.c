@@ -21,9 +21,6 @@
 #endif
 
 #include <assert.h>
-#if HAVE_ERR
-# include <err.h>
-#endif
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -101,179 +98,209 @@ diff_errx(const struct pos *posold,
  * Generate all PRAGMA prologue statements and sets "prol" if they've
  * been emitted or not.
  */
-static void
-gen_prologue(int *prol)
+static int
+gen_prologue(FILE *f, int *prol)
 {
 
 	if (*prol == 1)
-		return;
-	puts("PRAGMA foreign_keys=ON;\n");
+		return 1;
 	*prol = 1;
+	return fputs("PRAGMA foreign_keys=ON;\n\n", f) != EOF;
 }
 
 /*
  * Generate the "UNIQUE" statements on this table.
+ * Return zero on failure, non-zero on success.
  */
-static void
-gen_unique(const struct unique *n, int *first)
+static int
+gen_unique(FILE *f, const struct unique *n, int *first)
 {
 	struct nref	*ref;
 	int		 ffirst = 1;
 
-	printf("%s\n\tUNIQUE(", *first ? "" : ",");
+	if (fprintf(f, "%s\n\tUNIQUE(", *first ? "" : ",") < 0)
+		return 0;
 
 	TAILQ_FOREACH(ref, &n->nq, entries) {
-		printf("%s%s", ffirst ? "" : ", ",
-			ref->field->name);
+		if (fprintf(f, "%s%s", 
+		    ffirst ? "" : ", ", ref->field->name) < 0)
+			return 0;
 		ffirst = 0;
 	}
-	putchar(')');
+
 	*first = 0;
+	return fputc(')', f) != EOF;
 }
 
 /*
  * Generate the "FOREIGN KEY" statements on this table.
+ * Return zero on failure, non-zero on success.
  */
-static void
-gen_fkeys(const struct field *f, int *first)
+static int
+gen_fkeys(FILE *f, const struct field *fd, int *first)
 {
 
-	if (f->type == FTYPE_STRUCT || f->ref == NULL)
-		return;
+	if (fd->type == FTYPE_STRUCT || fd->ref == NULL)
+		return 1;
 
-	printf("%s\n\tFOREIGN KEY(%s) REFERENCES %s(%s)",
-		*first ? "" : ",",
-		f->ref->source->name,
-		f->ref->target->parent->name,
-		f->ref->target->name);
+	if (fprintf(f, "%s\n\tFOREIGN KEY(%s) REFERENCES %s(%s)",
+	    *first ? "" : ",",
+	    fd->ref->source->name,
+	    fd->ref->target->parent->name,
+	    fd->ref->target->name) < 0)
+		return 0;
 	
-	if (UPACT_NONE != f->actdel)
-		printf(" ON DELETE %s", upacts[f->actdel]);
-	if (UPACT_NONE != f->actup)
-		printf(" ON UPDATE %s", upacts[f->actup]);
+	if (fd->actdel != UPACT_NONE &&
+	    fprintf(f, " ON DELETE %s", upacts[fd->actdel]) < 0)
+		return 0;
+	if (fd->actup != UPACT_NONE &&
+	    fprintf(f, " ON UPDATE %s", upacts[fd->actup]) < 0)
+		return 0;
 
 	*first = 0;
+	return 1;
 }
 
 /*
- * Generate the columns for this table.
+ * Generate a column for this table.
+ * Return zero on failure, non-zero on success.
  */
-static void
-gen_field(const struct field *f, int *first, int comments)
+static int
+gen_field(FILE *f, const struct field *fd, int *first, int comments)
 {
 
-	if (f->type == FTYPE_STRUCT)
-		return;
+	if (fd->type == FTYPE_STRUCT)
+		return 1;
 
-	printf("%s\n", *first ? "" : ",");
-	if (comments)
-		print_commentt(1, COMMENT_SQL, f->doc);
-	if (f->type == FTYPE_EPOCH || f->type == FTYPE_DATE)
-		print_commentt(1, COMMENT_SQL, 
-			"(Stored as a UNIX epoch value.)");
-	printf("\t%s %s", f->name, ftypes[f->type]);
-	if (FIELD_ROWID & f->flags)
-		printf(" PRIMARY KEY");
-	if (FIELD_UNIQUE & f->flags)
-		printf(" UNIQUE");
-	if (!(FIELD_ROWID & f->flags) &&
-	    !(FIELD_NULL & f->flags))
-		printf(" NOT NULL");
+	if (fprintf(f, "%s\n", *first ? "" : ",") < 0)
+		return 0;
+	if (comments &&
+	    !gen_comment(f, 1, COMMENT_SQL, fd->doc))
+		return 0;
+	if (fd->type == FTYPE_EPOCH || fd->type == FTYPE_DATE)
+		if (!gen_comment(f, 1, COMMENT_SQL, 
+		    "(Stored as a UNIX epoch value.)"))
+			return 0;
+	if (fprintf(f, "\t%s %s", fd->name, ftypes[fd->type]) < 0)
+		return 0;
+	if (fd->flags & FIELD_ROWID && fputs(" PRIMARY KEY", f) == EOF)
+		return 0;
+	if (fd->flags & FIELD_UNIQUE && fputs(" UNIQUE", f) == EOF)
+		return 0;
+	if (!(fd->flags & FIELD_ROWID) && 
+	    !(fd->flags & FIELD_NULL) && fputs(" NOT NULL", f) == EOF)
+		return 0;
+
 	*first = 0;
+	return 1;
 }
 
 /*
  * Generate a table and all of its components: fields, foreign keys, and
  * unique statements.
  */
-static void
-gen_struct(const struct strct *p, int comments)
+static int
+gen_struct(FILE *f, const struct strct *p, int comments)
 {
-	const struct field 	*f;
+	const struct field 	*fd;
 	const struct unique 	*n;
 	int	 		 first = 1;
 
-	if (comments)
-		print_commentt(0, COMMENT_SQL, p->doc);
-
-	printf("CREATE TABLE %s (", p->name);
-	TAILQ_FOREACH(f, &p->fq, entries)
-		gen_field(f, &first, comments);
-	TAILQ_FOREACH(f, &p->fq, entries)
-		gen_fkeys(f, &first);
+	if (comments &&
+	    !gen_comment(f, 0, COMMENT_SQL, p->doc))
+		return 0;
+	if (fprintf(f, "CREATE TABLE %s (", p->name) < 0)
+		return 0;
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if (!gen_field(f, fd, &first, comments))
+			return 0;
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if (!gen_fkeys(f, fd, &first))
+			return 0;
 	TAILQ_FOREACH(n, &p->nq, entries)
-		gen_unique(n, &first);
-	puts("\n);\n"
-	     "");
+		if (!gen_unique(f, n, &first))
+			return 0;
+	return fputs("\n);\n\n", f) != EOF;
 }
 
-void
-gen_sql(const struct config *cfg)
+int
+ort_lang_sql(const struct config *cfg, FILE *f)
 {
 	const struct strct *p;
 
-	puts("PRAGMA foreign_keys=ON;\n"
-	     "");
+	if (fputs("PRAGMA foreign_keys=ON;\n\n", f) == EOF)
+		return 0;
 
 	TAILQ_FOREACH(p, &cfg->sq, entries)
-		gen_struct(p, 1);
+		if (!gen_struct(f, p, 1))
+			return 0;
+
+	return 1;
 }
 
 /*
  * This is the ALTER TABLE version of the field generators in
  * gen_struct().
  */
-static void
-gen_diff_field_new(const struct field *fd)
+static int
+gen_diff_field_new(FILE *f, const struct field *fd)
 {
+	int	 rc;
 
-	printf("ALTER TABLE %s ADD COLUMN %s %s",
-		fd->parent->name, fd->name, ftypes[fd->type]);
+	if (fprintf(f, "ALTER TABLE %s ADD COLUMN %s %s",
+	    fd->parent->name, fd->name, ftypes[fd->type]) < 0)
+		return 0;
 
-	if (fd->flags & FIELD_ROWID)
-		printf(" PRIMARY KEY");
-	if (fd->flags & FIELD_UNIQUE)
-		printf(" UNIQUE");
-	if (!(fd->flags & FIELD_ROWID) && !(fd->flags & FIELD_NULL))
-		printf(" NOT NULL");
+	if (fd->flags & FIELD_ROWID && fputs(" PRIMARY KEY", f) == EOF)
+		return 0;
+	if (fd->flags & FIELD_UNIQUE && fputs(" UNIQUE", f) == EOF)
+		return 0;
+	if (!(fd->flags & FIELD_ROWID) && !(fd->flags & FIELD_NULL) &&
+	    fputs(" NOT NULL", f) == EOF)
+		return 0;
 
-	if (fd->ref != NULL)
-		printf(" REFERENCES %s(%s)",
-			fd->ref->target->parent->name,
-			fd->ref->target->name);
+	if (fd->ref != NULL && fprintf(f, " REFERENCES %s(%s)",
+	    fd->ref->target->parent->name, fd->ref->target->name) < 0)
+		return 0;
 
-	if (fd->actup != UPACT_NONE)
-		printf(" ON UPDATE %s", upacts[fd->actup]);
-	if (fd->actdel != UPACT_NONE)
-		printf(" ON DELETE %s", upacts[fd->actdel]);
+	if (fd->actup != UPACT_NONE &&
+	    fprintf(f, " ON UPDATE %s", upacts[fd->actup]) < 0)
+		return 0;
+	if (fd->actdel != UPACT_NONE &&
+	    fprintf(f, " ON DELETE %s", upacts[fd->actdel]) < 0)
+		return 0;
 
 	if (fd->flags & FIELD_HASDEF) {
-		printf(" DEFAULT ");
+		if (fputs(" DEFAULT ", f) == EOF)
+			return 0;
 		switch (fd->type) {
 		case FTYPE_BIT:
 		case FTYPE_BITFIELD:
 		case FTYPE_DATE:
 		case FTYPE_EPOCH:
 		case FTYPE_INT:
-			printf("%" PRId64, fd->def.integer);
+			rc = fprintf(f, "%" PRId64, fd->def.integer);
 			break;
 		case FTYPE_REAL:
-			printf("%g", fd->def.decimal);
+			rc = fprintf(f, "%g", fd->def.decimal);
 			break;
 		case FTYPE_EMAIL:
 		case FTYPE_TEXT:
-			printf("'%s'", fd->def.string);
+			rc = fprintf(f, "'%s'", fd->def.string);
 			break;
 		case FTYPE_ENUM:
-			printf("%" PRId64, fd->def.eitem->value);
+			rc = fprintf(f, "%" PRId64, 
+				fd->def.eitem->value);
 			break;
 		default:
 			abort();
 			break;
 		}
+		if (rc < 0)
+			return 0;
 	}
 
-	puts(";");
+	return fputs(";\n", f) != EOF;
 }
 
 static size_t
@@ -474,7 +501,7 @@ gen_check_uniques(const struct diffq *q, int destruct)
  * would change the database, such as dropping tables.
  */
 int
-gen_diff_sql(const struct diffq *q, int destruct)
+ort_lang_diff_sql(const struct diffq *q, int destruct, FILE *f)
 {
 	const struct diff	*d;
 	size_t	 		 errors = 0;
@@ -489,31 +516,40 @@ gen_diff_sql(const struct diffq *q, int destruct)
 	if (errors)
 		return 0;
 
-
 	TAILQ_FOREACH(d, q, entries)
 		if (d->type == DIFF_ADD_STRCT) {
-			gen_prologue(&prol);
-			gen_struct(d->strct, 0);
+			if (!gen_prologue(f, &prol))
+				return -1;
+			if (!gen_struct(f, d->strct, 0))
+				return -1;
 		}
 
 	TAILQ_FOREACH(d, q, entries)
 		if (d->type == DIFF_ADD_FIELD) {
-			gen_prologue(&prol);
-			gen_diff_field_new(d->field);
+			if (!gen_prologue(f, &prol))
+				return -1;
+			if (!gen_diff_field_new(f, d->field))
+				return -1;
 		}
 
 	TAILQ_FOREACH(d, q, entries) 
 		if (d->type == DIFF_DEL_STRCT && destruct) {
-			gen_prologue(&prol);
-			printf("DROP TABLE %s;\n", d->strct->name);
+			if (!gen_prologue(f, &prol))
+				return -1;
+			if (fprintf(f,
+			    "DROP TABLE %s;\n", d->strct->name) < 0)
+				return -1;
 		}
 
 	TAILQ_FOREACH(d, q, entries)
 		if (d->type == DIFF_DEL_FIELD && destruct) {
-			gen_prologue(&prol);
-			printf("-- ALTER TABLE %s DROP COLUMN %s;\n", 
-				d->field->parent->name, 
-				d->field->name);
+			if (!gen_prologue(f, &prol))
+				return -1;
+			if (fprintf(f, 
+			    "-- ALTER TABLE %s DROP COLUMN %s;\n", 
+			    d->field->parent->name, 
+			    d->field->name) < 0)
+				return -1;
 		}
 
 	return 1;

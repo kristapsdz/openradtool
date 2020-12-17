@@ -145,14 +145,11 @@ main(int argc, char *argv[])
 
 	/* Generate diffs. */
 	
-	if ((q = ort_diff(dcfg, cfg)) == NULL) {
+	if ((q = ort_diff(dcfg, cfg)) == NULL)
 		warn(NULL);
-		goto out;
-	}
+	else if (!(rc = ort_lang_diff_sql(q, destruct, stdout)))
+		warn(NULL);
 
-	/* Generate output. */
-
-	rc = gen_diff_sql(q, destruct);
 out:
 	for (i = 0; i < confsz; i++)
 		if (fclose(confs[i]) == EOF)

@@ -17,7 +17,7 @@
 #ifndef ORT_LANG_SQL_H
 #define ORT_LANG_SQL_H
 
-void	gen_sql(const struct config *);
-int	gen_diff_sql(const struct diffq *, int);
+int	ort_lang_sql(const struct config *, FILE *f);
+int	ort_lang_diff_sql(const struct diffq *, int, FILE *f);
 
 #endif /* !ORT_LANG_SQL_H */

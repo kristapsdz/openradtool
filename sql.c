@@ -78,15 +78,9 @@ main(int argc, char *argv[])
 	if (argc == 0 && !ort_parse_file(cfg, stdin, "<stdin>"))
 		goto out;
 
-	/* Linker. */
-
-	if (!ort_parse_close(cfg))
-		goto out;
-	
-	/* Generate output. */
-
-	gen_sql(cfg);
-	rc = 1;
+	if ((rc = ort_parse_close(cfg)))
+		if (!(rc = ort_lang_sql(cfg, stdout)))
+			warn(NULL);
 out:
 	for (i = 0; i < (size_t)argc; i++)
 		if (fclose(confs[i]) == EOF)

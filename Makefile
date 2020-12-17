@@ -558,6 +558,24 @@ regress: all
 		fi ; \
 		echo "pass" ; \
 	done ; \
+	echo "=== ort-sql syntax tests === " ; \
+	for f in regress/*.ort ; do \
+		printf "sqlite3: $$f... " ; \
+		./ort-sql $$f >$$tmp 2>/dev/null ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (did not execute)" ; \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		sqlite3 ":memory:" < $$tmp 2>/dev/null ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail" ; \
+			sqlite3 ":memory:" < $$tmp ; \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+	done ; \
 	echo "=== ort-sql output tests === " ; \
 	for f in regress/sql/*.result ; do \
 		bf=regress/sql/`basename $$f .result`.ort ; \

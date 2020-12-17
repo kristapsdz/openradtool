@@ -31,35 +31,29 @@ struct	filldep {
 
 TAILQ_HEAD(filldepq, filldep);
 
-void	print_func_db_close(int);
-void	print_func_db_role(int);
-void	print_func_db_role_current(int);
-void	print_func_db_role_stored(int);
-void	print_func_db_open(int);
-void	print_func_db_open_logging(int);
-void	print_func_db_insert(const struct strct *, int);
-void	print_func_db_free(const struct strct *, int);
-void	print_func_db_freeq(const struct strct *, int);
-void	print_func_db_search(const struct search *, int);
-void	print_func_db_set_logging(int);
-void	print_func_db_trans_commit(int);
-void	print_func_db_trans_open(int);
-void	print_func_db_trans_rollback(int);
-void	print_func_db_update(const struct update *, int);
-
-size_t	print_name_db_insert(const struct strct *);
-size_t	print_name_db_search(const struct search *);
-size_t	print_name_db_update(const struct update *);
-
+int	gen_func_db_close(FILE *, int);
+int	gen_func_db_free(FILE *, const struct strct *, int);
+int	gen_func_db_freeq(FILE *, const struct strct *, int);
+int	gen_func_db_insert(FILE *, const struct strct *, int);
+int	gen_func_db_open(FILE *, int);
+int	gen_func_db_open_logging(FILE *, int);
+int	gen_func_db_role(FILE *, int);
+int	gen_func_db_role_current(FILE *, int);
+int	gen_func_db_role_stored(FILE *, int);
+int	gen_func_db_search(FILE *, const struct search *, int);
+int	gen_func_db_set_logging(FILE *, int);
+int	gen_func_db_trans_commit(FILE *, int);
+int	gen_func_db_trans_open(FILE *, int);
+int	gen_func_db_trans_rollback(FILE *, int);
+int	gen_func_db_update(FILE *, const struct update *, int);
 int	gen_func_json_array(FILE *, const struct strct *, int);
 int	gen_func_json_clear(FILE *, const struct strct *, int);
 int	gen_func_json_data(FILE *, const struct strct *, int);
 int	gen_func_json_free_array(FILE *, const struct strct *, int);
 int	gen_func_json_iterate(FILE *, const struct strct *, int);
+int	gen_func_json_obj(FILE *, const struct strct *, int);
 int	gen_func_json_parse(FILE *, const struct strct *, int);
 int	gen_func_json_parse_array(FILE *, const struct strct *, int);
-int	gen_func_json_obj(FILE *, const struct strct *, int);
-
 int	gen_func_valid(FILE *, const struct field *, int);
 
 int	gen_filldep(struct filldepq *, const struct strct *, unsigned int);

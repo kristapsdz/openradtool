@@ -349,7 +349,8 @@ gen_update(FILE *f, const struct config *cfg, const struct update *up)
 	    "Returns zero on constraint violation, "
 	    "non-zero on success."))
 		return 0;
-	print_func_db_update(up, 1);
+	if (!gen_func_db_update(f, up, 1))
+		return 0;
 
 	return fputs("", f) != EOF;
 }
@@ -470,7 +471,8 @@ gen_search(FILE *f, const struct config *cfg, const struct search *s)
 			return 0;
 	}
 
-	print_func_db_search(s, 1);
+	if (!gen_func_db_search(f, s, 1))
+		return 0;
 	return fputs("", f) != EOF;
 }
 
@@ -491,7 +493,8 @@ gen_database(FILE *f, const struct config *cfg, const struct strct *p)
 	    "Has no effect if \"p\" is NULL."))
 		return 0;
 
-	print_func_db_free(p, 1);
+	if (!gen_func_db_free(f, p, 1))
+		return 0;
 	if (fputs("\n", f) == EOF)
 		return 0;
 
@@ -500,7 +503,8 @@ gen_database(FILE *f, const struct config *cfg, const struct strct *p)
 		    "Unfill and free all queue members.\n"
 		    "Has no effect if \"q\" is NULL."))
 			return 0;
-		print_func_db_freeq(p, 1);
+		if (!gen_func_db_freeq(f, p, 1))
+			return 0;
 		if (fputs("\n", f) == EOF)
 			return 0;
 	}
@@ -531,7 +535,8 @@ gen_database(FILE *f, const struct config *cfg, const struct strct *p)
 		    "Returns the new row's identifier on "
 		    "success or <0 otherwise."))
 			return 0;
-		print_func_db_insert(p, 1);
+		if (!gen_func_db_insert(f, p, 1))
+			return 0;
 		if (fputs("\n", f) == EOF)
 			return 0;
 	}
@@ -747,7 +752,8 @@ gen_transaction(FILE *f, const struct config *cfg)
 	    "same but with the \"mode\" being explicit in the "
 	    "name and not needing to be specified."))
 		return 0;
-	print_func_db_trans_open(1);
+	if (!gen_func_db_trans_open(f, 1))
+		return 0;
 	if (fputs("\n", f) == EOF)
 		return 0;
 
@@ -762,14 +768,16 @@ gen_transaction(FILE *f, const struct config *cfg)
 	if (!gen_comment(f, 0, COMMENT_C,
 	    "Roll-back an open transaction."))
 		return 0;
-	print_func_db_trans_rollback(1);
+	if (!gen_func_db_trans_rollback(f, 1))
+		return 0;
 	if (fputs("\n", f) == EOF)
 		return 0;
 
 	if (!gen_comment(f, 0, COMMENT_C,
 	    "Commit an open transaction."))
 		return 0;
-	print_func_db_trans_commit(1);
+	if (!gen_func_db_trans_commit(f, 1))
+		return 0;
 	return fputs("\n", f) != EOF;
 }
 
@@ -799,7 +807,8 @@ gen_open(FILE *f, const struct config *cfg)
 	    "Set length to zero to unset the logging function "
 	    "callback argument."))
 		return 0;
-	print_func_db_set_logging(1);
+	if (!gen_func_db_set_logging(f, 1))
+		return 0;
 	if (fputs("\n", f) == EOF)
 		return 0;
 
@@ -818,7 +827,8 @@ gen_open(FILE *f, const struct config *cfg)
 	    "Subsequent this function, all database "
 	    "operations take place over IPC."))
 		return 0;
-	print_func_db_open(1);
+	if (!gen_func_db_open(f, 1))
+		return 0;
 	if (fputs("\n", f) == EOF)
 		return 0;
 
@@ -837,7 +847,8 @@ gen_open(FILE *f, const struct config *cfg)
 	    "See db_logging_data() to set the pointer "
 	    "after initialisation."))
 		return 0;
-	print_func_db_open_logging(1);
+	if (!gen_func_db_open_logging(f, 1))
+		return 0;
 	return fputs("\n", f) != EOF;
 }
 
@@ -860,13 +871,15 @@ gen_roles(FILE *f, const struct config *cfg)
 	    "The only exceptions are when leaving ROLE_default "
 	    "or when entering ROLE_none."))
 		return 0;
-	print_func_db_role(1);
+	if (!gen_func_db_role(f, 1))
+		return 0;
 	if (fputs("\n", f) == EOF)
 		return 0;
 
 	if (!gen_comment(f, 0, COMMENT_C, "Get the current role."))
 		return 0;
-	print_func_db_role_current(1);
+	if (!gen_func_db_role_current(f, 1))
+		return 0;
 	if (fputs("\n", f) == EOF)
 		return 0;
 
@@ -876,7 +889,8 @@ gen_roles(FILE *f, const struct config *cfg)
 	    "stored role is created, such as when a \"search\" "
 	    "query function is called."))
 		return 0;
-	print_func_db_role_stored(1);
+	if (!gen_func_db_role_stored(f, 1))
+		return 0;
 	return fputs("\n", f) != EOF;
 }
 
@@ -892,7 +906,8 @@ gen_close(FILE *f, const struct config *cfg)
 	    "Close the context opened by db_open().\n"
 	    "Has no effect if \"p\" is NULL."))
 		return 0;
-	print_func_db_close(1);
+	if (!gen_func_db_close(f, 1))
+		return 0;
 	return fputs("\n", f) != EOF;
 }
 

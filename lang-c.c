@@ -83,302 +83,322 @@ static	const char *const optypes[OPTYPE__MAX] = {
 };
 
 /*
- * Generate the db_open() function declaration.
- * This initialises the "struct ort", which is the centre of the entire
- * process.
- * It will manage allocating the database, setting roles, logging
- * callbacks, and so on.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line.
+ * Generate the db_open function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
-void
-print_func_db_open(int decl)
+int
+gen_func_db_open(FILE *f, int decl)
 {
 
-	printf("struct ort *%sdb_open(const char *file)%s\n",
-		decl ? "" : "\n", decl ? ";" : "");
+	return fprintf(f, "struct ort *%sdb_open"
+		"(const char *file)%s\n",
+		decl ? "" : "\n", decl ? ";" : "") > 0;
 }
 
 /*
- * Like print_func_db_open() but also with logging functions.
+ * Generate the db_open_logging function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
-void
-print_func_db_open_logging(int decl)
+int
+gen_func_db_open_logging(FILE *f, int decl)
 {
 
-	printf("struct ort *%sdb_open_logging(const char *file,\n"
-	       "\tvoid (*log)(const char *, void *),\n"
-	       "\tvoid (*log_short)(const char *, ...), void *log_arg)%s\n",
-		decl ? "" : "\n", decl ? ";" : "");
+	return fprintf(f, "struct ort *%sdb_open_logging"
+		"(const char *file,\n"
+		"\tvoid (*log)(const char *, void *),\n"
+		"\tvoid (*log_short)(const char *, ...), "
+		"void *log_arg)%s\n",
+		decl ? "" : "\n", decl ? ";" : "") > 0;
 }
 
 /*
- * Generate the db_logging_data() function declaration, which is used to
- * set logging callback data.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line.
+ * Generate the db_logging_data function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
-void
-print_func_db_set_logging(int decl)
+int
+gen_func_db_set_logging(FILE *f, int decl)
 {
 
-	printf("void%sdb_logging_data(struct ort *ort, "
-		"const void *arg, size_t sz)%s\n",
-		decl ? " " : "\n", decl ? ";" : "");
+	return fprintf(f, "void%sdb_logging_data"
+		"(struct ort *ort, const void *arg, size_t sz)%s\n",
+		decl ? " " : "\n", decl ? ";" : "") > 0;
 }
 
 /*
- * Generate the db_role() function declaration, which we use to change
- * the role both in the database process and ourselves.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line.
+ * Generate the db_role function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
-void
-print_func_db_role(int decl)
+int
+gen_func_db_role(FILE *f, int decl)
 {
 
-	printf("void%sdb_role(struct ort *ctx, enum ort_role r)%s\n",
-		decl ? " " : "\n", decl ? ";" : "");
+	return fprintf(f, "void%sdb_role"
+		"(struct ort *ctx, enum ort_role r)%s\n",
+		decl ? " " : "\n", decl ? ";" : "") > 0;
 }
 
-void
-print_func_db_role_current(int decl)
+/*
+ * Generate the db_role_current function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
+ */
+int
+gen_func_db_role_current(FILE *f, int decl)
 {
 
-	printf("enum ort_role%sdb_role_current(struct ort *ctx)%s\n",
-		decl ? " " : "\n", 
-		decl ? ";" : "");
+	return fprintf(f, "enum ort_role%sdb_role_current"
+		"(struct ort *ctx)%s\n",
+		decl ? " " : "\n", decl ? ";" : "") > 0;
 }
 
-void
-print_func_db_role_stored(int decl)
+/*
+ * Generate the db_role_stored function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
+ */
+int
+gen_func_db_role_stored(FILE *f, int decl)
 {
 
-	printf("enum ort_role%sdb_role_stored(struct ort_store *s)%s\n",
-		decl ? " " : "\n", 
-		decl ? ";" : "");
+	return fprintf(f, "enum ort_role%sdb_role_stored"
+		"(struct ort_store *s)%s\n", 
+		decl ? " " : "\n", decl ? ";" : "") > 0;
 }
 
-void
-print_func_db_trans_rollback(int decl)
+/*
+ * Generate the db_trans_rollback function header.
+ * If a declaration, print on one line with a comma following, otherwise
+ * two lines and no comma.
+ */
+int
+gen_func_db_trans_rollback(FILE *f, int decl)
 {
 
-	printf("void%sdb_trans_rollback"
+	return fprintf(f, "void%sdb_trans_rollback"
 		"(struct ort *ctx, size_t id)%s\n",
-		decl ? " " : "\n", decl ? ";" : "");
+		decl ? " " : "\n", decl ? ";" : "") > 0;
 }
 
-void
-print_func_db_trans_commit(int decl)
+/*
+ * Generate the db_trans_commit function header.
+ * If a declaration, print on one line with a comma following, otherwise
+ * two lines and no comma.
+ */
+int
+gen_func_db_trans_commit(FILE *f, int decl)
 {
 
-	printf("void%sdb_trans_commit"
+	return fprintf(f, "void%sdb_trans_commit"
 		"(struct ort *ctx, size_t id)%s\n",
-		decl ? " " : "\n", decl ? ";" : "");
+		decl ? " " : "\n", decl ? ";" : "") > 0;
 }
 
-void
-print_func_db_trans_open(int decl)
+/*
+ * Generate the db_trans_open function header.
+ * If a declaration, print on one line with a comma following, otherwise
+ * two lines and no comma.
+ */
+int
+gen_func_db_trans_open(FILE *f, int decl)
 {
 
-	printf("void%sdb_trans_open"
+	return fprintf(f, "void%sdb_trans_open"
 		"(struct ort *ctx, size_t id, int mode)%s\n",
-		decl ? " " : "\n", decl ? ";" : "");
+		decl ? " " : "\n", decl ? ";" : "") > 0;
 }
 
 /*
- * Generate the convenience "close" function.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line.
+ * Generate the db_close function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
-void
-print_func_db_close(int decl)
+int
+gen_func_db_close(FILE *f, int decl)
 {
 
-	printf("void%sdb_close(struct ort *p)%s\n",
-		decl ? " " : "\n", decl ? ";" : "");
+	return fprintf(f, "void%sdb_close(struct ort *p)%s\n",
+		decl ? " " : "\n", decl ? ";" : "") > 0;
 }
 
 /*
- * Print the variables in a function declaration, breaking the line at
- * 72 characters to indent 5 spaces.
- * The "col" is the current position in the output line.
- * Returns the current position in the output line.
+ * Generate the variables in a function header, breaking the line at 72
+ * characters to indent 5 spaces.  The "col" is the current position in
+ * the output line.
+ * Returns <0 on failure or the current position in the output line.
  */
-static size_t
-print_var(size_t pos, size_t col, 
-	const struct field *f, unsigned int flags)
+static int
+print_var(FILE *f, size_t pos, size_t col, 
+	const struct field *fd, unsigned int flags)
 {
 	int	rc;
 
-	putchar(',');
+	if (fputc(',', f) == EOF)
+		return -1;
 	col++;
 
 	if (col >= 72)
-		col = (rc = printf("\n     ")) > 0 ? rc : 0;
+		rc = fprintf(f, "\n     ");
 	else
-		col += (rc = printf(" ")) > 0 ? rc : 0;
+		rc = fprintf(f, " ");
 
-	if (FTYPE_ENUM == f->type) {
-		rc = printf("enum %s %sv%zu", f->enm->name,
+	if (rc < 0)
+		return -1;
+	col += rc;
+
+	if (FTYPE_ENUM == fd->type) {
+		rc = fprintf(f, "enum %s %sv%zu", fd->enm->name,
 			(flags & FIELD_NULL) ? "*" : "", pos);
-		col += rc > 0 ? rc : 0;
-		return col;
+		if (rc < 0)
+			return -1;
+		return col + rc;
 	}
 
-	assert(NULL != ftypes[f->type]);
-
-	if (FTYPE_BLOB == f->type) {
-		rc = printf("size_t v%zu_sz, ", pos);
-		col += rc > 0 ? rc : 0;
+	if (fd->type == FTYPE_BLOB) {
+		if ((rc = fprintf(f, "size_t v%zu_sz, ", pos)) < 0)
+			return -1;
+		col += rc;
 	}
 
-	rc = printf("%s%sv%zu", ftypes[f->type], 
+	rc = fprintf(f, "%s%sv%zu", ftypes[fd->type], 
 		(flags & FIELD_NULL) ?  "*" : "", pos);
-	col += rc > 0 ? rc : 0;
+	if (rc < 0)
+		return -1;
 
-	return col;
+	return col + rc;
 }
 
 /*
- * Print just the name of an update function "u".
- * The forms emitted are:
- *   - db_STRUCT_update_NAME
- *   - db_STRUCT_update_XXX_by_YYY
- *   - db_STRUCT_update_by_YYY
- *   - db_STRUCT_update_XXX
- *   - db_STRUCT_update
- * The last invocation occurs in the situation of just "update;" in the
- * configuration file.
- * Returns the number of characters printed.
+ * Generate the db_xxxx_update function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
-size_t
-print_name_db_update(const struct update *u)
+int
+gen_func_db_update(FILE *f, const struct update *u, int decl)
 {
-	const struct uref *ur;
-	size_t	 	   col = 0;
-	int		   rc;
-
-	rc = printf("db_%s_%s", u->parent->name, utypes[u->type]);
-	col = rc > 0 ? rc : 0;
-
-	if (u->name == NULL && u->type == UP_MODIFY) {
-		if (!(u->flags & UPDATE_ALL))
-			TAILQ_FOREACH(ur, &u->mrq, entries) {
-				rc = printf("_%s_%s", 
-					ur->field->name, 
-					modtypes[ur->mod]);
-				col += rc > 0 ? rc : 0;
-			}
-		if (!TAILQ_EMPTY(&u->crq)) {
-			col += (rc = printf("_by")) > 0 ? rc : 0;
-			TAILQ_FOREACH(ur, &u->crq, entries) {
-				rc = printf("_%s_%s", 
-					ur->field->name, 
-					optypes[ur->op]);
-				col += rc > 0 ? rc : 0;
-			}
-		}
-	} else if (u->name == NULL) {
-		if (!TAILQ_EMPTY(&u->crq)) {
-			col += (rc = printf("_by")) > 0 ? rc : 0;
-			TAILQ_FOREACH(ur, &u->crq, entries) {
-				rc = printf("_%s_%s", 
-					ur->field->name, 
-					optypes[ur->op]);
-				col += rc > 0 ? rc : 0;
-			}
-		}
-	} else 
-		col += (rc = printf("_%s", u->name)) > 0 ? rc : 0;
-
-	return col;
-}
-
-/*
- * Generate the "update" function for a given structure.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line.
- */
-void
-print_func_db_update(const struct update *u, int decl)
-{
-	const struct uref *ur;
-	size_t	 	   pos = 1, col = 0;
-	int	 	   rc;
-	const char	  *type;
+	const struct uref	*ur;
+	size_t			 pos = 1, col = 0, sz;
+	int			 rc;
+	const char		*type;
 
 	type = u->type == UP_MODIFY ? "int" : "void";
 
 	/* Start with return value. */
 
-	if (!decl) 
-		printf("%s\n", type);
-	else
-		col = (rc = printf("%s ", type)) > 0 ? rc : 0;
+	if (!decl) {
+		if (fprintf(f, "%s\n", type) < 0)
+			return 0;
+	} else {
+		if ((rc = fprintf(f, "%s ", type)) < 0)
+			return 0;
+		col = rc;
+	}
 
 	/* Now function name. */
 
-	if ((col += print_name_db_update(u)) >= 72) {
-		puts("");
-		col = (rc = printf("    ") > 0) ? rc : 0;
+	rc = fprintf(f, "db_%s_%s",
+		u->parent->name, utypes[u->type]);
+	if (rc < 0)
+		return 0;
+	sz = rc;
+
+	if (u->name == NULL && u->type == UP_MODIFY) {
+		if (!(u->flags & UPDATE_ALL))
+			TAILQ_FOREACH(ur, &u->mrq, entries) {
+				rc = fprintf(f, "_%s_%s", 
+					ur->field->name, 
+					modtypes[ur->mod]);
+				if (rc < 0)
+					return 0;
+				sz += rc;
+			}
+		if (!TAILQ_EMPTY(&u->crq)) {
+			if (fputs("_by", f) == EOF)
+				return 0;
+			sz += 3;
+			TAILQ_FOREACH(ur, &u->crq, entries) {
+				rc = fprintf(f, "_%s_%s", 
+					ur->field->name, 
+					optypes[ur->op]);
+				if (rc < 0)
+					return 0;
+				sz += rc;
+			}
+		}
+	} else if (u->name == NULL) {
+		if (!TAILQ_EMPTY(&u->crq)) {
+			if (fputs("_by", f) == EOF)
+				return 0;
+			sz += 3;
+			TAILQ_FOREACH(ur, &u->crq, entries) {
+				rc = fprintf(f, "_%s_%s", 
+					ur->field->name, 
+					optypes[ur->op]);
+				if (rc < 0)
+					return 0;
+				sz += rc;
+			}
+		}
+	} else {
+		if ((rc = fprintf(f, "_%s", u->name)) < 0)
+			return 0;
+		sz += rc;
+	}
+
+	if ((col += sz) >= 72) {
+		if (fputs("\n    ", f) == EOF)
+			return 0;
+		col = 4;
 	}
 
 	/* Arguments starting with database pointer. */
 
-	col += (rc = printf("(struct ort *ctx")) > 0 ? rc : 0;
+	if (fputs("(struct ort *ctx", f) == EOF)
+		return 0;
+	col += 16;
 
-	TAILQ_FOREACH(ur, &u->mrq, entries)
-		col = print_var(pos++, col, 
-			ur->field, ur->field->flags);
+	TAILQ_FOREACH(ur, &u->mrq, entries) {
+		if ((rc = print_var(f, pos++, col, 
+		    ur->field, ur->field->flags)) < 0)
+			return 0;
+		col = rc;
+	}
 
 	TAILQ_FOREACH(ur, &u->crq, entries)
-		if (!OPTYPE_ISUNARY(ur->op))
-			col = print_var(pos++, col, ur->field, 0);
-
-	printf(")%s", decl ? ";\n" : "");
-}
-
-/*
- * Print just the name of a search function for "s".
- * Returns the number of characters printed.
- */
-size_t
-print_name_db_search(const struct search *s)
-{
-	const struct sent *sent;
-	size_t		   sz = 0;
-	int	 	   rc;
-
-	rc = printf("db_%s_%s", s->parent->name, stypes[s->type]);
-	sz += rc > 0 ? rc : 0;
-
-	if (s->name == NULL && !TAILQ_EMPTY(&s->sntq)) {
-		sz += (rc = printf("_by")) > 0 ? rc : 0;
-		TAILQ_FOREACH(sent, &s->sntq, entries) {
-			rc = printf("_%s_%s", 
-				sent->uname, optypes[sent->op]);
-			sz += rc > 0 ? rc : 0;
+		if (!OPTYPE_ISUNARY(ur->op)) {
+			if ((rc = print_var(f, 
+			    pos++, col, ur->field, 0)) < 0)
+				return 0;
+			col = rc;
 		}
-	} else if (s->name != NULL)
-		sz += (rc = printf("_%s", s->name)) > 0 ? rc : 0;
 
-	return sz;
+	return fprintf(f, ")%s", decl ? ";\n" : "") > 0;
 }
 
 /*
- * Generate the declaration for a search function "s".
- * The format of the declaration depends upon the search type.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line.
+ * Generate the db_xxxx_{count,get,list,iterate} function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
-void
-print_func_db_search(const struct search *s, int decl)
+int
+gen_func_db_search(FILE *f, const struct search *s, int decl)
 {
-	const struct sent *sent;
-	const struct strct *retstr;
-	size_t	 	    pos = 1, col = 0;
-	int	 	    rc;
+	const struct sent	*sent;
+	const struct strct	*retstr;
+	size_t			 pos = 1, col = 0, sz = 0;
+	int			 rc;
 
 	/* 
 	 * If we have a "distinct" clause, we use that to generate
@@ -390,128 +410,172 @@ print_func_db_search(const struct search *s, int decl)
 	/* Start with return value. */
 
 	if (s->type == STYPE_SEARCH)
-		rc = printf("struct %s *", retstr->name);
+		rc = fprintf(f, "struct %s *", retstr->name);
 	else if (s->type == STYPE_LIST)
-		rc = printf("struct %s_q *", retstr->name);
+		rc = fprintf(f, "struct %s_q *", retstr->name);
 	else if (s->type == STYPE_ITERATE)
-		rc = printf("void");
+		rc = fprintf(f, "void");
 	else
-		rc = printf("uint64_t");
+		rc = fprintf(f, "uint64_t");
 
-	col += rc > 0 ? rc : 0;
+	if (rc < 0)
+		return 0;
+	col += rc;
+
 	if (!decl) {
-		printf("\n");
+		if (fputc('\n', f) == EOF)
+			return 0;
 		col = 0;
-	} else if (s->type != STYPE_SEARCH && s->type != STYPE_LIST)
-		col += (rc = printf(" ")) > 0 ? rc : 0;
+	} else if (s->type != STYPE_SEARCH && s->type != STYPE_LIST) {
+		if (fputc(' ', f) == EOF)
+			return 0;
+		col++;
+	}
 
 	/* Now function name. */
 
-	if ((col += print_name_db_search(s)) >= 72) {
-		puts("");
-		col = (rc = printf("    ") > 0) ? rc : 0;
+	rc = fprintf(f, "db_%s_%s", s->parent->name, stypes[s->type]);
+	if (rc < 0)
+		return 0;
+	sz += rc;
+	if (s->name == NULL && !TAILQ_EMPTY(&s->sntq)) {
+		if (fputs("_by", f) == EOF)
+			return 0;
+		sz += 3;
+		TAILQ_FOREACH(sent, &s->sntq, entries) {
+			rc = fprintf(f, "_%s_%s", 
+				sent->uname, optypes[sent->op]);
+			if (rc < 0)
+				return 0;
+			sz += rc;
+		}
+	} else if (s->name != NULL) {
+		if ((rc = fprintf(f, "_%s", s->name)) < 0)
+			return 0;
+		sz += rc;
+	}
+
+	if ((col += sz) >= 72) {
+		if (fputs("\n    ", f) == EOF)
+			return 0;
+		col = 4;
 	}
 
 	/* Arguments starting with database pointer. */
 
-	col += (rc = printf("(struct ort *ctx")) > 0 ? rc : 0;
+	if (fputs("(struct ort *ctx", f) == EOF)
+		return 0;
+	col += 16;
 
 	if (s->type == STYPE_ITERATE) {
-		rc = printf(", %s_cb cb, void *arg", retstr->name);
-		col += rc > 0 ? rc : 0;
+		if ((rc = fprintf(f, 
+		    ", %s_cb cb, void *arg", retstr->name)) < 0)
+			return 0;
+		col += rc;
 	}
 
 	TAILQ_FOREACH(sent, &s->sntq, entries)
-		if (!OPTYPE_ISUNARY(sent->op))
-			col = print_var(pos++, col, sent->field, 0);
+		if (!OPTYPE_ISUNARY(sent->op)) {
+			if ((rc = print_var
+			    (f, pos++, col, sent->field, 0)) < 0)
+				return 0;
+			col = rc;
+		}
 
-	printf(")%s", decl ? ";\n" : "");
+	return fprintf(f, ")%s", decl ? ";\n" : "") > 0;
 }
 
 /*
- * Print just the name of a insert function for "p".
- * Returns the number of characters printed.
+ * Generate the db_xxxx_insert function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
-size_t
-print_name_db_insert(const struct strct *p)
+int
+gen_func_db_insert(FILE *f, const struct strct *p, int decl)
 {
-	int	 rc;
-
-	return (rc = printf("db_%s_insert", p->name)) > 0 ? rc : 0;
-}
-
-/*
- * Generate the "insert" function for a given structure.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line.
- */
-void
-print_func_db_insert(const struct strct *p, int decl)
-{
-	const struct field *f;
+	const struct field *fd;
 	size_t	 	    pos = 1, col = 0;
 	int		    rc;
 
 	/* Start with return value. */
 
-	if (!decl)
-		printf("int64_t\n");
-	else
-		col += (rc = printf("int64_t ")) > 0 ? rc : 0;
+	if (!decl) {
+		if (fputs("int64_t\n", f) == EOF)
+			return 0;
+	} else {
+		if (fputs("int64_t ", f) == EOF)
+			return 0;
+		col += 8;
+	}
 
 	/* Now function name. */
 
-	if ((col += print_name_db_insert(p)) >= 72) {
-		puts("");
-		col = (rc = printf("    ") > 0) ? rc : 0;
+	if ((rc = fprintf(f, "db_%s_insert", p->name)) < 0)
+		return 0;
+	col += rc;
+
+	if (col >= 72) {
+		if (fputc('\n', f) == EOF)
+			return 0;
+		if ((rc = fprintf(f, "    ")) < 0)
+			return 0;
+		col = rc;
 	}
 
 	/* Arguments starting with database pointer. */
 
-	col += (rc = printf("(struct ort *ctx")) > 0 ? rc : 0;
+	if ((rc = fprintf(f, "(struct ort *ctx")) < 0)
+		return 0;
+	col += rc;
 
-	TAILQ_FOREACH(f, &p->fq, entries)
-		if (!(f->type == FTYPE_STRUCT || 
-		      (f->flags & FIELD_ROWID)))
-			col = print_var(pos++, col, f, f->flags);
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if (!(fd->type == FTYPE_STRUCT || 
+		    (fd->flags & FIELD_ROWID))) {
+			rc = print_var(f, pos++, col, fd, fd->flags);
+			if (rc < 0)
+				return 0;
+			col = rc;
+		}
 
-	printf(")%s", decl ? ";\n" : "");
+	return fprintf(f, ")%s", decl ? ";\n" : "") > 0;
 }
 
 /*
- * Generate the "freeq" function for a given structure.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line.
+ * Generate the db_xxxx_freeq function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
-void
-print_func_db_freeq(const struct strct *p, int decl)
+int
+gen_func_db_freeq(FILE *f, const struct strct *p, int decl)
 {
 
-	assert(STRCT_HAS_QUEUE & p->flags);
-	printf("void%sdb_%s_freeq(struct %s_q *q)%s",
+	return fprintf(f, "void%sdb_%s_freeq(struct %s_q *q)%s",
 	       decl ? " " : "\n", p->name, p->name,
-	       decl ? ";\n" : "");
+	       decl ? ";\n" : "") > 0;
 }
 
 /*
- * Generate the "free" function for a given structure.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line.
+ * Generate the db_xxxx_free function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
-void
-print_func_db_free(const struct strct *p, int decl)
+int
+gen_func_db_free(FILE *f, const struct strct *p, int decl)
 {
 
-	printf("void%sdb_%s_free(struct %s *p)%s",
+	return fprintf(f, "void%sdb_%s_free(struct %s *p)%s",
 	       decl ? " " : "\n", p->name, p->name,
-	       decl ? ";\n" : "");
+	       decl ? ";\n" : "") > 0;
 }
 
 /*
- * Generate the validation function for a given field.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line followed by a newline.
- * Also if NOT a declaration, don't trail with a semicolon.
+ * Generate the valid_xxx_yyy function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
 int
 gen_func_valid(FILE *f, const struct field *p, int decl)
@@ -524,9 +588,10 @@ gen_func_valid(FILE *f, const struct field *p, int decl)
 }
 
 /*
- * Function freeing value used during JSON parse.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line followed by a newline.
+ * Generate the jsmn_xxxx_clear function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
 int
 gen_func_json_clear(FILE *f, const struct strct *p, int decl)
@@ -538,9 +603,10 @@ gen_func_json_clear(FILE *f, const struct strct *p, int decl)
 }
 
 /*
- * Function freeing array returned from JSON parse.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line followed by a newline.
+ * Generate the jsmn_xxxx_free_array function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
 int
 gen_func_json_free_array(FILE *f, const struct strct *p, int decl)
@@ -553,9 +619,10 @@ gen_func_json_free_array(FILE *f, const struct strct *p, int decl)
 }
 
 /*
- * JSON parsing routine for an array of structures w/o allocation.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line followed by a newline.
+ * Generate the jsmn_xxx_array function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
 int
 gen_func_json_parse_array(FILE *f, const struct strct *p, int decl)
@@ -569,9 +636,10 @@ gen_func_json_parse_array(FILE *f, const struct strct *p, int decl)
 }
 
 /*
- * JSON parsing routine for a given structure w/o allocation.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line followed by a newline.
+ * Generate the jsmn_xxxx function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
 int
 gen_func_json_parse(FILE *f, const struct strct *p, int decl)
@@ -585,9 +653,10 @@ gen_func_json_parse(FILE *f, const struct strct *p, int decl)
 }
 
 /*
- * Generate the JSON internal data function for a given structure.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line followed by a newline.
+ * Generate the json_xxxx_data function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
 int
 gen_func_json_data(FILE *f, const struct strct *p, int decl)
@@ -600,9 +669,10 @@ gen_func_json_data(FILE *f, const struct strct *p, int decl)
 }
 
 /*
- * Generate the JSON array function for a given structure.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line followed by a newline.
+ * Generate the json_xxxx_array function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
 int
 gen_func_json_array(FILE *f, const struct strct *p, int decl)
@@ -615,9 +685,10 @@ gen_func_json_array(FILE *f, const struct strct *p, int decl)
 }
 
 /*
- * Generate the JSON object function for a given structure.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line followed by a newline.
+ * Generate the json_xxx_obj function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
 int
 gen_func_json_obj(FILE *f, const struct strct *p, int decl)
@@ -630,11 +701,10 @@ gen_func_json_obj(FILE *f, const struct strct *p, int decl)
 }
 
 /*
- * Create the iterator function for JSON.
- * This is meant to be called by an "iterator" function with the
- * kjsonreq set to be the private data.
- * If this is NOT a declaration ("decl"), then print a newline after the
- * return type; otherwise, have it on one line followed by a newline.
+ * Generate the json_xxx_iterate function header.
+ * If "decl" is non-zero, this is the declaration; otherwise, the
+ * definition header.
+ * Return zero on failure, non-zero on success.
  */
 int
 gen_func_json_iterate(FILE *f, const struct strct *p, int decl)

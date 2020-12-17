@@ -480,7 +480,8 @@ gen_iterator(FILE *f, const struct config *cfg,
 
 	/* Emit top of the function w/optional static parameters. */
 
-	print_func_db_search(s, 0);
+	if (!gen_func_db_search(f, s, 0))
+		return 0;
 	if (fprintf(f, "\n"
   	    "{\n"
 	    "\tstruct %s p;\n"
@@ -593,7 +594,8 @@ gen_list(FILE *f, const struct config *cfg,
 
 	/* Emit top of the function w/optional static parameters. */
 
-	print_func_db_search(s, 0);
+	if (!gen_func_db_search(f, s, 0))
+		return 0;
 	if (fprintf(f, "\n"
 	    "{\n"
 	    "\tstruct %s *p;\n"
@@ -900,7 +902,8 @@ gen_open(FILE *f, const struct config *cfg)
 	size_t			 i;
 	int			 c;
 
-	print_func_db_set_logging(0);
+	if (!gen_func_db_set_logging(f, 0))
+		return 0;
 	if (fputs("{\n"
 	    "\n"
 	    "\tif (!sqlbox_msg_set_dat(ort->db, arg, sz))\n"
@@ -908,14 +911,16 @@ gen_open(FILE *f, const struct config *cfg)
 	    "}\n\n", f) == EOF)
 		return 0;
 
-	print_func_db_open(0);
+	if (!gen_func_db_open(f, 0))
+		return 0;
 	if (fputs("{\n"
 	    "\n"
 	    "\treturn db_open_logging(file, NULL, NULL, NULL);\n"
 	    "}\n\n", f) == EOF)
 		return 0;
 
-	print_func_db_open_logging(0);
+	if (!gen_func_db_open_logging(f, 0))
+		return 0;
 	if (fputs("{\n"
 	     "\tsize_t i;\n"
 	     "\tstruct ort *ctx = NULL;\n"
@@ -1114,7 +1119,8 @@ gen_func_role_transitions(FILE *f, const struct config *cfg)
 			break;
 	assert(r != NULL);
 
-	print_func_db_role(0);
+	if (!gen_func_db_role(f, 0))
+		return 0;
 	if (fputs("{\n"
 	    "\tif (!sqlbox_role(ctx->db, r))\n"
 	    "\t\texit(EXIT_FAILURE);\n"
@@ -1137,13 +1143,15 @@ gen_func_role_transitions(FILE *f, const struct config *cfg)
 	    "}\n\n", f) == EOF)
 		return 0;
 
-	print_func_db_role_current(0);
+	if (!gen_func_db_role_current(f, 0))
+		return 0;
 	if (fputs("{\n"
 	    "\treturn ctx->role;\n"
 	    "}\n\n", f) == EOF)
 		return 0;
 
-	print_func_db_role_stored(0);
+	if (!gen_func_db_role_stored(f, 0))
+		return 0;
 	return fputs("{\n"
 	     "\treturn s->role;\n"
 	     "}\n\n", f) != EOF;
@@ -1157,7 +1165,8 @@ static int
 gen_transactions(FILE *f, const struct config *cfg)
 {
 
-	print_func_db_trans_open(0);
+	if (!gen_func_db_trans_open(f, 0))
+		return 0;
 	if (fputs("{\n"
 	    "\tstruct sqlbox *db = ctx->db;\n"
 	    "\tint c;\n"
@@ -1173,7 +1182,8 @@ gen_transactions(FILE *f, const struct config *cfg)
 	    "}\n\n", f) == EOF)
 		return 0;
 
-	print_func_db_trans_rollback(0);
+	if (!gen_func_db_trans_rollback(f, 0))
+		return 0;
 	if (fputs("{\n"
 	    "\tstruct sqlbox *db = ctx->db;\n"
 	    "\n"
@@ -1182,7 +1192,8 @@ gen_transactions(FILE *f, const struct config *cfg)
 	    "}\n\n", f) == EOF)
 		return 0;
 
-	print_func_db_trans_commit(0);
+	if (!gen_func_db_trans_commit(f, 0))
+		return 0;
 	return fputs("{\n"
 	     "\tstruct sqlbox *db = ctx->db;\n"
 	     "\n"
@@ -1199,7 +1210,8 @@ static int
 gen_close(FILE *f, const struct config *cfg)
 {
 
-	print_func_db_close(0);
+	if (!gen_func_db_close(f, 0))
+		return 0;
 	return fputs("{\n"
 	     "\tif (p == NULL)\n"
 	     "\t\treturn;\n"
@@ -1227,7 +1239,8 @@ gen_count(FILE *f, const struct config *cfg,
 			parms += count_bind
 				(sent->field->type, sent->op);
 
-	print_func_db_search(s, 0);
+	if (!gen_func_db_search(f, s, 0))
+		return 0;
 	if (fputs("\n"
 	    "{\n"
 	    "\tconst struct sqlbox_parmset *res;\n"
@@ -1293,7 +1306,8 @@ gen_search(FILE *f, const struct config *cfg,
 			parms += count_bind
 				(sent->field->type, sent->op);
 
-	print_func_db_search(s, 0);
+	if (!gen_func_db_search(f, s, 0))
+		return 0;
 	if (fprintf(f, "\n"
 	    "{\n"
 	    "\tstruct %s *p = NULL;\n"
@@ -1395,7 +1409,8 @@ gen_freeq(FILE *f, const struct strct *p)
 	if (!(p->flags & STRCT_HAS_QUEUE))
 		return 1;
 
-	print_func_db_freeq(p, 0);
+	if (!gen_func_db_freeq(f, p, 0))
+		return 0;
 	return fprintf(f, "\n"
 	       "{\n"
 	       "\tstruct %s *p;\n\n"
@@ -1432,7 +1447,8 @@ gen_insert(FILE *f, const struct config *cfg, const struct strct *p)
 		    !(fd->flags & FIELD_ROWID))
 			parms++;
 
-	print_func_db_insert(p, 0);
+	if (!gen_func_db_insert(f, p, 0))
+		return 0;
 	if (fputs("\n"
 	    "{\n"
 	    "\tint rc;\n"
@@ -1541,7 +1557,8 @@ static int
 gen_free(FILE *f, const struct strct *p)
 {
 
-	print_func_db_free(p, 0);
+	if (!gen_func_db_free(f, p, 0))
+		return 0;
 	return fprintf(f, "\n{\n"
 		"\tdb_%s_unfill_r(p);\n"
 		"\tfree(p);\n"
@@ -1832,7 +1849,8 @@ gen_update(FILE *f, const struct config *cfg,
 
 	/* Emit function prologue. */
 
-	print_func_db_update(up, 0);
+	if (!gen_func_db_update(f, up, 0))
+		return 0;
 	if (fputs("\n"
 	    "{\n"
 	    "\tenum sqlbox_code c;\n"

@@ -205,7 +205,7 @@ gen_comment(FILE *f, size_t tabs, enum cmtt type, const char *cp)
 		for (i = 0; i < tabs; i++) 
 			if (fputc('\t', f) == EOF)
 				return 0;
-		return printf("/* %s */\n", cp) > 0;
+		return fprintf(f, "/* %s */\n", cp) > 0;
 	}
 
 	/* Multi-line (or sufficiently long) comment. */
@@ -305,7 +305,7 @@ gen_sql_stmt_schema(FILE *f, size_t tabs, enum langt lang,
 			return 0;
 		(*col)++;
 	} else {
-		rc = printf("%s%c,%c", spacer, delim, delim);
+		rc = fprintf(f, "%s%c,%c", spacer, delim, delim);
 		if (rc < 0)
 			return 0;
 		*col += rc;
@@ -489,7 +489,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			if (fputc('\t', f) == EOF)
 				return 0;
 		col = tabs * 8;
-		if ((rc = printf("%cSELECT ", delim)) < 0)
+		if ((rc = fprintf(f, "%cSELECT ", delim)) < 0)
 			return 0;
 		col += rc;
 		if (!gen_sql_stmt_schema(f, 
@@ -547,12 +547,12 @@ gen_sql_stmts(FILE *f, size_t tabs,
 		 */
 
 		if (s->type == STYPE_COUNT) {
-			if ((rc = printf("COUNT(")) < 0)
+			if ((rc = fprintf(f, "COUNT(")) < 0)
 				return 0;
 			col += rc;
 		}
 		if (s->dst) {
-			if ((rc = printf("DISTINCT ")) < 0)
+			if ((rc = fprintf(f, "DISTINCT ")) < 0)
 				return 0;
 			col += rc;
 			if (!gen_sql_stmt_schema(f, tabs, lang, 
@@ -699,8 +699,9 @@ gen_sql_stmts(FILE *f, size_t tabs,
 		}
 
 		first = 1;
-		if (!TAILQ_EMPTY(&s->ordq))
-			printf(" ORDER BY ");
+		if (!TAILQ_EMPTY(&s->ordq) &&
+		    fputs(" ORDER BY ", f) == EOF)
+			return 0;
 		TAILQ_FOREACH(ord, &s->ordq, entries) {
 			if (!first && fputs(", ", f) == EOF)
 				return 0;
@@ -738,7 +739,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 				return 0;
 
 		col = tabs * 8;
-		if ((rc = printf(
+		if ((rc = fprintf(f, 
 		    "%cINSERT INTO %s ", delim, p->name)) < 0)
 			return 0;
 		col += rc;
@@ -778,8 +779,8 @@ gen_sql_stmts(FILE *f, size_t tabs,
 					if (fputc('\t', f) == EOF)
 						return 0;
 				col = (tabs + 1) * 8;
-				if ((rc = printf
-				    ("%s%c", spacer, delim)) < 0)
+				if ((rc = fprintf(f, 
+				    "%s%c", spacer, delim)) < 0)
 					return 0;
 				col += rc;
 			}
@@ -801,7 +802,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 						if (fputc('\t', f) == EOF)
 							return 0;
 					col = (tabs + 1) * 8;
-					rc = printf("%s%c%s", spacer,
+					rc = fprintf(f, "%s%c%s", spacer,
 						delim, first ? "(" : " ");
 					if (rc < 0)
 						return 0;

@@ -17,6 +17,11 @@
 #ifndef ORT_LANG_JAVASCRIPT_H
 #define ORT_LANG_JAVASCRIPT_H
 
-void	gen_javascript(const struct config *, const char *, int);
+struct	ort_lang_js {
+	const char	*ext_privMethods;
+};
+
+int	ort_lang_javascript(const struct config *, 
+		const struct ort_lang_js *, FILE *);
 
 #endif /* !ORT_LANG_JAVASCRIPT_H */

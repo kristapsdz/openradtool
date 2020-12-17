@@ -20,6 +20,7 @@
 # include <sys/queue.h>
 #endif
 #include <sys/param.h>
+#include <sys/stat.h>
 
 #include <assert.h>
 #if HAVE_ERR
@@ -37,21 +38,62 @@
 #include "ort-lang-javascript.h"
 #include "paths.h"
 
+/*
+ * Read a file into memory.
+ * If the file contains NUL characters, these will prematurely end the
+ * file when printed, as it's interpreted as a string.
+ * Return the file contents (never fails).
+ */
+static char *
+readfile(const char *dir, const char *fname)
+{
+	int		 fd;
+	ssize_t		 ssz;
+	size_t		 sz;
+	struct stat	 st;
+	char		 file[MAXPATHLEN];
+	char		*buf;
+
+	sz = snprintf(file, sizeof(file), "%s/%s", dir, fname);
+	if (sz < 0 || (size_t)sz >= sizeof(file))
+		errx(1, "%s/%s: too long", dir, fname);
+
+	if ((fd = open(file, O_RDONLY, 0)) == -1)
+		err(1, "%s", file);
+	if (fstat(fd, &st) == -1)
+		err(1, "%s", file);
+
+	/* FIXME: overflow check. */
+
+	sz = st.st_size;
+	if ((buf = malloc(sz + 1)) == NULL)
+		err(1, NULL);
+
+	if ((ssz = read(fd, buf, sz)) < 0)
+		err(1, "%s", file);
+
+	buf[sz] = '\0';
+	close(fd);
+	return buf;
+}
+
 int
 main(int argc, char *argv[])
 {
-	const char	 *sharedir = SHAREDIR;
-	char		  buf[MAXPATHLEN];
-	struct config	 *cfg = NULL;
-	int		  c, rc = 0, priv;
-	FILE		**confs = NULL;
-	size_t		  i;
-	ssize_t		  sz;
+	const char		 *sharedir = SHAREDIR;
+	struct config		 *cfg = NULL;
+	int			  c, rc = 0;
+	FILE			**confs = NULL;
+	size_t			  i;
+	char			 *ext_privMethods;
+	struct ort_lang_js	  args;
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
+
+	memset(&args, 0, sizeof(struct ort_lang_js));
 
 	while ((c = getopt(argc, argv, "S:t")) != -1)
 		switch (c) {
@@ -80,12 +122,8 @@ main(int argc, char *argv[])
 
 	/* Read our private namespace. */
 
-	sz = snprintf(buf, sizeof(buf), 
-		"%s/ortPrivate.ts", sharedir);
-	if (sz == -1 || (size_t)sz > sizeof(buf))
-		errx(EXIT_FAILURE, "%s: too long", sharedir);
-	if ((priv = open(buf, O_RDONLY, 0)) == -1)
-		err(EXIT_FAILURE, "%s", buf);
+	args.ext_privMethods = ext_privMethods =
+		readfile(sharedir, "ortPrivate.ts");
 
 #if HAVE_PLEDGE
 	if (pledge("stdio", NULL) == -1)
@@ -102,8 +140,8 @@ main(int argc, char *argv[])
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
-		gen_javascript(cfg, buf, priv);
-
+		if (!(rc = ort_lang_javascript(cfg, &args, stdout)))
+			warn(NULL);
 out:
 	ort_write_msg_file(stderr, &cfg->mq);
 	ort_config_free(cfg);
@@ -111,8 +149,8 @@ out:
 	for (i = 0; i < (size_t)argc; i++)
 		fclose(confs[i]);
 
-	close(priv);
 	free(confs);
+	free(ext_privMethods);
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, "usage: %s [-S sharedir] [config...]\n", 

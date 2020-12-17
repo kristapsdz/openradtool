@@ -51,16 +51,16 @@ size_t	print_name_db_insert(const struct strct *);
 size_t	print_name_db_search(const struct search *);
 size_t	print_name_db_update(const struct update *);
 
-void	print_func_json_array(const struct strct *, int);
-void	print_func_json_clear(const struct strct *, int);
-void	print_func_json_data(const struct strct *, int);
-void	print_func_json_free_array(const struct strct *, int);
-void	print_func_json_iterate(const struct strct *, int);
-void	print_func_json_parse(const struct strct *, int);
-void	print_func_json_parse_array(const struct strct *, int);
-void	print_func_json_obj(const struct strct *, int);
+int	gen_func_json_array(FILE *, const struct strct *, int);
+int	gen_func_json_clear(FILE *, const struct strct *, int);
+int	gen_func_json_data(FILE *, const struct strct *, int);
+int	gen_func_json_free_array(FILE *, const struct strct *, int);
+int	gen_func_json_iterate(FILE *, const struct strct *, int);
+int	gen_func_json_parse(FILE *, const struct strct *, int);
+int	gen_func_json_parse_array(FILE *, const struct strct *, int);
+int	gen_func_json_obj(FILE *, const struct strct *, int);
 
-void	print_func_valid(const struct field *, int);
+int	gen_func_valid(FILE *, const struct field *, int);
 
 int	gen_filldep(struct filldepq *, const struct strct *, unsigned int);
 const struct filldep *

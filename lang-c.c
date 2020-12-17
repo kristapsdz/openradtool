@@ -507,14 +507,20 @@ print_func_db_free(const struct strct *p, int decl)
 	       decl ? ";\n" : "");
 }
 
-void
-print_func_valid(const struct field *p, int decl)
+/*
+ * Generate the validation function for a given field.
+ * If this is NOT a declaration ("decl"), then print a newline after the
+ * return type; otherwise, have it on one line followed by a newline.
+ * Also if NOT a declaration, don't trail with a semicolon.
+ */
+int
+gen_func_valid(FILE *f, const struct field *p, int decl)
 {
 
-	printf("int%svalid_%s_%s(struct kpair *p)%s",
+	return fprintf(f, "int%svalid_%s_%s(struct kpair *p)%s",
 		decl ? " " : "\n", 
 		p->parent->name, p->name,
-		decl ? ";\n" : "\n");
+		decl ? ";\n" : "\n") > 0;
 }
 
 /*
@@ -522,13 +528,13 @@ print_func_valid(const struct field *p, int decl)
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line followed by a newline.
  */
-void
-print_func_json_clear(const struct strct *p, int decl)
+int
+gen_func_json_clear(FILE *f, const struct strct *p, int decl)
 {
 
-	printf("void%sjsmn_%s_clear(struct %s *p)%s",
+	return fprintf(f, "void%sjsmn_%s_clear(struct %s *p)%s",
 		decl ? " " : "\n", p->name, p->name, 
-		decl ? ";\n" : "\n");
+		decl ? ";\n" : "\n") > 0;
 }
 
 /*
@@ -536,13 +542,14 @@ print_func_json_clear(const struct strct *p, int decl)
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line followed by a newline.
  */
-void
-print_func_json_free_array(const struct strct *p, int decl)
+int
+gen_func_json_free_array(FILE *f, const struct strct *p, int decl)
 {
 
-	printf("void%sjsmn_%s_free_array(struct %s *p, size_t sz)%s",
+	return fprintf(f, "void%sjsmn_%s_free_array"
+		"(struct %s *p, size_t sz)%s",
 		decl ? " " : "\n", p->name, p->name, 
-		decl ? ";\n" : "\n");
+		decl ? ";\n" : "\n") > 0;
 }
 
 /*
@@ -550,14 +557,15 @@ print_func_json_free_array(const struct strct *p, int decl)
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line followed by a newline.
  */
-void
-print_func_json_parse_array(const struct strct *p, int decl)
+int
+gen_func_json_parse_array(FILE *f, const struct strct *p, int decl)
 {
 
-	printf("int%sjsmn_%s_array(struct %s **p, size_t *sz, "
-		"const char *buf, const jsmntok_t *t, size_t toksz)%s",
+	return fprintf(f, "int%sjsmn_%s_array"
+		"(struct %s **p, size_t *sz, const char *buf, "
+		"const jsmntok_t *t, size_t toksz)%s",
 		decl ? " " : "\n", p->name, p->name, 
-		decl ? ";\n" : "\n");
+		decl ? ";\n" : "\n") > 0;
 }
 
 /*
@@ -565,14 +573,15 @@ print_func_json_parse_array(const struct strct *p, int decl)
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line followed by a newline.
  */
-void
-print_func_json_parse(const struct strct *p, int decl)
+int
+gen_func_json_parse(FILE *f, const struct strct *p, int decl)
 {
 
-	printf("int%sjsmn_%s(struct %s *p, "
-		"const char *buf, const jsmntok_t *t, size_t toksz)%s",
+	return fprintf(f, "int%sjsmn_%s"
+		"(struct %s *p, const char *buf, "
+		"const jsmntok_t *t, size_t toksz)%s",
 		decl ? " " : "\n", p->name, p->name, 
-		decl ? ";\n" : "\n");
+		decl ? ";\n" : "\n") > 0;
 }
 
 /*
@@ -580,14 +589,14 @@ print_func_json_parse(const struct strct *p, int decl)
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line followed by a newline.
  */
-void
-print_func_json_data(const struct strct *p, int decl)
+int
+gen_func_json_data(FILE *f, const struct strct *p, int decl)
 {
 
-	printf("void%sjson_%s_data(struct kjsonreq *r, "
-		"const struct %s *p)%s",
+	return fprintf(f, "void%sjson_%s_data"
+		"(struct kjsonreq *r, const struct %s *p)%s",
 		decl ? " " : "\n", p->name, 
-		p->name, decl ? ";\n" : "");
+		p->name, decl ? ";\n" : "") > 0;
 }
 
 /*
@@ -595,14 +604,14 @@ print_func_json_data(const struct strct *p, int decl)
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line followed by a newline.
  */
-void
-print_func_json_array(const struct strct *p, int decl)
+int
+gen_func_json_array(FILE *f, const struct strct *p, int decl)
 {
 
-	printf("void%sjson_%s_array(struct kjsonreq *r, "
-		"const struct %s_q *q)%s\n",
+	return fprintf(f, "void%sjson_%s_array"
+		"(struct kjsonreq *r, const struct %s_q *q)%s\n",
 		decl ? " " : "\n", p->name, 
-		p->name, decl ? ";" : "");
+		p->name, decl ? ";" : "") > 0;
 }
 
 /*
@@ -610,14 +619,14 @@ print_func_json_array(const struct strct *p, int decl)
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line followed by a newline.
  */
-void
-print_func_json_obj(const struct strct *p, int decl)
+int
+gen_func_json_obj(FILE *f, const struct strct *p, int decl)
 {
 
-	printf("void%sjson_%s_obj(struct kjsonreq *r, "
-		"const struct %s *p)%s\n",
+	return fprintf(f, "void%sjson_%s_obj"
+		"(struct kjsonreq *r, const struct %s *p)%s\n",
 		decl ? " " : "\n", p->name, 
-		p->name, decl ? ";" : "");
+		p->name, decl ? ";" : "") > 0;
 }
 
 /*
@@ -627,14 +636,14 @@ print_func_json_obj(const struct strct *p, int decl)
  * If this is NOT a declaration ("decl"), then print a newline after the
  * return type; otherwise, have it on one line followed by a newline.
  */
-void
-print_func_json_iterate(const struct strct *p, int decl)
+int
+gen_func_json_iterate(FILE *f, const struct strct *p, int decl)
 {
 
-	printf("void%sjson_%s_iterate(const struct %s *p, "
-	        "void *arg)%s\n",
+	return fprintf(f, "void%sjson_%s_iterate"
+		"(const struct %s *p, void *arg)%s\n",
 		decl ? " " : "\n", p->name, 
-		p->name, decl ? ";" : "");
+		p->name, decl ? ";" : "") > 0;
 }
 
 /*

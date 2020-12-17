@@ -564,7 +564,8 @@ gen_json_parse(FILE *f, const struct config *cfg, const struct strct *p)
 	    "Returns 0 on parse failure, <0 on memory allocation "
 	    "failure, or the count of tokens parsed on success."))
 		return 0;
-	print_func_json_parse(p, 1);
+	if (!gen_func_json_parse(f, p, 1))
+		return 0;
 	if (fputs("\n", f) == EOF)
 		return 0;
 
@@ -578,7 +579,8 @@ gen_json_parse(FILE *f, const struct config *cfg, const struct strct *p)
 	    "failure, or the count of tokens parsed on success.",
 	    p->name))
 		return 0;
-	print_func_json_parse_array(p, 1);
+	if (!gen_func_json_parse_array(f, p, 1))
+		return 0;
 	if (fputs("\n", f) == EOF)
 		return 0;
 
@@ -587,7 +589,8 @@ gen_json_parse(FILE *f, const struct config *cfg, const struct strct *p)
 	    "Frees the pointer as well.\n"
 	    "May be passed NULL.", p->name))
 		return 0;
-	print_func_json_free_array(p, 1);
+	if (!gen_func_json_free_array(f, p, 1))
+		return 0;
 	if (fputs("\n", f) == EOF)
 		return 0;
 
@@ -596,7 +599,8 @@ gen_json_parse(FILE *f, const struct config *cfg, const struct strct *p)
 	    "Does not touch the pointer itself.\n"
 	    "May be passed NULL.", p->name))
 		return 0;
-	print_func_json_clear(p, 1);
+	if (!gen_func_json_clear(f, p, 1))
+		return 0;
 
 	return fputs("\n", f) != EOF;
 }
@@ -617,7 +621,8 @@ gen_json_out(FILE *f, const struct config *cfg, const struct strct *p)
 	    "See json_%s_obj() for the full object.",
 	    p->name, p->name))
 		return 0;
-	print_func_json_data(p, 1);
+	if (!gen_func_json_data(f, p, 1))
+		return 0;
 	if (fputs("\n", f) == EOF)
 		return 0;
 
@@ -628,7 +633,8 @@ gen_json_out(FILE *f, const struct config *cfg, const struct strct *p)
 	    "See json_%s_data() for the data.",
 	    p->name, p->name))
 		return 0;
-	print_func_json_obj(p, 1);
+	if (!gen_func_json_obj(f, p, 1))
+		return 0;
 	if (fputs("\n", f) == EOF)
 		return 0;
 
@@ -640,7 +646,8 @@ gen_json_out(FILE *f, const struct config *cfg, const struct strct *p)
 		    "See json_%s_data() for the data.",
 		    p->name, p->name))
 			return 0;
-		print_func_json_array(p, 1);
+		if (!gen_func_json_array(f, p, 1))
+			return 0;
 		if (fputs("\n", f) == EOF)
 			return 0;
 	}
@@ -655,7 +662,8 @@ gen_json_out(FILE *f, const struct config *cfg, const struct strct *p)
 		    "to be a kjsonreq as if were invoked "
 		    "from an iterator.", p->name))
 			return 0;
-		print_func_json_iterate(p, 1);
+		if (!gen_func_json_iterate(f, p, 1))
+			return 0;
 		if (fputs("\n", f) == EOF)
 			return 0;
 	}
@@ -677,7 +685,8 @@ gen_valids(FILE *f, const struct config *cfg, const struct strct *p)
 		    "Validation routines for the %s "
 		    "field in struct %s.", fd->name, p->name))
 			return 0;
-		print_func_valid(fd, 1);
+		if (!gen_func_valid(f, fd, 1))
+			return 0;
 		if (fputs("\n", f) == EOF)
 			return 0;
 	}

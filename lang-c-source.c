@@ -2028,7 +2028,8 @@ gen_valids(FILE *f, const struct strct *p)
 
 		assert(validtypes[fd->type] != NULL);
 
-		print_func_valid(fd, 0);
+		if (!gen_func_valid(f, fd, 0))
+			return 0;
 		if (fprintf(f, "{\n"
 		    "\tif (!%s(p))\n"
 		    "\t\treturn 0;\n", validtypes[fd->type]) < 0)
@@ -2205,7 +2206,8 @@ gen_json_parse(FILE *f, const struct strct *p)
 			hasstruct = 1;
 	}
 
-	print_func_json_parse(p, 0);
+	if (!gen_func_json_parse(f, p, 0))
+		return 0;
 	if (fputs("{\n"
 	    "\tint i;\n"
 	    "\tsize_t j;\n", f) == EOF)
@@ -2384,7 +2386,8 @@ gen_json_parse(FILE *f, const struct strct *p)
 	    "}\n\n", f) == EOF)
 		return 0;
 
-	print_func_json_clear(p, 0);
+	if (!gen_func_json_clear(f, p, 0))
+		return 0;
 	if (fputs("\n"
 	    "{\n"
 	    "\tif (p == NULL)\n"
@@ -2423,7 +2426,8 @@ gen_json_parse(FILE *f, const struct strct *p)
 	if (fputs("}\n\n", f) == EOF)
 		return 0;
 
-	print_func_json_free_array(p, 0);
+	if (!gen_func_json_free_array(f, p, 0))
+		return 0;
 	if (fprintf(f, "{\n"
 	    "\tsize_t i;\n"
 	    "\tfor (i = 0; i < sz; i++)\n"
@@ -2433,7 +2437,8 @@ gen_json_parse(FILE *f, const struct strct *p)
 	    "\n", p->name) < 0)
 		return 0;
 
-	print_func_json_parse_array(p, 0);
+	if (!gen_func_json_parse_array(f, p, 0))
+		return 0;
 	if (fprintf(f, "{\n"
 	    "\tsize_t i, j;\n"
 	    "\tint rc;\n"
@@ -2473,7 +2478,8 @@ gen_json_out(FILE *f, const struct strct *p)
 	size_t		 	 pos;
 	int			 sp;
 
-	print_func_json_data(p, 0);
+	if (!gen_func_json_data(f, p, 0))
+		return 0;
 	if (fputs("\n{\n", f) == EOF)
 		return 0;
 
@@ -2551,7 +2557,8 @@ gen_json_out(FILE *f, const struct strct *p)
 	if (fputs("}\n\n", f) == EOF)
 		return 0;
 
-	print_func_json_obj(p, 0);
+	if (!gen_func_json_obj(f, p, 0))
+		return 0;
 	if (fprintf(f, "{\n"
 	    "\tkjson_objp_open(r, \"%s\");\n"
 	    "\tjson_%s_data(r, p);\n"
@@ -2560,7 +2567,8 @@ gen_json_out(FILE *f, const struct strct *p)
 		return 0;
 
 	if (p->flags & STRCT_HAS_QUEUE) {
-		print_func_json_array(p, 0);
+		if (!gen_func_json_array(f, p, 0))
+			return 0;
 		if (fprintf(f, "{\n"
 		    "\tstruct %s *p;\n"
 		    "\n"
@@ -2576,7 +2584,8 @@ gen_json_out(FILE *f, const struct strct *p)
 	}
 
 	if (p->flags & STRCT_HAS_ITERATOR) {
-		print_func_json_iterate(p, 0);
+		if (!gen_func_json_iterate(f, p, 0))
+			return 0;
 		if (fprintf(f, "{\n"
 		    "\tstruct kjsonreq *r = arg;\n"
 		    "\n"

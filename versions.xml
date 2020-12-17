@@ -3,7 +3,7 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
-			<h3>0.11.4</h3>
+			<h3>0.11.5</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2020-12-08">2020-12-08</time>
 		</header>
@@ -19,6 +19,22 @@
 				Fix how <code>grouprow</code> queries, which use 
 				<code>LEFT OUTER JOIN</code>, don't prematurely terminate quoted
 				strings.  Found by the expanded regression suite.
+			</p>
+			<p>
+				Fix how empty iterators would cause bad
+				<a href="ort-nodejs.1.html">ort-nodejs(1)</a> to be emitted.
+			</p>
+			<p>
+				Internally, convert front-end utilities to properly emit output to a
+				passed-in file stream instead of assuming <code>stdout</code>.  This
+				way, these may be converted into libraries for use within other systems.
+			</p>
+			<p>
+				Introduce
+				<a href="ort-json.1.html">ort-json(1)</a>, via
+				<a href="ort_lang_json.3.html">ort_lang_json(3)</a>, which converts
+				a configuration into JSON.
+				These are still very new, but heavily tested.
 			</p>
 		</aside>
 	</article>

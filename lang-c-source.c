@@ -879,7 +879,7 @@ gen_roles(FILE *f, const struct config *cfg, const struct strct *p)
 			return -1;
 		TAILQ_FOREACH(rs, &u->rolemap->rq, entries)
 			if (strcmp(rs->role->name, "all") == 0) {
-				if (gen_role_stmt_all(f, cfg, buf))
+				if (!gen_role_stmt_all(f, cfg, buf))
 					return -1;
 			} else if (!gen_role_stmt(f, rs->role, buf))
 				return -1;

@@ -402,7 +402,7 @@ gen_insert(FILE *f, const struct strct *p)
 		if (fd->type == FTYPE_STRUCT ||
 		    (fd->flags & FIELD_ROWID))
 			continue;
-		if (gen_commentv(f, 1, COMMENT_JS_FRAG,
+		if (!gen_commentv(f, 1, COMMENT_JS_FRAG,
 		    "@param v%zu %s", pos++, fd->name))
 			return 0;
 	}

@@ -17,9 +17,6 @@
 #ifndef ORT_LANG_H
 #define ORT_LANG_H
 
-/*
- * Type of comment.
- */
 enum	cmtt {
 	COMMENT_C, /* self-contained C comment */
 	COMMENT_C_FRAG, /* C w/o open or close */
@@ -42,13 +39,5 @@ int	 gen_commentv(FILE *, size_t, enum cmtt, const char *, ...)
 		__attribute__((format(printf, 4, 5)));
 int	 gen_sql_stmts(FILE *, size_t, const struct strct *, enum langt);
 int	 gen_sql_enums(FILE *, size_t, const struct strct *, enum langt);
-
-/* Deprecated... */
-
-void	 print_commentt(size_t, enum cmtt, const char *);
-void	 print_commentv(size_t, enum cmtt, const char *, ...)
-		__attribute__((format(printf, 3, 4)));
-void	 print_sql_stmts(size_t, const struct strct *, enum langt);
-void	 print_sql_enums(size_t, const struct strct *, enum langt);
 
 #endif /* !ORT_LANG_H */

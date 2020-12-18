@@ -22,9 +22,6 @@
 
 #include <assert.h>
 #include <ctype.h>
-#if HAVE_ERR
-# include <err.h>
-#endif
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -253,31 +250,6 @@ gen_commentv(FILE *f, size_t tabs, enum cmtt t, const char *fmt, ...)
 	c = gen_comment(f, tabs, t, cp);
 	free(cp);
 	return c;
-}
-
-void
-print_commentt(size_t tabs, enum cmtt type, const char *cp)
-{
-
-	gen_comment(stdout, tabs, type, cp);
-}
-
-/*
- * Print comments with varargs.
- * See print_commentt().
- */
-void
-print_commentv(size_t tabs, enum cmtt type, const char *fmt, ...)
-{
-	va_list	 ap;
-	char	*cp;
-
-	va_start(ap, fmt);
-	if (vasprintf(&cp, fmt, ap) == -1)
-		err(EXIT_FAILURE, "vasprintf");
-	va_end(ap);
-	print_commentt(tabs, type, cp);
-	free(cp);
 }
 
 /*
@@ -963,13 +935,6 @@ gen_sql_stmts(FILE *f, size_t tabs,
 	return 1;
 }
 
-void
-print_sql_stmts(size_t tabs, const struct strct *p, enum langt lang)
-{
-
-	gen_sql_stmts(stdout, tabs, p, lang);
-}
-
 int
 gen_sql_enums(FILE *f, size_t tabs,
 	const struct strct *p, enum langt lang)
@@ -1031,9 +996,3 @@ gen_sql_enums(FILE *f, size_t tabs,
 	return 1;
 }
 
-void
-print_sql_enums(size_t tabs, const struct strct *p, enum langt lang)
-{
-
-	gen_sql_enums(stdout, tabs, p, lang);
-}

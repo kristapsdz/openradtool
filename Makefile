@@ -718,7 +718,6 @@ regress: all
 				exit 1 ; \
 			fi ; \
 			rm -f $$f.h $$f.c ; \
-			printf "$$bf... " ; \
 			./$$bf 2>/dev/null 1>/dev/null $$tmp ; \
 			if [ $$? -ne 0 ] ; then \
 				echo "fail" ; \

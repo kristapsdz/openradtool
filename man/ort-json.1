@@ -44,14 +44,14 @@ Parse errors, if any, are printed to standard error.
 The
 .Pa ort-json.ts
 file, usually distributed in
-.Pa /usr/local/share/ort ,
+.Pa /usr/local/share/openradtool ,
 consists of a TypeScript namespace describing the output.
 .Sh EXIT STATUS
 .Ex -std
 .Sh EXAMPLES
 The following shell snippet demonstrates validating JSON against the
 TypeScript definitions, which are assumed to be in
-.Pa /usr/local/share/ort .
+.Pa /usr/local/share/openradtool .
 The
 .Xr ort 5
 configuration is
@@ -70,7 +70,7 @@ utility installed via
 % npm init -y
 % npm install typescript-json-schema
 % node_modules/.bin/typescript-json-schema \e
-> --strictNullChecks /usr/local/share/ort/ort-json.ts \e
+> --strictNullChecks /usr/local/share/openradtool/ort-json.ts \e
 > ort.ortConfig > ort-json.schema
 % ort-json db.ort > db.json
 % jsonlint db.json

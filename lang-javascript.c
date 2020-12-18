@@ -317,7 +317,7 @@ gen_js_field(FILE *f, const struct field *fd)
 		col++;
 	}
 
-	if ((rc = printf("\'%s\',", fd->parent->name)) < 0)
+	if ((rc = fprintf(f, "\'%s\',", fd->parent->name)) < 0)
 		return 0;
 	col += rc;
 
@@ -333,7 +333,7 @@ gen_js_field(FILE *f, const struct field *fd)
 		col++;
 	}
 
-	if ((rc = printf("\'%s\',", fd->name)) < 0)
+	if ((rc = fprintf(f, "\'%s\',", fd->name)) < 0)
 		return 0;
 	col += rc;
 
@@ -349,7 +349,7 @@ gen_js_field(FILE *f, const struct field *fd)
 		col++;
 	}
 
-	if ((rc = printf("custom,")) < 0)
+	if ((rc = fprintf(f, "custom,")) < 0)
 		return 0;
 	col += rc;
 
@@ -365,7 +365,7 @@ gen_js_field(FILE *f, const struct field *fd)
 		col++;
 	}
 
-	if ((rc = printf("o.%s, inc,", fd->name)) < 0)
+	if ((rc = fprintf(f, "o.%s, inc,", fd->name)) < 0)
 		return 0;
 	col += rc;
 
@@ -381,7 +381,7 @@ gen_js_field(FILE *f, const struct field *fd)
 		col++;
 	}
 
-	rc = printf("%s,",
+	rc = fprintf(f, "%s,",
 		(fd->flags & FIELD_NULL) ||
 		(fd->type == FTYPE_STRUCT && 
 		 (fd->ref->source->flags & FIELD_NULL)) ?
@@ -443,7 +443,7 @@ gen_class_proto(FILE *f, int priv,
 		col += 8;
 	}
 
-	if ((rc = printf("%s(", func)) < 0)
+	if ((rc = fprintf(f, "%s(", func)) < 0)
 		return 0;
 	col += rc;
 
@@ -466,12 +466,12 @@ gen_class_proto(FILE *f, int priv,
 			}
 			col = 24;
 		}
-		if ((rc = printf("%.*s", (int)sz, name)) < 0) {
+		if ((rc = fprintf(f, "%.*s", (int)sz, name)) < 0) {
 			va_end(ap);
 			return 0;
 		}
 		col += rc;
-		if ((rc = printf(": %s", type)) < 0) {
+		if ((rc = fprintf(f, ": %s", type)) < 0) {
 			va_end(ap);
 			return 0;
 		}

@@ -682,8 +682,10 @@ regress: all
 		echo "=== ort-c-{header,source} compile tests === " ; \
 		for f in regress/*.ort ; do \
 			hf=`basename $$f`.h ; \
+			set -e ; \
 			./ort-c-header -vJj $$f > $$f.h 2>/dev/null ; \
 			./ort-c-source -S. -h $$hf -vJj $$f > $$f.c 2>/dev/null ; \
+			set +e ; \
 			printf "$(CC): $$f... " ; \
 			$(CC) $(CFLAGS) $(CFLAGS_SQLBOX) -o /dev/null -c $$f.c 2>/dev/null ; \
 			if [ $$? -ne 0 ] ; then \
@@ -702,9 +704,11 @@ regress: all
 			cf=regress/c/`basename $$f .ort`.c ; \
 			hf=`basename $$f`.h ; \
 			rm -f $$tmp ; \
+			set -e ; \
 			./ort-c-header -vJj $$f > $$f.h 2>/dev/null ; \
 			./ort-c-source -S. -h $$hf -vJj $$f > $$f.c 2>/dev/null ; \
 			./ort-sql $$f | sqlite3 $$tmp 2>/dev/null ; \
+			set +e ; \
 			printf "$(CC): $$f... " ; \
 			$(CC) $(CFLAGS_REGRESS) $(CFLAGS) -o $$bf \
 				$$f.c $$cf $$rr $(LIBS_REGRESS) \

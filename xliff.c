@@ -33,6 +33,7 @@
 #include <unistd.h>
 
 #include "ort.h"
+#include "ort-lang-xliff.h"
 
 struct	xliffunit {
 	char		*name;
@@ -358,40 +359,6 @@ xliff_read(int fd, const char *fn, XML_Parser p)
 	return res;
 }
 
-static void
-xliff_extract_unit(const struct labelq *lq, const char *type,
-	const struct pos *pos, const char ***s, size_t *ssz)
-{
-	const struct label *l;
-	size_t		    i;
-
-	TAILQ_FOREACH(l, lq, entries)
-		if (l->lang == 0)
-			break;
-
-	if (l == NULL && type == NULL) {
-		fprintf(stderr, "%s:%zu:%zu: missing "
-			"jslabel for translation\n",
-			pos->fname, pos->line, pos->column);
-		return;
-	} else if (l == NULL) {
-		fprintf(stderr, "%s:%zu:%zu: missing "
-			"\"%s\" jslabel for translation\n",
-			pos->fname, pos->line, pos->column, type);
-		return;
-	}
-
-	for (i = 0; i < *ssz; i++)
-		if (strcmp((*s)[i], l->label) == 0)
-			return;
-
-	*s = reallocarray(*s, *ssz + 1, sizeof(char **));
-	if (NULL == *s)
-		err(EXIT_FAILURE, "reallocarray");
-	(*s)[*ssz] = l->label;
-	(*ssz)++;
-}
-
 static int
 xliffunit_sort(const void *a1, const void *a2)
 {
@@ -399,65 +366,6 @@ xliffunit_sort(const void *a1, const void *a2)
 		 	 *p2 = (struct xliffunit *)a2;
 
 	return strcmp(p1->source, p2->source);
-}
-
-static int
-xliff_sort(const void *p1, const void *p2)
-{
-
-	return(strcmp(*(const char **)p1, *(const char **)p2));
-}
-
-static int
-xliff_extract(const struct config *cfg, int copy)
-{
-	const struct enm *e;
-	const struct eitem *ei;
-	const struct bitf *b;
-	const struct bitidx *bi;
-	size_t		  i, ssz = 0;
-	const char	**s = NULL;
-
-	TAILQ_FOREACH(e, &cfg->eq, entries)
-		TAILQ_FOREACH(ei, &e->eq, entries)
-			xliff_extract_unit(&ei->labels, 
-				NULL, &ei->pos, &s, &ssz);
-
-	TAILQ_FOREACH(b, &cfg->bq, entries) {
-		TAILQ_FOREACH(bi, &b->bq, entries)
-			xliff_extract_unit(&bi->labels, 
-				NULL, &bi->pos, &s, &ssz);
-		xliff_extract_unit(&b->labels_unset, 
-			"unset", &b->pos, &s, &ssz);
-		xliff_extract_unit(&b->labels_null, 
-			"isnull", &b->pos, &s, &ssz);
-	}
-
-	qsort(s, ssz, sizeof(char *), xliff_sort);
-
-	printf("<xliff version=\"1.2\">\n"
-	       "\t<file target-language=\"TODO\" "
-	          "tool=\"%s\">\n"
-	       "\t\t<body>\n", getprogname());
-
-	for (i = 0; i < ssz; i++)
-		if (copy) 
-			printf("\t\t\t<trans-unit id=\"%zu\">\n"
-			       "\t\t\t\t<source>%s</source>\n"
-			       "\t\t\t\t<target>%s</target>\n"
-			       "\t\t\t</trans-unit>\n",
-			       i + 1, s[i], s[i]);
-		else
-			printf("\t\t\t<trans-unit id=\"%zu\">\n"
-			       "\t\t\t\t<source>%s</source>\n"
-			       "\t\t\t</trans-unit>\n",
-			       i + 1, s[i]);
-
-	puts("\t\t</body>\n"
-	     "\t</file>\n"
-	     "</xliff>");
-
-	return 1;
 }
 
 static int
@@ -927,7 +835,7 @@ main(int argc, char *argv[])
 
 	switch (op) {
 	case OP_EXTRACT:
-		rc = xliff_extract(cfg, copy);
+		rc = ort_lang_xliff_extract(cfg, copy, stdout);
 		break;
 	case OP_JOIN:
 		rc = xliff_join_fds(cfg, copy, xmls, xmlsz, 

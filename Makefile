@@ -27,7 +27,8 @@ LIBS		 = libort.a \
 		   libort-lang-nodejs.a \
 		   libort-lang-javascript.a \
 		   libort-lang-json.a \
-		   libort-lang-sql.a
+		   libort-lang-sql.a \
+		   libort-lang-xliff.a
 PKGCONFIGS	 = ort.pc \
 		   ort-lang-json.pc
 OBJS		 = audit.o \
@@ -41,6 +42,7 @@ OBJS		 = audit.o \
 		   lang-json.o \
 		   lang-nodejs.o \
 		   lang-sql.o \
+		   lang-xliff.o \
 		   main.o \
 		   maindiff.o \
 		   nodejs.o \
@@ -118,6 +120,7 @@ HEADERS 	 = $(PUBHEADERS) \
 		   ort-lang-json.h \
 		   ort-lang-nodejs.h \
 		   ort-lang-sql.h \
+		   ort-lang-xliff.h \
 		   parser.h
 DOTAREXEC	 = configure
 DOTAR		 = $(HEADERS) \
@@ -143,6 +146,7 @@ DOTAR		 = $(HEADERS) \
 		   lang-json.c \
 		   lang-nodejs.c \
 		   lang-sql.c \
+		   lang-xliff.c \
 		   lang.c \
 		   linker.c \
 		   linker_aliases.c \
@@ -250,6 +254,9 @@ libort-lang-nodejs.a: lang-nodejs.o lang.o
 libort-lang-sql.a: lang-sql.o lang.o
 	$(AR) rs $@ lang-sql.o lang.o
 
+libort-lang-xliff.a: lang-xliff.o
+	$(AR) rs $@ lang-xliff.o
+
 ort-nodejs: nodejs.o libort-lang-nodejs.a libort.a
 	$(CC) -o $@ nodejs.o libort-lang-nodejs.a libort.a $(LDFLAGS) $(LDADD)
 
@@ -280,8 +287,8 @@ ort-audit-gv: audit.o libort.a
 ort-audit-json: audit.o libort.a
 	$(CC) -o $@ audit.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-xliff: xliff.o libort.a
-	$(CC) -o $@ xliff.o libort.a $(LDFLAGS) $(LIBS_PKG) $(LDADD)
+ort-xliff: xliff.o libort-lang-xliff.a libort.a
+	$(CC) -o $@ xliff.o libort-lang-xliff.a libort.a $(LDFLAGS) $(LIBS_PKG) $(LDADD)
 
 xliff.o: xliff.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(CFLAGS_PKG) -c xliff.c

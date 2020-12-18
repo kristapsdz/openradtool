@@ -39,15 +39,16 @@ Good luck!
 
 It's useful to run the installed regression tests on the bleeding edge
 sources.  (Again, this uses BSD make, so it may be `bmake` on your
-system.)
+system.)  The full regression suite is extensive and may take several
+minutes to run to completion.
 
 ```sh
 make regress
 ```
 
-The regression suite will use Node.js tools if available, though it will
-not configure these for you.  You'll need [npm](https://www.npmjs.com)
-for this to work.
+The TypeScript and Node.js regression tests will use Node.js tools if
+available, though it will not configure these for you.  You'll need
+[npm](https://www.npmjs.com) for this to work.
 
 ```sh
 npm install
@@ -57,7 +58,16 @@ make regress
 This will use the *package.json* and *package-lock.json* files to
 configure the *node_modules* subdirectory required for the regression
 tests.  You can safely remove the *node_modules* directory at any time,
-though you will need to re-run `npm install` to recreate it.
+though you will need to re-run `npm install` to recreate it.  Once
+installed, the regression suite will automatically pick these up.
+
+To test JSON output, you'll need both the Node.js installation (as described
+above) and the [py-jsonschema](http://github.com/Julian/jsonschema) utilities
+installed for validating JSON against a schema.
+
+The C interface tests need [kcgi](https://kristaps.bsd.lv/kcgi) and
+[libcurl](https://curl.se/libcur) installed.  The regression suite will
+automatically pick these up.
 
 # License
 

@@ -52,11 +52,22 @@ do not generate squiggly braces around the JSON content.
 .Pp
 The output is not pretty-printed in any way: JSON tokens are only space
 separated.
+.Pp
+To compile and link a simple file
+.Pa sample.c
+using this function, use
+.Xr pkg-config 1 :
+.Bd -literal -offset indent
+% cc `pkg-config --cflags ort-lang-json` -c -o sample.o sample.c
+% cc -o sample sample.o `pkg-config --libs ort-lang-json`
+.Ed
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.
 .Sh RETURN VALUES
 Returns zero on failure, non-zero on success.
+Failure only occurs with memory allocation errors or when writing to
+.Fa f .
 .\" For sections 2, 3, and 9 function return values only.
 .\" .Sh ENVIRONMENT
 .\" For sections 1, 6, 7, and 8 only.
@@ -86,7 +97,7 @@ if (!ort_parse_file(cfg, stdin, "<stdin>"))
 if (!ort_parse_close(cfg))
   errx(1, "ort_parse_close");
 if (!ort_lang_json(&args, cfg, stdout))
-  errx(1, "ort_lang_json");
+  err(1, "ort_lang_json");
 
 ort_config_free(cfg);
 .Ed
@@ -101,7 +112,7 @@ size_t bufsz = 0;
 if ((stream = open_memstream(&buf, &bufsz)) == NULL)
   err(1, "open_memstream");
 if (!ort_lang_json(&args, cfg, stream))
-  errx(1, "ort_lang_json");
+  err(1, "ort_lang_json");
 fclose(stream);
 
 /* Do something with buf of size bufsz. */
@@ -113,6 +124,7 @@ free(buf);
 .\" .Sh ERRORS
 .\" For sections 2, 3, 4, and 9 errno settings only.
 .Sh SEE ALSO
+.Xr pkg-config 1 ,
 .Xr ort 3
 .\" .Sh STANDARDS
 .\" .Sh HISTORY

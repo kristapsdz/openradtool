@@ -45,10 +45,37 @@ The
 .Pa ort-json.ts
 file, usually distributed in
 .Pa /usr/local/share/ort ,
-consists of a Typescript namespace describing the output.
+consists of a TypeScript namespace describing the output.
 .Sh EXIT STATUS
 .Ex -std
-.\" .Sh EXAMPLES
+.Sh EXAMPLES
+The following shell snippet demonstrates validating JSON against the
+TypeScript definitions, which are assumed to be in
+.Pa /usr/local/share/ort .
+The
+.Xr ort 5
+configuration is
+.Pa db.ort ,
+and the
+.Pa jsonschema
+and
+.Pa jsonlint
+utilities are assumed to be installed.
+Translation from the TypeScript definitions to JSON schema are managed
+by the
+.Pa typescript-json-schema
+utility installed via
+.Xr npm 1 .
+.Bd -literal -offset indent
+% npm init -y
+% npm install typescript-json-schema
+% node_modules/.bin/typescript-json-schema \e
+> --strictNullChecks /usr/local/share/ort/ort-json.ts \e
+> ort.ortConfig > ort-json.schema
+% ort-json db.ort > db.json
+% jsonlint db.json
+% jsonschema -i db.json ort-json.schema
+.Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
 .\" .Sh ERRORS

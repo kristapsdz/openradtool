@@ -29,7 +29,6 @@
 #include <unistd.h>
 
 #include "ort.h"
-#include "lang.h"
 #include "ort-lang-json.h"
 
 static const char *const ordtypes[] = {

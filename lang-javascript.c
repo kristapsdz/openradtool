@@ -151,43 +151,6 @@ gen_labels(FILE *f, const struct config *cfg, const struct labelq *q)
 	return fputc('}', f) != EOF;
 }
 
-static void
-warn_label(const struct config *cfg, const struct labelq *q, 
-	const struct pos *p, const char *name, const char *sub, 
-	const char *type)
-{
-	size_t	 	 i;
-	int		 hasdef;
-	const struct label *l;
-
-	TAILQ_FOREACH(l, q, entries)
-		if (l->lang == 0)
-			break;
-
-	if (!(hasdef = (l != NULL)))
-		fprintf(stderr, "%s:%zu: %s%s%s: "
-			"%s jslabel not defined\n",
-			p->fname, p->line, name,
-			sub != NULL ? "." : "", 
-			sub != NULL ? sub : "", type);
-
-	for (i = 1; i < cfg->langsz; i++) {
-		TAILQ_FOREACH(l, q, entries)
-			if (l->lang == i)
-				break;
-		if (l != NULL)
-			continue;
-		fprintf(stderr, "%s:%zu: %s%s%s: %s "
-			"jslabel.%s not defined: %s\n",
-			p->fname, p->line, name,
-			sub != NULL ? "." : "", 
-			sub != NULL ? sub : "",
-			type, cfg->langs[i],
-			hasdef ? "using default" :
-			"using empty string");
-	}
-}
-
 /*
  * Generate the documentation for each operation we support in
  * _fill() (e.g., _fillField()).
@@ -1007,11 +970,6 @@ ort_lang_javascript(const struct config *cfg,
 		    maxvalue + 1) < 0)
 			return 0;
 
-		warn_label(cfg, &bf->labels_unset, &bf->pos,
-			bf->name, NULL, "bits isunset");
-		warn_label(cfg, &bf->labels_null, &bf->pos,
-			bf->name, NULL, "bits isnull");
-
 		if (fputc('\n', f) == EOF)
 			return 0;
 
@@ -1089,8 +1047,6 @@ ort_lang_javascript(const struct config *cfg,
 		    "\t\t\t}\n\n", f) == EOF)
 			return 0;
 		TAILQ_FOREACH(bi, &bf->bq, entries) {
-			warn_label(cfg, &bi->labels, &bi->pos,
-				bf->name, bi->name, "item");
 			if (fprintf(f, 
 			    "\t\t\tif (!vlong.and"
 			    "(%s.BITF_%s).isZero()) {\n"
@@ -1130,9 +1086,6 @@ ort_lang_javascript(const struct config *cfg,
 			    ei->value) < 0)
 				return 0;
 		}
-
-		warn_label(cfg, &e->labels_null, &e->pos,
-			e->name, NULL, "enum isnull");
 
 		if (!gen_comment(f, 2, COMMENT_JS,
 		    "Uses the enumeration item's **jslabel** " 
@@ -1182,8 +1135,6 @@ ort_lang_javascript(const struct config *cfg,
 		    "\t\t\tswitch(v.toString()) {\n", f) == EOF)
 			return 0;
 		TAILQ_FOREACH(ei, &e->eq, entries) {
-			warn_label(cfg, &ei->labels, &ei->pos,
-				e->name, ei->name, "item");
 			if (fprintf(f, "\t\t\tcase %s.%s:\n"
 			    "\t\t\t\ts = _strlang(",
 			    e->name, ei->name) < 0)

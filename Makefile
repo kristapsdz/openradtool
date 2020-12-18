@@ -730,8 +730,10 @@ regress: all
 	fi ; \
 	if [ -f "node_modules/.bin/ts-node" ]; then \
 		echo "=== ort-nodejs compile tests === " ; \
+		set -e ; \
 		node_modules/.bin/ts-node --skip-project \
 			regress/nodejs/regress-runner.ts ; \
+		set +e ; \
 	else \
 		echo "!!! skipping ort-nodejs compile tests !!! " ; \
 	fi ; \
@@ -749,8 +751,10 @@ regress: all
 	done ; \
 	if [ -f "node_modules/.bin/ts-node" ]; then \
 		echo "=== ort-javascript run tests === " ; \
+		set -e ; \
 		node_modules/.bin/ts-node --skip-project \
 			regress/javascript/regress-runner.ts ; \
+		set +e ; \
 	else \
 		echo "!!! skipping ort-javascript run tests !!! " ; \
 	fi ; \

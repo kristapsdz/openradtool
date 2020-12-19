@@ -1,4 +1,4 @@
-namespace ortConfig {
+namespace ortJson {
 	/**
 	 * Same as "struct pos" in ort(3).
 	 */
@@ -302,7 +302,7 @@ namespace ortConfig {
 	/**
 	 * Same as "struct config" in ort(3).
 	 */
-	export interface config {
+	export interface configObj {
 		eq: enumSet|null;
 		bq: bitfSet|null;
 		/**
@@ -315,7 +315,7 @@ namespace ortConfig {
 		sq: strctSet;
 	}
 
-	export interface ortConfig {
-		config: config;
+	export interface ortJsonConfig {
+		config: configObj;
 	}
 }

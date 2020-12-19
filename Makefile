@@ -5,7 +5,7 @@ include Makefile.configure
 
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 11
-VERSION_BUILD	 = 6
+VERSION_BUILD	 = 7
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = compats.o \
 		   config.o \
@@ -768,7 +768,7 @@ regress: all
 	if [ -f "node_modules/.bin/typescript-json-schema" ]; then \
 		node_modules/.bin/typescript-json-schema \
 			--strictNullChecks ort-json.ts \
-			ortConfig.ortConfig > ort-json.schema ; \
+			ortJson.ortJsonConfig > ort-json.schema ; \
 		which jsonschema-3 >/dev/null 2>&1 ; \
 		if [ $$? -eq 0 ]; then \
 			echo "=== ort-json output tests === " ; \

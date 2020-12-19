@@ -1,8 +1,8 @@
-namespace ort {
+namespace ortConfig {
 	/**
 	 * Same as "struct pos" in ort(3).
 	 */
-	interface posObj {
+	export interface posObj {
 		fname: string;
 		column: number;
 		line: number;
@@ -11,7 +11,7 @@ namespace ort {
 	/**
 	 * Same as "struct label" in ort(3).
 	 */
-	interface labelObj {
+	export interface labelObj {
 		value: string;
 		pos: posObj;
 	}
@@ -20,56 +20,56 @@ namespace ort {
 	 * Label dictionary.
 	 * Key is language.
 	 */
-	interface labelSet {
+	export interface labelSet {
 		[lang: string]: labelObj;
 	}
 
 	/**
 	 * Same as "struct eitem" in ort(3).
 	 */
-	interface enumItemObj {
+	export interface enumItemObj {
 		pos: posObj;
 		doc: string|null;
 		value: string|number|null;
 		labels: labelSet|null;
 	}
 
-	interface enumItemSet {
+	export interface enumItemSet {
 		[name: string]: enumItemObj;
 	}
 
 	/**
 	 * Same as "struct enm" in ort(3).
 	 */
-	interface enumObj {
+	export interface enumObj {
 		pos: posObj;
 		doc: string|null;
 		labelsNull: labelSet|null;
 		eq: enumItemSet;
 	}
 
-	interface enumSet {
+	export interface enumSet {
 		[name: string]: enumObj;
 	}
 
 	/**
 	 * Same as "struct bitidx" in ort(3).
 	 */
-	interface bitIndexObj {
+	export interface bitIndexObj {
 		pos: posObj;
 		doc: string|null;
 		value: string|number|null;
 		labels: labelSet|null;
 	}
 
-	interface bitIndexSet {
+	export interface bitIndexSet {
 		[name: string]: bitIndexObj;
 	}
 
 	/**
 	 * Same as "struct bitf" in ort(3).
 	 */
-	interface bitfObj {
+	export interface bitfObj {
 		pos: posObj;
 		doc: string|null;
 		labelsNull: labelSet|null;
@@ -77,24 +77,24 @@ namespace ort {
 		bq: bitIndexSet;
 	}
 
-	interface bitfSet {
+	export interface bitfSet {
 		[name: string]: bitfObj;
 	}
 
-	interface roleObj {
+	export interface roleObj {
 		pos: posObj;
 		doc: string|null;
 		children: roleSet|null;
 	}
 
-	interface roleSet {
+	export interface roleSet {
 		[name: string]: roleObj;
 	}
 
 	/**
 	 * Same as "struct fvalid" in ort(3).
 	 */
-	interface validObj {
+	export interface validObj {
 		type: 'eq'|'le'|'gt'|'lt'|'ge';
 		/*
 		 * Depends on field type.
@@ -105,7 +105,7 @@ namespace ort {
 	/**
 	 * Same as "struct field" in ort(3).
 	 */
-	interface fieldObj {
+	export interface fieldObj {
 		pos: posObj;
 		doc: string|null;
 		type: 'bit'|'date'|'epoch'|'int'|'real'|'blob'|'text'|'password'|'email'|'struct'|'enum'|'bitfield';
@@ -127,14 +127,14 @@ namespace ort {
 		fvq: validObj[];
 	}
 
-	interface fieldSet {
+	export interface fieldSet {
 		[name: string]: fieldObj;
 	}
 
 	/**
 	 * Same as "struct insert" in ort(3).
 	 */
-	interface insertObj {
+	export interface insertObj {
 		pos: posObj;
 		rolemap: string[]|null;
 	}
@@ -142,7 +142,7 @@ namespace ort {
 	/**
 	 * Same as "struct sent" in ort(3).
 	 */
-	interface sentObj {
+	export interface sentObj {
 		pos: posObj;
 		fname: string;
 		op: 'eq'|'ge'|'gt'|'le'|'lt'|'neq'|'like'|'and'|'or'|'streq'|'strneq'|'isnull'|'notnull';
@@ -151,7 +151,7 @@ namespace ort {
 	/**
 	 * Same as "struct order" in ort(3).
 	 */
-	interface orderObj {
+	export interface orderObj {
 		pos: posObj;
 		fname: string;
 		op: 'desc'|'asc';
@@ -160,7 +160,7 @@ namespace ort {
 	/**
 	 * Same as "struct aggr" in ort(3).
 	 */
-	interface aggrObj {
+	export interface aggrObj {
 		pos: posObj;
 		fname: string;
 		op: 'minrow'|'maxrow';
@@ -169,7 +169,7 @@ namespace ort {
 	/**
 	 * Same as "struct group" in ort(3).
 	 */
-	interface groupObj {
+	export interface groupObj {
 		pos: posObj;
 		fname: string;
 	}
@@ -177,7 +177,7 @@ namespace ort {
 	/**
 	 * Same as "struct dstct" in ort(3).
 	 */
-	interface dstnctObj {
+	export interface dstnctObj {
 		pos: posObj;
 		fname: string;
 	}
@@ -185,7 +185,7 @@ namespace ort {
 	/**
 	 * Same as "struct search" in ort(3).
 	 */
-	interface searchObj {
+	export interface searchObj {
 		pos: posObj;
 		doc: string|null;
 		rolemap: string[]|null;
@@ -213,11 +213,11 @@ namespace ort {
 		type: 'search'|'iterate'|'list'|'count';
 	}
 
-	interface searchSet {
+	export interface searchSet {
 		[name: string]: searchObj;
 	}
 
-	interface searchClassObj {
+	export interface searchClassObj {
 		/**
 		 * Have a user-provided name.
 		 */
@@ -228,7 +228,7 @@ namespace ort {
 		anon: searchObj[];
 	}
 
-	interface urefObj {
+	export interface urefObj {
 		pos: posObj;
 		field: string;
 		op: 'eq'|'ge'|'gt'|'le'|'lt'|'neq'|'like'|'and'|'or'|'streq'|'strneq'|'isnull'|'notnull';
@@ -238,7 +238,7 @@ namespace ort {
 	/**
 	 * Same as "struct update" in ort(3).
 	 */
-	interface updateObj {
+	export interface updateObj {
 		pos: posObj;
 		doc: string|null;
 		rolemap: string[]|null;
@@ -250,11 +250,11 @@ namespace ort {
 		crq: urefObj[];
 	}
 
-	interface updateSet {
+	export interface updateSet {
 		[name: string]: updateObj;
 	}
 
-	interface updateClassObj {
+	export interface updateClassObj {
 		/**
 		 * Have a user-provided name.
 		 */
@@ -268,7 +268,7 @@ namespace ort {
 	/**
 	 * Same as "strct unique" in ort(3).
 	 */
-	interface uniqueObj {
+	export interface uniqueObj {
 		pos: posObj;
 		nq: string[];
 	}
@@ -276,13 +276,13 @@ namespace ort {
 	/**
 	 * Same as "struct strct" in ort(3).
 	 */
-	interface strctObj {
+	export interface strctObj {
 		pos: posObj;
 		doc: string|null;
 		/**
 		 * Never an empty set.
 		 */
-		fields: fieldSet;
+		fq: fieldSet;
 		insert: insertObj|null;
 		/**
 		 * Unlike "strct" in ort(3), which has all searches
@@ -295,14 +295,14 @@ namespace ort {
 		dn: uniqueObj[];
 	}
 
-	interface strctSet {
+	export interface strctSet {
 		[name: string]: strctObj;
 	}
 
 	/**
 	 * Same as "struct config" in ort(3).
 	 */
-	interface config {
+	export interface config {
 		eq: enumSet|null;
 		bq: bitfSet|null;
 		/**

@@ -3,6 +3,6 @@ struct foo {
 };
 
 struct bar {
-	field fooid:foo.id int actup nullify;
+	field fooid:foo.id int actup cascade;
 	field id int rowid;
 };

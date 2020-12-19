@@ -1,0 +1,9 @@
+struct foo {
+	field id int rowid;
+};
+
+struct bar {
+	field fooid:foo.id int actdel cascade;
+	field baz int actdel cascade;
+	field id int rowid;
+};

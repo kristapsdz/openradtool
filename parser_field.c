@@ -660,6 +660,12 @@ parse_field(struct parse *p, struct strct *s)
 		else if (fd->type == FTYPE_BLOB)
 			fd->parent->flags |= STRCT_HAS_BLOB;
 		parse_field_info(p, fd);
+		if ((fd->actup == UPACT_DEFAULT ||
+		     fd->actdel == UPACT_DEFAULT) &&
+		    !(fd->flags & FIELD_NULL) &&
+		    !(fd->flags & FIELD_HASDEF))
+			parse_errx(p, "default action without "
+				"default value or null");
 		return;
 	case FTYPE__MAX:
 		break;

@@ -1,0 +1,9 @@
+struct bar {
+	field fooid:foo.id int default 0 actdel default;
+	field id int rowid;
+};
+
+struct foo {
+	field id int rowid;
+};
+

@@ -300,6 +300,13 @@ or
 .Ar default
 .Pq set child referents to their default values .
 This is only available on foreign key references.
+The
+.Ar default
+value may only be used if the field is marked
+.Cm null
+or has a
+.Cm default
+value.
 .It Cm comment Ar string_literal
 Documents the field using the quoted string.
 .It Cm default Ar integer|decimal|date|string_literal|enum

@@ -868,7 +868,7 @@ gen_strct(FILE *f, const struct strct *s)
 		return 0;
 	if (!gen_doc(f, s->doc))
 		return 0;
-	if (fputs(" \"fields\": {", f) == EOF)
+	if (fputs(" \"fq\": {", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(fd, &s->fq, entries) {
 		if (!gen_field(f, fd))

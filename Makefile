@@ -768,7 +768,7 @@ regress: all
 	if [ -f "node_modules/.bin/typescript-json-schema" ]; then \
 		node_modules/.bin/typescript-json-schema \
 			--strictNullChecks ort-json.ts \
-			ort.ortConfig > ort-json.schema ; \
+			ortConfig.ortConfig > ort-json.schema ; \
 		which jsonschema-3 >/dev/null 2>&1 ; \
 		if [ $$? -eq 0 ]; then \
 			echo "=== ort-json output tests === " ; \

@@ -3,9 +3,34 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.11.7</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-12-19">2020-12-19</time>
+		</header>
+		<aside>
+			<p>
+				Enforce that the <code>default</code> action for <code>actup</code>
+				or <code>actdel</code> has either a <code>null</code> field or a
+				default.  This prevents the database from defaulting to a
+				<code>null</code> value, which may conflict with the configuration
+				and thus expectations of the code.
+			</p>
+			<p>
+				Do the same for the <code>nullify</code> action, requiring that the
+				field be <code>null</code>.
+			</p>
+			<p>
+				Rename some parts of the <a href="ort-json.1.html">ort-json(1)</a>
+				TypeScript definitions file. 
+				Add in some forgotten fields to the definitions.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.11.6</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2020-12-08">2020-12-08</time>
+			<time datetime="2020-12-17">2020-12-17</time>
 		</header>
 		<aside>
 			<p>

@@ -666,6 +666,11 @@ parse_field(struct parse *p, struct strct *s)
 		    !(fd->flags & FIELD_HASDEF))
 			parse_errx(p, "default action without "
 				"default value or null");
+		if ((fd->actup == UPACT_NULLIFY ||
+		     fd->actdel == UPACT_NULLIFY) &&
+		    !(fd->flags & FIELD_NULL)) 
+			parse_errx(p, "nullify action without "
+				"allowing for null");
 		return;
 	case FTYPE__MAX:
 		break;

@@ -291,14 +291,14 @@ May be one of
 .Ar none
 .Pq do nothing ,
 .Ar restrict
-.Pq disallow if having child referents ,
+.Pq disallow the reference from deleting if referrers exist ,
 .Ar nullify
-.Pq set child referents to null ,
+.Pq set referrers to null ,
 .Ar cascade ,
-.Pq propogate operation to referents ,
+.Pq propogate new value to referrers ,
 or
 .Ar default
-.Pq set child referents to their default values .
+.Pq set referrers to their default values .
 This is only available on foreign key references.
 The
 .Ar default
@@ -307,6 +307,10 @@ value may only be used if the field is marked
 or has a
 .Cm default
 value.
+The
+.Ar nullify
+value may only be used if the field is marked
+.Cm null .
 .It Cm comment Ar string_literal
 Documents the field using the quoted string.
 .It Cm default Ar integer|decimal|date|string_literal|enum

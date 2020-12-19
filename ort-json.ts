@@ -103,6 +103,22 @@ namespace ortJson {
 	}
 
 	/**
+	 * The names required to uniquely identify a field.
+	 */
+	export interface fieldPtrObj {
+		strct: string;
+		field: string;
+	};
+
+	/**
+	 * Same as "struct ref" in ort(3).
+	 */
+	export interface refObj {
+		target: fieldPtrObj;
+		source: fieldPtrObj;
+	}
+
+	/**
 	 * Same as "struct field" in ort(3).
 	 */
 	export interface fieldObj {
@@ -120,6 +136,10 @@ namespace ortJson {
 		 * Only set if we're a bitfield.
 		 */
 		bitf?: string;
+		/**
+		 * Only if we're a "struct" or with a reference.
+		 */
+		ref?: refObj;
 		/**
 		 * The interpretation of this depends upon the type.
 		 */

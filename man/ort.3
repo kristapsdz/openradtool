@@ -169,6 +169,7 @@ It is unique (case insensitive) among all structures.
 If not
 .Dv NULL ,
 free-form documentation.
+May be empty.
 .It Va struct pos pos
 Parse position.
 .It Va struct field *rowid
@@ -255,6 +256,7 @@ Otherwise it is
 If not
 .Dv NULL ,
 free-form documentation.
+May be empty.
 .It Va struct pos pos
 Parse point.
 .It Va <anon union> def
@@ -425,6 +427,7 @@ It is unique (case insensitive) among all enumerations and bit-fields.
 If not
 .Dv NULL ,
 free-form documentation.
+May be empty.
 .It Va struct pos pos
 Parse position.
 .It Va struct eitemq eq
@@ -448,6 +451,7 @@ It is unique among other items in the enumeration.
 If not
 .Dv NULL ,
 free-form documentation.
+May be empty.
 .It Va struct labelq labels
 A possibly-empty list of exported labels describing the item.
 .It Va struct pos pos
@@ -496,6 +500,7 @@ It is unique (case insensitive) among other bit-fields and enumerations.
 If not
 .Dv NULL ,
 free-form documentation.
+May be empty.
 .It Va struct labelq labels_unset
 A possibly-empty list of exported labels for formatting if the bit-field
 has no bits set.
@@ -519,6 +524,7 @@ It is unique (case insensitive) among other bits in the bit-field.
 If not
 .Dv NULL ,
 free-form documentation.
+May be empty.
 .It Va struct labelq labels
 A possibly-empty list of exported labels for formatting the bit.
 .It Va int64_t values
@@ -572,6 +578,7 @@ It is unique (case insensitive) among other roles.
 If not
 .Dv NULL ,
 free-form documentation.
+May be empty.
 .It Va struct role *parent
 The parent role.
 If
@@ -658,6 +665,7 @@ if anonymous.
 If not
 .Dv NULL ,
 free-form documentation.
+May be empty.
 .It Va enum upt type
 Either
 .Dv UP_MODIFY
@@ -758,6 +766,7 @@ to have an automatically-generated name.
 If not
 .Dv NULL ,
 free-form documentation.
+May be empty.
 .It Va struct strct *parent
 Parent containing the query.
 .It Va enum stype type

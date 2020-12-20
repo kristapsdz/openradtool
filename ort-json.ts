@@ -120,6 +120,7 @@ namespace ortJson {
 
 	/**
 	 * Same as "struct field" in ort(3).
+	 * TODO: flags.
 	 */
 	export interface fieldObj {
 		pos: posObj;
@@ -221,7 +222,7 @@ namespace ortJson {
 		 * Order is significant because it dictates the parameter
 		 * order in the API.
 		 */
-		snq: sentObj[];
+		sntq: sentObj[];
 		/**
 		 * Order is significant because it dictates the order in
 		 * which SQL provides its filters.

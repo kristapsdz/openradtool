@@ -117,7 +117,6 @@ HEADERS 	 = $(PUBHEADERS) \
 		   linker.h \
 		   ort-lang-c.h \
 		   ort-lang-javascript.h \
-		   ort-lang-json.h \
 		   ort-lang-nodejs.h \
 		   ort-lang-sql.h \
 		   ort-lang-xliff.h \

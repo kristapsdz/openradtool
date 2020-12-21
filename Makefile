@@ -641,7 +641,7 @@ regress: all
 		old=regress/diff/`basename $$f .result`.old.ort ; \
 		printf "ort-diff: regress/diff/$$fn... " ; \
 		./ort-diff $$old $$new >$$tmp 2>/dev/null ; \
-		if [ $$? -ne 0 ] ; then \
+		if [ $$? -gt 1 ] ; then \
 			echo "fail (did not execute)" ; \
 			rm -f $$tmp ; \
 			exit 1 ; \
@@ -659,13 +659,14 @@ regress: all
 	for f in regress/diff/*.ort ; do \
 		printf "ort-diff: $$f... " ; \
 		./ort-diff $$f $$f >$$tmp 2>/dev/null ; \
-		if [ $$? -ne 0 ] ; then \
+		rc=$$? ; \
+		if [ $$rc -gt 0 ] ; then \
 			echo "fail (did not execute)" ; \
 			rm -f $$tmp ; \
 			exit 1 ; \
 		fi ; \
 		val=`cat $$tmp | wc -l | sed 's! !!g'` ; \
-		if [ $$val -ne 2 ] ; then \
+		if [ $$val -ne 2 -o $$rc -ne 0 ] ; then \
 			echo "fail (output check)" ; \
 			cat $$tmp ; \
 			rm -f $$tmp ; \

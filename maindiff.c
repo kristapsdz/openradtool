@@ -37,14 +37,15 @@ main(int argc, char *argv[])
 {
 	FILE		**confs = NULL, **dconfs = NULL;
 	struct config	 *cfg = NULL, *dcfg = NULL;
-	int		  rc = 0;
+	int		  rc = 2;
 	size_t		  confsz = 0, dconfsz = 0, i, j, 
 			  confst = 0;
 	struct diffq	 *q = NULL;
+	struct diff	 *d;
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
-		err(EXIT_FAILURE, "pledge");
+		err(2, "pledge");
 #endif
 
 	if (getopt(argc, argv, "d") != -1)
@@ -82,33 +83,33 @@ main(int argc, char *argv[])
 
 	if (confsz > 0 &&
 	    (confs = calloc(confsz, sizeof(FILE *))) == NULL)
-		err(EXIT_FAILURE, NULL);
+		err(2, NULL);
 
 	if (dconfsz > 0 &&
 	    (dconfs = calloc(dconfsz, sizeof(FILE *))) == NULL)
-		err(EXIT_FAILURE, NULL);
+		err(2, NULL);
 
 	for (i = 0; i < dconfsz; i++)
 		if ((dconfs[i] = fopen(argv[i], "r")) == NULL)
-			err(EXIT_FAILURE, "%s", argv[i]);
+			err(2, "%s", argv[i]);
 
 	if (i < (size_t)argc && strcmp(argv[i], "-f") == 0)
 		i++;
 
 	for (j = 0; i < (size_t)argc; j++, i++)
 		if ((confs[j] = fopen(argv[i], "r")) == NULL)
-			err(EXIT_FAILURE, "%s", argv[i]);
+			err(2, "%s", argv[i]);
 
 #if HAVE_PLEDGE
 	if (pledge("stdio", NULL) == -1)
-		err(EXIT_FAILURE, "pledge");
+		err(2, "pledge");
 #endif
 
 	assert(confsz + dconfsz > 0);
 
 	if ((cfg = ort_config_alloc()) == NULL ||
 	    (dcfg = ort_config_alloc()) == NULL)
-		err(EXIT_FAILURE, NULL);
+		err(2, NULL);
 
 	/* Parse the input files themselves. */
 
@@ -140,11 +141,35 @@ main(int argc, char *argv[])
 		goto out;
 	}
 
-	rc = ort_write_diff_file(stdout, q, 
-		(const char **)&argv[confst], confsz,
-		(const char **)argv, dconfsz);
-	if (rc == 0)
+	/* Are we different? */
+
+	rc = 0;
+	TAILQ_FOREACH(d, q, entries) 
+		switch (d->type) {
+		case DIFF_SAME_BITF:
+		case DIFF_SAME_BITIDX:
+		case DIFF_SAME_EITEM:
+		case DIFF_SAME_ENM:
+		case DIFF_SAME_FIELD:
+		case DIFF_SAME_INSERT:
+		case DIFF_SAME_ROLE:
+		case DIFF_SAME_ROLES:
+		case DIFF_SAME_SEARCH:
+		case DIFF_SAME_STRCT:
+		case DIFF_SAME_UPDATE:
+			continue;
+		default:
+			rc = 1;
+			break;
+		}
+
+	if (!ort_write_diff_file(stdout, q, 
+	    (const char **)&argv[confst], confsz,
+	    (const char **)argv, dconfsz)) {
+		rc = -1;
 		warn(NULL);
+	}
+
 out:
 	ort_write_msg_file(stderr, &cfg->mq);
 	ort_write_msg_file(stderr, &dcfg->mq);
@@ -160,11 +185,11 @@ out:
 	free(dconfs);
 	ort_diff_free(q);
 
-	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
+	return rc;
 usage:
 	fprintf(stderr, 
 		"usage: %s oldconfig [config...]\n"
 		"       %s [oldconfig...] -f [config...]\n",
 		getprogname(), getprogname());
-	return EXIT_FAILURE;
+	return 2;
 }

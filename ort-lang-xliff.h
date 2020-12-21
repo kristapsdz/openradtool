@@ -18,10 +18,11 @@
 #define ORT_LANG_XLIFF_H
 
 struct	ort_lang_xliff {
-	FILE		 	*in;
-	size_t			 insz;
-	unsigned int		 flags;
-#define ORT_LANG_XLIFF_COPY	 0x01
+	FILE		 	**in;
+	const char		**fnames;
+	size_t			  insz;
+	unsigned int		  flags;
+#define ORT_LANG_XLIFF_COPY	  0x01
 };
 
 int	ort_lang_xliff_extract(const struct ort_lang_xliff *,

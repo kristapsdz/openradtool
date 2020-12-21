@@ -3,6 +3,26 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.11.8</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-12-19">2020-12-19</time>
+		</header>
+		<aside>
+			<p>
+				Have <a href="ort-diff.1.html">ort-diff(1)</a> return a value based
+				upon whether the results are different.
+				This makes it behave like
+				<a href="https://man.openbsd.org/diff.1">diff(1)</a>.
+			</p>
+			<p>
+				Emit XLIFF content that validates against the <q>strict</q> variant
+				of the specification.
+				This is now used in internal regression testing.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.11.7</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2020-12-19">2020-12-19</time>

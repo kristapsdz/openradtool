@@ -319,16 +319,15 @@ xend(void *dat, const XML_Char *s)
 }
 
 /*
- * Parse an XLIFF file from stdin.
- * Accepts "fn", which is usually "<stdin>".
+ * Parse an XLIFF file symbolically named "fn".
  * Returns NULL on failure or the xliffset on success.
  */
 static struct xliffset *
-xliff_read(int fd, const char *fn, XML_Parser p)
+xliff_read(FILE *f, const char *fn, XML_Parser p)
 {
 	struct xparse	*xp;
 	struct xliffset	*res = NULL;
-	ssize_t		 ssz;
+	size_t		 sz;
 	int		 rc;
 	char		 buf[BUFSIZ];
 
@@ -341,9 +340,10 @@ xliff_read(int fd, const char *fn, XML_Parser p)
 	XML_SetUserData(p, xp);
 
 	do {
-		if ((ssz = read(fd, buf, sizeof(buf))) == -1)
-			err(EXIT_FAILURE, "%s: read", fn);
-		rc = XML_Parse(p, buf, ssz, (ssz == 0));
+		sz = fread(buf, 1, sizeof(buf), f);
+		if (ferror(f))
+			return NULL;
+		rc = XML_Parse(p, buf, sz, feof(f));
 		if (rc != XML_STATUS_OK) {
 			lerr(fn, p, "%s", 
 				XML_ErrorString
@@ -351,7 +351,7 @@ xliff_read(int fd, const char *fn, XML_Parser p)
 			xparse_free(xp);
 			return NULL;
 		}
-	} while (ssz > 0);
+	} while (!feof(f));
 
 	res = xp->set;
 	xp->set = NULL;
@@ -561,12 +561,11 @@ xliff_join_xliff(struct config *cfg, int copy,
 /*
  * Parse XLIFF files with existing translations and update them (using a
  * single file) with new labels in "cfg".
- * Returns zero on XLIFF parse failure or update failure, non-zero on
- * success.
+ * Returns zero on failure, non-zero on success.
  */
 static int
-xliff_update(struct config *cfg, int copy, 
-	const int *xmls, size_t xmlsz, const char **argv)
+xliff_update(const struct ort_lang_xliff *args, 
+	struct config *cfg, FILE *f)
 {
 	struct xliffset	*x;
 	int		 rc = 0;
@@ -577,14 +576,13 @@ xliff_update(struct config *cfg, int copy,
 	struct bitf	*b;
 	struct bitidx	*bi;
 
-	assert(xmlsz < 2);
-
 	if ((p = XML_ParserCreate(NULL)) == NULL)
-		err(EXIT_FAILURE, "XML_ParserCreate");
+		return 0;
 
-	x = xmlsz ?
-		xliff_read(xmls[0], argv[0], p) :
-		xliff_read(STDIN_FILENO, "<stdin>", p);
+	assert(args->insz == 1);
+	x = xliff_read(args->in[0], args->fnames[0], p);
+	if (x == NULL)
+		goto out;
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		TAILQ_FOREACH(ei, &e->eq, entries)
@@ -607,36 +605,44 @@ xliff_update(struct config *cfg, int copy,
 
 	qsort(x->u, x->usz, sizeof(struct xliffunit), xliffunit_sort);
 
-	printf("<xliff version=\"1.2\">\n"
-	       "\t<file target-language=\"%s\" "
-	          "tool=\"%s\">\n"
-	       "\t\t<body>\n",
-	       x->trglang, getprogname());
+	if (fprintf(f, 
+	    "<xliff version=\"1.2\" "
+	    "xmlns=\"urn:oasis:names:tc:xliff:document:1.2\">\n"
+	    "\t<file target-language=\"%s\">\n"
+            "\t\t<body>\n", x->trglang) < 0)
+		goto out;
 
 	for (i = 0; i < x->usz; i++)
-		if (x->u[i].target == NULL && copy)
-			printf("\t\t\t<trans-unit id=\"%s\">\n"
-			       "\t\t\t\t<source>%s</source>\n"
-			       "\t\t\t\t<target>%s</target>\n"
-			       "\t\t\t</trans-unit>\n",
-			       x->u[i].name, x->u[i].source,
-			       x->u[i].source);
-		else if (x->u[i].target == NULL)
-			printf("\t\t\t<trans-unit id=\"%s\">\n"
-			       "\t\t\t\t<source>%s</source>\n"
-			       "\t\t\t</trans-unit>\n",
-			       x->u[i].name, x->u[i].source);
-		else
-			printf("\t\t\t<trans-unit id=\"%s\">\n"
-			       "\t\t\t\t<source>%s</source>\n"
-			       "\t\t\t\t<target>%s</target>\n"
-			       "\t\t\t</trans-unit>\n",
-			       x->u[i].name, x->u[i].source,
-			       x->u[i].target);
+		if (x->u[i].target == NULL && 
+		    (args->flags & ORT_LANG_XLIFF_COPY)) {
+			if (fprintf(f,
+			    "\t\t\t<trans-unit id=\"%s\">\n"
+			    "\t\t\t\t<source>%s</source>\n"
+			    "\t\t\t\t<target>%s</target>\n"
+			    "\t\t\t</trans-unit>\n",
+			    x->u[i].name, x->u[i].source,
+			    x->u[i].source) < 0)
+				goto out;
+		} else if (x->u[i].target == NULL) {
+			if (fprintf(f, 
+			    "\t\t\t<trans-unit id=\"%s\">\n"
+			    "\t\t\t\t<source>%s</source>\n"
+			    "\t\t\t</trans-unit>\n",
+			    x->u[i].name, x->u[i].source) < 0)
+				goto out;
+		} else {
+			if (fprintf(f, 
+			    "\t\t\t<trans-unit id=\"%s\">\n"
+			    "\t\t\t\t<source>%s</source>\n"
+			    "\t\t\t\t<target>%s</target>\n"
+			    "\t\t\t</trans-unit>\n",
+			    x->u[i].name, x->u[i].source,
+			    x->u[i].target) < 0)
+				goto out;
+		}
 
-	puts("\t\t</body>\n"
-	     "\t</file>\n"
-	     "</xliff>");
+	if (fputs("\t\t</body>\n\t</file>\n</xliff>\n", f) == EOF)
+		goto out;
 
 	rc = 1;
 out:
@@ -652,8 +658,8 @@ out:
  * success.
  */
 static int
-xliff_join(struct config *cfg, int copy, 
-	int xml, const char *fn, XML_Parser p)
+xliff_join_single(struct config *cfg, int copy, 
+	FILE *xml, const char *fn, XML_Parser p)
 {
 	struct xliffset	*x;
 	size_t		 i;
@@ -689,32 +695,30 @@ xliff_join(struct config *cfg, int copy,
 }
 
 /*
- * Given file descriptors "xmls" of size "xmlsz" identified by "argv",
- * which may be NULL and zero and NULL, join to configuration "cfg".
- * Returns zero on XLIFF parse failure or merge failure, non-zero on
- * success.
+ * Join XLIFF files to configuration "cfg" and emit on "f".
+ * Returns zero on failure, non-zero on success.
  * On success, the output is printed.
  */
 static int
-xliff_join_fds(struct config *cfg, int copy, 
-	const int *xmls, size_t xmlsz, const char **argv)
+xliff_join(const struct ort_lang_xliff *args,
+	struct config *cfg, FILE *f)
 {
 	int	 	 rc = 1;
 	size_t		 i;
 	XML_Parser	 p;
 
 	if ((p = XML_ParserCreate(NULL)) == NULL)
-		err(EXIT_FAILURE, "XML_ParserCreate");
+		return 0;
 
-	for (i = 0; rc && i < xmlsz; i++) 
-		rc = xliff_join(cfg, copy, xmls[i], argv[i], p);
-	if (xmlsz == 0)
-		rc = xliff_join(cfg, copy, STDIN_FILENO, "<stdin>", p);
+	for (i = 0; rc && i < args->insz; i++) 
+		rc = xliff_join_single(cfg, 
+			args->flags & ORT_LANG_XLIFF_COPY, 
+			args->in[i], args->fnames[i], p);
 
 	XML_ParserFree(p);
 
 	if (rc)
-		ort_write_file(stdout, cfg);
+		ort_write_file(f, cfg);
 	return rc;
 }
 
@@ -723,14 +727,14 @@ main(int argc, char *argv[])
 {
 	struct ort_lang_xliff	  args;
 	FILE			**confs = NULL;
-	int			 *xmls = NULL;
+	FILE			 *defin = stdin;
+	const char		 *deffname = "<stdin>";
 	struct config		 *cfg = NULL;
 #define	OP_EXTRACT		  0
 #define	OP_JOIN			  1
 #define	OP_UPDATE		 (-1)
 	int			  c, op = OP_EXTRACT, rc = 0;
-	size_t			  confsz = 0, i, j, xmlsz = 0, 
-				  xmlstart = 0;
+	size_t			  confsz = 0, i, j, xmlstart = 0;
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
@@ -777,21 +781,23 @@ main(int argc, char *argv[])
 			i++;
 
 		xmlstart = i;
-		xmlsz = argc - i;
+		args.insz = argc - i;
 
-		if (confsz == 0 && xmlsz == 0)
+		if (confsz == 0 && args.insz == 0)
 			goto usage;
 
 		/* If we have 2 w/o -x, it's old-new. */
 
-		if (xmlsz == 0 && argc == 2)
-			xmlsz = confsz = xmlstart = 1;
+		if (args.insz == 0 && argc == 2)
+			args.insz = confsz = xmlstart = 1;
 
-		if (OP_UPDATE == op && xmlsz > 1)
+		if (OP_UPDATE == op && args.insz > 1)
 			goto usage;
 
-		if (xmlsz > 0 &&
-		    (xmls = calloc(xmlsz, sizeof(int))) == NULL)
+		args.fnames = (const char **)&argv[xmlstart];
+
+		if (args.insz > 0 &&
+		    (args.in = calloc(args.insz, sizeof(FILE *))) == NULL)
 			err(EXIT_FAILURE, "calloc");
 		if (confsz > 0 &&
 		    (confs = calloc(confsz, sizeof(FILE *))) == NULL)
@@ -802,12 +808,18 @@ main(int argc, char *argv[])
 				err(EXIT_FAILURE, "%s", argv[i]);
 		if (i < (size_t)argc && 0 == strcmp(argv[i], "-x"))
 			i++;
-		for (j = 0; i < (size_t)argc; j++, i++) {
-			assert(j < xmlsz);
-			xmls[j] = open(argv[i], O_RDONLY, 0);
-			if (xmls[j] == -1)
+		for (j = 0; i < (size_t)argc; j++, i++)
+			if ((args.in[j] = fopen(argv[i], "r")) == NULL)
 				err(EXIT_FAILURE, "%s", argv[i]);
+
+		/* Handle stdin case. */
+
+		if (args.insz == 0) {
+			args.insz = 1;
+			args.fnames = &deffname;
+			args.in = &defin;
 		}
+
 	} else {
 		confsz = (size_t)argc;
 		if (confsz > 0 &&
@@ -842,12 +854,10 @@ main(int argc, char *argv[])
 		rc = ort_lang_xliff_extract(&args, cfg, stdout);
 		break;
 	case OP_JOIN:
-		rc = xliff_join_fds(cfg, args.flags & ORT_LANG_XLIFF_COPY, xmls, xmlsz, 
-			(const char **)&argv[xmlstart + i]);
+		rc = xliff_join(&args, cfg, stdout);
 		break;
 	case OP_UPDATE:
-		rc = xliff_update(cfg, args.flags & ORT_LANG_XLIFF_COPY, xmls, xmlsz, 
-			(const char **)&argv[xmlstart + i]);
+		rc = xliff_update(&args, cfg, stdout);
 		break;
 	}
 
@@ -857,13 +867,13 @@ out:
 	ort_write_msg_file(stderr, &cfg->mq);
 	ort_config_free(cfg);
 
-	for (i = 0; i < xmlsz; i++)
-		close(xmls[i]);
+	for (i = 0; i < args.insz; i++)
+		fclose(args.in[i]);
 	for (i = 0; i < confsz; i++)
 		fclose(confs[i]);
 
 	free(confs);
-	free(xmls);
+	free(args.in);
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:
 	fprintf(stderr, 

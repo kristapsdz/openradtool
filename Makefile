@@ -391,6 +391,9 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	install -m 0444 regress/sqldiff/*.nresult .dist/openradtool-$(VERSION)/regress/sqldiff
 	install -m 0444 regress/xliff/*.xsd .dist/openradtool-$(VERSION)/regress/xliff
 	install -m 0444 regress/xliff/*.md .dist/openradtool-$(VERSION)/regress/xliff
+	install -m 0444 regress/xliff/*.ort .dist/openradtool-$(VERSION)/regress/xliff
+	install -m 0444 regress/xliff/*.result .dist/openradtool-$(VERSION)/regress/xliff
+	install -m 0444 regress/xliff/*.xlf .dist/openradtool-$(VERSION)/regress/xliff
 	install -m 0555 $(DOTAREXEC) .dist/openradtool-$(VERSION)
 	( cd .dist/ && tar zcf ../$@ ./ )
 	rm -rf .dist/
@@ -703,6 +706,26 @@ regress: all
 		./ort-sqldiff $$old $$new >/dev/null 2>&1 ; \
 		if [ $$? -eq 0 ] ; then \
 			echo "fail (did not error out)" ; \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+	done ; \
+	echo "=== ort-xliff output tests === " ; \
+	for f in regress/xliff/*.result ; do \
+		fn=regress/xliff/`basename $$f .result`.ort ; \
+		jn=regress/xliff/`basename $$f .result`.xlf ; \
+		printf "ort-xliff: $$fn... " ; \
+		./ort-xliff -j $$fn $$jn >$$tmp 2>/dev/null ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (did not execute)" ; \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		./ort-diff $$tmp $$f 2>/dev/null 1>&2 ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (output check)" ; \
+			./ort-diff $$tmp $$f ; \
 			rm -f $$tmp ; \
 			exit 1 ; \
 		fi ; \

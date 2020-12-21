@@ -721,24 +721,28 @@ xliff_join_fds(struct config *cfg, int copy,
 int
 main(int argc, char *argv[])
 {
-	FILE		**confs = NULL;
-	int		 *xmls = NULL;
-	struct config	 *cfg = NULL;
-#define	OP_EXTRACT	  0
-#define	OP_JOIN		  1
-#define	OP_UPDATE	 (-1)
-	int		  c, op = OP_EXTRACT, copy = 0, rc = 0;
-	size_t		  confsz = 0, i, j, xmlsz = 0, xmlstart = 0;
+	struct ort_lang_xliff	  args;
+	FILE			**confs = NULL;
+	int			 *xmls = NULL;
+	struct config		 *cfg = NULL;
+#define	OP_EXTRACT		  0
+#define	OP_JOIN			  1
+#define	OP_UPDATE		 (-1)
+	int			  c, op = OP_EXTRACT, rc = 0;
+	size_t			  confsz = 0, i, j, xmlsz = 0, 
+				  xmlstart = 0;
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
 		err(EXIT_FAILURE, "pledge");
 #endif
 
+	memset(&args, 0, sizeof(struct ort_lang_xliff));
+
 	while ((c = getopt(argc, argv, "cju")) != -1)
 		switch (c) {
 		case 'c':
-			copy = 1;
+			args.flags |= ORT_LANG_XLIFF_COPY;
 			break;
 		case 'j':
 			op = OP_JOIN;
@@ -835,14 +839,14 @@ main(int argc, char *argv[])
 
 	switch (op) {
 	case OP_EXTRACT:
-		rc = ort_lang_xliff_extract(cfg, copy, stdout);
+		rc = ort_lang_xliff_extract(&args, cfg, stdout);
 		break;
 	case OP_JOIN:
-		rc = xliff_join_fds(cfg, copy, xmls, xmlsz, 
+		rc = xliff_join_fds(cfg, args.flags & ORT_LANG_XLIFF_COPY, xmls, xmlsz, 
 			(const char **)&argv[xmlstart + i]);
 		break;
 	case OP_UPDATE:
-		rc = xliff_update(cfg, copy, xmls, xmlsz, 
+		rc = xliff_update(cfg, args.flags & ORT_LANG_XLIFF_COPY, xmls, xmlsz, 
 			(const char **)&argv[xmlstart + i]);
 		break;
 	}

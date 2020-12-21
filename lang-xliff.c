@@ -75,7 +75,8 @@ xliff_sort(const void *p1, const void *p2)
 }
 
 int
-ort_lang_xliff_extract(const struct config *cfg, int copy, FILE *f)
+ort_lang_xliff_extract(const struct ort_lang_xliff *args,
+	const struct config *cfg, FILE *f)
 {
 	const struct enm	 *e;
 	const struct eitem	 *ei;
@@ -105,13 +106,15 @@ ort_lang_xliff_extract(const struct config *cfg, int copy, FILE *f)
 
 	qsort(s, ssz, sizeof(char *), xliff_sort);
 
-	if (fputs("<xliff version=\"1.2\">\n"
-	    "\t<file target-language=\"TODO\" tool=\"ort\">\n"
+	if (fputs("<xliff version=\"1.2\" "
+	    "xmlns=\"urn:oasis:names:tc:xliff:document:1.2\">\n"
+	    "\t<file source-language=\"TODO\" original=\"\" "
+	    "target-language=\"TODO\" datatype=\"plaintext\">\n"
             "\t\t<body>\n", f) == EOF)
 		return 0;
 
 	for (i = 0; i < ssz; i++)
-		if (copy) {
+		if (args->flags & ORT_LANG_XLIFF_COPY) {
 			if (fprintf(f, 
 			    "\t\t\t<trans-unit id=\"%zu\">\n"
 			    "\t\t\t\t<source>%s</source>\n"

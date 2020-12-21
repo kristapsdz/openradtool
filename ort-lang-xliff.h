@@ -17,7 +17,15 @@
 #ifndef ORT_LANG_XLIFF_H
 #define ORT_LANG_XLIFF_H
 
-int	ort_lang_xliff_extract(const struct config *, int, FILE *);
+struct	ort_lang_xliff {
+	FILE		 	*in;
+	size_t			 insz;
+	unsigned int		 flags;
+#define ORT_LANG_XLIFF_COPY	 0x01
+};
+
+int	ort_lang_xliff_extract(const struct ort_lang_xliff *,
+		const struct config *, FILE *);
 
 #endif /* !ORT_LANG_XLIFF_H */
 

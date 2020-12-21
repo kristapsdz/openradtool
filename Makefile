@@ -364,30 +364,33 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/openradtool-$(VERSION)/regress/nodejs
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sqldiff
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sql
+	mkdir -p .dist/openradtool-$(VERSION)/regress/xliff
 	install -m 0444 $(DOTAR) .dist/openradtool-$(VERSION)
 	install -m 0444 man/*.[0-9] .dist/openradtool-$(VERSION)/man
 	install -m 0444 regress/*.ort .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.result .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.nresult .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.md .dist/openradtool-$(VERSION)/regress
+	install -m 0444 regress/c/*.ort .dist/openradtool-$(VERSION)/regress/c
+	install -m 0444 regress/c/*.c .dist/openradtool-$(VERSION)/regress/c
+	install -m 0444 regress/c/*.md .dist/openradtool-$(VERSION)/regress/c
+	install -m 0444 regress/c/regress.h .dist/openradtool-$(VERSION)/regress/c
 	install -m 0444 regress/diff/*.ort .dist/openradtool-$(VERSION)/regress/diff
 	install -m 0444 regress/diff/*.result .dist/openradtool-$(VERSION)/regress/diff
 	install -m 0444 regress/diff/*.md .dist/openradtool-$(VERSION)/regress/diff
-	install -m 0444 regress/sqldiff/*.ort .dist/openradtool-$(VERSION)/regress/sqldiff
-	install -m 0444 regress/sqldiff/*.result .dist/openradtool-$(VERSION)/regress/sqldiff
-	install -m 0444 regress/sqldiff/*.nresult .dist/openradtool-$(VERSION)/regress/sqldiff
-	install -m 0444 regress/sql/*.ort .dist/openradtool-$(VERSION)/regress/sql
-	install -m 0444 regress/sql/*.result .dist/openradtool-$(VERSION)/regress/sql
 	install -m 0444 regress/javascript/*.ort .dist/openradtool-$(VERSION)/regress/javascript
 	install -m 0444 regress/javascript/*.result .dist/openradtool-$(VERSION)/regress/javascript
 	install -m 0444 regress/javascript/*.ts .dist/openradtool-$(VERSION)/regress/javascript
 	install -m 0444 regress/javascript/*.xml .dist/openradtool-$(VERSION)/regress/javascript
 	install -m 0444 regress/nodejs/*.md .dist/openradtool-$(VERSION)/regress/nodejs
 	install -m 0444 regress/nodejs/*.ts .dist/openradtool-$(VERSION)/regress/nodejs
-	install -m 0444 regress/c/*.ort .dist/openradtool-$(VERSION)/regress/c
-	install -m 0444 regress/c/*.c .dist/openradtool-$(VERSION)/regress/c
-	install -m 0444 regress/c/*.md .dist/openradtool-$(VERSION)/regress/c
-	install -m 0444 regress/c/regress.h .dist/openradtool-$(VERSION)/regress/c
+	install -m 0444 regress/sql/*.ort .dist/openradtool-$(VERSION)/regress/sql
+	install -m 0444 regress/sql/*.result .dist/openradtool-$(VERSION)/regress/sql
+	install -m 0444 regress/sqldiff/*.ort .dist/openradtool-$(VERSION)/regress/sqldiff
+	install -m 0444 regress/sqldiff/*.result .dist/openradtool-$(VERSION)/regress/sqldiff
+	install -m 0444 regress/sqldiff/*.nresult .dist/openradtool-$(VERSION)/regress/sqldiff
+	install -m 0444 regress/xliff/*.xsd .dist/openradtool-$(VERSION)/regress/xliff
+	install -m 0444 regress/xliff/*.md .dist/openradtool-$(VERSION)/regress/xliff
 	install -m 0555 $(DOTAREXEC) .dist/openradtool-$(VERSION)
 	( cd .dist/ && tar zcf ../$@ ./ )
 	rm -rf .dist/
@@ -568,6 +571,32 @@ regress: all
 		fi ; \
 		echo "pass" ; \
 	done ; \
+	which xmllint >/dev/null 2>&1 ; \
+	if [ $$? -eq 0 ]; then \
+		echo "=== ort-xliff syntax tests === " ; \
+		sc=regress/xliff/xliff-core-1.2-strict.xsd ; \
+		for f in regress/*.ort ; do \
+			printf "xmllint: $$f... " ; \
+			./ort-xliff $$f >$$tmp 2>/dev/null ; \
+			if [ $$? -ne 0 ] ; then \
+				echo "fail (did not execute)" ; \
+				rm -f $$tmp ; \
+				exit 1 ; \
+			fi ; \
+			xmllint --schema $$sc --nonet --noout \
+				--path "regress/xliff" $$tmp 2>/dev/null ; \
+			if [ $$? -ne 0 ] ; then \
+				echo "fail" ; \
+				xmllint --schema $$sc --nonet \
+					--path "regress/xliff" $$tmp ; \
+				rm -f $$tmp ; \
+				exit 1 ; \
+			fi ; \
+			echo "pass" ; \
+		done ; \
+	else \
+		echo "!!! skipping ort-xliff syntax tests !!! " ; \
+	fi ; \
 	echo "=== ort-sql syntax tests === " ; \
 	for f in regress/*.ort ; do \
 		printf "sqlite3: $$f... " ; \

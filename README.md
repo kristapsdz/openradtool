@@ -42,6 +42,9 @@ sources.  (Again, this uses BSD make, so it may be `bmake` on your
 system.)  The full regression suite is extensive and may take several
 minutes to run to completion.
 
+None of the tests require an external network, though some will use an
+internal network connection to test client/server mode.
+
 ```sh
 make regress
 ```
@@ -68,6 +71,10 @@ installed for validating JSON against a schema.
 The C interface tests need [kcgi](https://kristaps.bsd.lv/kcgi) and
 [libcurl](https://curl.se/libcur) installed.  The regression suite will
 automatically pick these up.
+
+Lastly, the XLIFF tests need [xmllint](http://xmlsoft.org/) to validate
+the XLIFF output.  The XSD files are included in the regression suite,
+so no network connection is made to fetch them.
 
 # License
 

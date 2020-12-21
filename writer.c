@@ -614,11 +614,11 @@ parse_write_strct(struct writer *w, const struct strct *p)
  */
 static int
 parse_write_label(struct writer *w, const struct config *cfg,
-	const struct label *p, size_t tabs, size_t pos)
+	const struct label *p, size_t pos)
 {
 	const char	*cp = p->label;
 
-	if (pos && !wprint(w, "%sjslabel", tabs > 1 ? "\t\t" : "\t"))
+	if (pos && !wprint(w, "\n\t\tjslabel"))
 		return 0;
 	else if (pos == 0 && !wprint(w, " jslabel"))
 		return 0;
@@ -664,7 +664,7 @@ parse_write_bitf(struct writer *w,
 			return 0;
 		i = 0;
 		TAILQ_FOREACH(l, &b->labels, entries)
-			if (!parse_write_label(w, cfg, l, 2, i++))
+			if (!parse_write_label(w, cfg, l, i++))
 				return 0;
 		if (!parse_write_comment(w, b->doc, 2))
 			return 0;
@@ -677,7 +677,7 @@ parse_write_bitf(struct writer *w,
 			return 0;
 		i = 0;
 		TAILQ_FOREACH(l, &p->labels_unset, entries)
-			if (!parse_write_label(w, cfg, l, 2, i++))
+			if (!parse_write_label(w, cfg, l, i++))
 				return 0;
 		if (!wputs(w, ";\n"))
 			return 0;
@@ -688,7 +688,7 @@ parse_write_bitf(struct writer *w,
 			return 0;
 		i = 0;
 		TAILQ_FOREACH(l, &p->labels_null, entries)
-			if (!parse_write_label(w, cfg, l, 2, i++))
+			if (!parse_write_label(w, cfg, l, i++))
 				return 0;
 		if (!wputs(w, ";\n"))
 			return 0;
@@ -727,7 +727,7 @@ parse_write_enm(struct writer *w,
 				return 0;
 		i = 0;
 		TAILQ_FOREACH(l, &e->labels, entries)
-			if (!parse_write_label(w, cfg, l, 2, i++))
+			if (!parse_write_label(w, cfg, l, i++))
 				return 0;
 		if (!parse_write_comment(w, e->doc, 2))
 			return 0;
@@ -745,7 +745,7 @@ parse_write_enm(struct writer *w,
 			return 0;
 		i = 0;
 		TAILQ_FOREACH(l, &p->labels_null, entries)
-			if (!parse_write_label(w, cfg, l, 2, i++))
+			if (!parse_write_label(w, cfg, l, i++))
 				return 0;
 		if (!wputs(w, ";\n"))
 			return 0;

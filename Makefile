@@ -390,7 +390,6 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	install -m 0444 regress/sqldiff/*.result .dist/openradtool-$(VERSION)/regress/sqldiff
 	install -m 0444 regress/sqldiff/*.nresult .dist/openradtool-$(VERSION)/regress/sqldiff
 	install -m 0444 regress/xliff/*.xsd .dist/openradtool-$(VERSION)/regress/xliff
-	install -m 0444 regress/xliff/*.md .dist/openradtool-$(VERSION)/regress/xliff
 	install -m 0444 regress/xliff/*.ort .dist/openradtool-$(VERSION)/regress/xliff
 	install -m 0444 regress/xliff/*.result .dist/openradtool-$(VERSION)/regress/xliff
 	install -m 0444 regress/xliff/*.xlf .dist/openradtool-$(VERSION)/regress/xliff

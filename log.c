@@ -140,6 +140,9 @@ ort_write_msg_file(FILE *f, const struct msgq *q)
 {
 	const struct msg	 *m;
 
+	if (q == NULL)
+		return 1;
+
 	TAILQ_FOREACH(m, q, entries)
 		if (!gen_msg(f, m))
 			return 0;

@@ -73,29 +73,22 @@ xliff_extract_unit(struct config *cfg, FILE *f,
 	const struct labelq *lq, const char *type,
 	const struct pos *pos, const char ***s, size_t *ssz)
 {
-	const struct label *l;
-	size_t		    i;
+	const struct label	*l;
+	size_t			 i;
 
 	TAILQ_FOREACH(l, lq, entries)
 		if (l->lang == 0)
 			break;
 
-#if 0
 	if (l == NULL && type == NULL) {
-		fprintf(stderr, "%s:%zu:%zu: missing "
-			"jslabel for translation\n",
-			pos->fname, pos->line, pos->column);
-		return;
-	} else if (l == NULL) {
-		fprintf(stderr, "%s:%zu:%zu: missing "
-			"\"%s\" jslabel for translation\n",
-			pos->fname, pos->line, pos->column, type);
-		return;
-	}
-#endif
-
-	if (l == NULL)
+		ort_msg(cfg, MSGTYPE_WARN, 0, pos, 
+			"missing jslabel for translation");
 		return 1;
+	} else if (l == NULL) {
+		ort_msg(cfg, MSGTYPE_WARN, 0, pos, "missing "
+			"\"%s\" jslabel for translation", type);
+		return 1;
+	}
 
 	for (i = 0; i < *ssz; i++)
 		if (strcmp((*s)[i], l->label) == 0)

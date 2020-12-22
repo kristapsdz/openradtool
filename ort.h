@@ -658,12 +658,10 @@ struct diffq	*ort_diff(const struct config *, const struct config *);
 void		 ort_diff_free(struct diffq *);
 int		 ort_write_diff_file(FILE *, const struct diffq *,
 			const char **, size_t, const char **, size_t);
-void	 	 ort_msgv(struct config *, enum msgtype, 
-			int, const struct pos *, 
-			const char *, va_list);
-void	 	 ort_msg(struct config *, enum msgtype, 
-			int, const struct pos *, 
-			const char *, ...);
+void	 	 ort_msgv(struct config *, enum msgtype, int, 
+			const struct pos *, const char *, va_list);
+void	 	 ort_msg(struct config *, enum msgtype, int, 
+			const struct pos *, const char *, ...);
 
 __END_DECLS
 

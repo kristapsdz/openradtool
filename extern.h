@@ -125,11 +125,4 @@ struct	config_private {
 	struct resolveq		 rq; /* resolution requests */
 };
 
-void	 ort_msgv(struct config *, enum msgtype, 
-		const char *, int, const struct pos *, 
-		const char *, va_list);
-void	 ort_msg(struct config *, enum msgtype, 
-		const char *, int, const struct pos *, 
-		const char *, ...);
-
 #endif /* !EXTERN_H */

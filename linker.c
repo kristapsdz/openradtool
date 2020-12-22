@@ -32,8 +32,6 @@
 #include "extern.h"
 #include "linker.h"
 
-static	const char *const channel = "linker";
-
 /*
  * Generate a warning message at position "pos".
  */
@@ -45,12 +43,10 @@ gen_warnx(struct config *cfg,
 
 	if (fmt != NULL) {
 		va_start(ap, fmt);
-		ort_msgv(cfg, MSGTYPE_WARN, 
-			channel, 0, pos, fmt, ap);
+		ort_msgv(cfg, MSGTYPE_WARN, 0, pos, fmt, ap);
 		va_end(ap);
 	} else
-		ort_msg(cfg, MSGTYPE_WARN, 
-			channel, 0, pos, NULL);
+		ort_msg(cfg, MSGTYPE_WARN, 0, pos, NULL);
 }
 
 /*
@@ -63,7 +59,7 @@ gen_err(struct config *cfg, const struct pos *pos)
 {
 	int	 er = errno;
 
-	ort_msg(cfg, MSGTYPE_FATAL, channel, er, pos, NULL);
+	ort_msg(cfg, MSGTYPE_FATAL, er, pos, NULL);
 }
 
 /*
@@ -79,11 +75,10 @@ gen_errx(struct config *cfg,
 	if (fmt != NULL) {
 		va_start(ap, fmt);
 		ort_msgv(cfg, MSGTYPE_ERROR, 
-			channel, 0, pos, fmt, ap);
+			0, pos, fmt, ap);
 		va_end(ap);
 	} else
-		ort_msg(cfg, MSGTYPE_ERROR, 
-			channel, 0, pos, NULL);
+		ort_msg(cfg, MSGTYPE_ERROR, 0, pos, NULL);
 }
 
 /*

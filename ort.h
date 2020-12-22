@@ -459,19 +459,16 @@ struct	role {
 };
 
 enum	msgtype {
-	MSGTYPE_WARN, /* recoverable warning */
-	MSGTYPE_ERROR, /* fatal non-system error */
-	MSGTYPE_FATAL /* fatal system error */
+	MSGTYPE_WARN,
+	MSGTYPE_ERROR,
+	MSGTYPE_FATAL
 };
 
-/*
- * A single message emitted during the parse.
- */
 struct	msg {
-	struct pos	 pos; /* position (or zero/NULL) */
-	enum msgtype	 type; /* type of message */
-	char		*buf; /* custom buffer or NULL */
-	int		 er; /* if MSGTYPE_FATAL, errno */
+	struct pos	 pos;
+	enum msgtype	 type;
+	char		*buf;
+	int		 er;
 	TAILQ_ENTRY(msg) entries;
 };
 
@@ -661,6 +658,12 @@ struct diffq	*ort_diff(const struct config *, const struct config *);
 void		 ort_diff_free(struct diffq *);
 int		 ort_write_diff_file(FILE *, const struct diffq *,
 			const char **, size_t, const char **, size_t);
+void	 	 ort_msgv(struct config *, enum msgtype, 
+			int, const struct pos *, 
+			const char *, va_list);
+void	 	 ort_msg(struct config *, enum msgtype, 
+			int, const struct pos *, 
+			const char *, ...);
 
 __END_DECLS
 

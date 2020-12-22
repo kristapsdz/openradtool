@@ -39,7 +39,6 @@ static	const char *const msgtypes[] = {
  * message.
  * This accepts an optionally-NULL "msg" at optionally-NULL "pos" with
  * errno "er" or zero (only recognised on MSGTYPE_FATAL).
- * The "chan" value may not be NULL.
  * If "cfg" is not NULL, this enqueues the message into the "msgs" array
  * for that configuration.
  * The "msg" pointer will be freed if "cfg" is NULL, as otherwise its
@@ -47,7 +46,7 @@ static	const char *const msgtypes[] = {
  */
 static void
 ort_log(struct config *cfg, enum msgtype type, 
-	const char *chan, int er, const struct pos *pos, char *msg)
+	int er, const struct pos *pos, char *msg)
 {
 	struct msg	*m;
 
@@ -75,14 +74,14 @@ ort_log(struct config *cfg, enum msgtype type,
  */
 void
 ort_msgv(struct config *cfg, enum msgtype type, 
-	const char *chan, int er, const struct pos *pos, 
+	int er, const struct pos *pos, 
 	const char *fmt, va_list ap)
 {
 	char	*buf = NULL;
 
 	if (fmt != NULL && vasprintf(&buf, fmt, ap) == -1)
 		return;
-	ort_log(cfg, type, chan, er, pos, buf);
+	ort_log(cfg, type, er, pos, buf);
 }
 
 /*
@@ -93,18 +92,18 @@ ort_msgv(struct config *cfg, enum msgtype type,
  */
 void
 ort_msg(struct config *cfg, enum msgtype type, 
-	const char *chan, int er, const struct pos *pos, 
+	int er, const struct pos *pos, 
 	const char *fmt, ...)
 {
 	va_list	 ap;
 
 	if (fmt == NULL) {
-		ort_log(cfg, type, chan, er, pos, NULL);
+		ort_log(cfg, type, er, pos, NULL);
 		return;
 	}
 
 	va_start(ap, fmt);
-	ort_msgv(cfg, type, chan, er, pos, fmt, ap);
+	ort_msgv(cfg, type, er, pos, fmt, ap);
 	va_end(ap);
 }
 
@@ -128,7 +127,7 @@ gen_msg(FILE *f, const struct msg *m)
 	if (m->buf != NULL && fputs(m->buf, f) == EOF)
 		return 0;
 
-	if (m->type == MSGTYPE_FATAL && fprintf(f, "%s%s", 
+	if (m->er != 0 && fprintf(f, "%s%s", 
 	    m->buf != NULL ? ": " : "", strerror(m->er)) < 0)
 		return 0;
 

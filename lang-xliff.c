@@ -69,7 +69,8 @@ static void
 xstart(void *dat, const XML_Char *s, const XML_Char **atts);
 
 static int
-xliff_extract_unit(FILE *f, const struct labelq *lq, const char *type,
+xliff_extract_unit(struct config *cfg, FILE *f, 
+	const struct labelq *lq, const char *type,
 	const struct pos *pos, const char ***s, size_t *ssz)
 {
 	const struct label *l;
@@ -92,6 +93,7 @@ xliff_extract_unit(FILE *f, const struct labelq *lq, const char *type,
 		return;
 	}
 #endif
+
 	if (l == NULL)
 		return 1;
 
@@ -768,7 +770,7 @@ ort_lang_xliff_join(const struct ort_lang_xliff *args,
 
 int
 ort_lang_xliff_extract(const struct ort_lang_xliff *args,
-	const struct config *cfg, FILE *f)
+	struct config *cfg, FILE *f)
 {
 	const struct enm	 *e;
 	const struct eitem	 *ei;
@@ -779,19 +781,19 @@ ort_lang_xliff_extract(const struct ort_lang_xliff *args,
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		TAILQ_FOREACH(ei, &e->eq, entries)
-			if (!xliff_extract_unit(f, &ei->labels, 
+			if (!xliff_extract_unit(cfg, f, &ei->labels, 
 			    NULL, &ei->pos, &s, &ssz))
 				return 0;
 
 	TAILQ_FOREACH(b, &cfg->bq, entries) {
 		TAILQ_FOREACH(bi, &b->bq, entries)
-			if (!xliff_extract_unit(f, &bi->labels, 
+			if (!xliff_extract_unit(cfg, f, &bi->labels, 
 			    NULL, &bi->pos, &s, &ssz))
 				return 0;
-		if (!xliff_extract_unit(f, &b->labels_unset, 
+		if (!xliff_extract_unit(cfg, f, &b->labels_unset, 
 		    "unset", &b->pos, &s, &ssz))
 			return 0;
-		if (!xliff_extract_unit(f, &b->labels_null,
+		if (!xliff_extract_unit(cfg, f, &b->labels_null,
 		    "isnull", &b->pos, &s, &ssz))
 			return 0;
 	}

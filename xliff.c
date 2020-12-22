@@ -20,11 +20,9 @@
 # include <sys/queue.h>
 #endif
 
-#include <assert.h>
 #if HAVE_ERR
 # include <err.h>
 #endif
-#include <fcntl.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,7 +48,7 @@ main(int argc, char *argv[])
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
-		err(EXIT_FAILURE, "pledge");
+		err(1, "pledge");
 #endif
 
 	memset(&args, 0, sizeof(struct ort_lang_xliff));
@@ -110,19 +108,19 @@ main(int argc, char *argv[])
 
 		if (args.insz > 0 &&
 		    (args.in = calloc(args.insz, sizeof(FILE *))) == NULL)
-			err(EXIT_FAILURE, "calloc");
+			err(1, "calloc");
 		if (confsz > 0 &&
 		    (confs = calloc(confsz, sizeof(FILE *))) == NULL)
-			err(EXIT_FAILURE, "calloc");
+			err(1, "calloc");
 
 		for (i = 0; i < confsz; i++)
 			if ((confs[i] = fopen(argv[i], "r")) == NULL)
-				err(EXIT_FAILURE, "%s", argv[i]);
+				err(1, "%s", argv[i]);
 		if (i < (size_t)argc && 0 == strcmp(argv[i], "-x"))
 			i++;
 		for (j = 0; i < (size_t)argc; j++, i++)
 			if ((args.in[j] = fopen(argv[i], "r")) == NULL)
-				err(EXIT_FAILURE, "%s", argv[i]);
+				err(1, "%s", argv[i]);
 
 		/* Handle stdin case. */
 
@@ -136,18 +134,18 @@ main(int argc, char *argv[])
 		confsz = (size_t)argc;
 		if (confsz > 0 &&
 		    (confs = calloc(confsz, sizeof(FILE *))) == NULL)
-			err(EXIT_FAILURE, NULL);
+			err(1, NULL);
 		for (i = 0; i < confsz; i++)
 			if ((confs[i] = fopen(argv[i], "r")) == NULL)
-				err(EXIT_FAILURE, "%s", argv[i]);
+				err(1, "%s", argv[i]);
 	}
 
 #if HAVE_PLEDGE
 	if (pledge("stdio", NULL) == -1)
-		err(EXIT_FAILURE, "pledge");
+		err(1, "pledge");
 #endif
 	if ((cfg = ort_config_alloc()) == NULL)
-		err(EXIT_FAILURE, NULL);
+		err(1, NULL);
 
 	for (i = 0; i < confsz; i++)
 		if (!ort_parse_file(cfg, confs[i], argv[i]))
@@ -186,7 +184,7 @@ out:
 
 	free(confs);
 	free(args.in);
-	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
+	return !rc;
 usage:
 	fprintf(stderr, 
 		"usage: %s [-c] -j [config...] -x [xliff...]\n"
@@ -196,5 +194,5 @@ usage:
 		"       %s [-c] [config...]\n",
 		getprogname(), getprogname(), getprogname(),
 		getprogname(), getprogname());
-	return EXIT_FAILURE;
+	return 1;
 }

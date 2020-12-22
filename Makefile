@@ -78,6 +78,7 @@ HTMLS		 = archive.html \
 		   man/ort_parse_file.3.html \
 		   man/ort_write_diff_file.3.html \
 		   man/ort_write_file.3.html \
+		   man/ort_write_msg_file.3.html \
 		   man/ort.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/openradtool
 MAN3S		 = man/ort.3 \
@@ -91,7 +92,8 @@ MAN3S		 = man/ort.3 \
 		   man/ort_parse_close.3 \
 		   man/ort_parse_file.3 \
 		   man/ort_write_file.3 \
-		   man/ort_write_diff_file.3
+		   man/ort_write_diff_file.3 \
+		   man/ort_write_msg_file.3
 MAN5S		 = man/ort.5
 MAN1S		 = man/ort.1 \
 		   man/ort-audit.1 \

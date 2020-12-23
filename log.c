@@ -34,16 +34,6 @@ static	const char *const msgtypes[] = {
 	"fatal" /* MSGTYPE_FATAL */
 };
 
-/*
- * Internal logging function: logs to stderr and (optionally) queues
- * message.
- * This accepts an optionally-NULL "msg" at optionally-NULL "pos" with
- * errno "er" or zero (only recognised on MSGTYPE_FATAL).
- * If "cfg" is not NULL, this enqueues the message into the "msgs" array
- * for that configuration.
- * The "msg" pointer will be freed if "cfg" is NULL, as otherwise its
- * ownership is transferred to the "msgs" array.
- */
 static void
 ort_log(struct config *cfg, enum msgtype type, 
 	int er, const struct pos *pos, char *msg)
@@ -62,8 +52,12 @@ ort_log(struct config *cfg, enum msgtype type,
 	m->type = type;
 	m->er = er;
 	m->buf = msg;
-	if (pos != NULL)
-		m->pos = *pos;
+	if (pos != NULL) {
+		if (pos->fname != NULL)
+			m->pos.fname = strdup(pos->fname);
+		m->pos.line = pos->line;
+		m->pos.column = pos->column;
+	}
 }
 
 /*

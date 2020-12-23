@@ -21,9 +21,6 @@
 #endif
 
 #include <assert.h>
-#if HAVE_ERR
-# include <err.h>
-#endif
 #include <expat.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -33,16 +30,22 @@
 #include "ort.h"
 #include "ort-lang-xliff.h"
 
+/*
+ * A single source->target pair.
+ */
 struct	xliffunit {
-	char		*name;
-	char		*source;
-	char		*target;
+	char			*name; /* id */
+	char			*source; /* source */
+	char			*target; /* target */
 };
 
+/*
+ * All source->target pairs for a given translation.
+ */
 struct	xliffset {
-	struct xliffunit *u;
-	size_t		  usz;
-	char	 	 *trglang; /* target language */
+	struct xliffunit	*u; /* translatable pairs */
+	size_t			 usz; /* size of "u" */
+	char			 *trglang; /* target language */
 };
 
 /*
@@ -51,23 +54,25 @@ struct	xliffset {
  * the xliffs pointer.
  */
 struct	xparse {
-	XML_Parser	  p;
-	const char	 *fname; /* xliff filename */
-	struct xliffset	 *set; /* resulting translation units */
-	struct xliffunit *curunit; /* current translating unit */
-	int		  type; /* >0 source, <0 target, 0 none */
+	struct config		*cfg; /* ort(3) config (for messages) */
+	XML_Parser		 p; /* parser */
+	const char		*fname; /* xliff filename */
+	struct xliffset		*set; /* resulting translation units */
+	struct xliffunit	*curunit; /* current translating unit */
+	int			 type; /* >0 source, <0 target, 0 none */
+	int			 er; /* if non-zero exit on sys fail */
 };
 
-static void
-lerr(const char *fn, XML_Parser p, const char *fmt, ...)
-	__attribute__((format(printf, 3, 4)));
+/* Forward declarations. */
 
-static void
-xend(void *dat, const XML_Char *s);
+static	void xend(void *, const XML_Char *);
+static	void xstart(void *, const XML_Char *, const XML_Char **);
+static	void xparse_err(struct xparse *, const char *, ...)
+	__attribute__((format(printf, 2, 3)));
 
-static void
-xstart(void *dat, const XML_Char *s, const XML_Char **atts);
-
+/*
+ * Return zero on failure, non-zero on success.
+ */
 static int
 xliff_extract_unit(struct config *cfg, FILE *f, 
 	const struct labelq *lq, const char *type,
@@ -75,6 +80,7 @@ xliff_extract_unit(struct config *cfg, FILE *f,
 {
 	const struct label	*l;
 	size_t			 i;
+	void			*pp;
 
 	TAILQ_FOREACH(l, lq, entries)
 		if (l->lang == 0)
@@ -94,9 +100,10 @@ xliff_extract_unit(struct config *cfg, FILE *f,
 		if (strcmp((*s)[i], l->label) == 0)
 			return 1;
 
-	*s = reallocarray(*s, *ssz + 1, sizeof(char **));
-	if (NULL == *s)
+	pp = reallocarray(*s, *ssz + 1, sizeof(char **));
+	if (NULL == pp)
 		return 0;
+	*s = pp;
 	(*s)[*ssz] = l->label;
 	(*ssz)++;
 	return 1;
@@ -110,29 +117,18 @@ xliff_sort(const void *p1, const void *p2)
 }
 
 static void
-lerr(const char *fn, XML_Parser p, const char *fmt, ...)
+xparse_err(struct xparse *xp, const char *fmt, ...)
 {
-	va_list	 ap;
+	va_list		 ap;
+	struct pos	 pos;
 
-	fprintf(stderr, "%s:%zu:%zu: ", fn, 
-		XML_GetCurrentLineNumber(p),
-		XML_GetCurrentColumnNumber(p));
+	pos.fname = xp->fname;
+	pos.line = XML_GetCurrentLineNumber(xp->p);
+	pos.column = XML_GetCurrentColumnNumber(xp->p);
+
 	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
+	ort_msgv(xp->cfg, MSGTYPE_WARN, 0, &pos, fmt, ap);
 	va_end(ap);
-	fputc('\n', stderr);
-}
-
-static struct xparse *
-xparse_alloc(const char *xliff, XML_Parser parse)
-{
-	struct xparse	*p;
-
-	if ((p = calloc(1, sizeof(struct xparse))) == NULL)
-		err(EXIT_FAILURE, "calloc");
-	p->fname = xliff;
-	p->p = parse;
-	return p;
 }
 
 static void
@@ -167,6 +163,7 @@ xtext(void *dat, const XML_Char *s, int len)
 {
 	struct xparse	 *p = dat;
 	size_t		 sz;
+	void		*pp;
 
 	assert(p->curunit != NULL);
 	assert(p->type);
@@ -174,32 +171,44 @@ xtext(void *dat, const XML_Char *s, int len)
 	if (p->type > 0) {
 		if (p->curunit->source != NULL) {
 			sz = strlen(p->curunit->source);
-			p->curunit->source = realloc
-				(p->curunit->source,
+			pp = realloc(p->curunit->source,
 				 sz + len + 1);
-			if (p->curunit->source == NULL)
-				err(EXIT_FAILURE, "realloc");
+			if (pp == NULL) {
+				p->er = 1;
+				XML_StopParser(p->p, 0);
+				return;
+			}
+			p->curunit->source = pp;
 			memcpy(p->curunit->source + sz, s, len);
 			p->curunit->source[sz + len] = '\0';
 		} else {
 			p->curunit->source = strndup(s, len);
-			if (p->curunit->source == NULL)
-				err(EXIT_FAILURE, "strdnup");
+			if (p->curunit->source == NULL) {
+				p->er = 1;
+				XML_StopParser(p->p, 0);
+				return;
+			}
 		}
 	} else {
 		if (p->curunit->target != NULL) {
 			sz = strlen(p->curunit->target);
-			p->curunit->target = realloc
-				(p->curunit->target,
+			pp = realloc(p->curunit->target,
 				 sz + len + 1);
-			if (p->curunit->target == NULL)
-				err(EXIT_FAILURE, "realloc");
+			if (pp == NULL) {
+				p->er = 1;
+				XML_StopParser(p->p, 0);
+				return;
+			}
+			p->curunit->target = pp;
 			memcpy(p->curunit->target + sz, s, len);
 			p->curunit->target[sz + len] = '\0';
 		} else {
 			p->curunit->target = strndup(s, len);
-			if (p->curunit->target == NULL)
-				err(EXIT_FAILURE, "strndup");
+			if (p->curunit->target == NULL) {
+				p->er = 1;
+				XML_StopParser(p->p, 0);
+				return;
+			}
 		}
 	}
 }
@@ -210,39 +219,41 @@ xstart(void *dat, const XML_Char *s, const XML_Char **atts)
 	struct xparse	 *p = dat;
 	const XML_Char	**attp;
 	const char	 *ver, *id;
+	void		 *pp;
 
 	if (strcmp(s, "xliff") == 0) {
 		if (p->set != NULL) {
-			lerr(p->fname, p->p, "nested <xliff>");
+			xparse_err(p, "nested <xliff>");
 			XML_StopParser(p->p, 0);
 			return;
 		}
 		p->set = calloc(1, sizeof(struct xliffset));
-		if (p->set == NULL)
-			err(EXIT_FAILURE, "calloc");
+		if (p->set == NULL) {
+			p->er = 1;
+			XML_StopParser(p->p, 0);
+			return;
+		}
 		ver = NULL;
 		for (attp = atts; *attp != NULL; attp += 2) 
 			if (strcmp(attp[0], "version") == 0)
 				ver = attp[1];
 		if (ver == NULL) {
-			lerr(p->fname, p->p, 
-				"<xliff> without version");
+			xparse_err(p, "<xliff> without version");
 			XML_StopParser(p->p, 0);
 			return;
 		} else if (strcmp(ver, "1.2")) {
-			lerr(p->fname, p->p, 
-				"<xliff> version must be 1.2");
+			xparse_err(p, "<xliff> version must be 1.2");
 			XML_StopParser(p->p, 0);
 			return;
 		}
 	} else if (strcmp(s, "file") == 0) {
 		if (p->set == NULL) {
-			lerr(p->fname, p->p, "<file> not in <xliff>");
+			xparse_err(p, "<file> not in <xliff>");
 			XML_StopParser(p->p, 0);
 			return;
 		}
 		if (p->set->trglang != NULL) {
-			lerr(p->fname, p->p, "nested <file>");
+			xparse_err(p, "nested <file>");
 			XML_StopParser(p->p, 0);
 			return;
 		}
@@ -250,24 +261,24 @@ xstart(void *dat, const XML_Char *s, const XML_Char **atts)
 			if (0 == strcmp(attp[0], "target-language")) {
 				free(p->set->trglang);
 				p->set->trglang = strdup(attp[1]);
-				if (p->set->trglang == NULL)
-					err(EXIT_FAILURE, "strdup");
+				if (p->set->trglang == NULL) {
+					p->er = 1;
+					XML_StopParser(p->p, 0);
+					return;
+				}
 			}
 		if (p->set->trglang == NULL) {
-			lerr(p->fname, p->p, "<file> "
-				"target-language not given");
+			xparse_err(p, "missing <file> target-language");
 			XML_StopParser(p->p, 0);
 			return;
 		}
 	} else if (strcmp(s, "trans-unit") == 0) {
 		if (p->set->trglang == NULL) {
-			lerr(p->fname, p->p, 
-				"<trans-unit> not in <file>");
+			xparse_err(p, "<trans-unit> not in <file>");
 			XML_StopParser(p->p, 0);
 			return;
 		} else if (p->curunit != NULL) {
-			lerr(p->fname, p->p, 
-				"nested <trans-unit>");
+			xparse_err(p, "nested <trans-unit>");
 			XML_StopParser(p->p, 0);
 			return;
 		}
@@ -279,30 +290,35 @@ xstart(void *dat, const XML_Char *s, const XML_Char **atts)
 				break;
 			}
 		if (id == NULL) {
-			lerr(p->fname, p->p, 
-				"<trans-unit> without id");
+			xparse_err(p, "<trans-unit> without id");
 			XML_StopParser(p->p, 0);
 			return;
 		}
 
-		p->set->u = reallocarray
+		pp = reallocarray
 			(p->set->u, p->set->usz + 1,
 			 sizeof(struct xliffunit));
-		if (p->set->u == NULL)
-			err(EXIT_FAILURE, "reallocarray");
+		if (pp == NULL) {
+			p->er = 1;
+			XML_StopParser(p->p, 0);
+			return;
+		}
+		p->set->u = pp;
 		p->curunit = &p->set->u[p->set->usz++];
 		memset(p->curunit, 0, sizeof(struct xliffunit));
 		p->curunit->name = strdup(id);
-		if (p->curunit->name == NULL)
-			err(EXIT_FAILURE, "strdup");
+		if (p->curunit->name == NULL) {
+			p->er = 1;
+			XML_StopParser(p->p, 0);
+			return;
+		}
 	} else if (strcmp(s, "source") == 0) {
 		if (p->curunit == NULL) {
-			lerr(p->fname, p->p, 
-				"<soure> not in <trans-unit>");
+			xparse_err(p, "<soure> not in <trans-unit>");
 			XML_StopParser(p->p, 0);
 			return;
 		} else if (p->type) {
-			lerr(p->fname, p->p, "nested <source>");
+			xparse_err(p, "nested <source>");
 			XML_StopParser(p->p, 0);
 			return;
 		}
@@ -310,12 +326,11 @@ xstart(void *dat, const XML_Char *s, const XML_Char **atts)
 		XML_SetDefaultHandlerExpand(p->p, xtext);
 	} else if (strcmp(s, "target") == 0) {
 		if (p->curunit == NULL) {
-			lerr(p->fname, p->p, 
-				"<target> not in <trans-unit>");
+			xparse_err(p, "<target> not in <trans-unit>");
 			XML_StopParser(p->p, 0);
 			return;
 		} else if (p->type) {
-			lerr(p->fname, p->p, "nested <target>");
+			xparse_err(p, "nested <target>");
 			XML_StopParser(p->p, 0);
 			return;
 		}
@@ -323,8 +338,7 @@ xstart(void *dat, const XML_Char *s, const XML_Char **atts)
 		XML_SetDefaultHandlerExpand(p->p, xtext);
 	} else {
 		if (p->type) {
-			lerr(p->fname, p->p, "element "
-				"in translatable content");
+			xparse_err(p, "element in translation");
 			XML_StopParser(p->p, 0);
 			return;
 		}
@@ -342,8 +356,8 @@ xend(void *dat, const XML_Char *s)
 		assert(p->curunit != NULL);
 		if (p->curunit->source == NULL || 
 		    p->curunit->target == NULL) {
-			lerr(p->fname, p->p, "missing <source> "
-				"or <target> in <trans-unit>");
+			xparse_err(p, "missing <source> or "
+				"<target> in <trans-unit>");
 			XML_StopParser(p->p, 0);
 			return;
 		}
@@ -358,20 +372,26 @@ xend(void *dat, const XML_Char *s)
 }
 
 /*
- * Parse an XLIFF file symbolically named "fn".
- * Returns NULL on failure or the xliffset on success.
+ * Parse an XLIFF file.
+ * Sets result in "ret" iff returning >0, otherwise res is set NULL.
+ * Returns <0 on failure, 0 on syntax error, >0 on success.
  */
-static struct xliffset *
-xliff_read(FILE *f, const char *fn, XML_Parser p)
+static int
+xliff_read(struct config *cfg, FILE *f, 
+	const char *fn, XML_Parser p, struct xliffset **ret)
 {
 	struct xparse	*xp;
-	struct xliffset	*res = NULL;
 	size_t		 sz;
-	int		 rc;
 	char		 buf[BUFSIZ];
 
-	xp = xparse_alloc(fn, p);
-	assert(xp != NULL);
+	*ret = NULL;
+
+	if ((xp = calloc(1, sizeof(struct xparse))) == NULL)
+		return -1;
+
+	xp->cfg = cfg;
+	xp->fname = fn;
+	xp->p = p;
 
 	XML_ParserReset(p, NULL);
 	XML_SetDefaultHandlerExpand(p, NULL);
@@ -380,22 +400,29 @@ xliff_read(FILE *f, const char *fn, XML_Parser p)
 
 	do {
 		sz = fread(buf, 1, sizeof(buf), f);
-		if (ferror(f))
-			return NULL;
-		rc = XML_Parse(p, buf, sz, feof(f));
-		if (rc != XML_STATUS_OK) {
-			lerr(fn, p, "%s", 
-				XML_ErrorString
-				(XML_GetErrorCode(p)));
+		if (ferror(f)) {
 			xparse_free(xp);
-			return NULL;
+			return -1;
 		}
+		if (XML_Parse(p, buf, sz, feof(f)) == XML_STATUS_OK)
+			continue;
+
+		/* If we have a hard error, stop at once. */
+
+		if (xp->er) {
+			xparse_free(xp);
+			return -1;
+		}
+		xparse_err(xp, "%s", 
+			XML_ErrorString(XML_GetErrorCode(p)));
+		xparse_free(xp);
+		return 0;
 	} while (!feof(f));
 
-	res = xp->set;
+	*ret = xp->set;
 	xp->set = NULL;
 	xparse_free(xp);
-	return res;
+	return 1;
 }
 
 static int
@@ -407,9 +434,13 @@ xliffunit_sort(const void *a1, const void *a2)
 	return strcmp(p1->source, p2->source);
 }
 
+/*
+ * Return <0 on error, 0 on syntax error, >0 on success.
+ */
 static int
-xliff_join_unit(struct labelq *q, int copy, const char *type,
-	size_t lang, const struct xliffset *x, const struct pos *pos)
+xliff_join_unit(struct config *cfg, struct labelq *q, int copy, 
+	const char *type, size_t lang, const struct xliffset *x, 
+	const struct pos *pos)
 {
 	struct label	*l;
 	size_t		 i;
@@ -425,14 +456,12 @@ xliff_join_unit(struct labelq *q, int copy, const char *type,
 	 */
 
 	if (l == NULL && type == NULL) {
-		fprintf(stderr, "%s:%zu:%zu: no "
-			"default translation\n",
-			pos->fname, pos->line, pos->column);
+		ort_msg(cfg, MSGTYPE_ERROR, 0, pos, 
+			"missing jslabel for translation");
 		return 0;
 	} else if (l == NULL) {
-		fprintf(stderr, "%s:%zu:%zu: no "
-			"default translation for \"%s\" clause\n",
-			pos->fname, pos->line, pos->column, type);
+		ort_msg(cfg, MSGTYPE_ERROR, 0, pos, "missing "
+			"\"%s\" jslabel for translation", type);
 		return 0;
 	}
 
@@ -444,29 +473,22 @@ xliff_join_unit(struct labelq *q, int copy, const char *type,
 
 	if (i == x->usz && type == NULL) {
 		if (copy) {
-			fprintf(stderr, "%s:%zu:%zu: using "
-				"source for translation\n", 
-				pos->fname, pos->line, 
-				pos->column);
+			ort_msg(cfg, MSGTYPE_WARN, 0, pos, 
+				"using source for translation");
 			targ = l->label;
 		} else {
-			fprintf(stderr, "%s:%zu:%zu: missing "
-				"translation\n", pos->fname, 
-				pos->line, pos->column);
+			ort_msg(cfg, MSGTYPE_ERROR, 0, pos, 
+				"missing jslabel for translation");
 			return 0;
 		}
 	} else if (i == x->usz) {
 		if (copy) {
-			fprintf(stderr, "%s:%zu:%zu: using "
-				"source for translating "
-				"\"%s\" clause\n", pos->fname, 
-				pos->line, pos->column, type);
+			ort_msg(cfg, MSGTYPE_WARN, 0, pos, "using "
+				"source for \"%s\" translation", type);
 			targ = l->label;
 		} else {
-			fprintf(stderr, "%s:%zu:%zu: missing "
-				"translation for \"%s\" clause\n",
-				pos->fname, pos->line, 
-				pos->column, type);
+			ort_msg(cfg, MSGTYPE_ERROR, 0, pos, "missing "
+				"\"%s\" jslabel for translation", type);
 			return 0;
 		}
 	} else
@@ -484,37 +506,39 @@ xliff_join_unit(struct labelq *q, int copy, const char *type,
 			break;
 
 	if (l != NULL && type == NULL) {
-		fprintf(stderr, "%s:%zu:%zu: not "
-			"overriding existing translation\n",
-			pos->fname, pos->line, pos->column);
+		ort_msg(cfg, MSGTYPE_WARN, 0, pos, 
+			"not overriding existing translation");
 		return 1;
 	} else if (l != NULL) {
-		fprintf(stderr, "%s:%zu:%zu: not "
-			"overriding existing translation "
-			"for \"%s\" clause\n",
-			pos->fname, pos->line, pos->column, type);
+		ort_msg(cfg, MSGTYPE_WARN, 0, pos, 
+			"not overriding existing \"%s\" translation",
+			type);
 		return 1;
 	}
 
 	/* Add the translation. */
 
 	if ((l = calloc(1, sizeof(struct label))) == NULL)
-		err(EXIT_FAILURE, "calloc");
+		return -1;
 	l->lang = lang;
 	if ((l->label = strdup(targ)) == NULL)
-		err(EXIT_FAILURE, "calloc");
+		return -1;
 	TAILQ_INSERT_TAIL(q, l, entries);
 	return 1;
 }
 
+/*
+ * Return <0 on failure, 0 on syntax error, >0 on success.
+ */
 static int
-xliff_update_unit(struct labelq *q, const char *type,
-	struct xliffset *x, const struct pos *pos)
+xliff_update_unit(struct config *cfg, struct labelq *q, 
+	const char *type, struct xliffset *x, const struct pos *pos)
 {
-	struct label	 *l;
-	size_t		  i;
-	struct xliffunit *u;
-	char		  nbuf[32];
+	struct label		*l;
+	size_t			 i;
+	struct xliffunit	*u;
+	char			 nbuf[32];
+	void			*pp;
 
 	TAILQ_FOREACH(l, q, entries)
 		if (l->lang == 0)
@@ -526,14 +550,12 @@ xliff_update_unit(struct labelq *q, const char *type,
 	 */
 
 	if (l == NULL && type == NULL) {
-		fprintf(stderr, "%s:%zu:%zu: no "
-			"default translation\n",
-			pos->fname, pos->line, pos->column);
+		ort_msg(cfg, MSGTYPE_ERROR, 0, pos, 
+			"missing jslabel for translation");
 		return 0;
 	} else if (l == NULL) {
-		fprintf(stderr, "%s:%zu:%zu: no "
-			"default translation for \"%s\" clause\n",
-			pos->fname, pos->line, pos->column, type);
+		ort_msg(cfg, MSGTYPE_ERROR, 0, pos, "missing "
+			"\"%s\" jslabel for translation", type);
 		return 0;
 	}
 
@@ -544,24 +566,26 @@ xliff_update_unit(struct labelq *q, const char *type,
 			break;
 
 	if (i == x->usz) {
-		x->u = reallocarray(x->u, 
+		pp = reallocarray(x->u, 
 			x->usz + 1, sizeof(struct xliffunit));
-		if (x->u == NULL)
-			err(EXIT_FAILURE, "reallocarray");
+		if (pp == NULL)
+			return -1;
+		x->u = pp;
 		u = &x->u[x->usz++];
 		snprintf(nbuf, sizeof(nbuf), "%zu", x->usz);
 		memset(u, 0, sizeof(struct xliffunit));
 		if ((u->name = strdup(nbuf)) == NULL)
-			err(EXIT_FAILURE, "strdup");
+			return -1;
 		if ((u->source = strdup(l->label)) == NULL)
-			err(EXIT_FAILURE, "strdup");
-		fprintf(stderr, "%s:%zu:%zu: new translation\n",
-			l->pos.fname, l->pos.line, l->pos.column);
+			return -1;
 	}
 
 	return 1;
 }
 
+/*
+ * Return <0 on error, 0 on syntax error, >0 on success.
+ */
 static int
 xliff_join_xliff(struct config *cfg, int copy,
 	size_t lang, const struct xliffset *x)
@@ -570,28 +594,35 @@ xliff_join_xliff(struct config *cfg, int copy,
 	struct eitem 	*ei;
 	struct bitf	*b;
 	struct bitidx	*bi;
+	int		 rc;
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
-		TAILQ_FOREACH(ei, &e->eq, entries)
-			if ( ! xliff_join_unit
-			    (&ei->labels, copy, NULL, 
-			     lang, x, &ei->pos))
-				return 0;
+		TAILQ_FOREACH(ei, &e->eq, entries) {
+			rc = xliff_join_unit
+			    (cfg, &ei->labels, copy, NULL, 
+			     lang, x, &ei->pos);
+			if (rc <= 0)
+				return rc;
+		}
 
 	TAILQ_FOREACH(b, &cfg->bq, entries) {
-		TAILQ_FOREACH(bi, &b->bq, entries)
-			if ( ! xliff_join_unit
-			    (&bi->labels, copy, NULL, 
-			     lang, x, &bi->pos))
-				return 0;
-		if ( ! xliff_join_unit
-		    (&b->labels_unset, copy, 
-		     "isunset", lang, x, &b->pos))
-			return 0;
-		if ( ! xliff_join_unit
-		    (&b->labels_null, copy, 
-		     "isnull", lang, x, &b->pos))
-			return 0;
+		TAILQ_FOREACH(bi, &b->bq, entries) {
+			rc = xliff_join_unit
+			    (cfg, &bi->labels, copy, NULL, 
+			     lang, x, &bi->pos);
+			if (rc <= 0)
+				return rc;
+		}
+		rc = xliff_join_unit
+		    (cfg, &b->labels_unset, copy, 
+		     "isunset", lang, x, &b->pos);
+		if (rc <= 0)
+			return rc;
+		rc = xliff_join_unit
+		    (cfg, &b->labels_null, copy, 
+		     "isnull", lang, x, &b->pos);
+		if (rc <= 0)
+			return rc;
 	}
 
 	return 1;
@@ -600,8 +631,7 @@ xliff_join_xliff(struct config *cfg, int copy,
 /*
  * Parse an XLIFF file with open descriptor "xml" and merge the
  * translations with labels in "cfg".
- * Returns zero on XLIFF parse failure or merge failure, non-zero on
- * success.
+ * Returns <0 on error, 0 on syntax error, >0 on success.
  */
 static int
 xliff_join_single(struct config *cfg, int copy, 
@@ -609,40 +639,44 @@ xliff_join_single(struct config *cfg, int copy,
 {
 	struct xliffset	*x;
 	size_t		 i;
+	void		*pp;
+	int		 rc;
+	struct pos	 pos;
 
-	if ((x = xliff_read(xml, fn, p)) == NULL)
-		return 0;
+	if ((rc = xliff_read(cfg, xml, fn, p, &x)) <= 0)
+		return rc;
 
 	assert(x->trglang != NULL);
+
 	for (i = 0; i < cfg->langsz; i++)
 		if (strcmp(cfg->langs[i], x->trglang) == 0)
 			break;
 
 	if (i == cfg->langsz) {
-		cfg->langs = reallocarray(cfg->langs,
+		pp = reallocarray(cfg->langs,
 			 cfg->langsz + 1, sizeof(char *));
-		if (cfg->langs == NULL)
-			err(EXIT_FAILURE, "reallocarray");
+		if (pp == NULL)
+			return -1;
+		cfg->langs = pp;
 		cfg->langs[cfg->langsz] = strdup(x->trglang);
 		if (cfg->langs[cfg->langsz] == NULL)
-			err(EXIT_FAILURE, "strdup");
+			return -1;
 		cfg->langsz++;
-	} else
-		fprintf(stderr, "%s: language \"%s\" is "
-			"already noted\n", fn, x->trglang);
-
-	if (!xliff_join_xliff(cfg, copy, i, x)) {
-		xparse_xliff_free(x);
-		return 0;
+	} else {
+		pos.fname = fn;
+		pos.line = pos.column = 0;
+		ort_msg(cfg, MSGTYPE_WARN, 0, &pos, 
+			"language \"%s\" already noted", x->trglang);
 	}
 
+	rc = xliff_join_xliff(cfg, copy, i, x);
 	xparse_xliff_free(x);
-	return 1;
+	return rc;
 }
 
 /*
  * Parse XLIFF files with existing translations and update them (using a
- * single file) with new labels in "cfg".
+ * single file) with new labels in "cfg"
  * Returns zero on failure, non-zero on success.
  */
 int
@@ -650,7 +684,7 @@ ort_lang_xliff_update(const struct ort_lang_xliff *args,
 	struct config *cfg, FILE *f)
 {
 	struct xliffset	*x;
-	int		 rc = 0;
+	int		 rc;
 	size_t		 i;
 	XML_Parser	 p;
 	struct enm 	*e;
@@ -659,32 +693,41 @@ ort_lang_xliff_update(const struct ort_lang_xliff *args,
 	struct bitidx	*bi;
 
 	if ((p = XML_ParserCreate(NULL)) == NULL)
-		return 0;
+		return -1;
 
 	assert(args->insz == 1);
-	x = xliff_read(args->in[0], args->fnames[0], p);
-	if (x == NULL)
+	rc = xliff_read(cfg, args->in[0], args->fnames[0], p, &x);
+	if (rc <= 0)
 		goto out;
 
+	assert(x != NULL);
+
 	TAILQ_FOREACH(e, &cfg->eq, entries)
-		TAILQ_FOREACH(ei, &e->eq, entries)
-			if (!xliff_update_unit
-			    (&ei->labels, NULL, x, &ei->pos))
+		TAILQ_FOREACH(ei, &e->eq, entries) {
+			rc = xliff_update_unit
+			    (cfg, &ei->labels, NULL, x, &ei->pos);
+			if (rc <= 0)
 				goto out;
+		}
 
 	TAILQ_FOREACH(b, &cfg->bq, entries) {
-		TAILQ_FOREACH(bi, &b->bq, entries)
-			if (!xliff_update_unit
-			    (&bi->labels, NULL, x, &bi->pos))
+		TAILQ_FOREACH(bi, &b->bq, entries) {
+			rc = xliff_update_unit
+			    (cfg, &bi->labels, NULL, x, &bi->pos);
+			if (rc <= 0)
 				goto out;
-		if (!xliff_update_unit
-		    (&b->labels_unset, "isunset", x, &b->pos))
+		}
+		rc = xliff_update_unit
+		    (cfg, &b->labels_unset, "isunset", x, &b->pos);
+		if (rc <= 0)
 			goto out;
-		if (!xliff_update_unit
-		    (&b->labels_null, "isnull", x, &b->pos))
+		rc = xliff_update_unit
+		    (cfg, &b->labels_null, "isnull", x, &b->pos);
+		if (rc <= 0)
 			goto out;
 	}
 
+	rc = -1;
 	qsort(x->u, x->usz, sizeof(struct xliffunit), xliffunit_sort);
 
 	if (fprintf(f, 
@@ -733,11 +776,6 @@ out:
 	return rc;
 }
 
-/*
- * Join XLIFF files to configuration "cfg" and emit on "f".
- * Returns zero on failure, non-zero on success.
- * On success, the output is printed.
- */
 int
 ort_lang_xliff_join(const struct ort_lang_xliff *args,
 	struct config *cfg, FILE *f)
@@ -747,17 +785,21 @@ ort_lang_xliff_join(const struct ort_lang_xliff *args,
 	XML_Parser	 p;
 
 	if ((p = XML_ParserCreate(NULL)) == NULL)
-		return 0;
+		return -1;
 
-	for (i = 0; rc && i < args->insz; i++) 
+	for (i = 0; i < args->insz; i++)  {
 		rc = xliff_join_single(cfg, 
 			args->flags & ORT_LANG_XLIFF_COPY, 
 			args->in[i], args->fnames[i], p);
+		if (rc <= 0)
+			break;
+	}
 
 	XML_ParserFree(p);
 
-	if (rc)
-		ort_write_file(f, cfg);
+	if (rc > 0 && !ort_write_file(f, cfg))
+		rc = -1;
+
 	return rc;
 }
 

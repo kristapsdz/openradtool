@@ -129,7 +129,6 @@ main(int argc, char *argv[])
 			args.fnames = &deffname;
 			args.in = &defin;
 		}
-
 	} else {
 		confsz = (size_t)argc;
 		if (confsz > 0 &&

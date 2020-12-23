@@ -54,9 +54,9 @@ ort_log(struct config *cfg, enum msgtype type,
 	m->buf = msg;
 	if (pos != NULL) {
 		if (pos->fname != NULL)
-			m->pos.fname = strdup(pos->fname);
-		m->pos.line = pos->line;
-		m->pos.column = pos->column;
+			m->fname = strdup(pos->fname);
+		m->line = pos->line;
+		m->column = pos->column;
 	}
 }
 
@@ -105,14 +105,13 @@ static int
 gen_msg(FILE *f, const struct msg *m)
 {
 
-	if (m->pos.fname != NULL && m->pos.line > 0) {
-		if (fprintf(f, "%s:%zu:%zu: %s: ", 
-		    m->pos.fname, m->pos.line, m->pos.column, 
-		    msgtypes[m->type]) < 0)
+	if (m->fname != NULL && m->line > 0) {
+		if (fprintf(f, "%s:%zu:%zu: %s: ", m->fname, 
+		    m->line, m->column, msgtypes[m->type]) < 0)
 			return 0;
-	} else if (m->pos.fname != NULL) {
+	} else if (m->fname != NULL) {
 		if (fprintf(f, "%s: %s: ", 
-		    m->pos.fname, msgtypes[m->type]) < 0)
+		    m->fname, msgtypes[m->type]) < 0)
 			return 0;
 	} else 
 		if (fprintf(f, "%s: ", msgtypes[m->type]) < 0)

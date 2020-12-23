@@ -856,17 +856,13 @@ and should be reported to the operator.
 They are represented by
 .Vt struct msg .
 .Bl -tag -width Ds -offset indent
-.It Va struct pos pos
-Parse point where message was raised.
-If
-.Va pos.fname
-is
-.Dv NULL ,
-the message has no position.
-Otherwise, if
-.Va pos.line
-is zero, then there is no line number.
-If given a filename and line, the column is assumed to be set.
+.It Va char *fname
+Filename where message occurred or
+.Dv NULL .
+.It Va size_t line
+Line number where message occurred or zero if not associated.
+.It Va size_t column
+Line column where message occurred or zero if not associated.
 .It Va enum msgtype type
 A message that is either
 .Dv MSGTYPE_WARN

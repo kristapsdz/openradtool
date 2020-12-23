@@ -465,7 +465,9 @@ enum	msgtype {
 };
 
 struct	msg {
-	struct pos	 pos;
+	char		*fname;
+	size_t		 line;
+	size_t		 column;
 	enum msgtype	 type;
 	char		*buf;
 	int		 er;

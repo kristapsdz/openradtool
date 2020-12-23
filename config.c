@@ -379,7 +379,7 @@ ort_config_free(struct config *cfg)
 
 	while ((m = TAILQ_FIRST(&cfg->mq)) != NULL) {
 		TAILQ_REMOVE(&cfg->mq, m, entries);
-		free(m->pos.fname);
+		free(m->fname);
 		free(m->buf);
 		free(m);
 	}

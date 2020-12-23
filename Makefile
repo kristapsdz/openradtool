@@ -75,6 +75,7 @@ HTMLS		 = archive.html \
 		   man/ort_lang_c_source.3.html \
 		   man/ort_lang_json.3.html \
 		   man/ort_lang_xliff_extract.3.html \
+		   man/ort_lang_xliff_join.3.html \
 		   man/ort_msg.3.html \
 		   man/ort_parse_close.3.html \
 		   man/ort_parse_file.3.html \
@@ -92,6 +93,7 @@ MAN3S		 = man/ort.3 \
 		   man/ort_lang_c_source.3 \
 		   man/ort_lang_json.3 \
 		   man/ort_lang_xliff_extract.3 \
+		   man/ort_lang_xliff_join.3 \
 		   man/ort_msg.3 \
 		   man/ort_parse_close.3 \
 		   man/ort_parse_file.3 \

@@ -1,0 +1,130 @@
+.\"	$Id$
+.\"
+.\" Copyright (c) 2020 Kristaps Dzonsons <kristaps@bsd.lv>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate$
+.Dt ORT_LANG_XLIFF_JOIN 3
+.Os
+.Sh NAME
+.Nm ort_lang_xliff_join
+.Nd merge configuration and translation
+.Sh LIBRARY
+.Lb libort-lang-xliff
+.Sh SYNOPSIS
+.In sys/queue.h
+.In stdio.h
+.In ort.h
+.In ort-lang-xliff.h
+.Ft int
+.Fo ort_lang_xliff_join
+.Fa "const struct ort_lang_xliff *args"
+.Fa "struct config *cfg"
+.Fa "FILE *f"
+.Fc
+.Sh DESCRIPTION
+Outputs a
+.Xr ort 5
+configuration to
+.Fa f
+consisting of
+.Fa cfg
+merged with translations given in
+.Fa args .
+The arguments recgnised in
+.Fa args
+are as follows:
+.Bl -tag -width Ds -offset indent
+.It Va unsigned int flags
+If the
+.Dv ORT_LANG_XLIFF_COPY
+mask is set and a translation is not provided for a given label, use the
+default label instead of erroring out.
+.It Va FILE **in
+XLIFF 1.2 input files consisting of translations.
+.It Va const char **fnames
+The filenames (for informational purposes only) of files in
+.Fa in .
+.It Va size_t insz
+The number of elements in
+.Fa in
+and
+.Fa fnames .
+.El
+.Nm
+alters
+.Fa cfg
+in-place by adding translations and possibly by adding warning or error
+messages encountered during processing.
+.\" The following requests should be uncommented and used where appropriate.
+.\" .Sh CONTEXT
+.\" For section 9 functions only.
+.Sh RETURN VALUES
+Returns one of the following values:
+.Pp
+.Bl -tag -width Ds -offset indent -compact
+.It Li <0
+System failure from memory allocation, reading from input, or writing to
+output.
+.It Li 0
+Syntax error parsing XLIFF files or translations missing.
+.It Li >0
+Success.
+.El
+.\" For sections 2, 3, and 9 function return values only.
+.\" .Sh ENVIRONMENT
+.\" For sections 1, 6, 7, and 8 only.
+.\" .Sh FILES
+.\" .Sh EXIT STATUS
+.\" For sections 1, 6, and 8 only.
+.Sh EXAMPLES
+A simple scenario of creating a configuration, parsing standard input,
+linking, then joining with a translation file
+.Pa fr.xlf .
+.Bd -literal -offset indent
+struct config *cfg;
+struct ort_lang_xliff args;
+FILE *f;
+const char *fname = "fr.xlf";
+
+if ((f = fopen(fname, "r")) == NULL)
+  err(1, "%s", fname);
+
+memset(&args, 0, sizeof(struct ort_lang_xliff));
+args.in = &f;
+args.fnames = &fname;
+args.insz = 1;
+
+if ((cfg = ort_config_alloc()) == NULL)
+  err(1, NULL);
+
+if (ort_parse_file(cfg, stdin, "<stdin>") &&
+    ort_parse_close(cfg) &&
+    ort_lang_xliff_join(&args, cfg, stdout) > 0)
+      ort_write_file(stdout, cfg);
+
+ort_write_msg_file(stderr, &cfg.mq);
+ort_config_free(cfg);
+.Ed
+.\" .Sh DIAGNOSTICS
+.\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
+.\" .Sh ERRORS
+.\" For sections 2, 3, 4, and 9 errno settings only.
+.Sh SEE ALSO
+.Xr ort 3
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh CAVEATS
+.\" .Sh BUGS

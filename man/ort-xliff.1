@@ -67,14 +67,12 @@ Merges one or more
 .Ar xliff
 files with an untranslated
 .Ar config ,
-producing another configuration on standard output containing the
-translated strings.
+producing another configuration containing the translated strings.
 .It Fl u
 Update the
 .Ar xliff
 file with new translation labels found in
 .Ar config .
-The updated translations are emitted on standard output.
 .It Ar xliff
 An XLIFF 1.2 file containing translated strings.
 .It Ar config
@@ -86,7 +84,7 @@ There may be multiple files in a single configuration.
 .Pp
 By default,
 .Nm
-outputs all translatable labels onto standard output.
+produces results to standard output.
 .Pp
 When invoked with
 .Fl j
@@ -143,9 +141,9 @@ may be translated into human-readable, language-specific labels.
 .Ex -std
 .Sh EXAMPLES
 Take a dummy configuration
-.Pa foo.kwbp
+.Pa foo.ort
 containing the following:
-.Bd -literal
+.Bd -literal -offset indent
 enum foo {
   item bar 0 jslabel "bar";
   item foo 1 jslabel "foo";
@@ -153,8 +151,8 @@ enum foo {
 .Ed
 .Pp
 Begin by extracting translatable strings from the input.
-.Bd -literal
-% ort-xliff foo.kwbp
+.Bd -literal -offset indent
+% ort-xliff foo.ort
 <xliff version="1.2">
   <file target-language="TODO" tool="ort-xliff">
     <body>
@@ -179,8 +177,8 @@ respectively.
 Then join the output,
 .Pa foo.fr.xliff ,
 with the input configuration.
-.Bd -literal
-% ort-xliff -j foo.kwbp foo.fr.xliff
+.Bd -literal -offset indent
+% ort-xliff -j foo.ort foo.fr.xliff
 enum foo {
   item bar 0
     jslabel "bar"
@@ -196,8 +194,8 @@ This output file can then be used with
 to have per-language label filling.
 .Pp
 Multiple configuration files, when joining, may also be specified.
-.Bd -literal
-% ort-xliff -j foo1.kwbp foo2.kwbp -x foo.fr.xliff
+.Bd -literal -offset indent
+% ort-xliff -j foo1.ort foo2.ort -x foo.fr.xliff
 .Ed
 .Pp
 The configuration or XLIFF files may also be passed on standard input by
@@ -209,9 +207,9 @@ is used to prevent
 .Fl x
 from being interpreted as a command-line option.)
 In the second case, it's the translation file.
-.Bd -literal
-% ort-xliff -j -- -x foo.fr.xliff < foo.kwbp
-% ort-xliff -j foo1.kwbp foo2.kwbp -x < foo.xliff
+.Bd -literal -offset indent
+% ort-xliff -j -- -x foo.fr.xliff < foo.ort
+% ort-xliff -j foo1.ort foo2.ort -x < foo.xliff
 .Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.

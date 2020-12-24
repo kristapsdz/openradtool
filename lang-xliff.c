@@ -46,6 +46,8 @@ struct	xliffset {
 	struct xliffunit	*u; /* translatable pairs */
 	size_t			 usz; /* size of "u" */
 	char			 *trglang; /* target language */
+	char			 *srclang; /* source language */
+	char			 *original; /* original file */
 };
 
 /*
@@ -144,6 +146,8 @@ xparse_xliff_free(struct xliffset *p)
 		free(p->u[i].target);
 		free(p->u[i].name);
 	}
+	free(p->original);
+	free(p->srclang);
 	free(p->trglang);
 	free(p->u);
 	free(p);
@@ -258,7 +262,7 @@ xstart(void *dat, const XML_Char *s, const XML_Char **atts)
 			return;
 		}
 		for (attp = atts; *attp != NULL; attp += 2)
-			if (0 == strcmp(attp[0], "target-language")) {
+			if (strcmp(attp[0], "target-language") == 0) {
 				free(p->set->trglang);
 				p->set->trglang = strdup(attp[1]);
 				if (p->set->trglang == NULL) {
@@ -266,9 +270,35 @@ xstart(void *dat, const XML_Char *s, const XML_Char **atts)
 					XML_StopParser(p->p, 0);
 					return;
 				}
+			} else if (strcmp(attp[0], "source-language") == 0) {
+				free(p->set->srclang);
+				p->set->srclang = strdup(attp[1]);
+				if (p->set->srclang == NULL) {
+					p->er = 1;
+					XML_StopParser(p->p, 0);
+					return;
+				}
+			} else if (strcmp(attp[0], "original") == 0) {
+				free(p->set->original);
+				p->set->original = strdup(attp[1]);
+				if (p->set->original == NULL) {
+					p->er = 1;
+					XML_StopParser(p->p, 0);
+					return;
+				}
 			}
 		if (p->set->trglang == NULL) {
 			xparse_err(p, "missing <file> target-language");
+			XML_StopParser(p->p, 0);
+			return;
+		}
+		if (p->set->srclang == NULL) {
+			xparse_err(p, "missing <file> source-language");
+			XML_StopParser(p->p, 0);
+			return;
+		}
+		if (p->set->original == NULL) {
+			xparse_err(p, "missing <file> original");
 			XML_StopParser(p->p, 0);
 			return;
 		}
@@ -733,8 +763,9 @@ ort_lang_xliff_update(const struct ort_lang_xliff *args,
 	if (fprintf(f, 
 	    "<xliff version=\"1.2\" "
 	    "xmlns=\"urn:oasis:names:tc:xliff:document:1.2\">\n"
-	    "\t<file target-language=\"%s\">\n"
-            "\t\t<body>\n", x->trglang) < 0)
+	    "\t<file target-language=\"%s\" source-language=\"%s\" "
+	    "original=\"%s\" datatype=\"plaintext\">\n"
+            "\t\t<body>\n", x->trglang, x->srclang, x->original) < 0)
 		goto out;
 
 	for (i = 0; i < x->usz; i++)
@@ -835,11 +866,11 @@ ort_lang_xliff_extract(const struct ort_lang_xliff *args,
 
 	qsort(s, ssz, sizeof(char *), xliff_sort);
 
-	if (fputs("<xliff version=\"1.2\" "
+	if (fprintf(f, "<xliff version=\"1.2\" "
 	    "xmlns=\"urn:oasis:names:tc:xliff:document:1.2\">\n"
-	    "\t<file source-language=\"TODO\" original=\"\" "
+	    "\t<file source-language=\"TODO\" original=\"%s\" "
 	    "target-language=\"TODO\" datatype=\"plaintext\">\n"
-            "\t\t<body>\n", f) == EOF)
+            "\t\t<body>\n", cfg->fnamesz ? cfg->fnames[0] : "") < 0)
 		return 0;
 
 	for (i = 0; i < ssz; i++)

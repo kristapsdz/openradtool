@@ -829,24 +829,24 @@ ort_write_file(FILE *f, const struct config *cfg)
 	const struct enm	*e;
 	const struct bitf	*b;
 	struct writer		 w;
-	int			 rc = 0;
 
 	memset(&w, 0, sizeof(struct writer));
 	w.f = f;
 
 	if (!TAILQ_EMPTY(&cfg->rq))
 		if (!parse_write_roles(&w, cfg))
-			goto out;
+			return 0;
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
-		parse_write_enm(&w, cfg, e);
+		if (!parse_write_enm(&w, cfg, e))
+			return 0;
 	TAILQ_FOREACH(b, &cfg->bq, entries)
-		parse_write_bitf(&w, cfg, b);
+		if (!parse_write_bitf(&w, cfg, b))
+			return 0;
 	TAILQ_FOREACH(s, &cfg->sq, entries)
-		parse_write_strct(&w, s);
+		if (!parse_write_strct(&w, s))
+			return 0;
 
-	rc = 1;
-out:
-	return rc;
+	return 1;
 }
 

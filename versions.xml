@@ -3,9 +3,9 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
-			<h3>0.11.7</h3>
+			<h3>0.11.8</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2020-12-19">2020-12-19</time>
+			<time datetime="2020-12-24">2020-12-24</time>
 		</header>
 		<aside>
 			<p>
@@ -18,6 +18,11 @@
 				Emit XLIFF content that validates against the <q>strict</q> variant
 				of the specification.
 				This is now used in internal regression testing.
+				All of the XLIFF processing is now well-documented in
+				<a href="ort_lang_xliff_extract.3.html">ort_lang_xliff_extract(3)</a>,
+				<a href="ort_lang_xliff_join.3.html">ort_lang_xliff_join(3)</a>,
+				and
+				<a href="ort_lang_xliff_update.3.html">ort_lang_xliff_update(3)</a>.
 			</p>
 		</aside>
 	</article>

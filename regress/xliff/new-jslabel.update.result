@@ -1,0 +1,17 @@
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+	<file target-language="xxx">
+		<body>
+			<trans-unit id="1">
+				<source>aaa</source>
+				<target>unit1</target>
+			</trans-unit>
+			<trans-unit id="2">
+				<source>bbb</source>
+				<target>unit2</target>
+			</trans-unit>
+			<trans-unit id="3">
+				<source>ccc</source>
+			</trans-unit>
+		</body>
+	</file>
+</xliff>

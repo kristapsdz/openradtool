@@ -717,10 +717,10 @@ regress: all
 		fi ; \
 		echo "pass" ; \
 	done ; \
-	echo "=== ort-xliff output tests === " ; \
-	for f in regress/xliff/*.result ; do \
-		fn=regress/xliff/`basename $$f .result`.ort ; \
-		jn=regress/xliff/`basename $$f .result`.xlf ; \
+	echo "=== ort-xliff join output tests === " ; \
+	for f in regress/xliff/*.join.result ; do \
+		fn=regress/xliff/`basename $$f .join.result`.ort ; \
+		jn=regress/xliff/`basename $$f .join.result`.xlf ; \
 		printf "ort-xliff: $$fn... " ; \
 		./ort-xliff -j $$fn $$jn >$$tmp 2>/dev/null ; \
 		if [ $$? -ne 0 ] ; then \
@@ -732,6 +732,26 @@ regress: all
 		if [ $$? -ne 0 ] ; then \
 			echo "fail (output check)" ; \
 			./ort-diff $$tmp $$f ; \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+	done ; \
+	echo "=== ort-xliff update output tests === " ; \
+	for f in regress/xliff/*.update.result ; do \
+		fn=regress/xliff/`basename $$f .update.result`.ort ; \
+		jn=regress/xliff/`basename $$f .update.result`.xlf ; \
+		printf "ort-xliff: $$fn... " ; \
+		./ort-xliff -u $$fn $$jn >$$tmp 2>/dev/null ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (did not execute)" ; \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		diff -w $$tmp $$f 2>/dev/null 1>&2 ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (output check)" ; \
+			diff -uw $$tmp $$f ; \
 			rm -f $$tmp ; \
 			exit 1 ; \
 		fi ; \

@@ -1,5 +1,5 @@
-<xliff version="1.2">
-	<file target-language="fr" tool="ort-xliff">
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+	<file target-language="fr" source-language="en" datatype="plaintext" original="db.ort">
 		<body>
 			<trans-unit id="1">
 				<source>female</source>

@@ -340,6 +340,10 @@ namespace ortJson {
 		config: configObj;
 	}
 
+	/**
+	 * Manage serialising an ortJsonConfig object into an HTML DOM
+	 * tree.
+	 */
 	export class ortJsonConfigFormat {
 		private readonly obj: ortJson.configObj;
 
@@ -372,6 +376,39 @@ namespace ortJson {
 					(document.createTextNode
 					 (text.toString()));
 			}
+		}
+
+		private clr(root: string|HTMLElement): 
+			HTMLElement|null
+		{
+			const e: HTMLElement|null = this.find(root);
+			if (e === null)
+				return null;
+			while (e.firstChild)
+				e.removeChild(e.firstChild);
+			return e;
+		}
+
+		private show(root: string|HTMLElement): 
+			HTMLElement|null
+		{
+			const e: HTMLElement|null = this.find(root);
+			if (e === null)
+				return null;
+			if (e.classList.contains('hide'))
+				e.classList.remove('hide');
+			return e;
+		}
+
+		private hide(root: string|HTMLElement): 
+			HTMLElement|null
+		{
+			const e: HTMLElement|null = this.find(root);
+			if (e === null)
+				return null;
+			if (!e.classList.contains('hide'))
+				e.classList.add('hide');
+			return e;
 		}
 
 		private hidecl(root: string|HTMLElement, 
@@ -424,8 +461,13 @@ namespace ortJson {
 		/**
 		 * Fills the configuration **below** the given element,
 		 * starting with structures, then drilling down.
-		 * Elements are queried by whether the contain the
-		 * following classes:
+		 * Elements are manipulated by whether the contain the
+		 * following classes.  Note that to "hide" an element
+		 * means to append the *hide* class to its class list,
+		 * while to "show" an element is to remove this.  The
+		 * caller will need to make sure that these classes
+		 * contain the appropriate `display: none` or similar
+		 * style definitions.
 		 *
 		 * Per configuration:
 		 *
@@ -624,7 +666,7 @@ namespace ortJson {
 				return;
 			const tmpl: HTMLElement =
 				<HTMLElement>e.children[0];
-			generic.clr(e);
+			this.clr(e);
 			const keys: string[] = Object.keys(this.obj.sq);
 			keys.sort();
 			for (let i = 0; i < keys.length; i++) {
@@ -733,13 +775,13 @@ namespace ortJson {
 				return;
 			const keys: string[] = Object.keys(cls.named);
 			if (keys.length + cls.anon.length === 0) {
-				generic.hide(e);
+				this.hide(e);
 				return;
 			}
-			generic.show(e);
+			this.show(e);
 			const tmpl: HTMLElement =
 				<HTMLElement>e.children[0];
-			generic.clr(e);
+			this.clr(e);
 			keys.sort();
 			for (let i = 0; i < keys.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
@@ -837,7 +879,7 @@ namespace ortJson {
 				return;
 			const tmpl: HTMLElement =
 				<HTMLElement>e.children[0];
-			generic.clr(e);
+			this.clr(e);
 			for (let i = 0; i < urefs.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
@@ -858,13 +900,13 @@ namespace ortJson {
 				return;
 			const keys: string[] = Object.keys(strct.sq.named);
 			if (keys.length + strct.sq.anon.length === 0) {
-				generic.hide(e);
+				this.hide(e);
 				return;
 			}
-			generic.show(e);
+			this.show(e);
 			const tmpl: HTMLElement =
 				<HTMLElement>e.children[0];
-			generic.clr(e);
+			this.clr(e);
 			keys.sort();
 			for (let i = 0; i < keys.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
@@ -986,7 +1028,7 @@ namespace ortJson {
 				return;
 			const tmpl: HTMLElement =
 				<HTMLElement>e.children[0];
-			generic.clr(e);
+			this.clr(e);
 			for (let i = 0; i < query.ordq.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
@@ -1007,7 +1049,7 @@ namespace ortJson {
 				return;
 			const tmpl: HTMLElement =
 				<HTMLElement>e.children[0];
-			generic.clr(e);
+			this.clr(e);
 			for (let i = 0; i < query.sntq.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
@@ -1028,7 +1070,7 @@ namespace ortJson {
 				return;
 			const tmpl: HTMLElement =
 				<HTMLElement>e.children[0];
-			generic.clr(e);
+			this.clr(e);
 			const keys: string[] = Object.keys(strct.fq);
 			keys.sort();
 			for (let i = 0; i < keys.length; i++) {

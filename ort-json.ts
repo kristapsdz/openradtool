@@ -339,4 +339,866 @@ namespace ortJson {
 	export interface ortJsonConfig {
 		config: configObj;
 	}
+
+	export class ortJsonConfigFormat {
+		private readonly obj: ortJson.configObj;
+
+		constructor(obj: ortJson.ortJsonConfig) {
+			this.obj = obj.config;
+		}
+
+		private find(root: string|HTMLElement): 
+			HTMLElement|null
+		{
+			if (typeof root !== 'string')
+				return root;
+			const e: HTMLElement|null =
+				document.getElementById(root);
+			return e;
+		}
+
+		private replcl(root: string|HTMLElement, 
+			name: string, text: string): void 
+		{
+			const e: HTMLElement|null = this.find(root);
+			if (e === null)
+				return;
+			const list: HTMLCollectionOf<Element> =
+				e.getElementsByClassName(name);
+			for (let i: number = 0; i < list.length; i++) {
+				const elem: HTMLElement =
+					<HTMLElement>list[i];
+				elem.appendChild
+					(document.createTextNode
+					 (text.toString()));
+			}
+		}
+
+		private hidecl(root: string|HTMLElement, 
+			name: string): void 
+		{
+			const e: HTMLElement|null = this.find(root);
+			if (e === null)
+				return;
+			const list: HTMLCollectionOf<Element> =
+				e.getElementsByClassName(name);
+			for (let i: number = 0; i < list.length; i++) {
+				const elem: HTMLElement =
+					<HTMLElement>list[i];
+				if (!elem.classList.contains('hide'))
+					elem.classList.add('hide');
+			}
+		}
+
+		private showcl(root: string|HTMLElement, 
+			name: string): void 
+		{
+			const e: HTMLElement|null = this.find(root);
+			if (e === null)
+				return;
+			const list: HTMLCollectionOf<Element> =
+				e.getElementsByClassName(name);
+			for (let i: number = 0; i < list.length; i++) {
+				const elem: HTMLElement =
+					<HTMLElement>list[i];
+				if (elem.classList.contains('hide'))
+					elem.classList.remove('hide');
+			}
+		}
+
+		/**
+		 * Invokes fill() for each element with the given class
+		 * under the root.
+		 */
+		fillByClass(root: HTMLElement|string, name: string): void
+		{
+			const e: HTMLElement|null = this.find(root);
+			if (e === null)
+				return;
+			const list: HTMLCollectionOf<Element> =
+				e.getElementsByClassName(name);
+			for (let i = 0; i < list.length; i++)
+				this.fill(<HTMLElement>list[i]);
+		}
+
+		/**
+		 * Fills the configuration **below** the given element,
+		 * starting with structures, then drilling down.
+		 * Elements are queried by whether the contain the
+		 * following classes:
+		 *
+		 * Per configuration:
+		 *
+		 * - *config-strcts*: the first child of this is cloned
+		 *   and filled in with data for each structure (see
+		 *   "Per structure")
+		 *
+		 * Per structure:
+		 *
+		 * - *config-strct-name*: filled in with name
+		 * - *config-strct-doc-{none,has}*: shown or hidden
+		 *   depending on whether there's a non-empty
+		 *   documentation field
+		 * - *config-strct-doc*: filled in with non-empty
+		 *   documentation, if found
+		 * - *config-fields*: the first child of this is cloned
+		 *   and filled in with data for each field (see "Per
+		 *   field")
+		 * - *config-queries-{has,none}*: shown or hidden
+		 *   depending upon whether there are any queries
+		 * - *config-queries*: the first child of this is cloned
+		 *   and filled in with data for each query (see "Per
+		 *   query") unless there are no queries, in which case
+		 *   the element is hidden
+		 * - *config-insert-{has,none}*: shown or hidden
+		 *   depending on whether an insert is defined (see "Per
+		 *   insert" if there is an insert defined)
+		 * - *config-updates-{has,none}*: shown or hidden
+		 *   depending upon whether there are any updates
+		 * - *config-updates*: the first child of this is cloned
+		 *   and filled in with data for each update (see "Per
+		 *   update") unless there are no queries, in which case
+		 *   the element is hidden
+		 * - *config-deletes-{has,none}*: shown or hidden
+		 *   depending upon whether there are any deletes
+		 * - *config-deletes*: the first child of this is cloned
+		 *   and filled in with data for each update (see "Per
+		 *   update") unless there are no queries, in which case
+		 *   the element is hidden
+		 *
+		 * Per update (or delete):
+		 * - *config-update-rolemap-{has,none}*: shown or hidden
+		 *   depending on whether there's a non-empty rolemap
+		 * - *config-update-rolemap*: filled in with the
+		 *   comma-separated role names if rolemaps are defined
+		 * - *config-update-doc-{has,none}*: shown or hidden
+		 *   depending on whether there's a non-empty
+		 *   documentation field
+		 * - *config-update-doc*: filled in with non-empty
+		 *   documentation if doc is defined*
+		 * - *config-update-name-{has,none}*: shown or hidden
+		 *   depending on whether the update is anonymous
+		 * - *config-update-name*: filled in with the update
+		 *   name if a name is defined
+		 * - *config-update-fields-{has,none}*: shown or hidden
+		 *   depending on whether the update has non-zero mrq
+		 *   or crqs
+		 * - *config-update-crq-{has,none}*: shown or hidden
+		 *   depending on whether the update has non-zero crq
+		 * - *config-update-mrq-{has,none}*: shown or hidden
+		 *   depending on whether the update has non-zero crq
+		 *
+		 * Per insert:
+		 * - *config-insert-rolemap-{has,none}*: shown or hidden
+		 *   depending on whether there's a non-empty rolemap
+		 * - *config-insert-rolemap*: filled in with the
+		 *   comma-separated role names if rolemaps are defined
+		 *
+		 * Per query:
+		 * - *config-query-name-{has,none}*: shown or hidden
+		 *   depending on whether the query is anonymous
+		 * - *config-query-name*: filled in with the query name
+		 *   if a name is defined
+		 * - *config-query-doc-{has,none}*: shown or hidden
+		 *   depending on whether there's a non-empty
+		 *   documentation field
+		 * - *config-query-doc*: filled in with non-empty
+		 *   documentation if doc is defined*
+		 * - *config-query-type*: filled in with the query type
+		 * - *config-query-sntq-{has,none}*: whether there's a
+		 *   list of search columns
+		 * - *config-query-sntq*: the first child of this is
+		 *   cloned and filled in with search columns (see "Per
+		 *   query search field") unless the list is empty, in which
+		 *   case the element is hidden
+		 * - *config-query-ordq-{has,none}*: whether there's a
+		 *   list of order columns
+		 * - *config-query-ordq*: the first child of this is
+		 *   cloned and filled in with order columns (see "Per
+		 *   query order field") unless the list is empty, in which
+		 *   case the element is hidden
+		 * - *config-query-aggr-{has,none}*: whether both an
+		 *   aggregate and group are defined
+		 * - *config-query-aggr-op*: aggregate operation, if
+		 *   defined
+		 * - *config-query-aggr-fname*: aggregate query path,
+		 *   if defined
+		 * - *config-query-group-fname*: group query path,
+		 *   if defined
+		 * - *config-query-dst-{has,none}*: whether a distinct
+		 *   reduction is defined
+		 * - *config-query-dst-fname*: distinct query path
+		 *
+		 * Per query search field:
+		 * - *config-sent-fname*: filled in with the fname
+		 * - *config-sent-op*: filled in with the operation
+		 *
+		 * Per query order field:
+		 * - *config-ord-fname*: filled in with the fname
+		 * - *config-ord-op*: filled in with the operation
+		 *
+		 * Per field:
+		 * - *config-field-name*: filled in with name
+		 * - *config-field-doc-{none,has}*: shown or hidden
+		 *   depending on whether there's a non-empty
+		 *   documentation field
+		 * - *config-field-doc*: filled in with non-empty
+		 *   documentation if doc is defined
+		 * - *config-field-type-TYPE*: shown or hidden depending
+		 *   upon the field type
+		 * - *config-field-type*: filled in with the type name
+		 * - *config-field-store-type*: shown or hidden
+		 *   depending upon whether a non-struct type
+		 * - *config-field-ref-{has,none}*: shown or hidden
+		 *   depending on whether there's a ref
+		 * - *config-field-fkey-{has,none}*: shown or hidden
+		 *   depending on whether there's a non-struct ref
+		 * - *config-field-ref-target-{strct,field}*: filled
+		 *   with the target names if ref is defined
+		 * - *config-field-ref-source-{strct,field}*: filled
+		 *   with the source names if ref is defined
+		 * - *config-field-bitf-{has,none}*: shown or hidden
+		 *   depending on whether there's a bitf
+		 * - *config-field-bitf*: filled in with the bitf name
+		 *   if bitf is defined
+		 * - *config-field-enm-{has,none}*: shown or hidden
+		 *   depending on whether there's an enm
+		 * - *config-field-enm*: filled in with the enm name
+		 *   if enm is defined
+		 * - *config-field-actdel*: filled in with actdel
+		 * - *config-field-actup*: filled in with actup
+		 * - *config-field-actup-TYPE*: shown or hidden
+		 *   depending upon the actup type
+		 * - *config-field-actdel-TYPE*: shown or hidden
+		 *   depending upon the actdel type
+		 * - *config-field-rolemap-{has,none}*: shown or hidden
+		 *   depending on whether there's a non-empty rolemap
+		 * - *config-field-rolemap*: filled in with the
+		 *   comma-separated role names if rolemaps are defined
+		 * - *config-field-def-{has,none}*: shown or hidden
+		 *   depending on whether there's a default value
+		 * - *config-field-def*: filled in with the default
+		 *   value if a default is defined
+		 * - *config-field-limits-{has,none}*: shown or hidden
+		 *   depending on whether limits are defined
+		 * - *config-field-limit-TYPE*: shown or hidden
+		 *   depending upon the actual limit type, which may be
+		 *   one of *number*, *real*, *string*, enum* if limits
+		 *   are defined
+		 * - *config-field-limit*: filled in with
+		 *   comma-separated limits type-value pairs if limits
+		 *   are defined
+		 *
+		 */
+		fill(e: string|HTMLElement|null): void
+		{
+			if (e === null)
+				return;
+			const pn: HTMLElement|null = this.find(e);
+			if (pn === null)
+				return;
+			const list: HTMLCollectionOf<Element> = 
+				pn.getElementsByClassName
+				('config-strcts');
+			for (let i = 0; i < list.length; i++)
+				this.fillStrcts(<HTMLElement>list[i]);
+		}
+
+		private fillComment(e: HTMLElement, 
+			type: string, doc: string|null): void
+		{
+			const str: string = 'config-' + type + '-doc';
+			if (doc === null || doc.length === 0) {
+				this.showcl(e, str + '-none');
+				this.hidecl(e, str + '-has');
+			} else {
+				this.hidecl(e, str + '-none');
+				this.showcl(e, str + '-has');
+				this.replcl(e, str, doc);
+			}
+		}
+
+		private fillStrcts(e: HTMLElement)
+		{
+			if (e.children.length === 0)
+				return;
+			const tmpl: HTMLElement =
+				<HTMLElement>e.children[0];
+			generic.clr(e);
+			const keys: string[] = Object.keys(this.obj.sq);
+			keys.sort();
+			for (let i = 0; i < keys.length; i++) {
+				const cln: HTMLElement = <HTMLElement>
+					tmpl.cloneNode(true);
+				e.appendChild(cln);
+				this.fillStrct(cln, keys[i], 
+					this.obj.sq[keys[i]]);
+			}
+		}
+
+		private fillStrct(e: HTMLElement, 
+			name: string, strct: ortJson.strctObj): void
+		{
+			let list: HTMLCollectionOf<Element>;
+
+			/* fq (fields) */
+
+			list = e.getElementsByClassName('config-fields');
+			for (let i = 0; i < list.length; i++)
+				this.fillFields(<HTMLElement>list[i], strct);
+
+			/* dq (deletes) */
+			
+			if (strct.dq.anon.length +
+		  	    Object.keys(strct.dq.named).length === 0) {
+				this.hidecl(e, 'config-deletes-has');
+				this.showcl(e, 'config-deletes-none');
+			} else {
+				this.showcl(e, 'config-deletes-has');
+				this.hidecl(e, 'config-deletes-none');
+				list = e.getElementsByClassName
+					('config-deletes');
+				for (let i = 0; i < list.length; i++)
+					this.fillUpdates
+						(<HTMLElement>list[i], 
+						 strct.dq);
+			}
+
+			/* uq (updates) */
+			
+			if (strct.uq.anon.length +
+		  	    Object.keys(strct.uq.named).length === 0) {
+				this.hidecl(e, 'config-updates-has');
+				this.showcl(e, 'config-updates-none');
+			} else {
+				this.showcl(e, 'config-updates-has');
+				this.hidecl(e, 'config-updates-none');
+				list = e.getElementsByClassName
+					('config-updates');
+				for (let i = 0; i < list.length; i++)
+					this.fillUpdates
+						(<HTMLElement>list[i], 
+						 strct.uq);
+			}
+
+			/* sq (queries) */
+			
+			if (strct.sq.anon.length +
+		  	    Object.keys(strct.sq.named).length === 0) {
+				this.hidecl(e, 'config-queries-has');
+				this.showcl(e, 'config-queries-none');
+			} else {
+				this.showcl(e, 'config-queries-has');
+				this.hidecl(e, 'config-queries-none');
+				list = e.getElementsByClassName
+					('config-queries');
+				for (let i = 0; i < list.length; i++)
+					this.fillQueries
+						(<HTMLElement>list[i], 
+						 strct);
+			}
+
+			/* insert */
+
+			if (strct.insert !== null) {
+				this.showcl(e, 'config-insert-has');
+				this.hidecl(e, 'config-insert-none');
+				this.hidecl(e, 'config-insert-rolemap-none');
+				if (strct.insert.rolemap !== null &&
+				    strct.insert.rolemap.length > 0) {
+					this.showcl(e, 'config-insert-rolemap-has');
+					this.replcl(e, 'config-insert-rolemap',
+						strct.insert.rolemap.join(', '));
+				} else {
+				}
+			} else {
+				this.hidecl(e, 'config-insert-has');
+				this.showcl(e, 'config-insert-none');
+				this.showcl(e, 'config-insert-rolemap-none');
+			}
+
+			/* doc */
+
+			this.fillComment(e, 'strct', strct.doc);
+
+			/* name */
+
+			this.replcl(e, 'config-strct-name', name);
+		}
+
+		private fillUpdates(e: HTMLElement, 
+			cls: ortJson.updateClassObj): void
+		{
+			if (e.children.length === 0)
+				return;
+			const keys: string[] = Object.keys(cls.named);
+			if (keys.length + cls.anon.length === 0) {
+				generic.hide(e);
+				return;
+			}
+			generic.show(e);
+			const tmpl: HTMLElement =
+				<HTMLElement>e.children[0];
+			generic.clr(e);
+			keys.sort();
+			for (let i = 0; i < keys.length; i++) {
+				const cln: HTMLElement = <HTMLElement>
+					tmpl.cloneNode(true);
+				e.appendChild(cln);
+				this.fillUpdate(cln, keys[i], 
+					cls.named[keys[i]]);
+			}
+			for (let i = 0; i < cls.anon.length; i++) {
+				const cln: HTMLElement = <HTMLElement>
+					tmpl.cloneNode(true);
+				e.appendChild(cln);
+				this.fillUpdate(cln, null, cls.anon[i]);
+			}
+		}
+
+		private fillUpdate(e: HTMLElement,
+			name: string|null, up: ortJson.updateObj): void
+		{
+			/* doc */
+
+			this.fillComment(e, 'update', up.doc);
+
+			/* name */
+
+			if (name === null) {
+				this.hidecl(e, 'config-update-name-has');
+				this.showcl(e, 'config-update-name-none');
+			} else {
+				this.hidecl(e, 'config-update-name-none');
+				this.showcl(e, 'config-update-name-has');
+				this.replcl(e, 'config-update-name', name);
+			}
+
+			if (up.crq.length + up.mrq.length === 0) {
+				this.showcl(e, 'config-update-fields-none');
+				this.hidecl(e, 'config-update-fields-has');
+			} else {
+				this.showcl(e, 'config-update-fields-none');
+				this.hidecl(e, 'config-update-fields-has');
+			}
+
+			/* crq */
+
+			if (up.crq.length === 0) {
+				this.showcl(e, 'config-update-crq-none');
+				this.hidecl(e, 'config-update-crq-has');
+				this.hidecl(e, 'config-update-crq');
+			} else {
+				this.hidecl(e, 'config-update-crq-none');
+				this.showcl(e, 'config-update-crq-has');
+				this.showcl(e, 'config-update-crq');
+				const list: HTMLCollectionOf<Element> =
+					e.getElementsByClassName
+					('config-update-crq');
+				for (let i = 0; i < list.length; i++)
+					this.fillUrefs(<HTMLElement>list[i], up.crq);
+			}
+
+			/* mrq */
+
+			if (up.mrq.length === 0) {
+				this.showcl(e, 'config-update-mrq-none');
+				this.hidecl(e, 'config-update-mrq-has');
+				this.hidecl(e, 'config-update-mrq');
+			} else {
+				this.hidecl(e, 'config-update-mrq-none');
+				this.showcl(e, 'config-update-mrq-has');
+				this.showcl(e, 'config-update-mrq');
+				const list: HTMLCollectionOf<Element> =
+					e.getElementsByClassName
+					('config-update-mrq');
+				for (let i = 0; i < list.length; i++)
+					this.fillUrefs(<HTMLElement>list[i], up.mrq);
+			}
+
+			/* rolemap */
+
+			if (up.rolemap === null || up.rolemap.length === 0) {
+				this.showcl(e, 'config-update-rolemap-none');
+				this.hidecl(e, 'config-update-rolemap-has');
+			} else {
+				this.hidecl(e, 'config-update-rolemap-none');
+				this.showcl(e, 'config-update-rolemap-has');
+				this.replcl(e, 'config-update-rolemap',
+					up.rolemap.join(', '));
+			}
+
+		}
+
+		private fillUrefs(e: HTMLElement, 
+			urefs: ortJson.urefObj[]): void
+		{
+			if (e.children.length === 0)
+				return;
+			const tmpl: HTMLElement =
+				<HTMLElement>e.children[0];
+			generic.clr(e);
+			for (let i = 0; i < urefs.length; i++) {
+				const cln: HTMLElement = <HTMLElement>
+					tmpl.cloneNode(true);
+				e.appendChild(cln);
+				this.replcl(cln, 'config-uref-field', 
+					urefs[i].field);
+				this.replcl(cln, 'config-uref-op', 
+					urefs[i].op);
+				this.replcl(cln, 'config-uref-mod', 
+					urefs[i].mod);
+			}
+		}
+
+		private fillQueries(e: HTMLElement, 
+			strct: ortJson.strctObj): void
+		{
+			if (e.children.length === 0)
+				return;
+			const keys: string[] = Object.keys(strct.sq.named);
+			if (keys.length + strct.sq.anon.length === 0) {
+				generic.hide(e);
+				return;
+			}
+			generic.show(e);
+			const tmpl: HTMLElement =
+				<HTMLElement>e.children[0];
+			generic.clr(e);
+			keys.sort();
+			for (let i = 0; i < keys.length; i++) {
+				const cln: HTMLElement = <HTMLElement>
+					tmpl.cloneNode(true);
+				e.appendChild(cln);
+				this.fillQuery(cln, keys[i], 
+					strct.sq.named[keys[i]]);
+			}
+			for (let i = 0; i < strct.sq.anon.length; i++) {
+				const cln: HTMLElement = <HTMLElement>
+					tmpl.cloneNode(true);
+				e.appendChild(cln);
+				this.fillQuery(cln, null, strct.sq.anon[i]);
+			}
+		}
+
+		private fillQuery(e: HTMLElement,
+			name: string|null, query: ortJson.searchObj): void
+		{
+			/* doc */
+
+			this.fillComment(e, 'query', query.doc);
+
+			/* name */
+
+			if (name === null) {
+				this.hidecl(e, 'config-query-name-has');
+				this.showcl(e, 'config-query-name-none');
+			} else {
+				this.hidecl(e, 'config-query-name-none');
+				this.showcl(e, 'config-query-name-has');
+				this.replcl(e, 'config-query-name', name);
+			}
+
+			/* type */
+
+			this.replcl(e, 'config-query-type', query.type);
+
+			/* sntq */
+
+			if (query.sntq.length === 0) {
+				this.showcl(e, 'config-query-sntq-none');
+				this.hidecl(e, 'config-query-sntq-has');
+				this.hidecl(e, 'config-query-sntq');
+			} else {
+				this.hidecl(e, 'config-query-sntq-none');
+				this.showcl(e, 'config-query-sntq-has');
+				this.showcl(e, 'config-query-sntq');
+				const list: HTMLCollectionOf<Element> =
+					e.getElementsByClassName
+					('config-query-sntq');
+				for (let i = 0; i < list.length; i++)
+					this.fillSents(<HTMLElement>list[i], query);
+			}
+			
+			/* ordq */
+
+			if (query.ordq.length === 0) {
+				this.showcl(e, 'config-query-ordq-none');
+				this.hidecl(e, 'config-query-ordq-has');
+				this.hidecl(e, 'config-query-ordq');
+			} else {
+				this.hidecl(e, 'config-query-ordq-none');
+				this.showcl(e, 'config-query-ordq-has');
+				this.showcl(e, 'config-query-ordq');
+				const list: HTMLCollectionOf<Element> =
+					e.getElementsByClassName
+					('config-query-ordq');
+				for (let i = 0; i < list.length; i++)
+					this.fillOrds(<HTMLElement>list[i], query);
+			}
+
+			/* dst */
+
+			if (query.dst !== null) {
+				this.showcl(e, 'config-query-dst-has');
+				this.hidecl(e, 'config-query-dst-none');
+				this.replcl(e, 'config-query-dst-fname', 
+					query.dst.fname);
+			} else {
+				this.hidecl(e, 'config-query-dst-has');
+				this.showcl(e, 'config-query-dst-none');
+			}
+
+			/* aggr/group */
+
+			if (query.aggr !== null && query.group != null) {
+				this.showcl(e, 'config-query-aggr-has');
+				this.hidecl(e, 'config-query-aggr-none');
+				this.replcl(e, 'config-query-group-fname', 
+					query.group.fname);
+				this.replcl(e, 'config-query-aggr-fname', 
+					query.aggr.fname);
+				this.replcl(e, 'config-query-aggr-op', 
+					query.aggr.op);
+			} else {
+				this.hidecl(e, 'config-query-aggr-has');
+				this.showcl(e, 'config-query-aggr-none');
+			}
+
+			/* rolemap */
+
+			if (query.rolemap === null || query.rolemap.length === 0) {
+				this.showcl(e, 'config-query-rolemap-none');
+				this.hidecl(e, 'config-query-rolemap-has');
+			} else {
+				this.hidecl(e, 'config-query-rolemap-none');
+				this.showcl(e, 'config-query-rolemap-has');
+				this.replcl(e, 'config-query-rolemap',
+					query.rolemap.join(', '));
+			}
+
+		}
+
+		private fillOrds(e: HTMLElement, 
+			query: ortJson.searchObj): void
+		{
+			if (e.children.length === 0)
+				return;
+			const tmpl: HTMLElement =
+				<HTMLElement>e.children[0];
+			generic.clr(e);
+			for (let i = 0; i < query.ordq.length; i++) {
+				const cln: HTMLElement = <HTMLElement>
+					tmpl.cloneNode(true);
+				e.appendChild(cln);
+				this.replcl(cln, 
+					'config-ord-fname', 
+					query.ordq[i].fname);
+				this.replcl(cln, 
+					'config-ord-op', 
+					query.ordq[i].op);
+			}
+		}
+
+		private fillSents(e: HTMLElement, 
+			query: ortJson.searchObj): void
+		{
+			if (e.children.length === 0)
+				return;
+			const tmpl: HTMLElement =
+				<HTMLElement>e.children[0];
+			generic.clr(e);
+			for (let i = 0; i < query.sntq.length; i++) {
+				const cln: HTMLElement = <HTMLElement>
+					tmpl.cloneNode(true);
+				e.appendChild(cln);
+				this.replcl(cln, 
+					'config-sent-fname', 
+					query.sntq[i].fname);
+				this.replcl(cln, 
+					'config-sent-op', 
+					query.sntq[i].op);
+			}
+		}
+
+		private fillFields(e: HTMLElement, 
+			strct: ortJson.strctObj): void
+		{
+			if (e.children.length === 0)
+				return;
+			const tmpl: HTMLElement =
+				<HTMLElement>e.children[0];
+			generic.clr(e);
+			const keys: string[] = Object.keys(strct.fq);
+			keys.sort();
+			for (let i = 0; i < keys.length; i++) {
+				const cln: HTMLElement = <HTMLElement>
+					tmpl.cloneNode(true);
+				e.appendChild(cln);
+				this.fillField(cln, keys[i], 
+					strct.fq[keys[i]]);
+			}
+		}
+
+		private fillFieldAction(e: HTMLElement, 
+			act: string, type: string): void
+		{
+			this.hidecl(e, 'config-field-' + type + '-none');
+			this.hidecl(e, 'config-field-' + type + '-restrict');
+			this.hidecl(e, 'config-field-' + type + '-nullify');
+			this.hidecl(e, 'config-field-' + type + '-default');
+			this.hidecl(e, 'config-field-' + type + '-cascade');
+			this.showcl(e, 'config-field-' + type + '-' + act);
+			this.replcl(e, 'config-field-' + type, act);
+		}
+
+		private fillField(e: HTMLElement,
+			name: string, field: ortJson.fieldObj): void
+		{
+			/* doc */
+
+			this.fillComment(e, 'field', field.doc);
+
+			/* name */
+
+			this.replcl(e, 'config-field-name', name);
+
+			/* type */
+
+			this.hidecl(e, 'config-field-type-bit');
+			this.hidecl(e, 'config-field-type-date');
+			this.hidecl(e, 'config-field-type-epoch');
+			this.hidecl(e, 'config-field-type-int');
+			this.hidecl(e, 'config-field-type-real');
+			this.hidecl(e, 'config-field-type-blob');
+			this.hidecl(e, 'config-field-type-text');
+			this.hidecl(e, 'config-field-type-password');
+			this.hidecl(e, 'config-field-type-email');
+			this.hidecl(e, 'config-field-type-struct');
+			this.hidecl(e, 'config-field-type-enum');
+			this.hidecl(e, 'config-field-type-bitfield');
+			this.showcl(e, 'config-field-type-' + field.type);
+			this.replcl(e, 'config-field-type', field.type);
+			if (field.type !== 'struct')
+				this.showcl(e, 'config-field-store-type');
+			else
+				this.hidecl(e, 'config-field-store-type');
+
+			/* actdel, actup */
+
+			this.fillFieldAction(e, field.actup, 'actup');
+			this.fillFieldAction(e, field.actdel, 'actdel');
+
+			/* reference (foreign key or struct) */
+
+			if (typeof field.ref === 'undefined') {
+				this.showcl(e, 'config-field-ref-none');
+				this.hidecl(e, 'config-field-ref-has');
+				this.hidecl(e, 'config-field-fkey-has');
+				this.showcl(e, 'config-field-fkey-none');
+			} else {
+				this.hidecl(e, 'config-field-ref-none');
+				this.showcl(e, 'config-field-ref-has');
+				if (field.type !== 'struct') {
+					this.showcl(e, 'config-field-fkey-has');
+					this.hidecl(e, 'config-field-fkey-none');
+				} else {
+					this.hidecl(e, 'config-field-fkey-has');
+					this.showcl(e, 'config-field-fkey-none');
+				}
+				this.replcl(e, 'config-field-ref-target-strct', 
+					field.ref.target.strct);
+				this.replcl(e, 'config-field-ref-target-field', 
+					field.ref.target.field);
+				this.replcl(e, 'config-field-ref-source-strct', 
+					field.ref.source.strct);
+				this.replcl(e, 'config-field-ref-source-field', 
+					field.ref.source.field);
+			}
+
+			/* bitf */
+
+			if (typeof field.bitf === 'undefined') {
+				this.showcl(e, 'config-field-bitf-none');
+				this.hidecl(e, 'config-field-bitf-has');
+			} else {
+				this.hidecl(e, 'config-field-bitf-none');
+				this.showcl(e, 'config-field-bitf-has');
+				this.replcl(e, 'config-field-bitf', field.bitf);
+			}
+
+			/* enm */
+
+			if (typeof field.enm === 'undefined') {
+				this.showcl(e, 'config-field-enm-none');
+				this.hidecl(e, 'config-field-enm-has');
+			} else {
+				this.hidecl(e, 'config-field-enm-none');
+				this.showcl(e, 'config-field-enm-has');
+				this.replcl(e, 'config-field-enm', field.enm);
+			}
+
+			/* rolemap */
+
+			if (field.rolemap === null || field.rolemap.length === 0) {
+				this.showcl(e, 'config-field-rolemap-none');
+				this.hidecl(e, 'config-field-rolemap-has');
+			} else {
+				this.hidecl(e, 'config-field-rolemap-none');
+				this.showcl(e, 'config-field-rolemap-has');
+				this.replcl(e, 'config-field-rolemap',
+					field.rolemap.join(', '));
+			}
+
+			/* def */
+
+			if (field.def === null) {
+				this.showcl(e, 'config-field-def-none');
+				this.hidecl(e, 'config-field-def-has');
+			} else { 
+				this.hidecl(e, 'config-field-def-none');
+				this.showcl(e, 'config-field-def-has');
+				this.replcl(e, 'config-field-def', field.def);
+			}
+			
+			/* fvq */
+
+			if (field.fvq.length === 0) {
+				this.hidecl(e, 'config-field-limits-has');
+				this.showcl(e, 'config-field-limits-none');
+			} else {
+				this.showcl(e, 'config-field-limits-has');
+				this.hidecl(e, 'config-field-limits-none');
+				this.hidecl(e, 'config-field-limit-number');
+				this.hidecl(e, 'config-field-limit-real');
+				this.hidecl(e, 'config-field-limit-string');
+				this.hidecl(e, 'config-field-limit-enum');
+				if (field.type === 'bit' ||
+				    field.type === 'bitfield' ||
+				    field.type === 'date' ||
+				    field.type === 'epoch' ||
+				    field.type === 'int')
+					this.showcl(e, 
+						'config-field-limit-number');
+				else if (field.type === 'real')
+					this.showcl(e, 
+						'config-field-limit-real');
+				else if (field.type === 'email' ||
+				    field.type === 'text')
+					this.showcl(e, 
+						'config-field-limit-string');
+				else if (field.type === 'enum')
+					this.showcl(e, 
+						'config-field-limit-enum');
+				let lim: string = '';
+				for (let i = 0; i < field.fvq.length; i++) {
+					lim += field.fvq[i].type + 
+						' ' + field.fvq[i].limit;
+					if (i < field.fvq.length - 1)
+						lim += ', ';
+				}
+				this.replcl(e, 'config-field-limit', lim);
+			}
+		}
+	}
 }

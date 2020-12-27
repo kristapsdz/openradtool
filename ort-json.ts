@@ -528,7 +528,21 @@ namespace ortJson {
 		 * - *config-update-crq-{has,none}*: shown or hidden
 		 *   depending on whether the update has non-zero crq
 		 * - *config-update-mrq-{has,none}*: shown or hidden
-		 *   depending on whether the update has non-zero crq
+		 *   depending on whether the update has non-zero mrq
+		 * - *config-update-mrq*: the first child of this is
+		 *   cloned and filled in with data for each reference
+		 *   (see "Per update reference") unless there are no
+		 *   references, in which case the element is hidden
+		 * - *config-update-crq*: the first child of this is
+		 *   cloned and filled in with data for each reference
+		 *   (see "Per update reference") unless there are no
+		 *   references, in which case the element is hidden
+		 *
+		 * Per update reference:
+		 * - *config-uref-field*: the field name in the current
+		 *   structure
+		 * - *config-uref-op*: the update constraint operator
+		 * - *config-uref-mod*: the update modifier
 		 *
 		 * Per insert:
 		 * - *config-insert-rolemap-{has,none}*: shown or hidden
@@ -1233,7 +1247,7 @@ namespace ortJson {
 					this.showcl(e, 
 						'config-field-limit-enum');
 				let lim: string = '';
-				for (let i = 0; i < field.fvq.length; i++) {
+				for (let i: number = 0; i < field.fvq.length; i++) {
 					lim += field.fvq[i].type + 
 						' ' + field.fvq[i].limit;
 					if (i < field.fvq.length - 1)

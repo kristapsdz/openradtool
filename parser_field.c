@@ -45,6 +45,7 @@ struct typemap {
 
 static const struct typemap ftypes[] = {
 	{ FTYPE_BIT, "bit" },
+	{ FTYPE_BITFIELD, "bitfield" },
 	{ FTYPE_BITFIELD, "bits" },
 	{ FTYPE_BLOB, "blob" },
 	{ FTYPE_DATE, "date" },

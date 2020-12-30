@@ -215,6 +215,9 @@ Non-zero values must be merged into a bit-field by setting
 prior to storage.
 For entire bitfields, see
 .Cm bits .
+.It Cm bitfield Ar name
+Alias for
+.Cm bits .
 .It Cm bits Ar name
 Integer constrained to the given
 .Ar name
@@ -939,8 +942,16 @@ bits bitsname {
 .Pp
 The name must be unique among all enumerations, structures, and other
 bitfields.
+The term
+.Qq bitfield
+may be used instead of
+.Cm bits ,
+for example,
+.Bd -literal -offset indent
+bitfield bitsname { item "bit1" 0; };
+.Ed
 .Pp
-Items define bits, their values, and documentation.
+Items define individual bits, their values, and documentation.
 Each item's
 .Cm name
 must be unique within a bitfield.

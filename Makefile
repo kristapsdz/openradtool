@@ -828,16 +828,6 @@ regress: all
 	else \
 		echo "!!! skipping ort-nodejs compile tests !!! " ; \
 	fi ; \
-	if [ -f "node_modules/.bin/ts-node" ]; then \
-		echo "=== ort-json conversion tests === " ; \
-		cat ort-json.ts regress/json/regress-runner.ts >$$tmp.ts ; \
-		set -e ; \
-		node_modules/.bin/ts-node --skip-project $$tmp.ts ; \
-		set +e ; \
-		rm -f $$tmp.ts ; \
-	else \
-		echo "!!! skipping ort-json conversion tests !!! " ; \
-	fi ; \
 	echo "=== ort-javascript output tests === " ; \
 	for f in regress/javascript/*.ort ; do \
 		printf "ort-javascript: $$f... " ; \

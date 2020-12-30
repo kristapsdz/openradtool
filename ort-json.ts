@@ -19,6 +19,7 @@ namespace ortJson {
 	/**
 	 * Label dictionary.
 	 * Key is language.
+	 * The default language is "_default".
 	 */
 	export interface labelSet {
 		[lang: string]: labelObj;
@@ -58,7 +59,7 @@ namespace ortJson {
 	export interface bitIndexObj {
 		pos: posObj;
 		doc: string|null;
-		value: string|number|null;
+		value: string|number;
 		labels: labelSet|null;
 	}
 
@@ -363,6 +364,103 @@ namespace ortJson {
 			return str;
 		}
 
+		private fieldObjToString(name: string, field: fieldObj): string
+		{
+			let str: string = ' field';
+			if (typeof field.ref !== 'undefined' && 
+			    field.type !== 'struct')
+				str += ' ' + field.ref.source.field + 
+					':' + field.ref.target.strct + 
+					'.' + field.ref.target.field;
+			else
+				str += ' ' + name;
+			str += ' ' + field.type;
+			if (typeof field.enm !== 'undefined')
+				str += ' ' + field.enm;
+			if (typeof field.bitf !== 'undefined')
+				str += ' ' + field.bitf;
+			if (typeof field.ref !== 'undefined' && 
+			    field.type === 'struct')
+				str += ' ' + field.ref.source.field;
+			if (field.doc !== null)
+				str += ' comment \"' + field.doc + '\"';
+			return str + ' ;';
+		}
+
+		private labelSetToString(set: labelSet): string
+		{
+			let str: string = '';
+			const keys: string[] = Object.keys(set);
+			for (let i: number = 0; i < keys.length; i++)
+				str += ' jslabel' + 
+					(keys[i] === '_default' ? '' :
+					 ('.' + keys[i])) +
+					' \"' + set[keys[i]].value + 
+					'\"';
+			return str;
+		}
+
+		private bitIndexObjToString(name: string, bit: bitIndexObj): string
+		{
+			let str: string = ' item ' + 
+				name + ' ' + bit.value.toString();
+			if (bit.doc !== null)
+				str += ' comment \"' + bit.doc + '\"';
+			if (bit.labels !== null)
+				str += this.labelSetToString(bit.labels);
+			return str + ' ;';
+		}
+
+		private bitfObjToString(name: string, bitf: bitfObj): string
+		{
+			let str: string = ' bitfield ' + name + ' {';
+			const bqKeys: string[] = Object.keys(bitf.bq);
+			for (let i: number = 0; i < bqKeys.length; i++)
+				str += this.bitIndexObjToString(bqKeys[i],
+					bitf.bq[bqKeys[i]]);
+			if (bitf.doc !== null)
+				str += ' comment \"' + bitf.doc + '\";';
+			if (bitf.labelsNull !== null)
+				str += ' isnull' + this.labelSetToString
+					(bitf.labelsNull) + ';';
+			if (bitf.labelsUnset !== null)
+				str += ' isunset' + this.labelSetToString
+					(bitf.labelsUnset) + ';';
+			return str + ' };';
+		}
+
+		private bitfSetToString(set: bitfSet): string
+		{
+			let str: string = '';
+			const keys: string[] = Object.keys(set);
+			for (let i: number = 0; i < keys.length; i++)
+				str += this.bitfObjToString
+					(keys[i], set[keys[i]]);
+			return str;
+		}
+
+		private strctObjToString(name: string, strct: strctObj): string
+		{
+			let str: string = ' struct ' + name + ' {';
+			const fqKeys: string[] = Object.keys(strct.fq);
+			for (let i: number = 0; i < fqKeys.length; i++)
+				str += this.fieldObjToString(fqKeys[i],
+					strct.fq[fqKeys[i]]);
+			if (strct.doc !== null) 
+				str += ' comment \"' + strct.doc + '\";';
+			return str + ' };';
+		}
+
+		private strctSetToString(set: strctSet): string
+		{
+			let str: string = '';
+			const keys: string[] = Object.keys(set);
+			for (let i: number = 0; i < keys.length; i++)
+				str += this.strctObjToString
+					(keys[i], set[keys[i]]);
+			return str;
+		}
+
 		/**
 		 * Convert the configuration to an ort(5) document.
 		 */
@@ -376,7 +474,10 @@ namespace ortJson {
 				str += ' };';
 			}
 
-			return str;
+			if (this.obj.bq !== null) 
+				str += this.bitfSetToString(this.obj.bq);
+
+			return str + this.strctSetToString(this.obj.sq);
 		}
 
 		private find(root: string|HTMLElement): 

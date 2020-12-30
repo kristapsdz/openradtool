@@ -119,16 +119,19 @@ namespace ortJson {
 		source: fieldPtrObj;
 	}
 
+	export type fieldObjFlags = 'rowid'|'null'|'unique';
+	export type fieldObjActions =  'none'|'restrict'|'nullify'|'cascade'|'default';
+
 	/**
 	 * Same as "struct field" in ort(3).
-	 * TODO: flags.
 	 */
 	export interface fieldObj {
 		pos: posObj;
 		doc: string|null;
 		type: 'bit'|'date'|'epoch'|'int'|'real'|'blob'|'text'|'password'|'email'|'struct'|'enum'|'bitfield';
-		actup: 'none'|'restrict'|'nullify'|'cascade'|'default';
-		actdel: 'none'|'restrict'|'nullify'|'cascade'|'default';
+		actup: fieldObjActions;
+		actdel: fieldObjActions;
+		flags: fieldObjFlags[];
 		rolemap: string[]|null;
 		/**
 		 * Only set if we're an enum.
@@ -364,6 +367,11 @@ namespace ortJson {
 			return str;
 		}
 
+		private commentToString(doc: string): string
+		{
+			return ' comment \"' + doc.replace(/"/g, '\\\"') + '\"';
+		}
+
 		private fieldObjToString(name: string, field: fieldObj): string
 		{
 			let str: string = ' field';
@@ -383,7 +391,9 @@ namespace ortJson {
 			    field.type === 'struct')
 				str += ' ' + field.ref.source.field;
 			if (field.doc !== null)
-				str += ' comment \"' + field.doc + '\"';
+				str += this.commentToString(field.doc);
+			for (let i: number = 0; i < field.flags.length; i++) 
+				str += ' ' + field.flags[i];
 			return str + ' ;';
 		}
 
@@ -391,12 +401,15 @@ namespace ortJson {
 		{
 			let str: string = '';
 			const keys: string[] = Object.keys(set);
-			for (let i: number = 0; i < keys.length; i++)
+			for (let i: number = 0; i < keys.length; i++) {
+				const label: string =
+					set[keys[i]].value.replace
+						(/"/g, '\\\"');
 				str += ' jslabel' + 
 					(keys[i] === '_default' ? '' :
 					 ('.' + keys[i])) +
-					' \"' + set[keys[i]].value + 
-					'\"';
+					' \"' + label + '\"';
+			}
 			return str;
 		}
 
@@ -405,7 +418,7 @@ namespace ortJson {
 			let str: string = ' item ' + 
 				name + ' ' + bit.value.toString();
 			if (bit.doc !== null)
-				str += ' comment \"' + bit.doc + '\"';
+				str += this.commentToString(bit.doc);
 			if (bit.labels !== null)
 				str += this.labelSetToString(bit.labels);
 			return str + ' ;';
@@ -414,12 +427,12 @@ namespace ortJson {
 		private bitfObjToString(name: string, bitf: bitfObj): string
 		{
 			let str: string = ' bitfield ' + name + ' {';
-			const bqKeys: string[] = Object.keys(bitf.bq);
-			for (let i: number = 0; i < bqKeys.length; i++)
-				str += this.bitIndexObjToString(bqKeys[i],
-					bitf.bq[bqKeys[i]]);
+			const keys: string[] = Object.keys(bitf.bq);
+			for (let i: number = 0; i < keys.length; i++)
+				str += this.bitIndexObjToString(keys[i],
+					bitf.bq[keys[i]]);
 			if (bitf.doc !== null)
-				str += ' comment \"' + bitf.doc + '\";';
+				str += this.commentToString(bitf.doc) + ';';
 			if (bitf.labelsNull !== null)
 				str += ' isnull' + this.labelSetToString
 					(bitf.labelsNull) + ';';
@@ -439,6 +452,43 @@ namespace ortJson {
 			return str;
 		}
 
+		private enumItemObjToString(name: string, eitem: enumItemObj): string
+		{
+			let str: string = ' item ' + name;
+			if (eitem.value !== null)
+				str += ' ' + eitem.value.toString();
+			if (eitem.doc !== null)
+				str += this.commentToString(eitem.doc);
+			if (eitem.labels !== null)
+				str += this.labelSetToString(eitem.labels);
+			return str + ' ;';
+		}
+
+		private enumObjToString(name: string, enm: enumObj): string
+		{
+			let str: string = ' enum ' + name + ' {';
+			const keys: string[] = Object.keys(enm.eq);
+			for (let i: number = 0; i < keys.length; i++)
+				str += this.enumItemObjToString(keys[i],
+					enm.eq[keys[i]]);
+			if (enm.doc !== null)
+				str += this.commentToString(enm.doc) + ';';
+			if (enm.labelsNull !== null)
+				str += ' isnull' + this.labelSetToString
+					(enm.labelsNull) + ';';
+			return str + ' };';
+		}
+
+		private enumSetToString(set: enumSet): string
+		{
+			let str: string = '';
+			const keys: string[] = Object.keys(set);
+			for (let i: number = 0; i < keys.length; i++)
+				str += this.enumObjToString
+					(keys[i], set[keys[i]]);
+			return str;
+		}
+
 		private strctObjToString(name: string, strct: strctObj): string
 		{
 			let str: string = ' struct ' + name + ' {';
@@ -447,7 +497,7 @@ namespace ortJson {
 				str += this.fieldObjToString(fqKeys[i],
 					strct.fq[fqKeys[i]]);
 			if (strct.doc !== null) 
-				str += ' comment \"' + strct.doc + '\";';
+				str += this.commentToString(strct.doc) + ';';
 			return str + ' };';
 		}
 
@@ -476,6 +526,8 @@ namespace ortJson {
 
 			if (this.obj.bq !== null) 
 				str += this.bitfSetToString(this.obj.bq);
+			if (this.obj.eq !== null) 
+				str += this.enumSetToString(this.obj.eq);
 
 			return str + this.strctSetToString(this.obj.sq);
 		}

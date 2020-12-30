@@ -317,7 +317,7 @@ gen_enms(FILE *f, const struct config *cfg)
 {
 	const struct enm	*enm;
 
-	if (fputs(" \"enums\": ", f) == EOF)
+	if (fputs(" \"eq\": ", f) == EOF)
 		return 0;
 	if (TAILQ_EMPTY(&cfg->eq))
 		return fputs("null,", f) != EOF;
@@ -480,6 +480,7 @@ static int
 gen_field(FILE *f, const struct field *fd)
 {
 	struct fvalid	*fv;
+	unsigned int	 fl;
 
 	if (fprintf(f, " \"%s\": {", fd->name) < 0)
 		return 0;
@@ -487,6 +488,29 @@ gen_field(FILE *f, const struct field *fd)
 		return 0;
 	if (!gen_doc(f, fd->doc))
 		return 0;
+
+	fl = (fd->flags & FIELD_ROWID) |
+		(fd->flags & FIELD_UNIQUE) | 
+		(fd->flags & FIELD_NULL);
+	if (fputs(" \"flags\": [", f) == EOF)
+		return 0;
+	if (fl & FIELD_ROWID) {
+		if (fputs("\"rowid\"", f) == EOF)
+			return 0;
+		if ((fl &= ~FIELD_ROWID) && fputs(", ", f) == EOF)
+			return 0;
+	}
+	if (fl & FIELD_UNIQUE) { 
+		if (fputs("\"unique\"", f) == EOF)
+			return 0;
+		if ((fl &= ~FIELD_UNIQUE) && fputs(", ", f) == EOF)
+			return 0;
+	}
+	if ((fl & FIELD_NULL) && fputs("\"null\"", f) == EOF)
+		return 0;
+	if (fputs("],", f) == EOF)
+		return 0;
+
 	if (fd->enm != NULL &&
 	    fprintf(f, " \"enm\": \"%s\",", fd->enm->name) < 0)
 		return 0;

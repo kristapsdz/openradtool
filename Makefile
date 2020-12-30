@@ -370,6 +370,7 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/openradtool-$(VERSION)/regress/c
 	mkdir -p .dist/openradtool-$(VERSION)/regress/diff
 	mkdir -p .dist/openradtool-$(VERSION)/regress/javascript
+	mkdir -p .dist/openradtool-$(VERSION)/regress/json
 	mkdir -p .dist/openradtool-$(VERSION)/regress/nodejs
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sqldiff
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sql
@@ -391,6 +392,8 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	install -m 0444 regress/javascript/*.result .dist/openradtool-$(VERSION)/regress/javascript
 	install -m 0444 regress/javascript/*.ts .dist/openradtool-$(VERSION)/regress/javascript
 	install -m 0444 regress/javascript/*.xml .dist/openradtool-$(VERSION)/regress/javascript
+	install -m 0444 regress/json/*.md .dist/openradtool-$(VERSION)/regress/json
+	install -m 0444 regress/json/*.ts .dist/openradtool-$(VERSION)/regress/json
 	install -m 0444 regress/nodejs/*.md .dist/openradtool-$(VERSION)/regress/nodejs
 	install -m 0444 regress/nodejs/*.ts .dist/openradtool-$(VERSION)/regress/nodejs
 	install -m 0444 regress/sql/*.ort .dist/openradtool-$(VERSION)/regress/sql
@@ -824,6 +827,16 @@ regress: all
 		set +e ; \
 	else \
 		echo "!!! skipping ort-nodejs compile tests !!! " ; \
+	fi ; \
+	if [ -f "node_modules/.bin/ts-node" ]; then \
+		echo "=== ort-json conversion tests === " ; \
+		cat ort-json.ts regress/json/regress-runner.ts >$$tmp.ts ; \
+		set -e ; \
+		node_modules/.bin/ts-node --skip-project $$tmp.ts ; \
+		set +e ; \
+		rm -f $$tmp.ts ; \
+	else \
+		echo "!!! skipping ort-json conversion tests !!! " ; \
 	fi ; \
 	echo "=== ort-javascript output tests === " ; \
 	for f in regress/javascript/*.ort ; do \

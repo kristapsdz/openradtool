@@ -351,6 +351,34 @@ namespace ortJson {
 			this.obj = obj.config;
 		}
 
+		private roleSetToString(roles: roleSet): string 
+		{
+			let str: string = '';
+			const keys: string[] = Object.keys(roles);
+
+			for (let i: number = 0; i < keys.length; i++) {
+				str += ' role ' + keys[i] + ';';
+			}
+
+			return str;
+		}
+
+		/**
+		 * Convert the configuration to an ort(5) document.
+		 */
+		toString(): string
+		{
+			let str: string = '';
+
+			if (this.obj.roles !== null) {
+				str += 'roles {';
+				str += this.roleSetToString(this.obj.roles);
+				str += ' };';
+			}
+
+			return str;
+		}
+
 		private find(root: string|HTMLElement): 
 			HTMLElement|null
 		{

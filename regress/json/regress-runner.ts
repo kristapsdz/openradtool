@@ -29,17 +29,17 @@ for (i = 0; i < files.length; i++) {
 
 	/* Run ort-json on ort(5) configuration, catch errors. */
 
-	const out = spawnSync('./ort-json', [ortname]);
+	const jsonProc = spawnSync('./ort-json', [ortname]);
 
-	if (out.status !== null && out.status !== 0) {
+	if (jsonProc.status !== null && jsonProc.status !== 0) {
 		console.log('ts-node: ' + ortname + 
 			'... fail (did not execute)');
-		console.log(Error(out.stderr));
+		console.log(jsonProc.stderr);
 		process.exit(1);
 	}
 
 	try {
-		res = JSON.parse(out.stdout.toString());
+		res = JSON.parse(jsonProc.stdout.toString());
 	} catch (er) {
 		console.log('ts-node: ' + ortname + 
 			'... fail (did not execute)');
@@ -52,7 +52,19 @@ for (i = 0; i < files.length; i++) {
 	const fmt: ortJson.ortJsonConfigFormat =
 		new ortJson.ortJsonConfigFormat(obj);
 
-	const cfg: string = fmt.toString();
+	console.log(fmt.toString());
+
+	const diffProc = spawnSync('./ort-diff', [ortname], {
+		'input': fmt.toString()
+	});
+
+	if (diffProc.status !== null && diffProc.status !== 0) {
+		console.log('ts-node: ' + ortname + 
+			'... fail (did not compare)');
+		console.log(diffProc.stderr.toString());
+		console.log(diffProc.stdout.toString());
+		process.exit(1);
+	}
 
 	/* ...else print out our errors and exit. */
 

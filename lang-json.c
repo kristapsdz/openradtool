@@ -822,6 +822,9 @@ gen_update(FILE *f, int *first, const struct update *u)
 		return 0;
 	if (!gen_doc(f, u->doc))
 		return 0;
+	if (fprintf(f, "\"type\": \"%s\"," ,
+	    u->type == UP_MODIFY ? "update" : "delete") < 0)
+		return 0;
 	if (fputs(" \"mrq\": [", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(ref, &u->mrq, entries) {

@@ -266,6 +266,7 @@ namespace ortJson {
 	export interface updateObj {
 		pos: posObj;
 		doc: string|null;
+		type: 'update'|'delete';
 		rolemap: string[]|null;
 		/**
 		 * Can contain "all" to represent UPDATE_ALL.
@@ -390,8 +391,25 @@ namespace ortJson {
 			if (typeof field.ref !== 'undefined' && 
 			    field.type === 'struct')
 				str += ' ' + field.ref.source.field;
+			if (typeof field.ref !== 'undefined' && 
+			    field.type !== 'struct') {
+				str += ' actdel ' + field.actdel;
+				str += ' actup ' + field.actup;
+			}
 			if (field.doc !== null)
 				str += this.commentToString(field.doc);
+			if (field.def !== null &&
+			    (field.type === 'email' ||
+			     field.type === 'text'))
+				str += ' default \"' + 
+					field.def.replace(/"/g, '\\\"') +
+					'\"';
+			else if (field.def !== null)
+				str += ' default ' + field.def;
+
+			for (let i: number = 0; i < field.fvq.length; i++)
+				str += ' limit ' + field.fvq[i].type + 
+					' ' + field.fvq[i].limit;
 			for (let i: number = 0; i < field.flags.length; i++) 
 				str += ' ' + field.flags[i];
 			return str + ' ;';
@@ -489,13 +507,121 @@ namespace ortJson {
 			return str;
 		}
 
+		private fieldSetToString(set: fieldSet): string
+		{
+			let str: string = '';
+			const keys: string[] = Object.keys(set);
+			for (let i: number = 0; i < keys.length; i++)
+				str += this.fieldObjToString
+					(keys[i], set[keys[i]]);
+			return str;
+		}
+
+		private updateObjToString(name: string|null, up: updateObj): string
+		{
+			let str: string = ' ' + up.type;
+			if (up.type === 'update' && up.flags.length === 0) {
+				for (let i: number = 0; i < up.mrq.length; i++) {
+					if (i > 0)
+						str += ',';
+					str += ' ' + up.mrq[i].field + 
+						' ' + up.mrq[i].mod;
+				}
+				str += ':';
+			} else if (up.type === 'update')
+				str += ':';
+
+			for (let i: number = 0; i < up.crq.length; i++) {
+				if (i > 0)
+					str += ',';
+				str += ' ' + up.crq[i].field + 
+					' ' + up.crq[i].op;
+			}
+			str += ':';
+			if (up.doc !== null)
+				str += this.commentToString(up.doc);
+			if (name !== null)
+				str += ' name ' + name;
+			return str + ';';
+		}
+
+		private updateSetToString(set: updateSet): string
+		{
+			let str: string = '';
+			const keys: string[] = Object.keys(set);
+			for (let i: number = 0; i < keys.length; i++)
+				str += this.updateObjToString
+					(keys[i], set[keys[i]]);
+			return str;
+		}
+
+		private searchObjToString(name: string|null, search: searchObj): string
+		{
+			let str: string = ' ' + search.type;
+			for (let i: number = 0; i < search.sntq.length; i++) {
+				if (i > 0)
+					str += ',';
+				str += ' ' + search.sntq[i].fname + 
+					' ' + search.sntq[i].op;
+			}
+			str += ':';
+			if (search.doc !== null)
+				str += this.commentToString(search.doc);
+			if (search.limit !== '0' || search.offset !== '0')
+				str += ' limit ' + search.limit + 
+					', offset ' + search.offset;
+			if (name !== null)
+				str += ' name ' + name;
+			if (search.dst !== null)
+				str += ' distinct ' + search.dst.fname;
+			if (search.group !== null)
+				str += ' grouprow ' + search.group.fname;
+			if (search.aggr !== null)
+				str += ' ' + search.aggr.op + 
+					' ' + search.aggr.fname;
+			if (search.ordq.length > 0) {
+				str += ' order';
+				for (let i: number = 0; i < search.ordq.length; i++) {
+					if (i > 0)
+						str += ',';
+					str += ' ' + search.ordq[i].fname + 
+						' ' + search.ordq[i].op;
+				}
+			}
+			return str + ';';
+		}
+
+		private searchSetToString(set: searchSet): string
+		{
+			let str: string = '';
+			const keys: string[] = Object.keys(set);
+			for (let i: number = 0; i < keys.length; i++)
+				str += this.searchObjToString
+					(keys[i], set[keys[i]]);
+			return str;
+		}
+
 		private strctObjToString(name: string, strct: strctObj): string
 		{
 			let str: string = ' struct ' + name + ' {';
-			const fqKeys: string[] = Object.keys(strct.fq);
-			for (let i: number = 0; i < fqKeys.length; i++)
-				str += this.fieldObjToString(fqKeys[i],
-					strct.fq[fqKeys[i]]);
+			str += this.fieldSetToString(strct.fq);
+
+			for (let i: number = 0; i < strct.sq.anon.length; i++) 
+		       		str += this.searchObjToString
+					(null, strct.sq.anon[i]);	
+			str += this.searchSetToString(strct.sq.named);
+
+			for (let i: number = 0; i < strct.uq.anon.length; i++) 
+		       		str += this.updateObjToString
+					(null, strct.uq.anon[i]);	
+			str += this.updateSetToString(strct.uq.named);
+
+			for (let i: number = 0; i < strct.dq.anon.length; i++) 
+		       		str += this.updateObjToString
+					(null, strct.dq.anon[i]);	
+			str += this.updateSetToString(strct.dq.named);
+			if (strct.insert !== null)
+				str += ' insert;';
 			if (strct.doc !== null) 
 				str += this.commentToString(strct.doc) + ';';
 			return str + ' };';

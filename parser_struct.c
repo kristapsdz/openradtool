@@ -284,6 +284,10 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 
 	if (p->lasttype == TOK_PERIOD) {
 		d->strct = srch->parent;
+		if ((d->fname = strdup(".")) == NULL) {
+			parse_err(p);
+			return;
+		}
 		parse_next(p);
 		return;
 	} else if (p->lasttype != TOK_IDENT) {

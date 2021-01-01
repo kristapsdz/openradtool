@@ -318,7 +318,7 @@ namespace ortJson {
 		sq: searchClassObj;
 		uq: updateClassObj;
 		dq: updateClassObj;
-		dn: uniqueObj[];
+		nq: uniqueObj[];
 	}
 
 	export interface strctSet {
@@ -567,9 +567,11 @@ namespace ortJson {
 			str += ':';
 			if (search.doc !== null)
 				str += this.commentToString(search.doc);
-			if (search.limit !== '0' || search.offset !== '0')
-				str += ' limit ' + search.limit + 
-					', offset ' + search.offset;
+			if (search.limit !== '0') {
+				str += ' limit ' + search.limit;
+				if (search.offset !== '0')
+					str += ', ' + search.offset;
+			}
 			if (name !== null)
 				str += ' name ' + name;
 			if (search.dst !== null)
@@ -624,6 +626,15 @@ namespace ortJson {
 				str += ' insert;';
 			if (strct.doc !== null) 
 				str += this.commentToString(strct.doc) + ';';
+			for (let i: number = 0; i < strct.nq.length; i++) {
+				str += ' unique ';
+				for (let j: number = 0; j < strct.nq[i].nq.length; j++) {
+					if (j > 0)
+						str += ',';
+					str += strct.nq[i].nq[j];
+				}
+				str += ';';
+			}
 			return str + ' };';
 		}
 

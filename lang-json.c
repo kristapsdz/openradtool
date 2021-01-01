@@ -103,6 +103,18 @@ static const char *const stypes[STYPE__MAX] = {
 	"iterate", /* STYPE_ITERATE */
 };
 
+static const char *const rolemapts[ROLEMAP__MAX] = {
+	"all", /* ROLEMAP_ALL */
+	"count", /* ROLEMAP_COUNT */
+	"delete", /* ROLEMAP_DELETE */
+	"insert", /* ROLEMAP_INSERT */
+	"iterate", /* ROLEMAP_ITERATE */
+	"list", /* ROLEMAP_LIST */
+	"search", /* ROLEMAP_SEARCH */
+	"update", /* ROLEMAP_UPDATE */
+	"noexport", /* ROLEMAP_NOEXPORT */
+};
+
 /*
  * Format the string according to the JSON specification.
  * Note about escaping the double-quote: in ort(3), double-quotes are
@@ -143,6 +155,58 @@ gen_string(FILE *f, const char *cp)
 			return 0;
 	}
 	return fputc('\"', f) != EOF;
+}
+
+/*
+ * Generate a full rolemap: rolemapObj[] w/o comma.
+ * Return zero on failure, non-zero on success.
+ */
+static int
+gen_rolemap_full(FILE *f, const struct rolemap *map)
+{
+	const struct rref	*ref;
+
+	if (fprintf(f, " { \"type\": \"%s\", \"rq\": [", 
+	   rolemapts[map->type]) < 0)
+		return 0;
+
+	TAILQ_FOREACH(ref, &map->rq, entries) {
+		if (fprintf(f, " \"%s\"", ref->role->name) < 0)
+			return 0;
+		if (TAILQ_NEXT(ref, entries) != NULL &&
+		    fputc(',', f) == EOF)
+			return 0;
+	}
+	if (fputs(" ], \"name\": ", f) == EOF)
+		return 0;
+
+	switch (map->type) {
+	case ROLEMAP_NOEXPORT:
+		if (map->f == NULL) {
+			if (fputs("null", f) == EOF)
+				return 0;
+			break;
+		}
+		if (fprintf(f, "\"%s\"", map->f->name) < 0)
+			return 0;
+		break;
+	case ROLEMAP_UPDATE:
+	case ROLEMAP_DELETE:
+		if (fprintf(f, "\"%s\"", map->u->name) < 0)
+			return 0;
+		break;
+	case ROLEMAP_INSERT:
+	case ROLEMAP_ALL:
+		if (fputs("null", f) == EOF)
+			return 0;
+		break;
+	default:
+		if (fprintf(f, "\"%s\"", map->s->name) < 0)
+			return 0;
+		break;
+	}
+
+	return fputc('}', f) != EOF;
 }
 
 /*
@@ -887,6 +951,7 @@ gen_strct(FILE *f, const struct strct *s)
 	const struct search	*sr;
 	const struct update	*up;
 	const struct unique	*un;
+	const struct rolemap	*rm;
 	int			 first;
 
 	if (fprintf(f, " \"%s\": {", s->name) < 0)
@@ -908,7 +973,16 @@ gen_strct(FILE *f, const struct strct *s)
 		return 0;
 	if (!gen_insert(f, s->ins))
 		return 0;
-	if (fputs(" \"nq\": [ ", f) == EOF)
+	if (fputs(" \"rq\": [ ", f) == EOF)
+		return 0;
+	TAILQ_FOREACH(rm, &s->rq, entries) {
+		if (!gen_rolemap_full(f, rm))
+			return 0;
+		if (TAILQ_NEXT(rm, entries) != NULL &&
+		    fputc(',', f) == EOF)
+			return 0;
+	}
+	if (fputs(" ], \"nq\": [ ", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(un, &s->nq, entries) {
 		if (!gen_unique(f, un))

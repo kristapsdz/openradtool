@@ -254,6 +254,8 @@ gen_commentv(FILE *f, size_t tabs, enum cmtt t, const char *fmt, ...)
 
 /*
  * Print all of the columns that a select statement wants.
+ * If "pname" is NULL, don't try to resolve the schema's alias and use
+ * it as-is.
  * This uses the macro/function for enumerating columns.
  */
 static int

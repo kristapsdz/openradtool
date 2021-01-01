@@ -527,8 +527,10 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			if ((rc = fprintf(f, "DISTINCT ")) < 0)
 				return 0;
 			col += rc;
-			if (!gen_sql_stmt_schema(f, tabs, lang, 
-			    p, 1, s->dst->strct, s->dst->fname, &col))
+			if (!gen_sql_stmt_schema(f, tabs, lang, p, 1, 
+			    s->dst->strct, 
+			    strcmp(s->dst->fname, ".") == 0 ? 
+			    NULL : s->dst->fname, &col))
 				return 0;
 			needquot = 1;
 		} else if (s->type != STYPE_COUNT) {

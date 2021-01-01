@@ -300,6 +300,20 @@ namespace ortJson {
 	}
 
 	/**
+	 * Similar to "struct rolemap" in ort(3).
+	 */
+	export interface rolemapObj {
+		type: 'all'|'count'|'delete'|'insert'|'iterate'|'list'|'search'|'update'|'noexport';
+		/**
+		 * If not null (it's only null if type is "all" or
+		 * "insert", or "noexport" for all fields), is the named
+		 * field/search/update.
+		 */
+		name: string|null;
+		rq: string[];
+	}
+
+	/**
 	 * Same as "struct strct" in ort(3).
 	 */
 	export interface strctObj {
@@ -319,6 +333,11 @@ namespace ortJson {
 		uq: updateClassObj;
 		dq: updateClassObj;
 		nq: uniqueObj[];
+		/**
+		 * This is informational: all of the operations have
+		 * their roles therein.  
+		 */
+		rq: rolemapObj[];
 	}
 
 	export interface strctSet {
@@ -356,21 +375,29 @@ namespace ortJson {
 			this.obj = obj.config;
 		}
 
-		private roleSetToString(roles: roleSet): string 
-		{
-			let str: string = '';
-			const keys: string[] = Object.keys(roles);
-
-			for (let i: number = 0; i < keys.length; i++) {
-				str += ' role ' + keys[i] + ';';
-			}
-
-			return str;
-		}
-
 		private commentToString(doc: string): string
 		{
 			return ' comment \"' + doc.replace(/"/g, '\\\"') + '\"';
+		}
+
+		private roleObjToString(name: string, role: roleObj): string
+		{
+			let str: string = ' role ' + name;
+			if (role.doc !== null)
+				this.commentToString(role.doc);
+			if (role.children !== null)
+				str += this.roleSetToString(role.children);
+			return str + ';';
+		}
+
+		private roleSetToString(set: roleSet): string 
+		{
+			let str: string = ' {';
+			const keys: string[] = Object.keys(set);
+			for (let i: number = 0; i < keys.length; i++)
+				str += this.roleObjToString
+					(keys[i], set[keys[i]]);
+			return str + '}';
 		}
 
 		private fieldObjToString(name: string, field: fieldObj): string
@@ -603,6 +630,20 @@ namespace ortJson {
 			return str;
 		}
 
+		private rolemapObjToString(map: rolemapObj): string
+		{
+			let str: string = ' roles';
+			for (let i: number = 0; i < map.rq.length; i++) {
+				if (i > 0)
+					str += ',';
+				str += ' ' + map.rq[i];
+			}
+			str += ' { ' + map.type;
+			if (map.name !== null)
+				str += ' ' + map.name;
+			return str + '; };';
+		}
+
 		private strctObjToString(name: string, strct: strctObj): string
 		{
 			let str: string = ' struct ' + name + ' {';
@@ -628,13 +669,16 @@ namespace ortJson {
 				str += this.commentToString(strct.doc) + ';';
 			for (let i: number = 0; i < strct.nq.length; i++) {
 				str += ' unique ';
-				for (let j: number = 0; j < strct.nq[i].nq.length; j++) {
+				for (let j: number = 0; 
+				     j < strct.nq[i].nq.length; j++) {
 					if (j > 0)
 						str += ',';
 					str += strct.nq[i].nq[j];
 				}
 				str += ';';
 			}
+			for (let i: number = 0; i < strct.rq.length; i++)
+				str += this.rolemapObjToString(strct.rq[i]);
 			return str + ' };';
 		}
 
@@ -650,17 +694,15 @@ namespace ortJson {
 
 		/**
 		 * Convert the configuration to an ort(5) document.
+		 * It does not validation of the document.
 		 */
 		toString(): string
 		{
 			let str: string = '';
 
-			if (this.obj.roles !== null) {
-				str += 'roles {';
-				str += this.roleSetToString(this.obj.roles);
-				str += ' };';
-			}
-
+			if (this.obj.roles !== null)
+				str += 'roles ' + this.roleSetToString
+					(this.obj.roles) + ';';
 			if (this.obj.bq !== null) 
 				str += this.bitfSetToString(this.obj.bq);
 			if (this.obj.eq !== null) 
@@ -962,7 +1004,6 @@ namespace ortJson {
 		 * - *config-field-limit*: filled in with
 		 *   comma-separated limits type-value pairs if limits
 		 *   are defined
-		 *
 		 */
 		fill(e: string|HTMLElement|null): void
 		{

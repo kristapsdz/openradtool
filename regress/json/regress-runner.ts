@@ -52,8 +52,6 @@ for (i = 0; i < files.length; i++) {
 	const fmt: ortJson.ortJsonConfigFormat =
 		new ortJson.ortJsonConfigFormat(obj);
 
-	console.log(fmt.toString());
-
 	const diffProc = spawnSync('./ort-diff', [ortname], {
 		'input': fmt.toString()
 	});

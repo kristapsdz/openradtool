@@ -820,6 +820,16 @@ regress: all
 		done ; \
 	fi ; \
 	if [ -f "node_modules/.bin/ts-node" ]; then \
+		echo "=== ort-json reformat tests === " ; \
+		cat ort-json.ts regress/json/regress-runner.ts > $$tmp.ts ; \
+		set -e ; \
+		node_modules/.bin/ts-node --skip-project $$tmp.ts ; \
+		set +e ; \
+		rm -f $$tmp.ts ; \
+	else \
+		echo "!!! skipping ort-json reformat run tests !!! " ; \
+	fi ; \
+	if [ -f "node_modules/.bin/ts-node" ]; then \
 		echo "=== ort-nodejs compile tests === " ; \
 		set -e ; \
 		node_modules/.bin/ts-node --skip-project \

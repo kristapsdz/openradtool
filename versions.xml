@@ -3,6 +3,22 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.11.10</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-01-02">2020-01-02</time>
+		</header>
+		<aside>
+			<p>
+				Include the ability to convert the JSON representation of a
+				configuration as provided by 
+				<a href="ort-json.1.html">ort-json(1)</a> back into a
+				<a href="ort.5.html">ort(5)</a>.
+				This is part of the <i>ort-json.ts</i> file.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.11.9</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2020-12-28">2020-12-28</time>

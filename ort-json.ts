@@ -867,6 +867,16 @@ namespace ortJson {
 		 *   and filled in with data for each update (see "Per
 		 *   update") unless there are no queries, in which case
 		 *   the element is hidden
+		 * - *config-uniques-{has,none}*: shown or hidden
+		 *   depending upon whether there are any unique tuples
+		 * - *config-uniques*: the first child of this is cloned
+		 *   and filled in with data for each unique tuple (see
+		 *   "Per unique") unless there are no tuples, in
+		 *   which case the element is hidden
+		 *
+		 * Per unique:
+		 * - *config-unique*: the comma-separated fields making
+		 *   up a unique tuple
 		 *
 		 * Per update (or delete):
 		 * - *config-update-rolemap-{has,none}*: shown or hidden
@@ -1079,6 +1089,22 @@ namespace ortJson {
 						 strct.dq);
 			}
 
+			/* nq */
+			
+			if (strct.nq.length) {
+				this.showcl(e, 'config-uniques-has');
+				this.hidecl(e, 'config-uniques-none');
+				list = e.getElementsByClassName
+					('config-uniques');
+				for (let i = 0; i < list.length; i++)
+					this.fillUniques
+						(<HTMLElement>list[i], 
+						 strct.nq);
+			} else {
+				this.hidecl(e, 'config-uniques-has');
+				this.showcl(e, 'config-uniques-none');
+			}
+
 			/* uq (updates) */
 			
 			if (strct.uq.anon.length +
@@ -1139,6 +1165,23 @@ namespace ortJson {
 			/* name */
 
 			this.replcl(e, 'config-strct-name', name);
+		}
+
+		private fillUniques(e: HTMLElement, 
+			nq: ortJson.uniqueObj[]): void
+		{
+			if (e.children.length === 0)
+				return;
+			const tmpl: HTMLElement =
+				<HTMLElement>e.children[0];
+			this.clr(e);
+			for (let i = 0; i < nq.length; i++) {
+				const cln: HTMLElement = <HTMLElement>
+					tmpl.cloneNode(true);
+				e.appendChild(cln);
+				this.replcl(cln, 'config-unique', 
+					  nq[i].nq.join(', '));
+			}
 		}
 
 		private fillUpdates(e: HTMLElement, 

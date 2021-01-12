@@ -351,9 +351,17 @@ namespace ortJson {
 		eq: enumSet|null;
 		bq: bitfSet|null;
 		/**
-		 * This is an emtpy set for RBAC w/o explicit roles.
+		 * Contains all user-defined roles, i.e., those
+		 * descending from (but not including) "all".  This is
+		 * an empty object for no user-defined roles (i.e., just
+		 * the "roles" statement) and null for no roles.
 		 */
-		roles: roleSet|null;
+		rq: roleSet|null;
+		/**
+		 * List of all non-hierarchical roles names including
+		 * system-defined roles.  Empty if having no roles.
+		 */
+		arq: string[];
 		/**
 		 * Never an empty set.
 		 */
@@ -700,9 +708,9 @@ namespace ortJson {
 		{
 			let str: string = '';
 
-			if (this.obj.roles !== null)
+			if (this.obj.rq !== null)
 				str += 'roles ' + this.roleSetToString
-					(this.obj.roles) + ';';
+					(this.obj.rq) + ';';
 			if (this.obj.bq !== null) 
 				str += this.bitfSetToString(this.obj.bq);
 			if (this.obj.eq !== null) 
@@ -721,18 +729,30 @@ namespace ortJson {
 			return e;
 		}
 
+		private list(root: string|HTMLElement, name: string): 
+			HTMLElement[] 
+		{
+			const ret: HTMLElement[] = [];
+			const e: HTMLElement|null = this.find(root);
+			if (e === null)
+				return ret;
+			const list: HTMLCollectionOf<Element> =
+				e.getElementsByClassName(name);
+			for (let i: number = 0; i < list.length; i++)
+				ret.push(<HTMLElement>list[i]);
+			if (e.classList.contains(name))
+				ret.push(e);
+			return ret;
+		}
+
 		private replcl(root: string|HTMLElement, 
 			name: string, text: string): void 
 		{
-			const e: HTMLElement|null = this.find(root);
-			if (e === null)
-				return;
-			const list: HTMLCollectionOf<Element> =
-				e.getElementsByClassName(name);
+			const list: HTMLElement[] = 
+				this.list(root, name);
 			for (let i: number = 0; i < list.length; i++) {
-				const elem: HTMLElement =
-					<HTMLElement>list[i];
-				elem.appendChild
+				this.clr(<HTMLElement>list[i]);
+				list[i].appendChild
 					(document.createTextNode
 					 (text.toString()));
 			}
@@ -774,33 +794,19 @@ namespace ortJson {
 		private hidecl(root: string|HTMLElement, 
 			name: string): void 
 		{
-			const e: HTMLElement|null = this.find(root);
-			if (e === null)
-				return;
-			const list: HTMLCollectionOf<Element> =
-				e.getElementsByClassName(name);
-			for (let i: number = 0; i < list.length; i++) {
-				const elem: HTMLElement =
-					<HTMLElement>list[i];
-				if (!elem.classList.contains('hide'))
-					elem.classList.add('hide');
-			}
+			const list: HTMLElement[] = 
+				this.list(root, name);
+			for (let i: number = 0; i < list.length; i++)
+				this.hide(<HTMLElement>list[i]);
 		}
 
 		private showcl(root: string|HTMLElement, 
 			name: string): void 
 		{
-			const e: HTMLElement|null = this.find(root);
-			if (e === null)
-				return;
-			const list: HTMLCollectionOf<Element> =
-				e.getElementsByClassName(name);
-			for (let i: number = 0; i < list.length; i++) {
-				const elem: HTMLElement =
-					<HTMLElement>list[i];
-				if (elem.classList.contains('hide'))
-					elem.classList.remove('hide');
-			}
+			const list: HTMLElement[] = 
+				this.list(root, name);
+			for (let i: number = 0; i < list.length; i++)
+				this.show(<HTMLElement>list[i]);
 		}
 
 		/**
@@ -809,12 +815,9 @@ namespace ortJson {
 		 */
 		fillByClass(root: HTMLElement|string, name: string): void
 		{
-			const e: HTMLElement|null = this.find(root);
-			if (e === null)
-				return;
-			const list: HTMLCollectionOf<Element> =
-				e.getElementsByClassName(name);
-			for (let i = 0; i < list.length; i++)
+			const list: HTMLElement[] = 
+				this.list(root, name);
+			for (let i: number = 0; i < list.length; i++)
 				this.fill(<HTMLElement>list[i]);
 		}
 
@@ -1022,11 +1025,8 @@ namespace ortJson {
 			const pn: HTMLElement|null = this.find(e);
 			if (pn === null)
 				return;
-			const list: HTMLCollectionOf<Element> = 
-				pn.getElementsByClassName
-				('config-strcts');
-			for (let i = 0; i < list.length; i++)
-				this.fillStrcts(<HTMLElement>list[i]);
+			this.fillRoles(pn);
+			this.fillStrcts(pn);
 		}
 
 		private fillComment(e: HTMLElement, 
@@ -1043,33 +1043,74 @@ namespace ortJson {
 			}
 		}
 
+		fillRoles(e: HTMLElement): void
+		{
+			if (this.obj.arq.length === 0) {
+				this.hidecl(e, 'config-roles-has');
+				this.showcl(e, 'config-roles-none');
+				return;
+			}
+			this.showcl(e, 'config-roles-has');
+			this.hidecl(e, 'config-roles-none');
+			const list: HTMLElement[] = 
+				this.list(e, 'config-roles');
+			for (let i: number = 0; i < list.length; i++) {
+				if (list[i].children.length === 0)
+					continue;
+				const tmpl: HTMLElement =
+					<HTMLElement>list[i].children[0];
+				this.clr(<HTMLElement>list[i]);
+				for (let j = 0; j < this.obj.arq.length; j++) {
+					const cln: HTMLElement = 
+						<HTMLElement>
+						tmpl.cloneNode(true);
+					list[i].appendChild(cln);
+					this.replcl(cln, 'config-role', 
+						this.obj.arq[j]);
+				}
+			}
+		}
+
 		private fillStrcts(e: HTMLElement)
 		{
-			if (e.children.length === 0)
+			const keys: string[] = 
+				Object.keys(this.obj.sq);
+			if (keys.length === 0) {
+				this.hidecl(e, 'config-strcts-has');
+				this.showcl(e, 'config-strcts-none');
 				return;
-			const tmpl: HTMLElement =
-				<HTMLElement>e.children[0];
-			this.clr(e);
-			const keys: string[] = Object.keys(this.obj.sq);
+			} 
+			this.showcl(e, 'config-strcts-has');
+			this.hidecl(e, 'config-strcts-none');
 			keys.sort();
-			for (let i = 0; i < keys.length; i++) {
-				const cln: HTMLElement = <HTMLElement>
-					tmpl.cloneNode(true);
-				e.appendChild(cln);
-				this.fillStrct(cln, keys[i], 
-					this.obj.sq[keys[i]]);
+			const list: HTMLElement[] = 
+				this.list(e, 'config-strcts');
+			for (let i: number = 0; i < list.length; i++) {
+				if (list[i].children.length === 0)
+					continue;
+				const tmpl: HTMLElement =
+					<HTMLElement>list[i].children[0];
+				this.clr(list[i]);
+				for (let j: number = 0; j < keys.length; j++) {
+					const cln: HTMLElement = 
+						<HTMLElement>
+						tmpl.cloneNode(true);
+					list[i].appendChild(cln);
+					this.fillStrct(cln, keys[j], 
+						this.obj.sq[keys[j]]);
+				}
 			}
 		}
 
 		private fillStrct(e: HTMLElement, 
 			name: string, strct: ortJson.strctObj): void
 		{
-			let list: HTMLCollectionOf<Element>;
+			let list: HTMLElement[];
 
 			/* fq (fields) */
 
-			list = e.getElementsByClassName('config-fields');
-			for (let i = 0; i < list.length; i++)
+			list = this.list(e, 'config-fields');
+			for (let i: number = 0; i < list.length; i++)
 				this.fillFields(<HTMLElement>list[i], strct);
 
 			/* dq (deletes) */
@@ -1081,9 +1122,8 @@ namespace ortJson {
 			} else {
 				this.showcl(e, 'config-deletes-has');
 				this.hidecl(e, 'config-deletes-none');
-				list = e.getElementsByClassName
-					('config-deletes');
-				for (let i = 0; i < list.length; i++)
+				list = this.list(e, 'config-deletes');
+				for (let i: number = 0; i < list.length; i++)
 					this.fillUpdates
 						(<HTMLElement>list[i], 
 						 strct.dq);
@@ -1094,9 +1134,8 @@ namespace ortJson {
 			if (strct.nq.length) {
 				this.showcl(e, 'config-uniques-has');
 				this.hidecl(e, 'config-uniques-none');
-				list = e.getElementsByClassName
-					('config-uniques');
-				for (let i = 0; i < list.length; i++)
+				list = this.list(e, 'config-uniques');
+				for (let i: number = 0; i < list.length; i++)
 					this.fillUniques
 						(<HTMLElement>list[i], 
 						 strct.nq);
@@ -1114,8 +1153,7 @@ namespace ortJson {
 			} else {
 				this.showcl(e, 'config-updates-has');
 				this.hidecl(e, 'config-updates-none');
-				list = e.getElementsByClassName
-					('config-updates');
+				list = this.list(e, 'config-updates');
 				for (let i = 0; i < list.length; i++)
 					this.fillUpdates
 						(<HTMLElement>list[i], 
@@ -1131,8 +1169,7 @@ namespace ortJson {
 			} else {
 				this.showcl(e, 'config-queries-has');
 				this.hidecl(e, 'config-queries-none');
-				list = e.getElementsByClassName
-					('config-queries');
+				list = this.list(e, 'config-queries');
 				for (let i = 0; i < list.length; i++)
 					this.fillQueries
 						(<HTMLElement>list[i], 
@@ -1250,10 +1287,9 @@ namespace ortJson {
 				this.hidecl(e, 'config-update-crq-none');
 				this.showcl(e, 'config-update-crq-has');
 				this.showcl(e, 'config-update-crq');
-				const list: HTMLCollectionOf<Element> =
-					e.getElementsByClassName
-					('config-update-crq');
-				for (let i = 0; i < list.length; i++)
+				const list: HTMLElement[] =
+					this.list(e, 'config-update-crq');
+				for (let i: number = 0; i < list.length; i++)
 					this.fillUrefs(<HTMLElement>list[i], up.crq);
 			}
 
@@ -1267,10 +1303,9 @@ namespace ortJson {
 				this.hidecl(e, 'config-update-mrq-none');
 				this.showcl(e, 'config-update-mrq-has');
 				this.showcl(e, 'config-update-mrq');
-				const list: HTMLCollectionOf<Element> =
-					e.getElementsByClassName
-					('config-update-mrq');
-				for (let i = 0; i < list.length; i++)
+				const list: HTMLElement[] =
+					this.list(e, 'config-update-mrq');
+				for (let i: number = 0; i < list.length; i++)
 					this.fillUrefs(<HTMLElement>list[i], up.mrq);
 			}
 
@@ -1371,10 +1406,9 @@ namespace ortJson {
 				this.hidecl(e, 'config-query-sntq-none');
 				this.showcl(e, 'config-query-sntq-has');
 				this.showcl(e, 'config-query-sntq');
-				const list: HTMLCollectionOf<Element> =
-					e.getElementsByClassName
-					('config-query-sntq');
-				for (let i = 0; i < list.length; i++)
+				const list: HTMLElement[] =
+					this.list(e, 'config-query-sntq');
+				for (let i: number = 0; i < list.length; i++)
 					this.fillSents(<HTMLElement>list[i], query);
 			}
 			
@@ -1388,10 +1422,9 @@ namespace ortJson {
 				this.hidecl(e, 'config-query-ordq-none');
 				this.showcl(e, 'config-query-ordq-has');
 				this.showcl(e, 'config-query-ordq');
-				const list: HTMLCollectionOf<Element> =
-					e.getElementsByClassName
-					('config-query-ordq');
-				for (let i = 0; i < list.length; i++)
+				const list: HTMLElement[] =
+					this.list(e, 'config-query-ordq');
+				for (let i: number = 0; i < list.length; i++)
 					this.fillOrds(<HTMLElement>list[i], query);
 			}
 

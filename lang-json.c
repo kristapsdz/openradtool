@@ -514,7 +514,16 @@ gen_roles(FILE *f, const struct config *cfg)
 {
 	const struct role	*r, *rr;
 
-	if (fputs(" \"roles\": ", f) == EOF)
+	if (fputs(" \"arq\": [", f) == EOF)
+		return 0;
+	TAILQ_FOREACH(r, &cfg->arq, allentries) {
+		if (fprintf(f, " \"%s\"", r->name) < 0)
+			return 0;
+		if (TAILQ_NEXT(r, allentries) != NULL &&
+		    fputc(',', f) == EOF)
+			return 0;
+	}
+	if (fputs("], \"rq\": ", f) == EOF)
 		return 0;
 	if (TAILQ_EMPTY(&cfg->rq))
 		return fputs("null,", f) != EOF;

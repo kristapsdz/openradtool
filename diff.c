@@ -730,18 +730,13 @@ ort_diff_strct_updateq(struct diffq *q,
 			return -1;
 		if (c == 0) {
 			d = diff_alloc(q, DIFF_MOD_UPDATE);
-			if (d == NULL)
-				return -1;
-			d->update_pair.from = fdel;
-			d->update_pair.into = idel;
 			rc = 0;
-		} else {
+		} else
 			d = diff_alloc(q, DIFF_SAME_UPDATE);
-			if (d == NULL)
-				return -1;
-			d->update_pair.from = fdel;
-			d->update_pair.into = idel;
-		}
+		if (d == NULL)
+			return -1;
+		d->update_pair.from = fdel;
+		d->update_pair.into = idel;
 	}
 
 	TAILQ_FOREACH(idel, intoq, entries) {
@@ -1037,13 +1032,9 @@ ort_diff_searchq(struct diffq *q,
 		if (sfrom->name != NULL)
 			continue;
 		TAILQ_FOREACH(sinto, &into->sq, entries) {
-			if (sinto->name != NULL ||
-			    sinto->type != sfrom->type)
-				continue;
-			c = ort_diff_search(q, sfrom, sinto);
-			if (c < 0)
-				return -1;
-			else if (c > 0)
+			if (sinto->name == NULL &&
+			    sinto->type == sfrom->type &&
+			    ort_diff_search(NULL, sfrom, sinto) > 0)
 				break;
 		}
 		if (sinto == NULL) {
@@ -1052,26 +1043,22 @@ ort_diff_searchq(struct diffq *q,
 				return -1;
 			d->search = sfrom;
 			rc = 0;
-			continue;
+		} else {
+			d = diff_alloc(q, DIFF_SAME_SEARCH);
+			if (d == NULL)
+				return -1;
+			d->search_pair.from = sfrom;
+			d->search_pair.into = sinto;
 		}
-		d = diff_alloc(q, DIFF_SAME_SEARCH);
-		if (d == NULL)
-			return -1;
-		d->search_pair.from = sfrom;
-		d->search_pair.into = sinto;
 	}
 
 	TAILQ_FOREACH(sinto, &into->sq, entries) {
 		if (sinto->name != NULL)
 			continue;
 		TAILQ_FOREACH(sfrom, &from->sq, entries) {
-			if (sfrom->name != NULL ||
-			    sfrom->type != sinto->type)
-				continue;
-			c = ort_diff_search(q, sfrom, sinto);
-			if (c < 0)
-				return -1;
-			else if (c > 0)
+			if (sfrom->name == NULL &&
+			    sfrom->type == sinto->type &&
+			    ort_diff_search(NULL, sfrom, sinto) > 0)
 				break;
 		}
 		if (sfrom == NULL) {

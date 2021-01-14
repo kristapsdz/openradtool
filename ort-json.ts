@@ -1,3 +1,5 @@
+/* vim: set filetype=javascript: */
+
 namespace ortJson {
 	/**
 	 * Same as "struct pos" in ort(3).
@@ -319,9 +321,6 @@ namespace ortJson {
 	export interface strctObj {
 		pos: posObj;
 		doc: string|null;
-		/**
-		 * Never an empty set.
-		 */
 		fq: fieldSet;
 		insert: insertObj|null;
 		/**
@@ -362,9 +361,6 @@ namespace ortJson {
 		 * system-defined roles.  Empty if having no roles.
 		 */
 		arq: string[];
-		/**
-		 * Never an empty set.
-		 */
 		sq: strctSet;
 	}
 
@@ -745,6 +741,15 @@ namespace ortJson {
 			return ret;
 		}
 
+		private attrcl(root: string|HTMLElement, 
+			name: string, attr: string, text: string): void 
+		{
+			const list: HTMLElement[] = 
+				this.list(root, name);
+			for (let i: number = 0; i < list.length; i++)
+				list[i].setAttribute(attr, text);
+		}
+
 		private replcl(root: string|HTMLElement, 
 			name: string, text: string): void 
 		{
@@ -822,7 +827,7 @@ namespace ortJson {
 		}
 
 		/**
-		 * Fills the configuration **below** the given element,
+		 * Fills the configuration **including** the given element,
 		 * starting with structures, then drilling down.
 		 * Elements are manipulated by whether the contain the
 		 * following classes.  Note that to "hide" an element
@@ -834,17 +839,145 @@ namespace ortJson {
 		 *
 		 * Per configuration:
 		 *
-		 * - *config-strcts*: the first child of this is cloned
-		 *   and filled in with data for each structure (see
-		 *   "Per structure")
+		 * - fillStrcts()
+		 * - fillRoles()
+		 */
+		fill(e: string|HTMLElement|null): void
+		{
+			if (e === null)
+				return;
+			const pn: HTMLElement|null = this.find(e);
+			if (pn === null)
+				return;
+			this.fillRoles(pn);
+			this.fillStrcts(pn);
+		}
+
+		private fillComment(e: HTMLElement, 
+			type: string, doc: string|null): void
+		{
+			const str: string = 'config-' + type + '-doc';
+			if (doc === null || doc.length === 0) {
+				this.showcl(e, str + '-none');
+				this.hidecl(e, str + '-has');
+				this.replcl(e, str, '');
+				this.attrcl(e, str + '-value', 'value', '');
+			} else {
+				this.hidecl(e, str + '-none');
+				this.showcl(e, str + '-has');
+				this.replcl(e, str, doc);
+				this.attrcl(e, str + '-value', 'value', doc);
+			}
+		}
+
+		/**
+		 * See fill() for generic documentation.
 		 *
-		 * Per structure:
+		 * Per all roles specified in a configuration:
+		 *
+		 * - *config-roles-{has,none}*: shown or hidden
+		 *   depending on whether there are roles at all (even
+		 *   if not having user-defined roles)
+		 * - *config-roles*: the first child of these is cloned
+		 *   and filled in with data for each role unless there
+		 *   are no roles, in which case the elements are hidden
+		 *
+		 * For each role:
+		 *
+		 * - *config-role*: filled in with the role name
+		 * - *config-role-value*: value set to the role name
+		 */
+		fillRoles(e: HTMLElement): void
+		{
+			if (this.obj.arq.length === 0) {
+				this.hidecl(e, 'config-roles-has');
+				this.showcl(e, 'config-roles-none');
+				return;
+			}
+			this.showcl(e, 'config-roles-has');
+			this.hidecl(e, 'config-roles-none');
+			const list: HTMLElement[] = 
+				this.list(e, 'config-roles');
+			for (let i: number = 0; i < list.length; i++) {
+				if (list[i].children.length === 0)
+					continue;
+				const tmpl: HTMLElement =
+					<HTMLElement>list[i].children[0];
+				this.show(list[i]);
+				this.clr(list[i]);
+				for (let j: number = 0; 
+				     j < this.obj.arq.length; j++) {
+					const cln: HTMLElement = 
+						<HTMLElement>
+						tmpl.cloneNode(true);
+					list[i].appendChild(cln);
+					this.replcl(cln, 'config-role', 
+						this.obj.arq[j]);
+					this.attrcl(cln, 'config-role-value',
+						'value', this.obj.arq[j]);
+				}
+			}
+		}
+
+		/**
+		 * See fill() for generic documentation.
+		 *
+		 * Per set of strcts:
+		 *
+		 * - *config-strcts-{has,none}*: shown or hidden
+		 *   depending on whether there are strcts
+		 * - *config-strcts*: the first child of these is cloned
+		 *   and filled in with data for each strct (see
+		 *   fillStrct()) unless there are no strcts, in which
+		 *   case the elements are hidden
+		 */
+		fillStrcts(e: HTMLElement)
+		{
+			const keys: string[] = 
+				Object.keys(this.obj.sq);
+			if (keys.length === 0) {
+				this.hidecl(e, 'config-strcts-has');
+				this.hidecl(e, 'config-strcts');
+				this.showcl(e, 'config-strcts-none');
+				return;
+			} 
+			this.showcl(e, 'config-strcts-has');
+			this.hidecl(e, 'config-strcts-none');
+			keys.sort();
+			const list: HTMLElement[] = 
+				this.list(e, 'config-strcts');
+			for (let i: number = 0; i < list.length; i++) {
+				if (list[i].children.length === 0)
+					continue;
+				const tmpl: HTMLElement =
+					<HTMLElement>list[i].children[0];
+				this.show(list[i]);
+				this.clr(list[i]);
+				for (let j: number = 0; j < keys.length; j++) {
+					const cln: HTMLElement = 
+						<HTMLElement>
+						tmpl.cloneNode(true);
+					list[i].appendChild(cln);
+					this.fillStrct(cln, keys[j], 
+						this.obj.sq[keys[j]]);
+				}
+				this.show(list[i]);
+			}
+		}
+
+		/**
+		 * See fill() for generic documentation.
+		 *
+		 * Per strct:
 		 *
 		 * - *config-strct-name*: filled in with name
+		 * - *config-strct-name-value*: value set with name
 		 * - *config-strct-doc-{none,has}*: shown or hidden
 		 *   depending on whether there's a non-empty
 		 *   documentation field
 		 * - *config-strct-doc*: filled in with non-empty
+		 *   documentation, if found
+		 * - *config-strct-doc-value*: value set with non-empty
 		 *   documentation, if found
 		 * - *config-fields*: the first child of this is cloned
 		 *   and filled in with data for each field (see "Per
@@ -876,6 +1009,18 @@ namespace ortJson {
 		 *   and filled in with data for each unique tuple (see
 		 *   "Per unique") unless there are no tuples, in
 		 *   which case the element is hidden
+		 *
+		 * Per insert:
+		 * - *config-insert-rolemap-{has,none}*: shown or hidden
+		 *   depending on whether there's a non-empty rolemap
+		 * - *config-insert-rolemap-join*: filled in with the
+		 *   comma-separated role names if rolemaps are defined
+		 * - *config-insert-rolemap*: first child of this is
+		 *   cloned and filled in with the name if matching
+		 *   *config-insert-rolemap-role* and the value set if
+		 *   matching *config-insert-rolemap-role-value* unless
+		 *   there are no roles, in which case the element is
+		 *   hidden
 		 *
 		 * Per unique:
 		 * - *config-unique*: the comma-separated fields making
@@ -916,12 +1061,6 @@ namespace ortJson {
 		 *   structure
 		 * - *config-uref-op*: the update constraint operator
 		 * - *config-uref-mod*: the update modifier
-		 *
-		 * Per insert:
-		 * - *config-insert-rolemap-{has,none}*: shown or hidden
-		 *   depending on whether there's a non-empty rolemap
-		 * - *config-insert-rolemap*: filled in with the
-		 *   comma-separated role names if rolemaps are defined
 		 *
 		 * Per query:
 		 * - *config-query-name-{has,none}*: shown or hidden
@@ -1018,92 +1157,8 @@ namespace ortJson {
 		 *   comma-separated limits type-value pairs if limits
 		 *   are defined
 		 */
-		fill(e: string|HTMLElement|null): void
-		{
-			if (e === null)
-				return;
-			const pn: HTMLElement|null = this.find(e);
-			if (pn === null)
-				return;
-			this.fillRoles(pn);
-			this.fillStrcts(pn);
-		}
-
-		private fillComment(e: HTMLElement, 
-			type: string, doc: string|null): void
-		{
-			const str: string = 'config-' + type + '-doc';
-			if (doc === null || doc.length === 0) {
-				this.showcl(e, str + '-none');
-				this.hidecl(e, str + '-has');
-			} else {
-				this.hidecl(e, str + '-none');
-				this.showcl(e, str + '-has');
-				this.replcl(e, str, doc);
-			}
-		}
-
-		fillRoles(e: HTMLElement): void
-		{
-			if (this.obj.arq.length === 0) {
-				this.hidecl(e, 'config-roles-has');
-				this.showcl(e, 'config-roles-none');
-				return;
-			}
-			this.showcl(e, 'config-roles-has');
-			this.hidecl(e, 'config-roles-none');
-			const list: HTMLElement[] = 
-				this.list(e, 'config-roles');
-			for (let i: number = 0; i < list.length; i++) {
-				if (list[i].children.length === 0)
-					continue;
-				const tmpl: HTMLElement =
-					<HTMLElement>list[i].children[0];
-				this.clr(<HTMLElement>list[i]);
-				for (let j = 0; j < this.obj.arq.length; j++) {
-					const cln: HTMLElement = 
-						<HTMLElement>
-						tmpl.cloneNode(true);
-					list[i].appendChild(cln);
-					this.replcl(cln, 'config-role', 
-						this.obj.arq[j]);
-				}
-			}
-		}
-
-		private fillStrcts(e: HTMLElement)
-		{
-			const keys: string[] = 
-				Object.keys(this.obj.sq);
-			if (keys.length === 0) {
-				this.hidecl(e, 'config-strcts-has');
-				this.showcl(e, 'config-strcts-none');
-				return;
-			} 
-			this.showcl(e, 'config-strcts-has');
-			this.hidecl(e, 'config-strcts-none');
-			keys.sort();
-			const list: HTMLElement[] = 
-				this.list(e, 'config-strcts');
-			for (let i: number = 0; i < list.length; i++) {
-				if (list[i].children.length === 0)
-					continue;
-				const tmpl: HTMLElement =
-					<HTMLElement>list[i].children[0];
-				this.clr(list[i]);
-				for (let j: number = 0; j < keys.length; j++) {
-					const cln: HTMLElement = 
-						<HTMLElement>
-						tmpl.cloneNode(true);
-					list[i].appendChild(cln);
-					this.fillStrct(cln, keys[j], 
-						this.obj.sq[keys[j]]);
-				}
-			}
-		}
-
-		private fillStrct(e: HTMLElement, 
-			name: string, strct: ortJson.strctObj): void
+		fillStrct(e: HTMLElement, name: string, 
+			  strct: ortJson.strctObj): void
 		{
 			let list: HTMLElement[];
 
@@ -1181,18 +1236,11 @@ namespace ortJson {
 			if (strct.insert !== null) {
 				this.showcl(e, 'config-insert-has');
 				this.hidecl(e, 'config-insert-none');
-				this.hidecl(e, 'config-insert-rolemap-none');
-				if (strct.insert.rolemap !== null &&
-				    strct.insert.rolemap.length > 0) {
-					this.showcl(e, 'config-insert-rolemap-has');
-					this.replcl(e, 'config-insert-rolemap',
-						strct.insert.rolemap.join(', '));
-				} else {
-				}
+				this.fillRolemap(e, 'insert', 
+					strct.insert.rolemap);
 			} else {
 				this.hidecl(e, 'config-insert-has');
 				this.showcl(e, 'config-insert-none');
-				this.showcl(e, 'config-insert-rolemap-none');
 			}
 
 			/* doc */
@@ -1202,6 +1250,47 @@ namespace ortJson {
 			/* name */
 
 			this.replcl(e, 'config-strct-name', name);
+			this.attrcl(e, 'config-strct-name-value', 'value', name);
+		}
+
+		private fillRolemap(e: HTMLElement, 
+			name: string, map: string[]|null): void
+		{
+			const cls: string = 
+				'config-' + name + '-rolemap';
+
+			if (map === null || map.length === 0) {
+				this.showcl(e, cls + '-none');
+				this.hidecl(e, cls + '-has');
+				this.hidecl(e, cls);
+				return;
+			}
+
+			this.replcl(e, cls + '-join', map.join(', '));
+			this.hidecl(e, cls + '-none');
+			this.showcl(e, cls + '-has');
+
+			const list: HTMLElement[] = this.list(e, cls);
+
+			for (let i: number = 0; i < list.length; i++) {
+				if (list[i].children.length === 0)
+					continue;
+				const tmpl: HTMLElement =
+					<HTMLElement>list[i].children[0];
+				this.show(list[i]);
+				this.clr(list[i]);
+				for (let j: number = 0; j < map.length; j++) {
+					const cln: HTMLElement = 
+						<HTMLElement>
+						tmpl.cloneNode(true);
+					list[i].appendChild(cln);
+					this.replcl(cln, 
+						cls + '-role', map[j]);
+					this.attrcl(cln, 
+						cls + '-role-value', 
+						'value', map[j]);
+				}
+			}
 		}
 
 		private fillUniques(e: HTMLElement, 

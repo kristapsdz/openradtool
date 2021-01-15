@@ -1,0 +1,7 @@
+struct foo {
+	field a int noexport;
+	field b int unique;
+	field c int null;
+	field d int rowid;
+};
+

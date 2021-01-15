@@ -210,7 +210,7 @@ gen_rolemap_full(FILE *f, const struct rolemap *map)
 }
 
 /*
- * Generate "rolemap": string[]|null w/comma if comma.
+ * Generate "rolemap": string[] w/comma if comma.
  * Return zero on failure, non-zero on success.
  */
 static int
@@ -218,11 +218,9 @@ gen_rolemap(FILE *f, int comma, const struct rolemap *map)
 {
 	const struct rref	*ref;
 
-	if (fputs( "\"rolemap\": ", f) == EOF)
+	if (fputs( "\"rolemap\": [", f) == EOF)
 		return 0;
-	if (map != NULL) {
-		if (fputc('[', f) == EOF)
-			return 0;
+	if (map != NULL)
 		TAILQ_FOREACH(ref, &map->rq, entries) {
 			if (fprintf(f, " \"%s\"", ref->role->name) < 0)
 				return 0;
@@ -230,11 +228,8 @@ gen_rolemap(FILE *f, int comma, const struct rolemap *map)
 			    fputc(',', f) == EOF)
 				return 0;
 		}
-		if (fputs(" ]", f) == EOF)
-			return 0;
-	} else if (fputs("null", f) == EOF)
+	if (fputc(']', f) == EOF)
 		return 0;
-
 	return comma ? fputc(',', f) != EOF : 1;
 }
 
@@ -564,6 +559,7 @@ gen_field(FILE *f, const struct field *fd)
 
 	fl = (fd->flags & FIELD_ROWID) |
 		(fd->flags & FIELD_UNIQUE) | 
+		(fd->flags & FIELD_NOEXPORT) | 
 		(fd->flags & FIELD_NULL);
 	if (fputs(" \"flags\": [", f) == EOF)
 		return 0;
@@ -577,6 +573,12 @@ gen_field(FILE *f, const struct field *fd)
 		if (fputs("\"unique\"", f) == EOF)
 			return 0;
 		if ((fl &= ~FIELD_UNIQUE) && fputs(", ", f) == EOF)
+			return 0;
+	}
+	if (fl & FIELD_NOEXPORT) { 
+		if (fputs("\"noexport\"", f) == EOF)
+			return 0;
+		if ((fl &= ~FIELD_NOEXPORT) && fputs(", ", f) == EOF)
 			return 0;
 	}
 	if ((fl & FIELD_NULL) && fputs("\"null\"", f) == EOF)

@@ -121,7 +121,7 @@ namespace ortJson {
 		source: fieldPtrObj;
 	}
 
-	export type fieldObjFlags = 'rowid'|'null'|'unique';
+	export type fieldObjFlags = 'rowid'|'null'|'unique'|'noexport';
 	export type fieldObjActions =  'none'|'restrict'|'nullify'|'cascade'|'default';
 
 	/**
@@ -134,7 +134,7 @@ namespace ortJson {
 		actup: fieldObjActions;
 		actdel: fieldObjActions;
 		flags: fieldObjFlags[];
-		rolemap: string[]|null;
+		rolemap: string[];
 		/**
 		 * Only set if we're an enum.
 		 */
@@ -163,7 +163,7 @@ namespace ortJson {
 	 */
 	export interface insertObj {
 		pos: posObj;
-		rolemap: string[]|null;
+		rolemap: string[];
 	}
 
 	/**
@@ -226,7 +226,7 @@ namespace ortJson {
 	export interface searchObj {
 		pos: posObj;
 		doc: string|null;
-		rolemap: string[]|null;
+		rolemap: string[];
 		/**
 		 * Numeric string. 
 		 */
@@ -280,7 +280,7 @@ namespace ortJson {
 		pos: posObj;
 		doc: string|null;
 		type: 'update'|'delete';
-		rolemap: string[]|null;
+		rolemap: string[];
 		/**
 		 * Can contain "all" to represent UPDATE_ALL.
 		 */
@@ -1435,7 +1435,7 @@ namespace ortJson {
 
 			/* rolemap */
 
-			if (up.rolemap === null || up.rolemap.length === 0) {
+			if (up.rolemap.length === 0) {
 				this.showcl(e, 'config-update-rolemap-none');
 				this.hidecl(e, 'config-update-rolemap-has');
 			} else {
@@ -1582,7 +1582,7 @@ namespace ortJson {
 
 			/* rolemap */
 
-			if (query.rolemap === null || query.rolemap.length === 0) {
+			if (query.rolemap.length === 0) {
 				this.showcl(e, 'config-query-rolemap-none');
 				this.hidecl(e, 'config-query-rolemap-has');
 			} else {
@@ -1755,7 +1755,7 @@ namespace ortJson {
 
 			/* rolemap */
 
-			if (field.rolemap === null || field.rolemap.length === 0) {
+			if (field.rolemap.length === 0) {
 				this.showcl(e, 'config-field-rolemap-none');
 				this.hidecl(e, 'config-field-rolemap-has');
 			} else {

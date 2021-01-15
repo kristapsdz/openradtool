@@ -167,6 +167,17 @@ namespace ortJson {
 	}
 
 	/**
+	 * Create an empty insertObj.
+	 * The position is initialised to an empty file at position zero.
+	 */
+	export function createInsertObj(): insertObj {
+		return {
+			'pos': { 'fname': '', 'column': 0, 'line': 0 },
+			'rolemap': []
+		};
+	}
+
+	/**
 	 * Same as "struct sent" in ort(3).
 	 */
 	export interface sentObj {
@@ -319,6 +330,7 @@ namespace ortJson {
 	 * Same as "struct strct" in ort(3).
 	 */
 	export interface strctObj {
+		name: string;
 		pos: posObj;
 		doc: string|null;
 		fq: fieldSet;
@@ -337,6 +349,26 @@ namespace ortJson {
 		 * their roles therein.  
 		 */
 		rq: rolemapObj[];
+	}
+
+	/**
+	 * Create an empty strctObj.
+	 * The only field set is the name.
+	 * The position is initialised to an empty file at position zero.
+	 */
+	export function createStrctObj(name: string): strctObj {
+		return {
+			'name': name,
+			'pos': { 'fname': '', 'column': 0, 'line': 0 },
+			'doc': null,
+			'fq': {},
+			'insert': null,
+			'sq': { 'named': {}, 'anon': [] },
+			'uq': { 'named': {}, 'anon': [] },
+			'dq': { 'named': {}, 'anon': [] },
+			'nq': [],
+			'rq': []
+		};
 	}
 
 	export interface strctSet {
@@ -648,9 +680,9 @@ namespace ortJson {
 			return str + '; };';
 		}
 
-		private strctObjToString(name: string, strct: strctObj): string
+		private strctObjToString(strct: strctObj): string
 		{
-			let str: string = ' struct ' + name + ' {';
+			let str: string = ' struct ' + strct.name + ' {';
 			str += this.fieldSetToString(strct.fq);
 
 			for (let i: number = 0; i < strct.sq.anon.length; i++) 
@@ -691,14 +723,16 @@ namespace ortJson {
 			let str: string = '';
 			const keys: string[] = Object.keys(set);
 			for (let i: number = 0; i < keys.length; i++)
-				str += this.strctObjToString
-					(keys[i], set[keys[i]]);
+				str += this.strctObjToString(set[keys[i]]);
 			return str;
 		}
 
 		/**
 		 * Convert the configuration to an ort(5) document.
 		 * It does not validation of the document.
+		 *
+		 * Throughout this, the "pos" elements of the current
+		 * configuration are all ignored.
 		 */
 		toString(): string
 		{
@@ -958,8 +992,7 @@ namespace ortJson {
 						<HTMLElement>
 						tmpl.cloneNode(true);
 					list[i].appendChild(cln);
-					this.fillStrct(cln, keys[j], 
-						this.obj.sq[keys[j]]);
+					this.fillStrct(cln, this.obj.sq[keys[j]]);
 				}
 				this.show(list[i]);
 			}
@@ -1014,12 +1047,13 @@ namespace ortJson {
 		 * - *config-insert-rolemap-{has,none}*: shown or hidden
 		 *   depending on whether there's a non-empty rolemap
 		 * - *config-insert-rolemap-join*: filled in with the
-		 *   comma-separated role names if rolemaps are defined
+		 *   comma-separated role names if the rolemap is
+		 *   non-empty
 		 * - *config-insert-rolemap*: first child of this is
 		 *   cloned and filled in with the name if matching
 		 *   *config-insert-rolemap-role* and the value set if
 		 *   matching *config-insert-rolemap-role-value* unless
-		 *   there are no roles, in which case the element is
+		 *   the rolemap is empty, in which case the element is
 		 *   hidden
 		 *
 		 * Per unique:
@@ -1157,8 +1191,7 @@ namespace ortJson {
 		 *   comma-separated limits type-value pairs if limits
 		 *   are defined
 		 */
-		fillStrct(e: HTMLElement, name: string, 
-			  strct: ortJson.strctObj): void
+		fillStrct(e: HTMLElement, strct: ortJson.strctObj): void
 		{
 			let list: HTMLElement[];
 
@@ -1241,6 +1274,7 @@ namespace ortJson {
 			} else {
 				this.hidecl(e, 'config-insert-has');
 				this.showcl(e, 'config-insert-none');
+				this.fillRolemap(e, 'insert', null);
 			}
 
 			/* doc */
@@ -1249,8 +1283,8 @@ namespace ortJson {
 
 			/* name */
 
-			this.replcl(e, 'config-strct-name', name);
-			this.attrcl(e, 'config-strct-name-value', 'value', name);
+			this.replcl(e, 'config-strct-name', strct.name);
+			this.attrcl(e, 'config-strct-name-value', 'value', strct.name);
 		}
 
 		private fillRolemap(e: HTMLElement, 
@@ -1260,6 +1294,7 @@ namespace ortJson {
 				'config-' + name + '-rolemap';
 
 			if (map === null || map.length === 0) {
+				this.replcl(e, cls + '-join', '');
 				this.showcl(e, cls + '-none');
 				this.hidecl(e, cls + '-has');
 				this.hidecl(e, cls);

@@ -710,23 +710,6 @@ The example permits logged-in operators to insert new rows, and both the
 default and logged-in roles to search for them.
 However, the secret variable is only exported to logged-in users.
 .Pp
-It is an error to apply a role, or any of its descendents, more than once to
-the same operation.
-However,
-.Cm noexport
-is different in that fields marked for the same role more than once are not
-considered an error.
-So specifying
-.Cm noexport
-and also
-.Cm noexport field
-is not an error, but simply specifying
-.Cm noexport
-twice is.
-The
-.Cm all
-keyword is also exempted.
-.Pp
 If, during run-time, the current role is not a subtype (inclusive) of
 the given role for an operation, the application is immediately
 terminated.

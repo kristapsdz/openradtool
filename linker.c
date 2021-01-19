@@ -276,16 +276,15 @@ check_searchtype(struct config *cfg, const struct search *srch)
 
 
 /*
- * Given the rolemap "rm", make sure that the matched roles, if any,
- * don't overlap in the tree of roles.
- * Return non-zero on success, zero on failure.
+ * Given the rolemap "rm", warn if the matched roles, if any, don't
+ * overlap in the tree of roles.
+ * Always returns success.
  */
 static ssize_t
 check_unique_roles_tree(struct config *cfg, const struct rolemap *rm)
 {
 	const struct rref	*rs, *rrs;
 	const struct role	*rp;
-	size_t		 	 i = 0;
 
 	/*
 	 * Don't use top-level roles, since by definition they don't
@@ -302,13 +301,12 @@ check_unique_roles_tree(struct config *cfg, const struct rolemap *rm)
 					break;
 			if (rp == NULL)
 				continue;
-			gen_errx(cfg, &rs->pos, 
+			gen_warnx(cfg, &rs->pos, 
 				"overlapping role: %s, %s", 
 				rrs->role->name, rs->role->name);
-			i++;
 		}
 
-	return i == 0;
+	return 1;
 }
 
 /*

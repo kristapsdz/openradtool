@@ -482,26 +482,16 @@ gen_role(FILE *f, const struct role *r)
 		return 0;
 	if (!gen_doc(f, r->doc))
 		return 0;
-	if (fputs(" \"children\":", f) == EOF)
+	if (fputs(" \"subrq\": {", f) == EOF)
 		return 0;
-
-	if (!TAILQ_EMPTY(&r->subrq)) {
-		if (fputs(" {", f) == EOF)
+	TAILQ_FOREACH(rr, &r->subrq, entries) {
+		if (!gen_role(f,  rr))
 			return 0;
-		TAILQ_FOREACH(rr, &r->subrq, entries) {
-			if (!gen_role(f,  rr))
-				return 0;
-			if (TAILQ_NEXT(rr, entries) != NULL &&
-			    fputc(',', f) == EOF)
-				return 0;
-		}
-		if (fputs(" }", f) == EOF)
+		if (TAILQ_NEXT(rr, entries) != NULL &&
+		    fputc(',', f) == EOF)
 			return 0;
-	} else
-		if (fputs(" null", f) == EOF)
-			return 0;
-
-	return fputs(" }", f) != EOF;
+	}
+	return fputs(" } }", f) != EOF;
 }
 
 static int

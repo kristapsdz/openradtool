@@ -87,7 +87,7 @@ namespace ortJson {
 	export interface roleObj {
 		pos: posObj;
 		doc: string|null;
-		children: roleSet|null;
+		subrq: roleSet;
 	}
 
 	export interface roleSet {
@@ -421,8 +421,8 @@ namespace ortJson {
 			let str: string = ' role ' + name;
 			if (role.doc !== null)
 				this.commentToString(role.doc);
-			if (role.children !== null)
-				str += this.roleSetToString(role.children);
+			if (Object.keys(role).length)
+				str += this.roleSetToString(role.subrq);
 			return str + ';';
 		}
 

@@ -84,6 +84,9 @@ namespace ortJson {
 		[name: string]: bitfObj;
 	}
 
+	/**
+	 * Same as "struct role" in ort(3).
+	 */
 	export interface roleObj {
 		pos: posObj;
 		doc: string|null;
@@ -164,17 +167,6 @@ namespace ortJson {
 	export interface insertObj {
 		pos: posObj;
 		rolemap: string[];
-	}
-
-	/**
-	 * Create an empty insertObj.
-	 * The position is initialised to an empty file at position zero.
-	 */
-	export function createInsertObj(): insertObj {
-		return {
-			'pos': { 'fname': '', 'column': 0, 'line': 0 },
-			'rolemap': []
-		};
 	}
 
 	/**
@@ -349,26 +341,6 @@ namespace ortJson {
 		 * their roles therein.  
 		 */
 		rq: rolemapObj[];
-	}
-
-	/**
-	 * Create an empty strctObj.
-	 * The only field set is the name.
-	 * The position is initialised to an empty file at position zero.
-	 */
-	export function createStrctObj(name: string): strctObj {
-		return {
-			'name': name,
-			'pos': { 'fname': '', 'column': 0, 'line': 0 },
-			'doc': null,
-			'fq': {},
-			'insert': null,
-			'sq': { 'named': {}, 'anon': [] },
-			'uq': { 'named': {}, 'anon': [] },
-			'dq': { 'named': {}, 'anon': [] },
-			'nq': [],
-			'rq': []
-		};
 	}
 
 	export interface strctSet {

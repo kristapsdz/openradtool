@@ -299,8 +299,8 @@ ort-audit-json: audit.o libort.a
 ort-xliff: xliff.o libort-lang-xliff.a libort.a
 	$(CC) -o $@ xliff.o libort-lang-xliff.a libort.a $(LDFLAGS) $(LIBS_PKG) $(LDADD)
 
-xliff.o: xliff.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(CFLAGS_PKG) -c xliff.c
+lang-xliff.o: lang-xliff.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(CFLAGS_PKG) -c lang-xliff.c
 
 www: $(IMAGES) $(HTMLS) openradtool.tar.gz openradtool.tar.gz.sha512 atom.xml
 

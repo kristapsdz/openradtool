@@ -476,57 +476,48 @@ gen_role(FILE *f, const struct role *r)
 {
 	const struct role	*rr;
 
-	if (fprintf(f, " \"%s\": {", r->name) < 0)
+	if (fprintf(f, " \"%s\": { \"name\": \"%s\", \"parent\": ", 
+	    r->name, r->name) < 0)
+		return 0;
+	if (r->parent == NULL) {
+		if (fputs("null, ", f) == EOF)
+			return 0;
+	} else if (fprintf(f, "\"%s\", ", r->parent->name) < 0)
 		return 0;
 	if (!gen_pos(f, &r->pos))
 		return 0;
 	if (!gen_doc(f, r->doc))
 		return 0;
-	if (fputs(" \"subrq\": {", f) == EOF)
+	if (fputs(" \"subrq\": [", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(rr, &r->subrq, entries) {
-		if (!gen_role(f,  rr))
+		if (fprintf(f, "\"%s\"", rr->name) < 0)
 			return 0;
 		if (TAILQ_NEXT(rr, entries) != NULL &&
 		    fputc(',', f) == EOF)
 			return 0;
 	}
-	return fputs(" } }", f) != EOF;
+	return fputs("] }", f) != EOF;
 }
 
 static int
 gen_roles(FILE *f, const struct config *cfg)
 {
-	const struct role	*r, *rr;
+	const struct role	*r;
 
-	if (fputs(" \"arq\": [", f) == EOF)
-		return 0;
-	TAILQ_FOREACH(r, &cfg->arq, allentries) {
-		if (fprintf(f, " \"%s\"", r->name) < 0)
-			return 0;
-		if (TAILQ_NEXT(r, allentries) != NULL &&
-		    fputc(',', f) == EOF)
-			return 0;
-	}
-	if (fputs("], \"rq\": ", f) == EOF)
+	if (fputs(" \"rq\": ", f) == EOF)
 		return 0;
 	if (TAILQ_EMPTY(&cfg->rq))
 		return fputs("null,", f) != EOF;
 	if (fputc('{', f) == EOF)
 		return 0;
-	TAILQ_FOREACH(r, &cfg->rq, entries) {
-		if (strcasecmp(r->name, "all"))
-			continue;
-		TAILQ_FOREACH(rr, &r->subrq, entries) {
-			if (!gen_role(f, rr))
-				return 0;
-			if (TAILQ_NEXT(rr, entries) != NULL &&
-			    fputc(',', f) == EOF)
-				return 0;
-		}
-		break;
+	TAILQ_FOREACH(r, &cfg->arq, allentries) {
+		if (!gen_role(f, r))
+			return 0;
+		if (TAILQ_NEXT(r, allentries) != NULL &&
+		    fputc(',', f) == EOF)
+			return 0;
 	}
-
 	return fputs(" },", f) != EOF;
 }
 

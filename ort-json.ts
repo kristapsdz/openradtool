@@ -88,9 +88,11 @@ namespace ortJson {
 	 * Same as "struct role" in ort(3).
 	 */
 	export interface roleObj {
+		name: string;
 		pos: posObj;
 		doc: string|null;
-		subrq: roleSet;
+		parent: string|null;
+		subrq: string[];
 	}
 
 	export interface roleSet {
@@ -354,17 +356,12 @@ namespace ortJson {
 		eq: enumSet|null;
 		bq: bitfSet|null;
 		/**
-		 * Contains all user-defined roles, i.e., those
-		 * descending from (but not including) "all".  This is
-		 * an empty object for no user-defined roles (i.e., just
-		 * the "roles" statement) and null for no roles.
+		 * Unlike in struct config, the "rq" here contains all
+		 * roles at the top-level.  This means one can look for
+		 * roles by name by checking whether they're defined
+		 * properties of the object.
 		 */
 		rq: roleSet|null;
-		/**
-		 * List of all non-hierarchical roles names including
-		 * system-defined roles.  Empty if having no roles.
-		 */
-		arq: string[];
 		sq: strctSet;
 	}
 
@@ -383,29 +380,45 @@ namespace ortJson {
 			this.obj = obj.config;
 		}
 
-		private commentToString(doc: string): string
+		private commentToString(doc: string|null): string
 		{
+			if (doc === null)
+				return '';
 			return ' comment \"' + doc.replace(/"/g, '\\\"') + '\"';
 		}
 
-		private roleObjToString(name: string, role: roleObj): string
+		private roleObjToString(r: roleObj): string
 		{
-			let str: string = ' role ' + name;
-			if (role.doc !== null)
-				this.commentToString(role.doc);
-			if (Object.keys(role).length)
-				str += this.roleSetToString(role.subrq);
+			let str: string = ' role ' + r.name;
+			str += this.commentToString(r.doc);
+			if (r.subrq.length)
+				str += ' {' + this.roleSubrqToString(r) + '}';
 			return str + ';';
 		}
 
-		private roleSetToString(set: roleSet): string 
+		private roleSubrqToString(r: roleObj): string
 		{
-			let str: string = ' {';
-			const keys: string[] = Object.keys(set);
-			for (let i: number = 0; i < keys.length; i++)
-				str += this.roleObjToString
-					(keys[i], set[keys[i]]);
-			return str + '}';
+			let str: string = '';
+			for (let i: number = 0; i < r.subrq.length; i++) {
+				if (this.obj.rq === null)
+					continue;
+				const nr: roleObj|undefined =
+					this.obj.rq[r.subrq[i]];
+				if (nr === undefined)
+					continue;
+				str += this.roleObjToString(nr);
+			}
+			return str;
+		}
+
+		private roleSetToString(): string 
+		{
+			if (this.obj.rq === null)
+				return '';
+			const r: roleObj|undefined = this.obj.rq['all'];
+			if (r === undefined)
+				return '';
+			return ' roles {' + this.roleSubrqToString(r) + '};';
 		}
 
 		private fieldObjToString(name: string, field: fieldObj): string
@@ -431,8 +444,7 @@ namespace ortJson {
 				str += ' actdel ' + field.actdel;
 				str += ' actup ' + field.actup;
 			}
-			if (field.doc !== null)
-				str += this.commentToString(field.doc);
+			str += this.commentToString(field.doc);
 			if (field.def !== null &&
 			    (field.type === 'email' ||
 			     field.type === 'text'))
@@ -470,8 +482,7 @@ namespace ortJson {
 		{
 			let str: string = ' item ' + 
 				name + ' ' + bit.value.toString();
-			if (bit.doc !== null)
-				str += this.commentToString(bit.doc);
+			str += this.commentToString(bit.doc);
 			if (bit.labels !== null)
 				str += this.labelSetToString(bit.labels);
 			return str + ' ;';
@@ -484,8 +495,9 @@ namespace ortJson {
 			for (let i: number = 0; i < keys.length; i++)
 				str += this.bitIndexObjToString(keys[i],
 					bitf.bq[keys[i]]);
+			str += this.commentToString(bitf.doc);
 			if (bitf.doc !== null)
-				str += this.commentToString(bitf.doc) + ';';
+				str += ';';
 			if (bitf.labelsNull !== null)
 				str += ' isnull' + this.labelSetToString
 					(bitf.labelsNull) + ';';
@@ -510,8 +522,7 @@ namespace ortJson {
 			let str: string = ' item ' + name;
 			if (eitem.value !== null)
 				str += ' ' + eitem.value.toString();
-			if (eitem.doc !== null)
-				str += this.commentToString(eitem.doc);
+			str += this.commentToString(eitem.doc);
 			if (eitem.labels !== null)
 				str += this.labelSetToString(eitem.labels);
 			return str + ' ;';
@@ -524,8 +535,9 @@ namespace ortJson {
 			for (let i: number = 0; i < keys.length; i++)
 				str += this.enumItemObjToString(keys[i],
 					enm.eq[keys[i]]);
+			str += this.commentToString(enm.doc);
 			if (enm.doc !== null)
-				str += this.commentToString(enm.doc) + ';';
+				str += ';';
 			if (enm.labelsNull !== null)
 				str += ' isnull' + this.labelSetToString
 					(enm.labelsNull) + ';';
@@ -573,8 +585,7 @@ namespace ortJson {
 					' ' + up.crq[i].op;
 			}
 			str += ':';
-			if (up.doc !== null)
-				str += this.commentToString(up.doc);
+			str += this.commentToString(up.doc);
 			if (name !== null)
 				str += ' name ' + name;
 			return str + ';';
@@ -600,8 +611,7 @@ namespace ortJson {
 					' ' + search.sntq[i].op;
 			}
 			str += ':';
-			if (search.doc !== null)
-				str += this.commentToString(search.doc);
+			str += this.commentToString(search.doc);
 			if (search.limit !== '0') {
 				str += ' limit ' + search.limit;
 				if (search.offset !== '0')
@@ -673,8 +683,9 @@ namespace ortJson {
 			str += this.updateSetToString(strct.dq.named);
 			if (strct.insert !== null)
 				str += ' insert;';
+			str += this.commentToString(strct.doc);
 			if (strct.doc !== null) 
-				str += this.commentToString(strct.doc) + ';';
+				str += ';';
 			for (let i: number = 0; i < strct.nq.length; i++) {
 				str += ' unique ';
 				for (let j: number = 0; 
@@ -711,8 +722,7 @@ namespace ortJson {
 			let str: string = '';
 
 			if (this.obj.rq !== null)
-				str += 'roles ' + this.roleSetToString
-					(this.obj.rq) + ';';
+				str += this.roleSetToString();
 			if (this.obj.bq !== null) 
 				str += this.bitfSetToString(this.obj.bq);
 			if (this.obj.eq !== null) 
@@ -885,17 +895,13 @@ namespace ortJson {
 		 *   depending on whether there are roles at all (even
 		 *   if not having user-defined roles)
 		 * - *config-roles*: the first child of these is cloned
-		 *   and filled in with data for each role unless there
-		 *   are no roles, in which case the elements are hidden
-		 *
-		 * For each role:
-		 *
-		 * - *config-role*: filled in with the role name
-		 * - *config-role-value*: value set to the role name
+		 *   and filled in with fillRole() for each role unless
+		 *   there are no roles, in which case the elements are
+		 *   hidden
 		 */
 		fillRoles(e: HTMLElement): void
 		{
-			if (this.obj.arq.length === 0) {
+			if (this.obj.rq === null) {
 				this.hidecl(e, 'config-roles-has');
 				this.showcl(e, 'config-roles-none');
 				return;
@@ -911,18 +917,33 @@ namespace ortJson {
 					<HTMLElement>list[i].children[0];
 				this.show(list[i]);
 				this.clr(list[i]);
-				for (let j: number = 0; 
-				     j < this.obj.arq.length; j++) {
+				for (let name in this.obj.rq) {
 					const cln: HTMLElement = 
 						<HTMLElement>
 						tmpl.cloneNode(true);
 					list[i].appendChild(cln);
-					this.replcl(cln, 'config-role', 
-						this.obj.arq[j]);
-					this.attrcl(cln, 'config-role-value',
-						'value', this.obj.arq[j]);
+					this.fillRole(cln, this.obj.rq[name]);
 				}
 			}
+		}
+
+		/**
+		 * See fill() for generic documentation.
+		 *
+		 * For each role:
+		 *
+		 * - *config-role-doc*: filled in with role
+		 *   documentation
+		 * - *config-role-name*: filled in with the role name
+		 * - *config-role-name-value*: value set to the role
+		 *   name
+		 */
+		fillRole(e: HTMLElement, role: ortJson.roleObj): void
+		{
+			this.fillComment(e, 'role', role.doc);
+			this.replcl(e, 'config-role-name', role.name);
+			this.attrcl(e, 'config-role-name-value', 
+				'value', role.name);
 		}
 
 		/**

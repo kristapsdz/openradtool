@@ -899,9 +899,16 @@ namespace ortJson {
 		 *   there are no roles, in which case the elements are
 		 *   hidden
 		 */
-		fillRoles(e: HTMLElement): void
+		fillRoles(e: HTMLElement, exclude?: string[]): void
 		{
-			if (this.obj.rq === null) {
+			const newrq: roleObj[] = [];
+			if (this.obj.rq !== null)
+				for (const name in this.obj.rq)
+					if (typeof(exclude) === 'undefined' ||
+					    exclude.indexOf(name) === -1)
+						newrq.push(this.obj.rq[name]);
+
+			if (newrq.length === 0) {
 				this.hidecl(e, 'config-roles-has');
 				this.showcl(e, 'config-roles-none');
 				return;
@@ -917,12 +924,12 @@ namespace ortJson {
 					<HTMLElement>list[i].children[0];
 				this.show(list[i]);
 				this.clr(list[i]);
-				for (let name in this.obj.rq) {
+				for (let j: number = 0; j < newrq.length; j++) {
 					const cln: HTMLElement = 
 						<HTMLElement>
 						tmpl.cloneNode(true);
 					list[i].appendChild(cln);
-					this.fillRole(cln, this.obj.rq[name]);
+					this.fillRole(cln, newrq[j]);
 				}
 			}
 		}
@@ -942,6 +949,15 @@ namespace ortJson {
 		{
 			this.fillComment(e, 'role', role.doc);
 			this.replcl(e, 'config-role-name', role.name);
+			if (role.parent === null) {
+				this.hidecl(e, 'config-role-parent-has');
+				this.showcl(e, 'config-role-parent-none');
+				this.replcl(e, 'config-role-parent', '');
+			} else {
+				this.showcl(e, 'config-role-parent-has');
+				this.hidecl(e, 'config-role-parent-none');
+				this.replcl(e, 'config-role-parent', role.parent);
+			}
 			this.attrcl(e, 'config-role-name-value', 
 				'value', role.name);
 		}

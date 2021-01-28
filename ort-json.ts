@@ -353,7 +353,7 @@ namespace ortJson {
 	 * Same as "struct config" in ort(3).
 	 */
 	export interface configObj {
-		eq: enumSet|null;
+		eq: enumSet;
 		bq: bitfSet|null;
 		/**
 		 * Unlike in struct config, the "rq" here contains all
@@ -725,9 +725,7 @@ namespace ortJson {
 				str += this.roleSetToString();
 			if (this.obj.bq !== null) 
 				str += this.bitfSetToString(this.obj.bq);
-			if (this.obj.eq !== null) 
-				str += this.enumSetToString(this.obj.eq);
-
+			str += this.enumSetToString(this.obj.eq);
 			return str + this.strctSetToString(this.obj.sq);
 		}
 

@@ -368,7 +368,7 @@ gen_enm(FILE *f, const struct enm *enm, const struct config *cfg)
 }
 
 /*
- * Emit "eq": { enumSet }|null w/comma.
+ * Emit "eq": { enumSet } w/comma.
  * Return zero on failure, non-zero on success.
  */
 static int
@@ -376,13 +376,8 @@ gen_enms(FILE *f, const struct config *cfg)
 {
 	const struct enm	*enm;
 
-	if (fputs(" \"eq\": ", f) == EOF)
+	if (fputs(" \"eq\": {", f) == EOF)
 		return 0;
-	if (TAILQ_EMPTY(&cfg->eq))
-		return fputs("null,", f) != EOF;
-	if (fputc('{', f) == EOF)
-		return 0;
-
 	TAILQ_FOREACH(enm, &cfg->eq, entries) {
 		if (!gen_enm(f, enm, cfg))
 			return 0;
@@ -390,7 +385,6 @@ gen_enms(FILE *f, const struct config *cfg)
 		    fputc(',', f) == EOF)
 			return 0;
 	}
-
 	return fputs(" },", f) != EOF;
 }
 

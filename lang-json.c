@@ -345,7 +345,8 @@ gen_enm(FILE *f, const struct enm *enm, const struct config *cfg)
 {
 	const struct eitem	*ei;
 
-	if (fprintf(f, " \"%s\": {", enm->name) < 0)
+	if (fprintf(f, " \"%s\": { \"name\": \"%s\", ", 
+	    enm->name, enm->name) < 0)
 		return 0;
 	if (!gen_pos(f, &enm->pos))
 		return 0;

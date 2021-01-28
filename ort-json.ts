@@ -45,6 +45,7 @@ namespace ortJson {
 	 * Same as "struct enm" in ort(3).
 	 */
 	export interface enumObj {
+		name: string;
 		pos: posObj;
 		doc: string|null;
 		labelsNull: labelSet|null;
@@ -528,9 +529,9 @@ namespace ortJson {
 			return str + ' ;';
 		}
 
-		private enumObjToString(name: string, enm: enumObj): string
+		private enumObjToString(enm: enumObj): string
 		{
-			let str: string = ' enum ' + name + ' {';
+			let str: string = ' enum ' + enm.name + ' {';
 			const keys: string[] = Object.keys(enm.eq);
 			for (let i: number = 0; i < keys.length; i++)
 				str += this.enumItemObjToString(keys[i],
@@ -549,8 +550,7 @@ namespace ortJson {
 			let str: string = '';
 			const keys: string[] = Object.keys(set);
 			for (let i: number = 0; i < keys.length; i++)
-				str += this.enumObjToString
-					(keys[i], set[keys[i]]);
+				str += this.enumObjToString(set[keys[i]]);
 			return str;
 		}
 
@@ -865,6 +865,7 @@ namespace ortJson {
 				return;
 			this.fillRoles(pn);
 			this.fillStrcts(pn);
+			this.fillEnums(pn);
 		}
 
 		private fillComment(e: HTMLElement, 
@@ -887,6 +888,66 @@ namespace ortJson {
 		/**
 		 * See fill() for generic documentation.
 		 *
+		 * Per all enumerations specified in a configuration:
+		 *
+		 * - *config-enums-{has,none}*: shown or hidden
+		 *   depending on whether there are enumerations
+		 * - *config-enums*: the first child of these is cloned
+		 *   and filled in with fillEnum() for each enumeration
+		 *   unless there are no enumerations, in which case the
+		 *   elements are hidden
+		 */
+		fillEnums(e: HTMLElement): void
+		{
+			const keys: string[] = Object.keys(this.obj.eq);
+			if (keys.length === 0) {
+				this.hidecl(e, 'config-enums-has');
+				this.showcl(e, 'config-enums-none');
+				return;
+			}
+			this.showcl(e, 'config-enums-has');
+			this.hidecl(e, 'config-enums-none');
+			const list: HTMLElement[] = 
+				this.list(e, 'config-enums');
+			for (let i: number = 0; i < list.length; i++) {
+				if (list[i].children.length === 0)
+					continue;
+				const tmpl: HTMLElement =
+					<HTMLElement>list[i].children[0];
+				this.show(list[i]);
+				this.clr(list[i]);
+				for (const name in this.obj.eq) {
+					const cln: HTMLElement = 
+						<HTMLElement>
+						tmpl.cloneNode(true);
+					list[i].appendChild(cln);
+					this.fillEnum(cln, this.obj.eq[name]);
+				}
+			}
+		}
+
+		/**
+		 * See fill() for generic documentation.
+		 *
+		 * For each enumeration:
+		 *
+		 * - *config-enum-doc*: filled in with enum
+		 *   documentation
+		 * - *config-enum-name*: filled in with the enum name
+		 * - *config-enum-name-value*: value set to the enum
+		 *   name
+		 */
+		fillEnum(e: HTMLElement, enm: ortJson.enumObj): void
+		{
+			this.fillComment(e, 'enum', enm.doc);
+			this.replcl(e, 'config-enum-name', enm.name);
+			this.attrcl(e, 'config-enum-name-value', 
+				'value', enm.name);
+		}
+
+		/**
+		 * See fill() for generic documentation.
+		 *
 		 * Per all roles specified in a configuration:
 		 *
 		 * - *config-roles-{has,none}*: shown or hidden
@@ -896,6 +957,8 @@ namespace ortJson {
 		 *   and filled in with fillRole() for each role unless
 		 *   there are no roles, in which case the elements are
 		 *   hidden
+		 *
+		 * Accepts an optional array of role names not to show.
 		 */
 		fillRoles(e: HTMLElement, exclude?: string[]): void
 		{
@@ -942,6 +1005,10 @@ namespace ortJson {
 		 * - *config-role-name*: filled in with the role name
 		 * - *config-role-name-value*: value set to the role
 		 *   name
+		 * - *config-role-parent-{has,none}*: shown or hidden
+		 *   depending upon whether the parent is set
+		 * - *config-role-parent*: filled in with the parent
+		 *   name or an empty string if the parent is not set
 		 */
 		fillRole(e: HTMLElement, role: ortJson.roleObj): void
 		{

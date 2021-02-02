@@ -397,7 +397,9 @@ static int
 gen_bitidx(FILE *f, const struct bitidx *bi, const struct config *cfg)
 {
 
-	if (fprintf(f, " \"%s\": {", bi->name) < 0)
+	if (fprintf(f, " \"%s\": { \"parent\": \"%s\", "
+	    "\"name\": \"%s\", ", 
+	    bi->name, bi->parent->name, bi->name) < 0)
 		return 0;
 	if (!gen_pos(f, &bi->pos))
 		return 0;

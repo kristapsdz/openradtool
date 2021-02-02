@@ -60,6 +60,8 @@ namespace ortJson {
 	 * Same as "struct bitidx" in ort(3).
 	 */
 	export interface bitIndexObj {
+		parent: string;
+		name: string;
 		pos: posObj;
 		doc: string|null;
 		value: string|number;
@@ -970,7 +972,7 @@ namespace ortJson {
 		/**
 		 * See fill() for generic documentation.
 		 *
-		 * For each enumeration:
+		 * For a bitfield:
 		 *
 		 * - *config-bitf-doc*: filled in with bitfield
 		 *   documentation
@@ -990,7 +992,7 @@ namespace ortJson {
 		/**
 		 * See fill() for generic documentation.
 		 *
-		 * For each enumeration:
+		 * For an enumeration:
 		 *
 		 * - *config-enum-doc*: filled in with enum
 		 *   documentation
@@ -1004,6 +1006,34 @@ namespace ortJson {
 			this.replcl(e, 'config-enum-name', enm.name);
 			this.attrcl(e, 'config-enum-name-value', 
 				'value', enm.name);
+		}
+
+		/**
+		 * See fill() for generic documentation.
+		 *
+		 * For a bitfield item:
+		 *
+		 * - *config-bitindex-doc*: filled in with bitfield item
+		 *   documentation
+		 * - *config-bitindex-name*: filled in with the bitfield
+		 *   item name
+		 * - *config-bitindex-name-value*: value set to the
+		 *   bitfield item name
+		 * - *config-bitindex-value*: filled in with the bitfield
+		 *   item name
+		 * - *config-bitindex-name-value*: value set to the
+		 *   bitfield item name
+		 */
+		fillBitIndexObj(e: HTMLElement, biti: ortJson.bitIndexObj): void
+		{
+			this.fillComment(e, 'bitindex', biti.doc);
+			this.replcl(e, 'config-bitindex-name', biti.name);
+			this.replcl(e, 'config-bitindex-value', 
+				biti.value.toString());
+			this.attrcl(e, 'config-bitindex-name-value', 
+				'value', biti.name);
+			this.attrcl(e, 'config-bitindex-value-value', 
+				'value', biti.value.toString());
 		}
 
 		/**

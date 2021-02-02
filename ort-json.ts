@@ -852,7 +852,7 @@ namespace ortJson {
 		 *
 		 * Per configuration:
 		 *
-		 * - fillStrcts()
+		 * - fillStrctSet()
 		 * - fillRoles()
 		 */
 		fill(e: string|HTMLElement|null): void
@@ -863,7 +863,7 @@ namespace ortJson {
 			if (pn === null)
 				return;
 			this.fillRoles(pn);
-			this.fillStrcts(pn);
+			this.fillStrctSet(pn);
 			this.fillEnumSet(pn);
 		}
 
@@ -1035,10 +1035,10 @@ namespace ortJson {
 		 *   depending on whether there are strcts
 		 * - *config-strcts*: the first child of these is cloned
 		 *   and filled in with data for each strct (see
-		 *   fillStrct()) unless there are no strcts, in which
+		 *   fillStrctObj()) unless there are no strcts, in which
 		 *   case the elements are hidden
 		 */
-		fillStrcts(e: HTMLElement)
+		fillStrctSet(e: HTMLElement)
 		{
 			const keys: string[] = 
 				Object.keys(this.obj.sq);
@@ -1065,7 +1065,7 @@ namespace ortJson {
 						<HTMLElement>
 						tmpl.cloneNode(true);
 					list[i].appendChild(cln);
-					this.fillStrct(cln, this.obj.sq[keys[j]]);
+					this.fillStrctObj(cln, this.obj.sq[keys[j]]);
 				}
 				this.show(list[i]);
 			}
@@ -1264,7 +1264,7 @@ namespace ortJson {
 		 *   comma-separated limits type-value pairs if limits
 		 *   are defined
 		 */
-		fillStrct(e: HTMLElement, strct: ortJson.strctObj): void
+		fillStrctObj(e: HTMLElement, strct: ortJson.strctObj): void
 		{
 			let list: HTMLElement[];
 

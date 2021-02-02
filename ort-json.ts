@@ -865,6 +865,7 @@ namespace ortJson {
 			this.fillRoles(pn);
 			this.fillStrctSet(pn);
 			this.fillEnumSet(pn);
+			this.fillBitfSet(pn);
 		}
 
 		private fillComment(e: HTMLElement, 
@@ -881,6 +882,47 @@ namespace ortJson {
 				this.showcl(e, str + '-has');
 				this.replcl(e, str, doc);
 				this.attrcl(e, str + '-value', 'value', doc);
+			}
+		}
+
+		/**
+		 * See fill() for generic documentation.
+		 *
+		 * Per all bitfields specified in a configuration:
+		 *
+		 * - *config-bitfs-{has,none}*: shown or hidden
+		 *   depending on whether there are bitfields
+		 * - *config-bitfs*: the first child of these is cloned
+		 *   and filled in with fillBitfObj() for each bitfield
+		 *   unless there are no bitfields, in which case the
+		 *   elements are hidden
+		 */
+		fillBitfSet(e: HTMLElement): void
+		{
+			const keys: string[] = Object.keys(this.obj.bq);
+			if (keys.length === 0) {
+				this.hidecl(e, 'config-bitfs-has');
+				this.showcl(e, 'config-bitfs-none');
+				return;
+			}
+			this.showcl(e, 'config-bitfs-has');
+			this.hidecl(e, 'config-bitfs-none');
+			const list: HTMLElement[] = 
+				this.list(e, 'config-bitfs');
+			for (let i: number = 0; i < list.length; i++) {
+				if (list[i].children.length === 0)
+					continue;
+				const tmpl: HTMLElement =
+					<HTMLElement>list[i].children[0];
+				this.show(list[i]);
+				this.clr(list[i]);
+				for (const name in this.obj.bq) {
+					const cln: HTMLElement = 
+						<HTMLElement>
+						tmpl.cloneNode(true);
+					list[i].appendChild(cln);
+					this.fillBitfObj(cln, this.obj.bq[name]);
+				}
 			}
 		}
 
@@ -923,6 +965,26 @@ namespace ortJson {
 					this.fillEnumObj(cln, this.obj.eq[name]);
 				}
 			}
+		}
+
+		/**
+		 * See fill() for generic documentation.
+		 *
+		 * For each enumeration:
+		 *
+		 * - *config-bitf-doc*: filled in with bitfield
+		 *   documentation
+		 * - *config-bitf-name*: filled in with the bitfield
+		 *   name
+		 * - *config-bitf-name-value*: value set to the bitfield
+		 *   name
+		 */
+		fillBitfObj(e: HTMLElement, bitf: ortJson.bitfObj): void
+		{
+			this.fillComment(e, 'bitf', bitf.doc);
+			this.replcl(e, 'config-bitf-name', bitf.name);
+			this.attrcl(e, 'config-bitf-name-value', 
+				'value', bitf.name);
 		}
 
 		/**

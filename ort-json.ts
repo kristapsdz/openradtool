@@ -31,6 +31,8 @@ namespace ortJson {
 	 * Same as "struct eitem" in ort(3).
 	 */
 	export interface enumItemObj {
+		parent: string;
+		name: string;
 		pos: posObj;
 		doc: string|null;
 		value: string|number|null;
@@ -1011,6 +1013,49 @@ namespace ortJson {
 		/**
 		 * See fill() for generic documentation.
 		 *
+		 * For an enumeration item:
+		 *
+		 * - *config-enumitem-doc*: filled in with bitfield item
+		 *   documentation
+		 * - *config-enumitem-name*: filled in with the bitfield
+		 *   item name
+		 * - *config-enumitem-name-value*: value set to the
+		 *   bitfield item name
+		 * - *config-eitem-value-{has,none}*: shown or hidden
+		 *   depending on whether there's a value for the
+		 *   enumerateion item
+		 * - *config-enumitem-value*: filled in with the
+		 *   bitfield item name, if applicable, or an empty
+		 *   string of unset
+		 * - *config-enumitem-value-value*: value set to the
+		 *   bitfield item value, if applicable, or an empty
+		 *   string if unset
+		 */
+		fillEnumItemObj(e: HTMLElement, eitem: ortJson.enumItemObj): void
+		{
+			this.fillComment(e, 'enumitem', eitem.doc);
+			this.replcl(e, 'config-enumitem-name', eitem.name);
+			this.attrcl(e, 'config-enumitem-name-value', 
+				'value', eitem.name);
+			if (eitem.value !== null) {
+				this.showcl(e, 'config-enumitem-value-has');
+				this.hidecl(e, 'config-enumitem-value-none');
+				this.replcl(e, 'config-enumitem-value', 
+					eitem.value.toString());
+				this.attrcl(e, 'config-enumitem-value-value', 
+					'value', eitem.value.toString());
+			} else {
+				this.hidecl(e, 'config-enumitem-value-has');
+				this.showcl(e, 'config-enumitem-value-none');
+				this.replcl(e, 'config-enumitem-value', '');
+				this.attrcl(e, 'config-enumitem-value-value', 
+					'value', '');
+			}
+		}
+
+		/**
+		 * See fill() for generic documentation.
+		 *
 		 * For a bitfield item:
 		 *
 		 * - *config-bitindex-doc*: filled in with bitfield item
@@ -1021,8 +1066,8 @@ namespace ortJson {
 		 *   bitfield item name
 		 * - *config-bitindex-value*: filled in with the bitfield
 		 *   item name
-		 * - *config-bitindex-name-value*: value set to the
-		 *   bitfield item name
+		 * - *config-bitindex-value-value*: value set to the
+		 *   bitfield item value
 		 */
 		fillBitIndexObj(e: HTMLElement, biti: ortJson.bitIndexObj): void
 		{

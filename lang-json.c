@@ -321,7 +321,9 @@ static int
 gen_eitem(FILE *f, const struct eitem *ei, const struct config *cfg)
 {
 
-	if (fprintf(f, " \"%s\": {", ei->name) < 0)
+	if (fprintf(f, " \"%s\": { \"name\": \"%s\", "
+	    "\"parent\": \"%s\", ", 
+	    ei->name, ei->name, ei->parent->name) < 0)
 		return 0;
 	if (!gen_pos(f, &ei->pos))
 		return 0;

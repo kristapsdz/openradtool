@@ -418,7 +418,8 @@ gen_bitf(FILE *f, const struct bitf *bitf, const struct config *cfg)
 {
 	const struct bitidx	*bi;
 
-	if (fprintf(f, " \"%s\": {", bitf->name) < 0)
+	if (fprintf(f, " \"%s\": { \"name\": \"%s\", ", 
+	    bitf->name, bitf->name) < 0)
 		return 0;
 	if (!gen_pos(f, &bitf->pos))
 		return 0;
@@ -449,11 +450,7 @@ gen_bitfs(FILE *f, const struct config *cfg)
 {
 	const struct bitf	*bitf;
 
-	if (fputs(" \"bq\": ", f) == EOF)
-		return 0;
-	if (TAILQ_EMPTY(&cfg->bq))
-		return fputs("null,", f) != EOF;
-	if (fputc('{', f) == EOF)
+	if (fputs(" \"bq\": {", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(bitf, &cfg->bq, entries) {
 		if (!gen_bitf(f, bitf, cfg))

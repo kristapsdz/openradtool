@@ -74,6 +74,7 @@ namespace ortJson {
 	 * Same as "struct bitf" in ort(3).
 	 */
 	export interface bitfObj {
+		name: string;
 		pos: posObj;
 		doc: string|null;
 		labelsNull: labelSet|null;
@@ -355,7 +356,7 @@ namespace ortJson {
 	 */
 	export interface configObj {
 		eq: enumSet;
-		bq: bitfSet|null;
+		bq: bitfSet;
 		/**
 		 * Unlike in struct config, the "rq" here contains all
 		 * roles at the top-level.  This means one can look for
@@ -489,9 +490,9 @@ namespace ortJson {
 			return str + ' ;';
 		}
 
-		private bitfObjToString(name: string, bitf: bitfObj): string
+		private bitfObjToString(bitf: bitfObj): string
 		{
-			let str: string = ' bitfield ' + name + ' {';
+			let str: string = ' bitfield ' + bitf.name + ' {';
 			const keys: string[] = Object.keys(bitf.bq);
 			for (let i: number = 0; i < keys.length; i++)
 				str += this.bitIndexObjToString(keys[i],
@@ -513,8 +514,7 @@ namespace ortJson {
 			let str: string = '';
 			const keys: string[] = Object.keys(set);
 			for (let i: number = 0; i < keys.length; i++)
-				str += this.bitfObjToString
-					(keys[i], set[keys[i]]);
+				str += this.bitfObjToString(set[keys[i]]);
 			return str;
 		}
 
@@ -723,8 +723,7 @@ namespace ortJson {
 
 			if (this.obj.rq !== null)
 				str += this.roleSetToString();
-			if (this.obj.bq !== null) 
-				str += this.bitfSetToString(this.obj.bq);
+			str += this.bitfSetToString(this.obj.bq);
 			str += this.enumSetToString(this.obj.eq);
 			return str + this.strctSetToString(this.obj.sq);
 		}

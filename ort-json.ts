@@ -864,7 +864,7 @@ namespace ortJson {
 				return;
 			this.fillRoles(pn);
 			this.fillStrcts(pn);
-			this.fillEnums(pn);
+			this.fillEnumSet(pn);
 		}
 
 		private fillComment(e: HTMLElement, 
@@ -892,11 +892,11 @@ namespace ortJson {
 		 * - *config-enums-{has,none}*: shown or hidden
 		 *   depending on whether there are enumerations
 		 * - *config-enums*: the first child of these is cloned
-		 *   and filled in with fillEnum() for each enumeration
+		 *   and filled in with fillEnumObj() for each enumeration
 		 *   unless there are no enumerations, in which case the
 		 *   elements are hidden
 		 */
-		fillEnums(e: HTMLElement): void
+		fillEnumSet(e: HTMLElement): void
 		{
 			const keys: string[] = Object.keys(this.obj.eq);
 			if (keys.length === 0) {
@@ -920,7 +920,7 @@ namespace ortJson {
 						<HTMLElement>
 						tmpl.cloneNode(true);
 					list[i].appendChild(cln);
-					this.fillEnum(cln, this.obj.eq[name]);
+					this.fillEnumObj(cln, this.obj.eq[name]);
 				}
 			}
 		}
@@ -936,7 +936,7 @@ namespace ortJson {
 		 * - *config-enum-name-value*: value set to the enum
 		 *   name
 		 */
-		fillEnum(e: HTMLElement, enm: ortJson.enumObj): void
+		fillEnumObj(e: HTMLElement, enm: ortJson.enumObj): void
 		{
 			this.fillComment(e, 'enum', enm.doc);
 			this.replcl(e, 'config-enum-name', enm.name);

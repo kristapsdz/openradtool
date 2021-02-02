@@ -139,6 +139,8 @@ namespace ortJson {
 	 * Same as "struct field" in ort(3).
 	 */
 	export interface fieldObj {
+		parent: string;
+		name: string;
 		pos: posObj;
 		doc: string|null;
 		type: 'bit'|'date'|'epoch'|'int'|'real'|'blob'|'text'|'password'|'email'|'struct'|'enum'|'bitfield';
@@ -1860,8 +1862,7 @@ namespace ortJson {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
 				e.appendChild(cln);
-				this.fillField(cln, keys[i], 
-					strct.fq[keys[i]]);
+				this.fillFieldObj(cln, strct.fq[keys[i]]);
 			}
 		}
 
@@ -1877,8 +1878,7 @@ namespace ortJson {
 			this.replcl(e, 'config-field-' + type, act);
 		}
 
-		private fillField(e: HTMLElement,
-			name: string, field: ortJson.fieldObj): void
+		fillFieldObj(e: HTMLElement, field: ortJson.fieldObj): void
 		{
 			/* doc */
 
@@ -1886,7 +1886,7 @@ namespace ortJson {
 
 			/* name */
 
-			this.replcl(e, 'config-field-name', name);
+			this.replcl(e, 'config-field-name', field.name);
 
 			/* type */
 

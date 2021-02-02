@@ -527,7 +527,9 @@ gen_field(FILE *f, const struct field *fd)
 	struct fvalid	*fv;
 	unsigned int	 fl;
 
-	if (fprintf(f, " \"%s\": {", fd->name) < 0)
+	if (fprintf(f, " \"%s\": { \"name\": \"%s\", "
+	    "\"parent\": \"%s\", ", 
+	    fd->name, fd->name, fd->parent->name) < 0)
 		return 0;
 	if (!gen_pos(f, &fd->pos))
 		return 0;

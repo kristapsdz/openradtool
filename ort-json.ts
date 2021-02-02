@@ -1887,6 +1887,8 @@ namespace ortJson {
 			/* name */
 
 			this.replcl(e, 'config-field-name', field.name);
+			this.attrcl(e, 'config-field-name-value', 
+				'value', field.name);
 
 			/* type */
 

@@ -1211,7 +1211,8 @@ namespace ortJson {
 		}
 
 		/**
-		 * See fill() for generic documentation.
+		 * See fill() for generic documentation.  See fillFieldSet() for
+		 * what's run over for the structure's fields.
 		 *
 		 * Per strct:
 		 *
@@ -1350,58 +1351,6 @@ namespace ortJson {
 		 * Per query order field:
 		 * - *config-ord-fname*: filled in with the fname
 		 * - *config-ord-op*: filled in with the operation
-		 *
-		 * Per field:
-		 * - *config-field-name*: filled in with name
-		 * - *config-field-doc-{none,has}*: shown or hidden
-		 *   depending on whether there's a non-empty
-		 *   documentation field
-		 * - *config-field-doc*: filled in with non-empty
-		 *   documentation if doc is defined
-		 * - *config-field-type-TYPE*: shown or hidden depending
-		 *   upon the field type
-		 * - *config-field-type*: filled in with the type name
-		 * - *config-field-store-type*: shown or hidden
-		 *   depending upon whether a non-struct type
-		 * - *config-field-ref-{has,none}*: shown or hidden
-		 *   depending on whether there's a ref
-		 * - *config-field-fkey-{has,none}*: shown or hidden
-		 *   depending on whether there's a non-struct ref
-		 * - *config-field-ref-target-{strct,field}*: filled
-		 *   with the target names if ref is defined
-		 * - *config-field-ref-source-{strct,field}*: filled
-		 *   with the source names if ref is defined
-		 * - *config-field-bitf-{has,none}*: shown or hidden
-		 *   depending on whether there's a bitf
-		 * - *config-field-bitf*: filled in with the bitf name
-		 *   if bitf is defined
-		 * - *config-field-enm-{has,none}*: shown or hidden
-		 *   depending on whether there's an enm
-		 * - *config-field-enm*: filled in with the enm name
-		 *   if enm is defined
-		 * - *config-field-actdel*: filled in with actdel
-		 * - *config-field-actup*: filled in with actup
-		 * - *config-field-actup-TYPE*: shown or hidden
-		 *   depending upon the actup type
-		 * - *config-field-actdel-TYPE*: shown or hidden
-		 *   depending upon the actdel type
-		 * - *config-field-rolemap-{has,none}*: shown or hidden
-		 *   depending on whether there's a non-empty rolemap
-		 * - *config-field-rolemap*: filled in with the
-		 *   comma-separated role names if rolemaps are defined
-		 * - *config-field-def-{has,none}*: shown or hidden
-		 *   depending on whether there's a default value
-		 * - *config-field-def*: filled in with the default
-		 *   value if a default is defined
-		 * - *config-field-limits-{has,none}*: shown or hidden
-		 *   depending on whether limits are defined
-		 * - *config-field-limit-TYPE*: shown or hidden
-		 *   depending upon the actual limit type, which may be
-		 *   one of *number*, *real*, *string*, enum* if limits
-		 *   are defined
-		 * - *config-field-limit*: filled in with
-		 *   comma-separated limits type-value pairs if limits
-		 *   are defined
 		 */
 		fillStrctObj(e: HTMLElement, strct: ortJson.strctObj): void
 		{
@@ -1409,9 +1358,7 @@ namespace ortJson {
 
 			/* fq (fields) */
 
-			list = this.list(e, 'config-fields');
-			for (let i: number = 0; i < list.length; i++)
-				this.fillFields(<HTMLElement>list[i], strct);
+			this.fillFieldSet(e, strct);
 
 			/* dq (deletes) */
 			
@@ -1848,21 +1795,45 @@ namespace ortJson {
 			}
 		}
 
-		private fillFields(e: HTMLElement, 
-			strct: ortJson.strctObj): void
+		/**
+		 * - *config-fields-{has,none}*: shown or hidden depending on
+		 *   whether there are fields in the structure
+		 * - *config-fields*: the first child of these is cloned and
+		 *   filled in with fillFieldObj() for each field unless there
+		 *   are no fields, in which case the elements are hidden
+		 */
+		fillFieldSet(e: HTMLElement, strct: ortJson.strctObj,
+			exclude?: string[]): void
 		{
-			if (e.children.length === 0)
+			const keys: string[] = []
+			for (const name in strct.fq)
+				if (typeof(exclude) === 'undefined' ||
+			  	    exclude.indexOf(name) === -1)
+					keys.push(name);
+			if (keys.length === 0) {
+				this.hidecl(e, 'config-fields-has');
+				this.showcl(e, 'config-fields-none');
 				return;
-			const tmpl: HTMLElement =
-				<HTMLElement>e.children[0];
-			this.clr(e);
-			const keys: string[] = Object.keys(strct.fq);
+			}
 			keys.sort();
-			for (let i = 0; i < keys.length; i++) {
-				const cln: HTMLElement = <HTMLElement>
-					tmpl.cloneNode(true);
-				e.appendChild(cln);
-				this.fillFieldObj(cln, strct.fq[keys[i]]);
+			this.showcl(e, 'config-fields-has');
+			this.hidecl(e, 'config-fields-none');
+			const list: HTMLElement[] = 
+				this.list(e, 'config-fields');
+			for (let i: number = 0; i < list.length; i++) {
+				if (list[i].children.length === 0)
+					continue;
+				const tmpl: HTMLElement =
+					<HTMLElement>list[i].children[0];
+				this.show(list[i]);
+				this.clr(list[i]);
+				for (let j: number = 0; j < keys.length; j++) {
+					const cln: HTMLElement = <HTMLElement>
+						tmpl.cloneNode(true);
+					list[i].appendChild(cln);
+					this.fillFieldObj
+						(cln, strct.fq[keys[j]]);
+				}
 			}
 		}
 
@@ -1878,6 +1849,61 @@ namespace ortJson {
 			this.replcl(e, 'config-field-' + type, act);
 		}
 
+		/**
+		 * Per field:
+		 * - *config-field-name*: filled in with name
+		 * - *config-field-name-value*: value filled in with the
+		 *   field name
+		 * - *config-field-doc-{none,has}*: shown or hidden
+		 *   depending on whether there's a non-empty
+		 *   documentation field
+		 * - *config-field-doc*: filled in with non-empty
+		 *   documentation if doc is defined
+		 * - *config-field-type-TYPE*: shown or hidden depending
+		 *   upon the field type
+		 * - *config-field-type*: filled in with the type name
+		 * - *config-field-store-type*: shown or hidden
+		 *   depending upon whether a non-struct type
+		 * - *config-field-ref-{has,none}*: shown or hidden
+		 *   depending on whether there's a ref
+		 * - *config-field-fkey-{has,none}*: shown or hidden
+		 *   depending on whether there's a non-struct ref
+		 * - *config-field-ref-target-{strct,field}*: filled
+		 *   with the target names if ref is defined
+		 * - *config-field-ref-source-{strct,field}*: filled
+		 *   with the source names if ref is defined
+		 * - *config-field-bitf-{has,none}*: shown or hidden
+		 *   depending on whether there's a bitf
+		 * - *config-field-bitf*: filled in with the bitf name
+		 *   if bitf is defined
+		 * - *config-field-enm-{has,none}*: shown or hidden
+		 *   depending on whether there's an enm
+		 * - *config-field-enm*: filled in with the enm name
+		 *   if enm is defined
+		 * - *config-field-actdel*: filled in with actdel
+		 * - *config-field-actup*: filled in with actup
+		 * - *config-field-actup-TYPE*: shown or hidden
+		 *   depending upon the actup type
+		 * - *config-field-actdel-TYPE*: shown or hidden
+		 *   depending upon the actdel type
+		 * - *config-field-rolemap-{has,none}*: shown or hidden
+		 *   depending on whether there's a non-empty rolemap
+		 * - *config-field-rolemap*: filled in with the
+		 *   comma-separated role names if rolemaps are defined
+		 * - *config-field-def-{has,none}*: shown or hidden
+		 *   depending on whether there's a default value
+		 * - *config-field-def*: filled in with the default
+		 *   value if a default is defined
+		 * - *config-field-limits-{has,none}*: shown or hidden
+		 *   depending on whether limits are defined
+		 * - *config-field-limit-TYPE*: shown or hidden
+		 *   depending upon the actual limit type, which may be
+		 *   one of *number*, *real*, *string*, enum* if limits
+		 *   are defined
+		 * - *config-field-limit*: filled in with
+		 *   comma-separated limits type-value pairs if limits
+		 *   are defined
+		 */
 		fillFieldObj(e: HTMLElement, field: ortJson.fieldObj): void
 		{
 			/* doc */

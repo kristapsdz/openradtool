@@ -760,6 +760,15 @@ namespace ortJson {
 			return ret;
 		}
 
+		private rattrcl(root: string|HTMLElement, 
+			name: string, attr: string): void 
+		{
+			const list: HTMLElement[] = 
+				this.list(root, name);
+			for (let i: number = 0; i < list.length; i++)
+				list[i].removeAttribute(attr);
+		}
+
 		private attrcl(root: string|HTMLElement, 
 			name: string, attr: string, text: string): void 
 		{
@@ -1903,9 +1912,21 @@ namespace ortJson {
 		 * - *config-field-limit*: filled in with
 		 *   comma-separated limits type-value pairs if limits
 		 *   are defined
+		 * - *config-field-flag-FLAG-set*: set as "checked" if
+		 *   the given FLAG is set, otherwise the "checked"
+		 *   attribute is removed
+		 * - *config-field-flags-{has,none}*: shown or hidden
+		 *   depending on whether the field has flags
+		 * - *config-field-flags-join*: filled in with
+		 *   comma-separated flags or empty string if having
+		 *   none
 		 */
 		fillFieldObj(e: HTMLElement, field: ortJson.fieldObj): void
 		{
+			const flags: fieldObjFlags[] = [
+				'rowid', 'null', 'unique', 'noexport'
+			];
+
 			/* doc */
 
 			this.fillComment(e, 'field', field.doc);
@@ -1916,6 +1937,29 @@ namespace ortJson {
 			this.attrcl(e, 'config-field-name-value', 
 				'value', field.name);
 
+			/* flags */
+
+			for (let i: number = 0; i < flags.length; i++)
+				if (field.flags.indexOf(flags[i]) < 0)
+					this.rattrcl(e, 'config-field-flag-' +
+						flags[i] + '-set', 
+						'checked');
+				else
+					this.attrcl(e, 'config-field-flag-' + 
+						flags[i] + '-set', 
+						'checked', 'checked');
+
+			if (field.flags.length) {
+				this.hidecl(e, 'config-field-flags-none');
+				this.showcl(e, 'config-field-flags-has');
+				this.replcl(e, 'config-field-flags-join', 
+					field.flags.join(','));
+			} else {
+				this.showcl(e, 'config-field-flags-none');
+				this.hidecl(e, 'config-field-flags-has');
+				this.replcl(e, 'config-field-flags-join', '');
+			}
+			
 			/* type */
 
 			this.hidecl(e, 'config-field-type-bit');

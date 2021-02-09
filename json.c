@@ -32,7 +32,6 @@
 
 #include "ort.h"
 #include "ort-lang-json.h"
-#include "paths.h"
 
 int
 main(int argc, char *argv[])

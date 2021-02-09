@@ -30,6 +30,7 @@ LIBS		 = libort.a \
 		   libort-lang-sql.a \
 		   libort-lang-xliff.a
 PKGCONFIGS	 = ort.pc \
+		   ort-lang-nodejs.pc \
 		   ort-lang-json.pc
 OBJS		 = audit.o \
 		   cheader.o \
@@ -74,6 +75,7 @@ HTMLS		 = archive.html \
 		   man/ort_lang_c_header.3.html \
 		   man/ort_lang_c_source.3.html \
 		   man/ort_lang_json.3.html \
+		   man/ort_lang_nodejs.3.html \
 		   man/ort_lang_xliff_extract.3.html \
 		   man/ort_lang_xliff_join.3.html \
 		   man/ort_lang_xliff_update.3.html \
@@ -93,6 +95,7 @@ MAN3S		 = man/ort.3 \
 		   man/ort_lang_c_header.3 \
 		   man/ort_lang_c_source.3 \
 		   man/ort_lang_json.3 \
+		   man/ort_lang_nodejs.3 \
 		   man/ort_lang_xliff_extract.3 \
 		   man/ort_lang_xliff_join.3 \
 		   man/ort_lang_xliff_update.3 \
@@ -119,6 +122,7 @@ MAN1S		 = man/ort.1 \
 GENHEADERS	 = paths.h \
 		   version.h
 PUBHEADERS	 = ort.h \
+		   ort-lang-nodejs.h \
 		   ort-lang-json.h
 HEADERS 	 = $(PUBHEADERS) \
 		   extern.h \
@@ -127,7 +131,6 @@ HEADERS 	 = $(PUBHEADERS) \
 		   linker.h \
 		   ort-lang-c.h \
 		   ort-lang-javascript.h \
-		   ort-lang-nodejs.h \
 		   ort-lang-sql.h \
 		   ort-lang-xliff.h \
 		   parser.h
@@ -166,6 +169,7 @@ DOTAR		 = $(HEADERS) \
 		   nodejs.c \
 		   ortPrivate.ts \
 		   ort.in.pc \
+		   ort-lang-nodejs.in.pc \
 		   ort-lang-json.in.pc \
 		   ort-json.ts \
 		   parser.c \

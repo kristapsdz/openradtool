@@ -1693,7 +1693,8 @@ gen_ortctx(FILE *f, const struct config *cfg)
 }
 
 int
-gen_nodejs(const struct config *cfg, FILE *f)
+ort_lang_nodejs(const struct ort_lang_nodejs *args,
+	const struct config *cfg, FILE *f)
 {
 
 	if (!gen_commentv(f, 0, COMMENT_JS, 

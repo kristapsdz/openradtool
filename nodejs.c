@@ -79,7 +79,7 @@ main(int argc, char *argv[])
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
-		if (!(rc = gen_nodejs(cfg, stdout)))
+		if (!(rc = ort_lang_nodejs(NULL, cfg, stdout)))
 			warn(NULL);
 out:
 	ort_write_msg_file(stderr, &cfg->mq);

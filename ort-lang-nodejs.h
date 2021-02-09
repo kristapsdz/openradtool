@@ -17,6 +17,11 @@
 #ifndef ORT_LANG_NODEJS
 #define ORT_LANG_NODEJS
 
-int	 gen_nodejs(const struct config *, FILE *f);
+struct ort_lang_nodejs {
+	unsigned int	 dummy;
+};
+
+int	 ort_lang_nodejs(const struct ort_lang_nodejs *,
+		const struct config *, FILE *f);
 
 #endif

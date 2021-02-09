@@ -1,0 +1,107 @@
+.\"	$Id$
+.\"
+.\" Copyright (c) 2021 Kristaps Dzonsons <kristaps@bsd.lv>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate$
+.Dt ORT_LANG_NODEJS 3
+.Os
+.Sh NAME
+.Nm ort_lang_c_source
+.Nd generate node.js implementation of openradtool configuration
+.Sh LIBRARY
+.Lb libort-lang-nodejs
+.Sh SYNOPSIS
+.In sys/queue.h
+.In stdio.h
+.In ort.h
+.In ort-lang-nodejs.h
+.Ft int
+.Fo ort_lang_nodejs
+.Fa "const struct ort_lang_nodejs *args"
+.Fa "const struct config *cfg"
+.Fa "FILE *f"
+.Fc
+.Sh DESCRIPTION
+Outputs a node.js implementation of the parsed configuration
+.Fa cfg
+to
+.Fa f .
+The
+.Fa args
+is currently ignored and may be
+.Dv NULL .
+.\" The following requests should be uncommented and used where appropriate.
+.\" .Sh CONTEXT
+.\" For section 9 functions only.
+.Sh RETURN VALUES
+Returns zero on failure, non-zero on success.
+Failure only occurs with memory allocation errors or when writing to
+.Fa f .
+.\" For sections 2, 3, and 9 function return values only.
+.\" .Sh ENVIRONMENT
+.\" For sections 1, 6, 7, and 8 only.
+.\" .Sh FILES
+.\" .Sh EXIT STATUS
+.\" For sections 1, 6, and 8 only.
+.Sh EXAMPLES
+The following emits a configuration as read from standard input to
+node.js as written to standard output.
+.Bd -literal -offset indent
+struct config *cfg;
+struct ort_lang_nodejs args;
+
+memset(&args, 0, sizeof(struct ort_lang_nodejs));
+
+if ((cfg = ort_config_alloc()) == NULL)
+  err(1, NULL);
+if (!ort_parse_file(cfg, stdin, "<stdin>"))
+  errx(1, "ort_parse_file");
+if (!ort_parse_close(cfg))
+  errx(1, "ort_parse_close");
+if (!ort_lang_nodejs(&args, cfg, stdout))
+  err(1, "ort_lang_nodejs");
+
+ort_config_free(cfg);
+.Ed
+.Pp
+Alternatively, this could be converted into a string:
+.Bd -literal -offset indent
+char *buf = NULL;
+size_t bufsz = 0;
+
+/* Read and parse configuration as above... */
+
+if ((stream = open_memstream(&buf, &bufsz)) == NULL)
+  err(1, "open_memstream");
+if (!ort_lang_nodejs(&args, cfg, stream))
+  err(1, "ort_lang_nodejs");
+fclose(stream);
+
+/* Do something with buf of size bufsz. */
+
+free(buf);
+.Ed
+.\" .Sh DIAGNOSTICS
+.\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
+.\" .Sh ERRORS
+.\" For sections 2, 3, 4, and 9 errno settings only.
+.Sh SEE ALSO
+.Xr pkg-config 1 ,
+.Xr ort 3
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh CAVEATS
+.\" .Sh BUGS

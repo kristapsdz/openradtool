@@ -1,0 +1,12 @@
+struct bar {
+	field id int rowid;
+};
+
+struct log {
+	field bar struct agentid;
+	field agentid:bar.id int null;
+	field a int;
+	field id int rowid;
+	list a;
+};
+

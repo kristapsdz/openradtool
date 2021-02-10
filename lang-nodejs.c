@@ -1078,7 +1078,7 @@ gen_query(FILE *f, const struct config *cfg,
 			return 0;
 		if (rs->flags & STRCT_HAS_NULLREFS) {
 			if (fprintf(f, "\t\t\tthis.db_%s_reffind"
-			    "(this.#o, obj);\n", rs->name))
+			    "(this.#o, obj);\n", rs->name) < 0)
 				return 0;
 		}
 		if (fprintf(f, 

@@ -529,8 +529,7 @@ gen_iterator(FILE *f, const struct config *cfg,
 	/* Conditional post-query null lookup. */
 
 	if ((retstr->flags & STRCT_HAS_NULLREFS) && fprintf(f,
-	     "\t\tdb_%s_reffind(%s&p, db);\n", retstr->name, 
-	     !TAILQ_EMPTY(&cfg->rq) ? "ctx, " : "") < 0)
+	     "\t\tdb_%s_reffind(ctx, &p);\n", retstr->name) < 0)
 		return 0;
 
 	/* Conditional post-query password check. */
@@ -663,8 +662,7 @@ gen_list(FILE *f, const struct config *cfg,
 	/* Conditional post-query to fill null refs. */
 
 	if (retstr->flags & STRCT_HAS_NULLREFS && fprintf(f, 
-            "\t\tdb_%s_reffind(%sp, db);\n", retstr->name,
-	    !TAILQ_EMPTY(&cfg->rq) ? "ctx, " : "") < 0)
+            "\t\tdb_%s_reffind(ctx, p);\n", retstr->name) < 0)
 		return 0;
 
 	/* Conditional post-query password check. */
@@ -1357,8 +1355,7 @@ gen_search(FILE *f, const struct config *cfg,
 	/* Conditional post-query reference lookup. */
 
 	if (retstr->flags & STRCT_HAS_NULLREFS && fprintf(f, 
-	    "\t\tdb_%s_reffind(%sp, db);\n", retstr->name,
-	    !TAILQ_EMPTY(&cfg->rq) ? "ctx, " : "") < 0)
+	    "\t\tdb_%s_reffind(ctx, p);\n", retstr->name) < 0)
 		return 0;
 
 	/* Conditional post-query password check. */
@@ -1676,9 +1673,10 @@ gen_reffind(FILE *f, const struct config *cfg, const struct strct *p)
 			break;
 
 	if (fprintf(f, "static void\n"
-	    "db_%s_reffind(%sstruct %s *p, struct sqlbox *db)\n"
-	    "{\n", p->name, (!TAILQ_EMPTY(&cfg->rq)) ? 
-	    "struct ort *ctx, " : "", p->name) < 0)
+	    "db_%s_reffind(struct ort *ctx, struct %s *p)\n"
+	    "{\n"
+	    "\tstruct sqlbox *db = ctx->db;\n",
+	    p->name, p->name) < 0)
 		return 0;
 
 	if (fd != NULL && fputs
@@ -1716,10 +1714,8 @@ gen_reffind(FILE *f, const struct config *cfg, const struct strct *p)
 		if (!(fd->ref->target->parent->flags & 
 		    STRCT_HAS_NULLREFS))
 			continue;
-		if (fprintf(f, "\tdb_%s_reffind(%s&p->%s, db);\n", 
-		    fd->ref->target->parent->name, 
-		    (!TAILQ_EMPTY(&cfg->rq)) ? 
-		    "ctx, " : "", fd->name) < 0)
+		if (fprintf(f, "\tdb_%s_reffind(ctx, &p->%s);\n", 
+		    fd->ref->target->parent->name, fd->name) < 0)
 			return 0;
 	}
 

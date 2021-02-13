@@ -1897,8 +1897,15 @@ namespace ortJson {
 		 *   depending upon the actdel type
 		 * - *config-field-rolemap-{has,none}*: shown or hidden
 		 *   depending on whether there's a non-empty rolemap
-		 * - *config-field-rolemap*: filled in with the
-		 *   comma-separated role names if rolemaps are defined
+		 * - *config-field-rolemap-join*: filled in with the
+		 *   comma-separated role names if the rolemap is
+		 *   non-empty
+		 * - *config-field-rolemap*: first child of this is
+		 *   cloned and filled in with the name if matching
+		 *   *config-field-rolemap-role* and the value set if
+		 *   matching *config-field-rolemap-role-value* unless
+		 *   the rolemap is empty, in which case the element is
+		 *   hidden
 		 * - *config-field-def-{has,none}*: shown or hidden
 		 *   depending on whether there's a default value
 		 * - *config-field-def*: filled in with the default
@@ -2037,15 +2044,7 @@ namespace ortJson {
 
 			/* rolemap */
 
-			if (field.rolemap.length === 0) {
-				this.showcl(e, 'config-field-rolemap-none');
-				this.hidecl(e, 'config-field-rolemap-has');
-			} else {
-				this.hidecl(e, 'config-field-rolemap-none');
-				this.showcl(e, 'config-field-rolemap-has');
-				this.replcl(e, 'config-field-rolemap',
-					field.rolemap.join(', '));
-			}
+			this.fillRolemap(e, 'field', field.rolemap);
 
 			/* def */
 

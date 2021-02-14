@@ -708,11 +708,12 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 static void
 parse_config_limit_params(struct parse *p, struct search *s)
 {
+
 	if (p->lasttype != TOK_INTEGER) {
 		parse_errx(p, "expected limit value");
 		return;
-	} else if (p->last.integer <= 0) {
-		parse_errx(p, "expected limit >0");
+	} else if (p->last.integer < 0) {
+		parse_errx(p, "expected limit >=0");
 		return;
 	} else if (s->limit)
 		parse_warnx(p, "redeclaring limit");
@@ -724,8 +725,8 @@ parse_config_limit_params(struct parse *p, struct search *s)
 	if (parse_next(p) != TOK_INTEGER) {
 		parse_errx(p, "expected offset value");
 		return;
-	} else if (p->last.integer <= 0) {
-		parse_errx(p, "expected offset >0");
+	} else if (p->last.integer < 0) {
+		parse_errx(p, "expected offset >=0");
 		return;
 	} else if (s->offset)
 		parse_warnx(p, "redeclaring offset");

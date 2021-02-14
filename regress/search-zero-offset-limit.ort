@@ -1,0 +1,6 @@
+struct foo {
+	field foo text;
+	field bar int;
+	field id int rowid;
+	search id: limit 0,0;
+};

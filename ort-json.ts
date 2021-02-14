@@ -623,7 +623,7 @@ namespace ortJson {
 			}
 			str += ':';
 			str += this.commentToString(search.doc);
-			if (search.limit !== '0') {
+			if (search.limit !== '0' || search.offset !== '0') {
 				str += ' limit ' + search.limit;
 				if (search.offset !== '0')
 					str += ', ' + search.offset;

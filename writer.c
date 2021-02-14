@@ -465,18 +465,12 @@ parse_write_query(struct writer *w, const struct search *p)
 
 	/* Limit and offset. */
 
-	if (p->limit) {
+	if (p->limit || p->offset) {
 		if (!colon && !wputc(w, ':'))
 			return 0;
 		if (!wprint(w, " limit %" PRId64, p->limit))
 			return 0;
-		colon = 1;
-	}
-
-	if (p->offset) {
-		if (!colon && !wputc(w, ':'))
-			return 0;
-		if (!wprint(w, " offset %" PRId64, p->offset))
+		if (p->offset && !wprint(w, ",%" PRId64, p->offset))
 			return 0;
 		colon = 1;
 	}

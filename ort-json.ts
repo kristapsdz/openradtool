@@ -1667,6 +1667,16 @@ namespace ortJson {
 		 * - *config-query-dst-{has,none}*: whether a distinct
 		 *   reduction is defined
 		 * - *config-query-dst-fname*: distinct query path
+		 * - *config-query-limit-{has,none}*: whether a non-zero
+		 *   limit is defined
+		 * - *config-query-offset-{has,none}*: whether a non-zero
+		 *   offset is defined
+		 * - *config-query-offset*: filled in with the offset
+		 * - *config-query-offset-value*: value filled in with
+		 *   the offset
+		 * - *config-query-limit*: filled in with the limit
+		 * - *config-query-limit-value*: value filled in with
+		 *   the limit
 		 *
 		 * Per query search field:
 		 * - *config-sent-fname*: filled in with the fname
@@ -1721,7 +1731,32 @@ namespace ortJson {
 				for (let i: number = 0; i < list.length; i++)
 					this.fillSents(<HTMLElement>list[i], query);
 			}
+
+			/* limit/offset */
 			
+			this.replcl(e, 'config-query-limit', query.limit);
+			this.attrcl(e, 'config-query-limit-value', 
+				'value', query.limit);
+			this.replcl(e, 'config-query-offset', query.offset);
+			this.attrcl(e, 'config-query-offset-value', 
+				'value', query.offset);
+
+			if (query.limit.toString() === '0') {
+				this.showcl(e, 'config-query-limit-none');
+				this.hidecl(e, 'config-query-limit-has');
+			} else {
+				this.hidecl(e, 'config-query-limit-none');
+				this.showcl(e, 'config-query-limit-has');
+			}
+
+			if (query.offset.toString() === '0') {
+				this.showcl(e, 'config-query-offset-none');
+				this.hidecl(e, 'config-query-offset-has');
+			} else {
+				this.hidecl(e, 'config-query-offset-none');
+				this.showcl(e, 'config-query-offset-has');
+			}
+
 			/* ordq */
 
 			if (query.ordq.length === 0) {

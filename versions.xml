@@ -5,6 +5,18 @@
 		<header>
 			<h3>0.11.11</h3>
 			<address>Kristaps Dzonsons</address>
+			<time datetime="2020-02-13">ongoing</time>
+		</header>
+		<aside>
+			<p>
+				Fix parsing and writing of limit/offset pairs.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
+			<h3>0.11.11</h3>
+			<address>Kristaps Dzonsons</address>
 			<time datetime="2020-02-13">2020-02-13</time>
 		</header>
 		<aside>

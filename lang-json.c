@@ -788,6 +788,14 @@ gen_search(FILE *f, int *first, const struct search *s)
 		return 0;
 	if (fputs(" {", f) == EOF)
 		return 0;
+	if (s->name != NULL && 
+	    fprintf(f, " \"name\": \"%s\",", s->name) < 0)
+		return 0;
+	if (s->name == NULL && 
+	    fputs(" \"name\": null,", f) == EOF)
+		return 0;
+	if (fprintf(f, " \"parent\": \"%s\",", s->parent->name) < 0)
+		return 0;
 	if (!gen_pos(f, &s->pos))
 		return 0;
 	if (!gen_doc(f, s->doc))

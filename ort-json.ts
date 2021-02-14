@@ -226,6 +226,8 @@ namespace ortJson {
 	 * Same as "struct search" in ort(3).
 	 */
 	export interface searchObj {
+		parent: string;
+		name: string|null;
 		pos: posObj;
 		doc: string|null;
 		rolemap: string[];
@@ -607,7 +609,7 @@ namespace ortJson {
 			return str;
 		}
 
-		private searchObjToString(name: string|null, search: searchObj): string
+		private searchObjToString(search: searchObj): string
 		{
 			let str: string = ' ' + search.type;
 			for (let i: number = 0; i < search.sntq.length; i++) {
@@ -623,8 +625,8 @@ namespace ortJson {
 				if (search.offset !== '0')
 					str += ', ' + search.offset;
 			}
-			if (name !== null)
-				str += ' name ' + name;
+			if (search.name !== null)
+				str += ' name ' + search.name;
 			if (search.dst !== null)
 				str += ' distinct ' + search.dst.fname;
 			if (search.group !== null)
@@ -649,8 +651,7 @@ namespace ortJson {
 			let str: string = '';
 			const keys: string[] = Object.keys(set);
 			for (let i: number = 0; i < keys.length; i++)
-				str += this.searchObjToString
-					(keys[i], set[keys[i]]);
+				str += this.searchObjToString(set[keys[i]]);
 			return str;
 		}
 
@@ -674,8 +675,7 @@ namespace ortJson {
 			str += this.fieldSetToString(strct.fq);
 
 			for (let i: number = 0; i < strct.sq.anon.length; i++) 
-		       		str += this.searchObjToString
-					(null, strct.sq.anon[i]);	
+		       		str += this.searchObjToString(strct.sq.anon[i]);	
 			str += this.searchSetToString(strct.sq.named);
 
 			for (let i: number = 0; i < strct.uq.anon.length; i++) 
@@ -1221,7 +1221,7 @@ namespace ortJson {
 
 		/**
 		 * See fill() for generic documentation.  See fillFieldSet() for
-		 * what's run over for the structure's fields.
+		 * what's run over for fields, fillSearchClassObj() for queries.
 		 *
 		 * Per strct:
 		 *
@@ -1317,49 +1317,6 @@ namespace ortJson {
 		 *   structure
 		 * - *config-uref-op*: the update constraint operator
 		 * - *config-uref-mod*: the update modifier
-		 *
-		 * Per query:
-		 * - *config-query-name-{has,none}*: shown or hidden
-		 *   depending on whether the query is anonymous
-		 * - *config-query-name*: filled in with the query name
-		 *   if a name is defined
-		 * - *config-query-doc-{has,none}*: shown or hidden
-		 *   depending on whether there's a non-empty
-		 *   documentation field
-		 * - *config-query-doc*: filled in with non-empty
-		 *   documentation if doc is defined*
-		 * - *config-query-type*: filled in with the query type
-		 * - *config-query-sntq-{has,none}*: whether there's a
-		 *   list of search columns
-		 * - *config-query-sntq*: the first child of this is
-		 *   cloned and filled in with search columns (see "Per
-		 *   query search field") unless the list is empty, in which
-		 *   case the element is hidden
-		 * - *config-query-ordq-{has,none}*: whether there's a
-		 *   list of order columns
-		 * - *config-query-ordq*: the first child of this is
-		 *   cloned and filled in with order columns (see "Per
-		 *   query order field") unless the list is empty, in which
-		 *   case the element is hidden
-		 * - *config-query-aggr-{has,none}*: whether both an
-		 *   aggregate and group are defined
-		 * - *config-query-aggr-op*: aggregate operation, if
-		 *   defined
-		 * - *config-query-aggr-fname*: aggregate query path,
-		 *   if defined
-		 * - *config-query-group-fname*: group query path,
-		 *   if defined
-		 * - *config-query-dst-{has,none}*: whether a distinct
-		 *   reduction is defined
-		 * - *config-query-dst-fname*: distinct query path
-		 *
-		 * Per query search field:
-		 * - *config-sent-fname*: filled in with the fname
-		 * - *config-sent-op*: filled in with the operation
-		 *
-		 * Per query order field:
-		 * - *config-ord-fname*: filled in with the fname
-		 * - *config-ord-op*: filled in with the operation
 		 */
 		fillStrctObj(e: HTMLElement, strct: ortJson.strctObj): void
 		{
@@ -1427,7 +1384,7 @@ namespace ortJson {
 				this.hidecl(e, 'config-queries-none');
 				list = this.list(e, 'config-queries');
 				for (let i = 0; i < list.length; i++)
-					this.fillQueries
+					this.fillSearchClassObj
 						(<HTMLElement>list[i], 
 						 strct);
 			}
@@ -1636,7 +1593,10 @@ namespace ortJson {
 			}
 		}
 
-		private fillQueries(e: HTMLElement, 
+		/**
+		 * Runs fillSearchObj() for each named or anonymous query.
+		 */
+		private fillSearchClassObj(e: HTMLElement, 
 			strct: ortJson.strctObj): void
 		{
 			if (e.children.length === 0)
@@ -1655,19 +1615,65 @@ namespace ortJson {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
 				e.appendChild(cln);
-				this.fillQuery(cln, keys[i], 
-					strct.sq.named[keys[i]]);
+				this.fillSearchObj(cln, strct.sq.named[keys[i]]);
 			}
 			for (let i = 0; i < strct.sq.anon.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
 				e.appendChild(cln);
-				this.fillQuery(cln, null, strct.sq.anon[i]);
+				this.fillSearchObj(cln, strct.sq.anon[i]);
 			}
 		}
 
-		private fillQuery(e: HTMLElement,
-			name: string|null, query: ortJson.searchObj): void
+		/**
+		 * Per query:
+		 *
+		 * - *config-query-name-{has,none}*: shown or hidden
+		 *   depending on whether the query is anonymous
+		 * - *config-query-name*: filled in with the query name
+		 *   if a name is defined, empty string otherwise
+		 * - *config-query-name-value*: value filled in with the
+		 *   query name if a name is defined, empty string 
+		 *   otherwise
+		 * - *config-query-doc-{has,none}*: shown or hidden
+		 *   depending on whether there's a non-empty
+		 *   documentation field
+		 * - *config-query-doc*: filled in with non-empty
+		 *   documentation if doc is defined*
+		 * - *config-query-type*: filled in with the query type
+		 * - *config-query-sntq-{has,none}*: whether there's a
+		 *   list of search columns
+		 * - *config-query-sntq*: the first child of this is
+		 *   cloned and filled in with search columns (see "Per
+		 *   query search field") unless the list is empty, in which
+		 *   case the element is hidden
+		 * - *config-query-ordq-{has,none}*: whether there's a
+		 *   list of order columns
+		 * - *config-query-ordq*: the first child of this is
+		 *   cloned and filled in with order columns (see "Per
+		 *   query order field") unless the list is empty, in which
+		 *   case the element is hidden
+		 * - *config-query-aggr-{has,none}*: whether both an
+		 *   aggregate and group are defined
+		 * - *config-query-aggr-op*: aggregate operation, if
+		 *   defined
+		 * - *config-query-aggr-fname*: aggregate query path,
+		 *   if defined
+		 * - *config-query-group-fname*: group query path,
+		 *   if defined
+		 * - *config-query-dst-{has,none}*: whether a distinct
+		 *   reduction is defined
+		 * - *config-query-dst-fname*: distinct query path
+		 *
+		 * Per query search field:
+		 * - *config-sent-fname*: filled in with the fname
+		 * - *config-sent-op*: filled in with the operation
+		 *
+		 * Per query order field:
+		 * - *config-ord-fname*: filled in with the fname
+		 * - *config-ord-op*: filled in with the operation
+		 */
+		fillSearchObj(e: HTMLElement, query: ortJson.searchObj): void
 		{
 			/* doc */
 
@@ -1675,13 +1681,18 @@ namespace ortJson {
 
 			/* name */
 
-			if (name === null) {
+			if (query.name === null) {
 				this.hidecl(e, 'config-query-name-has');
 				this.showcl(e, 'config-query-name-none');
+				this.replcl(e, 'config-query-name', '');
+				this.attrcl(e, 'config-query-name-value', 
+					'value', '');
 			} else {
 				this.hidecl(e, 'config-query-name-none');
 				this.showcl(e, 'config-query-name-has');
-				this.replcl(e, 'config-query-name', name);
+				this.replcl(e, 'config-query-name', query.name);
+				this.attrcl(e, 'config-query-name-value', 
+					'value', query.name);
 			}
 
 			/* type */

@@ -179,13 +179,16 @@ namespace ortJson {
 		rolemap: string[];
 	}
 
+	export type sentObjOp = 'eq'|'ge'|'gt'|'le'|'lt'|'neq'|'like'|'and'|
+		'or'|'streq'|'strneq'|'isnull'|'notnull';
+
 	/**
 	 * Same as "struct sent" in ort(3).
 	 */
 	export interface sentObj {
 		pos: posObj;
 		fname: string;
-		op: 'eq'|'ge'|'gt'|'le'|'lt'|'neq'|'like'|'and'|'or'|'streq'|'strneq'|'isnull'|'notnull';
+		op: sentObjOp;
 	}
 
 	/**
@@ -1667,7 +1670,11 @@ namespace ortJson {
 		 *
 		 * Per query search field:
 		 * - *config-sent-fname*: filled in with the fname
+		 * - *config-sent-fname-value*: value filled in with the
+		 *   fname
 		 * - *config-sent-op*: filled in with the operation
+		 * - *config-sent-op-value*: value filled in with the
+		 *   operation
 		 *
 		 * Per query order field:
 		 * - *config-ord-fname*: filled in with the fname
@@ -1806,12 +1813,14 @@ namespace ortJson {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
 				e.appendChild(cln);
-				this.replcl(cln, 
-					'config-sent-fname', 
+				this.replcl(cln, 'config-sent-fname', 
 					query.sntq[i].fname);
-				this.replcl(cln, 
-					'config-sent-op', 
+				this.attrcl(cln, 'config-sent-fname-value', 
+					'value', query.sntq[i].fname);
+				this.replcl(cln, 'config-sent-op', 
 					query.sntq[i].op);
+				this.attrcl(cln, 'config-sent-op-value', 
+					'value', query.sntq[i].op);
 			}
 		}
 

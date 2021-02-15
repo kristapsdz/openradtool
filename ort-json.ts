@@ -191,13 +191,15 @@ namespace ortJson {
 		op: sentObjOp;
 	}
 
+	export type orderObjOp = 'desc'|'asc';
+
 	/**
 	 * Same as "struct order" in ort(3).
 	 */
 	export interface orderObj {
 		pos: posObj;
 		fname: string;
-		op: 'desc'|'asc';
+		op: orderObjOp;
 	}
 
 	/**
@@ -1688,7 +1690,11 @@ namespace ortJson {
 		 *
 		 * Per query order field:
 		 * - *config-ord-fname*: filled in with the fname
+		 * - *config-ord-fname-value*: value filled in with the
+		 *   fname
 		 * - *config-ord-op*: filled in with the operation
+		 * - *config-ord-op-value*: value filled in with the
+		 *   operation
 		 */
 		fillSearchObj(e: HTMLElement, query: ortJson.searchObj): void
 		{
@@ -1827,12 +1833,14 @@ namespace ortJson {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
 				e.appendChild(cln);
-				this.replcl(cln, 
-					'config-ord-fname', 
+				this.replcl(cln, 'config-ord-fname', 
 					query.ordq[i].fname);
-				this.replcl(cln, 
-					'config-ord-op', 
+				this.attrcl(cln, 'config-ord-fname-value', 
+					'value', query.ordq[i].fname);
+				this.replcl(cln, 'config-ord-op',
 					query.ordq[i].op);
+				this.attrcl(cln, 'config-ord-op-value',
+					'value', query.ordq[i].op);
 			}
 		}
 

@@ -181,6 +181,8 @@ namespace ortJson {
 
 	export type sentObjOp = 'eq'|'ge'|'gt'|'le'|'lt'|'neq'|'like'|'and'|
 		'or'|'streq'|'strneq'|'isnull'|'notnull';
+	export type urefObjOp = 'eq'|'ge'|'gt'|'le'|'lt'|'neq'|'like'|'and'|
+		'or'|'streq'|'strneq'|'isnull'|'notnull';
 
 	/**
 	 * Same as "struct sent" in ort(3).
@@ -275,11 +277,13 @@ namespace ortJson {
 		anon: searchObj[];
 	}
 
+	export type urefObjMod = 'concat'|'dec'|'inc'|'set'|'strset';
+
 	export interface urefObj {
 		pos: posObj;
 		field: string;
-		op: 'eq'|'ge'|'gt'|'le'|'lt'|'neq'|'like'|'and'|'or'|'streq'|'strneq'|'isnull'|'notnull';
-		mod: 'concat'|'dec'|'inc'|'set'|'strset';
+		op: urefObjOp;
+		mod: urefObjMod;
 	}
 
 	/**
@@ -1515,8 +1519,14 @@ namespace ortJson {
 		 * Per update reference:
 		 * - *config-uref-field*: the field name in the current
 		 *   structure
+		 * - *config-uref-field-value*: value set to the field
+		 *   name in the current structure
 		 * - *config-uref-op*: the update constraint operator
+		 * - *config-uref-op-value*: value set to the update
+		 *   constraint operator
 		 * - *config-uref-mod*: the update modifier
+		 * - *config-uref-mod-value*: value set to the update
+		 *   modifier
 		 */
 		fillUpdateObj(e: HTMLElement, up: ortJson.updateObj): void
 		{
@@ -1608,10 +1618,16 @@ namespace ortJson {
 				e.appendChild(cln);
 				this.replcl(cln, 'config-uref-field', 
 					urefs[i].field);
+				this.attrcl(cln, 'config-uref-field-value', 
+					'value', urefs[i].field);
 				this.replcl(cln, 'config-uref-op', 
 					urefs[i].op);
+				this.attrcl(cln, 'config-uref-op-value', 
+					'value', urefs[i].op);
 				this.replcl(cln, 'config-uref-mod', 
 					urefs[i].mod);
+				this.attrcl(cln, 'config-uref-mod-value', 
+					'value', urefs[i].mod);
 			}
 		}
 

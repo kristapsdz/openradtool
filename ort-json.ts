@@ -1485,10 +1485,7 @@ namespace ortJson {
 		/**
 		 * Per update (or delete):
 		 *
-		 * - *config-update-rolemap-{has,none}*: shown or hidden
-		 *   depending on whether there's a non-empty rolemap
-		 * - *config-update-rolemap*: filled in with the
-		 *   comma-separated role names if rolemaps are defined
+		 * - see fillRolemap()
 		 * - *config-update-doc-{has,none}*: shown or hidden
 		 *   depending on whether there's a non-empty
 		 *   documentation field
@@ -1592,16 +1589,7 @@ namespace ortJson {
 
 			/* rolemap */
 
-			if (up.rolemap.length === 0) {
-				this.showcl(e, 'config-update-rolemap-none');
-				this.hidecl(e, 'config-update-rolemap-has');
-			} else {
-				this.hidecl(e, 'config-update-rolemap-none');
-				this.showcl(e, 'config-update-rolemap-has');
-				this.replcl(e, 'config-update-rolemap',
-					up.rolemap.join(', '));
-			}
-
+			this.fillRolemap(e, 'update', up.rolemap);
 		}
 
 		private fillUrefs(e: HTMLElement, 

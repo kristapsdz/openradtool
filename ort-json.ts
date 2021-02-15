@@ -321,11 +321,14 @@ namespace ortJson {
 		nq: string[];
 	}
 
+	export type rolemapObjType = 'all'|'count'|'delete'|'insert'|
+		'iterate'|'list'|'search'|'update'|'noexport';
+
 	/**
 	 * Similar to "struct rolemap" in ort(3).
 	 */
 	export interface rolemapObj {
-		type: 'all'|'count'|'delete'|'insert'|'iterate'|'list'|'search'|'update'|'noexport';
+		type: rolemapObjType;
 		/**
 		 * If not null (it's only null if type is "all" or
 		 * "insert", or "noexport" for all fields), is the named
@@ -1271,17 +1274,7 @@ namespace ortJson {
 		 *   which case the element is hidden
 		 *
 		 * Per insert:
-		 * - *config-insert-rolemap-{has,none}*: shown or hidden
-		 *   depending on whether there's a non-empty rolemap
-		 * - *config-insert-rolemap-join*: filled in with the
-		 *   comma-separated role names if the rolemap is
-		 *   non-empty
-		 * - *config-insert-rolemap*: first child of this is
-		 *   cloned and filled in with the name if matching
-		 *   *config-insert-rolemap-role* and the value set if
-		 *   matching *config-insert-rolemap-role-value* unless
-		 *   the rolemap is empty, in which case the element is
-		 *   hidden
+		 * - see fillRolemap()
 		 *
 		 * Per unique:
 		 * - *config-unique*: the comma-separated fields making
@@ -1417,6 +1410,21 @@ namespace ortJson {
 			this.attrcl(e, 'config-strct-name-value', 'value', strct.name);
 		}
 
+		/**
+		 * Per rolemap with the given NAME:
+		 *
+		 * - *config-NAME-rolemap-{has,none}*: shown or hidden
+		 *   depending on whether there's a non-empty rolemap
+		 * - *config-NAME-rolemap-join*: filled in with the
+		 *   comma-separated role names if the rolemap is
+		 *   non-empty
+		 * - *config-NAME-rolemap*: first child of this is
+		 *   cloned and filled in with the name if matching
+		 *   *config-NAME-rolemap-role* and the value set if
+		 *   matching *config-NAME-rolemap-role-value* unless
+		 *   the rolemap is empty, in which case the element is
+		 *   hidden
+		 */
 		private fillRolemap(e: HTMLElement, 
 			name: string, map: string[]|null): void
 		{
@@ -1633,6 +1641,7 @@ namespace ortJson {
 		/**
 		 * Per query:
 		 *
+		 * - see fillRolemap()
 		 * - *config-query-name-{has,none}*: shown or hidden
 		 *   depending on whether the query is anonymous
 		 * - *config-query-name*: filled in with the query name
@@ -1809,16 +1818,7 @@ namespace ortJson {
 
 			/* rolemap */
 
-			if (query.rolemap.length === 0) {
-				this.showcl(e, 'config-query-rolemap-none');
-				this.hidecl(e, 'config-query-rolemap-has');
-			} else {
-				this.hidecl(e, 'config-query-rolemap-none');
-				this.showcl(e, 'config-query-rolemap-has');
-				this.replcl(e, 'config-query-rolemap',
-					query.rolemap.join(', '));
-			}
-
+			this.fillRolemap(e, 'query', query.rolemap);
 		}
 
 		private fillOrds(e: HTMLElement, 

@@ -164,14 +164,6 @@ check_searchtype(struct config *cfg, const struct search *srch)
 	const struct sent	*sent;
 	size_t			 errs = 0;
 
-	/* XXX: there should be facility to do this. */
-
-	if (srch->type == STYPE_SEARCH && TAILQ_EMPTY(&srch->sntq)) {
-		gen_errx(cfg, &srch->pos, 
-			"unique result search without parameters");
-		errs++;
-	}
-
 	/*
 	 * XXX: we use SQL's "count" function for this, so we can't
 	 * currently use any of the password equality checks.
@@ -194,6 +186,11 @@ check_searchtype(struct config *cfg, const struct search *srch)
 	 * multiple searches and vice versa.
 	 */
 
+	if (srch->type == STYPE_SEARCH && 
+	    TAILQ_EMPTY(&srch->sntq))
+		gen_warnx(cfg, &srch->pos, 
+			"single-result search without parameters "
+			"and without a limit of one");
 	if (srch->type != STYPE_SEARCH &&
 	    (srch->flags & SEARCH_IS_UNIQUE))
 		gen_warnx(cfg, &srch->pos, 

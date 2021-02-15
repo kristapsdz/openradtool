@@ -286,6 +286,8 @@ namespace ortJson {
 	 * Same as "struct update" in ort(3).
 	 */
 	export interface updateObj {
+		name: string|null;
+		parent: string;
 		pos: posObj;
 		doc: string|null;
 		type: 'update'|'delete';
@@ -580,7 +582,7 @@ namespace ortJson {
 			return str;
 		}
 
-		private updateObjToString(name: string|null, up: updateObj): string
+		private updateObjToString(up: updateObj): string
 		{
 			let str: string = ' ' + up.type;
 			if (up.type === 'update' && up.flags.length === 0) {
@@ -602,8 +604,8 @@ namespace ortJson {
 			}
 			str += ':';
 			str += this.commentToString(up.doc);
-			if (name !== null)
-				str += ' name ' + name;
+			if (up.name !== null)
+				str += ' name ' + up.name;
 			return str + ';';
 		}
 
@@ -612,8 +614,7 @@ namespace ortJson {
 			let str: string = '';
 			const keys: string[] = Object.keys(set);
 			for (let i: number = 0; i < keys.length; i++)
-				str += this.updateObjToString
-					(keys[i], set[keys[i]]);
+				str += this.updateObjToString(set[keys[i]]);
 			return str;
 		}
 
@@ -687,13 +688,11 @@ namespace ortJson {
 			str += this.searchSetToString(strct.sq.named);
 
 			for (let i: number = 0; i < strct.uq.anon.length; i++) 
-		       		str += this.updateObjToString
-					(null, strct.uq.anon[i]);	
+		       		str += this.updateObjToString(strct.uq.anon[i]);	
 			str += this.updateSetToString(strct.uq.named);
 
 			for (let i: number = 0; i < strct.dq.anon.length; i++) 
-		       		str += this.updateObjToString
-					(null, strct.dq.anon[i]);	
+		       		str += this.updateObjToString(strct.dq.anon[i]);	
 			str += this.updateSetToString(strct.dq.named);
 			if (strct.insert !== null)
 				str += ' insert;';
@@ -1281,40 +1280,7 @@ namespace ortJson {
 		 *   up a unique tuple
 		 *
 		 * Per update (or delete):
-		 * - *config-update-rolemap-{has,none}*: shown or hidden
-		 *   depending on whether there's a non-empty rolemap
-		 * - *config-update-rolemap*: filled in with the
-		 *   comma-separated role names if rolemaps are defined
-		 * - *config-update-doc-{has,none}*: shown or hidden
-		 *   depending on whether there's a non-empty
-		 *   documentation field
-		 * - *config-update-doc*: filled in with non-empty
-		 *   documentation if doc is defined*
-		 * - *config-update-name-{has,none}*: shown or hidden
-		 *   depending on whether the update is anonymous
-		 * - *config-update-name*: filled in with the update
-		 *   name if a name is defined
-		 * - *config-update-fields-{has,none}*: shown or hidden
-		 *   depending on whether the update has non-zero mrq
-		 *   or crqs
-		 * - *config-update-crq-{has,none}*: shown or hidden
-		 *   depending on whether the update has non-zero crq
-		 * - *config-update-mrq-{has,none}*: shown or hidden
-		 *   depending on whether the update has non-zero mrq
-		 * - *config-update-mrq*: the first child of this is
-		 *   cloned and filled in with data for each reference
-		 *   (see "Per update reference") unless there are no
-		 *   references, in which case the element is hidden
-		 * - *config-update-crq*: the first child of this is
-		 *   cloned and filled in with data for each reference
-		 *   (see "Per update reference") unless there are no
-		 *   references, in which case the element is hidden
-		 *
-		 * Per update reference:
-		 * - *config-uref-field*: the field name in the current
-		 *   structure
-		 * - *config-uref-op*: the update constraint operator
-		 * - *config-uref-mod*: the update modifier
+		 * - see fillUpdateObj()
 		 */
 		fillStrctObj(e: HTMLElement, strct: ortJson.strctObj): void
 		{
@@ -1502,19 +1468,57 @@ namespace ortJson {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
 				e.appendChild(cln);
-				this.fillUpdate(cln, keys[i], 
-					cls.named[keys[i]]);
+				this.fillUpdateObj(cln, cls.named[keys[i]]);
 			}
 			for (let i = 0; i < cls.anon.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
 				e.appendChild(cln);
-				this.fillUpdate(cln, null, cls.anon[i]);
+				this.fillUpdateObj(cln, cls.anon[i]);
 			}
 		}
 
-		private fillUpdate(e: HTMLElement,
-			name: string|null, up: ortJson.updateObj): void
+		/**
+		 * Per update (or delete):
+		 *
+		 * - *config-update-rolemap-{has,none}*: shown or hidden
+		 *   depending on whether there's a non-empty rolemap
+		 * - *config-update-rolemap*: filled in with the
+		 *   comma-separated role names if rolemaps are defined
+		 * - *config-update-doc-{has,none}*: shown or hidden
+		 *   depending on whether there's a non-empty
+		 *   documentation field
+		 * - *config-update-doc*: filled in with non-empty
+		 *   documentation if doc is defined*
+		 * - *config-update-name-{has,none}*: shown or hidden
+		 *   depending on whether the update is anonymous
+		 * - *config-update-name*: filled in with the update
+		 *   name if a name is defined or empty
+		 * - *config-update-name-value*: value filled in with
+		 *   the update name if a name is defined or empty
+		 * - *config-update-fields-{has,none}*: shown or hidden
+		 *   depending on whether the update has non-zero mrq
+		 *   or crqs
+		 * - *config-update-crq-{has,none}*: shown or hidden
+		 *   depending on whether the update has non-zero crq
+		 * - *config-update-mrq-{has,none}*: shown or hidden
+		 *   depending on whether the update has non-zero mrq
+		 * - *config-update-mrq*: the first child of this is
+		 *   cloned and filled in with data for each reference
+		 *   (see "Per update reference") unless there are no
+		 *   references, in which case the element is hidden
+		 * - *config-update-crq*: the first child of this is
+		 *   cloned and filled in with data for each reference
+		 *   (see "Per update reference") unless there are no
+		 *   references, in which case the element is hidden
+		 *
+		 * Per update reference:
+		 * - *config-uref-field*: the field name in the current
+		 *   structure
+		 * - *config-uref-op*: the update constraint operator
+		 * - *config-uref-mod*: the update modifier
+		 */
+		fillUpdateObj(e: HTMLElement, up: ortJson.updateObj): void
 		{
 			/* doc */
 
@@ -1522,13 +1526,18 @@ namespace ortJson {
 
 			/* name */
 
-			if (name === null) {
+			if (up.name === null) {
 				this.hidecl(e, 'config-update-name-has');
 				this.showcl(e, 'config-update-name-none');
+				this.replcl(e, 'config-update-name', '');
+				this.attrcl(e, 'config-update-name-value', 
+					'value', '');
 			} else {
 				this.hidecl(e, 'config-update-name-none');
 				this.showcl(e, 'config-update-name-has');
-				this.replcl(e, 'config-update-name', name);
+				this.replcl(e, 'config-update-name', up.name);
+				this.attrcl(e, 'config-update-name-value', 
+					'value', up.name);
 			}
 
 			if (up.crq.length + up.mrq.length === 0) {

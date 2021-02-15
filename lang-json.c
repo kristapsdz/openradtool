@@ -880,6 +880,14 @@ gen_update(FILE *f, int *first, const struct update *u)
 		return 0;
 	if (fputs(" {", f) == EOF)
 		return 0;
+	if (u->name != NULL && 
+	    fprintf(f, " \"name\": \"%s\",", u->name) < 0)
+		return 0;
+	if (u->name == NULL && 
+	    fputs(" \"name\": null,", f) == EOF)
+		return 0;
+	if (fprintf(f, " \"parent\": \"%s\",", u->parent->name) < 0)
+		return 0;
 	if (!gen_pos(f, &u->pos))
 		return 0;
 	if (!gen_doc(f, u->doc))

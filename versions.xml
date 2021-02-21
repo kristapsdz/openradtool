@@ -3,13 +3,14 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
-			<h3>0.11.11</h3>
+			<h3>0.11.12</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2020-02-13">ongoing</time>
+			<time datetime="2021-02-21">2021-02-21</time>
 		</header>
 		<aside>
 			<p>
 				Fix parsing and writing of limit/offset pairs.
+				Allow parameter-less search statements.
 			</p>
 		</aside>
 	</article>
@@ -17,7 +18,7 @@
 		<header>
 			<h3>0.11.11</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2020-02-13">2020-02-13</time>
+			<time datetime="2021-02-13">2021-02-13</time>
 		</header>
 		<aside>
 			<p>
@@ -39,7 +40,7 @@
 		<header>
 			<h3>0.11.10</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2020-01-18">2020-01-18</time>
+			<time datetime="2021-01-18">2021-01-18</time>
 		</header>
 		<aside>
 			<p>
@@ -53,7 +54,7 @@
 		<header>
 			<h3>0.11.10</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2020-01-02">2020-01-02</time>
+			<time datetime="2021-01-02">2021-01-02</time>
 		</header>
 		<aside>
 			<p>

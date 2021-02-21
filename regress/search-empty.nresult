@@ -1,4 +1,0 @@
-struct foo {
-	field id int rowid;
-	search;
-};

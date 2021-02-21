@@ -15,7 +15,7 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-OCONFIGURE_VERSION="0.3.3"
+OCONFIGURE_VERSION="0.3.4"
 
 #
 # This script outputs two files: config.h and Makefile.configure.
@@ -109,15 +109,15 @@ INSTALL_DATA=
 # It does have gcc, so try that instead.
 # Prefer clang, though.
 
-which ${CC} 2>/dev/null 1>&2 || {
+command -v ${CC} 2>/dev/null 1>&2 || {
 	echo "${CC} not found: trying clang" 1>&2
 	echo "${CC} not found: trying clang" 1>&3
 	CC=clang
-	which ${CC} 2>/dev/null 1>&2 || {
+	command -v ${CC} 2>/dev/null 1>&2 || {
 		echo "${CC} not found: trying gcc" 1>&2
 		echo "${CC} not found: trying gcc" 1>&3
 		CC=gcc
-		which ${CC} 2>/dev/null 1>&2 || {
+		command -v ${CC} 2>/dev/null 1>&2 || {
 			echo "gcc not found: giving up" 1>&2
 			echo "gcc not found: giving up" 1>&3
 			exit 1
@@ -646,12 +646,12 @@ __HEREDOC__
 /*
  * Compatibility functions for err(3).
  */
-extern void err(int, const char *, ...);
-extern void errc(int, int, const char *, ...);
-extern void errx(int, const char *, ...);
-extern void verr(int, const char *, va_list);
-extern void verrc(int, int, const char *, va_list);
-extern void verrx(int, const char *, va_list);
+extern void err(int, const char *, ...) __attribute__((noreturn));
+extern void errc(int, int, const char *, ...) __attribute__((noreturn));
+extern void errx(int, const char *, ...) __attribute__((noreturn));
+extern void verr(int, const char *, va_list) __attribute__((noreturn));
+extern void verrc(int, int, const char *, va_list) __attribute__((noreturn));
+extern void verrx(int, const char *, va_list) __attribute__((noreturn));
 extern void warn(const char *, ...);
 extern void warnx(const char *, ...);
 extern void warnc(int, const char *, ...);
@@ -947,7 +947,7 @@ if [ ${HAVE_SYS_QUEUE} -eq 0 ]; then
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ''AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE

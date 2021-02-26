@@ -1551,8 +1551,8 @@ namespace ortJson {
 				this.showcl(e, 'config-update-fields-none');
 				this.hidecl(e, 'config-update-fields-has');
 			} else {
-				this.showcl(e, 'config-update-fields-none');
-				this.hidecl(e, 'config-update-fields-has');
+				this.hidecl(e, 'config-update-fields-none');
+				this.showcl(e, 'config-update-fields-has');
 			}
 
 			/* crq */

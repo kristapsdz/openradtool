@@ -1693,6 +1693,8 @@ namespace ortJson {
 		 * - *config-query-dst-fname*: distinct query path
 		 * - *config-query-limit-{has,none}*: whether a non-zero
 		 *   limit is defined
+		 * - *config-query-limoffs-{has,none}*: whether a
+		 *   non-zero offset and/or limit is defined
 		 * - *config-query-offset-{has,none}*: whether a non-zero
 		 *   offset is defined
 		 * - *config-query-offset*: filled in with the offset
@@ -1768,6 +1770,15 @@ namespace ortJson {
 			this.replcl(e, 'config-query-offset', query.offset);
 			this.attrcl(e, 'config-query-offset-value', 
 				'value', query.offset);
+
+			if (query.limit.toString() === '0' &&
+			    query.offset.toString() === '0') {
+				this.showcl(e, 'config-query-limoffs-none');
+				this.hidecl(e, 'config-query-limoffs-has');
+			} else {
+				this.hidecl(e, 'config-query-limoffs-none');
+				this.showcl(e, 'config-query-limoffs-has');
+			}
 
 			if (query.limit.toString() === '0') {
 				this.showcl(e, 'config-query-limit-none');
@@ -1960,11 +1971,11 @@ namespace ortJson {
 		 * - *config-field-bitf-{has,none}*: shown or hidden
 		 *   depending on whether there's a bitf
 		 * - *config-field-bitf*: filled in with the bitf name
-		 *   if bitf is defined
+		 *   if bitf is defined or empty string otherwise
 		 * - *config-field-enm-{has,none}*: shown or hidden
 		 *   depending on whether there's an enm
 		 * - *config-field-enm*: filled in with the enm name
-		 *   if enm is defined
+		 *   if enm is defined or empty string otherwise
 		 * - *config-field-actdel*: filled in with actdel
 		 * - *config-field-actup*: filled in with actup
 		 * - *config-field-actup-TYPE*: shown or hidden
@@ -2101,6 +2112,7 @@ namespace ortJson {
 			if (typeof field.bitf === 'undefined') {
 				this.showcl(e, 'config-field-bitf-none');
 				this.hidecl(e, 'config-field-bitf-has');
+				this.replcl(e, 'config-field-bitf', '');
 			} else {
 				this.hidecl(e, 'config-field-bitf-none');
 				this.showcl(e, 'config-field-bitf-has');
@@ -2112,6 +2124,7 @@ namespace ortJson {
 			if (typeof field.enm === 'undefined') {
 				this.showcl(e, 'config-field-enm-none');
 				this.hidecl(e, 'config-field-enm-has');
+				this.replcl(e, 'config-field-enm', '');
 			} else {
 				this.hidecl(e, 'config-field-enm-none');
 				this.showcl(e, 'config-field-enm-has');

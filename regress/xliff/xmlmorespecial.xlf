@@ -1,0 +1,18 @@
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+	<file source-language="xxx" original="htmlspecial.ort" target-language="yyy" datatype="plaintext">
+		<body>
+			<trans-unit id="1">
+				<source>aa&lt;a</source>
+				<target>aa&gt;b</target>
+			</trans-unit>
+			<trans-unit id="2">
+				<source>bb&amp;amp;b</source>
+				<target>bb&amp;amp;b</target>
+			</trans-unit>
+			<trans-unit id="3">
+				<source>cc&amp;&lt;c&amp;#169;</source>
+				<target>cc&amp;&gt;c&#8212;</target>
+			</trans-unit>
+		</body>
+	</file>
+</xliff>

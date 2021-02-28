@@ -1,0 +1,9 @@
+enum foo {
+	item a jslabel "Λορεμ";
+	item b jslabel "Лорем";
+};
+
+struct bar {
+	field val enum foo;
+	field id int rowid;
+};

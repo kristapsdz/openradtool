@@ -375,6 +375,32 @@ xstart(void *dat, const XML_Char *s, const XML_Char **atts)
 	}
 }
 
+/*
+ * In-place unescape from XML into native characters.
+ * This considers only '&amp;' -> '&' and '&lt;' -> '<'.
+ */
+static void
+unescape(char *s)
+{
+	char	*ns = s;
+
+	for ( ; *s != '\0'; ns++)
+		if (*s != '&') {
+			*ns = *s;
+			s++;
+		} else if (strncmp(s, "&amp;", 5) == 0) {
+			*ns = '&';
+			s += 5;
+		} else if (strncmp(s, "&lt;", 4) == 0) {
+			*ns = '<';
+			s += 4;
+		} else {
+			*ns = *s;
+			s++;
+		}
+	*ns = '\0';
+}
+
 static void
 xend(void *dat, const XML_Char *s)
 {
@@ -394,9 +420,11 @@ xend(void *dat, const XML_Char *s)
 		p->curunit = NULL;
 	} else if (strcmp(s, "target") == 0) {
 		assert(p->curunit != NULL);
+		unescape(p->curunit->target);
 		p->type = 0;
 	} else if (strcmp(s, "source") == 0) {
 		assert(p->curunit != NULL);
+		unescape(p->curunit->source);
 		p->type = 0;
 	}
 }

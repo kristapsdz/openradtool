@@ -1,0 +1,9 @@
+enum foo {
+	item a jslabel "Λορεμ"; # value 0
+	item b jslabel "Лорем"; # value 1
+};
+
+struct bar {
+	field a enum foo;
+};
+

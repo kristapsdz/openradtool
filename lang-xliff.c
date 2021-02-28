@@ -376,8 +376,8 @@ xstart(void *dat, const XML_Char *s, const XML_Char **atts)
 }
 
 /*
- * HTML-escape the given string.
- * This only replaces the '<' and '&'.
+ * XML-escape the given string.
+ * This only considers the five predefined XML escapes.
  * Return NULL on memory failure.
  */
 static char *
@@ -388,13 +388,17 @@ escape(const char *s)
 
 	sz = strlen(s);
 	for (i = count = 0; i < sz; i++)
-		if (s[i] == '<' || s[i] == '&')
+		if (s[i] == '<' || 
+		    s[i] == '&' ||
+		    s[i] == '>' || 
+		    s[i] == '"' || 
+		    s[i] == '\'')
 			count++;
 
 	if (count == 0)
 		return strdup(s);
 
-	bufsz = sz + count * 4 + 1;
+	bufsz = sz + count * 5 + 1;
 	if ((buf = malloc(bufsz)) == NULL)
 		return 0;
 
@@ -404,6 +408,12 @@ escape(const char *s)
 			count = strlcat(buf, "&lt;", bufsz);
 		else if ('&' == s[i])
 			count = strlcat(buf, "&amp;", bufsz);
+		else if ('>' == s[i])
+			count = strlcat(buf, "&gt;", bufsz);
+		else if ('"' == s[i])
+			count = strlcat(buf, "&quot;", bufsz);
+		else if ('\'' == s[i])
+			count = strlcat(buf, "&apos;", bufsz);
 		else 
 			buf[count++] = s[i];
 	}
@@ -425,12 +435,21 @@ unescape(char *s)
 		if (*s != '&') {
 			*ns = *s;
 			s++;
-		} else if (strncmp(s, "&amp;", 5) == 0) {
-			*ns = '&';
-			s += 5;
 		} else if (strncmp(s, "&lt;", 4) == 0) {
 			*ns = '<';
 			s += 4;
+		} else if (strncmp(s, "&amp;", 5) == 0) {
+			*ns = '&';
+			s += 5;
+		} else if (strncmp(s, "&gt;", 4) == 0) {
+			*ns = '>';
+			s += 4;
+		} else if (strncmp(s, "&quot;", 6) == 0) {
+			*ns = '"';
+			s += 6;
+		} else if (strncmp(s, "&apos;", 6) == 0) {
+			*ns = '\'';
+			s += 6;
 		} else {
 			*ns = *s;
 			s++;

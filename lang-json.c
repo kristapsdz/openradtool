@@ -146,7 +146,7 @@ gen_string(FILE *f, const char *cp)
 			rc = fputs("\\t", f) != EOF;
 			break;
 		default:
-			if (*cp < ' ')
+			if ((unsigned char)*cp < 32)
 				rc = fprintf(f, "\\u%.4u", *cp) > 0;
 			else
 				rc = fputc(*cp, f) != EOF;

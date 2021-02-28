@@ -1,7 +1,0 @@
-enum foo {
-	item a jslabel "foo<bar" ;
-};
-
-struct bar {
-	field a enum foo ;
-};

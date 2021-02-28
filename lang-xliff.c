@@ -834,6 +834,43 @@ ort_lang_xliff_join(const struct ort_lang_xliff *args,
 	return rc;
 }
 
+/*
+ * HTML-escape the given string.
+ * This only replaces the '<' and '&'.
+ * Return NULL on memory failure.
+ */
+static char *
+escape(const char *s)
+{
+	size_t	 i, sz, count, bufsz;
+	char	*buf;
+
+	sz = strlen(s);
+	for (i = count = 0; i < sz; i++)
+		if (s[i] == '<' || s[i] == '&')
+			count++;
+
+	if (count == 0)
+		return strdup(s);
+
+	bufsz = sz + count * 4 + 1;
+	if ((buf = malloc(bufsz)) == NULL)
+		return 0;
+
+	for (i = count = 0; i < sz; i++) {
+		buf[count] = '\0';
+		if ('<' == s[i])
+			count = strlcat(buf, "&lt;", bufsz);
+		else if ('&' == s[i])
+			count = strlcat(buf, "&amp;", bufsz);
+		else 
+			buf[count++] = s[i];
+	}
+
+	buf[count] = '\0';
+	return buf;
+}
+
 int
 ort_lang_xliff_extract(const struct ort_lang_xliff *args,
 	struct config *cfg, FILE *f)
@@ -844,6 +881,10 @@ ort_lang_xliff_extract(const struct ort_lang_xliff *args,
 	const struct bitidx	 *bi;
 	size_t			  i, ssz = 0;
 	const char		**s = NULL;
+	char			 *buf;
+	int			  rc;
+
+	/* Extract all unique labels strings. */
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		TAILQ_FOREACH(ei, &e->eq, entries)
@@ -866,6 +907,11 @@ ort_lang_xliff_extract(const struct ort_lang_xliff *args,
 
 	qsort(s, ssz, sizeof(char *), xliff_sort);
 
+	/* 
+	 * Emit them all, sorted, in XLIFF format.
+	 * Escape all '<' and '&' as '&lt;' and '&amp;'.
+	 */
+
 	if (fprintf(f, "<xliff version=\"1.2\" "
 	    "xmlns=\"urn:oasis:names:tc:xliff:document:1.2\">\n"
 	    "\t<file source-language=\"TODO\" original=\"%s\" "
@@ -873,23 +919,23 @@ ort_lang_xliff_extract(const struct ort_lang_xliff *args,
             "\t\t<body>\n", cfg->fnamesz ? cfg->fnames[0] : "") < 0)
 		return 0;
 
-	for (i = 0; i < ssz; i++)
-		if (args->flags & ORT_LANG_XLIFF_COPY) {
-			if (fprintf(f, 
-			    "\t\t\t<trans-unit id=\"%zu\">\n"
+	for (i = 0; i < ssz; i++) {
+		if ((buf = escape(s[i])) == NULL)
+			return 0;
+		rc = (args->flags & ORT_LANG_XLIFF_COPY) ?
+			fprintf(f, "\t\t\t<trans-unit id=\"%zu\">\n"
 			    "\t\t\t\t<source>%s</source>\n"
 			    "\t\t\t\t<target>%s</target>\n"
 			    "\t\t\t</trans-unit>\n",
-			    i + 1, s[i], s[i]) < 0)
-				return 0;
-		} else {
-			if (fprintf(f, 
-			    "\t\t\t<trans-unit id=\"%zu\">\n"
+			    i + 1, buf, buf) :
+			fprintf(f, "\t\t\t<trans-unit id=\"%zu\">\n"
 			    "\t\t\t\t<source>%s</source>\n"
 			    "\t\t\t</trans-unit>\n",
-			    i + 1, s[i]) < 0)
-				return 0;
-		}
+			    i + 1, buf);
+		free(buf);
+		if (rc < 0) 
+			return 0;
+	}
 
 	return fputs("\t\t</body>\n\t</file>\n</xliff>\n", f) != EOF;
 }

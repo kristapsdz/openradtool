@@ -3,6 +3,21 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.11.13</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-02-28">2021-02-28</time>
+		</header>
+		<aside>
+			<p>
+				Minor fix in handling UTF-8 labels and converting to and from JSON.
+				Have <a href="ort-xliff.1.html">ort-xliff(1)</a> properly handle XML
+				special characters by on-the-fly encoding and decoding, lifting the
+				restriction of not being able to use <q>&lt;</q> in labels.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.11.12</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-02-21">2021-02-21</time>

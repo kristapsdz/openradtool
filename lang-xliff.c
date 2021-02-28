@@ -376,6 +376,43 @@ xstart(void *dat, const XML_Char *s, const XML_Char **atts)
 }
 
 /*
+ * HTML-escape the given string.
+ * This only replaces the '<' and '&'.
+ * Return NULL on memory failure.
+ */
+static char *
+escape(const char *s)
+{
+	size_t	 i, sz, count, bufsz;
+	char	*buf;
+
+	sz = strlen(s);
+	for (i = count = 0; i < sz; i++)
+		if (s[i] == '<' || s[i] == '&')
+			count++;
+
+	if (count == 0)
+		return strdup(s);
+
+	bufsz = sz + count * 4 + 1;
+	if ((buf = malloc(bufsz)) == NULL)
+		return 0;
+
+	for (i = count = 0; i < sz; i++) {
+		buf[count] = '\0';
+		if ('<' == s[i])
+			count = strlcat(buf, "&lt;", bufsz);
+		else if ('&' == s[i])
+			count = strlcat(buf, "&amp;", bufsz);
+		else 
+			buf[count++] = s[i];
+	}
+
+	buf[count] = '\0';
+	return buf;
+}
+
+/*
  * In-place unescape from XML into native characters.
  * This considers only '&amp;' -> '&' and '&lt;' -> '<'.
  */
@@ -749,6 +786,7 @@ ort_lang_xliff_update(const struct ort_lang_xliff *args,
 	struct eitem 	*ei;
 	struct bitf	*b;
 	struct bitidx	*bi;
+	char		*sbuf = NULL, *tbuf = NULL;
 
 	if ((p = XML_ParserCreate(NULL)) == NULL)
 		return -1;
@@ -796,23 +834,28 @@ ort_lang_xliff_update(const struct ort_lang_xliff *args,
             "\t\t<body>\n", x->trglang, x->srclang, x->original) < 0)
 		goto out;
 
-	for (i = 0; i < x->usz; i++)
-		if (x->u[i].target == NULL && 
+	for (i = 0; i < x->usz; i++) {
+		if ((sbuf = escape(x->u[i].source)) == NULL)
+			goto out;
+		if (x->u[i].target != NULL &&
+		    (tbuf = escape(x->u[i].target)) == NULL)
+			goto out;
+
+		if (tbuf == NULL && 
 		    (args->flags & ORT_LANG_XLIFF_COPY)) {
 			if (fprintf(f,
 			    "\t\t\t<trans-unit id=\"%s\">\n"
 			    "\t\t\t\t<source>%s</source>\n"
 			    "\t\t\t\t<target>%s</target>\n"
 			    "\t\t\t</trans-unit>\n",
-			    x->u[i].name, x->u[i].source,
-			    x->u[i].source) < 0)
+			    x->u[i].name, sbuf, sbuf) < 0)
 				goto out;
-		} else if (x->u[i].target == NULL) {
+		} else if (tbuf == NULL) {
 			if (fprintf(f, 
 			    "\t\t\t<trans-unit id=\"%s\">\n"
 			    "\t\t\t\t<source>%s</source>\n"
 			    "\t\t\t</trans-unit>\n",
-			    x->u[i].name, x->u[i].source) < 0)
+			    x->u[i].name, sbuf) < 0)
 				goto out;
 		} else {
 			if (fprintf(f, 
@@ -820,16 +863,21 @@ ort_lang_xliff_update(const struct ort_lang_xliff *args,
 			    "\t\t\t\t<source>%s</source>\n"
 			    "\t\t\t\t<target>%s</target>\n"
 			    "\t\t\t</trans-unit>\n",
-			    x->u[i].name, x->u[i].source,
-			    x->u[i].target) < 0)
+			    x->u[i].name, sbuf, tbuf) < 0)
 				goto out;
 		}
+		free(sbuf);
+		free(tbuf);
+		sbuf = tbuf = NULL;
+	}
 
 	if (fputs("\t\t</body>\n\t</file>\n</xliff>\n", f) == EOF)
 		goto out;
 
 	rc = 1;
 out:
+	free(sbuf);
+	free(tbuf);
 	xparse_xliff_free(x);
 	XML_ParserFree(p);
 	return rc;
@@ -860,43 +908,6 @@ ort_lang_xliff_join(const struct ort_lang_xliff *args,
 		rc = -1;
 
 	return rc;
-}
-
-/*
- * HTML-escape the given string.
- * This only replaces the '<' and '&'.
- * Return NULL on memory failure.
- */
-static char *
-escape(const char *s)
-{
-	size_t	 i, sz, count, bufsz;
-	char	*buf;
-
-	sz = strlen(s);
-	for (i = count = 0; i < sz; i++)
-		if (s[i] == '<' || s[i] == '&')
-			count++;
-
-	if (count == 0)
-		return strdup(s);
-
-	bufsz = sz + count * 4 + 1;
-	if ((buf = malloc(bufsz)) == NULL)
-		return 0;
-
-	for (i = count = 0; i < sz; i++) {
-		buf[count] = '\0';
-		if ('<' == s[i])
-			count = strlcat(buf, "&lt;", bufsz);
-		else if ('&' == s[i])
-			count = strlcat(buf, "&amp;", bufsz);
-		else 
-			buf[count++] = s[i];
-	}
-
-	buf[count] = '\0';
-	return buf;
 }
 
 int

@@ -603,7 +603,6 @@ parse_label(struct parse *p, struct labelq *q)
 {
 	size_t	 	 lang = 0;
 	struct label	*l;
-	const char	*cp;
 	void		*pp;
 
 	/* 
@@ -655,19 +654,6 @@ parse_label(struct parse *p, struct labelq *q)
 		parse_errx(p, "label must be non-empty");
 		return 0;
 	}
-
-	/* 
-	 * Don't allow < in the input for now.
-	 * This is because we'll put this label in an XLIFF file and
-	 * it's easier to disallow it here than to jump through hoops in
-	 * translating to and from special characters.
-	 */
-
-	for (cp = p->last.string; *cp != '\0'; cp++) 
-		if (*cp == '<') {
-			parse_errx(p, "invalid character in label");
-			return 0;
-		}
 
 	/* Disallow duplicates. */
 

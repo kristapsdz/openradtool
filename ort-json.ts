@@ -1238,6 +1238,8 @@ namespace ortJson {
 		 *
 		 * - *config-strct-name*: filled in with name
 		 * - *config-strct-name-value*: value set with name
+		 * - *config-strct-name-data*: 'data-name' attribute set
+		 *   with name
 		 * - *config-strct-doc-{none,has}*: shown or hidden
 		 *   depending on whether there's a non-empty
 		 *   documentation field
@@ -1377,7 +1379,10 @@ namespace ortJson {
 			/* name */
 
 			this.replcl(e, 'config-strct-name', strct.name);
-			this.attrcl(e, 'config-strct-name-value', 'value', strct.name);
+			this.attrcl(e, 'config-strct-name-value', 
+				'value', strct.name);
+			this.attrcl(e, 'config-strct-name-data', 
+				'data-name', strct.name);
 		}
 
 		/**

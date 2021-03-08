@@ -31,7 +31,8 @@ LIBS		 = libort.a \
 		   libort-lang-xliff.a
 PKGCONFIGS	 = ort.pc \
 		   ort-lang-nodejs.pc \
-		   ort-lang-json.pc
+		   ort-lang-json.pc \
+		   ort-lang-sql.pc
 OBJS		 = audit.o \
 		   cheader.o \
 		   csource.o \
@@ -175,6 +176,7 @@ DOTAR		 = $(HEADERS) \
 		   ort.in.pc \
 		   ort-lang-nodejs.in.pc \
 		   ort-lang-json.in.pc \
+		   ort-lang-sql.in.pc \
 		   ort-json.ts \
 		   parser.c \
 		   parser_bitfield.c \

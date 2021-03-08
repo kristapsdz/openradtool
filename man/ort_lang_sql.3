@@ -38,6 +38,8 @@ Outputs the SQL schema of the parsed configuration
 .Fa cfg
 to
 .Fa f .
+The output is tailored to
+.Xr sqlite3 1 .
 The
 .Fa args
 is currently ignored and may be
@@ -99,6 +101,7 @@ free(buf);
 .\" For sections 2, 3, 4, and 9 errno settings only.
 .Sh SEE ALSO
 .Xr pkg-config 1 ,
+.Xr sqlite3 1 ,
 .Xr ort 3
 .\" .Sh STANDARDS
 .\" .Sh HISTORY

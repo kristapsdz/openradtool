@@ -17,7 +17,13 @@
 #ifndef ORT_LANG_SQL_H
 #define ORT_LANG_SQL_H
 
-int	ort_lang_sql(const struct config *, FILE *f);
-int	ort_lang_diff_sql(const struct diffq *, int, FILE *f, struct msgq *);
+struct ort_lang_sql {
+	unsigned int	 dummy;
+};
+
+int	ort_lang_sql(const struct ort_lang_sql *, 
+		const struct config *, FILE *f);
+int	ort_lang_diff_sql(const struct ort_lang_sql *,
+		const struct diffq *, int, FILE *f, struct msgq *);
 
 #endif /* !ORT_LANG_SQL_H */

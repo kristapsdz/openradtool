@@ -144,9 +144,12 @@ main(int argc, char *argv[])
 
 	/* Generate diffs. */
 	
-	if ((q = ort_diff(dcfg, cfg)) == NULL)
+	if ((q = ort_diff(dcfg, cfg)) == NULL) {
 		warn(NULL);
-	else if (!(rc = ort_lang_diff_sql(q, destruct, stdout, &mq)))
+		goto out;
+	}
+
+	if (!(rc = ort_lang_diff_sql(NULL, q, destruct, stdout, &mq)))
 		warn(NULL);
 out:
 	ort_write_msg_file(stderr, &cfg->mq);

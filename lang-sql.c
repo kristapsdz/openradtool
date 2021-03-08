@@ -219,7 +219,8 @@ gen_struct(FILE *f, const struct strct *p, int comments)
 }
 
 int
-ort_lang_sql(const struct config *cfg, FILE *f)
+ort_lang_sql(const struct ort_lang_sql *args,
+	const struct config *cfg, FILE *f)
 {
 	const struct strct *p;
 
@@ -496,8 +497,8 @@ gen_check_uniques(struct msgq *mq, const struct diffq *q, int destruct)
  * would change the database, such as dropping tables.
  */
 int
-ort_lang_diff_sql(const struct diffq *q,
-	int destruct, FILE *f, struct msgq *mq)
+ort_lang_diff_sql(const struct ort_lang_sql *args, 
+	const struct diffq *q, int destruct, FILE *f, struct msgq *mq)
 {
 	const struct diff	*d;
 	size_t	 		 errors = 0;

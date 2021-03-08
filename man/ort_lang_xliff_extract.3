@@ -30,7 +30,7 @@
 .Ft int
 .Fo ort_lang_xliff_extract
 .Fa "const struct ort_lang_xliff *args"
-.Fa "struct config *cfg"
+.Fa "const struct config *cfg"
 .Fa "FILE *f"
 .Fa "struct msgq *mq"
 .Fc
@@ -62,12 +62,6 @@ directives, otherwise it emits only
 .Pp
 Only translatable components (e.g,. an enumeration item) with labels are
 queued for translation.
-.Nm
-may alter
-.Fa cfg
-by adding warning messages for translatable components that do not have an
-initial label.
-These warnings are informational.
 .Pp
 Generated content conforms to the strict XLIFF 1.2 schema.
 .\" The following requests should be uncommented and used where appropriate.
@@ -89,6 +83,7 @@ linking, then extracting translations is as follows.
 .Bd -literal -offset indent
 struct config *cfg;
 struct ort_lang_xliff args;
+struct msgq mq = TAILQ_HEAD_INITIALIZER(mq);
 
 memset(&args, 0, sizeof(struct ort_lang_xliff));
 
@@ -97,10 +92,12 @@ if ((cfg = ort_config_alloc()) == NULL)
 
 if (ort_parse_file(cfg, stdin, "<stdin>") &&
     ort_parse_close(cfg))
-  ort_lang_xliff_extract(&args, cfg, stdout);
+  ort_lang_xliff_extract(&args, cfg, stdout, &mq);
 
 ort_write_msg_file(stderr, &cfg.mq);
+ort_write_msg_file(stderr, &mq);
 ort_config_free(cfg);
+ort_msgq_free(&mq);
 .Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.

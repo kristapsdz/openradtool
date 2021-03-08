@@ -76,7 +76,7 @@ static	void xparse_err(struct xparse *, const char *, ...)
  * Return zero on failure, non-zero on success.
  */
 static int
-xliff_extract_unit(struct config *cfg, FILE *f, 
+xliff_extract_unit(struct msgq *mq, FILE *f, 
 	const struct labelq *lq, const char *type,
 	const struct pos *pos, const char ***s, size_t *ssz)
 {
@@ -89,11 +89,11 @@ xliff_extract_unit(struct config *cfg, FILE *f,
 			break;
 
 	if (l == NULL && type == NULL) {
-		ort_msg(&cfg->mq, MSGTYPE_WARN, 0, pos, 
+		ort_msg(mq, MSGTYPE_WARN, 0, pos, 
 			"missing jslabel for translation");
 		return 1;
 	} else if (l == NULL) {
-		ort_msg(&cfg->mq, MSGTYPE_WARN, 0, pos, "missing "
+		ort_msg(mq, MSGTYPE_WARN, 0, pos, "missing "
 			"\"%s\" jslabel for translation", type);
 		return 1;
 	}
@@ -943,7 +943,7 @@ ort_lang_xliff_join(const struct ort_lang_xliff *args,
 
 int
 ort_lang_xliff_extract(const struct ort_lang_xliff *args,
-	struct config *cfg, FILE *f, struct msgq *mq)
+	const struct config *cfg, FILE *f, struct msgq *mq)
 {
 	const struct enm	 *e;
 	const struct eitem	 *ei;
@@ -962,19 +962,19 @@ ort_lang_xliff_extract(const struct ort_lang_xliff *args,
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		TAILQ_FOREACH(ei, &e->eq, entries)
-			if (!xliff_extract_unit(cfg, f, &ei->labels, 
+			if (!xliff_extract_unit(mq, f, &ei->labels, 
 			    NULL, &ei->pos, &s, &ssz))
 				goto out;
 
 	TAILQ_FOREACH(b, &cfg->bq, entries) {
 		TAILQ_FOREACH(bi, &b->bq, entries)
-			if (!xliff_extract_unit(cfg, f, &bi->labels, 
+			if (!xliff_extract_unit(mq, f, &bi->labels, 
 			    NULL, &bi->pos, &s, &ssz))
 				goto out;
-		if (!xliff_extract_unit(cfg, f, &b->labels_unset, 
+		if (!xliff_extract_unit(mq, f, &b->labels_unset, 
 		    "unset", &b->pos, &s, &ssz))
 			goto out;
-		if (!xliff_extract_unit(cfg, f, &b->labels_null,
+		if (!xliff_extract_unit(mq, f, &b->labels_null,
 		    "isnull", &b->pos, &s, &ssz))
 			goto out;
 	}

@@ -15,47 +15,90 @@
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .Dd $Mdocdate$
-.Dt ORT_MSGQ_FREE 3
+.Dt ORT_LANG_SQL 3
 .Os
 .Sh NAME
-.Nm ort_msgq_free
-.Nd free message queue
+.Nm ort_lang_sql
+.Nd generate SQL schema of openradtool configuration
 .Sh LIBRARY
-.Lb libort
+.Lb libort-lang-sql
 .Sh SYNOPSIS
 .In sys/queue.h
 .In stdio.h
 .In ort.h
-.Ft void
-.Fo ort_msgq_free
-.Fa "struct msgq *mq"
+.In ort-lang-sql.h
+.Ft int
+.Fo ort_lang_sql
+.Fa "const struct sql *args"
+.Fa "const struct config *cfg"
+.Fa "FILE *f"
 .Fc
 .Sh DESCRIPTION
-Free the message queue
-.Fa mq ,
-or do nothing of
-.Fa mq
-is
+Outputs the SQL schema of the parsed configuration
+.Fa cfg
+to
+.Fa f .
+The
+.Fa args
+is currently ignored and may be
 .Dv NULL .
-Does not free the
-.Fa mq
-pointer itself.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.
-.\" .Sh RETURN VALUES
+.Sh RETURN VALUES
+Returns zero on failure, non-zero on success.
+Failure only occurs with memory allocation errors or when writing to
+.Fa f .
 .\" For sections 2, 3, and 9 function return values only.
 .\" .Sh ENVIRONMENT
 .\" For sections 1, 6, 7, and 8 only.
 .\" .Sh FILES
 .\" .Sh EXIT STATUS
 .\" For sections 1, 6, and 8 only.
-.\" .Sh EXAMPLES
+.Sh EXAMPLES
+The following emits a configuration as read from standard input to SQL
+as written to standard output.
+.Bd -literal -offset indent
+struct config *cfg;
+struct ort_lang_sql args;
+
+memset(&args, 0, sizeof(struct ort_lang_sql));
+
+if ((cfg = ort_config_alloc()) == NULL)
+  err(1, NULL);
+if (!ort_parse_file(cfg, stdin, "<stdin>"))
+  errx(1, "ort_parse_file");
+if (!ort_parse_close(cfg))
+  errx(1, "ort_parse_close");
+if (!ort_lang_sql(&args, cfg, stdout))
+  err(1, "ort_lang_sql");
+
+ort_config_free(cfg);
+.Ed
+.Pp
+Alternatively, this could be converted into a string:
+.Bd -literal -offset indent
+char *buf = NULL;
+size_t bufsz = 0;
+
+/* Read and parse configuration as above... */
+
+if ((stream = open_memstream(&buf, &bufsz)) == NULL)
+  err(1, "open_memstream");
+if (!ort_lang_sql(&args, cfg, stream))
+  err(1, "ort_lang_sql");
+fclose(stream);
+
+/* Do something with buf of size bufsz. */
+
+free(buf);
+.Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
 .\" .Sh ERRORS
 .\" For sections 2, 3, 4, and 9 errno settings only.
 .Sh SEE ALSO
+.Xr pkg-config 1 ,
 .Xr ort 3
 .\" .Sh STANDARDS
 .\" .Sh HISTORY

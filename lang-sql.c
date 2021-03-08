@@ -501,11 +501,16 @@ gen_check_uniques(const struct diffq *q, int destruct)
  * would change the database, such as dropping tables.
  */
 int
-ort_lang_diff_sql(const struct diffq *q, int destruct, FILE *f)
+ort_lang_diff_sql(const struct diffq *q,
+	int destruct, FILE *f, struct msgq *mq)
 {
 	const struct diff	*d;
 	size_t	 		 errors = 0;
-	int	 		 prol = 0;
+	int	 		 rc = 0, prol = 0;
+	struct msgq		 tmpq = TAILQ_HEAD_INITIALIZER(tmpq);
+
+	if (mq == NULL)
+		mq = &tmpq;
 
 	errors += gen_check_enms(q, destruct);
 	errors += gen_check_bitfs(q, destruct);
@@ -514,43 +519,49 @@ ort_lang_diff_sql(const struct diffq *q, int destruct, FILE *f)
 	errors += gen_check_uniques(q, destruct);
 
 	if (errors)
-		return 0;
+		goto out;
+
+	rc = -1;
 
 	TAILQ_FOREACH(d, q, entries)
 		if (d->type == DIFF_ADD_STRCT) {
 			if (!gen_prologue(f, &prol))
-				return -1;
+				goto out;
 			if (!gen_struct(f, d->strct, 0))
-				return -1;
+				goto out;
 		}
 
 	TAILQ_FOREACH(d, q, entries)
 		if (d->type == DIFF_ADD_FIELD) {
 			if (!gen_prologue(f, &prol))
-				return -1;
+				goto out;
 			if (!gen_diff_field_new(f, d->field))
-				return -1;
+				goto out;
 		}
 
 	TAILQ_FOREACH(d, q, entries) 
 		if (d->type == DIFF_DEL_STRCT && destruct) {
 			if (!gen_prologue(f, &prol))
-				return -1;
+				goto out;
 			if (fprintf(f,
 			    "DROP TABLE %s;\n", d->strct->name) < 0)
-				return -1;
+				goto out;
 		}
 
 	TAILQ_FOREACH(d, q, entries)
 		if (d->type == DIFF_DEL_FIELD && destruct) {
 			if (!gen_prologue(f, &prol))
-				return -1;
+				goto out;
 			if (fprintf(f, 
 			    "-- ALTER TABLE %s DROP COLUMN %s;\n", 
 			    d->field->parent->name, 
 			    d->field->name) < 0)
-				return -1;
+				goto out;
 		}
 
-	return 1;
+	rc = 1;
+out:
+	if (mq == &tmpq)
+		ort_msgq_free(mq);
+	return rc;
 }

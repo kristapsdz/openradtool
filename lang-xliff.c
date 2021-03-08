@@ -89,11 +89,11 @@ xliff_extract_unit(struct config *cfg, FILE *f,
 			break;
 
 	if (l == NULL && type == NULL) {
-		ort_msg(cfg, MSGTYPE_WARN, 0, pos, 
+		ort_msg(&cfg->mq, MSGTYPE_WARN, 0, pos, 
 			"missing jslabel for translation");
 		return 1;
 	} else if (l == NULL) {
-		ort_msg(cfg, MSGTYPE_WARN, 0, pos, "missing "
+		ort_msg(&cfg->mq, MSGTYPE_WARN, 0, pos, "missing "
 			"\"%s\" jslabel for translation", type);
 		return 1;
 	}
@@ -129,7 +129,7 @@ xparse_err(struct xparse *xp, const char *fmt, ...)
 	pos.column = XML_GetCurrentColumnNumber(xp->p);
 
 	va_start(ap, fmt);
-	ort_msgv(xp->cfg, MSGTYPE_WARN, 0, &pos, fmt, ap);
+	ort_msgv(&xp->cfg->mq, MSGTYPE_WARN, 0, &pos, fmt, ap);
 	va_end(ap);
 }
 
@@ -570,11 +570,11 @@ xliff_join_unit(struct config *cfg, struct labelq *q, int copy,
 	 */
 
 	if (l == NULL && type == NULL) {
-		ort_msg(cfg, MSGTYPE_ERROR, 0, pos, 
+		ort_msg(&cfg->mq, MSGTYPE_ERROR, 0, pos, 
 			"missing jslabel for translation");
 		return 0;
 	} else if (l == NULL) {
-		ort_msg(cfg, MSGTYPE_ERROR, 0, pos, "missing "
+		ort_msg(&cfg->mq, MSGTYPE_ERROR, 0, pos, "missing "
 			"\"%s\" jslabel for translation", type);
 		return 0;
 	}
@@ -587,21 +587,21 @@ xliff_join_unit(struct config *cfg, struct labelq *q, int copy,
 
 	if (i == x->usz && type == NULL) {
 		if (copy) {
-			ort_msg(cfg, MSGTYPE_WARN, 0, pos, 
+			ort_msg(&cfg->mq, MSGTYPE_WARN, 0, pos, 
 				"using source for translation");
 			targ = l->label;
 		} else {
-			ort_msg(cfg, MSGTYPE_ERROR, 0, pos, 
+			ort_msg(&cfg->mq, MSGTYPE_ERROR, 0, pos, 
 				"missing jslabel for translation");
 			return 0;
 		}
 	} else if (i == x->usz) {
 		if (copy) {
-			ort_msg(cfg, MSGTYPE_WARN, 0, pos, "using "
+			ort_msg(&cfg->mq, MSGTYPE_WARN, 0, pos, "using "
 				"source for \"%s\" translation", type);
 			targ = l->label;
 		} else {
-			ort_msg(cfg, MSGTYPE_ERROR, 0, pos, "missing "
+			ort_msg(&cfg->mq, MSGTYPE_ERROR, 0, pos, "missing "
 				"\"%s\" jslabel for translation", type);
 			return 0;
 		}
@@ -620,11 +620,11 @@ xliff_join_unit(struct config *cfg, struct labelq *q, int copy,
 			break;
 
 	if (l != NULL && type == NULL) {
-		ort_msg(cfg, MSGTYPE_WARN, 0, pos, 
+		ort_msg(&cfg->mq, MSGTYPE_WARN, 0, pos, 
 			"not overriding existing translation");
 		return 1;
 	} else if (l != NULL) {
-		ort_msg(cfg, MSGTYPE_WARN, 0, pos, 
+		ort_msg(&cfg->mq, MSGTYPE_WARN, 0, pos, 
 			"not overriding existing \"%s\" translation",
 			type);
 		return 1;
@@ -664,11 +664,11 @@ xliff_update_unit(struct config *cfg, struct labelq *q,
 	 */
 
 	if (l == NULL && type == NULL) {
-		ort_msg(cfg, MSGTYPE_ERROR, 0, pos, 
+		ort_msg(&cfg->mq, MSGTYPE_ERROR, 0, pos, 
 			"missing jslabel for translation");
 		return 0;
 	} else if (l == NULL) {
-		ort_msg(cfg, MSGTYPE_ERROR, 0, pos, "missing "
+		ort_msg(&cfg->mq, MSGTYPE_ERROR, 0, pos, "missing "
 			"\"%s\" jslabel for translation", type);
 		return 0;
 	}
@@ -779,7 +779,7 @@ xliff_join_single(struct config *cfg, int copy,
 	} else {
 		pos.fname = fn;
 		pos.line = pos.column = 0;
-		ort_msg(cfg, MSGTYPE_WARN, 0, &pos, 
+		ort_msg(&cfg->mq, MSGTYPE_WARN, 0, &pos, 
 			"language \"%s\" already noted", x->trglang);
 	}
 

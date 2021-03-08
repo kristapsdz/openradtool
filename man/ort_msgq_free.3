@@ -1,6 +1,6 @@
 .\"	$Id$
 .\"
-.\" Copyright (c) 2020 Kristaps Dzonsons <kristaps@bsd.lv>
+.\" Copyright (c) 2021 Kristaps Dzonsons <kristaps@bsd.lv>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -15,12 +15,11 @@
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .Dd $Mdocdate$
-.Dt ORT_MSG 3
+.Dt ORT_MSGQ_FREE 3
 .Os
 .Sh NAME
-.Nm ort_msg ,
-.Nm ort_msgv
-.Nd queue status message
+.Nm ort_msgq_free
+.Nd free message queue
 .Sh LIBRARY
 .Lb libort
 .Sh SYNOPSIS
@@ -28,51 +27,19 @@
 .In stdio.h
 .In ort.h
 .Ft void
-.Fo ort_msg
+.Fo ort_msgq_free
 .Fa "struct msgq *mq"
-.Fa "enum msgtype type"
-.Fa "int er"
-.Fa "const struct pos *pos"
-.Fa "const char *fmt"
-.Fa "..."
-.Fc
-.Ft void
-.Fo ort_msgv
-.Fa "struct msgq *mq"
-.Fa "enum msgtype type"
-.Fa "int er"
-.Fa "const struct pos *pos"
-.Fa "const char *fmt"
-.Fa "va_list ap"
 .Fc
 .Sh DESCRIPTION
-Append a message to the
-.Fa mq
-queue.
-The message has a level of
-.Fa type ,
-which dictates how a caller should respond to the message.
-The
-.Fa er ,
-if not zero, is interpreted as an
-.Xr errno 2 .
-The error is attached at position
-.Fa pos ,
-or unattached if
-.Fa pos
-is
-.Dv NULL
-or its
-.Fa pos->fname
+Free the message queue
+.Fa mq ,
+or do nothing of
+.Fq mq
 is
 .Dv NULL .
-If not
-.Dv NULL ,
-the contents of
-.Fa pos->fname
-are copied.
-.Pp
-Memory allocation failures are ignored.
+Does not free the
+.Fa mq
+pointer itself.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.
@@ -89,9 +56,7 @@ Memory allocation failures are ignored.
 .\" .Sh ERRORS
 .\" For sections 2, 3, 4, and 9 errno settings only.
 .Sh SEE ALSO
-.Xr ort 3 ,
-.Xr ort_msgq_free 3 ,
-.Xr ort_write_msg_file 3 
+.Xr ort 3
 .\" .Sh STANDARDS
 .\" .Sh HISTORY
 .\" .Sh AUTHORS

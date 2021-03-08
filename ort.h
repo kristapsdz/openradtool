@@ -655,15 +655,16 @@ void		 ort_config_free(struct config *);
 int		 ort_parse_close(struct config *);
 int		 ort_parse_file(struct config *, FILE *, const char *);
 int		 ort_write_file(FILE *, const struct config *);
-int		 ort_write_msg_file(FILE *f, const struct msgq *q);
+int		 ort_write_msg_file(FILE *f, const struct msgq *);
 struct diffq	*ort_diff(const struct config *, const struct config *);
 void		 ort_diff_free(struct diffq *);
 int		 ort_write_diff_file(FILE *, const struct diffq *,
 			const char **, size_t, const char **, size_t);
-void	 	 ort_msgv(struct config *, enum msgtype, int, 
+void	 	 ort_msgv(struct msgq *, enum msgtype, int, 
 			const struct pos *, const char *, va_list);
-void	 	 ort_msg(struct config *, enum msgtype, int, 
+void	 	 ort_msg(struct msgq *, enum msgtype, int, 
 			const struct pos *, const char *, ...);
+void		 ort_msgq_free(struct msgq *);
 
 __END_DECLS
 

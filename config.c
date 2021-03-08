@@ -334,6 +334,21 @@ parse_free_resolve(struct resolve *p)
 	free(p);
 }
 
+void
+ort_msgq_free(struct msgq *q)
+{
+	struct msg	*m;
+
+	if (q == NULL)
+		return;
+	while ((m = TAILQ_FIRST(q)) != NULL) {
+		TAILQ_REMOVE(q, m, entries);
+		free(m->fname);
+		free(m->buf);
+		free(m);
+	}
+}
+
 /*
  * Free all configuration resources.
  * Does nothing if "q" is empty or NULL.
@@ -345,7 +360,6 @@ ort_config_free(struct config *cfg)
 	struct enm	*e;
 	struct role	*r;
 	struct bitf	*bf;
-	struct msg	*m;
 	struct resolve	*res;
 	size_t		 i;
 
@@ -377,12 +391,7 @@ ort_config_free(struct config *cfg)
 		parse_free_resolve(res);
 	}
 
-	while ((m = TAILQ_FIRST(&cfg->mq)) != NULL) {
-		TAILQ_REMOVE(&cfg->mq, m, entries);
-		free(m->fname);
-		free(m->buf);
-		free(m);
-	}
+	ort_msgq_free(&cfg->mq);
 
 	for (i = 0; i < cfg->langsz; i++)
 		free(cfg->langs[i]);

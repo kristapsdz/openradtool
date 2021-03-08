@@ -43,10 +43,10 @@ gen_warnx(struct config *cfg,
 
 	if (fmt != NULL) {
 		va_start(ap, fmt);
-		ort_msgv(cfg, MSGTYPE_WARN, 0, pos, fmt, ap);
+		ort_msgv(&cfg->mq, MSGTYPE_WARN, 0, pos, fmt, ap);
 		va_end(ap);
 	} else
-		ort_msg(cfg, MSGTYPE_WARN, 0, pos, NULL);
+		ort_msg(&cfg->mq, MSGTYPE_WARN, 0, pos, NULL);
 }
 
 /*
@@ -59,7 +59,7 @@ gen_err(struct config *cfg, const struct pos *pos)
 {
 	int	 er = errno;
 
-	ort_msg(cfg, MSGTYPE_FATAL, er, pos, NULL);
+	ort_msg(&cfg->mq, MSGTYPE_FATAL, er, pos, NULL);
 }
 
 /*
@@ -74,11 +74,11 @@ gen_errx(struct config *cfg,
 
 	if (fmt != NULL) {
 		va_start(ap, fmt);
-		ort_msgv(cfg, MSGTYPE_ERROR, 
+		ort_msgv(&cfg->mq, MSGTYPE_ERROR, 
 			0, pos, fmt, ap);
 		va_end(ap);
 	} else
-		ort_msg(cfg, MSGTYPE_ERROR, 0, pos, NULL);
+		ort_msg(&cfg->mq, MSGTYPE_ERROR, 0, pos, NULL);
 }
 
 /*

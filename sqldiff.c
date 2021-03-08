@@ -43,6 +43,7 @@ main(int argc, char *argv[])
 	size_t		  confsz = 0, dconfsz = 0, i, j, 
 			  confst = 0;
 	struct diffq	 *q = NULL;
+	struct msgq	  mq = TAILQ_HEAD_INITIALIZER(mq);
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
@@ -145,11 +146,14 @@ main(int argc, char *argv[])
 	
 	if ((q = ort_diff(dcfg, cfg)) == NULL)
 		warn(NULL);
-	else if (!(rc = ort_lang_diff_sql(q, destruct, stdout)))
+	else if (!(rc = ort_lang_diff_sql(q, destruct, stdout, &mq)))
 		warn(NULL);
 out:
 	ort_write_msg_file(stderr, &cfg->mq);
 	ort_write_msg_file(stderr, &dcfg->mq);
+	ort_write_msg_file(stderr, &mq);
+
+	ort_msgq_free(&mq);
 	ort_config_free(cfg);
 	ort_config_free(dcfg);
 

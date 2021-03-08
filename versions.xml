@@ -3,6 +3,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.11.34</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-02-28">2021-02-28</time>
+		</header>
+		<aside>
+			<p>
+				Internal API change: pass a <code>msgq</code> directly to the
+				<a href="ort_msg.3.html">ort_msg(3)</a> family of functions.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.11.13</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-02-28">2021-02-28</time>

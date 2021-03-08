@@ -216,10 +216,10 @@ parse_warnx(struct parse *p, const char *fmt, ...)
 
 	if (fmt != NULL) {
 		va_start(ap, fmt);
-		ort_msgv(p->cfg, MSGTYPE_WARN, 0, &pos, fmt, ap);
+		ort_msgv(&p->cfg->mq, MSGTYPE_WARN, 0, &pos, fmt, ap);
 		va_end(ap);
 	} else
-		ort_msg(p->cfg, MSGTYPE_WARN, 0, &pos, NULL);
+		ort_msg(&p->cfg->mq, MSGTYPE_WARN, 0, &pos, NULL);
 }
 
 enum tok
@@ -232,7 +232,7 @@ parse_err(struct parse *p)
 	pos.line = p->line;
 	pos.column = p->column;
 
-	ort_msg(p->cfg, MSGTYPE_FATAL, er, &pos, NULL);
+	ort_msg(&p->cfg->mq, MSGTYPE_FATAL, er, &pos, NULL);
 
 	p->lasttype = TOK_ERR;
 	return p->lasttype;
@@ -250,10 +250,10 @@ parse_errx(struct parse *p, const char *fmt, ...)
 
 	if (fmt != NULL) {
 		va_start(ap, fmt);
-		ort_msgv(p->cfg, MSGTYPE_ERROR, 0, &pos, fmt, ap);
+		ort_msgv(&p->cfg->mq, MSGTYPE_ERROR, 0, &pos, fmt, ap);
 		va_end(ap);
 	} else
-		ort_msg(p->cfg, MSGTYPE_ERROR, 0, &pos, NULL);
+		ort_msg(&p->cfg->mq, MSGTYPE_ERROR, 0, &pos, NULL);
 
 	p->lasttype = TOK_ERR;
 	return p->lasttype;
@@ -763,7 +763,7 @@ ort_parse_file(struct config *cfg, FILE *f, const char *fname)
 	pp = reallocarray(cfg->fnames, 
 		cfg->fnamesz + 1, sizeof(char *));
 	if (pp == NULL) {
-		ort_msg(cfg, MSGTYPE_FATAL, ENOMEM, NULL, NULL);
+		ort_msg(&cfg->mq, MSGTYPE_FATAL, ENOMEM, NULL, NULL);
 		return 0;
 	}
 
@@ -771,7 +771,7 @@ ort_parse_file(struct config *cfg, FILE *f, const char *fname)
 	cfg->fnamesz++;
 	cfg->fnames[cfg->fnamesz - 1] = strdup(fname);
 	if (cfg->fnames[cfg->fnamesz - 1] == NULL) {
-		ort_msg(cfg, MSGTYPE_FATAL, ENOMEM, NULL, NULL);
+		ort_msg(&cfg->mq, MSGTYPE_FATAL, ENOMEM, NULL, NULL);
 		return 0;
 	}
 

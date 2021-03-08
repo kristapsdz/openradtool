@@ -35,7 +35,7 @@ static	const char *const msgtypes[] = {
 };
 
 static void
-ort_log(struct config *cfg, enum msgtype type, 
+ort_log(struct msgq *mq, enum msgtype type, 
 	int er, const struct pos *pos, char *msg)
 {
 	struct msg	*m;
@@ -47,7 +47,7 @@ ort_log(struct config *cfg, enum msgtype type,
 		return;
 	}
 
-	TAILQ_INSERT_HEAD(&cfg->mq, m, entries);
+	TAILQ_INSERT_HEAD(mq, m, entries);
 
 	m->type = type;
 	m->er = er;
@@ -62,42 +62,38 @@ ort_log(struct config *cfg, enum msgtype type,
 
 /*
  * Generic message formatting (va_list version).
- * Puts all messages into the message array (if "cfg" isn't NULL) and
- * prints them to stderr as well.
+ * Copies all messages into the message array.
  * On memory exhaustion, does nothing.
  */
 void
-ort_msgv(struct config *cfg, enum msgtype type, 
-	int er, const struct pos *pos, 
-	const char *fmt, va_list ap)
+ort_msgv(struct msgq *mq, enum msgtype type, int er, 
+	const struct pos *pos, const char *fmt, va_list ap)
 {
 	char	*buf = NULL;
 
 	if (fmt != NULL && vasprintf(&buf, fmt, ap) == -1)
 		return;
-	ort_log(cfg, type, er, pos, buf);
+	ort_log(mq, type, er, pos, buf);
 }
 
 /*
  * Generic message formatting.
- * Puts all messages into the message array if ("cfg" isn't NULL) and
- * prints them to stderr as well.
+ * Copies all messages into the message array.
  * On memory exhaustion, does nothing.
  */
 void
-ort_msg(struct config *cfg, enum msgtype type, 
-	int er, const struct pos *pos, 
-	const char *fmt, ...)
+ort_msg(struct msgq *mq, enum msgtype type, int er, 
+	const struct pos *pos, const char *fmt, ...)
 {
 	va_list	 ap;
 
 	if (fmt == NULL) {
-		ort_log(cfg, type, er, pos, NULL);
+		ort_log(mq, type, er, pos, NULL);
 		return;
 	}
 
 	va_start(ap, fmt);
-	ort_msgv(cfg, type, er, pos, fmt, ap);
+	ort_msgv(mq, type, er, pos, fmt, ap);
 	va_end(ap);
 }
 

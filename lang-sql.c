@@ -57,28 +57,25 @@ static	const char *const ftypes[FTYPE__MAX] = {
 
 /* Forward declarations to get __attribute__ bits. */
 
-static void gen_warnx(const struct pos *, const char *, ...)
-	__attribute__((format(printf, 2, 3)));
-static void diff_errx(const struct pos *,
-		const struct pos *, const char *, ...)
+static void gen_warnx(struct msgq *mq, 
+	const struct pos *, const char *, ...)
 	__attribute__((format(printf, 3, 4)));
+static void diff_errx(struct msgq *mq, 
+	const struct pos *, const struct pos *, const char *, ...)
+	__attribute__((format(printf, 4, 5)));
 
 static void
-gen_warnx(const struct pos *pos, const char *fmt, ...)
+gen_warnx(struct msgq *mq, const struct pos *pos, const char *fmt, ...)
 {
 	va_list	 ap;
-	char	 buf[1024];
 
 	va_start(ap, fmt);
-	vsnprintf(buf, sizeof(buf), fmt, ap);
+	ort_msgv(mq, MSGTYPE_WARN, 0, pos, fmt, ap);
 	va_end(ap);
-
-	fprintf(stderr, "%s:%zu:%zu: %s\n", 
-		pos->fname, pos->line, pos->column, buf);
 }
 
 static void
-diff_errx(const struct pos *posold, 
+diff_errx(struct msgq *mq, const struct pos *posold, 
 	const struct pos *posnew, const char *fmt, ...)
 {
 	va_list	 ap;
@@ -87,9 +84,7 @@ diff_errx(const struct pos *posold,
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-
-	fprintf(stderr, "%s:%zu:%zu -> %s:%zu:%zu: error: %s\n", 
-		posold->fname, posold->line, posold->column, 
+	ort_msg(mq, MSGTYPE_ERROR, 0, posold, "%s:%zu:%zu: %s",
 		posnew->fname, posnew->line, posnew->column, 
 		buf);
 }
@@ -304,7 +299,7 @@ gen_diff_field_new(FILE *f, const struct field *fd)
 }
 
 static size_t
-gen_check_fields(const struct diffq *q, int destruct)
+gen_check_fields(struct msgq *mq, const struct diffq *q, int destruct)
 {
 	const struct diff	*d;
 	const struct field	*f, *df;
@@ -318,7 +313,7 @@ gen_check_fields(const struct diffq *q, int destruct)
 		case DIFF_DEL_FIELD:
 			if (destruct || d->field->type == FTYPE_STRUCT)
 				break;
-			gen_warnx(&d->field->pos, 
+			gen_warnx(mq, &d->field->pos, 
 				"field column was dropped");
 			errors++;
 			break;
@@ -327,7 +322,7 @@ gen_check_fields(const struct diffq *q, int destruct)
 		case DIFF_MOD_FIELD_TYPE:
 			f = d->field_pair.into;
 			df = d->field_pair.from;
-			diff_errx(&df->pos, &f->pos, 
+			diff_errx(mq, &df->pos, &f->pos, 
 				"field type has changed");
 			errors++;
 			break;
@@ -339,14 +334,14 @@ gen_check_fields(const struct diffq *q, int destruct)
 
 			if ((f->flags & mask) == (df->flags & mask))
 				break;
-			diff_errx(&df->pos, &f->pos, 
+			diff_errx(mq, &df->pos, &f->pos, 
 				"field flag has changed");
 			errors++;
 			break;
 		case DIFF_MOD_FIELD_ACTIONS:
 			f = d->field_pair.into;
 			df = d->field_pair.from;
-			diff_errx(&df->pos, &f->pos, 
+			diff_errx(mq, &df->pos, &f->pos, 
 				"field action has changed");
 			errors++;
 			break;
@@ -359,7 +354,7 @@ gen_check_fields(const struct diffq *q, int destruct)
 			if (f->type == FTYPE_STRUCT ||
 			    df->type == FTYPE_STRUCT)
 				break;
-			diff_errx(&df->pos, &f->pos, 
+			diff_errx(mq, &df->pos, &f->pos, 
 				"field reference has changed");
 			errors++;
 			break;
@@ -376,7 +371,7 @@ gen_check_fields(const struct diffq *q, int destruct)
  * Same but for the bitfield types.
  */
 static size_t
-gen_check_bitfs(const struct diffq *q, int destruct)
+gen_check_bitfs(struct msgq *mq, const struct diffq *q, int destruct)
 {
 	const struct diff	*d;
 	size_t	 		 errors = 0;
@@ -386,12 +381,12 @@ gen_check_bitfs(const struct diffq *q, int destruct)
 		case DIFF_DEL_BITF:
 			if (destruct)
 				break;
-			gen_warnx(&d->bitf->pos, 
+			gen_warnx(mq, &d->bitf->pos, 
 				"deleted bitfield");
 			errors++;
 			break;
 		case DIFF_MOD_BITIDX_VALUE:
-			diff_errx(&d->bitidx_pair.from->pos, 
+			diff_errx(mq, &d->bitidx_pair.from->pos, 
 			  	&d->bitidx_pair.into->pos,
 				"bitfield item has changed value");
 			errors++;
@@ -399,7 +394,7 @@ gen_check_bitfs(const struct diffq *q, int destruct)
 		case DIFF_DEL_BITIDX:
 			if (destruct)
 				break;
-			gen_warnx(&d->bitidx->pos, 
+			gen_warnx(mq, &d->bitidx->pos, 
 				"deleted bitfield item");
 			errors++;
 			break;
@@ -417,7 +412,7 @@ gen_check_bitfs(const struct diffq *q, int destruct)
  * items.
  */
 static size_t
-gen_check_enms(const struct diffq *q, int destruct)
+gen_check_enms(struct msgq *mq, const struct diffq *q, int destruct)
 {
 	const struct diff	*d;
 	size_t	 		 errors = 0;
@@ -427,12 +422,12 @@ gen_check_enms(const struct diffq *q, int destruct)
 		case DIFF_DEL_ENM:
 			if (destruct)
 				break;
-			gen_warnx(&d->enm->pos, 
+			gen_warnx(mq, &d->enm->pos, 
 				"deleted enumeration");
 			errors++;
 			break;
 		case DIFF_MOD_EITEM_VALUE:
-			diff_errx(&d->eitem_pair.from->pos, 
+			diff_errx(mq, &d->eitem_pair.from->pos, 
 			  	&d->eitem_pair.into->pos,
 				"item has changed value");
 			errors++;
@@ -440,7 +435,7 @@ gen_check_enms(const struct diffq *q, int destruct)
 		case DIFF_DEL_EITEM:
 			if (destruct)
 				break;
-			gen_warnx(&d->eitem->pos, 
+			gen_warnx(mq, &d->eitem->pos, 
 				"deleted enumeration item");
 			errors++;
 			break;
@@ -453,7 +448,7 @@ gen_check_enms(const struct diffq *q, int destruct)
 }
 
 static size_t
-gen_check_strcts(const struct diffq *q, int destruct)
+gen_check_strcts(struct msgq *mq, const struct diffq *q, int destruct)
 {
 	const struct diff	*d;
 	size_t			 errors = 0;
@@ -463,7 +458,7 @@ gen_check_strcts(const struct diffq *q, int destruct)
 		case DIFF_DEL_STRCT:
 			if (destruct)
 				break;
-			gen_warnx(&d->strct->pos, "deleted table");
+			gen_warnx(mq, &d->strct->pos, "deleted table");
 			errors++;
 			break;
 		default:
@@ -474,7 +469,7 @@ gen_check_strcts(const struct diffq *q, int destruct)
 }
 
 static size_t
-gen_check_uniques(const struct diffq *q, int destruct)
+gen_check_uniques(struct msgq *mq, const struct diffq *q, int destruct)
 {
 	const struct diff	*d;
 	size_t			 errors = 0;
@@ -482,7 +477,7 @@ gen_check_uniques(const struct diffq *q, int destruct)
 	TAILQ_FOREACH(d, q, entries)
 		switch (d->type) {
 		case DIFF_ADD_UNIQUE:
-			gen_warnx(&d->unique->pos, "new unique field");
+			gen_warnx(mq, &d->unique->pos, "new unique field");
 			errors++;
 			break;
 		default:
@@ -512,11 +507,11 @@ ort_lang_diff_sql(const struct diffq *q,
 	if (mq == NULL)
 		mq = &tmpq;
 
-	errors += gen_check_enms(q, destruct);
-	errors += gen_check_bitfs(q, destruct);
-	errors += gen_check_fields(q, destruct);
-	errors += gen_check_strcts(q, destruct);
-	errors += gen_check_uniques(q, destruct);
+	errors += gen_check_enms(mq, q, destruct);
+	errors += gen_check_bitfs(mq, q, destruct);
+	errors += gen_check_fields(mq, q, destruct);
+	errors += gen_check_strcts(mq, q, destruct);
+	errors += gen_check_uniques(mq, q, destruct);
 
 	if (errors)
 		goto out;

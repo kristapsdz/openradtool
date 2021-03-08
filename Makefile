@@ -5,7 +5,7 @@ include Makefile.configure
 
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 11
-VERSION_BUILD	 = 13
+VERSION_BUILD	 = 14
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = compats.o \
 		   config.o \

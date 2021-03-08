@@ -795,7 +795,7 @@ xliff_join_single(struct config *cfg, int copy,
  */
 int
 ort_lang_xliff_update(const struct ort_lang_xliff *args, 
-	struct config *cfg, FILE *f)
+	struct config *cfg, FILE *f, struct msgq *mq)
 {
 	struct xliffset	*x;
 	int		 rc;
@@ -806,9 +806,13 @@ ort_lang_xliff_update(const struct ort_lang_xliff *args,
 	struct bitf	*b;
 	struct bitidx	*bi;
 	char		*sbuf = NULL, *tbuf = NULL;
+	struct msgq	 tmpq = TAILQ_HEAD_INITIALIZER(tmpq);
 
 	if ((p = XML_ParserCreate(NULL)) == NULL)
 		return -1;
+
+	if (mq == NULL)
+		mq = &tmpq;
 
 	assert(args->insz == 1);
 	rc = xliff_read(cfg, args->in[0], args->fnames[0], p, &x);
@@ -899,19 +903,25 @@ out:
 	free(tbuf);
 	xparse_xliff_free(x);
 	XML_ParserFree(p);
+	if (mq == &tmpq)
+		ort_msgq_free(mq);
 	return rc;
 }
 
 int
 ort_lang_xliff_join(const struct ort_lang_xliff *args,
-	struct config *cfg, FILE *f)
+	struct config *cfg, FILE *f, struct msgq *mq)
 {
 	int	 	 rc = 1;
 	size_t		 i;
 	XML_Parser	 p;
+	struct msgq	 tmpq = TAILQ_HEAD_INITIALIZER(tmpq);
 
 	if ((p = XML_ParserCreate(NULL)) == NULL)
 		return -1;
+
+	if (mq == NULL)
+		mq = &tmpq;
 
 	for (i = 0; i < args->insz; i++)  {
 		rc = xliff_join_single(cfg, 
@@ -925,13 +935,15 @@ ort_lang_xliff_join(const struct ort_lang_xliff *args,
 
 	if (rc > 0 && !ort_write_file(f, cfg))
 		rc = -1;
+	if (mq == &tmpq)
+		ort_msgq_free(mq);
 
 	return rc;
 }
 
 int
 ort_lang_xliff_extract(const struct ort_lang_xliff *args,
-	struct config *cfg, FILE *f)
+	struct config *cfg, FILE *f, struct msgq *mq)
 {
 	const struct enm	 *e;
 	const struct eitem	 *ei;
@@ -940,7 +952,11 @@ ort_lang_xliff_extract(const struct ort_lang_xliff *args,
 	size_t			  i, ssz = 0;
 	const char		**s = NULL;
 	char			 *buf;
-	int			  rc;
+	int			  rc = 0;
+	struct msgq		  tmpq = TAILQ_HEAD_INITIALIZER(tmpq);
+
+	if (mq == NULL)
+		mq = &tmpq;
 
 	/* Extract all unique labels strings. */
 
@@ -948,19 +964,19 @@ ort_lang_xliff_extract(const struct ort_lang_xliff *args,
 		TAILQ_FOREACH(ei, &e->eq, entries)
 			if (!xliff_extract_unit(cfg, f, &ei->labels, 
 			    NULL, &ei->pos, &s, &ssz))
-				return 0;
+				goto out;
 
 	TAILQ_FOREACH(b, &cfg->bq, entries) {
 		TAILQ_FOREACH(bi, &b->bq, entries)
 			if (!xliff_extract_unit(cfg, f, &bi->labels, 
 			    NULL, &bi->pos, &s, &ssz))
-				return 0;
+				goto out;
 		if (!xliff_extract_unit(cfg, f, &b->labels_unset, 
 		    "unset", &b->pos, &s, &ssz))
-			return 0;
+			goto out;
 		if (!xliff_extract_unit(cfg, f, &b->labels_null,
 		    "isnull", &b->pos, &s, &ssz))
-			return 0;
+			goto out;
 	}
 
 	qsort(s, ssz, sizeof(char *), xliff_sort);
@@ -975,11 +991,12 @@ ort_lang_xliff_extract(const struct ort_lang_xliff *args,
 	    "\t<file source-language=\"TODO\" original=\"%s\" "
 	    "target-language=\"TODO\" datatype=\"plaintext\">\n"
             "\t\t<body>\n", cfg->fnamesz ? cfg->fnames[0] : "") < 0)
-		return 0;
+		goto out;
 
 	for (i = 0; i < ssz; i++) {
+		rc = 0;
 		if ((buf = escape(s[i])) == NULL)
-			return 0;
+			goto out;
 		rc = (args->flags & ORT_LANG_XLIFF_COPY) ?
 			fprintf(f, "\t\t\t<trans-unit id=\"%zu\">\n"
 			    "\t\t\t\t<source>%s</source>\n"
@@ -991,10 +1008,17 @@ ort_lang_xliff_extract(const struct ort_lang_xliff *args,
 			    "\t\t\t</trans-unit>\n",
 			    i + 1, buf);
 		free(buf);
-		if (rc < 0) 
-			return 0;
+		if (rc < 0) {
+			rc = 0;
+			goto out;
+		}
 	}
 
-	return fputs("\t\t</body>\n\t</file>\n</xliff>\n", f) != EOF;
+	rc = fputs("\t\t</body>\n\t</file>\n</xliff>\n", f) != EOF;
+out:
+	if (mq == &tmpq)
+		ort_msgq_free(mq);
+	return rc;
+
 }
 

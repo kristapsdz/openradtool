@@ -45,6 +45,7 @@ main(int argc, char *argv[])
 #define	OP_UPDATE		 (-1)
 	int			  c, op = OP_EXTRACT, rc = 0;
 	size_t			  confsz = 0, i, j, xmlstart = 0;
+	struct msgq		  mq = TAILQ_HEAD_INITIALIZER(mq);
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
@@ -160,13 +161,13 @@ main(int argc, char *argv[])
 
 	switch (op) {
 	case OP_EXTRACT:
-		rc = ort_lang_xliff_extract(&args, cfg, stdout);
+		rc = ort_lang_xliff_extract(&args, cfg, stdout, &mq);
 		break;
 	case OP_JOIN:
-		rc = ort_lang_xliff_join(&args, cfg, stdout);
+		rc = ort_lang_xliff_join(&args, cfg, stdout, &mq);
 		break;
 	case OP_UPDATE:
-		rc = ort_lang_xliff_update(&args, cfg, stdout);
+		rc = ort_lang_xliff_update(&args, cfg, stdout, &mq);
 		break;
 	}
 
@@ -174,6 +175,9 @@ main(int argc, char *argv[])
 		warn(NULL);
 out:
 	ort_write_msg_file(stderr, &cfg->mq);
+	ort_write_msg_file(stderr, &mq);
+
+	ort_msgq_free(&mq);
 	ort_config_free(cfg);
 
 	for (i = 0; i < args.insz; i++)

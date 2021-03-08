@@ -32,6 +32,7 @@
 .Fa "const struct ort_lang_xliff *args"
 .Fa "struct config *cfg"
 .Fa "FILE *f"
+.Fa "struct msgq *mq"
 .Fc
 .Sh DESCRIPTION
 Outputs a
@@ -42,6 +43,10 @@ consisting of
 .Fa cfg
 merged with translations given in
 .Fa args .
+Errors and warnings are enqueued to
+.Fa mq ,
+if not
+.Dv NULL .
 The arguments recgnised in
 .Fa args
 are as follows:

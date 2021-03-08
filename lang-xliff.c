@@ -56,7 +56,7 @@ struct	xliffset {
  * the xliffs pointer.
  */
 struct	xparse {
-	struct config		*cfg; /* ort(3) config (for messages) */
+	struct msgq		*mq; /* for messages */
 	XML_Parser		 p; /* parser */
 	const char		*fname; /* xliff filename */
 	struct xliffset		*set; /* resulting translation units */
@@ -115,7 +115,7 @@ static int
 xliff_sort(const void *p1, const void *p2)
 {
 
-	return(strcmp(*(const char **)p1, *(const char **)p2));
+	return strcmp(*(const char **)p1, *(const char **)p2);
 }
 
 static void
@@ -129,7 +129,7 @@ xparse_err(struct xparse *xp, const char *fmt, ...)
 	pos.column = XML_GetCurrentColumnNumber(xp->p);
 
 	va_start(ap, fmt);
-	ort_msgv(&xp->cfg->mq, MSGTYPE_WARN, 0, &pos, fmt, ap);
+	ort_msgv(xp->mq, MSGTYPE_WARN, 0, &pos, fmt, ap);
 	va_end(ap);
 }
 
@@ -491,7 +491,7 @@ xend(void *dat, const XML_Char *s)
  * Returns <0 on failure, 0 on syntax error, >0 on success.
  */
 static int
-xliff_read(struct config *cfg, FILE *f, 
+xliff_read(struct msgq *mq, FILE *f, 
 	const char *fn, XML_Parser p, struct xliffset **ret)
 {
 	struct xparse	*xp;
@@ -503,7 +503,7 @@ xliff_read(struct config *cfg, FILE *f,
 	if ((xp = calloc(1, sizeof(struct xparse))) == NULL)
 		return -1;
 
-	xp->cfg = cfg;
+	xp->mq = mq;
 	xp->fname = fn;
 	xp->p = p;
 
@@ -554,7 +554,7 @@ xliffunit_sort(const void *a1, const void *a2)
 static int
 xliff_join_unit(struct config *cfg, struct labelq *q, int copy, 
 	const char *type, size_t lang, const struct xliffset *x, 
-	const struct pos *pos)
+	const struct pos *pos, struct msgq *mq)
 {
 	struct label	*l;
 	size_t		 i;
@@ -570,11 +570,11 @@ xliff_join_unit(struct config *cfg, struct labelq *q, int copy,
 	 */
 
 	if (l == NULL && type == NULL) {
-		ort_msg(&cfg->mq, MSGTYPE_ERROR, 0, pos, 
+		ort_msg(mq, MSGTYPE_ERROR, 0, pos, 
 			"missing jslabel for translation");
 		return 0;
 	} else if (l == NULL) {
-		ort_msg(&cfg->mq, MSGTYPE_ERROR, 0, pos, "missing "
+		ort_msg(mq, MSGTYPE_ERROR, 0, pos, "missing "
 			"\"%s\" jslabel for translation", type);
 		return 0;
 	}
@@ -587,21 +587,21 @@ xliff_join_unit(struct config *cfg, struct labelq *q, int copy,
 
 	if (i == x->usz && type == NULL) {
 		if (copy) {
-			ort_msg(&cfg->mq, MSGTYPE_WARN, 0, pos, 
+			ort_msg(mq, MSGTYPE_WARN, 0, pos, 
 				"using source for translation");
 			targ = l->label;
 		} else {
-			ort_msg(&cfg->mq, MSGTYPE_ERROR, 0, pos, 
+			ort_msg(mq, MSGTYPE_ERROR, 0, pos, 
 				"missing jslabel for translation");
 			return 0;
 		}
 	} else if (i == x->usz) {
 		if (copy) {
-			ort_msg(&cfg->mq, MSGTYPE_WARN, 0, pos, "using "
+			ort_msg(mq, MSGTYPE_WARN, 0, pos, "using "
 				"source for \"%s\" translation", type);
 			targ = l->label;
 		} else {
-			ort_msg(&cfg->mq, MSGTYPE_ERROR, 0, pos, "missing "
+			ort_msg(mq, MSGTYPE_ERROR, 0, pos, "missing "
 				"\"%s\" jslabel for translation", type);
 			return 0;
 		}
@@ -620,11 +620,11 @@ xliff_join_unit(struct config *cfg, struct labelq *q, int copy,
 			break;
 
 	if (l != NULL && type == NULL) {
-		ort_msg(&cfg->mq, MSGTYPE_WARN, 0, pos, 
+		ort_msg(mq, MSGTYPE_WARN, 0, pos, 
 			"not overriding existing translation");
 		return 1;
 	} else if (l != NULL) {
-		ort_msg(&cfg->mq, MSGTYPE_WARN, 0, pos, 
+		ort_msg(mq, MSGTYPE_WARN, 0, pos, 
 			"not overriding existing \"%s\" translation",
 			type);
 		return 1;
@@ -645,10 +645,10 @@ xliff_join_unit(struct config *cfg, struct labelq *q, int copy,
  * Return <0 on failure, 0 on syntax error, >0 on success.
  */
 static int
-xliff_update_unit(struct config *cfg, struct labelq *q, 
+xliff_update_unit(struct msgq *mq, const struct labelq *q, 
 	const char *type, struct xliffset *x, const struct pos *pos)
 {
-	struct label		*l;
+	const struct label		*l;
 	size_t			 i;
 	struct xliffunit	*u;
 	char			 nbuf[32];
@@ -664,11 +664,11 @@ xliff_update_unit(struct config *cfg, struct labelq *q,
 	 */
 
 	if (l == NULL && type == NULL) {
-		ort_msg(&cfg->mq, MSGTYPE_ERROR, 0, pos, 
+		ort_msg(mq, MSGTYPE_ERROR, 0, pos, 
 			"missing jslabel for translation");
 		return 0;
 	} else if (l == NULL) {
-		ort_msg(&cfg->mq, MSGTYPE_ERROR, 0, pos, "missing "
+		ort_msg(mq, MSGTYPE_ERROR, 0, pos, "missing "
 			"\"%s\" jslabel for translation", type);
 		return 0;
 	}
@@ -702,7 +702,7 @@ xliff_update_unit(struct config *cfg, struct labelq *q,
  */
 static int
 xliff_join_xliff(struct config *cfg, int copy,
-	size_t lang, const struct xliffset *x)
+	size_t lang, const struct xliffset *x, struct msgq *mq)
 {
 	struct enm 	*e;
 	struct eitem 	*ei;
@@ -714,7 +714,7 @@ xliff_join_xliff(struct config *cfg, int copy,
 		TAILQ_FOREACH(ei, &e->eq, entries) {
 			rc = xliff_join_unit
 			    (cfg, &ei->labels, copy, NULL, 
-			     lang, x, &ei->pos);
+			     lang, x, &ei->pos, mq);
 			if (rc <= 0)
 				return rc;
 		}
@@ -723,18 +723,18 @@ xliff_join_xliff(struct config *cfg, int copy,
 		TAILQ_FOREACH(bi, &b->bq, entries) {
 			rc = xliff_join_unit
 			    (cfg, &bi->labels, copy, NULL, 
-			     lang, x, &bi->pos);
+			     lang, x, &bi->pos, mq);
 			if (rc <= 0)
 				return rc;
 		}
 		rc = xliff_join_unit
 		    (cfg, &b->labels_unset, copy, 
-		     "isunset", lang, x, &b->pos);
+		     "isunset", lang, x, &b->pos, mq);
 		if (rc <= 0)
 			return rc;
 		rc = xliff_join_unit
 		    (cfg, &b->labels_null, copy, 
-		     "isnull", lang, x, &b->pos);
+		     "isnull", lang, x, &b->pos, mq);
 		if (rc <= 0)
 			return rc;
 	}
@@ -749,7 +749,7 @@ xliff_join_xliff(struct config *cfg, int copy,
  */
 static int
 xliff_join_single(struct config *cfg, int copy, 
-	FILE *xml, const char *fn, XML_Parser p)
+	FILE *xml, const char *fn, XML_Parser p, struct msgq *mq)
 {
 	struct xliffset	*x;
 	size_t		 i;
@@ -757,7 +757,7 @@ xliff_join_single(struct config *cfg, int copy,
 	int		 rc;
 	struct pos	 pos;
 
-	if ((rc = xliff_read(cfg, xml, fn, p, &x)) <= 0)
+	if ((rc = xliff_read(mq, xml, fn, p, &x)) <= 0)
 		return rc;
 
 	assert(x->trglang != NULL);
@@ -779,11 +779,11 @@ xliff_join_single(struct config *cfg, int copy,
 	} else {
 		pos.fname = fn;
 		pos.line = pos.column = 0;
-		ort_msg(&cfg->mq, MSGTYPE_WARN, 0, &pos, 
+		ort_msg(mq, MSGTYPE_WARN, 0, &pos, 
 			"language \"%s\" already noted", x->trglang);
 	}
 
-	rc = xliff_join_xliff(cfg, copy, i, x);
+	rc = xliff_join_xliff(cfg, copy, i, x, mq);
 	xparse_xliff_free(x);
 	return rc;
 }
@@ -795,18 +795,18 @@ xliff_join_single(struct config *cfg, int copy,
  */
 int
 ort_lang_xliff_update(const struct ort_lang_xliff *args, 
-	struct config *cfg, FILE *f, struct msgq *mq)
+	const struct config *cfg, FILE *f, struct msgq *mq)
 {
-	struct xliffset	*x;
-	int		 rc;
-	size_t		 i;
-	XML_Parser	 p;
-	struct enm 	*e;
-	struct eitem 	*ei;
-	struct bitf	*b;
-	struct bitidx	*bi;
-	char		*sbuf = NULL, *tbuf = NULL;
-	struct msgq	 tmpq = TAILQ_HEAD_INITIALIZER(tmpq);
+	struct xliffset		*x;
+	int			 rc;
+	size_t			 i;
+	XML_Parser		 p;
+	const struct enm 	*e;
+	const struct eitem 	*ei;
+	const struct bitf	*b;
+	const struct bitidx	*bi;
+	char			*sbuf = NULL, *tbuf = NULL;
+	struct msgq		 tmpq = TAILQ_HEAD_INITIALIZER(tmpq);
 
 	if ((p = XML_ParserCreate(NULL)) == NULL)
 		return -1;
@@ -815,7 +815,7 @@ ort_lang_xliff_update(const struct ort_lang_xliff *args,
 		mq = &tmpq;
 
 	assert(args->insz == 1);
-	rc = xliff_read(cfg, args->in[0], args->fnames[0], p, &x);
+	rc = xliff_read(mq, args->in[0], args->fnames[0], p, &x);
 	if (rc <= 0)
 		goto out;
 
@@ -824,7 +824,7 @@ ort_lang_xliff_update(const struct ort_lang_xliff *args,
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		TAILQ_FOREACH(ei, &e->eq, entries) {
 			rc = xliff_update_unit
-			    (cfg, &ei->labels, NULL, x, &ei->pos);
+			    (mq, &ei->labels, NULL, x, &ei->pos);
 			if (rc <= 0)
 				goto out;
 		}
@@ -832,16 +832,16 @@ ort_lang_xliff_update(const struct ort_lang_xliff *args,
 	TAILQ_FOREACH(b, &cfg->bq, entries) {
 		TAILQ_FOREACH(bi, &b->bq, entries) {
 			rc = xliff_update_unit
-			    (cfg, &bi->labels, NULL, x, &bi->pos);
+			    (mq, &bi->labels, NULL, x, &bi->pos);
 			if (rc <= 0)
 				goto out;
 		}
 		rc = xliff_update_unit
-		    (cfg, &b->labels_unset, "isunset", x, &b->pos);
+		    (mq, &b->labels_unset, "isunset", x, &b->pos);
 		if (rc <= 0)
 			goto out;
 		rc = xliff_update_unit
-		    (cfg, &b->labels_null, "isnull", x, &b->pos);
+		    (mq, &b->labels_null, "isnull", x, &b->pos);
 		if (rc <= 0)
 			goto out;
 	}
@@ -926,7 +926,7 @@ ort_lang_xliff_join(const struct ort_lang_xliff *args,
 	for (i = 0; i < args->insz; i++)  {
 		rc = xliff_join_single(cfg, 
 			args->flags & ORT_LANG_XLIFF_COPY, 
-			args->in[i], args->fnames[i], p);
+			args->in[i], args->fnames[i], p, mq);
 		if (rc <= 0)
 			break;
 	}

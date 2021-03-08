@@ -30,7 +30,7 @@ int	ort_lang_xliff_extract(const struct ort_lang_xliff *,
 int	ort_lang_xliff_join(const struct ort_lang_xliff *,
 		struct config *, FILE *, struct msgq *);
 int	ort_lang_xliff_update(const struct ort_lang_xliff *,
-		struct config *, FILE *, struct msgq *);
+		const struct config *, FILE *, struct msgq *);
 
 #endif /* !ORT_LANG_XLIFF_H */
 

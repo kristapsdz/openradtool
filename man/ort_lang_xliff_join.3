@@ -70,8 +70,7 @@ and
 .Nm
 alters
 .Fa cfg
-in-place by adding translations and possibly by adding warning or error
-messages encountered during processing.
+in-place by adding translations.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.
@@ -100,6 +99,7 @@ linking, then joining with a translation file
 .Bd -literal -offset indent
 struct config *cfg;
 struct ort_lang_xliff args;
+struct msgq mq = TAILQ_HEAD_INITIALIZER(mq);
 FILE *f;
 const char *fname = "fr.xlf";
 
@@ -116,11 +116,13 @@ if ((cfg = ort_config_alloc()) == NULL)
 
 if (ort_parse_file(cfg, stdin, "<stdin>") &&
     ort_parse_close(cfg) &&
-    ort_lang_xliff_join(&args, cfg, stdout) > 0)
+    ort_lang_xliff_join(&args, cfg, stdout, &mq) > 0)
       ort_write_file(stdout, cfg);
 
 ort_write_msg_file(stderr, &cfg.mq);
+ort_write_msg_file(stderr, &mq);
 ort_config_free(cfg);
+ort_msgq_free(&mq);
 .Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.

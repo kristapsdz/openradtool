@@ -16,6 +16,14 @@
 				Add <a href="ort_lang_sql.3.html">ort_lang_sql(3)</a> for outputting
 				the SQL schema.
 			</p>
+			<p>
+				API change: add a <code>msgq</code> to
+				<a href="ort_lang_xliff_extract.3.html">ort_lang_xliff_extract(3)</a>,
+				<a href="ort_lang_xliff_join.3.html">ort_lang_xliff_join(3)</a>,
+				and
+				<a href="ort_lang_xliff_update.3.html">ort_lang_xliff_update(3)</a>;
+				and make the configuration <code>const</code> when possible.
+			</p>
 		</aside>
 	</article>
 	<article data-sblg-article="1" data-sblg-tags="version">

@@ -1955,6 +1955,10 @@ namespace ortJson {
 		 * - *config-field-name*: filled in with name
 		 * - *config-field-name-value*: value filled in with the
 		 *   field name
+		 * - *config-field-name-data*: 'data-name' attribute set
+		 *   with name
+		 * - *config-field-fullname-data*: 'data-fullname'
+		 *   attribute set as "parent.name"
 		 * - *config-field-doc-{none,has}*: shown or hidden
 		 *   depending on whether there's a non-empty
 		 *   documentation field
@@ -2035,6 +2039,11 @@ namespace ortJson {
 			this.replcl(e, 'config-field-name', field.name);
 			this.attrcl(e, 'config-field-name-value', 
 				'value', field.name);
+			this.attrcl(e, 'config-field-name-data', 
+				'data-name', field.name);
+			this.attrcl(e, 'config-field-fullname-data', 
+				'data-fullname', 
+				field.parent + '.' + field.name);
 
 			/* flags */
 

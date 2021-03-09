@@ -128,7 +128,8 @@ GENHEADERS	 = paths.h \
 		   version.h
 PUBHEADERS	 = ort.h \
 		   ort-lang-nodejs.h \
-		   ort-lang-json.h
+		   ort-lang-json.h \
+		   ort-lang-sql.h
 HEADERS 	 = $(PUBHEADERS) \
 		   extern.h \
 		   lang-c.h \

@@ -755,102 +755,94 @@ namespace ortJson {
 			return e;
 		}
 
-		private list(root: string|HTMLElement, name: string): 
-			HTMLElement[] 
+		private list(e: HTMLElement, name: string): HTMLElement[]
 		{
 			const ret: HTMLElement[] = [];
-			const e: HTMLElement|null = this.find(root);
-			if (e === null)
-				return ret;
 			const list: HTMLCollectionOf<Element> =
 				e.getElementsByClassName(name);
-			for (let i: number = 0; i < list.length; i++)
+			const sz: number = list.length;
+			for (let i: number = 0; i < sz; i++)
 				ret.push(<HTMLElement>list[i]);
 			if (e.classList.contains(name))
 				ret.push(e);
 			return ret;
 		}
 
-		private rattrcl(root: string|HTMLElement, 
-			name: string, attr: string): void 
+		private rattrcl(e: HTMLElement, name: string, at: string): void
 		{
-			const list: HTMLElement[] = 
-				this.list(root, name);
-			for (let i: number = 0; i < list.length; i++)
-				list[i].removeAttribute(attr);
+			const list: HTMLCollectionOf<Element> =
+				e.getElementsByClassName(name);
+			const sz: number = list.length;
+			for (let i: number = 0; i < sz; i++)
+				list[i].removeAttribute(at);
+			if (e.classList.contains(name))
+				e.removeAttribute(at);
 		}
 
-		private attrcl(root: string|HTMLElement, 
-			name: string, attr: string, text: string): void 
+		private attrcl(e: HTMLElement, name: string, at: string, 
+			val: string): void 
 		{
-			const list: HTMLElement[] = 
-				this.list(root, name);
-			for (let i: number = 0; i < list.length; i++)
-				list[i].setAttribute(attr, text);
+			const list: HTMLCollectionOf<Element> =
+				e.getElementsByClassName(name);
+			const sz: number = list.length;
+			for (let i: number = 0; i < sz; i++)
+				list[i].setAttribute(at, val);
+			if (e.classList.contains(name))
+				e.setAttribute(at, val);
 		}
 
-		private replcl(root: string|HTMLElement, 
-			name: string, text: string): void 
+		private replcl(e: HTMLElement, name: string, txt: string): void
 		{
-			const list: HTMLElement[] = 
-				this.list(root, name);
-			for (let i: number = 0; i < list.length; i++) {
-				this.clr(<HTMLElement>list[i]);
-				list[i].appendChild
-					(document.createTextNode
-					 (text.toString()));
-			}
+			const list: HTMLCollectionOf<Element> =
+				e.getElementsByClassName(name);
+			const sz: number = list.length;
+			for (let i: number = 0; i < sz; i++)
+				list[i].textContent = txt;
+			if (e.classList.contains(name))
+				e.textContent = txt;
 		}
 
-		private clr(root: string|HTMLElement): 
-			HTMLElement|null
+		private clr(e: HTMLElement): HTMLElement
 		{
-			const e: HTMLElement|null = this.find(root);
-			if (e === null)
-				return null;
 			while (e.firstChild)
 				e.removeChild(e.firstChild);
 			return e;
 		}
 
-		private show(root: string|HTMLElement): 
-			HTMLElement|null
+		private show(e: HTMLElement): HTMLElement
 		{
-			const e: HTMLElement|null = this.find(root);
-			if (e === null)
-				return null;
 			if (e.classList.contains('hide'))
 				e.classList.remove('hide');
 			return e;
 		}
 
-		private hide(root: string|HTMLElement): 
-			HTMLElement|null
+		private hide(e: HTMLElement): HTMLElement
 		{
-			const e: HTMLElement|null = this.find(root);
-			if (e === null)
-				return null;
 			if (!e.classList.contains('hide'))
 				e.classList.add('hide');
 			return e;
 		}
 
-		private hidecl(root: string|HTMLElement, 
-			name: string): void 
+		private hidecl(e: HTMLElement, name: string): void 
 		{
-			const list: HTMLElement[] = 
-				this.list(root, name);
-			for (let i: number = 0; i < list.length; i++)
-				this.hide(<HTMLElement>list[i]);
+			const list: HTMLCollectionOf<Element> =
+				e.getElementsByClassName(name);
+			const sz = list.length;
+			for (let i: number = 0; i < sz; i++)
+				list[i].classList.add('hide');
+			if (e.classList.contains(name))
+				e.classList.add('hide');
 		}
 
-		private showcl(root: string|HTMLElement, 
-			name: string): void 
+		private showcl(e: HTMLElement, name: string): void 
 		{
-			const list: HTMLElement[] = 
-				this.list(root, name);
-			for (let i: number = 0; i < list.length; i++)
-				this.show(<HTMLElement>list[i]);
+			const list: HTMLCollectionOf<Element> =
+				e.getElementsByClassName(name);
+			const sz = list.length;
+			for (let i: number = 0; i < sz; i++)
+				list[i].classList.remove('hide');
+			if (e.classList.contains(name))
+				e.classList.remove('hide');
 		}
 
 		/**
@@ -859,8 +851,10 @@ namespace ortJson {
 		 */
 		fillByClass(root: HTMLElement|string, name: string): void
 		{
-			const list: HTMLElement[] = 
-				this.list(root, name);
+			const e: HTMLElement|null = this.find(root);
+			if (e === null)
+				return;
+			const list: HTMLElement[] = this.list(e, name);
 			for (let i: number = 0; i < list.length; i++)
 				this.fill(<HTMLElement>list[i]);
 		}
@@ -946,8 +940,8 @@ namespace ortJson {
 					const cln: HTMLElement = 
 						<HTMLElement>
 						tmpl.cloneNode(true);
-					list[i].appendChild(cln);
 					this.fillBitfObj(cln, this.obj.bq[name]);
+					list[i].appendChild(cln);
 				}
 			}
 		}
@@ -987,8 +981,8 @@ namespace ortJson {
 					const cln: HTMLElement = 
 						<HTMLElement>
 						tmpl.cloneNode(true);
-					list[i].appendChild(cln);
 					this.fillEnumObj(cln, this.obj.eq[name]);
+					list[i].appendChild(cln);
 				}
 			}
 		}
@@ -1147,8 +1141,8 @@ namespace ortJson {
 					const cln: HTMLElement = 
 						<HTMLElement>
 						tmpl.cloneNode(true);
-					list[i].appendChild(cln);
 					this.fillRole(cln, newrq[j]);
+					list[i].appendChild(cln);
 				}
 			}
 		}
@@ -1223,8 +1217,8 @@ namespace ortJson {
 					const cln: HTMLElement = 
 						<HTMLElement>
 						tmpl.cloneNode(true);
-					list[i].appendChild(cln);
 					this.fillStrctObj(cln, this.obj.sq[keys[j]]);
+					list[i].appendChild(cln);
 				}
 				this.show(list[i]);
 			}
@@ -1431,12 +1425,12 @@ namespace ortJson {
 					const cln: HTMLElement = 
 						<HTMLElement>
 						tmpl.cloneNode(true);
-					list[i].appendChild(cln);
 					this.replcl(cln, 
 						cls + '-role', map[j]);
 					this.attrcl(cln, 
 						cls + '-role-value', 
 						'value', map[j]);
+					list[i].appendChild(cln);
 				}
 			}
 		}
@@ -1452,9 +1446,9 @@ namespace ortJson {
 			for (let i = 0; i < nq.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
-				e.appendChild(cln);
 				this.replcl(cln, 'config-unique', 
 					  nq[i].nq.join(', '));
+				e.appendChild(cln);
 			}
 		}
 
@@ -1476,14 +1470,14 @@ namespace ortJson {
 			for (let i = 0; i < keys.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
-				e.appendChild(cln);
 				this.fillUpdateObj(cln, cls.named[keys[i]]);
+				e.appendChild(cln);
 			}
 			for (let i = 0; i < cls.anon.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
-				e.appendChild(cln);
 				this.fillUpdateObj(cln, cls.anon[i]);
+				e.appendChild(cln);
 			}
 		}
 
@@ -1608,7 +1602,6 @@ namespace ortJson {
 			for (let i = 0; i < urefs.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
-				e.appendChild(cln);
 				this.replcl(cln, 'config-uref-field', 
 					urefs[i].field);
 				this.attrcl(cln, 'config-uref-field-value', 
@@ -1621,6 +1614,7 @@ namespace ortJson {
 					urefs[i].mod);
 				this.attrcl(cln, 'config-uref-mod-value', 
 					'value', urefs[i].mod);
+				e.appendChild(cln);
 			}
 		}
 
@@ -1645,14 +1639,14 @@ namespace ortJson {
 			for (let i = 0; i < keys.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
-				e.appendChild(cln);
 				this.fillSearchObj(cln, strct.sq.named[keys[i]]);
+				e.appendChild(cln);
 			}
 			for (let i = 0; i < strct.sq.anon.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
-				e.appendChild(cln);
 				this.fillSearchObj(cln, strct.sq.anon[i]);
+				e.appendChild(cln);
 			}
 		}
 
@@ -1861,7 +1855,6 @@ namespace ortJson {
 			for (let i = 0; i < query.ordq.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
-				e.appendChild(cln);
 				this.replcl(cln, 'config-ord-fname', 
 					query.ordq[i].fname);
 				this.attrcl(cln, 'config-ord-fname-value', 
@@ -1870,6 +1863,7 @@ namespace ortJson {
 					query.ordq[i].op);
 				this.attrcl(cln, 'config-ord-op-value',
 					'value', query.ordq[i].op);
+				e.appendChild(cln);
 			}
 		}
 
@@ -1931,9 +1925,9 @@ namespace ortJson {
 				for (let j: number = 0; j < keys.length; j++) {
 					const cln: HTMLElement = <HTMLElement>
 						tmpl.cloneNode(true);
-					list[i].appendChild(cln);
 					this.fillFieldObj
 						(cln, strct.fq[keys[j]]);
+					list[i].appendChild(cln);
 				}
 			}
 		}

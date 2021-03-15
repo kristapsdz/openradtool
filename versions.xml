@@ -3,6 +3,18 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.11.16</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-03-15">2021-03-15</time>
+		</header>
+		<aside>
+			<p>
+				Tiny changes to speed up TypeScript routines.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.11.15</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-03-08">2021-03-08</time>

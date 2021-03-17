@@ -1023,6 +1023,7 @@ block is defined.
 .Pp
 This nested structure defines the role tree.
 Roles descendent of roles are called sub-roles.
+Role names are case insensitive and must be unique.
 .Pp
 By defining
 .Cm roles ,
@@ -1036,7 +1037,7 @@ There are three reserved roles:
 .Cm none ,
 and
 .Cm all .
-These need not be specified in the
+These may not be specified in the
 .Cm roles
 statement.
 The first may be used for the initial state of the system (before a role
@@ -1053,7 +1054,7 @@ The
 field is only produced for role documentation.
 .Sh EXAMPLES
 A trivial example is as follows:
-.Bd -literal
+.Bd -literal -offset indente
 struct user {
   field name text;
   field id int rowid;

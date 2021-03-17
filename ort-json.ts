@@ -341,6 +341,9 @@ namespace ortJson {
 		 * field/search/update.
 		 */
 		name: string|null;
+		/**
+		 * If empty, no roles and should be ignored.
+		 */
 		rq: string[];
 	}
 
@@ -670,6 +673,8 @@ namespace ortJson {
 
 		private rolemapObjToString(map: rolemapObj): string
 		{
+			if (map.rq.length === 0)
+				return '';
 			let str: string = ' roles';
 			for (let i: number = 0; i < map.rq.length; i++) {
 				if (i > 0)

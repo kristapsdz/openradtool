@@ -19,16 +19,13 @@
 #if HAVE_SYS_QUEUE
 # include <sys/queue.h>
 #endif
-#include <sys/param.h>
 
 #include <assert.h>
-#include <fcntl.h>
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "ort.h"
 #include "ort-lang-javascript.h"

@@ -73,7 +73,7 @@ parse_check_rolename(const struct roleq *rq, const char *name)
 	const struct role *r;
 
 	TAILQ_FOREACH(r, rq, entries)
-		if (strcmp(r->name, name) == 0 ||
+		if (strcasecmp(r->name, name) == 0 ||
 		    !parse_check_rolename(&r->subrq, name))
 			return 0;
 

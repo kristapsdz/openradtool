@@ -1,0 +1,9 @@
+roles {
+	role foo {
+		role foo;
+	};
+};
+
+struct bar {
+	field id;
+};

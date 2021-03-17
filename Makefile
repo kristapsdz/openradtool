@@ -76,6 +76,7 @@ HTMLS		 = archive.html \
 		   man/ort_diff_free.3.html \
 		   man/ort_lang_c_header.3.html \
 		   man/ort_lang_c_source.3.html \
+		   man/ort_lang_javascript.3.html \
 		   man/ort_lang_json.3.html \
 		   man/ort_lang_nodejs.3.html \
 		   man/ort_lang_sql.3.html \
@@ -98,6 +99,7 @@ MAN3S		 = man/ort.3 \
 		   man/ort_diff_free.3  \
 		   man/ort_lang_c_header.3 \
 		   man/ort_lang_c_source.3 \
+		   man/ort_lang_javascript.3 \
 		   man/ort_lang_json.3 \
 		   man/ort_lang_nodejs.3 \
 		   man/ort_lang_sql.3 \

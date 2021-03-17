@@ -31,6 +31,7 @@ LIBS		 = libort.a \
 		   libort-lang-xliff.a
 PKGCONFIGS	 = ort.pc \
 		   ort-lang-nodejs.pc \
+		   ort-lang-javascript.pc \
 		   ort-lang-json.pc \
 		   ort-lang-sql.pc
 OBJS		 = audit.o \
@@ -175,6 +176,7 @@ DOTAR		 = $(HEADERS) \
 		   ortPrivate.ts \
 		   ort.in.pc \
 		   ort-lang-nodejs.in.pc \
+		   ort-lang-javascript.in.pc \
 		   ort-lang-json.in.pc \
 		   ort-lang-sql.in.pc \
 		   ort-json.ts \

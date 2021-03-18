@@ -3,6 +3,22 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.11.17</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-03-18">2021-03-18</time>
+		</header>
+		<aside>
+			<p>
+				Install the manual and package configuration for
+				<a href="ort_lang_javsacript.3.html">ort_lang_javascript(3)</a>, 
+				which creates TypeScript front-end code.
+				Also tighten down role name case insensitivity and fix serialisation
+				of empty role objects in <i>ort-json.ts</i>.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.11.16</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-03-15">2021-03-15</time>

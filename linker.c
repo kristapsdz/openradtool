@@ -187,7 +187,7 @@ check_searchtype(struct config *cfg, const struct search *srch)
 	 */
 
 	if (srch->type == STYPE_SEARCH && 
-	    TAILQ_EMPTY(&srch->sntq))
+	    TAILQ_EMPTY(&srch->sntq) && srch->limit != 1)
 		gen_warnx(cfg, &srch->pos, 
 			"single-result search without parameters "
 			"and without a limit of one");

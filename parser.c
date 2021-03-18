@@ -618,7 +618,7 @@ parse_label(struct parse *p, struct labelq *q)
 		}
 		assert(p->last.string[0] != '\0');
 		for ( ; lang < p->cfg->langsz; lang++) 
-			if (strcmp
+			if (strcasecmp
 			    (p->cfg->langs[lang], p->last.string) == 0)
 				break;
 		if (lang == p->cfg->langsz) {

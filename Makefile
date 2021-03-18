@@ -130,8 +130,9 @@ MAN1S		 = man/ort.1 \
 GENHEADERS	 = paths.h \
 		   version.h
 PUBHEADERS	 = ort.h \
-		   ort-lang-nodejs.h \
+		   ort-lang-javascript.h \
 		   ort-lang-json.h \
+		   ort-lang-nodejs.h \
 		   ort-lang-sql.h
 HEADERS 	 = $(PUBHEADERS) \
 		   extern.h \
@@ -139,7 +140,6 @@ HEADERS 	 = $(PUBHEADERS) \
 		   lang.h \
 		   linker.h \
 		   ort-lang-c.h \
-		   ort-lang-javascript.h \
 		   ort-lang-xliff.h \
 		   parser.h
 DOTAREXEC	 = configure

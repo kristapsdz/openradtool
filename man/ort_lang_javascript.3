@@ -38,8 +38,7 @@ Outputs a JavaScript (really TypeScript) file to
 .Fa f
 from the parsed configuration
 .Fa cfg
-with classes to format the
-JSON produced by
+with classes to populate HTML5 DOM trees with JSON produced by
 .Xr ort_lang_c_header 3
 .Fn json_xxxx
 functions and
@@ -55,7 +54,7 @@ are as follows:
 This string consists of classes and functions required by the produced
 code.
 It must be set to the contents of
-.Pa /usr/local/share/openradtool/ortPrivate.ts .
+.Pa ortPrivate.ts .
 .El
 .Pp
 The output is documented in typedoc.
@@ -69,7 +68,15 @@ Failure only occurs with memory allocation errors or when writing to
 .\" For sections 2, 3, and 9 function return values only.
 .\" .Sh ENVIRONMENT
 .\" For sections 1, 6, 7, and 8 only.
-.\" .Sh FILES
+.Sh FILES
+.Bl -tag -width Ds
+.It Pa ortPrivate.ts
+Helper classes and functions that must be specified as
+.Va ext_privMethods
+in the configuration.
+This is usually installed in
+.Pa /usr/local/share/openradtool .
+.El
 .\" .Sh EXIT STATUS
 .\" For sections 1, 6, and 8 only.
 .Sh EXAMPLES

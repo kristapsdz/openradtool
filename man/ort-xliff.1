@@ -138,12 +138,12 @@ Labels with XML special characters
 and
 .Qq \&"
 encode as the XML escaped
-.Qq \&&amp; ,
-.Qq \&&lt; ,
-.Qq \&&gt; ,
-.Qq \&&apos; ,
+.Qq \&&amp\&; ,
+.Qq \&&lt\&; ,
+.Qq \&&gt\&; ,
+.Qq \&&apos\&; ,
 and
-.Qq \&&quot; ,
+.Qq \&&quot\&; ,
 respectively, when compared with source identifiers in XLIFF files.
 Thus,
 .Qq <source>a&lt;b&amp;c</source>
@@ -153,7 +153,7 @@ matches with the label
 All other XML escapes are passed through verbatim, so
 .Qq <source>&#169;</source>
 matches with the label
-.Qq \&&#169;
+.Qq \&&#169\&;
 instead of the copyright marker.
 Numbered entities should be encoded in their UTF-8 representations
 instead.

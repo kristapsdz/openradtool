@@ -365,9 +365,9 @@ on a field named
 .Li val ,
 provide a custom callback.
 .Bd -literal -offset indent
-const e: HTMLElement|null = 
+const e: HTMLElement|null =
   document.getElementById('foo');
-const obj: ort.fooData = 
+const obj: ort.fooData =
   <ort.fooData>JSON.parse(response);
 const custom: ort.DataCallbacks = {
   'foo-val': ort.someenum.format

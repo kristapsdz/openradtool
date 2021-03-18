@@ -1,0 +1,10 @@
+bits foo {
+	item a 1 ;
+	item b 2 ;
+	item c 3 comment "abcdef" jslabel "foo" jslabel "bar" ;
+	comment "fdsa";
+};
+
+struct bar {
+	field a bits foo ;
+};

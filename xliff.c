@@ -180,6 +180,11 @@ out:
 	ort_msgq_free(&mq);
 	ort_config_free(cfg);
 
+	if (args.in == &defin) {
+		args.in = NULL;
+		args.insz = 0;
+	}
+
 	for (i = 0; i < args.insz; i++)
 		fclose(args.in[i]);
 	for (i = 0; i < confsz; i++)

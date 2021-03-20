@@ -702,28 +702,6 @@ regress: all
 		fi ; \
 		echo "pass" ; \
 	done ; \
-	tmp2=`mktemp` ; \
-	echo "=== ort-diff case insensitivity tests === " ; \
-	for f in regress/diff/*.ort ; do \
-		printf "ort-diff: $$f... " ; \
-		./ort $$f > $$tmp2 2>/dev/null ; \
-		./ort-diff $$f $$tmp2 >$$tmp 2>/dev/null ; \
-		rc=$$? ; \
-		if [ $$rc -gt 0 ] ; then \
-			echo "fail (did not execute)" ; \
-			rm -f $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		val=`cat $$tmp | wc -l | sed 's! !!g'` ; \
-		if [ $$val -ne 2 -o $$rc -ne 0 ] ; then \
-			echo "fail (output check)" ; \
-			cat $$tmp ; \
-			rm -f $$tmp $$tmp2 ; \
-			exit 1 ; \
-		fi ; \
-		echo "pass" ; \
-	done ; \
-	rm -f $$tmp2 ; \
 	echo "=== ort-sqldiff output tests === " ; \
 	for f in regress/sqldiff/*.result ; do \
 		fn=`basename $$f .result`.{old,new}.ort ; \

@@ -641,19 +641,13 @@ struct	diff {
 	TAILQ_ENTRY(diff) 	 	 entries;
 };
 
-struct ort_write_args {
-	unsigned int	 	 flags;
-#define	ORT_WRITE_LOWERCASE	 0x01
-};
-
 __BEGIN_DECLS
 
 struct config	*ort_config_alloc(void);
 void		 ort_config_free(struct config *);
 int		 ort_parse_close(struct config *);
 int		 ort_parse_file(struct config *, FILE *, const char *);
-int		 ort_write_file(const struct ort_write_args *,
-			FILE *, const struct config *);
+int		 ort_write_file(FILE *, const struct config *);
 int		 ort_write_msg_file(FILE *f, const struct msgq *);
 struct diffq	*ort_diff(const struct config *, const struct config *);
 void		 ort_diff_free(struct diffq *);

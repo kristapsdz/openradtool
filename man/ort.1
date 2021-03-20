@@ -22,7 +22,6 @@
 .Nd test ort configuration syntax
 .Sh SYNOPSIS
 .Nm ort
-.Op Fl i
 .Op Ar config...
 .Sh DESCRIPTION
 The
@@ -32,18 +31,9 @@ utility accepts an
 .Ar config ,
 defaulting to standard input, and tests its syntax.
 The configuration may be broken apart into several files.
-Its arguments are as follows:
-.Bl -tag -width Ds
-.It Fl i
-Output all case-insensitive names (e.g., field names, lookup sequences)
-as lowercase instead of in their original case.
-This is semantically equivalent to the input, but useful for
-lexicographic comparison.
-.It Ar config...
-Zero or more configurations in the
+It accepts zero or more configuration files in the
 .Xr ort 5
 format.
-.El
 .Pp
 Warnings and errors, if any, are printed to standard error.
 On success, the configuration is reproduced on standard output.

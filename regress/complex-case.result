@@ -1,0 +1,70 @@
+enum sex {
+	item male jslabel "male"
+		comment "Y(*SAAh;;hh"; # value 0
+	item female jslabel "пхаедрум"
+		jslabel.fr "asdb8y"
+		comment "Лорем"; # value 1
+	item other jslabel "other"
+		jslabel.fr "asdf"
+		comment "абхорреант"; # value 2
+	comment "При ерудити ассентиор";
+};
+
+struct company {
+	field name text limit gt 0
+		comment "huil:HOY)*(:";
+	field id int rowid;
+	field somenum int null
+		comment "SDUSD;oioih98a89";
+	list somenum isnull;
+	delete;
+	insert;
+	comment "";
+};
+
+struct user {
+	field company struct cid
+		comment "y7ew9e";
+	field cid:company.id int actdel cascade
+		comment "y 99awpy8 wa";
+	field sex enum sex
+		comment "дицит молестие адолесценс";
+	field hash password limit gt 0
+		comment "asdfkljhasdf";
+	field email email unique
+		comment "s8gyad9p8agy";
+	field image blob null
+		comment "b8y0";
+	field name text
+		comment "8ba0basd";
+	field ctime epoch;
+	field uid int rowid;
+	list: name foo grouprow cid maxrow ctime;
+	list: name glarrg limit 5 grouprow cid maxrow ctime distinct company;
+	iterate name: limit 5
+		comment "sfd890sag";
+	search email, hash: name creds
+		comment "sdflKLJBHGKJasd";
+	search uid: order company.name
+		comment "gd98yyy0'";
+	update hash: uid;
+	update email: uid;
+	delete;
+	insert;
+};
+
+struct session {
+	field user struct userid;
+	field userid:user.uid int
+		comment "agfsday9";
+	field token int
+		comment "asdy9aO*(Yy";
+	field mtime epoch;
+	field id int rowid;
+	iterate user.company.name, mtime: name foo order user.company.id desc
+		comment "хис цу персиус омиттантур";
+	delete id;
+	insert;
+	comment "платонем S(DGD(GSD.";
+};
+

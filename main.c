@@ -38,22 +38,13 @@ main(int argc, char *argv[])
 	size_t			  i;
 	int			  rc = 0, c;
 	FILE			**confs = NULL;
-	struct ort_write_args	  args;
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
 		err(1, "pledge");
 #endif
-	memset(&args, 0, sizeof(struct ort_write_args));
-
 	while ((c = getopt(argc, argv, "i")) != -1) 
-		switch (c) {
-		case 'i':
-			args.flags |= ORT_WRITE_LOWERCASE;
-			break;
-		default:
-			goto usage;
-		}
+		goto usage;
 
 	argc -= optind;
 	argv += optind;
@@ -83,7 +74,7 @@ main(int argc, char *argv[])
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
-		if (!(rc = ort_write_file(&args, stdout, cfg)))
+		if (!(rc = ort_write_file(stdout, cfg)))
 			warn(NULL);
 out:
 	ort_write_msg_file(stderr, &cfg->mq);

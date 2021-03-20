@@ -933,7 +933,7 @@ ort_lang_xliff_join(const struct ort_lang_xliff *args,
 
 	XML_ParserFree(p);
 
-	if (rc > 0 && !ort_write_file(f, cfg))
+	if (rc > 0 && !ort_write_file(NULL, f, cfg))
 		rc = -1;
 	if (mq == &tmpq)
 		ort_msgq_free(mq);

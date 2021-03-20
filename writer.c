@@ -112,6 +112,9 @@ static	const char *const rolemapts[ROLEMAP__MAX] = {
 
 struct	writer {
 	FILE	*f;
+	char	*buf;
+	size_t	 bufsz;
+	int	 lower;
 };
 
 static int
@@ -120,13 +123,40 @@ wprint(struct writer *w, const char *fmt, ...)
 
 /*
  * Like fputs(3).
- * Returns zero on failure (memory), non-zero otherwise.
+ * Returns zero on failure, non-zero otherwise.
  */
 static int
 wputs(struct writer *w, const char *buf)
 {
 
 	return fputs(buf, w->f) != EOF;
+}
+
+/*
+ * Like fputs(3), but emitting only lowercase characters.
+ * Returns zero on failure, non-zero otherwise.
+ */
+static const char *
+wnamebuf(struct writer *w, const char *buf)
+{
+	size_t	 sz, i;
+	void	*pp;
+
+	if (!w->lower)
+		return buf;
+
+	sz = strlen(buf);
+	if (sz > w->bufsz) {
+		if ((pp = realloc(w->buf, sz + 1)) == NULL)
+			return NULL;
+		w->buf = pp;
+		w->bufsz = sz;
+	}
+	for (i = 0; i < sz; i++)
+		w->buf[i] = tolower((unsigned char)buf[i]);
+	w->buf[i] = '\0';
+
+	return w->buf;
 }
 
 /*
@@ -191,33 +221,52 @@ parse_write_comment(struct writer *w, const char *cp, size_t tabs)
 static int
 parse_write_field(struct writer *w, const struct field *p)
 {
-	const struct fvalid *fv;
-	unsigned int	 fl;
-	int		 rc;
+	const struct fvalid	*fv;
+	unsigned int		 fl;
+	int			 rc;
+	const char		*name;
 
 	/* Name, type, refs. */
 
-	if (!wprint(w, "\tfield %s", p->name))
+	if ((name = wnamebuf(w, p->name)) == NULL)
+		return 0;
+	if (!wprint(w, "\tfield %s", name))
 		return 0;
 
-	if (p->ref != NULL && p->type != FTYPE_STRUCT)
-		if (!wprint(w, ":%s.%s", 
-		    p->ref->target->parent->name, 
-		    p->ref->target->name))
+	if (p->ref != NULL && p->type != FTYPE_STRUCT) {
+		name = wnamebuf(w, p->ref->target->parent->name);
+		if (name == NULL)
 			return 0;
+		if (!wprint(w, ":%s", name))
+			return 0;
+		name = wnamebuf(w, p->ref->target->name);
+		if (name == NULL)
+			return 0;
+		if (!wprint(w, ".%s", name))
+			return 0;
+	}
 
 	if (!wprint(w, " %s", ftypes[p->type]))
 		return 0;
 
-	if (p->ref != NULL && p->type == FTYPE_STRUCT)
-		if (!wprint(w, " %s", p->ref->source->name))
+	if (p->ref != NULL && p->type == FTYPE_STRUCT) {
+		if ((name = wnamebuf(w, p->ref->source->name)) == NULL)
 			return 0;
-	if (p->type == FTYPE_ENUM)
-		if (!wprint(w, " %s", p->enm->name))
+		if (!wprint(w, " %s", name))
 			return 0;
-	if (p->type == FTYPE_BITFIELD)
-		if (!wprint(w, " %s", p->bitf->name))
+	}
+	if (p->type == FTYPE_ENUM) {
+		if ((name = wnamebuf(w, p->enm->name)) == NULL)
 			return 0;
+		if (!wprint(w, " %s", name))
+			return 0;
+	}
+	if (p->type == FTYPE_BITFIELD) {
+		if ((name = wnamebuf(w, p->bitf->name)) == NULL)
+			return 0;
+		if (!wprint(w, " %s", name))
+			return 0;
+	}
 
 	/* Flags. */
 
@@ -262,8 +311,10 @@ parse_write_field(struct writer *w, const struct field *p)
 				p->def.string);
 			break;
 		case FTYPE_ENUM:
-			rc = wprint(w, " default %s",
-				p->def.eitem->name);
+			name = wnamebuf(w, p->def.eitem->name);
+			if (name == NULL)
+				return 0;
+			rc = wprint(w, " default %s", name);
 			break;
 		default:
 			abort();
@@ -331,6 +382,7 @@ parse_write_modify(struct writer *w, const struct update *p)
 {
 	const struct uref	*u;
 	size_t			 nf;
+	const char		*name;
 
 	/* Start with the type of data modification. */
 
@@ -345,8 +397,10 @@ parse_write_modify(struct writer *w, const struct update *p)
 	if (p->type == UP_MODIFY && !(p->flags & UPDATE_ALL)) {
 		nf = 0;
 		TAILQ_FOREACH(u, &p->mrq, entries) {
-			if (!wprint(w, "%s %s", 
-			    nf++ ? "," : "", u->field->name))
+			name = wnamebuf(w, u->field->name);
+			if (name == NULL)
+				return 0;
+			if (!wprint(w, "%s %s", nf++ ? "," : "", name))
 				return 0;
 			if (u->mod != MODTYPE_SET &&
 			    !wprint(w, " %s", modtypes[u->mod]))
@@ -365,8 +419,9 @@ parse_write_modify(struct writer *w, const struct update *p)
 
 	nf = 0;
 	TAILQ_FOREACH(u, &p->crq, entries) {
-		if (!wprint(w, "%s %s", 
-		    nf++ ? "," : "", u->field->name))
+		if ((name = wnamebuf(w, u->field->name)) == NULL)
+			return 0;
+		if (!wprint(w, "%s %s", nf++ ? "," : "", name))
 			return 0;
 		if (u->op != OPTYPE_EQUAL &&
 		    !wprint(w, " %s", optypes[u->op]))
@@ -378,9 +433,12 @@ parse_write_modify(struct writer *w, const struct update *p)
 	if (p->name != NULL || p->doc != NULL) {
 		if (!wputc(w, ':'))
 			return 0;
-		if (p->name != NULL && 
-		    !wprint(w, " name %s", p->name))
-			return 0;
+		if (p->name != NULL) {
+			if ((name = wnamebuf(w, p->name)) == NULL)
+				return 0;
+			if (!wprint(w, " name %s", name))
+				return 0;
+		}
 		if (!parse_write_comment(w, p->doc, 2))
 			return 0;
 	}
@@ -396,15 +454,18 @@ static int
 parse_write_unique(struct writer *w, const struct unique *p)
 {
 	const struct nref	*n;
+	const char		*name;
 	size_t			 nf = 0;
 
 	if (!wputs(w, "\tunique"))
 		return 0;
 
-	TAILQ_FOREACH(n, &p->nq, entries)
-		if (!wprint(w, "%s %s",
-		    nf++ ? "," : "", n->field->name))
+	TAILQ_FOREACH(n, &p->nq, entries) {
+		if ((name = wnamebuf(w, n->field->name)) == NULL)
 			return 0;
+		if (!wprint(w, "%s %s", nf++ ? "," : "", name))
+			return 0;
+	}
 
 	return wputs(w, ";\n");
 }
@@ -420,6 +481,7 @@ parse_write_query(struct writer *w, const struct search *p)
 	const struct ord	*o;
 	size_t			 nf;
 	int			 colon = 0;
+	const char		*name;
 
 	if (!wprint(w, "\t%s", stypes[p->type]))
 		return 0;
@@ -428,7 +490,9 @@ parse_write_query(struct writer *w, const struct search *p)
 
 	nf = 0;
 	TAILQ_FOREACH(s, &p->sntq, entries) {
-		if (!wprint(w, "%s %s", nf++ ? "," : "", s->fname))
+		if ((name = wnamebuf(w, s->fname)) == NULL)
+			return 0;
+		if (!wprint(w, "%s %s", nf++ ? "," : "", name))
 			return 0;
 		if (s->op != OPTYPE_EQUAL &&
 		    !wprint(w, " %s", optypes[s->op]))
@@ -440,7 +504,9 @@ parse_write_query(struct writer *w, const struct search *p)
 	if (NULL != p->name) {
 		if (!colon && !wputc(w, ':'))
 			return 0;
-		if (!wprint(w, " name %s", p->name))
+		if ((name = wnamebuf(w, p->name)) == NULL)
+			return 0;
+		if (!wprint(w, " name %s", name))
 			return 0;
 		colon = 1;
 	}
@@ -457,7 +523,9 @@ parse_write_query(struct writer *w, const struct search *p)
 
 	nf = 0;
 	TAILQ_FOREACH(o, &p->ordq, entries) {
-		if (!wprint(w, "%s %s", nf++ ? "," : "", o->fname))
+		if ((name = wnamebuf(w, o->fname)) == NULL)
+			return 0;
+		if (!wprint(w, "%s %s", nf++ ? "," : "", name))
 			return 0;
 		if (o->op != ORDTYPE_ASC && !wputs(w, " desc"))
 			return 0;
@@ -480,9 +548,14 @@ parse_write_query(struct writer *w, const struct search *p)
 	if (p->group != NULL) {
 		if (!colon && !wputc(w, ':'))
 			return 0;
-		if (!wprint(w, " grouprow %s %s %s", p->group->fname,
-		    p->aggr->op == AGGR_MAXROW ? "maxrow" : "minrow",
-		    p->aggr->fname))
+		if ((name = wnamebuf(w, p->group->fname)) == NULL)
+			return 0;
+		if (!wprint(w, " grouprow %s %s", name,
+		    p->aggr->op == AGGR_MAXROW ? "maxrow" : "minrow"))
+			return 0;
+		if ((name = wnamebuf(w, p->aggr->fname)) == NULL)
+			return 0;
+		if (!wprint(w, " %s", name))
 			return 0;
 		colon = 1;
 	}
@@ -492,8 +565,10 @@ parse_write_query(struct writer *w, const struct search *p)
 	if (p->dst != NULL) {
 		if (!colon && !wputc(w, ':'))
 			return 0;
-		if (!wprint(w, " distinct %s",
-		    p->dst->fname == NULL ? "." : p->dst->fname))
+		if ((name = wnamebuf(w, p->dst->fname == NULL ? 
+		     "." : p->dst->fname)) == NULL)
+			return 0;
+		if (!wprint(w, " distinct %s",name))
 			return 0;
 		colon = 1;
 	}
@@ -520,36 +595,44 @@ parse_write_rolemap(struct writer *w, const struct rolemap *p)
 {
 	const struct rref	*r;
 	size_t			 nf = 0;
+	const char		*name, *oldname = NULL;
 
 	if (!wputs(w, "\troles"))
 		return 0;
 
-	TAILQ_FOREACH(r, &p->rq, entries)
-		if (!wprint(w, "%s %s",
-		     nf++ ? "," : "", r->role->name))
+	TAILQ_FOREACH(r, &p->rq, entries) {
+		if ((name = wnamebuf(w, r->role->name)) == NULL)
 			return 0;
+		if (!wprint(w, "%s %s", nf++ ? "," : "", name))
+			return 0;
+	}
 
 	if (!wprint(w, " { %s", rolemapts[p->type]))
 		return 0;
+
 	switch (p->type) {
 	case ROLEMAP_COUNT:
 	case ROLEMAP_ITERATE:
 	case ROLEMAP_LIST:
 	case ROLEMAP_SEARCH:
-		if (p->s != NULL && !wprint(w, " %s", p->s->name))
-			return 0;
+		oldname = p->s != NULL ? p->s->name : NULL;
 		break;
 	case ROLEMAP_DELETE:
 	case ROLEMAP_UPDATE:
-		if (p->u != NULL && !wprint(w, " %s", p->u->name))
-			return 0;
+		oldname = p->u != NULL ? p->u->name : NULL;
 		break;
 	case ROLEMAP_NOEXPORT:
-		if (p->f != NULL && !wprint(w, " %s", p->f->name))
-			return 0;
+		oldname = p->f != NULL ? p->f->name : NULL;
 		break;
 	default:
 		break;
+	}
+
+	if (oldname != NULL) {
+		if ((name = wnamebuf(w, oldname)) == NULL)
+			return 0;
+		if (!wprint(w, " %s", name))
+			return 0;
 	}
 
 	return wputs(w, "; };\n");
@@ -567,8 +650,11 @@ parse_write_strct(struct writer *w, const struct strct *p)
 	const struct update	*u;
 	const struct unique	*n;
 	const struct rolemap	*r;
+	const char		*name;
 
-	if (!wprint(w, "struct %s {\n", p->name))
+	if ((name = wnamebuf(w, p->name)) == NULL)
+		return 0;
+	if (!wprint(w, "struct %s {\n", name))
 		return 0;
 
 	TAILQ_FOREACH(fd, &p->fq, entries)
@@ -610,14 +696,18 @@ static int
 parse_write_label(struct writer *w, const struct config *cfg,
 	const struct label *p, size_t pos)
 {
-	const char	*cp = p->label;
+	const char	*cp = p->label, *name;
 
 	if (pos && !wprint(w, "\n\t\tjslabel"))
 		return 0;
 	else if (pos == 0 && !wprint(w, " jslabel"))
 		return 0;
-	if (p->lang && !wprint(w, ".%s", cfg->langs[p->lang]))
-		return 0;
+	if (p->lang > 0) {
+		if ((name = wnamebuf(w, cfg->langs[p->lang])) == NULL)
+			return 0;
+		if (!wprint(w, ".%s", name))
+			return 0;
+	}
 	if (!wprint(w, " \""))
 		return 0;
 
@@ -648,13 +738,17 @@ parse_write_bitf(struct writer *w,
 	const struct bitidx	*b;
 	const struct label	*l;
 	size_t			 i;
+	const char		*name;
 
-	if (!wprint(w, "bitfield %s {\n", p->name))
+	if ((name = wnamebuf(w, p->name)) == NULL)
+		return 0;
+	if (!wprint(w, "bitfield %s {\n", name))
 		return 0;
 
 	TAILQ_FOREACH(b, &p->bq, entries) {
-		if (!wprint(w, "\titem %s %" 
-		    PRId64, b->name, b->value))
+		if ((name = wnamebuf(w, b->name)) == NULL)
+			return 0;
+		if (!wprint(w, "\titem %s %" PRId64, name, b->value))
 			return 0;
 		i = 0;
 		TAILQ_FOREACH(l, &b->labels, entries)
@@ -708,13 +802,18 @@ parse_write_enm(struct writer *w,
 {
 	const struct eitem	*e;
 	const struct label	*l;
+	const char		*name;
 	size_t			 i;
 
-	if (!wprint(w, "enum %s {\n", p->name))
+	if ((name = wnamebuf(w, p->name)) == NULL)
+		return 0;
+	if (!wprint(w, "enum %s {\n", name))
 		return 0;
 
 	TAILQ_FOREACH(e, &p->eq, entries) {
-		if (!wprint(w, "\titem %s", e->name))
+		if ((name = wnamebuf(w, e->name)) == NULL)
+			return 0;
+		if (!wprint(w, "\titem %s", name))
 			return 0;
 		if (!(e->flags & EITEM_AUTO))
 			if (!wprint(w, " %" PRId64, e->value))
@@ -760,19 +859,20 @@ parse_write_enm(struct writer *w,
  * Returns zero on failure (memory), non-zero otherwise.
  */
 static int
-parse_write_role(struct writer *w, 
-	const struct role *r, size_t tabs)
+parse_write_role(struct writer *w, const struct role *r, size_t tabs)
 {
 	size_t	 		 i;
 	const struct role 	*rr;
+	const char		*name;
 
 	for (i = 0; i < tabs; i++)
 		if (!wputc(w, '\t'))
 			return 0;
 
-	if (!wprint(w, "role %s", r->name))
+	if ((name = wnamebuf(w, r->name)) == NULL)
 		return 0;
-
+	if (!wprint(w, "role %s", name))
+		return 0;
 	if (r->doc != NULL && 
 	    !parse_write_comment(w, r->doc, tabs + 1))
 		return 0;
@@ -817,30 +917,36 @@ parse_write_roles(struct writer *w, const struct config *cfg)
 }
 
 int
-ort_write_file(FILE *f, const struct config *cfg)
+ort_write_file(const struct ort_write_args *args,
+	FILE *f, const struct config *cfg)
 {
 	const struct strct	*s;
 	const struct enm	*e;
 	const struct bitf	*b;
 	struct writer		 w;
+	int			 rc = 0;
 
 	memset(&w, 0, sizeof(struct writer));
 	w.f = f;
+	w.lower = args == NULL ? 0 :
+		(args->flags & ORT_WRITE_LOWERCASE);
 
 	if (!TAILQ_EMPTY(&cfg->rq))
 		if (!parse_write_roles(&w, cfg))
-			return 0;
-
+			goto out;
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		if (!parse_write_enm(&w, cfg, e))
-			return 0;
+			goto out;
 	TAILQ_FOREACH(b, &cfg->bq, entries)
 		if (!parse_write_bitf(&w, cfg, b))
-			return 0;
+			goto out;
 	TAILQ_FOREACH(s, &cfg->sq, entries)
 		if (!parse_write_strct(&w, s))
-			return 0;
+			goto out;
 
-	return 1;
+	rc = 1;
+out:
+	free(w.buf);
+	return rc;
 }
 

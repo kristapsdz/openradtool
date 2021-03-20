@@ -107,6 +107,10 @@ A conforming and non-conforming identifier:
 enum foobar { ... };  # ok
 enum foo_bar { ... }; # no
 .Ed
+.Pp
+Although identifiers may appear in any case, they are internally
+converted to lowercase (this includes, for example, role names, query names,
+field names, language labels, etc.).
 .Ss String literals
 Another common syntactic element is the string literal: a double-quoted
 string where internal double quotes may be escaped by a single preceding

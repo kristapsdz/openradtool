@@ -122,6 +122,7 @@ parse_enum_data(struct parse *p, struct enm *e)
 	struct eitem	*ei;
 	int64_t	 	 maxvalue = INT64_MIN;
 	int		 hasauto = 0;
+	char		*cp;
 
 	if (parse_next(p) != TOK_LBRACE) {
 		parse_errx(p, "expected left brace");
@@ -177,15 +178,21 @@ parse_enum_data(struct parse *p, struct enm *e)
 			parse_err(p);
 			return;
 		}
-		TAILQ_INIT(&ei->labels);
 		TAILQ_INSERT_TAIL(&e->eq, ei, entries);
+
+		TAILQ_INIT(&ei->labels);
 		parse_point(p, &ei->pos);
 		ei->parent = e;
 		if ((ei->name = strdup(p->last.string)) == NULL) {
 			parse_err(p);
 			return;
 		}
+
+		for (cp = ei->name; *cp != '\0'; cp++)
+			*cp = tolower((unsigned char)*cp);
+
 		parse_enum_item(p, ei);
+
 		if (hasauto == 0 && (ei->flags & EITEM_AUTO))
 			hasauto = 1;
 	}
@@ -231,6 +238,7 @@ parse_enum(struct parse *p)
 	struct enm	*e;
 	struct eitem	*ei;
 	int		 foundauto = 0;
+	char		*cp;
 	int64_t		 maxv = INT64_MIN;
 
 	if (parse_next(p) != TOK_IDENT) {
@@ -258,6 +266,9 @@ parse_enum(struct parse *p)
 		parse_err(p);
 		return;
 	}
+
+	for (cp = e->name; *cp != '\0'; cp++)
+		*cp = tolower((unsigned char)*cp);
 
 	parse_enum_data(p, e);
 

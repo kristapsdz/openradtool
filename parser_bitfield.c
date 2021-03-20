@@ -107,6 +107,7 @@ static void
 parse_bitidx(struct parse *p, struct bitf *b)
 {
 	struct bitidx	*bi;
+	char		*cp;
 
 	if (parse_next(p) != TOK_LBRACE) {
 		parse_errx(p, "expected left brace");
@@ -165,14 +166,20 @@ parse_bitidx(struct parse *p, struct bitf *b)
 			parse_err(p);
 			return;
 		}
+		TAILQ_INSERT_TAIL(&b->bq, bi, entries);
+
 		TAILQ_INIT(&bi->labels);
 		parse_point(p, &bi->pos);
-		TAILQ_INSERT_TAIL(&b->bq, bi, entries);
 		bi->parent = b;
+
 		if ((bi->name = strdup(p->last.string)) == NULL) {
 			parse_err(p);
 			return;
 		}
+
+		for (cp = bi->name; *cp != '\0'; cp++)
+			*cp = tolower((unsigned char)*cp);
+
 		parse_bitidx_item(p, bi);
 	}
 
@@ -195,6 +202,7 @@ void
 parse_bitfield(struct parse *p)
 {
 	struct bitf	*b;
+	char		*cp;
 
 	if (parse_next(p) != TOK_IDENT) {
 		parse_errx(p, "expected bitfield name");
@@ -225,6 +233,9 @@ parse_bitfield(struct parse *p)
 		parse_err(p);
 		return;
 	}
+
+	for (cp = b->name; *cp != '\0'; cp++)
+		*cp = tolower((unsigned char)*cp);
 
 	parse_bitidx(p, b);
 }

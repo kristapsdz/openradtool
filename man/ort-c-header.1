@@ -81,6 +81,8 @@ declarations are output.
 .Ss Data structures
 The basis of the C API is a series of enumerations, structures, and
 preprocessor macros that describe the data.
+Unless as otherwise noted, all fields except for string literal data (e.g.,
+comments) are printed in lowercase.
 To include output files for data structures, specify:
 .Bd -literal -offset indent
 #include <sys/queue.h> /* iff the config has lists */
@@ -177,7 +179,6 @@ variable suffixed with
 .Qq _sz
 is defined.
 .Pp
-All field names are lowercased.
 .Bd -literal -offset indent
 struct company {
   field name text;
@@ -522,6 +523,9 @@ must be stipulated.
 #include <kcgi.h>
 #include <kcgijson.h>
 .Ed
+.Pp
+All structure and field names are expressed in lowercase.
+.Pp
 .Bl -tag -width Ds
 .It Fn "void json_foo_array" "struct kjsonreq *r" "const struct foo_q *q"
 Print the list

@@ -77,6 +77,7 @@ static struct strct *
 strct_alloc(struct parse *p, const char *name)
 {
 	struct strct	*s;
+	char		*cp;
 
 	/* Check reserved identifiers and dupe names. */
 
@@ -96,6 +97,9 @@ strct_alloc(struct parse *p, const char *name)
 		return NULL;
 	}
 
+	for (cp = s->name; *cp != '\0'; cp++)
+		*cp = tolower((unsigned char)*cp);
+
 	s->cfg = p->cfg;
 	parse_point(p, &s->pos);
 	TAILQ_INSERT_TAIL(&p->cfg->sq, s, entries);
@@ -113,22 +117,26 @@ static int
 name_append(char ***p, size_t *sz, const char *v)
 {
 	void	*pp;
+	char	*cp;
 
 	if (*p == NULL) {
 		if ((*p = calloc(1, sizeof(char *))) == NULL)
 			return 0;
 		*sz = 1;
-		if (((*p)[0] = strdup(v)) == NULL)
+		if ((cp = (*p)[0] = strdup(v)) == NULL)
 			return 0;
 	} else {
 		pp = reallocarray(*p, *sz + 1, sizeof(char *));
 		if (pp == NULL)
 			return 0;
 		*p = pp;
-		if (((*p)[*sz] = strdup(v)) == NULL)
+		if ((cp = (*p)[*sz] = strdup(v)) == NULL)
 			return 0;
 		(*sz)++;
 	}
+
+	for ( ; *cp != '\0'; cp++)
+		*cp = tolower((unsigned char)*cp);
 
 	return 1;
 }
@@ -151,7 +159,7 @@ name_truncate(char **p, const char *v)
 }
 
 static int
-ref_append2(char **p, const char *v, char delim)
+ref_append(char **p, const char *v, char delim)
 {
 	size_t		 sz, cursz;
 	void		*pp;
@@ -175,12 +183,8 @@ ref_append2(char **p, const char *v, char delim)
 		dst = *p + cursz + 1;
 	}
 
-	if (delim == '_')
-		for (src = v; *src != '\0'; dst++, src++) 
-			*dst = tolower((unsigned char)*src);
-	else
-		for (src = v; *src != '\0'; dst++, src++) 
-			*dst = *src;
+	for (src = v; *src != '\0'; dst++, src++) 
+		*dst = tolower((unsigned char)*src);
 
 	*dst = '\0';
 	return 1;
@@ -309,7 +313,7 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 		parse_err(p);
 		return;
 	}
-	if (!ref_append2(&d->fname, p->last.string, '.')) {
+	if (!ref_append(&d->fname, p->last.string, '.')) {
 		parse_err(p);
 		return;
 	}
@@ -334,7 +338,7 @@ parse_config_distinct_term(struct parse *p, struct search *srch)
 			parse_err(p);
 			return;
 		}
-		if (!ref_append2(&d->fname, p->last.string, '.')) {
+		if (!ref_append(&d->fname, p->last.string, '.')) {
 			parse_err(p);
 			return;
 		}
@@ -386,7 +390,7 @@ parse_config_aggr_terms(struct parse *p,
 
 	/* Initialise canonical name. */
 
-	if (!ref_append2(&aggr->fname, p->last.string, '.')) {
+	if (!ref_append(&aggr->fname, p->last.string, '.')) {
 		parse_err(p);
 		return;
 	}
@@ -411,7 +415,7 @@ parse_config_aggr_terms(struct parse *p,
 			parse_err(p);
 			return;
 		}
-		if (!ref_append2(&aggr->fname, p->last.string, '.')) {
+		if (!ref_append(&aggr->fname, p->last.string, '.')) {
 			parse_err(p);
 			return;
 		}
@@ -465,7 +469,7 @@ parse_config_group_terms(struct parse *p, struct search *srch)
 
 	/* Initialise canonical name. */
 
-	if (!ref_append2(&grp->fname, p->last.string, '.')) {
+	if (!ref_append(&grp->fname, p->last.string, '.')) {
 		parse_err(p);
 		return;
 	}
@@ -490,7 +494,7 @@ parse_config_group_terms(struct parse *p, struct search *srch)
 			parse_err(p);
 			return;
 		}
-		if (!ref_append2(&grp->fname, p->last.string, '.')) {
+		if (!ref_append(&grp->fname, p->last.string, '.')) {
 			parse_err(p);
 			return;
 		}
@@ -542,7 +546,7 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 
 	/* Initialise canonical name. */
 
-	if (!ref_append2(&ord->fname, p->last.string, '.')) {
+	if (!ref_append(&ord->fname, p->last.string, '.')) {
 		parse_err(p);
 		return;
 	}
@@ -578,7 +582,7 @@ parse_config_order_terms(struct parse *p, struct search *srch)
 			parse_err(p);
 			return;
 		}
-		if (!ref_append2(&ord->fname, p->last.string, '.')) {
+		if (!ref_append(&ord->fname, p->last.string, '.')) {
 			parse_err(p);
 			return;
 		}
@@ -631,8 +635,8 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 
 	/* Initialise the canonical names. */
 	
-	if (!ref_append2(&sent->fname, p->last.string, '.') ||
-	    !ref_append2(&sent->uname, p->last.string, '_')) {
+	if (!ref_append(&sent->fname, p->last.string, '.') ||
+	    !ref_append(&sent->uname, p->last.string, '_')) {
 		parse_err(p);
 		return;
 	}
@@ -683,8 +687,8 @@ parse_config_search_terms(struct parse *p, struct search *srch)
 			parse_err(p);
 			return;
 		}
-		if (!ref_append2(&sent->fname, p->last.string, '.') ||
-		    !ref_append2(&sent->uname, p->last.string, '_')) {
+		if (!ref_append(&sent->fname, p->last.string, '.') ||
+		    !ref_append(&sent->uname, p->last.string, '_')) {
 			parse_err(p);
 			return;
 		}
@@ -749,6 +753,7 @@ static void
 parse_config_search_params(struct parse *p, struct search *s)
 {
 	struct search	*ss;
+	char		*cp;
 
 	if (parse_next(p) == TOK_SEMICOLON)
 		return;
@@ -779,6 +784,8 @@ parse_config_search_params(struct parse *p, struct search *s)
 				parse_err(p);
 				return;
 			}
+			for (cp = s->name; *cp != '\0'; cp++)
+				*cp = tolower((unsigned char)*cp);
 			parse_next(p);
 		} else if (strcasecmp("comment", p->last.string) == 0) {
 			if (!parse_comment(p, &s->doc))
@@ -911,6 +918,7 @@ parse_struct_update(struct parse *p, struct strct *s, enum upt type)
 {
 	struct update	*up;
 	struct uref	*ur;
+	char		*cp;
 
 	if (NULL == (up = calloc(1, sizeof(struct update)))) {
 		parse_err(p);
@@ -1074,6 +1082,8 @@ terms:
 				parse_err(p);
 				return;
 			}
+			for (cp = up->name; *cp != '\0'; cp++)
+				*cp = tolower((unsigned char)*cp);
 		} else if (0 == strcasecmp(p->last.string, "comment")) {
 			if ( ! parse_comment(p, &up->doc))
 				return;

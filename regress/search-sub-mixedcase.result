@@ -6,6 +6,6 @@ struct foo {
 	field bar struct barid;
 	field barid:bar.id int;
 	field id int rowid;
-	search Bar.Id;
+	search bar.id;
 };
 

@@ -149,6 +149,7 @@ statements in the configuration.
 Let
 .Qq foo
 be the name of the exemplar structure.
+All names are expressed in lowercase unless as explicitly noted.
 All of these functions will throw an exception on database error.
 .Bl -tag -width Ds
 .It Fn "db_foo_delete_xxxx" "ARGS" Ns No : void
@@ -310,6 +311,8 @@ may be manipulated with the
 .Vt ortns.fooData obj
 object interface in
 .Vt ortns.foo .
+All names (field names, structures, enumerations, etc.) are expressed in
+lowercase unless as explicitly noted.
 This consists of all fields in the structure with types mapped as follows:
 .Bl -column -offset indent "password " "Buffer "
 .It Cm bit Ta BigInt

@@ -604,6 +604,7 @@ parse_label(struct parse *p, struct labelq *q)
 	size_t	 	 lang = 0;
 	struct label	*l;
 	void		*pp;
+	char		*cp;
 
 	/* 
 	 * If we have a period (like jslabel.en), then interpret the
@@ -637,7 +638,9 @@ parse_label(struct parse *p, struct labelq *q)
 				parse_err(p);
 				return 0;
 			}
-			p->cfg->langsz++;
+			cp = p->cfg->langs[p->cfg->langsz++];
+			for (; *cp != '\0'; cp++)
+				*cp = tolower((unsigned char)*cp);
 		}
 		parse_next(p);
 	} else if (p->lasttype != TOK_LITERAL) {

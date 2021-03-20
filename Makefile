@@ -582,7 +582,7 @@ regress: all
 		diff -w $$tmp $$f >/dev/null 2>&1 ; \
 		if [ $$? -ne 0 ] ; then \
 			echo "fail (output)" ; \
-			diff -wu $$tmp $$f ; \
+			diff -wu $$f $$tmp ; \
 			rm -f $$tmp ; \
 			exit 1 ; \
 		fi ; \

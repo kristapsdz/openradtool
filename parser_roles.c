@@ -47,8 +47,6 @@ role_alloc(struct parse *p, const char *name, struct role *parent)
 		return NULL;
 	}
 
-	/* Add a lowercase version. */
-
 	for (cp = r->name; '\0' != *cp; cp++)
 		*cp = tolower((unsigned char)*cp);
 

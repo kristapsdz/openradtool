@@ -831,6 +831,33 @@ but using underscores instead of periods, and lowercased.
 Resolved alias.
 .El
 .Pp
+Ordering within query results is dictated by the queue of
+.Vt struct ord .
+By default, search results are ordered arbitrarily.
+.Bl -tag -width Ds -offset indent
+.It Va struct field *field
+Final field used for the ordering.
+.It Va char *name
+Lookup structure (reference sub-fields separated by dots, not including
+the last field) or
+.Dv NULL
+if in the current structure.
+.It Va char *fname
+Lookup field (reference sub-fields separated by dots).
+.It Va enum ordtype op
+Type of ordering:
+.Dv ORDTYPE_ASC
+for ascending (1, 2, 3...) and
+.Dv ORDTYPE_DESC
+for descending (...3, 2, 1).
+.It Va struct pos pos
+Parse point.
+.It Va struct search *parent
+Parent reference.
+.It Va struct alias *alias
+Resolved alias.
+.El
+.Pp
 The
 .Fa dst
 field of type

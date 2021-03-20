@@ -277,25 +277,18 @@ struct	sent {
 };
 
 enum	ordtype {
-	ORDTYPE_ASC, /* ascending order */
-	ORDTYPE_DESC /* descending order */
+	ORDTYPE_ASC,
+	ORDTYPE_DESC
 };
 
-/*
- * An order reference.
- * This will resolve to a native field in a structure for which query
- * commands will be generated.
- * It will be produced as, for example, "ORDER BY a.b.c ASC" in
- * specifying the SQL order of a query.
- */
 struct	ord {
-	struct field	*field; /* resolved order field */
-	char		*name; /* fname w/o last field or NULL */
-	char		*fname; /* canonical dot-form name */
-	enum ordtype	 op; /* type of ordering */
-	struct pos	 pos; /* position in parse */
-	struct search	*parent; /* up-reference */
-	struct alias	*alias; /* resolved alias */
+	struct field	*field;
+	char		*name;
+	char		*fname;
+	enum ordtype	 op;
+	struct pos	 pos;
+	struct search	*parent;
+	struct alias	*alias;
 	TAILQ_ENTRY(ord) entries;
 };
 

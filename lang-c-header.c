@@ -79,32 +79,32 @@ gen_field(FILE *f, const struct field *p)
 	switch (p->type) {
 	case FTYPE_STRUCT:
 		c = fprintf(f, "\tstruct %s %s;\n", 
-			p->ref->target->parent->name, p->cname);
+			p->ref->target->parent->name, p->name);
 		break;
 	case FTYPE_REAL:
-		c = fprintf(f, "\tdouble\t %s;\n", p->cname);
+		c = fprintf(f, "\tdouble\t %s;\n", p->name);
 		break;
 	case FTYPE_BLOB:
 		c = fprintf(f, "\tvoid\t*%s;\n\tsize_t\t %s_sz;\n",
-		       p->cname, p->cname);
+		       p->name, p->name);
 		break;
 	case FTYPE_DATE:
 	case FTYPE_EPOCH:
-		c = fprintf(f, "\ttime_t\t %s;\n", p->cname);
+		c = fprintf(f, "\ttime_t\t %s;\n", p->name);
 		break;
 	case FTYPE_BIT:
 	case FTYPE_BITFIELD:
 	case FTYPE_INT:
-		c = fprintf(f, "\tint64_t\t %s;\n", p->cname);
+		c = fprintf(f, "\tint64_t\t %s;\n", p->name);
 		break;
 	case FTYPE_TEXT:
 	case FTYPE_EMAIL:
 	case FTYPE_PASSWORD:
-		c = fprintf(f, "\tchar\t*%s;\n", p->cname);
+		c = fprintf(f, "\tchar\t*%s;\n", p->name);
 		break;
 	case FTYPE_ENUM:
 		c = fprintf(f, "\tenum %s %s;\n", 
-			p->enm->name, p->cname);
+			p->enm->name, p->name);
 		break;
 	default:
 		break;
@@ -225,10 +225,10 @@ gen_struct(FILE *f, const struct config *cfg, const struct strct *p)
 		    (fd->ref->source->flags & FIELD_NULL)) {
 			if (!gen_commentv(f, 1, COMMENT_C,
 			    "Non-zero if \"%s\" has been set "
-			    "from \"%s\".", fd->cname, 
+			    "from \"%s\".", fd->name, 
 			    fd->ref->source->name))
 				return 0;
-			if (fprintf(f, "\tint has_%s;\n", fd->cname) < 0)
+			if (fprintf(f, "\tint has_%s;\n", fd->name) < 0)
 				return 0;
 			continue;
 		} else if (!(fd->flags & FIELD_NULL))
@@ -236,9 +236,9 @@ gen_struct(FILE *f, const struct config *cfg, const struct strct *p)
 
 		if (!gen_commentv(f, 1, COMMENT_C,
 		    "Non-zero if \"%s\" field is null/unset.",
-		    fd->cname))
+		    fd->name))
 			return 0;
-		if (fprintf(f, "\tint has_%s;\n", fd->cname) < 0)
+		if (fprintf(f, "\tint has_%s;\n", fd->name) < 0)
 			return 0;
 	}
 
@@ -523,11 +523,11 @@ gen_database(FILE *f, const struct config *cfg, const struct strct *p)
 			if (fd->type == FTYPE_PASSWORD) {
 				if (!gen_commentv(f, 0, COMMENT_C_FRAG,
 				    "\tv%zu: %s (pre-hashed password)", 
-				    pos++, fd->cname))
+				    pos++, fd->name))
 					return 0;
 			} else {
 				if (!gen_commentv(f, 0, COMMENT_C_FRAG,
-				    "\tv%zu: %s", pos++, fd->cname))
+				    "\tv%zu: %s", pos++, fd->name))
 					return 0;
 			}
 		}
@@ -688,7 +688,7 @@ gen_valids(FILE *f, const struct config *cfg, const struct strct *p)
 	TAILQ_FOREACH(fd, &p->fq, entries) {
 		if (!gen_commentv(f, 0, COMMENT_C,
 		    "Validation routines for the %s "
-		    "field in struct %s.", fd->cname, p->name))
+		    "field in struct %s.", fd->name, p->name))
 			return 0;
 		if (!gen_func_valid(f, fd, 1))
 			return 0;

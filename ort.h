@@ -151,7 +151,6 @@ enum	upact {
 
 struct	field {
 	char		  *name;
-	char		  *cname;
 	struct ref	  *ref;
 	struct enm	  *enm;
 	struct bitf	  *bitf;

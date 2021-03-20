@@ -552,7 +552,6 @@ static struct field *
 field_alloc(struct parse *p, struct strct *s, const char *name)
 {
 	struct field	*fd;
-	char		*cp;
 
 	/* Check reserved identifiers. */
 
@@ -581,15 +580,7 @@ field_alloc(struct parse *p, struct strct *s, const char *name)
 		parse_err(p);
 		free(fd);
 		return NULL;
-	} else if ((fd->cname = strdup(fd->name)) == NULL) {
-		parse_err(p);
-		free(fd->name);
-		free(fd);
-		return NULL;
 	}
-
-	for (cp = fd->cname; *cp != '\0'; cp++)
-		*cp = tolower((unsigned char)*cp);
 
 	parse_point(p, &fd->pos);
 	fd->type = FTYPE_INT;

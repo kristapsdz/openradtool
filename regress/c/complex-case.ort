@@ -1,0 +1,50 @@
+enum sEX {
+	item MAle jslabel "male" comment "Y(*SAAh;;hh";
+	item FEmale jslabel "пхаедрум" jslabel.Fr "asdb8y" comment "Лорем";
+	item OTher jslabel "other" jslabel.FR "asdf" comment "абхорреант";
+	comment "При ерудити ассентиор";
+};
+
+struct COMPany {
+	field NAme text limit gt 0 comment "huil:HOY)*(:";
+	field Id int rowid;
+	field SOMEnum int null comment "SDUSD;oioih98a89";
+	list someNUm isnull;
+	delete;
+	insert;
+	comment "";
+};
+
+struct User {
+	field COMPany struct ciD comment "y7ew9e";
+	field cId:cOMPany.iD int actdel cascade comment "y 99awpy8 wa";
+	field seX enum Sex comment "дицит молестие адолесценс";
+	field haSh password limit gt 0 comment "asdfkljhasdf";
+	field emAil email unique comment "s8gyad9p8agy";
+	field imaGE blob null comment "b8y0";
+	field NaMe text comment "8ba0basd";
+	field ctIMe epoch;
+	field uId int rowid;
+	list: grouprow Cid maxrow CtIme name foO;
+	list: grouprow ciD maxrow ctiME limit 5 distinct compANY name GLarRG;
+	iterate naMe: limit 5 comment "sfd890sag";
+	search emaIl, hash: name cReds comment "sdflKLJBHGKJasd";
+	search uiD: order company.NAme comment "gd98yyy0'";
+	update haSh: uiD;
+	update emAil: uiD;
+	delete;
+	insert;
+};
+
+struct sESSion {
+	field user struct useriD;
+	field usErid:uSer.Uid int comment "agfsday9";
+	field tokEn int comment "asdy9aO*(Yy";
+	field mtiMe epoch;
+	field id int rowid;
+	iterate user.cOMPANy.name, mtIme: name fOo comment "хис цу персиус омиттантур" order user.cOMPany.id desc;
+	delete Id;
+	insert;
+	comment "платонем S(DGD(GSD.";
+};
+

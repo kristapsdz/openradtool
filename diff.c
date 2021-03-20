@@ -815,7 +815,7 @@ ort_check_sentq(const struct sentq *from, const struct sentq *into)
 	TAILQ_FOREACH(sfrom, from, entries) {
 		if (sinto == NULL || 
 		    sfrom->op != sinto->op ||
-		    strcmp(sfrom->fname, sinto->fname))
+		    strcasecmp(sfrom->fname, sinto->fname))
 			return 0;
 		sinto = TAILQ_NEXT(sinto, entries);
 	}
@@ -836,7 +836,7 @@ ort_check_ordq(const struct ordq *from, const struct ordq *into)
 	TAILQ_FOREACH(ofrom, from, entries) {
 		if (ointo == NULL || 
 		    ofrom->op != ointo->op ||
-		    strcmp(ofrom->fname, ointo->fname))
+		    strcasecmp(ofrom->fname, ointo->fname))
 			return 0;
 		ointo = TAILQ_NEXT(ointo, entries);
 	}
@@ -883,7 +883,7 @@ ort_diff_search(struct diffq *q,
 	    (from->aggr == NULL && into->aggr != NULL) ||
 	    (from->aggr != NULL && into->aggr != NULL &&
 	     ((from->aggr->op != into->aggr->op) ||
-	      strcmp(from->aggr->fname, into->aggr->fname)))) {
+	      strcasecmp(from->aggr->fname, into->aggr->fname)))) {
 		if (q != NULL) {
 			d = diff_alloc(q, DIFF_MOD_SEARCH_AGGR);
 			if (d == NULL)
@@ -897,7 +897,7 @@ ort_diff_search(struct diffq *q,
 	if ((from->group != NULL && into->group == NULL) ||
 	    (from->group == NULL && into->group != NULL) ||
 	    (from->group != NULL && into->group != NULL &&
-	     strcmp(from->group->fname, into->group->fname))) {
+	     strcasecmp(from->group->fname, into->group->fname))) {
 		if (q != NULL) {
 			d = diff_alloc(q, DIFF_MOD_SEARCH_GROUP);
 			if (d == NULL)
@@ -911,7 +911,7 @@ ort_diff_search(struct diffq *q,
 	if ((from->dst != NULL && into->dst == NULL) ||
 	    (from->dst == NULL && into->dst != NULL) ||
 	    (from->dst != NULL && into->dst != NULL &&
-	     strcmp(from->dst->fname, into->dst->fname))) {
+	     strcasecmp(from->dst->fname, into->dst->fname))) {
 		if (q != NULL) {
 			d = diff_alloc(q, DIFF_MOD_SEARCH_DISTINCT);
 			if (d == NULL)

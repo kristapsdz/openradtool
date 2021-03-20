@@ -296,13 +296,13 @@ gen_fill_field(FILE *f, const struct field *fd)
 
 	if (fd->type == FTYPE_STRUCT &&
 	    (fd->ref->source->flags & FIELD_NULL))
-		return fprintf(f, "\tp->has_%s = 0;\n", fd->name) > 0;
+		return fprintf(f, "\tp->has_%s = 0;\n", fd->cname) > 0;
 	else if (fd->type == FTYPE_STRUCT)
 		return 1;
 
 	if ((fd->flags & FIELD_NULL) && !print_src(f, 1, 
 	     "p->has_%s = set->ps[*pos].type != "
-	     "SQLBOX_PARM_NULL;", fd->name))
+	     "SQLBOX_PARM_NULL;", fd->cname))
 		return 0;
 
 	/*
@@ -313,7 +313,7 @@ gen_fill_field(FILE *f, const struct field *fd)
 	 */
 
 	if ((fd->flags & FIELD_NULL)) {
-		if (fprintf(f, "\tif (p->has_%s) {\n", fd->name) < 0)
+		if (fprintf(f, "\tif (p->has_%s) {\n", fd->cname) < 0)
 			return 0;
 		indent = 2;
 	} else
@@ -325,7 +325,7 @@ gen_fill_field(FILE *f, const struct field *fd)
 		    "if (%s(&set->ps[(*pos)++],\n"
 		    "    &p->%s, &p->%s_sz) == -1)\n"
 		    "\texit(EXIT_FAILURE);", coltypes[fd->type], 
-		    fd->name, fd->name))
+		    fd->cname, fd->cname))
 			return 0;
 		break;
 	case FTYPE_DATE:
@@ -335,7 +335,7 @@ gen_fill_field(FILE *f, const struct field *fd)
 		    "if (%s(&set->ps[(*pos)++], &tmpint) == -1)\n"
 		    "\texit(EXIT_FAILURE);\n"
 		    "p->%s = tmpint;",
-		    coltypes[fd->type], fd->name))
+		    coltypes[fd->type], fd->cname))
 			return 0;
 		break;
 	case FTYPE_BIT:
@@ -345,7 +345,7 @@ gen_fill_field(FILE *f, const struct field *fd)
 		if (!print_src(f, indent,
 		    "if (%s(&set->ps[(*pos)++], &p->%s) == -1)\n"
 		    "\texit(EXIT_FAILURE);",
-		    coltypes[fd->type], fd->name))
+		    coltypes[fd->type], fd->cname))
 			return 0;
 		break;
 	default:
@@ -353,7 +353,7 @@ gen_fill_field(FILE *f, const struct field *fd)
 		    "if (%s\n"
 		    "    (&set->ps[(*pos)++], &p->%s, NULL) == -1)\n"
 		    "\texit(EXIT_FAILURE);",
-		    coltypes[fd->type], fd->name))
+		    coltypes[fd->type], fd->cname))
 			return 0;
 		break;
 	}
@@ -802,7 +802,7 @@ gen_roles(FILE *f, const struct config *cfg, const struct strct *p)
 	TAILQ_FOREACH(fd, &p->fq, entries)
 		if ((fd->flags & (FIELD_ROWID|FIELD_UNIQUE))) {
 			if (asprintf(&buf, "STMT_%s_BY_UNIQUE_%s",
-			    p->name, fd->name) < 0)
+			    p->name, fd->cname) < 0)
 				return -1;
 			if (!gen_role_stmt_all(f, cfg, buf))
 				return -1;
@@ -1592,7 +1592,7 @@ gen_unfill(FILE *f, const struct config *cfg, const struct strct *p)
 		case FTYPE_TEXT:
 		case FTYPE_EMAIL:
 			if (fprintf(f, 
-			    "\tfree(p->%s);\n", fd->name) < 0)
+			    "\tfree(p->%s);\n", fd->cname) < 0)
 				return 0;
 			break;
 		default:
@@ -1630,14 +1630,14 @@ gen_unfill_r(FILE *f, const struct strct *p)
 		if (fd->ref->source->flags & FIELD_NULL) {
 			if (fprintf(f, "\tif (p->has_%s)\n"
 			    "\t\tdb_%s_unfill_r(&p->%s);\n",
-			    fd->ref->source->name, 
+			    fd->ref->source->cname, 
 			    fd->ref->target->parent->name, 
-			    fd->name) < 0)
+			    fd->cname) < 0)
 				return 0;
 		} else {
 			if (fprintf(f, "\tdb_%s_unfill_r(&p->%s);\n",
 			    fd->ref->target->parent->name, 
-			    fd->name) < 0)
+			    fd->cname) < 0)
 				return 0;
 		}
 	}
@@ -1704,18 +1704,18 @@ gen_reffind(FILE *f, const struct config *cfg, const struct strct *p)
 			    "\t\t\texit(EXIT_FAILURE);\n"
 			    "\t\tp->has_%s = 1;\n"
 			    "\t}\n",
-			    fd->ref->source->name,
-			    fd->ref->source->name,
+			    fd->ref->source->cname,
+			    fd->ref->source->cname,
 			    fd->ref->target->parent->name,
-			    fd->ref->target->name,
+			    fd->ref->target->cname,
 			    fd->ref->target->parent->name,
-			    fd->name, fd->name) < 0)
+			    fd->cname, fd->cname) < 0)
 				return 0;
 		if (!(fd->ref->target->parent->flags & 
 		    STRCT_HAS_NULLREFS))
 			continue;
 		if (fprintf(f, "\tdb_%s_reffind(ctx, &p->%s);\n", 
-		    fd->ref->target->parent->name, fd->name) < 0)
+		    fd->ref->target->parent->name, fd->cname) < 0)
 			return 0;
 	}
 
@@ -1751,7 +1751,7 @@ gen_fill_r(FILE *f, const struct config *cfg, const struct strct *p)
 			if (fprintf(f, "\tdb_%s_fill_r(ctx, "
 			    "&p->%s, res, pos);\n", 
 			    fd->ref->target->parent->name, 
-			    fd->name) < 0)
+			    fd->cname) < 0)
 				return 0;
 
 	return fputs("}\n\n", f) != EOF;
@@ -2139,8 +2139,8 @@ gen_json_out_field(FILE *f,
 			if (fprintf(f, "%sif (!p->has_%s)\n"
 			       "%s\tkjson_putnullp(r, \"%s\");\n"
 			       "%selse\n"
-			       "%s\t", tabs, fd->name, tabs, 
-			       fd->name, tabs, tabs) < 0)
+			       "%s\t", tabs, fd->cname, tabs, 
+			       fd->cname, tabs, tabs) < 0)
 				return 0;
 		} else if (fputs(tabs, f) == EOF)
 			return 0;
@@ -2148,12 +2148,12 @@ gen_json_out_field(FILE *f,
 		if (fd->type == FTYPE_BLOB) {
 			if (fprintf(f, "%s(r, \"%s\", buf%zu);\n",
 			    puttypes[fd->type], 
-			    fd->name, ++(*pos)) < 0)
+			    fd->cname, ++(*pos)) < 0)
 				return 0;
 		} else {
 			if (fprintf(f, "%s(r, \"%s\", p->%s);\n", 
 			    puttypes[fd->type], 
-			    fd->name, fd->name) < 0)
+			    fd->cname, fd->cname) < 0)
 				return 0;
 		}
 		if ((fd->flags & FIELD_NULL) && !*sp) {
@@ -2170,9 +2170,9 @@ gen_json_out_field(FILE *f,
 		    "%s\tkjson_obj_close(r);\n"
 		    "%s} else\n"
 		    "%s\tkjson_putnullp(r, \"%s\");\n",
-		    tabs, fd->name, tabs, fd->name,
-		    tabs, fd->ref->target->parent->name, fd->name, 
-		    tabs, tabs, tabs, fd->name) < 0)
+		    tabs, fd->cname, tabs, fd->cname,
+		    tabs, fd->ref->target->parent->name, fd->cname, 
+		    tabs, tabs, tabs, fd->cname) < 0)
 			return 0;
 		if (!*sp) {
 			if (fputc('\n', f) == EOF)
@@ -2183,8 +2183,8 @@ gen_json_out_field(FILE *f,
 		if (fprintf(f, "%skjson_objp_open(r, \"%s\");\n"
 		    "%sjson_%s_data(r, &p->%s);\n"
 		    "%skjson_obj_close(r);\n",
-		    tabs, fd->name, tabs, 
-		    fd->ref->target->parent->name, fd->name, tabs) < 0)
+		    tabs, fd->cname, tabs, 
+		    fd->ref->target->parent->name, fd->cname, tabs) < 0)
 			return 0;
 
 	if (fd->rolemap != NULL) {
@@ -2244,7 +2244,7 @@ gen_json_parse(FILE *f, const struct strct *p)
 			continue;
 		if (fprintf(f, "\t\tif "
 		    "(jsmn_eq(buf, &t[j+1], \"%s\")) {\n"
-		    "\t\t\tj++;\n", fd->name) < 0)
+		    "\t\t\tj++;\n", fd->cname) < 0)
 			return 0;
 
 		/* Check correct kind of token. */
@@ -2258,7 +2258,7 @@ gen_json_parse(FILE *f, const struct strct *p)
 		     "\t\t\t\tcontinue;\n"
 		     "\t\t\t} else\n"
 		     "\t\t\t\tp->has_%s = 1;\n",
-		     fd->name, fd->name) < 0)
+		     fd->cname, fd->cname) < 0)
 			return 0;
 
 		switch (fd->type) {
@@ -2312,7 +2312,7 @@ gen_json_parse(FILE *f, const struct strct *p)
 			    "\t\t\t    t[j+1].end - t[j+1].start, "
 			    "&p->%s))\n"
 			    "\t\t\t\treturn 0;\n"
-			    "\t\t\tj++;\n", fd->name) < 0)
+			    "\t\t\tj++;\n", fd->cname) < 0)
 				return 0;
 			break;
 		case FTYPE_ENUM:
@@ -2322,7 +2322,7 @@ gen_json_parse(FILE *f, const struct strct *p)
 			    "&tmpint))\n"
 			    "\t\t\t\treturn 0;\n"
 			    "\t\t\tp->%s = tmpint;\n"
-			    "\t\t\tj++;\n", fd->name) < 0)
+			    "\t\t\tj++;\n", fd->cname) < 0)
 				return 0;
 			break;
 		case FTYPE_REAL:
@@ -2331,7 +2331,7 @@ gen_json_parse(FILE *f, const struct strct *p)
 			    "\t\t\t    t[j+1].end - t[j+1].start, "
 			    "&p->%s))\n"
 			    "\t\t\t\treturn 0;\n"
-			    "\t\t\tj++;\n", fd->name) < 0)
+			    "\t\t\tj++;\n", fd->cname) < 0)
 				return 0;
 			break;
 		case FTYPE_BLOB:
@@ -2352,8 +2352,8 @@ gen_json_parse(FILE *f, const struct strct *p)
 			    "\t\t\tif (rc < 0)\n"
 			    "\t\t\t\treturn -1;\n"
 			    "\t\t\tp->%s_sz = rc;\n"
-			    "\t\t\tj++;\n", fd->name, fd->name, 
-			    fd->name, fd->name) < 0)
+			    "\t\t\tj++;\n", fd->cname, fd->cname, 
+			    fd->cname, fd->cname) < 0)
 				return 0;
 			break;
 		case FTYPE_TEXT:
@@ -2365,7 +2365,7 @@ gen_json_parse(FILE *f, const struct strct *p)
 			    "\t\t\tif (p->%s == NULL)\n"
 			    "\t\t\t\treturn -1;\n"
 			    "\t\t\tj++;\n", 
-			    fd->name, fd->name) < 0)
+			    fd->cname, fd->cname) < 0)
 				return 0;
 			break;
 		case FTYPE_STRUCT:
@@ -2376,7 +2376,7 @@ gen_json_parse(FILE *f, const struct strct *p)
 			    "\t\t\t\treturn rc;\n"
 			    "\t\t\tj += rc;\n",
 			    fd->ref->target->parent->name,
-			    fd->name) < 0)
+			    fd->cname) < 0)
 				return 0;
 			break;
 		default:
@@ -2415,22 +2415,22 @@ gen_json_parse(FILE *f, const struct strct *p)
 		case FTYPE_TEXT:
 		case FTYPE_EMAIL:
 			if (fprintf(f,
-			    "\tfree(p->%s);\n", fd->name) < 0)
+			    "\tfree(p->%s);\n", fd->cname) < 0)
 				return 0;
 			break;
 		case FTYPE_STRUCT:
 			if (fd->ref->source->flags & FIELD_NULL) {
 				if (fprintf(f, "\tif (p->has_%s)\n"
 			            "\t\tjsmn_%s_clear(&p->%s);\n",
-				    fd->ref->source->name, 
+				    fd->ref->source->cname, 
 				    fd->ref->target->parent->name, 
-				    fd->name) < 0)
+				    fd->cname) < 0)
 					return 0;
 				break;
 			}
 			if (fprintf(f, "\tjsmn_%s_clear(&p->%s);\n",
 			    fd->ref->target->parent->name, 
-			    fd->name) < 0)
+			    fd->cname) < 0)
 				return 0;
 			break;
 		default:
@@ -2536,13 +2536,13 @@ gen_json_out(FILE *f, const struct strct *p)
 		    "\tif (buf%zu == NULL) {\n"
 		    "\t\tperror(NULL);\n"
 		    "\t\texit(EXIT_FAILURE);\n"
-		    "\t}\n", fd->name, pos, pos) < 0)
+		    "\t}\n", fd->cname, pos, pos) < 0)
 			return 0;
 		if ((fd->flags & FIELD_NULL) &&
-		    fprintf(f, "\tif (p->has_%s)\n\t", fd->name) < 0)
+		    fprintf(f, "\tif (p->has_%s)\n\t", fd->cname) < 0)
 			return 0;
 		if (fprintf(f, "\tb64_ntop(p->%s, p->%s_sz, "
-		    "buf%zu, sz);\n", fd->name, fd->name, pos) < 0)
+		    "buf%zu, sz);\n", fd->cname, fd->cname, pos) < 0)
 			return 0;
 	}
 
@@ -2705,7 +2705,7 @@ gen_valid(FILE *f, const struct strct *p)
 	TAILQ_FOREACH(fd, &p->fq, entries) {
 		if (fd->type == FTYPE_BLOB) {
 			if (fprintf(f, "\t{ NULL, \"%s-%s\" },\n",
-			    p->name, fd->name) < 0)
+			    p->name, fd->cname) < 0)
 				return 0;
 			continue;
 		} else if (fd->type == FTYPE_STRUCT)
@@ -2714,12 +2714,12 @@ gen_valid(FILE *f, const struct strct *p)
 		if (fd->type != FTYPE_ENUM && TAILQ_EMPTY(&fd->fvq)) {
 			if (fprintf(f, "\t{ %s, \"%s-%s\" },\n",
 			    validtypes[fd->type], p->name, 
-			    fd->name) < 0)
+			    fd->cname) < 0)
 				return 0;
 			continue;
 		}
 		if (fprintf(f, "\t{ valid_%s_%s, \"%s-%s\" },\n",
-		    p->name, fd->name, p->name, fd->name) < 0)
+		    p->name, fd->cname, p->name, fd->cname) < 0)
 			return 0;
 	}
 
@@ -2747,7 +2747,7 @@ gen_schema(FILE *f, const struct strct *p)
 			continue;
 		if (fprintf(f, "%s\n", s) < 0)
 			return 0;
-		if (fprintf(f, "\t#_x \".%s\"", fd->name) < 0)
+		if (fprintf(f, "\t#_x \".%s\"", fd->cname) < 0)
 			return 0;
 		s = " \",\" \\";
 	}

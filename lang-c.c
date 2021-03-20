@@ -317,7 +317,7 @@ gen_func_db_update(FILE *f, const struct update *u, int decl)
 		if (!(u->flags & UPDATE_ALL))
 			TAILQ_FOREACH(ur, &u->mrq, entries) {
 				rc = fprintf(f, "_%s_%s", 
-					ur->field->name, 
+					ur->field->cname, 
 					modtypes[ur->mod]);
 				if (rc < 0)
 					return 0;
@@ -329,7 +329,7 @@ gen_func_db_update(FILE *f, const struct update *u, int decl)
 			sz += 3;
 			TAILQ_FOREACH(ur, &u->crq, entries) {
 				rc = fprintf(f, "_%s_%s", 
-					ur->field->name, 
+					ur->field->cname, 
 					optypes[ur->op]);
 				if (rc < 0)
 					return 0;
@@ -343,7 +343,7 @@ gen_func_db_update(FILE *f, const struct update *u, int decl)
 			sz += 3;
 			TAILQ_FOREACH(ur, &u->crq, entries) {
 				rc = fprintf(f, "_%s_%s", 
-					ur->field->name, 
+					ur->field->cname, 
 					optypes[ur->op]);
 				if (rc < 0)
 					return 0;
@@ -578,12 +578,12 @@ gen_func_db_free(FILE *f, const struct strct *p, int decl)
  * Return zero on failure, non-zero on success.
  */
 int
-gen_func_valid(FILE *f, const struct field *p, int decl)
+gen_func_valid(FILE *f, const struct field *fd, int decl)
 {
 
 	return fprintf(f, "int%svalid_%s_%s(struct kpair *p)%s",
 		decl ? " " : "\n", 
-		p->parent->name, p->name,
+		fd->parent->name, fd->cname,
 		decl ? ";\n" : "\n") > 0;
 }
 
@@ -728,21 +728,21 @@ gen_func_json_iterate(FILE *f, const struct strct *p, int decl)
 int
 gen_filldep(struct filldepq *fq, const struct strct *p, unsigned int need)
 {
-	struct filldep		*fd;
-	const struct field	*f;
+	struct filldep		*fill;
+	const struct field	*fd;
 
-	TAILQ_FOREACH(fd, fq, entries)
-		if (fd->p == p) {
-			fd->need |= need;
+	TAILQ_FOREACH(fill, fq, entries)
+		if (fill->p == p) {
+			fill->need |= need;
 			return 1;
 		}
 
-	if ((fd = calloc(1, sizeof(struct filldep))) == NULL)
+	if ((fill = calloc(1, sizeof(struct filldep))) == NULL)
 		return 0;
 
-	TAILQ_INSERT_TAIL(fq, fd, entries);
-	fd->p = p;
-	fd->need = need;
+	TAILQ_INSERT_TAIL(fq, fill, entries);
+	fill->p = p;
+	fill->need = need;
 
 	/* 
 	 * Recursively add all children.
@@ -750,11 +750,11 @@ gen_filldep(struct filldepq *fq, const struct strct *p, unsigned int need)
 	 * fill_r for them.
 	 */
 
-	TAILQ_FOREACH(f, &p->fq, entries) {
-		if (f->type != FTYPE_STRUCT)
+	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fd->type != FTYPE_STRUCT)
 			continue;
-		if (!gen_filldep(fq, f->ref->target->parent,
-		    (f->ref->source->flags & FIELD_NULL) ?
+		if (!gen_filldep(fq, fd->ref->target->parent,
+		    (fd->ref->source->flags & FIELD_NULL) ?
 		    (FILLDEP_FILL_R |FILLDEP_REFFIND) : 
 		    FILLDEP_FILL_R))
 			return 0;
@@ -766,11 +766,11 @@ gen_filldep(struct filldepq *fq, const struct strct *p, unsigned int need)
 const struct filldep *
 get_filldep(const struct filldepq *fq, const struct strct *s)
 {
-	const struct filldep	*f;
+	const struct filldep	*fill;
 
-	TAILQ_FOREACH(f, fq, entries)
-		if (f->p == s)
-			return f;
+	TAILQ_FOREACH(fill, fq, entries)
+		if (fill->p == s)
+			return fill;
 
 	return NULL;
 }

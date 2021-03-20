@@ -4,8 +4,8 @@
 include Makefile.configure
 
 VERSION_MAJOR	 = 0
-VERSION_MINOR	 = 11
-VERSION_BUILD	 = 18
+VERSION_MINOR	 = 12
+VERSION_BUILD	 = 0
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = compats.o \
 		   config.o \
@@ -823,7 +823,7 @@ regress: all
 				exit 1 ; \
 			fi ; \
 			rm -f $$f.h $$f.c ; \
-			./$$bf 2>/dev/null 1>/dev/null $$tmp ; \
+			./$$bf $$tmp ; \
 			if [ $$? -ne 0 ] ; then \
 				echo "fail" ; \
 				rm -f $$bf $$tmp ; \

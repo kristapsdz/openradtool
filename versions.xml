@@ -3,6 +3,32 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.12.0</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-03-20">2021-03-20</time>
+		</header>
+		<aside>
+			<p>
+				Introduce a significant change where names in
+				<a href="ort.5.html">ort(5)</a> configurations are internally
+				converted to lowercase.  This means that all output will use the
+				lowercase versions of the read names, which affects APIs.
+			</p>
+			<p>
+				Why is this a good idea?  Largely because it keeps APIs consistent
+				with changing (for example) structure names, which is already
+				accepted as <q>not a change</q> because structure names are case
+				insensitive.
+			</p>
+			<p>
+				It also cleans up some inconsistency where some fields (e.g., roles)
+				were lowercased already, while most (structure names, field names,
+				explicit query naming, etc.) were not.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.11.18</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-03-18">2021-03-18</time>

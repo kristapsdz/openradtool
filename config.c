@@ -48,6 +48,7 @@ parse_free_field(struct field *p)
 	     FTYPE_EMAIL == p->type))
 		free(p->def.string);
 	free(p->doc);
+	free(p->cname);
 	free(p->name);
 	free(p);
 }

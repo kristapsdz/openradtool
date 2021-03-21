@@ -891,6 +891,7 @@ namespace ortJson {
 			this.fillStrctSet(pn);
 			this.fillEnumSet(pn);
 			this.fillBitfSet(pn);
+			this.show(pn);
 		}
 
 		private fillComment(e: HTMLElement, 

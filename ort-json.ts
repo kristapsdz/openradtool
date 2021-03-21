@@ -1158,15 +1158,17 @@ namespace ortJson {
 		 *
 		 * For each role:
 		 *
-		 * - *config-role-doc*: filled in with role
-		 *   documentation
+		 * - *config-role-doc*: filled in with role documentation
 		 * - *config-role-name*: filled in with the role name
-		 * - *config-role-name-value*: value set to the role
-		 *   name
-		 * - *config-role-parent-{has,none}*: shown or hidden
-		 *   depending upon whether the parent is set
-		 * - *config-role-parent*: filled in with the parent
-		 *   name or an empty string if the parent is not set
+		 * - *config-role-name-value*: value set to the role name
+		 * - *config-role-parent-{has,none}*: shown or hidden depending
+		 *   upon whether the parent is set
+		 * - *config-role-parent*: filled in with the parent name or an
+		 *   empty string if the parent is not set
+		 * - *config-role-subrq-{has,none}*: shown or hidden depending
+		 *   upon whether the role has children
+		 * - *config-role-subrq*: filled in with comma-separated
+		 *   children or an empty string
 		 */
 		fillRole(e: HTMLElement, role: ortJson.roleObj): void
 		{
@@ -1183,6 +1185,15 @@ namespace ortJson {
 			}
 			this.attrcl(e, 'config-role-name-value', 
 				'value', role.name);
+			if (role.subrq.length) {
+				this.hidecl(e, 'config-role-subrq-none');
+				this.showcl(e, 'config-role-subrq-has');
+			} else {
+				this.showcl(e, 'config-role-subrq-none');
+				this.hidecl(e, 'config-role-subrq-has');
+			}
+
+			this.replcl(e, 'config-role-subrq', role.subrq.join(', '));
 		}
 
 		/**

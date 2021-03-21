@@ -1001,6 +1001,17 @@ namespace ortJson {
 			this.replcl(e, 'config-bitf-name', bitf.name);
 			this.attrcl(e, 'config-bitf-name-value', 
 				'value', bitf.name);
+			if (Object.keys(bitf.bq).length) {
+				this.showcl(e, 'config-bitems-has');
+				this.hidecl(e, 'config-bitems-none');
+				const list: HTMLElement[] = 
+					this.list(e, 'config-bitems');
+				for (let i: number = 0; i < list.length; i++)
+					this.fillBitIndexSet(list[i], bitf.bq);
+			} else {
+				this.hidecl(e, 'config-bitems-has');
+				this.showcl(e, 'config-bitems-none');
+			}
 		}
 
 		/**
@@ -1015,7 +1026,6 @@ namespace ortJson {
 		 */
 		fillEnumObj(e: HTMLElement, enm: ortJson.enumObj): void
 		{
-			let list: HTMLElement[];
 			this.fillComment(e, 'enum', enm.doc);
 			this.replcl(e, 'config-enum-name', enm.name);
 			this.attrcl(e, 'config-enum-name-value', 
@@ -1023,7 +1033,8 @@ namespace ortJson {
 			if (Object.keys(enm.eq).length) {
 				this.showcl(e, 'config-eitems-has');
 				this.hidecl(e, 'config-eitems-none');
-				list = this.list(e, 'config-eitems');
+				const list: HTMLElement[] = 
+					this.list(e, 'config-eitems');
 				for (let i: number = 0; i < list.length; i++)
 					this.fillEnumItemSet(list[i], enm.eq);
 			} else {
@@ -1096,6 +1107,34 @@ namespace ortJson {
 				this.attrcl(e, 'config-enumitem-value-value', 
 					'value', '');
 			}
+		}
+
+		/**
+		 * For a set of bitfield items, the first child of the element
+		 * is cloned and filled in with fillBitIndexObj() for each item
+		 * unless there are no items, in which case the element is
+		 * hidden.
+		 */
+		private fillBitIndexSet(e: HTMLElement, 
+			set: ortJson.bitIndexSet): void
+		{
+			if (e.children.length === 0)
+				return;
+			const keys: string[] = Object.keys(set);
+			if (keys.length === 0) {
+				this.hide(e);
+				return;
+			}
+			keys.sort();
+			const tmpl: HTMLElement = <HTMLElement>e.children[0];
+			this.clr(e);
+			for (let i = 0; i < keys.length; i++) {
+				const cln: HTMLElement = <HTMLElement>
+					tmpl.cloneNode(true);
+				this.fillBitIndexObj(cln, set[keys[i]]);
+				e.appendChild(cln);
+			}
+			this.show(e);
 		}
 
 		/**

@@ -861,7 +861,7 @@ namespace ortJson {
 				return;
 			const list: HTMLElement[] = this.list(e, name);
 			for (let i: number = 0; i < list.length; i++)
-				this.fill(<HTMLElement>list[i]);
+				this.fill(list[i]);
 		}
 
 		/**
@@ -912,16 +912,13 @@ namespace ortJson {
 		}
 
 		/**
-		 * See fill() for generic documentation.
+		 * For all bitfields in a configuration:
 		 *
-		 * Per all bitfields specified in a configuration:
-		 *
-		 * - *config-bitfs-{has,none}*: shown or hidden
-		 *   depending on whether there are bitfields
-		 * - *config-bitfs*: the first child of these is cloned
-		 *   and filled in with fillBitfObj() for each bitfield
-		 *   unless there are no bitfields, in which case the
-		 *   elements are hidden
+		 * - *config-bitfs-{has,none}*: shown or hidden depending on
+		 *   whether there are bitfields
+		 * - *config-bitfs*: the first child of these is cloned and
+		 *   filled in with fillBitfObj() for each bitfield unless there
+		 *   are no bitfields, in which case the elements are hidden
 		 */
 		fillBitfSet(e: HTMLElement): void
 		{
@@ -953,16 +950,14 @@ namespace ortJson {
 		}
 
 		/**
-		 * See fill() for generic documentation.
+		 * For all enumerations in a configuration:
 		 *
-		 * Per all enumerations specified in a configuration:
-		 *
-		 * - *config-enums-{has,none}*: shown or hidden
-		 *   depending on whether there are enumerations
-		 * - *config-enums*: the first child of these is cloned
-		 *   and filled in with fillEnumObj() for each enumeration
-		 *   unless there are no enumerations, in which case the
-		 *   elements are hidden
+		 * - *config-enums-{has,none}*: shown or hidden depending on
+		 *   whether there are enumerations
+		 * - *config-enums*: the first child of these is cloned and
+		 *   filled in with fillEnumObj() for each enumeration unless
+		 *   there are no enumerations, in which case the elements are
+		 *   hidden
 		 */
 		fillEnumSet(e: HTMLElement): void
 		{
@@ -994,16 +989,11 @@ namespace ortJson {
 		}
 
 		/**
-		 * See fill() for generic documentation.
-		 *
 		 * For a bitfield:
 		 *
-		 * - *config-bitf-doc*: filled in with bitfield
-		 *   documentation
-		 * - *config-bitf-name*: filled in with the bitfield
-		 *   name
-		 * - *config-bitf-name-value*: value set to the bitfield
-		 *   name
+		 * - *config-bitf-doc*: filled in with bitfield documentation
+		 * - *config-bitf-name*: filled in with the bitfield name
+		 * - *config-bitf-name-value*: value set to the bitfield name
 		 */
 		fillBitfObj(e: HTMLElement, bitf: ortJson.bitfObj): void
 		{
@@ -1014,44 +1004,77 @@ namespace ortJson {
 		}
 
 		/**
-		 * See fill() for generic documentation.
-		 *
 		 * For an enumeration:
 		 *
-		 * - *config-enum-doc*: filled in with enum
-		 *   documentation
+		 * - *config-enum-doc*: filled in with enum documentation
 		 * - *config-enum-name*: filled in with the enum name
-		 * - *config-enum-name-value*: value set to the enum
-		 *   name
+		 * - *config-enum-name-value*: value set to the enum name
+		 * - *config-eitems-{has,none}*: shown or hidden depending on
+		 *   whether there are enumeration items
+		 * - *config-eitems*: see fillEnumItemSet()
 		 */
 		fillEnumObj(e: HTMLElement, enm: ortJson.enumObj): void
 		{
+			let list: HTMLElement[];
 			this.fillComment(e, 'enum', enm.doc);
 			this.replcl(e, 'config-enum-name', enm.name);
 			this.attrcl(e, 'config-enum-name-value', 
 				'value', enm.name);
+			if (Object.keys(enm.eq).length) {
+				this.showcl(e, 'config-eitems-has');
+				this.hidecl(e, 'config-eitems-none');
+				list = this.list(e, 'config-eitems');
+				for (let i: number = 0; i < list.length; i++)
+					this.fillEnumItemSet(list[i], enm.eq);
+			} else {
+				this.hidecl(e, 'config-eitems-has');
+				this.showcl(e, 'config-eitems-none');
+			}
 		}
 
 		/**
-		 * See fill() for generic documentation.
-		 *
+		 * For a set of enumeration items, the first child of the
+		 * element is cloned and filled in with fillEnumItemObj() for
+		 * each item unless there are no items, in which case the
+		 * element is hidden.
+		 */
+		private fillEnumItemSet(e: HTMLElement, 
+			set: ortJson.enumItemSet): void
+		{
+			if (e.children.length === 0)
+				return;
+			const keys: string[] = Object.keys(set);
+			if (keys.length === 0) {
+				this.hide(e);
+				return;
+			}
+			keys.sort();
+			const tmpl: HTMLElement = <HTMLElement>e.children[0];
+			this.clr(e);
+			for (let i = 0; i < keys.length; i++) {
+				const cln: HTMLElement = <HTMLElement>
+					tmpl.cloneNode(true);
+				this.fillEnumItemObj(cln, set[keys[i]]);
+				e.appendChild(cln);
+			}
+			this.show(e);
+		}
+
+		/**
 		 * For an enumeration item:
 		 *
 		 * - *config-enumitem-doc*: filled in with bitfield item
 		 *   documentation
-		 * - *config-enumitem-name*: filled in with the bitfield
+		 * - *config-enumitem-name*: filled in with the bitfield item
+		 *   name
+		 * - *config-enumitem-name-value*: value set to the bitfield
 		 *   item name
-		 * - *config-enumitem-name-value*: value set to the
-		 *   bitfield item name
-		 * - *config-eitem-value-{has,none}*: shown or hidden
-		 *   depending on whether there's a value for the
-		 *   enumerateion item
-		 * - *config-enumitem-value*: filled in with the
-		 *   bitfield item name, if applicable, or an empty
-		 *   string of unset
-		 * - *config-enumitem-value-value*: value set to the
-		 *   bitfield item value, if applicable, or an empty
-		 *   string if unset
+		 * - *config-eitem-value-{has,none}*: shown or hidden depending
+		 *   on whether there's a value for the enumerateion item
+		 * - *config-enumitem-value*: filled in with the bitfield item
+		 *   name, if applicable, or an empty string of unset
+		 * - *config-enumitem-value-value*: value set to the bitfield
+		 *   item value, if applicable, or an empty string if unset
 		 */
 		fillEnumItemObj(e: HTMLElement, eitem: ortJson.enumItemObj): void
 		{
@@ -1076,20 +1099,18 @@ namespace ortJson {
 		}
 
 		/**
-		 * See fill() for generic documentation.
-		 *
 		 * For a bitfield item:
 		 *
 		 * - *config-bitindex-doc*: filled in with bitfield item
 		 *   documentation
-		 * - *config-bitindex-name*: filled in with the bitfield
+		 * - *config-bitindex-name*: filled in with the bitfield item
+		 *   name
+		 * - *config-bitindex-name-value*: value set to the bitfield
 		 *   item name
-		 * - *config-bitindex-name-value*: value set to the
-		 *   bitfield item name
-		 * - *config-bitindex-value*: filled in with the bitfield
-		 *   item name
-		 * - *config-bitindex-value-value*: value set to the
-		 *   bitfield item value
+		 * - *config-bitindex-value*: filled in with the bitfield item
+		 *   name
+		 * - *config-bitindex-value-value*: value set to the bitfield
+		 *   item value
 		 */
 		fillBitIndexObj(e: HTMLElement, biti: ortJson.bitIndexObj): void
 		{
@@ -1104,17 +1125,14 @@ namespace ortJson {
 		}
 
 		/**
-		 * See fill() for generic documentation.
+		 * For all roles in a configuration:
 		 *
-		 * Per all roles specified in a configuration:
-		 *
-		 * - *config-roles-{has,none}*: shown or hidden
-		 *   depending on whether there are roles at all (even
-		 *   if not having user-defined roles)
-		 * - *config-roles*: the first child of these is cloned
-		 *   and filled in with fillRole() for each role unless
-		 *   there are no roles, in which case the elements are
-		 *   hidden
+		 * - *config-roles-{has,none}*: shown or hidden depending on
+		 *   whether there are roles at all (even if not having
+		 *   user-defined roles)
+		 * - *config-roles*: the first child of these is cloned and
+		 *   filled in with fillRole() for each role unless there are no
+		 *   roles, in which case the elements are hidden
 		 *
 		 * Accepts an optional array of role names not to show.
 		 */
@@ -1141,7 +1159,6 @@ namespace ortJson {
 					continue;
 				const tmpl: HTMLElement =
 					<HTMLElement>list[i].children[0];
-				this.show(list[i]);
 				this.clr(list[i]);
 				for (let j: number = 0; j < newrq.length; j++) {
 					const cln: HTMLElement = 
@@ -1150,12 +1167,11 @@ namespace ortJson {
 					this.fillRole(cln, newrq[j]);
 					list[i].appendChild(cln);
 				}
+				this.show(list[i]);
 			}
 		}
 
 		/**
-		 * See fill() for generic documentation.
-		 *
 		 * For each role:
 		 *
 		 * - *config-role-doc*: filled in with role documentation
@@ -1197,16 +1213,14 @@ namespace ortJson {
 		}
 
 		/**
-		 * See fill() for generic documentation.
+		 * For a set of strcts:
 		 *
-		 * Per set of strcts:
-		 *
-		 * - *config-strcts-{has,none}*: shown or hidden
-		 *   depending on whether there are strcts
-		 * - *config-strcts*: the first child of these is cloned
-		 *   and filled in with data for each strct (see
-		 *   fillStrctObj()) unless there are no strcts, in which
-		 *   case the elements are hidden
+		 * - *config-strcts-{has,none}*: shown or hidden depending on
+		 *   whether there are strcts
+		 * - *config-strcts*: the first child of these is cloned and
+		 *   filled in with data for each strct (see fillStrctObj())
+		 *   unless there are no strcts, in which case the elements are
+		 *   hidden
 		 */
 		fillStrctSet(e: HTMLElement)
 		{
@@ -1318,9 +1332,7 @@ namespace ortJson {
 				this.hidecl(e, 'config-deletes-none');
 				list = this.list(e, 'config-deletes');
 				for (let i: number = 0; i < list.length; i++)
-					this.fillUpdates
-						(<HTMLElement>list[i], 
-						 strct.dq);
+					this.fillUpdates(list[i], strct.dq);
 			}
 
 			/* nq */
@@ -1330,9 +1342,7 @@ namespace ortJson {
 				this.hidecl(e, 'config-uniques-none');
 				list = this.list(e, 'config-uniques');
 				for (let i: number = 0; i < list.length; i++)
-					this.fillUniques
-						(<HTMLElement>list[i], 
-						 strct.nq);
+					this.fillUniques(list[i], strct.nq);
 			} else {
 				this.hidecl(e, 'config-uniques-has');
 				this.showcl(e, 'config-uniques-none');
@@ -1349,9 +1359,7 @@ namespace ortJson {
 				this.hidecl(e, 'config-updates-none');
 				list = this.list(e, 'config-updates');
 				for (let i = 0; i < list.length; i++)
-					this.fillUpdates
-						(<HTMLElement>list[i], 
-						 strct.uq);
+					this.fillUpdates(list[i], strct.uq);
 			}
 
 			/* sq (queries) */
@@ -1365,9 +1373,7 @@ namespace ortJson {
 				this.hidecl(e, 'config-queries-none');
 				list = this.list(e, 'config-queries');
 				for (let i = 0; i < list.length; i++)
-					this.fillSearchClassObj
-						(<HTMLElement>list[i], 
-						 strct);
+					this.fillSearchClassObj(list[i], strct);
 			}
 
 			/* insert */
@@ -1442,10 +1448,8 @@ namespace ortJson {
 					const cln: HTMLElement = 
 						<HTMLElement>
 						tmpl.cloneNode(true);
-					this.replcl(cln, 
-						cls + '-role', map[j]);
-					this.attrcl(cln, 
-						cls + '-role-value', 
+					this.replcl(cln, cls + '-role', map[j]);
+					this.attrcl(cln, cls + '-role-value', 
 						'value', map[j]);
 					list[i].appendChild(cln);
 				}
@@ -1584,7 +1588,7 @@ namespace ortJson {
 				const list: HTMLElement[] =
 					this.list(e, 'config-update-crq');
 				for (let i: number = 0; i < list.length; i++)
-					this.fillUrefs(<HTMLElement>list[i], up.crq);
+					this.fillUrefs(list[i], up.crq);
 			}
 
 			/* mrq */
@@ -1600,7 +1604,7 @@ namespace ortJson {
 				const list: HTMLElement[] =
 					this.list(e, 'config-update-mrq');
 				for (let i: number = 0; i < list.length; i++)
-					this.fillUrefs(<HTMLElement>list[i], up.mrq);
+					this.fillUrefs(list[i], up.mrq);
 			}
 
 			/* rolemap */
@@ -1775,7 +1779,7 @@ namespace ortJson {
 				const list: HTMLElement[] =
 					this.list(e, 'config-query-sntq');
 				for (let i: number = 0; i < list.length; i++)
-					this.fillSents(<HTMLElement>list[i], query);
+					this.fillSents(list[i], query);
 			}
 
 			/* limit/offset */
@@ -1825,7 +1829,7 @@ namespace ortJson {
 				const list: HTMLElement[] =
 					this.list(e, 'config-query-ordq');
 				for (let i: number = 0; i < list.length; i++)
-					this.fillOrds(<HTMLElement>list[i], query);
+					this.fillOrds(list[i], query);
 			}
 
 			/* dst */

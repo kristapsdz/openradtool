@@ -993,6 +993,8 @@ namespace ortJson {
 		 *
 		 * - *config-bitf-doc*: filled in with bitfield documentation
 		 * - *config-bitf-name*: filled in with the bitfield name
+		 * - *config-bitf-name-data*: *data-name* attribute set to the
+		 *   bitfield name
 		 * - *config-bitf-name-value*: value set to the bitfield name
 		 */
 		fillBitfObj(e: HTMLElement, bitf: ortJson.bitfObj): void
@@ -1001,6 +1003,8 @@ namespace ortJson {
 			this.replcl(e, 'config-bitf-name', bitf.name);
 			this.attrcl(e, 'config-bitf-name-value', 
 				'value', bitf.name);
+			this.attrcl(e, 'config-bitf-name-data', 
+				'data-name', bitf.name);
 			if (Object.keys(bitf.bq).length) {
 				this.showcl(e, 'config-bitems-has');
 				this.hidecl(e, 'config-bitems-none');
@@ -1020,6 +1024,8 @@ namespace ortJson {
 		 * - *config-enum-doc*: filled in with enum documentation
 		 * - *config-enum-name*: filled in with the enum name
 		 * - *config-enum-name-value*: value set to the enum name
+		 * - *config-enum-name-data*: *data-name* attribute set to the
+		 *   enum name
 		 * - *config-eitems-{has,none}*: shown or hidden depending on
 		 *   whether there are enumeration items
 		 * - *config-eitems*: see fillEnumItemSet()
@@ -1030,6 +1036,8 @@ namespace ortJson {
 			this.replcl(e, 'config-enum-name', enm.name);
 			this.attrcl(e, 'config-enum-name-value', 
 				'value', enm.name);
+			this.attrcl(e, 'config-enum-name-data', 
+				'data-name', enm.name);
 			if (Object.keys(enm.eq).length) {
 				this.showcl(e, 'config-eitems-has');
 				this.hidecl(e, 'config-eitems-none');
@@ -1216,6 +1224,8 @@ namespace ortJson {
 		 * - *config-role-doc*: filled in with role documentation
 		 * - *config-role-name*: filled in with the role name
 		 * - *config-role-name-value*: value set to the role name
+		 * - *config-role-name-data*: 'data-name' attribute set with
+		 *   name
 		 * - *config-role-parent-{has,none}*: shown or hidden depending
 		 *   upon whether the parent is set
 		 * - *config-role-parent*: filled in with the parent name or an
@@ -1229,6 +1239,8 @@ namespace ortJson {
 		{
 			this.fillComment(e, 'role', role.doc);
 			this.replcl(e, 'config-role-name', role.name);
+			this.attrcl(e, 'config-role-name-data', 
+				'data-name', role.name);
 			if (role.parent === null) {
 				this.hidecl(e, 'config-role-parent-has');
 				this.showcl(e, 'config-role-parent-none');
@@ -1302,8 +1314,8 @@ namespace ortJson {
 		 *
 		 * - *config-strct-name*: filled in with name
 		 * - *config-strct-name-value*: value set with name
-		 * - *config-strct-name-data*: 'data-name' attribute set
-		 *   with name
+		 * - *config-strct-name-data*: *data-name* attribute set with
+		 *   name
 		 * - *config-strct-doc-{none,has}*: shown or hidden
 		 *   depending on whether there's a non-empty
 		 *   documentation field
@@ -2009,7 +2021,7 @@ namespace ortJson {
 		 * - *config-field-name*: filled in with name
 		 * - *config-field-name-value*: value filled in with the
 		 *   field name
-		 * - *config-field-name-data*: 'data-name' attribute set
+		 * - *config-field-name-data*: *data-name* attribute set
 		 *   with name
 		 * - *config-field-fullname-data*: 'data-fullname'
 		 *   attribute set as "parent.name"

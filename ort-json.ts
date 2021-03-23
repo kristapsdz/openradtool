@@ -396,15 +396,34 @@ namespace ortJson {
 		config: configObj;
 	}
 
+	export interface ortJsonConfigPrefixes {
+		strcts: string;
+		roles: string;
+		enums: string;
+		bitfs: string;
+	}
+
 	/**
 	 * Manage serialising an ortJsonConfig object into an HTML DOM
 	 * tree.
 	 */
 	export class ortJsonConfigFormat {
 		private readonly obj: ortJson.configObj;
+		private readonly prefixes: ortJson.ortJsonConfigPrefixes;
 
-		constructor(obj: ortJson.ortJsonConfig) {
+		constructor(obj: ortJson.ortJsonConfig,
+			prefixes?: ortJson.ortJsonConfigPrefixes) 
+		{
 			this.obj = obj.config;
+			if (typeof(prefixes) === 'undefined') {
+				this.prefixes = {
+					'strcts': '',
+					'roles': '',
+					'enums': '',
+					'bitfs': '',
+				};
+			} else
+				this.prefixes = prefixes;
 		}
 
 		private commentToString(doc: string|null): string
@@ -1272,11 +1291,13 @@ namespace ortJson {
 		 *   filled in with data for each strct (see fillStrctObj())
 		 *   unless there are no strcts, in which case the elements are
 		 *   hidden
+		 * - *config-strcts-link*: set *href* to prefix fragment
 		 */
 		fillStrctSet(e: HTMLElement)
 		{
-			const keys: string[] = 
-				Object.keys(this.obj.sq);
+			this.attrcl(e, 'config-strcts-link', 
+				'href', '#' + this.prefixes.strcts);
+			const keys: string[] = Object.keys(this.obj.sq);
 			if (keys.length === 0) {
 				this.hidecl(e, 'config-strcts-has');
 				this.hidecl(e, 'config-strcts');
@@ -1307,12 +1328,13 @@ namespace ortJson {
 		}
 
 		/**
-		 * See fill() for generic documentation.  See fillFieldSet() for
-		 * what's run over for fields, fillSearchClassObj() for queries.
-		 *
-		 * Per strct:
+		 * For a strct:
 		 *
 		 * - *config-strct-name*: filled in with name
+		 * - *config-strct-name-id*: *id* attribute set as the name
+		 *   with the optional prefix as set during construction
+		 * - *config-strct-link*: *href* attribute set as the same
+		 *   fragment set in *config-strct-name-id*
 		 * - *config-strct-name-value*: value set with name
 		 * - *config-strct-name-data*: *data-name* attribute set with
 		 *   name
@@ -1354,26 +1376,25 @@ namespace ortJson {
 		 *   "Per unique") unless there are no tuples, in
 		 *   which case the element is hidden
 		 *
-		 * Per insert:
+		 * For any insert:
 		 * - see fillRolemap()
 		 *
-		 * Per unique:
-		 * - *config-unique*: the comma-separated fields making
-		 *   up a unique tuple
+		 * For any unique:
+		 * - see fillUniques()
 		 *
-		 * Per update (or delete):
+		 * For any updates(or deletes):
 		 * - see fillUpdateObj()
+		 *
+		 * For any fields:
+		 * - see fillFieldSet()
+		 *
+		 * For queries:
+		 * - see fillSearchClassObj() 
 		 */
 		fillStrctObj(e: HTMLElement, strct: ortJson.strctObj): void
 		{
-			let list: HTMLElement[];
-
-			/* fq (fields) */
-
 			this.fillFieldSet(e, strct);
 
-			/* dq (deletes) */
-			
 			if (strct.dq.anon.length +
 		  	    Object.keys(strct.dq.named).length === 0) {
 				this.hidecl(e, 'config-deletes-has');
@@ -1381,17 +1402,17 @@ namespace ortJson {
 			} else {
 				this.showcl(e, 'config-deletes-has');
 				this.hidecl(e, 'config-deletes-none');
-				list = this.list(e, 'config-deletes');
+				const list: HTMLElement[] = 
+					this.list(e, 'config-deletes');
 				for (let i: number = 0; i < list.length; i++)
 					this.fillUpdates(list[i], strct.dq);
 			}
 
-			/* nq */
-			
 			if (strct.nq.length) {
 				this.showcl(e, 'config-uniques-has');
 				this.hidecl(e, 'config-uniques-none');
-				list = this.list(e, 'config-uniques');
+				const list: HTMLElement[] = 
+					this.list(e, 'config-uniques');
 				for (let i: number = 0; i < list.length; i++)
 					this.fillUniques(list[i], strct.nq);
 			} else {
@@ -1399,8 +1420,6 @@ namespace ortJson {
 				this.showcl(e, 'config-uniques-none');
 			}
 
-			/* uq (updates) */
-			
 			if (strct.uq.anon.length +
 		  	    Object.keys(strct.uq.named).length === 0) {
 				this.hidecl(e, 'config-updates-has');
@@ -1408,12 +1427,11 @@ namespace ortJson {
 			} else {
 				this.showcl(e, 'config-updates-has');
 				this.hidecl(e, 'config-updates-none');
-				list = this.list(e, 'config-updates');
+				const list: HTMLElement[] = 
+					this.list(e, 'config-updates');
 				for (let i = 0; i < list.length; i++)
 					this.fillUpdates(list[i], strct.uq);
 			}
-
-			/* sq (queries) */
 			
 			if (strct.sq.anon.length +
 		  	    Object.keys(strct.sq.named).length === 0) {
@@ -1422,12 +1440,11 @@ namespace ortJson {
 			} else {
 				this.showcl(e, 'config-queries-has');
 				this.hidecl(e, 'config-queries-none');
-				list = this.list(e, 'config-queries');
+				const list: HTMLElement[] = 
+					this.list(e, 'config-queries');
 				for (let i = 0; i < list.length; i++)
 					this.fillSearchClassObj(list[i], strct);
 			}
-
-			/* insert */
 
 			if (strct.insert !== null) {
 				this.showcl(e, 'config-insert-has');
@@ -1440,17 +1457,16 @@ namespace ortJson {
 				this.fillRolemap(e, 'insert', null);
 			}
 
-			/* doc */
-
 			this.fillComment(e, 'strct', strct.doc);
-
-			/* name */
-
 			this.replcl(e, 'config-strct-name', strct.name);
 			this.attrcl(e, 'config-strct-name-value', 
 				'value', strct.name);
 			this.attrcl(e, 'config-strct-name-data', 
 				'data-name', strct.name);
+			this.attrcl(e, 'config-strct-name-id', 'id', 
+				this.prefixes.strcts + strct.name);
+			this.attrcl(e, 'config-strct-link', 'href', 
+				'#' + this.prefixes.strcts + strct.name);
 		}
 
 		/**
@@ -1542,13 +1558,13 @@ namespace ortJson {
 			for (let i = 0; i < keys.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
-				this.fillUpdateObj(cln, cls.named[keys[i]]);
+				this.fillUpdateObj(cln, cls.named[keys[i]], i);
 				e.appendChild(cln);
 			}
 			for (let i = 0; i < cls.anon.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
-				this.fillUpdateObj(cln, cls.anon[i]);
+				this.fillUpdateObj(cln, cls.anon[i], i);
 				e.appendChild(cln);
 			}
 		}
@@ -1557,67 +1573,76 @@ namespace ortJson {
 		 * Per update (or delete):
 		 *
 		 * - see fillRolemap()
-		 * - *config-update-doc-{has,none}*: shown or hidden
-		 *   depending on whether there's a non-empty
-		 *   documentation field
-		 * - *config-update-doc*: filled in with non-empty
-		 *   documentation if doc is defined*
-		 * - *config-update-name-{has,none}*: shown or hidden
-		 *   depending on whether the update is anonymous
-		 * - *config-update-name*: filled in with the update
+		 * - *config-update-doc-{has,none}*: shown or hidden depending
+		 *   on whether there's a non-empty documentation field
+		 * - *config-update-doc*: filled in with non-empty documentation
+		 *   if doc is defined
+		 * - *config-update-name-{has,none}*: shown or hidden depending
+		 *   on whether the update is anonymous
+		 * - *config-update-name*: filled in with the update name if a
+		 *   name is defined or empty
+		 * - *config-update-name-value*: value filled in with the update
 		 *   name if a name is defined or empty
-		 * - *config-update-name-value*: value filled in with
-		 *   the update name if a name is defined or empty
+		 * - *config-update-name-id*: *id* set as the parent name,
+		 *   forward slash, then name with the optional prefix as set
+		 *   during construction (or _update + unique number)
+		 * - *config-update-link*: *href* set as the same fragment set in
+		 *   *config-update-name-id*
 		 * - *config-update-fields-{has,none}*: shown or hidden
-		 *   depending on whether the update has non-zero mrq
-		 *   or crqs
-		 * - *config-update-crq-{has,none}*: shown or hidden
-		 *   depending on whether the update has non-zero crq
-		 * - *config-update-mrq-{has,none}*: shown or hidden
-		 *   depending on whether the update has non-zero mrq
-		 * - *config-update-mrq*: the first child of this is
-		 *   cloned and filled in with data for each reference
-		 *   (see "Per update reference") unless there are no
-		 *   references, in which case the element is hidden
-		 * - *config-update-crq*: the first child of this is
-		 *   cloned and filled in with data for each reference
-		 *   (see "Per update reference") unless there are no
-		 *   references, in which case the element is hidden
+		 *   depending on whether the update has non-zero mrq or crqs
+		 * - *config-update-crq-{has,none}*: shown or hidden depending
+		 *   on whether the update has non-zero crq
+		 * - *config-update-mrq-{has,none}*: shown or hidden depending
+		 *   on whether the update has non-zero mrq
+		 * - *config-update-mrq*: the first child of this is cloned and
+		 *   filled in with data for each reference (see "Per update
+		 *   reference") unless there are no references, in which case
+		 *   the element is hidden
+		 * - *config-update-crq*: the first child of this is cloned and
+		 *   filled in with data for each reference (see "Per update
+		 *   reference") unless there are no references, in which case
+		 *   the element is hidden
 		 *
 		 * Per update reference:
 		 * - *config-uref-field*: the field name in the current
 		 *   structure
-		 * - *config-uref-field-value*: value set to the field
-		 *   name in the current structure
+		 * - *config-uref-field-value*: value set to the field name in
+		 *   the current structure
 		 * - *config-uref-op*: the update constraint operator
-		 * - *config-uref-op-value*: value set to the update
-		 *   constraint operator
+		 * - *config-uref-op-value*: value set to the update constraint
+		 *   operator
 		 * - *config-uref-mod*: the update modifier
-		 * - *config-uref-mod-value*: value set to the update
-		 *   modifier
+		 * - *config-uref-mod-value*: value set to the update modifier
 		 */
-		fillUpdateObj(e: HTMLElement, up: ortJson.updateObj): void
+		fillUpdateObj(e: HTMLElement, up: ortJson.updateObj,
+			pos: number): void
 		{
-			/* doc */
-
 			this.fillComment(e, 'update', up.doc);
-
-			/* name */
-
 			if (up.name === null) {
 				this.hidecl(e, 'config-update-name-has');
 				this.showcl(e, 'config-update-name-none');
 				this.replcl(e, 'config-update-name', '');
 				this.attrcl(e, 'config-update-name-value', 
 					'value', '');
+				this.attrcl(e, 'config-update-name-id', 'id', 
+					this.prefixes.strcts + up.parent + 
+					'/' + up.type + '/_up' + pos);
+				this.attrcl(e, 'config-update-link', 'href', 
+					'#' + this.prefixes.strcts + up.parent + 
+					'/' + up.type + '/_up' + pos);
 			} else {
 				this.hidecl(e, 'config-update-name-none');
 				this.showcl(e, 'config-update-name-has');
 				this.replcl(e, 'config-update-name', up.name);
 				this.attrcl(e, 'config-update-name-value', 
 					'value', up.name);
+				this.attrcl(e, 'config-update-name-id', 'id', 
+					this.prefixes.strcts + up.parent + 
+					'/' + up.name);
+				this.attrcl(e, 'config-update-link', 'href', 
+					'#' + this.prefixes.strcts + up.parent + 
+					'/' + up.name);
 			}
-
 			if (up.crq.length + up.mrq.length === 0) {
 				this.showcl(e, 'config-update-fields-none');
 				this.hidecl(e, 'config-update-fields-has');
@@ -1625,9 +1650,6 @@ namespace ortJson {
 				this.hidecl(e, 'config-update-fields-none');
 				this.showcl(e, 'config-update-fields-has');
 			}
-
-			/* crq */
-
 			if (up.crq.length === 0) {
 				this.showcl(e, 'config-update-crq-none');
 				this.hidecl(e, 'config-update-crq-has');
@@ -1641,9 +1663,6 @@ namespace ortJson {
 				for (let i: number = 0; i < list.length; i++)
 					this.fillUrefs(list[i], up.crq);
 			}
-
-			/* mrq */
-
 			if (up.mrq.length === 0) {
 				this.showcl(e, 'config-update-mrq-none');
 				this.hidecl(e, 'config-update-mrq-has');
@@ -1657,9 +1676,6 @@ namespace ortJson {
 				for (let i: number = 0; i < list.length; i++)
 					this.fillUrefs(list[i], up.mrq);
 			}
-
-			/* rolemap */
-
 			this.fillRolemap(e, 'update', up.rolemap);
 		}
 
@@ -1711,13 +1727,14 @@ namespace ortJson {
 			for (let i = 0; i < keys.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
-				this.fillSearchObj(cln, strct.sq.named[keys[i]]);
+				this.fillSearchObj(cln, 
+					strct.sq.named[keys[i]], i);
 				e.appendChild(cln);
 			}
 			for (let i = 0; i < strct.sq.anon.length; i++) {
 				const cln: HTMLElement = <HTMLElement>
 					tmpl.cloneNode(true);
-				this.fillSearchObj(cln, strct.sq.anon[i]);
+				this.fillSearchObj(cln, strct.sq.anon[i], i);
 				e.appendChild(cln);
 			}
 		}
@@ -1733,6 +1750,11 @@ namespace ortJson {
 		 * - *config-query-name-value*: value filled in with the
 		 *   query name if a name is defined, empty string 
 		 *   otherwise
+		 * - *config-query-name-id*: *id* set as the parent name,
+		 *   forward slash, then name with the optional prefix as set
+		 *   during construction (or _query + unique number)
+		 * - *config-query-link*: *href* set as the same fragment set in
+		 *   *config-query-name-id*
 		 * - *config-query-doc-{has,none}*: shown or hidden
 		 *   depending on whether there's a non-empty
 		 *   documentation field
@@ -1791,7 +1813,8 @@ namespace ortJson {
 		 * - *config-ord-op-value*: value filled in with the
 		 *   operation
 		 */
-		fillSearchObj(e: HTMLElement, query: ortJson.searchObj): void
+		fillSearchObj(e: HTMLElement, query: ortJson.searchObj,
+			pos: number): void
 		{
 			/* doc */
 
@@ -1805,12 +1828,24 @@ namespace ortJson {
 				this.replcl(e, 'config-query-name', '');
 				this.attrcl(e, 'config-query-name-value', 
 					'value', '');
+				this.attrcl(e, 'config-query-name-id', 'id', 
+					this.prefixes.strcts + query.parent + 
+					'/query/_q' + pos);
+				this.attrcl(e, 'config-query-link', 'href', 
+					'#' + this.prefixes.strcts + query.parent + 
+					'/query/_q' + pos);
 			} else {
 				this.hidecl(e, 'config-query-name-none');
 				this.showcl(e, 'config-query-name-has');
 				this.replcl(e, 'config-query-name', query.name);
 				this.attrcl(e, 'config-query-name-value', 
 					'value', query.name);
+				this.attrcl(e, 'config-query-name-id', 'id', 
+					this.prefixes.strcts + query.parent + 
+					'/query/' + query.name);
+				this.attrcl(e, 'config-query-link', 'href', 
+					'#' + this.prefixes.strcts + query.parent + 
+					'/query/' + query.name);
 			}
 
 			/* type */
@@ -2018,11 +2053,15 @@ namespace ortJson {
 
 		/**
 		 * Per field:
+		 *
 		 * - *config-field-name*: filled in with name
-		 * - *config-field-name-value*: value filled in with the
-		 *   field name
-		 * - *config-field-name-data*: *data-name* attribute set
-		 *   with name
+		 * - *config-field-name-value*: value filled in with field name
+		 * - *config-field-name-data*: *data-name* set with name
+		 * - *config-field-name-id*: *id* set as the parent name,
+		 *   forward slash, then name with the optional prefix as set
+		 *   during construction
+		 * - *config-field-link*: *href* set as the same fragment set in
+		 *   *config-field-name-id*
 		 * - *config-field-fullname-data*: 'data-fullname'
 		 *   attribute set as "parent.name"
 		 * - *config-field-doc-{none,has}*: shown or hidden
@@ -2096,12 +2135,7 @@ namespace ortJson {
 				'rowid', 'null', 'unique', 'noexport'
 			];
 
-			/* doc */
-
 			this.fillComment(e, 'field', field.doc);
-
-			/* name */
-
 			this.replcl(e, 'config-field-name', field.name);
 			this.attrcl(e, 'config-field-name-value', 
 				'value', field.name);
@@ -2110,9 +2144,12 @@ namespace ortJson {
 			this.attrcl(e, 'config-field-fullname-data', 
 				'data-fullname', 
 				field.parent + '.' + field.name);
-
-			/* flags */
-
+			this.attrcl(e, 'config-field-name-id', 'id', 
+				this.prefixes.strcts + field.parent + 
+				'/field/' + field.name);
+			this.attrcl(e, 'config-field-link', 'href', 
+				'#' + this.prefixes.strcts + field.parent + 
+				'/field/' + field.name);
 			for (let i: number = 0; i < flags.length; i++)
 				if (field.flags.indexOf(flags[i]) < 0)
 					this.rattrcl(e, 'config-field-flag-' +
@@ -2122,7 +2159,6 @@ namespace ortJson {
 					this.attrcl(e, 'config-field-flag-' + 
 						flags[i] + '-set', 
 						'checked', 'checked');
-
 			if (field.flags.length) {
 				this.hidecl(e, 'config-field-flags-none');
 				this.showcl(e, 'config-field-flags-has');
@@ -2133,9 +2169,6 @@ namespace ortJson {
 				this.hidecl(e, 'config-field-flags-has');
 				this.replcl(e, 'config-field-flags-join', '');
 			}
-			
-			/* type */
-
 			this.hidecl(e, 'config-field-type-bit');
 			this.hidecl(e, 'config-field-type-date');
 			this.hidecl(e, 'config-field-type-epoch');
@@ -2154,14 +2187,8 @@ namespace ortJson {
 				this.showcl(e, 'config-field-store-type');
 			else
 				this.hidecl(e, 'config-field-store-type');
-
-			/* actdel, actup */
-
 			this.fillFieldAction(e, field.actup, 'actup');
 			this.fillFieldAction(e, field.actdel, 'actdel');
-
-			/* reference (foreign key or struct) */
-
 			if (typeof field.ref === 'undefined') {
 				this.showcl(e, 'config-field-ref-none');
 				this.hidecl(e, 'config-field-ref-has');
@@ -2186,9 +2213,6 @@ namespace ortJson {
 				this.replcl(e, 'config-field-ref-source-field', 
 					field.ref.source.field);
 			}
-
-			/* bitf */
-
 			if (typeof field.bitf === 'undefined') {
 				this.showcl(e, 'config-field-bitf-none');
 				this.hidecl(e, 'config-field-bitf-has');
@@ -2198,9 +2222,6 @@ namespace ortJson {
 				this.showcl(e, 'config-field-bitf-has');
 				this.replcl(e, 'config-field-bitf', field.bitf);
 			}
-
-			/* enm */
-
 			if (typeof field.enm === 'undefined') {
 				this.showcl(e, 'config-field-enm-none');
 				this.hidecl(e, 'config-field-enm-has');
@@ -2210,13 +2231,7 @@ namespace ortJson {
 				this.showcl(e, 'config-field-enm-has');
 				this.replcl(e, 'config-field-enm', field.enm);
 			}
-
-			/* rolemap */
-
 			this.fillRolemap(e, 'field', field.rolemap);
-
-			/* def */
-
 			if (field.def === null) {
 				this.showcl(e, 'config-field-def-none');
 				this.hidecl(e, 'config-field-def-has');
@@ -2225,9 +2240,6 @@ namespace ortJson {
 				this.showcl(e, 'config-field-def-has');
 				this.replcl(e, 'config-field-def', field.def);
 			}
-			
-			/* fvq */
-
 			if (field.fvq.length === 0) {
 				this.hidecl(e, 'config-field-limits-has');
 				this.showcl(e, 'config-field-limits-none');

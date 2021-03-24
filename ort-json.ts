@@ -1553,24 +1553,21 @@ namespace ortJson {
 		/**
 		 * Per rolemap with the given NAME:
 		 *
-		 * - *config-NAME-rolemap-{has,none}*: shown or hidden
-		 *   depending on whether there's a non-empty rolemap
-		 * - *config-NAME-rolemap-join*: filled in with the
-		 *   comma-separated role names if the rolemap is
-		 *   non-empty
+		 * - *config-NAME-rolemap-{has,none}*: shown or hidden depending
+		 *   on whether there's a non-empty rolemap
+		 * - *config-NAME-rolemap-join*: set to the comma-separated role
+		 *   names if the rolemap is non-empty
 		 * - *config-NAME-rolemap*: first child of this is
 		 *   cloned and filled in with the name if matching
-		 *   *config-NAME-rolemap-role* and the value set if
-		 *   matching *config-NAME-rolemap-role-value* unless
-		 *   the rolemap is empty, in which case the element is
-		 *   hidden
+		 *   *config-NAME-rolemap-role*, the *value* set if
+		 *   matching *config-NAME-rolemap-role-value*, the *href* set
+		 *   to the role's id if *config-NAME-rolemap-role-link* unless
+		 *   the rolemap is empty, in which case the element is hidden
 		 */
 		private fillRolemap(e: HTMLElement, 
 			name: string, map: string[]|null): void
 		{
-			const cls: string = 
-				'config-' + name + '-rolemap';
-
+			const cls: string = 'config-' + name + '-rolemap';
 			if (map === null || map.length === 0) {
 				this.replcl(e, cls + '-join', '');
 				this.showcl(e, cls + '-none');
@@ -1578,19 +1575,15 @@ namespace ortJson {
 				this.hidecl(e, cls);
 				return;
 			}
-
 			this.replcl(e, cls + '-join', map.join(', '));
 			this.hidecl(e, cls + '-none');
 			this.showcl(e, cls + '-has');
-
 			const list: HTMLElement[] = this.list(e, cls);
-
 			for (let i: number = 0; i < list.length; i++) {
 				if (list[i].children.length === 0)
 					continue;
 				const tmpl: HTMLElement =
 					<HTMLElement>list[i].children[0];
-				this.show(list[i]);
 				this.clr(list[i]);
 				for (let j: number = 0; j < map.length; j++) {
 					const cln: HTMLElement = 
@@ -1599,8 +1592,12 @@ namespace ortJson {
 					this.replcl(cln, cls + '-role', map[j]);
 					this.attrcl(cln, cls + '-role-value', 
 						'value', map[j]);
+					this.attrcl(cln, cls + '-role-link', 
+						'href', '#' + this.prefixes.roles + 
+						'roles/' + map[j]);
 					list[i].appendChild(cln);
 				}
+				this.show(list[i]);
 			}
 		}
 
@@ -2207,8 +2204,14 @@ namespace ortJson {
 		 *   on whether there's a non-struct ref
 		 * - *config-field-ref-target-{strct,field}*: filled with the
 		 *   target names if ref is defined
+		 * - *config-field-ref-target-{strct,field}-link*: set *href* to
+		 *   the *id* set by target's *config-field-name-id* or
+		 *   *config-strct-name-id* if ref is defined
 		 * - *config-field-ref-source-{strct,field}*: filled with the
 		 *   source names if ref is defined
+		 * - *config-field-ref-source-{strct,field}-link*: set *href* to
+		 *   the *id* set by source's *config-field-name-id* or
+		 *   *config-strct-name-id* if ref is defined
 		 * - *config-field-bitf-{has,none}*: shown or hidden depending
 		 *   on whether there's a bitf
 		 * - *config-field-bitf*: filled in with the bitf name if bitf
@@ -2325,12 +2328,30 @@ namespace ortJson {
 				}
 				this.replcl(e, 'config-field-ref-target-strct', 
 					field.ref.target.strct);
+				this.attrcl(e, 
+					'config-field-ref-target-strct-link', 
+					'href', '#' + this.prefixes.strcts + 
+					'strcts/' + field.ref.target.strct);
 				this.replcl(e, 'config-field-ref-target-field', 
 					field.ref.target.field);
+				this.attrcl(e, 
+					'config-field-ref-target-field-link', 
+					'href', '#' + this.prefixes.strcts + 
+					'strcts/' + field.ref.target.strct + 
+					'/fields/' + field.ref.target.field);
 				this.replcl(e, 'config-field-ref-source-strct', 
 					field.ref.source.strct);
+				this.attrcl(e, 
+					'config-field-ref-source-strct-link', 
+					'href', '#' + this.prefixes.strcts + 
+					'strcts/' + field.ref.source.strct);
 				this.replcl(e, 'config-field-ref-source-field', 
 					field.ref.source.field);
+				this.attrcl(e, 
+					'config-field-ref-source-field-link', 
+					'href', '#' + this.prefixes.strcts + 
+					'strcts/' + field.ref.source.strct + 
+					'/fields/' + field.ref.source.field);
 			}
 			if (typeof field.bitf === 'undefined') {
 				this.showcl(e, 'config-field-bitf-none');

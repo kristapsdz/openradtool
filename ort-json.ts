@@ -1045,6 +1045,7 @@ namespace ortJson {
 				this.hidecl(e, 'config-enums');
 				return;
 			}
+			keys.sort();
 			this.showcl(e, 'config-enums-has');
 			this.hidecl(e, 'config-enums-none');
 			const list: HTMLElement[] = 
@@ -1056,11 +1057,12 @@ namespace ortJson {
 					<HTMLElement>list[i].children[0];
 				this.show(list[i]);
 				this.clr(list[i]);
-				for (const name in this.obj.eq) {
+				for (let j: number = 0; j < keys.length; j++) {
 					const cln: HTMLElement = 
 						<HTMLElement>
 						tmpl.cloneNode(true);
-					this.fillEnumObj(cln, this.obj.eq[name]);
+					this.fillEnumObj(cln, 
+						this.obj.eq[keys[j]]);
 					list[i].appendChild(cln);
 				}
 			}
@@ -1338,6 +1340,9 @@ namespace ortJson {
 				this.hidecl(e, 'config-roles');
 				return;
 			}
+			newrq.sort(function(a: roleObj, b: roleObj) {
+				return a.name.localeCompare(b.name);
+			});
 			this.showcl(e, 'config-roles-has');
 			this.hidecl(e, 'config-roles-none');
 			const list: HTMLElement[] = 
@@ -1377,8 +1382,11 @@ namespace ortJson {
 		 *   empty string if the parent is not set
 		 * - *config-role-subrq-{has,none}*: shown or hidden depending
 		 *   upon whether the role has children
-		 * - *config-role-subrq*: filled in with comma-separated
+		 * - *config-role-subrq-join*: filled in with comma-separated
 		 *   children or an empty string
+		 * - *config-role-subrq*: clone each element beneath for each
+		 *   subrole and fill in the *config-role-subrq-role-name* and
+		 *   *config-role-subrq-role-link* (or hide if none)
 		 */
 		fillRoleObj(e: HTMLElement, role: ortJson.roleObj): void
 		{
@@ -1399,18 +1407,48 @@ namespace ortJson {
 				this.showcl(e, 'config-role-parent-has');
 				this.hidecl(e, 'config-role-parent-none');
 				this.replcl(e, 'config-role-parent', role.parent);
+				this.attrcl(e, 'config-role-parent-link', 
+					'href', '#' + this.prefixes.roles + 
+					'roles/' + role.parent);
 			}
 			this.attrcl(e, 'config-role-name-value', 
 				'value', role.name);
-			if (role.subrq.length) {
-				this.hidecl(e, 'config-role-subrq-none');
-				this.showcl(e, 'config-role-subrq-has');
-			} else {
+			if (role.subrq.length === 0) {
 				this.showcl(e, 'config-role-subrq-none');
 				this.hidecl(e, 'config-role-subrq-has');
+				this.replcl(e, 'config-role-subrq-join', '');
+				this.hidecl(e, 'config-role-subrq');
+				return;
+			} 
+			this.hidecl(e, 'config-role-subrq-none');
+			this.showcl(e, 'config-role-subrq-has');
+			this.replcl(e, 'config-role-subrq-join', 
+				role.subrq.join(', '));
+			const list: HTMLElement[] = 
+				this.list(e, 'config-role-subrq');
+			for (let i: number = 0; i < list.length; i++) {
+				if (list[i].children.length === 0)
+					continue;
+				const tmpl: HTMLElement =
+					<HTMLElement>list[i].children[0];
+				this.clr(list[i]);
+				for (let j: number = 0; 
+			  	     j < role.subrq.length; j++) {
+					const cln: HTMLElement = 
+						<HTMLElement>
+						tmpl.cloneNode(true);
+					this.replcl(cln, 
+						'config-role-subrq-role-name', 
+						role.subrq[j]);
+					this.attrcl(cln, 
+						'config-role-subrq-role-link', 
+						'href', '#' + 
+						this.prefixes.roles + 
+						'roles/' + role.subrq[j]);
+					list[i].appendChild(cln);
+				}
+				this.show(list[i]);
 			}
-
-			this.replcl(e, 'config-role-subrq', role.subrq.join(', '));
 		}
 
 		/**
@@ -2361,6 +2399,9 @@ namespace ortJson {
 				this.hidecl(e, 'config-field-bitf-none');
 				this.showcl(e, 'config-field-bitf-has');
 				this.replcl(e, 'config-field-bitf', field.bitf);
+				this.attrcl(e, 'config-field-bitf-link', 'href',
+					'#' + this.prefixes.bitfs + 'bitfs/' + 
+					field.bitf);
 			}
 			if (typeof field.enm === 'undefined') {
 				this.showcl(e, 'config-field-enm-none');
@@ -2370,6 +2411,9 @@ namespace ortJson {
 				this.hidecl(e, 'config-field-enm-none');
 				this.showcl(e, 'config-field-enm-has');
 				this.replcl(e, 'config-field-enm', field.enm);
+				this.attrcl(e, 'config-field-enm-link', 'href',
+					'#' + this.prefixes.enums + 'enums/' + 
+					field.enm);
 			}
 			this.fillRolemap(e, 'field', field.rolemap);
 			if (field.def === null) {

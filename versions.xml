@@ -3,6 +3,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.12.1</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-03-24">2021-03-24</time>
+		</header>
+		<aside>
+			<p>
+				A number of improvements to the <i>ort-json.ts</i> machinery.
+				Probably not going to change any normal usage.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.12.0</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-03-20">2021-03-20</time>

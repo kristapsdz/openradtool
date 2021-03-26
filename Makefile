@@ -823,7 +823,7 @@ regress: all
 				exit 1 ; \
 			fi ; \
 			rm -f $$f.h $$f.c ; \
-			./$$bf $$tmp ; \
+			./$$bf $$tmp 2>/dev/null ; \
 			if [ $$? -ne 0 ] ; then \
 				echo "fail" ; \
 				rm -f $$bf $$tmp ; \

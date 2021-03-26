@@ -425,6 +425,8 @@
 					Math.min(8, str.length - i);
 				const value: number = 
 					parseInt(str.substring(i, i + size), 10);
+				if (isNaN(value))
+					return null;
 				if (size < 8) {
 					const power: Long = 
 						Long.fromNumber

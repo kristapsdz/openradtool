@@ -834,6 +834,15 @@ regress: all
 		done ; \
 	fi ; \
 	if [ -f "node_modules/.bin/ts-node" ]; then \
+		echo "=== ort-javascript internal tests === " ; \
+		set -e ; \
+		node_modules/.bin/ts-node --skip-project \
+			regress/javascript/internal/regress-runner.ts ; \
+		set +e ; \
+	else \
+		echo "!!! skipping ort-javascript internal tests !!! " ; \
+	fi ; \
+	if [ -f "node_modules/.bin/ts-node" ]; then \
 		echo "=== ort-json reformat tests === " ; \
 		cat ort-json.ts regress/json/regress-runner.ts > $$tmp.ts ; \
 		set -e ; \

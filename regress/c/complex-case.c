@@ -17,7 +17,6 @@
 #include <sys/queue.h>
 #include <sys/types.h>
 
-#include <err.h>
 #include <float.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -86,8 +85,6 @@ client(long http, const char *buf, size_t sz)
 
 	if (http != 200)
 		goto out;
-
-	warnx("%.*s", (int)sz, buf);
 
 	/* Parse JSON results. */
 

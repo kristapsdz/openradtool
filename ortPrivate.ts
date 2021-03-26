@@ -416,6 +416,9 @@
 				return nresult.neg();
 			}
 
+			if (!str.match(/^[0-9]+$/))
+				return null;
+
 			// Do several (8) digits each time through the
 			// loop, so as to  minimize the calls to the
 			// very expensive emulated div.

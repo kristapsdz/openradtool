@@ -34,19 +34,15 @@ if (!num4.eq(ortJson.Long.ZERO))
 if (num4.toNumber() !== 0)
 	return false;
 
-const num5: ortJson.Long|null =
+const num5: ortJson.Long =
 	ortJson.Long.fromNumber(0, false);
-if (num5 === null)
-	return false;
 if (!num5.eq(ortJson.Long.ZERO))
 	return false;
 if (num5.toNumber() !== 0)
 	return false;
 
-const num6: ortJson.Long|null =
+const num6: ortJson.Long =
 	ortJson.Long.fromNumber(0, true);
-if (num6 === null)
-	return false;
 if (!num6.eq(ortJson.Long.ZERO))
 	return false;
 if (num6.toNumber() !== 0)

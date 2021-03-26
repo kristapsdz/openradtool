@@ -19,24 +19,18 @@ if (num3 === null)
 if (num3.toNumber() !== Number.MIN_SAFE_INTEGER)
 	return false;
 
-const num4: ortJson.Long|null =
+const num4: ortJson.Long =
 	ortJson.Long.fromNumber(Number.MAX_SAFE_INTEGER, true);
-if (num4 === null)
-	return false;
 if (num4.toNumber() !== Number.MAX_SAFE_INTEGER)
 	return false;
 
-const num5: ortJson.Long|null =
+const num5: ortJson.Long =
 	ortJson.Long.fromNumber(Number.MAX_SAFE_INTEGER, false);
-if (num5 === null)
-	return false;
 if (num5.toNumber() !== Number.MAX_SAFE_INTEGER)
 	return false;
 
-const num6: ortJson.Long|null =
+const num6: ortJson.Long =
 	ortJson.Long.fromNumber(Number.MIN_SAFE_INTEGER);
-if (num6 === null)
-	return false;
 if (num6.toNumber() !== Number.MIN_SAFE_INTEGER)
 	return false;
 

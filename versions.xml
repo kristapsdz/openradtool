@@ -3,6 +3,19 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.12.2</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-03-24">2021-03-24</time>
+		</header>
+		<aside>
+			<p>
+				Regression tests for internal JavaScript (<code>ortJson.Long</code>)
+				functions.  No change to code, but adding <code>or</code> and some documentation.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.12.1</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-03-24">2021-03-24</time>

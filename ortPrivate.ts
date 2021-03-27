@@ -92,7 +92,8 @@
 		}
 
 		/**
-		 * @return Whether the value is strictly < 0.
+		 * @return Whether the value is strictly < 0.  This only applies
+		 * to signed numbers, else this is always false.
 		 */
 		isNegative(): boolean
 		{
@@ -100,7 +101,7 @@
 		}
 
 		/**
-		 * @return Whether the value is zero.
+		 * @return Whether the value is zero, regardless of sign.
 		 */
 		isZero(): boolean
 		{
@@ -116,7 +117,11 @@
 		}
 
 		/**
-		 * @return Whether the value equals the given value.
+		 * @return Whether the value equals the given value.  This is
+		 * according to the numerical value, not the bit pattern, so a
+		 * negative signed value and a positive signed value will be
+		 * the same even if having the same bit pattern.  The exception
+		 * here is zero, which is the same whether signed or not.
 		 */
 		eq(other: Long|number): boolean
 		{
@@ -152,24 +157,39 @@
 
 		/**
 		 * @return The bit-wise AND of the value with the given value.
-		 * If the given value can't be parsed, returns zero.
+		 * Sign is inherited from the source value.  If the
+		 * parameterised value can't be parsed, returns zero.
 		 */
 		and(other: Long|number|string|null): Long
 		{
 			const v: Long|null = !Long.isLong(other) ?
 				Long.fromValue(other) : <Long>other;
-
 			if (v === null)
 				return Long.ZERO;
-
 			return new Long(this.low & v.low, 
 					this.high & v.high, 
 					this.unsigned);
 		}
 
 		/**
-		 * @return The value left-shifted by the given number of
-		 * bits.
+		 * @return The bit-wise OR of the value with the given value.
+		 * Sign is inherited from the source value.  If the
+		 * parameterised value can't be parsed, returns zero.
+		 */
+		or(other: Long|number|string|null): Long 
+		{
+			    if (!Long.isLong(other))
+			            other = Long.fromValue(other);
+			    if (other === null)
+				    return Long.ZERO;
+			    return new Long(this.low | other.low, 
+					this.high | other.high, 
+					this.unsigned);
+		}
+
+		/**
+		 * @return The value left-shifted by the given number of bits.
+		 * Sign is inherited from the source value.
 		 */
 		shl(numBits: Long|number): Long
 		{

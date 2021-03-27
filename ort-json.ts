@@ -2274,9 +2274,9 @@ namespace ortJson {
 		 *   *config-field-rolemap-role-value* unless the rolemap is
 		 *   empty, in which case the element is hidden
 		 * - *config-field-def-{has,none}*: shown or hidden depending on
-		 *   whether there's a default value
-		 * - *config-field-def*: filled in with the default value if a
-		 *   default is defined
+		 *   whether def is defined
+		 * - *config-field-def*: set to def, if defined
+		 * - *config-field-def-value*: *value* set to def, if defined
 		 * - *config-field-limits-{has,none}*: shown or hidden depending
 		 *   on whether limits are defined
 		 * - *config-field-limit-TYPE*: shown or hidden depending upon
@@ -2423,6 +2423,8 @@ namespace ortJson {
 				this.hidecl(e, 'config-field-def-none');
 				this.showcl(e, 'config-field-def-has');
 				this.replcl(e, 'config-field-def', field.def);
+				this.attrcl(e, 'config-field-def-value', 
+					'value', field.def);
 			}
 			if (field.fvq.length === 0) {
 				this.hidecl(e, 'config-field-limits-has');

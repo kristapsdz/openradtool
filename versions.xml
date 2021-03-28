@@ -3,7 +3,7 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
-			<h3>0.12.2</h3>
+			<h3>0.12.3</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-03-28">2021-03-28</time>
 		</header>
@@ -13,6 +13,10 @@
 				functions.  No change to code, but adding <code>or</code> and some
 				documentation.  Also relax some needless constraints in
 				<i>ort-json.ts</i>.
+			</p>
+			<p>
+				Fix a bug in <a href="ort-sqldiff.1.html">ort-sqldiff(1)</a> where
+				<code>struct</code> fields were considered SQL columns.
 			</p>
 		</aside>
 	</article>

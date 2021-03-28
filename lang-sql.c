@@ -529,6 +529,8 @@ ort_lang_diff_sql(const struct ort_lang_sql *args,
 
 	TAILQ_FOREACH(d, q, entries)
 		if (d->type == DIFF_ADD_FIELD) {
+			if (d->field->type == FTYPE_STRUCT)
+				continue;
 			if (!gen_prologue(f, &prol))
 				goto out;
 			if (!gen_diff_field_new(f, d->field))
@@ -546,6 +548,8 @@ ort_lang_diff_sql(const struct ort_lang_sql *args,
 
 	TAILQ_FOREACH(d, q, entries)
 		if (d->type == DIFF_DEL_FIELD && destruct) {
+			if (d->field->type == FTYPE_STRUCT)
+				continue;
 			if (!gen_prologue(f, &prol))
 				goto out;
 			if (fprintf(f, 

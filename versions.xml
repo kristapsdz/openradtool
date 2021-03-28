@@ -5,12 +5,14 @@
 		<header>
 			<h3>0.12.2</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2021-03-24">2021-03-24</time>
+			<time datetime="2021-03-28">2021-03-28</time>
 		</header>
 		<aside>
 			<p>
 				Regression tests for internal JavaScript (<code>ortJson.Long</code>)
-				functions.  No change to code, but adding <code>or</code> and some documentation.
+				functions.  No change to code, but adding <code>or</code> and some
+				documentation.  Also relax some needless constraints in
+				<i>ort-json.ts</i>.
 			</p>
 		</aside>
 	</article>

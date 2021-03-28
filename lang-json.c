@@ -277,11 +277,7 @@ gen_labelq(FILE *f, const char *name,
 	const struct label	*l;
 	const char		*lang;
 
-	if (fprintf(f, " \"%s\": ", name) < 0)
-		return 0;
-	if (TAILQ_EMPTY(q))
-		return fputs("null,", f) != EOF;
-	if (fputc('{', f) == EOF)
+	if (fprintf(f, " \"%s\": {", name) < 0)
 		return 0;
 	TAILQ_FOREACH(l, q, entries) {
 		lang = cfg->langs[l->lang][0] == '\0' ?

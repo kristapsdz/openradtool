@@ -36,7 +36,7 @@ namespace ortJson {
 		pos: posObj;
 		doc: string|null;
 		value: string|number|null;
-		labels: labelSet|null;
+		labels: labelSet;
 	}
 
 	export interface enumItemSet {
@@ -50,7 +50,7 @@ namespace ortJson {
 		name: string;
 		pos: posObj;
 		doc: string|null;
-		labelsNull: labelSet|null;
+		labelsNull: labelSet;
 		eq: enumItemSet;
 	}
 
@@ -67,7 +67,7 @@ namespace ortJson {
 		pos: posObj;
 		doc: string|null;
 		value: string|number;
-		labels: labelSet|null;
+		labels: labelSet;
 	}
 
 	export interface bitIndexSet {
@@ -81,8 +81,8 @@ namespace ortJson {
 		name: string;
 		pos: posObj;
 		doc: string|null;
-		labelsNull: labelSet|null;
-		labelsUnset: labelSet|null;
+		labelsNull: labelSet;
+		labelsUnset: labelSet;
 		bq: bitIndexSet;
 	}
 
@@ -515,10 +515,15 @@ namespace ortJson {
 			return str + ' ;';
 		}
 
-		private labelSetToString(set: labelSet): string
+		private labelSetToString(set: labelSet, name?: string|null,
+			semi?: boolean): string
 		{
 			let str: string = '';
 			const keys: string[] = Object.keys(set);
+			if (keys.length === 0)
+				return '';
+			if (typeof name !== 'undefined' && name !== null)
+				str += ' ' + name;
 			for (let i: number = 0; i < keys.length; i++) {
 				const label: string =
 					set[keys[i]].value.replace
@@ -528,6 +533,8 @@ namespace ortJson {
 					 ('.' + keys[i])) +
 					' \"' + label + '\"';
 			}
+			if (typeof semi !== 'undefined' && semi)
+				str += ';';
 			return str;
 		}
 
@@ -536,8 +543,7 @@ namespace ortJson {
 			let str: string = ' item ' + 
 				name + ' ' + bit.value.toString();
 			str += this.commentToString(bit.doc);
-			if (bit.labels !== null)
-				str += this.labelSetToString(bit.labels);
+			str += this.labelSetToString(bit.labels);
 			return str + ' ;';
 		}
 
@@ -551,12 +557,10 @@ namespace ortJson {
 			str += this.commentToString(bitf.doc);
 			if (bitf.doc !== null)
 				str += ';';
-			if (bitf.labelsNull !== null)
-				str += ' isnull' + this.labelSetToString
-					(bitf.labelsNull) + ';';
-			if (bitf.labelsUnset !== null)
-				str += ' isunset' + this.labelSetToString
-					(bitf.labelsUnset) + ';';
+			str += this.labelSetToString
+				(bitf.labelsNull, 'isnull', true);
+			str += this.labelSetToString
+				(bitf.labelsUnset, 'isunset', true);
 			return str + ' };';
 		}
 
@@ -575,8 +579,7 @@ namespace ortJson {
 			if (eitem.value !== null)
 				str += ' ' + eitem.value.toString();
 			str += this.commentToString(eitem.doc);
-			if (eitem.labels !== null)
-				str += this.labelSetToString(eitem.labels);
+			str += this.labelSetToString(eitem.labels);
 			return str + ' ;';
 		}
 
@@ -590,9 +593,8 @@ namespace ortJson {
 			str += this.commentToString(enm.doc);
 			if (enm.doc !== null)
 				str += ';';
-			if (enm.labelsNull !== null)
-				str += ' isnull' + this.labelSetToString
-					(enm.labelsNull) + ';';
+			str += this.labelSetToString
+				(enm.labelsNull, 'isnull', true);
 			return str + ' };';
 		}
 

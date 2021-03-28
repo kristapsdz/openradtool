@@ -178,12 +178,12 @@
 		 */
 		or(other: Long|number|string|null): Long 
 		{
-			    if (!Long.isLong(other))
-			            other = Long.fromValue(other);
-			    if (other === null)
-				    return Long.ZERO;
-			    return new Long(this.low | other.low, 
-					this.high | other.high, 
+			const v: Long|null = !Long.isLong(other) ?
+				Long.fromValue(other) : <Long>other;
+			if (v === null)
+				return Long.ZERO;
+			return new Long(this.low | v.low, 
+					this.high | v.high, 
 					this.unsigned);
 		}
 

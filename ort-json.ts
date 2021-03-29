@@ -1086,6 +1086,9 @@ namespace ortJson {
 		 *
 		 * For bitfield items:
 		 * - see fillBitIndexSet()
+		 *
+		 * For labels:
+		 * - see fillLabelSet() ("bitf-null" and "bitf-unset")
 		 */
 		fillBitfObj(e: HTMLElement, bitf: ortJson.bitfObj): void
 		{
@@ -1101,6 +1104,8 @@ namespace ortJson {
 				'#' + this.prefixes.bitfs + 'bitfs/' + 
 				bitf.name);
 			this.fillBitIndexSet(e, bitf);
+			this.fillLabelSet(e, 'bitf-null', bitf.labelsNull);
+			this.fillLabelSet(e, 'bitf-unset', bitf.labelsUnset);
 		}
 
 		/**
@@ -1346,6 +1351,9 @@ namespace ortJson {
 		 * - *config-bitindex-name-value*: *value* set to name
 		 * - *config-bitindex-value*: set text to item value
 		 * - *config-bitindex-value-value*: *value* set to item value
+		  
+		 * For labels:
+		 * - see fillLabelSet() (name "bitindex")
 		 */
 		fillBitIndexObj(e: HTMLElement, biti: ortJson.bitIndexObj): void
 		{
@@ -1363,6 +1371,7 @@ namespace ortJson {
 				'value', biti.name);
 			this.attrcl(e, 'config-bitindex-value-value', 
 				'value', biti.value.toString());
+			this.fillLabelSet(e, 'bitindex', biti.labels);
 		}
 
 		/**

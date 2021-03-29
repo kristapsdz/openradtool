@@ -1118,6 +1118,9 @@ namespace ortJson {
 		 *
 		 * For enumeration items:
 		 * - see fillEnumItemSet() 
+		  
+		 * For labels:
+		 * - see fillLabelSet() (name "enum-null")
 		 */
 		fillEnumObj(e: HTMLElement, enm: ortJson.enumObj): void
 		{
@@ -1133,6 +1136,7 @@ namespace ortJson {
 				'#' + this.prefixes.enums + 'enums/' + 
 				enm.name);
 			this.fillEnumItemSet(e, enm);
+			this.fillLabelSet(e, 'enum-null', enm.labelsNull);
 		}
 
 		/**
@@ -1200,6 +1204,9 @@ namespace ortJson {
 		 *   name, if applicable, or an empty string of unset
 		 * - *config-enumitem-value-value*: *value* set to item value,
 		 *   if applicable, or an empty string if unset
+		  
+		 * For labels:
+		 * - see fillLabelSet() (name "enumitem")
 		 */
 		fillEnumItemObj(e: HTMLElement, eitem: ortJson.enumItemObj): void
 		{
@@ -1230,6 +1237,14 @@ namespace ortJson {
 			this.fillLabelSet(e, 'enumitem', eitem.labels);
 		}
 
+		/**
+		 * For a set of labels:
+		 *
+		 * - *config-NAME-labels-{has,none}*: shown or hidden depending
+		 *   on whether the set is empty
+		 * - *config-NAME-labels*: first element cloned, others cleared,
+		 *   filled with fillLabelObj()
+		 */
 		private fillLabelSet(e: HTMLElement, name: string, 
 			labels: ortJson.labelSet): void
 		{
@@ -1259,6 +1274,12 @@ namespace ortJson {
 			}
 		}
 
+		/**
+		 * For a single label:
+		 *
+		 * - *config-label-lang*: set to the label language
+		 * - *config-label-value*: set to the label value
+		 */
 		private fillLabelObj(e: HTMLElement, label: ortJson.labelObj): void
 		{
 			this.replcl(e, 'config-label-lang', label.lang);

@@ -15,6 +15,7 @@ namespace ortJson {
 	 */
 	export interface labelObj {
 		value: string;
+		lang: string;
 		pos: posObj;
 	}
 
@@ -1226,6 +1227,42 @@ namespace ortJson {
 				this.attrcl(e, 'config-enumitem-value-value', 
 					'value', '');
 			}
+			this.fillLabelSet(e, 'enumitem', eitem.labels);
+		}
+
+		private fillLabelSet(e: HTMLElement, name: string, 
+			labels: ortJson.labelSet): void
+		{
+			const keys: string[] = Object.keys(labels);
+			if (keys.length === 0) {
+				this.hidecl(e, 'config-' + name + '-labels-has');
+				this.showcl(e, 'config-' + name + '-labels-none');
+				this.hidecl(e, 'config-' + name + '-labels');
+				return;
+			}
+			keys.sort();
+			this.showcl(e, 'config-' + name + '-labels-has');
+			this.hidecl(e, 'config-' + name + '-labels-none');
+			const list: HTMLElement[] = 
+				this.list(e, 'config-' + name + '-labels');
+			for (let i: number = 0; i < list.length; i++) {
+				const tmpl: HTMLElement = 
+					<HTMLElement>list[i].children[0];
+				this.clr(list[i]);
+				for (let j = 0; j < keys.length; j++) {
+					const cln: HTMLElement = <HTMLElement>
+						tmpl.cloneNode(true);
+					this.fillLabelObj(cln, labels[keys[j]]);
+					list[i].appendChild(cln);
+				}
+				this.show(list[i]);
+			}
+		}
+
+		private fillLabelObj(e: HTMLElement, label: ortJson.labelObj): void
+		{
+			this.replcl(e, 'config-label-lang', label.lang);
+			this.replcl(e, 'config-label-value', label.value);
 		}
 
 		/**

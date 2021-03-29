@@ -259,7 +259,7 @@ gen_label(FILE *f, const char *name,
 	const struct label *l, const struct config *cfg)
 {
 
-	if (fprintf(f, " \"%s\": {", name) < 0)
+	if (fprintf(f, " \"%s\": { \"lang\": \"%s\",", name, name) < 0)
 		return 0;
 	if (!gen_pos(f, &l->pos))
 		return 0;

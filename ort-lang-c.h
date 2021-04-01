@@ -37,5 +37,7 @@ int	ort_lang_c_header(const struct ort_lang_c *,
 		const struct config *, FILE *);
 int	ort_lang_c_source(const struct ort_lang_c *, 
 		const struct config *, FILE *f);
+int	ort_lang_c_manpage(const struct ort_lang_c *,
+		const struct config *, FILE *);
 
 #endif /* !ORT_LANG_C_H */

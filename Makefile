@@ -24,9 +24,9 @@ LIBOBJS		 = compats.o \
 		   writer-diff.o
 LIBS		 = libort.a \
 		   libort-lang-c.a \
-		   libort-lang-nodejs.a \
 		   libort-lang-javascript.a \
 		   libort-lang-json.a \
+		   libort-lang-nodejs.a \
 		   libort-lang-sql.a \
 		   libort-lang-xliff.a
 PKGCONFIGS	 = ort.pc \
@@ -36,10 +36,12 @@ PKGCONFIGS	 = ort.pc \
 		   ort-lang-sql.pc
 OBJS		 = audit.o \
 		   cheader.o \
+		   cmanpage.o \
 		   csource.o \
 		   lang.o \
 		   lang-c-header.o \
 		   lang-c-source.o \
+		   lang-c-manpage.o \
 		   lang-c.o \
 		   lang-javascript.o \
 		   lang-json.o \
@@ -160,6 +162,7 @@ DOTAR		 = $(HEADERS) \
 		   json.c \
 		   jsmn.c \
 		   lang-c-header.c \
+		   lang-c-manpage.c \
 		   lang-c-source.c \
 		   lang-c.c \
 		   lang-javascript.c \
@@ -215,6 +218,7 @@ BINS		 = ort \
 		   ort-audit-gv \
 		   ort-audit-json \
 		   ort-c-header \
+		   ort-c-manpage \
 		   ort-c-source \
 		   ort-diff \
 		   ort-javascript \
@@ -262,8 +266,8 @@ ort-diff: maindiff.o libort.a
 libort.a: $(LIBOBJS)
 	$(AR) rs $@ $(LIBOBJS)
 
-libort-lang-c.a: lang-c.o lang-c-source.o lang-c-header.o lang.o
-	$(AR) rs $@ lang-c.o lang-c-source.o lang-c-header.o lang.o
+libort-lang-c.a: lang-c.o lang-c-manpage.o lang-c-source.o lang-c-header.o lang.o
+	$(AR) rs $@ lang-c.o lang-c-manpage.o lang-c-source.o lang-c-header.o lang.o
 
 libort-lang-javascript.a: lang-javascript.o lang.o
 	$(AR) rs $@ lang-javascript.o lang.o
@@ -288,6 +292,9 @@ ort-c-source: csource.o libort-lang-c.a libort.a
 
 ort-c-header: cheader.o libort-lang-c.a libort.a
 	$(CC) -o $@ cheader.o libort-lang-c.a libort.a $(LDFLAGS) $(LDADD)
+
+ort-c-manpage: cmanpage.o libort-lang-c.a libort.a
+	$(CC) -o $@ cmanpage.o libort-lang-c.a libort.a $(LDFLAGS) $(LDADD)
 
 ort-javascript: javascript.o libort-lang-javascript.a libort.a
 	$(CC) -o $@ javascript.o libort-lang-javascript.a libort.a $(LDFLAGS) $(LDADD)

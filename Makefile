@@ -5,7 +5,7 @@ include Makefile.configure
 
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 12
-VERSION_BUILD	 = 4
+VERSION_BUILD	 = 5
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = compats.o \
 		   config.o \
@@ -153,6 +153,7 @@ DOTAR		 = $(HEADERS) \
 		   audit.js \
 		   b64_ntop.c \
 		   cheader.c \
+		   cmanpage.c \
 		   compats.c \
 		   config.c \
 		   csource.c \

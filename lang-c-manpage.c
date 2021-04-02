@@ -84,6 +84,9 @@ gen_bitem(FILE *f, const struct bitidx *bi, const char *bitf)
 	return 1;
 }
 
+/*
+ * Return -1 on failure, 0 if nothing written, 1 if something written.
+ */
 static int
 gen_bitfs(FILE *f, const struct config *cfg)
 {
@@ -92,36 +95,38 @@ gen_bitfs(FILE *f, const struct config *cfg)
 	char			*name, *cp;
 
 	if (TAILQ_EMPTY(&cfg->bq))
-		return 1;
+		return 0;
 
 	if (fprintf(f, 
-	    ".Ss Bitfields\n"
+	    "Bitfields define individual bits within 64-bit integer\n"
+	    "values (bits 0\\(en63).\n"
+	    "They're used for input validation and value access.\n"
+	    "The following bitfields are available:\n"
 	    ".Bl -tag -width Ds\n") < 0)
-		return 0;
+		return -1;
+
 	TAILQ_FOREACH(b, &cfg->bq, entries) {
-		if (fprintf(f, 
-		    ".It Vt enum %s\n", b->name) < 0)
-			return 0;
+		if (fprintf(f, ".It Vt enum %s\n", b->name) < 0)
+			return -1;
 		if (b->doc != NULL && !gen_doc_block(f, b->doc, 1))
-			return 0;
-		if (fprintf(f, 
-		    ".Bl -tag -width Ds\n") < 0)
-			return 0;
+			return -1;
+		if (fprintf(f, ".Bl -tag -width Ds\n") < 0)
+			return -1;
 		if ((name = strdup(b->name)) == NULL)
-			return 0;
+			return -1;
 		for (cp = name; *cp != '\0'; cp++)
 			*cp = toupper((unsigned char)*cp);
 		TAILQ_FOREACH(bi, &b->bq, entries)
 			if (!gen_bitem(f, bi, name)) {
 				free(name);
-				return 0;
+				return -1;
 		}
 		free(name);
 		if (fprintf(f, ".El\n") < 0)
-			return 0;
+			return -1;
 	}
 
-	return fprintf(f, ".El\n") >= 0;
+	return fprintf(f, ".El\n") < 0 ? -1 : 1;
 }
 
 static int
@@ -135,6 +140,9 @@ gen_eitem(FILE *f, const struct eitem *ei, const char *enm)
 	return 1;
 }
 
+/*
+ * Return -1 on failure, 0 if nothing written, 1 if something written.
+ */
 static int
 gen_enums(FILE *f, const struct config *cfg)
 {
@@ -143,58 +151,69 @@ gen_enums(FILE *f, const struct config *cfg)
 	char			*name, *cp;
 
 	if (TAILQ_EMPTY(&cfg->eq))
-		return 1;
+		return 0;
 
 	if (fprintf(f, 
-	    ".Ss Enumerations\n"
+	    "Enumerations constrain integer types to a known set\n"
+	    "of values.\n"
+	    "They're used for input validation and value comparison.\n"
+	    "The following enumerations are available.\n"
 	    ".Bl -tag -width Ds\n") < 0)
-		return 0;
+		return -1;
+
 	TAILQ_FOREACH(e, &cfg->eq, entries) {
-		if (fprintf(f, 
-		    ".It Vt enum %s\n", e->name) < 0)
-			return 0;
+		if (fprintf(f, ".It Vt enum %s\n", e->name) < 0)
+			return -1;
 		if (e->doc != NULL && !gen_doc_block(f, e->doc, 1))
-			return 0;
-		if (fprintf(f, 
-		    ".Bl -compact -tag -width Ds\n") < 0)
-			return 0;
+			return -1;
+		if (fprintf(f, ".Bl -compact -tag -width Ds\n") < 0)
+			return -1;
 		if ((name = strdup(e->name)) == NULL)
-			return 0;
+			return -1;
 		for (cp = name; *cp != '\0'; cp++)
 			*cp = toupper((unsigned char)*cp);
 		TAILQ_FOREACH(ei, &e->eq, entries)
 			if (!gen_eitem(f, ei, name)) {
 				free(name);
-				return 0;
+				return -1;
 		}
 		free(name);
 		if (fprintf(f, ".El\n") < 0)
-			return 0;
+			return -1;
 	}
 
-	return fprintf(f, ".El\n") >= 0;
+	return fprintf(f, ".El\n") < 0 ? -1 : 1;
 }
 
+/*
+ * Return -1 on failure, 0 if nothing written, 1 if something written.
+ */
 static int
 gen_roles(FILE *f, const struct config *cfg)
 {
 	const struct role	*r;
 
 	if (TAILQ_EMPTY(&cfg->rq))
-		return 1;
+		return 0;
 
 	if (fprintf(f, 
-	    ".Ss Roles\n"
-	    "The\n"
+	    "Roles define which operations and data are available to\n"
+	    "running application and are set with\n"
+	    ".Fn db_role .\n"
+	    "It accepts one of the following roles:\n"
+	    ".Pp\n"
 	    ".Vt enum ort_role\n"
-	    "enumeration defines the following roles:\n"
-	    ".Bl -tag -width Ds\n") < 0)
-		return 0;
-	TAILQ_FOREACH(r, &cfg->arq, allentries)
-		if (fprintf(f, 
-		    ".It Dv ROLE_%s\n", r->name) < 0)
-			return 0;
-	return fprintf(f, ".El\n") >= 0;
+	    ".Bl -tag -width Ds -compact -offset indent\n") < 0)
+		return -1;
+
+	TAILQ_FOREACH(r, &cfg->arq, allentries) {
+		if (fprintf(f, ".It Dv ROLE_%s\n", r->name) < 0)
+			return -1;
+		if (r->doc != NULL && !gen_doc_block(f, r->doc, 0))
+			return -1;
+	}
+
+	return fprintf(f, ".El\n") < 0 ? -1 : 1;
 }
 
 static int
@@ -261,27 +280,34 @@ gen_fields(FILE *f, const struct strct *s)
 	return fprintf(f, ".El\n") >= 0;
 }
 
+/*
+ * Return -1 on failure, 0 if nothing written, 1 if something written.
+ */
 static int
 gen_strcts(FILE *f, const struct config *cfg)
 {
 	const struct strct	*s;
 
 	if (TAILQ_EMPTY(&cfg->sq))
-		return 1;
+		return 0;
 
 	if (fprintf(f, 
-	    ".Ss Structures\n"
+	    "Structures are the mainstay of the application.\n"
+	    "They correspond to tables in the database.\n"
+	    "The following structures are available:\n"
 	    ".Bl -tag -width Ds\n") < 0)
-		return 0;
+		return -1;
+
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
 		if (fprintf(f, ".It Vt struct %s\n", s->name) < 0)
-			return 0;
+			return -1;
 		if (s->doc != NULL && !gen_doc_block(f, s->doc, 1))
-			return 0;
+			return -1;
 		if (!gen_fields(f, s))
-			return 0;
+			return -1;
 	}
-	return fprintf(f, ".El\n") >= 0;
+
+	return fprintf(f, ".El\n") < 0 ? -1 : 1;
 }
 
 static int
@@ -401,6 +427,9 @@ gen_search(FILE *f, const struct search *sr)
 
 }
 
+/*
+ * Return -1 on failure, 0 if nothing written, 1 if something written.
+ */
 static int
 gen_searches(FILE *f, const struct config *cfg)
 {
@@ -411,17 +440,20 @@ gen_searches(FILE *f, const struct config *cfg)
 	TAILQ_FOREACH(s, &cfg->sq, entries)
 		TAILQ_FOREACH(sr, &s->sq, entries) {
 			if (first && fputs
-			    (".Ss Queries\n"
+			    ("The following queries are available,\n"
+			     "which allow accepted roles to extract\n"
+			     "data from the database:\n"
 			     ".Bl -tag -width Ds\n", f) == EOF)
-				return 0;
+				return -1;
 			if (!gen_search(f, sr))
-				return 0;
+				return -1;
 			first = 0;
 		}
-	if (!first && fputs(".El\n", f) == EOF)
-		return 0;
 
-	return 1;
+	if (!first && fputs(".El\n", f) == EOF)
+		return -1;
+
+	return !first;
 }
 
 static int
@@ -611,6 +643,9 @@ gen_insert(FILE *f, const struct strct *s)
 
 }
 
+/*
+ * Return -1 on failure, 0 if nothing written, 1 if something written.
+ */
 static int
 gen_deletes(FILE *f, const struct config *cfg)
 {
@@ -621,19 +656,24 @@ gen_deletes(FILE *f, const struct config *cfg)
 	TAILQ_FOREACH(s, &cfg->sq, entries)
 		TAILQ_FOREACH(up, &s->dq, entries) {
 			if (first && fputs
-			    (".Ss Deletions\n"
+			    ("Deletes allow for accepted roles to\n"
+			     "delete data from the database.\n"
+			     "The following deletes are available:\n"
 			     ".Bl -tag -width Ds\n", f) == EOF)
-				return 0;
+				return -1;
 			if (!gen_update(f, up))
-				return 0;
+				return -1;
 			first = 0;
 		}
 	if (!first && fputs(".El\n", f) == EOF)
-		return 0;
+		return -1;
 
-	return 1;
+	return !first;
 }
 
+/*
+ * Return -1 on failure, 0 if nothing written, 1 if something written.
+ */
 static int
 gen_updates(FILE *f, const struct config *cfg)
 {
@@ -644,19 +684,24 @@ gen_updates(FILE *f, const struct config *cfg)
 	TAILQ_FOREACH(s, &cfg->sq, entries)
 		TAILQ_FOREACH(up, &s->uq, entries) {
 			if (first && fputs
-			    (".Ss Updates\n"
+			    ("Updates allow for accepted roles to\n"
+			     "modify data in the database.\n"
+			     "The following updates are available:\n"
 			     ".Bl -tag -width Ds\n", f) == EOF)
-				return 0;
+				return -1;
 			if (!gen_update(f, up))
-				return 0;
+				return -1;
 			first = 0;
 		}
 	if (!first && fputs(".El\n", f) == EOF)
-		return 0;
+		return -1;
 
-	return 1;
+	return !first;
 }
 
+/*
+ * Return -1 on failure, 0 if nothing written, 1 if something written.
+ */
 static int
 gen_inserts(FILE *f, const struct config *cfg)
 {
@@ -667,23 +712,26 @@ gen_inserts(FILE *f, const struct config *cfg)
 		if (s->ins == NULL)
 			continue;
 		if (first && fputs
-		    (".Ss Inserts\n"
+		    ("Inserts allow accepted roles to add\n"
+		     "new data to the database.\n"
+		     "The following inserts are available:\n"
 		     ".Bl -tag -width Ds\n", f) == EOF)
-			return 0;
+			return -1;
 		if (!gen_insert(f, s))
-			return 0;
+			return -1;
 		first = 0;
 	}
 	if (!first && fputs(".El\n", f) == EOF)
-		return 0;
+		return -1;
 
-	return 1;
+	return !first;
 }
 
 int
 ort_lang_c_manpage(const struct ort_lang_c *args,
 	const struct config *cfg, FILE *f)
 {
+	int	 c;
 
 	if (fprintf(f, 
 	    ".\\\" WARNING: automatically generated by ort-%s.\n"
@@ -691,7 +739,7 @@ ort_lang_c_manpage(const struct ort_lang_c *args,
 		return 0;
 
 	if (fprintf(f,
-	    ".Dd $Mdocdate$\n"
+	    ".Dd $" "Mdocdate" "$\n"
 	    ".Dt ORT 3\n"
 	    ".Os\n"
 	    ".Sh NAME\n"
@@ -699,27 +747,38 @@ ort_lang_c_manpage(const struct ort_lang_c *args,
 	    ".Nd functions for your project\n"
 	    ".Sh DESCRIPTION\n"
 	    "This is all the stuff.\n"
-	    ".Sh DATA\n") < 0)
+	    ".Ss Data structures\n") < 0)
 		return 0;
 
-	if (!gen_roles(f, cfg))
+	if ((c = gen_roles(f, cfg)) < 0)
 		return 0;
-	if (!gen_enums(f, cfg))
+	else if (c > 0 && fputs(".Pp\n", f) == EOF)
 		return 0;
-	if (!gen_bitfs(f, cfg))
+	if ((c = gen_enums(f, cfg)) < 0)
 		return 0;
-	if (!gen_strcts(f, cfg))
+	else if (c > 0 && fputs(".Pp\n", f) == EOF)
 		return 0;
-
-	if (fputs(".Sh OPERATIONS\n", f) == EOF)
+	if ((c = gen_bitfs(f, cfg)) < 0)
 		return 0;
-	if (!gen_searches(f, cfg))
+	else if (c > 0 && fputs(".Pp\n", f) == EOF)
 		return 0;
-	if (!gen_updates(f, cfg))
+	if (gen_strcts(f, cfg) < 0)
 		return 0;
-	if (!gen_deletes(f, cfg))
+	if (fputs(".Ss Database input\n", f) == EOF)
 		return 0;
-	if (!gen_inserts(f, cfg))
+	if ((c = gen_searches(f, cfg)) < 0)
+		return 0;
+	else if (c > 0 && fputs(".Pp\n", f) == EOF)
+		return 0;
+	if ((c = gen_updates(f, cfg)) < 0)
+		return 0;
+	else if (c > 0 && fputs(".Pp\n", f) == EOF)
+		return 0;
+	if ((c = gen_deletes(f, cfg)) < 0)
+		return 0;
+	else if (c > 0 && fputs(".Pp\n", f) == EOF)
+		return 0;
+	if (gen_inserts(f, cfg) < 0)
 		return 0;
 
 	return 1;

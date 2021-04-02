@@ -82,6 +82,27 @@ static	const char *const optypes[OPTYPE__MAX] = {
 	"notnull", /* OPTYPE_NOTNULL */
 };
 
+const char *
+get_optype_str(enum optype op)
+{
+
+	return optypes[op];
+}
+
+const char *
+get_stype_str(enum stype op)
+{
+
+	return stypes[op];
+}
+
+const char *
+get_ftype_str(enum ftype op)
+{
+
+	return ftypes[op];
+}
+
 /*
  * Generate the db_open function header.
  * If "decl" is non-zero, this is the declaration; otherwise, the

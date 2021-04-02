@@ -60,4 +60,8 @@ int	gen_filldep(struct filldepq *, const struct strct *, unsigned int);
 const struct filldep *
 	get_filldep(const struct filldepq *, const struct strct *);
 
+const char	*get_optype_str(enum optype);
+const char	*get_stype_str(enum stype);
+const char	*get_ftype_str(enum ftype);
+
 #endif /* !LANG_C_H */

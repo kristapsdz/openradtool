@@ -31,17 +31,45 @@
 #include "ort.h"
 #include "ort-lang-c.h"
 #include "lang.h"
+#include "lang-c.h"
 
 static int
-gen_block(FILE *f, const char *cp)
+gen_doc_block(FILE *f, const char *cp, int tail)
 {
-	size_t	 sz;
+	size_t	 sz, lines = 0;
 
-	sz = strlen(cp);
-	if (fputs(cp, f) == EOF)
+	for ( ; *cp != '\0'; cp++)
+		if (!isspace((unsigned char)*cp))
+			break;
+
+	if (*cp == '\0')
+		return 1;
+
+	while (*cp != '\0') {
+		if (*cp == '.' || *cp == '"')
+			if (fputs("\\&", f) == EOF)
+				return 0;
+		for (sz = 0; *cp != '\0'; cp++) {
+			if (*cp == '\n')
+				break;
+			if (*cp == '\\' && cp[1] == '"')
+				cp++;
+			if (fputc(*cp, f) == EOF)
+				return 0;
+			sz++;
+		}
+		lines += sz > 0 ? 1 : 0;
+		if (sz > 0 && fputc('\n', f) == EOF)
+			return 0;
+		for ( ; *cp != '\0'; cp++)
+			if (!isspace((unsigned char)*cp))
+				break;
+	}
+
+	if (lines && tail && fputs(".Pp\n", f) == EOF)
 		return 0;
-	return (sz && cp[sz - 1] != '\n') ?
-		fputc('\n', f) != EOF : 1;
+
+	return 1;
 }
 
 static int
@@ -51,7 +79,7 @@ gen_bitem(FILE *f, const struct bitidx *bi, const char *bitf)
 	if (fprintf(f, ".It Dv BITF_%s_%s, BITI_%s_%s\n", 
 	    bitf, bi->name, bitf, bi->name) < 0)
 		return 0;
-	if (bi->doc != NULL && !gen_block(f, bi->doc))
+	if (bi->doc != NULL && !gen_doc_block(f, bi->doc, 0))
 		return 0;
 	return 1;
 }
@@ -67,14 +95,14 @@ gen_bitfs(FILE *f, const struct config *cfg)
 		return 1;
 
 	if (fprintf(f, 
-	    "Bitfields available:\n"
+	    ".Ss Bitfields\n"
 	    ".Bl -tag -width Ds\n") < 0)
 		return 0;
 	TAILQ_FOREACH(b, &cfg->bq, entries) {
 		if (fprintf(f, 
 		    ".It Vt enum %s\n", b->name) < 0)
 			return 0;
-		if (b->doc != NULL && !gen_block(f, b->doc))
+		if (b->doc != NULL && !gen_doc_block(f, b->doc, 1))
 			return 0;
 		if (fprintf(f, 
 		    ".Bl -tag -width Ds\n") < 0)
@@ -102,7 +130,7 @@ gen_eitem(FILE *f, const struct eitem *ei, const char *enm)
 
 	if (fprintf(f, ".It Dv %s_%s\n", enm, ei->name) < 0)
 		return 0;
-	if (ei->doc != NULL && !gen_block(f, ei->doc))
+	if (ei->doc != NULL && !gen_doc_block(f, ei->doc, 0))
 		return 0;
 	return 1;
 }
@@ -118,17 +146,17 @@ gen_enums(FILE *f, const struct config *cfg)
 		return 1;
 
 	if (fprintf(f, 
-	    "Enumerations available:\n"
+	    ".Ss Enumerations\n"
 	    ".Bl -tag -width Ds\n") < 0)
 		return 0;
 	TAILQ_FOREACH(e, &cfg->eq, entries) {
 		if (fprintf(f, 
 		    ".It Vt enum %s\n", e->name) < 0)
 			return 0;
-		if (e->doc != NULL && !gen_block(f, e->doc))
+		if (e->doc != NULL && !gen_doc_block(f, e->doc, 1))
 			return 0;
 		if (fprintf(f, 
-		    ".Bl -tag -width Ds\n") < 0)
+		    ".Bl -compact -tag -width Ds\n") < 0)
 			return 0;
 		if ((name = strdup(e->name)) == NULL)
 			return 0;
@@ -214,7 +242,7 @@ gen_field(FILE *f, const struct field *fd)
 
 	if (c < 0)
 		return 0;
-	if (fd->doc != NULL && !gen_block(f, fd->doc))
+	if (fd->doc != NULL && !gen_doc_block(f, fd->doc, 0))
 		return 0;
 	return 1;
 }
@@ -248,12 +276,140 @@ gen_strcts(FILE *f, const struct config *cfg)
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
 		if (fprintf(f, ".It Vt struct %s\n", s->name) < 0)
 			return 0;
-		if (s->doc != NULL && !gen_block(f, s->doc))
+		if (s->doc != NULL && !gen_doc_block(f, s->doc, 1))
 			return 0;
 		if (!gen_fields(f, s))
 			return 0;
 	}
 	return fprintf(f, ".El\n") >= 0;
+}
+
+static int
+gen_search(FILE *f, const struct search *sr)
+{
+	const char		*retname;
+	const struct sent	*sent;
+	int		 	 c, hasunary = 0;
+
+	if (fputs(".It Ft \"", f) == EOF)
+		return 0;
+
+	retname = sr->dst != NULL ? 
+		sr->dst->strct->name : sr->parent->name;
+	if (sr->type == STYPE_COUNT)
+		c = fprintf(f, "uint64_t");
+	else if (sr->type == STYPE_SEARCH)
+		c = fprintf(f, "struct %s *", retname);
+	else if (sr->type == STYPE_LIST)
+		c = fprintf(f, "struct %s_q *", retname);
+	else
+		c = fprintf(f, "void");
+	if (c < 0)
+		return 0;
+
+	if (fprintf(f, "\" Fn db_%s_%s", 
+	    sr->parent->name, get_stype_str(sr->type)) < 0)
+		return 0;
+
+	if (sr->name == NULL && !TAILQ_EMPTY(&sr->sntq)) {
+		if (fputs("_by", f) == EOF)
+			return 0;
+		TAILQ_FOREACH(sent, &sr->sntq, entries)
+			if (fprintf(f, "_%s_%s", sent->uname,
+			    get_optype_str(sent->op)) < 0)
+				return 0;
+	} else if (sr->name != NULL)
+		if (fprintf(f, "_%s", sr->name) < 0)
+			return 0;
+	if (fputs("\n", f) == EOF)
+		return 0;
+
+	if (sr->doc != NULL && !gen_doc_block(f, sr->doc, 1))
+		return 0;
+
+	if (fputs(".TS\nlw6 l l.\n", f) == EOF)
+		return 0;
+
+	if (fputs("-\t\\fIstruct ort *\\fR\t\\fIctx\\fR\n", f) == EOF)
+		return 0;
+	if (sr->type == STYPE_ITERATE && fprintf(f, 
+	    "-\t\\fI%s_cb\\fR\t\\fIcb\\fR\n"
+	    "-\t\\fIvoid *\\fR\t\\fIarg\\fR\n", retname) < 0)
+		return 0;
+
+	TAILQ_FOREACH(sent, &sr->sntq, entries) {
+		if (OPTYPE_ISUNARY(sent->op)) {
+			hasunary = 1;
+			continue;
+		}
+		if (sent->field->type == FTYPE_BLOB)
+			if (fprintf(f, 
+			    "-\t\\fIsize_t\\fR\t\\fI%s\\fR (size)\n", 
+			    sent->field->name) < 0)
+				return 0;
+		if (fprintf(f, "%s\t", get_optype_str(sent->op)) < 0)
+			return 0;
+		if (fputs("\\fI", f) == EOF)
+			return 0;
+		if (sent->field->type == FTYPE_ENUM)
+			c = fprintf(f, "enum %s", 
+				sent->field->enm->name);
+		else 
+			c = fprintf(f, "%s%s", 
+				get_ftype_str(sent->field->type), 
+				(sent->field->flags & FIELD_NULL) ?
+				"*" : "");
+		if (c < 0)
+			return 0;
+		if (fprintf(f, "\\fR\t\\fI%s\\fR\n", 
+		    sent->field->name) < 0)
+			return 0;
+
+	}
+
+	if (hasunary) {
+		if (fputs(".TE\n", f) == EOF)
+			return 0;
+		if (fputs(".Pp\n"
+		    "Unary operations:\n"
+		    ".TS\n"
+		    "lw7 l.\n", f) == EOF)
+			return 0;
+		TAILQ_FOREACH(sent, &sr->sntq, entries) {
+			if (!OPTYPE_ISUNARY(sent->op))
+				continue;
+			if (fprintf(f, "%s\t\\fI%s\\fR\n", 
+			    get_optype_str(sent->op),
+			    sent->field->name) < 0)
+				return 0;
+		}
+	}
+
+	return fputs(".TE\n", f) != EOF;
+
+}
+
+static int
+gen_searches(FILE *f, const struct config *cfg)
+{
+	const struct strct	*s;
+	const struct search	*sr;
+	int			 first = 1;
+
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		TAILQ_FOREACH(sr, &s->sq, entries) {
+			if (first && fputs
+			    (".Ss Queries\n"
+			     ".Bl -tag -width Ds\n", f) == EOF)
+				return 0;
+			if (!gen_search(f, sr))
+				return 0;
+			first = 0;
+		}
+	if (!first && fputs(".El\n", f) == EOF)
+		return 0;
+
+	return 1;
 }
 
 int
@@ -273,180 +429,25 @@ ort_lang_c_manpage(const struct ort_lang_c *args,
 	    ".Sh NAME\n"
 	    ".Nm ort\n"
 	    ".Nd functions for your project\n"
-	    ".Sh DESCRIPTION\n") < 0)
+	    ".Sh DESCRIPTION\n"
+	    "This is all the stuff.\n"
+	    ".Sh DATA\n") < 0)
 		return 0;
 
 	if (!gen_roles(f, cfg))
 		return 0;
-
-	if (!TAILQ_EMPTY(&cfg->eq) || !TAILQ_EMPTY(&cfg->bq)) {
-		if (fprintf(f, 
-		    ".Ss User-defined types\n") < 0)
-			return 0;
-		if (!gen_enums(f, cfg))
-			return 0;
-		if (!gen_bitfs(f, cfg))
-			return 0;
-	}
-
+	if (!gen_enums(f, cfg))
+		return 0;
+	if (!gen_bitfs(f, cfg))
+		return 0;
 	if (!gen_strcts(f, cfg))
 		return 0;
 
-#if 0
-	if (args->flags & ORT_LANG_C_CORE) {
-		TAILQ_FOREACH(p, &cfg->sq, entries)
-			if (!gen_struct(f, cfg, p))
-				return 0;
-	}
-
-	if (args->flags & ORT_LANG_C_VALID_KCGI) {
-		if (!gen_comment(f, 0, COMMENT_C,
-		    "All of the fields we validate.\n"
-		    "These are as VALID_XXX_YYY, where XXX is "
-		    "the structure and YYY is the field.\n"
-		    "Only native types are listed."))
-			return 0;
-		if (fputs("enum\tvalid_keys {\n", f) == EOF)
-			return 0;
-		TAILQ_FOREACH(p, &cfg->sq, entries)
-			if (!gen_valid_enums(f, p))
-				return 0;
-		if (fputs("\tVALID__MAX\n};\n\n", f) == EOF)
-			return 0;
-		if (!gen_comment(f, 0, COMMENT_C,
-		    "Validation fields.\n"
-		    "Pass this directly into khttp_parse(3) "
-		    "to use them as-is.\n"
-		    "The functions are \"valid_xxx_yyy\", "
-		    "where \"xxx\" is the struct and \"yyy\" "
-		    "the field, and can be used standalone.\n"
-		    "The form inputs are named \"xxx-yyy\"."))
-			return 0;
-		if (fputs("extern const struct kvalid "
-			   "valid_keys[VALID__MAX];\n\n", f) == EOF)
-			return 0;
-	}
-
-	if (args->flags & ORT_LANG_C_JSON_JSMN) {
-		if (!gen_comment(f, 0, COMMENT_C,
-		    "Possible error returns from jsmn_parse(), "
-		    "if returning a <0 error code."))
-			return 0;
-		if (fputs("enum jsmnerr_t {\n"
-		          "\tJSMN_ERROR_NOMEM = -1,\n"
-		          "\tJSMN_ERROR_INVAL = -2,\n"
-		          "\tJSMN_ERROR_PART = -3\n"
-		          "};\n\n", f) == EOF)
-			return 0;
-		if (!gen_comment(f, 0, COMMENT_C, 
-		    "Type of JSON token"))
-			return 0;
-		if (fputs("typedef enum {\n"
-		          "\tJSMN_UNDEFINED = 0,\n"
-		          "\tJSMN_OBJECT = 1,\n"
-		          "\tJSMN_ARRAY = 2,\n"
-		          "\tJSMN_STRING = 3,\n"
-		          "\tJSMN_PRIMITIVE = 4\n"
-		          "} jsmntype_t;\n\n", f) == EOF)
-			return 0;
-		if (!gen_comment(f, 0, COMMENT_C,
-		    "JSON token description."))
-			return 0;
-		if (fputs("typedef struct {\n"
-		          "\tjsmntype_t type;\n"
-		          "\tint start;\n"
-		          "\tint end;\n"
-		          "\tint size;\n"
-		          "} jsmntok_t;\n\n", f) == EOF)
-			return 0;
-		if (!gen_comment(f, 0, COMMENT_C,
-		    "JSON parser. Contains an array of token "
-		    "blocks available. Also stores the string "
-		    "being parsed now and current position in "
-		    "that string."))
-			return 0;
-		if (fputs("typedef struct {\n"
-		          "\tunsigned int pos;\n"
-		          "\tunsigned int toknext;\n"
-		          "\tint toksuper;\n"
-		          "} jsmn_parser;\n\n", f) == EOF)
-			return 0;
-	}
-
-	if (fputs("__BEGIN_DECLS\n\n", f) == EOF)
+	if (fputs(".Sh OPERATIONS\n", f) == EOF)
+		return 0;
+	if (!gen_searches(f, cfg))
 		return 0;
 
-	if (args->flags & ORT_LANG_C_DB_SQLBOX) {
-		if (!gen_open(f, cfg))
-			return 0;
-		if (!gen_transaction(f, cfg))
-			return 0;
-		if (!gen_close(f, cfg))
-			return 0;
-		if (!TAILQ_EMPTY(&cfg->rq))
-			if (!gen_roles(f, cfg))
-				return 0;
-		TAILQ_FOREACH(p, &cfg->sq, entries)
-			if (!gen_database(f, cfg, p))
-				return 0;
-	}
-
-	if (args->flags & ORT_LANG_C_JSON_KCGI)
-		TAILQ_FOREACH(p, &cfg->sq, entries)
-			if (!gen_json_out(f, cfg, p))
-				return 0;
-	if (args->flags & ORT_LANG_C_JSON_JSMN) {
-		if (!gen_comment(f, 0, COMMENT_C,
-		    "Check whether the current token in a "
-		    "JSON parse sequence \"tok\" parsed from "
-		    "\"json\" is equal to a string.\n"
-		    "Usually used when checking for key "
-		    "equality.\n"
-		    "Returns non-zero on equality, zero "
-		    "otherwise."))
-			return 0;
-		if (fputs("int jsmn_eq(const char *json,\n"
-		          "\tconst jsmntok_t *tok, "
-			  "const char *s);\n\n", f) == EOF)
-			return 0;
-		if (!gen_comment(f, 0, COMMENT_C,
-		    "Initialise a JSON parser sequence \"p\"."))
-			return 0;
-		if (fputs("void jsmn_init"
-			  "(jsmn_parser *p);\n\n", f) == EOF)
-			return 0;
-		if (!gen_comment(f, 0, COMMENT_C,
-		    "Parse a buffer \"buf\" of length \"sz\" "
-		    "into tokens \"toks\" of length \"toksz\" "
-		    "with parser \"p\".\n"
-		    "Returns the number of tokens parsed or "
-		    "<0 on failure (possible errors described "
-		    "in enum jsmnerr_t).\n"
-		    "If passed NULL \"toks\", simply computes "
-		    "the number of tokens required."))
-			return 0;
-		if (fputs("int jsmn_parse(jsmn_parser *p, "
-			  "const char *buf,\n"
-			  "\tsize_t sz, jsmntok_t *toks, "
-		          "unsigned int toksz);\n\n", f) == EOF)
-			return 0;
-		TAILQ_FOREACH(p, &cfg->sq, entries)
-			if (!gen_json_parse(f, cfg, p))
-				return 0;
-	}
-	if (args->flags & ORT_LANG_C_VALID_KCGI)
-		TAILQ_FOREACH(p, &cfg->sq, entries)
-			if (!gen_valids(f, cfg, p))
-				return 0;
-
-	if (fputs("__END_DECLS\n", f) == EOF)
-		return 0;
-
-	if (args->guard != NULL &&
-	    fputs("\n#endif\n", f) == EOF)
-		return 0;
-
-#endif
 	return 1;
 }
 

@@ -373,13 +373,25 @@ gen_search(FILE *f, const struct search *sr)
 		if (fputs(".Pp\n"
 		    "Unary operations:\n"
 		    ".TS\n"
-		    "lw7 l.\n", f) == EOF)
+		    "lw6 lw12 l.\n", f) == EOF)
 			return 0;
 		TAILQ_FOREACH(sent, &sr->sntq, entries) {
 			if (!OPTYPE_ISUNARY(sent->op))
 				continue;
-			if (fprintf(f, "%s\t\\fI%s\\fR\n", 
-			    get_optype_str(sent->op),
+			if (fprintf(f, "%s\t",
+			    get_optype_str(sent->op)) < 0)
+				return 0;
+			if (fputs("\\fI", f) == EOF)
+				return 0;
+			if (sent->field->type == FTYPE_ENUM)
+				c = fprintf(f, "enum %s", 
+					sent->field->enm->name);
+			else 
+				c = fprintf(f, "%s", get_ftype_str
+					(sent->field->type));
+			if (c < 0)
+				return 0;
+			if (fprintf(f, "\\fR\t\\fI%s\\fR\n", 
 			    sent->field->name) < 0)
 				return 0;
 		}
@@ -530,16 +542,69 @@ gen_update(FILE *f, const struct update *up)
 		if (fputs(".Pp\n"
 		    "Unary operations:\n"
 		    ".TS\n"
-		    "l lw7 l.\n", f) == EOF)
+		    "l lw6 l l.\n", f) == EOF)
 			return 0;
 		TAILQ_FOREACH(ur, &up->crq, entries) {
 			if (!OPTYPE_ISUNARY(ur->op))
 				continue;
-			if (fprintf(f, "\\(->\t%s\t\\fI%s\\fR\n", 
-			    get_optype_str(ur->op),
+			if (fprintf(f, "\\(->\t%s\t",
+			    get_optype_str(ur->op)) < 0)
+				return 0;
+			if (fputs("\\fI", f) == EOF)
+				return 0;
+			if (ur->field->type == FTYPE_ENUM)
+				c = fprintf(f, "enum %s", 
+					ur->field->enm->name);
+			else 
+				c = fprintf(f, "%s", get_ftype_str
+					(ur->field->type));
+			if (c < 0)
+				return 0;
+			if (fprintf(f, "\\fR\t\\fI%s\\fR\n", 
 			    ur->field->name) < 0)
 				return 0;
 		}
+	}
+
+	return fputs(".TE\n", f) != EOF;
+
+}
+
+static int
+gen_insert(FILE *f, const struct strct *s)
+{
+	const struct field	*fd;
+	int			 c;
+
+	if (fprintf(f, ".It Ft int64_t Fn db_%s_insert\n", s->name) < 0)
+		return 0;
+
+	if (fputs(".TS\nl l.\n", f) == EOF)
+		return 0;
+	if (fputs("\\fIstruct ort *\\fR\t\\fIctx\\fR\n", f) == EOF)
+		return 0;
+
+	TAILQ_FOREACH(fd, &s->fq, entries) {
+		if (fd->type == FTYPE_STRUCT || 
+		    (fd->flags & FIELD_ROWID))
+			continue;
+		if (fd->type == FTYPE_BLOB)
+			if (fprintf(f,
+			    "\\fIsize_t\\fR\t\\fI%s\\fR (size)\n", 
+			    fd->name) < 0)
+				return 0;
+		if (fputs("\\fI", f) == EOF)
+			return 0;
+		if (fd->type == FTYPE_ENUM)
+			c = fprintf(f, "enum %s", fd->enm->name);
+		else 
+			c = fprintf(f, "%s%s", get_ftype_str(fd->type), 
+				(fd->flags & FIELD_NULL) ?  "*" : "");
+		if (c < 0)
+			return 0;
+		if (fprintf(f, "\\fR\t\\fI%s\\fR\n", fd->name) < 0)
+			return 0;
+
 	}
 
 	return fputs(".TE\n", f) != EOF;
@@ -592,6 +657,29 @@ gen_updates(FILE *f, const struct config *cfg)
 	return 1;
 }
 
+static int
+gen_inserts(FILE *f, const struct config *cfg)
+{
+	const struct strct	*s;
+	int			 first = 1;
+
+	TAILQ_FOREACH(s, &cfg->sq, entries) {
+		if (s->ins == NULL)
+			continue;
+		if (first && fputs
+		    (".Ss Inserts\n"
+		     ".Bl -tag -width Ds\n", f) == EOF)
+			return 0;
+		if (!gen_insert(f, s))
+			return 0;
+		first = 0;
+	}
+	if (!first && fputs(".El\n", f) == EOF)
+		return 0;
+
+	return 1;
+}
+
 int
 ort_lang_c_manpage(const struct ort_lang_c *args,
 	const struct config *cfg, FILE *f)
@@ -630,6 +718,8 @@ ort_lang_c_manpage(const struct ort_lang_c *args,
 	if (!gen_updates(f, cfg))
 		return 0;
 	if (!gen_deletes(f, cfg))
+		return 0;
+	if (!gen_inserts(f, cfg))
 		return 0;
 
 	return 1;

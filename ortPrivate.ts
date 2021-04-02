@@ -1,10 +1,19 @@
 	/**
 	 * Facilities to manipulate 64-bit numbers encoded as strings.
-	 * The JavaScript implementation of openradtool uses strings for
-	 * numbers because of the 64-bit problem: internally,
-	 * openradtool uses 64-bit integer numbers, but JavaScript has
-	 * only 53 bits of precision for integers.
-	 * This class is a modified version of long.js fixed to base 10.
+	 * The JavaScript implementation of openradtool uses strings for numbers
+	 * because of the 64-bit problem: internally, openradtool uses 64-bit
+	 * integer numbers, but JavaScript has only 53 bits of precision for
+	 * integers.
+	 * This class is a modified version of long.js fixed to base 10 and
+	 * converted to TypeScript.
+	 *
+	 * Original source: https://github.com/dcodeIO/long.js
+	 *
+	 * @license
+	 * Copyright 2009 The Closure Library Authors.
+	 * Copyright 2020 Daniel Wirtz / The long.js Contributors.
+	 * Copyright 2021 Kristaps Dzonsons
+	 * SPDX-License-Identifier: Apache-2.0
 	 */
 	export class Long {
 		private readonly __isLong__: boolean = true;
@@ -24,14 +33,11 @@
 				false: unsigned;
 		}
 
-		static readonly ZERO: Long = 
-			new Long(0, 0);
-		static readonly ONE: Long = 
-			new Long(1, 0);
-		static readonly UZERO: Long = 
-			new Long(0, 0, true);
-		static readonly TEN_TO_EIGHT: Long =
-			new Long(100000000, 0);
+		static readonly ZERO: Long = new Long(0, 0);
+		static readonly ONE: Long = new Long(1, 0);
+		static readonly UZERO: Long = new Long(0, 0, true);
+		static readonly TEN_TO_EIGHT: Long = new Long(100000000, 0);
+
 		static readonly MIN_VALUE: Long = 
 			new Long(0, 0x80000000|0, false);
 		static readonly MAX_UNSIGNED_VALUE: Long = 

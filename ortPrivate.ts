@@ -157,15 +157,12 @@
 
 		/**
 		 * @return The bit-wise AND of the value with the given value.
-		 * Sign is inherited from the source value.  If the
-		 * parameterised value can't be parsed, returns zero.
+		 * Sign is inherited from the source value.  
 		 */
-		and(other: Long|number|string|null): Long
+		and(other: Long|number): Long
 		{
-			const v: Long|null = !Long.isLong(other) ?
-				Long.fromValue(other) : <Long>other;
-			if (v === null)
-				return Long.ZERO;
+			const v: Long = !Long.isLong(other) ?
+				Long.fromNumber(<number>other) : <Long>other;
 			return new Long(this.low & v.low, 
 					this.high & v.high, 
 					this.unsigned);
@@ -176,16 +173,47 @@
 		 * Sign is inherited from the source value.  If the
 		 * parameterised value can't be parsed, returns zero.
 		 */
-		or(other: Long|number|string|null): Long 
+		or(other: Long|number): Long 
 		{
-			const v: Long|null = !Long.isLong(other) ?
-				Long.fromValue(other) : <Long>other;
-			if (v === null)
-				return Long.ZERO;
+			const v: Long = !Long.isLong(other) ?
+				Long.fromNumber(<number>other) : <Long>other;
 			return new Long(this.low | v.low, 
 					this.high | v.high, 
 					this.unsigned);
 		}
+
+		/**
+		 * @return 0 if they are the same (or the number could not be
+		 * parsed), 1 if the this is greater, and -1 if the given one
+		 * is greater.
+		 */
+		compare(other: Long|number): number
+		{
+			const v: Long = !Long.isLong(other) ?
+				Long.fromNumber(<number>other) : <Long>other;
+
+			if (this.eq(v))
+				return 0;
+
+			const thisNeg: boolean = this.isNegative();
+			const otherNeg: boolean = v.isNegative();
+
+			if (thisNeg && !otherNeg)
+				return -1;
+			if (!thisNeg && otherNeg)
+				return 1;
+
+			// At this point the sign bits are the same
+
+			if (!this.unsigned)
+				return this.sub(v).isNegative() ? -1 : 1;
+
+			// Both are positive if at least one is unsigned
+
+			return (v.high >>> 0) > (this.high >>> 0) || 
+				(v.high === this.high && 
+				 (v.low >>> 0) > (this.low >>> 0)) ?  -1 : 1;
+		};
 
 		/**
 		 * @return The value left-shifted by the given number of bits.
@@ -194,8 +222,7 @@
 		shl(numBits: Long|number): Long
 		{
 			let v: number = Long.isLong(numBits) ?
-				(<Long>numBits).toInt() : 
-				<number>numBits;
+				(<Long>numBits).toInt() : <number>numBits;
 
 			if ((v &= 63) === 0)
 				return this;
@@ -217,8 +244,7 @@
 		mul(tomul: Long|number): Long
 		{
 			const v: Long = !Long.isLong(tomul) ?
-				Long.fromNumber(<number>tomul) : 
-				<Long>tomul;
+				Long.fromNumber(<number>tomul) : <Long>tomul;
 
 			if (this.isZero() || v.isZero())
 				return Long.ZERO;
@@ -281,6 +307,16 @@
 				((c16 << 16) | c00, (c48 << 16) | c32,
 				 this.unsigned);
 		}
+
+		/**
+		 * @return The difference of the value and the given value.
+		 */
+		sub(tosub: Long|number): Long
+		{
+			const v: Long = !Long.isLong(tosub) ?
+				Long.fromNumber(<number>tosub) : <Long>tosub;
+			return this.add(v.neg());
+		};
 
 		/**
 		 * @return The sum of the value and the given value.

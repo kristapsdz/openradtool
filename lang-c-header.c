@@ -924,7 +924,7 @@ gen_role(FILE *f, const struct role *r, int *nf)
 		return 1;
 
 	if (*nf) {
-		if (fputc(',', f) == EOF)
+		if (fputs(",\n", f) == EOF)
 			return 0;
 	} else
 		*nf = 1;

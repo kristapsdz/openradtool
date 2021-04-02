@@ -83,6 +83,13 @@ static	const char *const optypes[OPTYPE__MAX] = {
 };
 
 const char *
+get_modtype_str(enum modtype op)
+{
+
+	return modtypes[op];
+}
+
+const char *
 get_optype_str(enum optype op)
 {
 

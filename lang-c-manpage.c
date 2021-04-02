@@ -412,6 +412,186 @@ gen_searches(FILE *f, const struct config *cfg)
 	return 1;
 }
 
+static int
+gen_update(FILE *f, const struct update *up)
+{
+	const struct uref	*ur;
+	const char		*rettype, *functype;
+	int			 c, hasunary = 0;
+
+	rettype = up->type == UP_MODIFY ? "int" : "void";
+	functype = up->type == UP_MODIFY ? "update" : "delete";
+
+	if (fprintf(f, ".It Ft %s Fn db_%s_%s",
+	    rettype, up->parent->name, functype) < 0)
+		return 0;
+
+	if (up->name == NULL && up->type == UP_MODIFY) {
+		if (!(up->flags & UPDATE_ALL))
+			TAILQ_FOREACH(ur, &up->mrq, entries)
+				if (fprintf(f, "_%s_%s", 
+				    ur->field->name, 
+				    get_modtype_str(ur->mod)) < 0)
+					return 0;
+		if (!TAILQ_EMPTY(&up->crq)) {
+			if (fputs("_by", f) == EOF)
+				return 0;
+			TAILQ_FOREACH(ur, &up->crq, entries)
+				if (fprintf(f, "_%s_%s", 
+				    ur->field->name, 
+				    get_optype_str(ur->op)) < 0)
+					return 0;
+		}
+	} else if (up->name == NULL) {
+		if (!TAILQ_EMPTY(&up->crq)) {
+			if (fputs("_by", f) == EOF)
+				return 0;
+			TAILQ_FOREACH(ur, &up->crq, entries)
+				if (fprintf(f, "_%s_%s", 
+				    ur->field->name, 
+				    get_optype_str(ur->op)) < 0)
+					return 0;
+		}
+	} else if (fprintf(f, "_%s", up->name) < 0)
+		return 0;
+
+	if (fputc('\n', f) == EOF)
+		return 0;
+
+	if (up->doc != NULL && !gen_doc_block(f, up->doc, 1))
+		return 0;
+
+	if (fputs(".TS\nl lw6 l l.\n", f) == EOF)
+		return 0;
+	if (fputs("-\t-\t\\fIstruct ort *\\fR\t\\fIctx\\fR\n", f) == EOF)
+		return 0;
+
+	TAILQ_FOREACH(ur, &up->mrq, entries) {
+		if (ur->field->type == FTYPE_BLOB)
+			if (fprintf(f, "\\(<-\t-\t"
+			    "\\fIsize_t\\fR\t\\fI%s\\fR (size)\n", 
+			    ur->field->name) < 0)
+				return 0;
+		if (fprintf(f, "\\(<-\t%s\t",
+		    get_modtype_str(ur->mod)) < 0)
+			return 0;
+		if (fputs("\\fI", f) == EOF)
+			return 0;
+		if (ur->field->type == FTYPE_ENUM)
+			c = fprintf(f, "enum %s", 
+				ur->field->enm->name);
+		else 
+			c = fprintf(f, "%s%s", 
+				get_ftype_str(ur->field->type), 
+				(ur->field->flags & FIELD_NULL) ?
+				"*" : "");
+		if (c < 0)
+			return 0;
+		if (fprintf(f, "\\fR\t\\fI%s\\fR\n", 
+		    ur->field->name) < 0)
+			return 0;
+
+	}
+
+	TAILQ_FOREACH(ur, &up->crq, entries) {
+		if (OPTYPE_ISUNARY(ur->op)) {
+			hasunary = 1;
+			continue;
+		}
+		if (ur->field->type == FTYPE_BLOB)
+			if (fprintf(f, "\\(->\t-\t"
+			    "\\fIsize_t\\fR\t\\fI%s\\fR (size)\n", 
+			    ur->field->name) < 0)
+				return 0;
+		if (fprintf(f, "\\(->\t%s\t",
+		    get_optype_str(ur->op)) < 0)
+			return 0;
+		if (fputs("\\fI", f) == EOF)
+			return 0;
+		if (ur->field->type == FTYPE_ENUM)
+			c = fprintf(f, "enum %s", 
+				ur->field->enm->name);
+		else 
+			c = fprintf(f, "%s%s", 
+				get_ftype_str(ur->field->type), 
+				(ur->field->flags & FIELD_NULL) ?
+				"*" : "");
+		if (c < 0)
+			return 0;
+		if (fprintf(f, "\\fR\t\\fI%s\\fR\n", 
+		    ur->field->name) < 0)
+			return 0;
+
+	}
+
+	if (hasunary) {
+		if (fputs(".TE\n", f) == EOF)
+			return 0;
+		if (fputs(".Pp\n"
+		    "Unary operations:\n"
+		    ".TS\n"
+		    "l lw7 l.\n", f) == EOF)
+			return 0;
+		TAILQ_FOREACH(ur, &up->crq, entries) {
+			if (!OPTYPE_ISUNARY(ur->op))
+				continue;
+			if (fprintf(f, "\\(->\t%s\t\\fI%s\\fR\n", 
+			    get_optype_str(ur->op),
+			    ur->field->name) < 0)
+				return 0;
+		}
+	}
+
+	return fputs(".TE\n", f) != EOF;
+
+}
+
+static int
+gen_deletes(FILE *f, const struct config *cfg)
+{
+	const struct strct	*s;
+	const struct update	*up;
+	int			 first = 1;
+
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		TAILQ_FOREACH(up, &s->dq, entries) {
+			if (first && fputs
+			    (".Ss Deletions\n"
+			     ".Bl -tag -width Ds\n", f) == EOF)
+				return 0;
+			if (!gen_update(f, up))
+				return 0;
+			first = 0;
+		}
+	if (!first && fputs(".El\n", f) == EOF)
+		return 0;
+
+	return 1;
+}
+
+static int
+gen_updates(FILE *f, const struct config *cfg)
+{
+	const struct strct	*s;
+	const struct update	*up;
+	int			 first = 1;
+
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		TAILQ_FOREACH(up, &s->uq, entries) {
+			if (first && fputs
+			    (".Ss Updates\n"
+			     ".Bl -tag -width Ds\n", f) == EOF)
+				return 0;
+			if (!gen_update(f, up))
+				return 0;
+			first = 0;
+		}
+	if (!first && fputs(".El\n", f) == EOF)
+		return 0;
+
+	return 1;
+}
+
 int
 ort_lang_c_manpage(const struct ort_lang_c *args,
 	const struct config *cfg, FILE *f)
@@ -446,6 +626,10 @@ ort_lang_c_manpage(const struct ort_lang_c *args,
 	if (fputs(".Sh OPERATIONS\n", f) == EOF)
 		return 0;
 	if (!gen_searches(f, cfg))
+		return 0;
+	if (!gen_updates(f, cfg))
+		return 0;
+	if (!gen_deletes(f, cfg))
 		return 0;
 
 	return 1;

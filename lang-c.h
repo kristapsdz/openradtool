@@ -61,6 +61,7 @@ const struct filldep *
 	get_filldep(const struct filldepq *, const struct strct *);
 
 const char	*get_optype_str(enum optype);
+const char	*get_modtype_str(enum modtype);
 const char	*get_stype_str(enum stype);
 const char	*get_ftype_str(enum ftype);
 

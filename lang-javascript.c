@@ -950,7 +950,8 @@ ort_lang_javascript(const struct config *cfg,
 			    "(\'%" PRIu64 "\');\n"
 			    "\t\tstatic readonly "
 			    "BITI_%s: number = %" PRId64 ";\n",
-			    bi->name, 1LLU << bi->value,
+			    bi->name, 
+			    (uint64_t)1 << (uint64_t)bi->value,
 			    bi->name, bi->value) < 0)
 				return 0;
 			if (bi->value > maxvalue)

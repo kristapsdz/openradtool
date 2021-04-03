@@ -784,7 +784,7 @@ regress: all
 		fi ; \
 		echo "pass" ; \
 	done ; \
-	if [ "$(LIBS_REGRESS)" == "" ]; then \
+	if [ "x$(LIBS_REGRESS)" == "x" ]; then \
 		echo "!!! skipping ort-c-{header,source} compile tests !!! " ; \
 		echo "!!! skipping ort-c-{header,source,sql} run tests !!! " ; \
 	else \
@@ -821,12 +821,13 @@ regress: all
 			printf "$(CC): $$f... " ; \
 			$(CC) $(CFLAGS_REGRESS) $(CFLAGS) -o $$bf \
 				$$f.c $$cf $$rr $(LIBS_REGRESS) \
-				$(LDADD_CRYPT) 2>/dev/null ; \
+				$(LDADD_CRYPT) $(LDADD_B64_NTOP) \
+				2>/dev/null ; \
 			if [ $$? -ne 0 ] ; then \
 				echo "fail (did not compile)" ; \
 				$(CC) $(CFLAGS_REGRESS) $(CFLAGS) -o $$bf \
 					$$f.c $$cf $$rr $(LIBS_REGRESS) \
-					$(LDADD_CRYPT) ; \
+					$(LDADD_CRYPT) $(LDADD_B64_NTOP) ; \
 				rm -f $$f.h $$f.c $$bf $$tmp ; \
 				exit 1 ; \
 			fi ; \

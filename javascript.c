@@ -51,12 +51,10 @@ readfile(const char *dir, const char *fname)
 	ssize_t		 ssz;
 	size_t		 sz;
 	struct stat	 st;
-	char		 file[MAXPATHLEN];
-	char		*buf;
+	char		*buf, *file;
 
-	sz = snprintf(file, sizeof(file), "%s/%s", dir, fname);
-	if (sz < 0 || (size_t)sz >= sizeof(file))
-		errx(1, "%s/%s: too long", dir, fname);
+	if (asprintf(&file, "%s/%s", dir, fname) == -1)
+		err(1, NULL);
 
 	if ((fd = open(file, O_RDONLY, 0)) == -1)
 		err(1, "%s", file);
@@ -71,9 +69,12 @@ readfile(const char *dir, const char *fname)
 
 	if ((ssz = read(fd, buf, sz)) < 0)
 		err(1, "%s", file);
+	else if ((size_t)ssz != sz)
+		errx(1, "%s: bad file length", file);
 
 	buf[sz] = '\0';
 	close(fd);
+	free(file);
 	return buf;
 }
 

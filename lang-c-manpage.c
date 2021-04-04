@@ -727,6 +727,70 @@ gen_inserts(FILE *f, const struct config *cfg)
 	return !first;
 }
 
+static int
+gen_json_input(FILE *f, const struct strct *s)
+{
+
+	return fprintf(f,
+		".It Ft int Fn jsmn_%s\n"
+		".TS\n"
+		"l l.\n"
+		"\\fIstruct %s *\\fR\t\\fIp\\fR\n"
+		"\\fIconst char *\\fR\t\\fIbuf\\fR\n"
+		"\\fIconst jsmntok_t *\\fR\t\\fItoks\\fR\n"
+		"\\fIsize_t\\fR\t\\fItoksz\\fR\n"
+		".TE\n"
+		".It Ft int Fn jsmn_%s_array\n"
+		".TS\n"
+		"l l.\n"
+		"\\fIstruct %s **\\fR\t\\fIp\\fR\n"
+		"\\fIsize_t *\\fR\t\\fIpsz\\fR\n"
+		"\\fIconst char *\\fR\t\\fIbuf\\fR\n"
+		"\\fIconst jsmntok_t *\\fR\t\\fItoks\\fR\n"
+		"\\fIsize_t\\fR\t\\fItoksz\\fR\n"
+		".TE\n", s->name, s->name, s->name, s->name) >= 0;
+}
+
+/*
+ * Return -1 on failure, 0 if nothing written, 1 if something written.
+ */
+static int
+gen_json_inputs(FILE *f, const struct config *cfg)
+{
+	const struct strct	*s;
+	int			 first = 1;
+
+	TAILQ_FOREACH(s, &cfg->sq, entries) {
+		if (first && fputs
+		    ("Allow for JSON objects and arrays, such as\n"
+		     "those produced by the JSON export functions\n"
+		     "(if defined), to be re-imported.\n"
+		     "These deserialise parsed JSON buffers\n"
+		     ".Fa buf ,\n"
+		     "which need not be NUL terminated, with parse\n"
+		     "tokens\n"
+		     ".Fa toks\n"
+		     "of length\n"
+		     ".Fa toksz ,\n"
+		     "into\n"
+		     ".Fa p ,\n"
+		     "for arrays of count\n"
+		     ".Fa psz .\n"
+		     "They return 0 on parse failure, <0 on memory\n"
+		     "allocation failure, or the count of tokens\n"
+		     "parsed on success.\n"
+		     ".Bl -tag -width Ds\n", f) == EOF)
+			return -1;
+		if (!gen_json_input(f, s))
+			return -1;
+		first = 0;
+	}
+	if (!first && fputs(".El\n", f) == EOF)
+		return -1;
+
+	return !first;
+}
+
 int
 ort_lang_c_manpage(const struct ort_lang_c *args,
 	const struct config *cfg, FILE *f)
@@ -779,6 +843,10 @@ ort_lang_c_manpage(const struct ort_lang_c *args,
 	else if (c > 0 && fputs(".Pp\n", f) == EOF)
 		return 0;
 	if (gen_inserts(f, cfg) < 0)
+		return 0;
+	if (fputs(".Ss JSON input\n", f) == EOF)
+		return 0;
+	if (gen_json_inputs(f, cfg) < 0)
 		return 0;
 
 	return 1;

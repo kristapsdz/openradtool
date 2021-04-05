@@ -9,6 +9,19 @@
 		</header>
 		<aside>
 			<p>
+				Release <a href="ort-c-manpage.1.html">>ort-c-manpage(1)</a> and its libray bits,
+				<a href="ort_lang_c_manpage.3.html">>ort_lang_c_manpage(3)</a>.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
+			<h3>0.12.5</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-04-02">2021-04-02</time>
+		</header>
+		<aside>
+			<p>
 				Add some new methods to the generated <code>ort.Long</code> output with
 				<a href="ort-javascript.1.html">ort-javascript(1)</a> to make it
 				easier for front-ends to work with 64-bit integers.  Add regression

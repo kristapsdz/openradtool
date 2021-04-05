@@ -953,9 +953,8 @@ ort_lang_c_manpage(const struct ort_lang_c *args,
 	    ".Os\n"
 	    ".Sh NAME\n"
 	    ".Nm ort\n"
-	    ".Nd functions for your project\n"
+	    ".Nd C API for your openradtool data model\n"
 	    ".Sh DESCRIPTION\n"
-	    "This is all the stuff.\n"
 	    ".Ss Data structures\n") < 0)
 		return 0;
 

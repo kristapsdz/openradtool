@@ -49,8 +49,11 @@ main(int argc, char *argv[])
 
 	memset(&args, 0, sizeof(struct ort_lang_c));
 
-	while ((c = getopt(argc, argv, "J")) != -1)
+	while ((c = getopt(argc, argv, "jJ")) != -1)
 		switch (c) {
+		case 'j':
+			args.flags |= ORT_LANG_C_JSON_KCGI;
+			break;
 		case 'J':
 			args.flags |= ORT_LANG_C_JSON_JSMN;
 			break;
@@ -99,6 +102,6 @@ out:
 	free(confs);
 	return !rc;
 usage:
-	fprintf(stderr, "usage: %s [-J] [config...]\n", getprogname());
+	fprintf(stderr, "usage: %s [-jJ] [config...]\n", getprogname());
 	return 1;
 }

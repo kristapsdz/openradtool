@@ -769,6 +769,63 @@ gen_json_input(FILE *f, const struct strct *s)
 		s->name, s->name, s->name) >= 0;
 }
 
+static int
+gen_json_output(FILE *f, const struct strct *s)
+{
+
+	if (fprintf(f,
+	    ".It Ft void Fn json_%s_data , Fn json_%s_obj\n"
+	    ".TS\n"
+	    "l l.\n"
+	    "\\fIstruct kjsonreq *\\fR\t\\fIr\\fR\n"
+	    "\\fIconst struct %s *\\fR\t\\fIp\\fR\n"
+	    ".TE\n", s->name, s->name, s->name) < 0)
+		return 0;
+	if ((s->flags & STRCT_HAS_QUEUE) && fprintf(f,
+	    ".It Ft void Fn json_%s_array\n"
+	    ".TS\n"
+	    "l l.\n"
+	    "\\fIstruct kjsonreq *\\fR\t\\fIr\\fR\n"
+	    "\\fIconst struct %s_q *\\fR\t\\fIq\\fR\n"
+	    ".TE\n", s->name, s->name) < 0)
+		return 0;
+	if ((s->flags & STRCT_HAS_ITERATOR) && fprintf(f,
+	    ".It Ft void Fn json_%s_iterate\n"
+	    ".TS\n"
+	    "l l.\n"
+	    "\\fIconst struct %s *\\fR\t\\fIp\\fR\n"
+	    "\\fIvoid *\\fR\t\\fIarg\\fR (really \\fIstruct kjsonreq *\\fR)\n"
+	    ".TE\n", s->name, s->name) < 0)
+		return 0;
+	return 1;
+}
+
+/*
+ * Return -1 on failure, 0 if nothing written, 1 if something written.
+ */
+static int
+gen_json_outputs(FILE *f, const struct config *cfg)
+{
+	const struct strct	*s;
+
+	if (TAILQ_EMPTY(&cfg->sq))
+		return 0;
+
+	if (fputs
+	    ("These print out the fields of a structure in JSON "
+	     "including nested structures.\n"
+	     "They omit any passwords, those marked \"noexport\",\n"
+	     "or those disallowed by the current role.\n"
+	     ".Bl -tag -width Ds\n", f) == EOF)
+		return 0;
+
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		if (!gen_json_output(f, s))
+			return -1;
+
+	return fputs(".El\n", f) != EOF;
+}
+
 /*
  * Return -1 on failure, 0 if nothing written, 1 if something written.
  */
@@ -932,6 +989,13 @@ ort_lang_c_manpage(const struct ort_lang_c *args,
 		if (fputs(".Ss JSON input\n", f) == EOF)
 			return 0;
 		if (gen_json_inputs(f, cfg) < 0)
+			return 0;
+	}
+
+	if (args->flags & ORT_LANG_C_JSON_KCGI) {
+		if (fputs(".Ss JSON output\n", f) == EOF)
+			return 0;
+		if (gen_json_outputs(f, cfg) < 0)
 			return 0;
 	}
 

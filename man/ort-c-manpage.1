@@ -1,0 +1,102 @@
+.\"	$OpenBSD$
+.\"
+.\" Copyright (c) 2021 Kristaps Dzonsons <kristaps@bsd.lv>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate$
+.Dt ORT-C-MANPAGE 1
+.Os
+.Sh NAME
+.Nm ort-c-manpage
+.Nd generate C API documentation
+.Sh SYNOPSIS
+.Nm ort-c-manpage
+.Op Fl jJ
+.Op Ar config...
+.Sh DESCRIPTION
+The
+.Nm
+utility accepts
+.Xr ort 5
+.Ar config
+files, defaulting to standard input,
+and generates C API documentation.
+Its arguments are as follows:
+.Bl -tag -width Ds
+.It Fl j
+Output
+.Sx JSON export
+function declaration documentation.
+.It Fl J
+Output
+.Sx JSON import
+function declaration documentation.
+.El
+.Pp
+The output is in
+.Xr mdoc 7 .
+It is arranged into sub-sections beneath the
+.Dv DESCRIPTION .
+.Pp
+The documentation begins with data structures (describing roles,
+structures, enumerations, and bit-fields where applicable).
+It continues with database input, which consists of queries, updates,
+and deletes where applicable.
+.Pp
+If
+.Fl J
+is enabled, output continues with JSON input functions using the
+built-in JSMN implementation.
+If
+.Fl j
+is enabled, it continues with JSON output, which consists of the JSON
+output using
+.Xr kcgijson 3 .
+.\" The following requests should be uncommented and used where appropriate.
+.\" .Sh CONTEXT
+.\" For section 9 functions only.
+.\" .Sh RETURN VALUES
+.\" For sections 2, 3, and 9 function return values only.
+.\" .Sh ENVIRONMENT
+.\" For sections 1, 6, 7, and 8 only.
+.\" .Sh FILES
+.Sh EXIT STATUS
+.Ex -std
+.Sh EXAMPLES
+To quickly browse the C API documentation for a given configuration on
+.Xr mandoc 1
+systems, simply run:
+.Pp
+.Dl ort-c-manpage db.ort | mandoc | less
+.Pp
+Or on systems using
+.Xr groff 1
+for manpage rendering:
+.Pp
+.Dl ort-c-manpage db.ort | groff -Tutf8 -mandoc -itk | less -R
+.\" .Sh DIAGNOSTICS
+.\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
+.\" .Sh ERRORS
+.\" For sections 2, 3, 4, and 9 errno settings only.
+.Sh SEE ALSO
+.Xr ort-c-header 1 ,
+.Xr ort-c-source 1 ,
+.Xr kcgijson 3 ,
+.Xr ort 5 ,
+.Xr mdoc 7
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh CAVEATS
+.\" .Sh BUGS

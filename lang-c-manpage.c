@@ -105,7 +105,7 @@ gen_bitfs(FILE *f, const struct config *cfg)
 	    "values (bits 0\\(en63).\n"
 	    "They're used for input validation and value access.\n"
 	    "The following bitfields are available:\n"
-	    ".Bl -tag -width Ds\n") < 0)
+	    ".Bl -tag -width Ds -offset indent\n") < 0)
 		return -1;
 
 	TAILQ_FOREACH(b, &cfg->bq, entries) {
@@ -161,7 +161,7 @@ gen_enums(FILE *f, const struct config *cfg)
 	    "of values.\n"
 	    "They're used for input validation and value comparison.\n"
 	    "The following enumerations are available.\n"
-	    ".Bl -tag -width Ds\n") < 0)
+	    ".Bl -tag -width Ds -offset indent\n") < 0)
 		return -1;
 
 	TAILQ_FOREACH(e, &cfg->eq, entries) {
@@ -169,7 +169,7 @@ gen_enums(FILE *f, const struct config *cfg)
 			return -1;
 		if (e->doc != NULL && !gen_doc_block(f, e->doc, 1, 0))
 			return -1;
-		if (fprintf(f, ".Bl -compact -tag -width Ds\n") < 0)
+		if (fprintf(f, ".Bl -tag -width Ds -compact\n") < 0)
 			return -1;
 		if ((name = strdup(e->name)) == NULL)
 			return -1;
@@ -274,8 +274,8 @@ gen_fields(FILE *f, const struct strct *s)
 {
 	const struct field	*fd;
 
-	if (fprintf(f, ".Pp\n"
-	    ".Bl -compact -tag -width Ds\n") < 0)
+	if (fprintf(f,
+	    ".Bl -tag -width Ds -compact\n") < 0)
 		return 0;
 	TAILQ_FOREACH(fd, &s->fq, entries)
 		if (!gen_field(f, fd))
@@ -298,7 +298,7 @@ gen_strcts(FILE *f, const struct config *cfg)
 	    "Structures are the mainstay of the application.\n"
 	    "They correspond to tables in the database.\n"
 	    "The following structures are available:\n"
-	    ".Bl -tag -width Ds\n") < 0)
+	    ".Bl -tag -width Ds -offset indent\n") < 0)
 		return -1;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
@@ -440,25 +440,26 @@ gen_searches(FILE *f, const struct config *cfg)
 {
 	const struct strct	*s;
 	const struct search	*sr;
-	int			 first = 1;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries)
-		TAILQ_FOREACH(sr, &s->sq, entries) {
-			if (first && fputs
-			    ("The following queries are available,\n"
-			     "which allow accepted roles to extract\n"
-			     "data from the database:\n"
-			     ".Bl -tag -width Ds\n", f) == EOF)
-				return -1;
-			if (!gen_search(f, sr))
-				return -1;
-			first = 0;
-		}
+		if (!TAILQ_EMPTY(&s->sq))
+			break;
+	if (s == NULL)
+		return 0;
 
-	if (!first && fputs(".El\n", f) == EOF)
+	if (fputs
+	    ("The following queries are available,\n"
+	     "which allow accepted roles to extract\n"
+	     "data from the database:\n"
+	     ".Bl -tag -width Ds -offset indent\n", f) == EOF)
 		return -1;
 
-	return !first;
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		TAILQ_FOREACH(sr, &s->sq, entries)
+			if (!gen_search(f, sr))
+				return -1;
+
+	return fputs(".El\n", f) == EOF ? -1 : 1;
 }
 
 static int
@@ -656,24 +657,26 @@ gen_deletes(FILE *f, const struct config *cfg)
 {
 	const struct strct	*s;
 	const struct update	*up;
-	int			 first = 1;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries)
-		TAILQ_FOREACH(up, &s->dq, entries) {
-			if (first && fputs
-			    ("Deletes allow for accepted roles to\n"
-			     "delete data from the database.\n"
-			     "The following deletes are available:\n"
-			     ".Bl -tag -width Ds\n", f) == EOF)
-				return -1;
-			if (!gen_update(f, up))
-				return -1;
-			first = 0;
-		}
-	if (!first && fputs(".El\n", f) == EOF)
+		if (!TAILQ_EMPTY(&s->dq))
+			break;
+	if (s == NULL)
+		return 0;
+
+	if (fputs
+	    ("Deletes allow for accepted roles to\n"
+	     "delete data from the database.\n"
+	     "The following deletes are available:\n"
+	     ".Bl -tag -width Ds -offset indent\n", f) == EOF)
 		return -1;
 
-	return !first;
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		TAILQ_FOREACH(up, &s->dq, entries)
+			if (!gen_update(f, up))
+				return -1;
+
+	return fputs(".El\n", f) == EOF ? -1 : 1;
 }
 
 /*
@@ -684,24 +687,26 @@ gen_updates(FILE *f, const struct config *cfg)
 {
 	const struct strct	*s;
 	const struct update	*up;
-	int			 first = 1;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries)
-		TAILQ_FOREACH(up, &s->uq, entries) {
-			if (first && fputs
-			    ("Updates allow for accepted roles to\n"
-			     "modify data in the database.\n"
-			     "The following updates are available:\n"
-			     ".Bl -tag -width Ds\n", f) == EOF)
-				return -1;
-			if (!gen_update(f, up))
-				return -1;
-			first = 0;
-		}
-	if (!first && fputs(".El\n", f) == EOF)
+		if (!TAILQ_EMPTY(&s->uq))
+			break;
+	if (s == NULL)
+		return 0;
+
+	if (fputs
+	    ("Updates allow for accepted roles to\n"
+	     "modify data in the database.\n"
+	     "The following updates are available:\n"
+	     ".Bl -tag -width Ds -offset indent\n", f) == EOF)
 		return -1;
 
-	return !first;
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		TAILQ_FOREACH(up, &s->uq, entries)
+			if (!gen_update(f, up))
+				return -1;
+
+	return fputs(".El\n", f) == EOF ? -1 : 1;
 }
 
 /*
@@ -711,25 +716,25 @@ static int
 gen_inserts(FILE *f, const struct config *cfg)
 {
 	const struct strct	*s;
-	int			 first = 1;
 
-	TAILQ_FOREACH(s, &cfg->sq, entries) {
-		if (s->ins == NULL)
-			continue;
-		if (first && fputs
-		    ("Inserts allow accepted roles to add\n"
-		     "new data to the database.\n"
-		     "The following inserts are available:\n"
-		     ".Bl -tag -width Ds\n", f) == EOF)
-			return -1;
-		if (!gen_insert(f, s))
-			return -1;
-		first = 0;
-	}
-	if (!first && fputs(".El\n", f) == EOF)
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		if (s->ins != NULL)
+			break;
+	if (s == NULL)
+		return 0;
+
+	if (fputs
+	    ("Inserts allow accepted roles to add\n"
+	     "new data to the database.\n"
+	     "The following inserts are available:\n"
+	     ".Bl -tag -width Ds -offset indent\n", f) == EOF)
 		return -1;
 
-	return !first;
+	TAILQ_FOREACH(s, &cfg->sq, entries) 
+		if (s->ins != NULL && !gen_insert(f, s))
+			return -1;
+
+	return fputs(".El\n", f) == EOF ? -1 : 1;
 }
 
 static int
@@ -816,7 +821,7 @@ gen_json_outputs(FILE *f, const struct config *cfg)
 	     "including nested structures.\n"
 	     "They omit any passwords, those marked \"noexport\",\n"
 	     "or those disallowed by the current role.\n"
-	     ".Bl -tag -width Ds\n", f) == EOF)
+	     ".Bl -tag -width Ds -offset indent\n", f) == EOF)
 		return 0;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries)
@@ -855,7 +860,7 @@ gen_json_inputs(FILE *f, const struct config *cfg)
 	     "They return 0 on parse failure, <0 on memory\n"
 	     "allocation failure, or the count of tokens\n"
 	     "parsed on success.\n"
-	     ".Bl -tag -width Ds\n", f) == EOF)
+	     ".Bl -tag -width Ds -offset indent\n", f) == EOF)
 		return 0;
 
 	/* Start with the utility functions. */

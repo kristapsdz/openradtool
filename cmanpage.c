@@ -36,8 +36,9 @@
 int
 main(int argc, char *argv[])
 {
+	struct ort_lang_c	  args;
 	struct config		 *cfg = NULL;
-	int			  rc = 0;
+	int			  c, rc = 0;
 	FILE			**confs = NULL;
 	size_t			  i;
 
@@ -46,8 +47,16 @@ main(int argc, char *argv[])
 		err(1, "pledge");
 #endif
 
-	if (getopt(argc, argv, "") != -1)
-		goto usage;
+	memset(&args, 0, sizeof(struct ort_lang_c));
+
+	while ((c = getopt(argc, argv, "J")) != -1)
+		switch (c) {
+		case 'J':
+			args.flags |= ORT_LANG_C_JSON_JSMN;
+			break;
+		default:
+			goto usage;
+		}
 
 	argc -= optind;
 	argv += optind;
@@ -78,7 +87,7 @@ main(int argc, char *argv[])
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
-		if (!(rc = ort_lang_c_manpage(NULL, cfg, stdout)))
+		if (!(rc = ort_lang_c_manpage(&args, cfg, stdout)))
 			warn(NULL);
 out:
 	ort_write_msg_file(stderr, &cfg->mq);
@@ -90,6 +99,6 @@ out:
 	free(confs);
 	return !rc;
 usage:
-	fprintf(stderr, "usage: %s [config...]\n", getprogname());
+	fprintf(stderr, "usage: %s [-J] [config...]\n", getprogname());
 	return 1;
 }

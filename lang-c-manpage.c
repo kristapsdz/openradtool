@@ -34,7 +34,7 @@
 #include "lang-c.h"
 
 static int
-gen_doc_block(FILE *f, const char *cp, int tail)
+gen_doc_block(FILE *f, const char *cp, int tail, int head)
 {
 	size_t	 sz, lines = 0;
 
@@ -54,6 +54,9 @@ gen_doc_block(FILE *f, const char *cp, int tail)
 				break;
 			if (*cp == '\\' && cp[1] == '"')
 				cp++;
+			if (head && sz == 0 && lines == 0)
+				if (fputs(".Pp\n", f) == EOF)
+					return 0;
 			if (fputc(*cp, f) == EOF)
 				return 0;
 			sz++;
@@ -79,7 +82,7 @@ gen_bitem(FILE *f, const struct bitidx *bi, const char *bitf)
 	if (fprintf(f, ".It Dv BITF_%s_%s, BITI_%s_%s\n", 
 	    bitf, bi->name, bitf, bi->name) < 0)
 		return 0;
-	if (bi->doc != NULL && !gen_doc_block(f, bi->doc, 0))
+	if (bi->doc != NULL && !gen_doc_block(f, bi->doc, 0, 0))
 		return 0;
 	return 1;
 }
@@ -108,7 +111,7 @@ gen_bitfs(FILE *f, const struct config *cfg)
 	TAILQ_FOREACH(b, &cfg->bq, entries) {
 		if (fprintf(f, ".It Vt enum %s\n", b->name) < 0)
 			return -1;
-		if (b->doc != NULL && !gen_doc_block(f, b->doc, 1))
+		if (b->doc != NULL && !gen_doc_block(f, b->doc, 1, 0))
 			return -1;
 		if (fprintf(f, ".Bl -tag -width Ds\n") < 0)
 			return -1;
@@ -135,7 +138,7 @@ gen_eitem(FILE *f, const struct eitem *ei, const char *enm)
 
 	if (fprintf(f, ".It Dv %s_%s\n", enm, ei->name) < 0)
 		return 0;
-	if (ei->doc != NULL && !gen_doc_block(f, ei->doc, 0))
+	if (ei->doc != NULL && !gen_doc_block(f, ei->doc, 0, 0))
 		return 0;
 	return 1;
 }
@@ -164,7 +167,7 @@ gen_enums(FILE *f, const struct config *cfg)
 	TAILQ_FOREACH(e, &cfg->eq, entries) {
 		if (fprintf(f, ".It Vt enum %s\n", e->name) < 0)
 			return -1;
-		if (e->doc != NULL && !gen_doc_block(f, e->doc, 1))
+		if (e->doc != NULL && !gen_doc_block(f, e->doc, 1, 0))
 			return -1;
 		if (fprintf(f, ".Bl -compact -tag -width Ds\n") < 0)
 			return -1;
@@ -209,7 +212,7 @@ gen_roles(FILE *f, const struct config *cfg)
 	TAILQ_FOREACH(r, &cfg->arq, allentries) {
 		if (fprintf(f, ".It Dv ROLE_%s\n", r->name) < 0)
 			return -1;
-		if (r->doc != NULL && !gen_doc_block(f, r->doc, 0))
+		if (r->doc != NULL && !gen_doc_block(f, r->doc, 0, 0))
 			return -1;
 	}
 
@@ -261,7 +264,7 @@ gen_field(FILE *f, const struct field *fd)
 
 	if (c < 0)
 		return 0;
-	if (fd->doc != NULL && !gen_doc_block(f, fd->doc, 0))
+	if (fd->doc != NULL && !gen_doc_block(f, fd->doc, 0, 0))
 		return 0;
 	return 1;
 }
@@ -301,7 +304,7 @@ gen_strcts(FILE *f, const struct config *cfg)
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
 		if (fprintf(f, ".It Vt struct %s\n", s->name) < 0)
 			return -1;
-		if (s->doc != NULL && !gen_doc_block(f, s->doc, 1))
+		if (s->doc != NULL && !gen_doc_block(f, s->doc, 1, 0))
 			return -1;
 		if (!gen_fields(f, s))
 			return -1;
@@ -347,17 +350,14 @@ gen_search(FILE *f, const struct search *sr)
 	} else if (sr->name != NULL)
 		if (fprintf(f, "_%s", sr->name) < 0)
 			return 0;
-	if (fputs("\n", f) == EOF)
+
+	if (fputs(
+	    "\n"
+	    ".TS\n"
+	    "lw6 l l.\n"
+            "-\t\\fIstruct ort *\\fR\t\\fIctx\\fR\n", f) == EOF)
 		return 0;
 
-	if (sr->doc != NULL && !gen_doc_block(f, sr->doc, 1))
-		return 0;
-
-	if (fputs(".TS\nlw6 l l.\n", f) == EOF)
-		return 0;
-
-	if (fputs("-\t\\fIstruct ort *\\fR\t\\fIctx\\fR\n", f) == EOF)
-		return 0;
 	if (sr->type == STYPE_ITERATE && fprintf(f, 
 	    "-\t\\fI%s_cb\\fR\t\\fIcb\\fR\n"
 	    "-\t\\fIvoid *\\fR\t\\fIarg\\fR\n", retname) < 0)
@@ -398,6 +398,7 @@ gen_search(FILE *f, const struct search *sr)
 			return 0;
 		if (fputs(".Pp\n"
 		    "Unary operations:\n"
+		    ".Pp\n"
 		    ".TS\n"
 		    "lw6 lw12 l.\n", f) == EOF)
 			return 0;
@@ -423,7 +424,11 @@ gen_search(FILE *f, const struct search *sr)
 		}
 	}
 
-	return fputs(".TE\n", f) != EOF;
+	if (fputs(".TE\n", f) == EOF)
+		return 0;
+	if (sr->doc != NULL && !gen_doc_block(f, sr->doc, 0, 1))
+		return 0;
+	return 1;
 
 }
 
@@ -499,15 +504,11 @@ gen_update(FILE *f, const struct update *up)
 	} else if (fprintf(f, "_%s", up->name) < 0)
 		return 0;
 
-	if (fputc('\n', f) == EOF)
-		return 0;
-
-	if (up->doc != NULL && !gen_doc_block(f, up->doc, 1))
-		return 0;
-
-	if (fputs(".TS\nl lw6 l l.\n", f) == EOF)
-		return 0;
-	if (fputs("-\t-\t\\fIstruct ort *\\fR\t\\fIctx\\fR\n", f) == EOF)
+	if (fputs(
+	    "\n"
+	    ".TS\n"
+	    "l lw6 l l.\n"
+	    "-\t-\t\\fIstruct ort *\\fR\t\\fIctx\\fR\n", f) == EOF)
 		return 0;
 
 	TAILQ_FOREACH(ur, &up->mrq, entries) {
@@ -573,6 +574,7 @@ gen_update(FILE *f, const struct update *up)
 			return 0;
 		if (fputs(".Pp\n"
 		    "Unary operations:\n"
+		    ".Pp\n"
 		    ".TS\n"
 		    "l lw6 l l.\n", f) == EOF)
 			return 0;
@@ -598,8 +600,11 @@ gen_update(FILE *f, const struct update *up)
 		}
 	}
 
-	return fputs(".TE\n", f) != EOF;
-
+	if (fputs(".TE\n", f) == EOF)
+		return 0;
+	if (up->doc != NULL && !gen_doc_block(f, up->doc, 0, 1))
+		return 0;
+	return 1;
 }
 
 static int

@@ -1102,6 +1102,7 @@ ort_lang_c_header(const struct ort_lang_c *args,
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			if (!gen_json_out(f, cfg, p))
 				return 0;
+
 	if (args->flags & ORT_LANG_C_JSON_JSMN) {
 		if (!gen_comment(f, 0, COMMENT_C,
 		    "Check whether the current token in a "
@@ -1141,6 +1142,7 @@ ort_lang_c_header(const struct ort_lang_c *args,
 			if (!gen_json_parse(f, cfg, p))
 				return 0;
 	}
+
 	if (args->flags & ORT_LANG_C_VALID_KCGI)
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			if (!gen_valids(f, cfg, p))

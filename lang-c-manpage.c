@@ -436,6 +436,101 @@ gen_search(FILE *f, const struct search *sr)
  * Return -1 on failure, 0 if nothing written, 1 if something written.
  */
 static int
+gen_general(FILE *f, const struct config *cfg)
+{
+
+	if (fputs
+	    ("These utility functions allow opening the database,\n"
+	     "closing it, and manipulating its state (roles,\n"
+	     "logging, etc.).\n"
+	     ".Bl -tag -width Ds -offset indent\n", f) == EOF)
+		return -1;
+	if (fputs
+	    (".It Ft \"struct ort *\" Fn db_open_logging\n"
+	     ".TS\n"
+	     "l l.\n"
+	     "\\fIconst char *\\fR\t\\fIfile\\fR\n"
+	     "\\fI(void *)(const char *, void *)\\fR\t\\fIlog\\fR\n"
+	     "\\fI(void *)(const char *, ...)\\fR\t\\fIlog_short\\fR\n"
+	     "\\fIvoid *\\fR\t\\fIarg\\fR\n"
+	     ".TE\n"
+	     ".Pp\n"
+	     "Open a database\n"
+	     ".Fa file\n"
+	     "in a child process with logging enabled.\n"
+	     "Returns\n"
+	     ".Dv NULL\n"
+	     "on failure.\n"
+	     "If both callbacks are provided,\n"
+	     ".Fa log\n"
+	     "overrides\n"
+	     ".Fa log_short .\n"
+	     "The logging function is run both in a child and\n"
+	     "parent process, so it must not have side effects.\n"
+	     ".Fa arg\n"
+	     "is passed to\n"
+	     ".Fa log\n"
+	     "as it is inherited by the child process.\n"
+	     "The context must be closed by\n"
+	     ".Fn db_close .\n"
+	     "See\n"
+	     ".Fn db_logging_data\n"
+	     "to set the pointer after initialisation.\n", f) == EOF)
+		return -1;
+	if (fputs
+	    (".It Ft \"struct ort *\" Fn db_open\n"
+	     ".TS\n"
+	     "l l.\n"
+	     "\\fIconst char *\\fR\t\\fIfile\\fR\n"
+	     ".TE\n"
+	     ".Pp\n"
+	     "Like\n"
+	     ".Fn db_open_logging\n"
+	     "but without logging enabled.\n", f) == EOF)
+		return -1;
+	if (fputs
+	    (".It Ft void Fn db_logging_data\n"
+	     ".TS\n"
+	     "l l.\n"
+	     "\\fIstruct ort *\\fR\t\\fIort\\fR\n"
+	     "\\fIconst void *\\fR\t\\fIarg\\fR\n"
+	     "\\fIsize_t\\fR\t\\fIargsz\\fR\n"
+	     ".TE\n"
+	     ".Pp\n"
+	     "Sets the argument giving to the logging functions (if\n"
+	     "enabled) to the contents of\n"
+	     ".Fa arg ,\n"
+	     "of length\n"
+	     ".Fa argsz ,\n"
+	     "which is copied into the child process.\n"
+	     "Has no effect if logging is not enabled.\n"
+	     "If\n"
+	     ".Fa argsz\n"
+	     "is zero, nothing is passed to the logger.\n", f) == EOF)
+		return -1;
+	if (fputs
+	    (".It Ft void Fn db_close\n"
+	     ".TS\n"
+	     "l l.\n"
+	     "\\fIstruct ort *\\fR\t\\fIp\\fR\n"
+	     ".TE\n"
+	     ".Pp\n"
+	     "Close a database opened with\n"
+	     ".Fn db_open\n"
+	     "or\n"
+	     ".Fn db_open_logging .\n"
+	     "Does nothing if\n"
+	     ".Fa p\n"
+	     "is\n"
+	     ".Dv NULL .\n", f) == EOF)
+		return -1;
+	return fputs(".El\n", f) == EOF ? -1 : 1;
+}
+
+/*
+ * Return -1 on failure, 0 if nothing written, 1 if something written.
+ */
+static int
 gen_searches(FILE *f, const struct config *cfg)
 {
 	const struct strct	*s;
@@ -973,6 +1068,10 @@ ort_lang_c_manpage(const struct ort_lang_c *args,
 	if (gen_strcts(f, cfg) < 0)
 		return 0;
 	if (fputs(".Ss Database input\n", f) == EOF)
+		return 0;
+	if ((c = gen_general(f, cfg)) < 0)
+		return 0;
+	else if (c > 0 && fputs(".Pp\n", f) == EOF)
 		return 0;
 	if ((c = gen_searches(f, cfg)) < 0)
 		return 0;

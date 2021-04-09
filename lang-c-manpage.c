@@ -901,7 +901,7 @@ gen_json_output(FILE *f, const struct strct *s)
 }
 
 /*
- * Return -1 on failure, 0 if nothing written, 1 if something written.
+ * Return 0 on failure, non-zero on success.
  */
 static int
 gen_json_outputs(FILE *f, const struct config *cfg)
@@ -921,13 +921,42 @@ gen_json_outputs(FILE *f, const struct config *cfg)
 
 	TAILQ_FOREACH(s, &cfg->sq, entries)
 		if (!gen_json_output(f, s))
-			return -1;
+			return 0;
 
 	return fputs(".El\n", f) != EOF;
 }
 
 /*
- * Return -1 on failure, 0 if nothing written, 1 if something written.
+ * Return 0 on failure, non-zero on success.
+ */
+static int
+gen_json_valids(FILE *f, const struct config *cfg)
+{
+
+	if (TAILQ_EMPTY(&cfg->sq))
+		return 0;
+	if (fputs
+	    (".Ss Validation\n"
+	     "Each non-struct field in the configuration has a "
+	     "validation function.\n"
+	     "These may be passed to the HTTP parsing functions in\n"
+	     ".Xr kcgi 3 ,\n"
+	     "specifically\n"
+	     ".Xr khttp_parse 3 .\n"
+	     ".Bl -tag -width Ds -offset indent\n"
+	     ".It Va enum valid_keys\n"
+	     "A list of keys, each one corresponding to a field.\n"
+	     "The keys are named\n"
+	     ".Dv VALID_struct_field .\n"
+	     ".It Va const struct kvalid valid_keys[]\n"
+	     "Validation functions associated with each field.\n"
+	     ".El\n", f) == EOF)
+		return 0;
+	return 1;
+}
+
+/*
+ * Return 0 on failure, non-zero on success.
  */
 static int
 gen_json_inputs(FILE *f, const struct config *cfg)
@@ -938,7 +967,8 @@ gen_json_inputs(FILE *f, const struct config *cfg)
 		return 0;
 
 	if (fputs
-	    ("Allow for JSON objects and arrays, such as\n"
+	    (".Ss JSON input\n"
+	     "Allow for JSON objects and arrays, such as\n"
 	     "those produced by the JSON export functions\n"
 	     "(if defined), to be re-imported.\n"
 	     "These deserialise parsed JSON buffers\n"
@@ -1020,9 +1050,9 @@ gen_json_inputs(FILE *f, const struct config *cfg)
 
 	TAILQ_FOREACH(s, &cfg->sq, entries)
 		if (!gen_json_input(f, s))
-			return -1;
+			return 0;
 
-	return fputs(".El\n", f) == EOF ? -1 : 1;
+	return fputs(".El\n", f) != EOF;
 }
 
 int
@@ -1067,6 +1097,7 @@ ort_lang_c_manpage(const struct ort_lang_c *args,
 		return 0;
 	if (gen_strcts(f, cfg) < 0)
 		return 0;
+
 	if (fputs(".Ss Database input\n", f) == EOF)
 		return 0;
 	if ((c = gen_general(f, cfg)) < 0)
@@ -1088,19 +1119,17 @@ ort_lang_c_manpage(const struct ort_lang_c *args,
 	if (gen_inserts(f, cfg) < 0)
 		return 0;
 
-	if (args->flags & ORT_LANG_C_JSON_JSMN) {
-		if (fputs(".Ss JSON input\n", f) == EOF)
+	if (args->flags & ORT_LANG_C_JSON_JSMN)
+		if (!gen_json_inputs(f, cfg))
 			return 0;
-		if (gen_json_inputs(f, cfg) < 0)
-			return 0;
-	}
 
-	if (args->flags & ORT_LANG_C_JSON_KCGI) {
-		if (fputs(".Ss JSON output\n", f) == EOF)
+	if (args->flags & ORT_LANG_C_JSON_KCGI)
+		if (!gen_json_outputs(f, cfg))
 			return 0;
-		if (gen_json_outputs(f, cfg) < 0)
+
+	if (args->flags & ORT_LANG_C_VALID_KCGI)
+		if (!gen_json_valids(f, cfg))
 			return 0;
-	}
 
 	return 1;
 }

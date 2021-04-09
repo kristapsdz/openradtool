@@ -1131,6 +1131,18 @@ ort_lang_c_manpage(const struct ort_lang_c *args,
 		if (!gen_json_valids(f, cfg))
 			return 0;
 
+	if ((args->flags & ORT_LANG_C_VALID_KCGI) ||
+	    (args->flags & ORT_LANG_C_JSON_KCGI)) {
+		if (fputs(".Sh SEE ALSO\n", f) == EOF)
+			return 0;
+		if ((args->flags & ORT_LANG_C_VALID_KCGI) &&
+		    fputs(".Xr kcgi 3\n", f) == EOF)
+			return 0;
+		if ((args->flags & ORT_LANG_C_JSON_KCGI) &&
+		    fputs(".Xr kcgijson 3\n", f) == EOF)
+			return 0;
+	}
+
 	return 1;
 }
 

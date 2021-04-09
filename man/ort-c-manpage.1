@@ -22,7 +22,7 @@
 .Nd generate C API documentation
 .Sh SYNOPSIS
 .Nm ort-c-manpage
-.Op Fl jJ
+.Op Fl jJv
 .Op Ar config...
 .Sh DESCRIPTION
 The
@@ -36,12 +36,14 @@ Its arguments are as follows:
 .Bl -tag -width Ds
 .It Fl j
 Output
-.Sx JSON export
-function declaration documentation.
+.Xr kcgijson 3
+JSON export function declaration documentation.
 .It Fl J
+Output JSON import function declaration documentation.
+.It Fl v
 Output
-.Sx JSON import
-function declaration documentation.
+.Xr kcgi 3
+validation variables documentation.
 .El
 .Pp
 The output is in
@@ -63,6 +65,14 @@ If
 is enabled, it continues with JSON output, which consists of the JSON
 output using
 .Xr kcgijson 3 .
+Lastly,
+.Fl v
+continues with validation variables.
+.Pp
+The
+.Dv DESCRIPTION
+section is conditionally followed by a
+.Dv SEE ALSO .
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.
@@ -92,6 +102,7 @@ for manpage rendering:
 .Sh SEE ALSO
 .Xr ort-c-header 1 ,
 .Xr ort-c-source 1 ,
+.Xr kcgi 3 ,
 .Xr kcgijson 3 ,
 .Xr ort 5 ,
 .Xr mdoc 7

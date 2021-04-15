@@ -411,6 +411,11 @@ namespace ortJson {
 		bitfs: string;
 	}
 
+	export interface ortJsonConfigCallbacks {
+		strct?: (e: HTMLElement, strct: ortJson.strctObj, arg?: any) => void;
+		field?: (e: HTMLElement, strct: ortJson.fieldObj, arg?: any) => void;
+	}
+
 	/**
 	 * Manage serialising an ortJsonConfig object into an HTML DOM
 	 * tree.
@@ -883,31 +888,30 @@ namespace ortJson {
 		 * Invokes fill() for each element with the given class
 		 * under the root.
 		 */
-		fillByClass(root: HTMLElement|string, name: string): void
+		fillByClass(root: HTMLElement|string, name: string,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			const e: HTMLElement|null = this.find(root);
 			if (e === null)
 				return;
 			const list: HTMLElement[] = this.list(e, name);
 			for (let i: number = 0; i < list.length; i++)
-				this.fill(list[i]);
+				this.fill(list[i], cb, arg);
 		}
 
 		/**
 		 * Fills the configuration **including** the given element,
-		 * starting with structures, then drilling down.
-		 * Elements are manipulated by whether the contain the
-		 * following classes.  Note that to "hide" an element
-		 * means to append the *hide* class to its class list,
-		 * while to "show" an element is to remove this.  The
-		 * caller will need to make sure that these classes
-		 * contain the appropriate `display: none` or similar
-		 * style definitions.
+		 * starting with structures, then drilling down.  Elements are
+		 * manipulated by whether the contain the following classes.
+		 * To "hide" an element means to append the *hide* class to its
+		 * class list, while to "show" an element is to remove this.
+		 * The caller will need to make sure that these classes contain
+		 * the appropriate `display: none` or similar style definitions.
 		 *
-		 * Per configuration:
-		 *
-		 * - fillStrctSet()
-		 * - fillRoleSet()
+		 * - fillStrctSet() (for structs)
+		 * - fillRoleSet() (for roles)
+		 * - fillEnumSet() (for enums)
+		 * - fillBitfSet() (for bitfields)
 		 * - *config-strcts-prefix-link*: sets 'href' to the strcts
 		 *   prefix fragment (even if empty)
 		 * - *config-roles-prefix-link*: sets 'href' to the roles
@@ -924,8 +928,12 @@ namespace ortJson {
 		 *   (even if empty)
 		 * - *config-bitfs-prefix-id*: sets 'id' to the bitfs prefix
 		 *   (even if empty)
+		 *
+		 * If "cb" and possibly "arg" are provided, they're pushed down
+		 * into their callbacks.
 		 */
-		fill(e: string|HTMLElement|null): void
+		fill(e: string|HTMLElement|null,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			if (e === null)
 				return;
@@ -949,7 +957,7 @@ namespace ortJson {
 			this.attrcl(pn, 'config-bitfs-prefix-link',
 				'href', '#' + this.prefixes.bitfs);
 			this.fillRoleSet(pn);
-			this.fillStrctSet(pn);
+			this.fillStrctSet(pn, cb, arg);
 			this.fillEnumSet(pn);
 			this.fillBitfSet(pn);
 			this.show(pn);
@@ -1534,7 +1542,8 @@ namespace ortJson {
 		 * - *config-strcts-name-id*: set *id* to 'strcts' within the
 		 *   *config-strcts-prefix-id* prefix
 		 */
-		fillStrctSet(e: HTMLElement)
+		fillStrctSet(e: HTMLElement,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			this.attrcl(e, 'config-strcts-name-link', 
 				'href', '#' + this.prefixes.strcts + 'strcts');
@@ -1559,10 +1568,15 @@ namespace ortJson {
 					<HTMLElement>list[i].children[0];
 				this.clr(list[i]);
 				for (let j: number = 0; j < keys.length; j++) {
+					const strct: ortJson.strctObj =
+						this.obj.sq[keys[j]];
 					const cln: HTMLElement = 
 						<HTMLElement>
 						tmpl.cloneNode(true);
-					this.fillStrctObj(cln, this.obj.sq[keys[j]]);
+					this.fillStrctObj(cln, strct);
+					if (typeof cb !== 'undefined' &&
+					    typeof cb.strct !== 'undefined')
+						cb.strct(cln, strct, arg);
 					list[i].appendChild(cln);
 				}
 				this.show(list[i]);

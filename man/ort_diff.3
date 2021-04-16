@@ -942,23 +942,48 @@ on memory allocation failure.
 .\" .Sh FILES
 .\" .Sh EXIT STATUS
 .\" For sections 1, 6, and 8 only.
-.\" .Sh EXAMPLES
-.\" The following parses standard input and repeats the parsed, canonicalised
-.\" configuration on standard output.
-.\" .Bd -literal -offset indent
-.\" struct config *cfg;
-.\"
-.\" if ((cfg = ort_config_alloc()) == NULL)
-.\" 	err(1, NULL);
-.\" if (!ort_parse_file(cfg, stdin, "<stdin>");
-.\" 	errx(1, "ort_parse_file");
-.\" if (!ort_parse_close(cfg))
-.\" 	errx(1, "ort_parse_close");
-.\" if (!ort_write_file(stdout, cfg))
-.\" 	errx(1, "ort_write_file");
-.\"
-.\" ort_config_free(cfg);
-.\" .Ed
+.Sh EXAMPLES
+The following passes the differences between two files,
+.Pa old.ort
+and
+.Pa new.ort ,
+to a function
+.Fn differ .
+.Bd -literal -offset indent
+struct config *oldcfg, *newcfg;
+struct diffq *diff;
+FILE *old, *new;
+
+if ((old = fopen("old.ort", "r")) == NULL)
+  err(1, "old.ort");
+if ((new = fopen("new.ort", "r")) == NULL)
+  err(1, "new.ort");
+
+if ((oldcfg = ort_config_alloc()) == NULL) {
+  err(1, NULL);
+if (!ort_parse_file(oldcfg, old, "old.ort"))
+  errx(1, "old.ort: parse failure");
+if (!ort_parse_close(oldcfg))
+  errx(1, "old.ort: parse failure");
+fclose(old);
+
+if ((newcfg = ort_config_alloc()) == NULL) {
+  err(1, NULL);
+if (!ort_parse_file(newcfg, new, "new.ort"))
+  errx(1, "new.ort: parse failure");
+if (!ort_parse_close(newcfg))
+  errx(1, "new.ort: parse failure");
+fclose(new);
+
+if ((diff = ort_diff(old, new)) == NULL)
+  errx(1, "old.ort -> new.ort");
+
+differ(diff);
+
+ort_config_free(oldcfg);
+ort_config_free(newcfg);
+return 0;
+.Ed
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
 .\" .Sh ERRORS

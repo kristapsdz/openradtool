@@ -411,9 +411,23 @@ namespace ortJson {
 		bitfs: string;
 	}
 
+	/**
+	 * These callbacks are adding custom manipulation of the DOM for
+	 * specific types of objects.
+	 */
 	export interface ortJsonConfigCallbacks {
-		strct?: (e: HTMLElement, strct: ortJson.strctObj, arg?: any) => void;
-		field?: (e: HTMLElement, strct: ortJson.fieldObj, arg?: any) => void;
+		/**
+		 * If provided, invoked in fillStrctObj() after all other
+		 * filling has occurred.
+		 */
+		strct?: (e: HTMLElement, strct: ortJson.strctObj,
+			arg?: any) => void;
+		/**
+		 * If provided, invoked in fillFieldObj() after all other
+		 * filling has occurred.
+		 */
+		field?: (e: HTMLElement, strct: ortJson.fieldObj,
+			arg?: any) => void;
 	}
 
 	/**
@@ -886,7 +900,7 @@ namespace ortJson {
 
 		/**
 		 * Invokes fill() for each element with the given class
-		 * under the root.
+		 * (inclusive) under the root.
 		 */
 		fillByClass(root: HTMLElement|string, name: string,
 			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
@@ -900,10 +914,10 @@ namespace ortJson {
 		}
 
 		/**
-		 * Fills the configuration **including** the given element,
+		 * Fills the configuration the given element (inclusive),
 		 * starting with structures, then drilling down.  Elements are
-		 * manipulated by whether the contain the following classes.
-		 * To "hide" an element means to append the *hide* class to its
+		 * manipulated by whether the contain the following classes.  To
+		 * "hide" an element means to append the *hide* class to its
 		 * class list, while to "show" an element is to remove this.
 		 * The caller will need to make sure that these classes contain
 		 * the appropriate `display: none` or similar style definitions.
@@ -912,25 +926,23 @@ namespace ortJson {
 		 * - fillRoleSet() (for roles)
 		 * - fillEnumSet() (for enums)
 		 * - fillBitfSet() (for bitfields)
-		 * - *config-strcts-prefix-link*: sets 'href' to the strcts
-		 *   prefix fragment (even if empty)
-		 * - *config-roles-prefix-link*: sets 'href' to the roles
-		 *   prefix fragment (even if empty)
-		 * - *config-enums-prefix-link*: sets 'href' to the enums
-		 *   prefix fragment (even if empty)
-		 * - *config-bitfs-prefix-link*: sets 'href' to the bitfs
-		 *   prefix fragment (even if empty)
-		 * - *config-strcts-prefix-id*: sets 'id' to the strcts prefix
-		 *   (even if empty)
-		 * - *config-roles-prefix-id*: sets 'id' to the roles prefix
-		 *   (even if empty)
-		 * - *config-enums-prefix-id*: sets 'id' to the enums prefix
-		 *   (even if empty)
-		 * - *config-bitfs-prefix-id*: sets 'id' to the bitfs prefix
-		 *   (even if empty)
 		 *
-		 * If "cb" and possibly "arg" are provided, they're pushed down
-		 * into their callbacks.
+		 * - *config-strcts-prefix-link*: sets 'href' to the strcts
+		 *   prefix fragment, even if empty
+		 * - *config-roles-prefix-link*: sets 'href' to the roles
+		 *   prefix fragment, even if empty
+		 * - *config-enums-prefix-link*: sets 'href' to the enums
+		 *   prefix fragment, even if empty
+		 * - *config-bitfs-prefix-link*: sets 'href' to the bitfs
+		 *   prefix fragment, even if empty
+		 * - *config-strcts-prefix-id*: sets 'id' to the strcts prefix,
+		 *   even if empty
+		 * - *config-roles-prefix-id*: sets 'id' to the roles prefix,
+		 *   even if empty
+		 * - *config-enums-prefix-id*: sets 'id' to the enums prefix,
+		 *   even if empty
+		 * - *config-bitfs-prefix-id*: sets 'id' to the bitfs prefix,
+		 *   even if empty
 		 */
 		fill(e: string|HTMLElement|null,
 			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
@@ -963,6 +975,16 @@ namespace ortJson {
 			this.show(pn);
 		}
 
+		/**
+		 * For a possibly-null comment string "doc" of the given name
+		 * "type" (e.g., "strct" or "field"):
+		 *
+		 * - *config-type-doc-{none,has}*: shown or hidden if "doc" is
+		 *   non-null
+		 * - *config-type-doc*: filled with "doc" or emptied if null
+		 * - *config-type-doc-value*: set *value* to "doc" or empty if
+		 *   null
+		 */
 		private fillComment(e: HTMLElement, 
 			type: string, doc: string|null): void
 		{
@@ -1082,7 +1104,6 @@ namespace ortJson {
 		/**
 		 * For a bitfield:
 		 *
-		 * - *config-bitf-doc*: filled in with bitfield documentation
 		 * - *config-bitf-name*: filled in with the bitfield name
 		 * - *config-bitf-name-data*: *data-name* set to the bitfield
 		 *   name
@@ -1091,6 +1112,9 @@ namespace ortJson {
 		 *   *config-bitfs-name-id* prefix
 		 * - *config-bitf-name-link*: *href* set as the name within the
 		 *   *config-bitfs-name-link* prefix
+		 *
+		 * For documentation:
+		 * - see fillComment()
 		 *
 		 * For bitfield items:
 		 * - see fillBitIndexSet()
@@ -1119,7 +1143,6 @@ namespace ortJson {
 		/**
 		 * For an enumeration:
 		 *
-		 * - *config-enum-doc*: filled in with enum documentation
 		 * - *config-enum-name*: filled in with the enum name
 		 * - *config-enum-name-id*: *id* set as the name within the
 		 *   *config-enums-name-id* prefix
@@ -1128,6 +1151,9 @@ namespace ortJson {
 		 * - *config-enum-name-value*: value set to the enum name
 		 * - *config-enum-name-data*: *data-name* attribute set to the
 		 *   enum name
+		 *
+		 * For documentation:
+		 * - see fillComment()
 		 *
 		 * For enumeration items:
 		 * - see fillEnumItemSet() 
@@ -1204,7 +1230,6 @@ namespace ortJson {
 		/**
 		 * For an enumeration item:
 		 *
-		 * - *config-enumitem-doc*: set text to item docs
 		 * - *config-enumitem-name*: set text to item name
 		 * - *config-enumitem-name-value*: set *value* to item name
 		 * - *config-enumitem-name-id*: *id* set as the name within the
@@ -1217,7 +1242,10 @@ namespace ortJson {
 		 *   name, if applicable, or an empty string of unset
 		 * - *config-enumitem-value-value*: *value* set to item value,
 		 *   if applicable, or an empty string if unset
-		  
+		 *
+		 * For documentation:
+		 * - see fillComment()
+		 *
 		 * For labels:
 		 * - see fillLabelSet() (name "enumitem")
 		 */
@@ -1354,12 +1382,14 @@ namespace ortJson {
 		 *   *config-bitfs-name-id* prefix
 		 * - *config-bitindex-name-link*: *href* set as the name within the
 		 *   *config-bitfs-name-link* prefix
-		 * - *config-bitindex-doc*: set text to item documentation
 		 * - *config-bitindex-name*: set text to item name
 		 * - *config-bitindex-name-value*: *value* set to name
 		 * - *config-bitindex-value*: set text to item value
 		 * - *config-bitindex-value-value*: *value* set to item value
-		  
+		 *
+		 * For documentation:
+		 * - see fillComment()
+		 *
 		 * For labels:
 		 * - see fillLabelSet() (name "bitindex")
 		 */
@@ -1444,7 +1474,6 @@ namespace ortJson {
 		/**
 		 * For each role:
 		 *
-		 * - *config-role-doc*: filled in with role documentation
 		 * - *config-role-name*: filled in with the role name
 		 * - *config-role-name-value*: value set to the role name
 		 * - *config-role-name-data*: 'data-name' attribute set with
@@ -1464,6 +1493,9 @@ namespace ortJson {
 		 * - *config-role-subrq*: clone each element beneath for each
 		 *   subrole and fill in the *config-role-subrq-role-name* and
 		 *   *config-role-subrq-role-link* (or hide if none)
+		 *
+		 * For documentation:
+		 * - see fillComment()
 		 */
 		fillRoleObj(e: HTMLElement, role: ortJson.roleObj): void
 		{
@@ -1573,10 +1605,7 @@ namespace ortJson {
 					const cln: HTMLElement = 
 						<HTMLElement>
 						tmpl.cloneNode(true);
-					this.fillStrctObj(cln, strct);
-					if (typeof cb !== 'undefined' &&
-					    typeof cb.strct !== 'undefined')
-						cb.strct(cln, strct, arg);
+					this.fillStrctObj(cln, strct, cb, arg);
 					list[i].appendChild(cln);
 				}
 				this.show(list[i]);
@@ -1594,12 +1623,6 @@ namespace ortJson {
 		 * - *config-strct-name-value*: value set with name
 		 * - *config-strct-name-data*: *data-name* attribute set with
 		 *   name
-		 * - *config-strct-doc-{none,has}*: shown or hidden depending on
-		 *   whether there's a non-empty documentation field
-		 * - *config-strct-doc*: filled in with non-empty documentation,
-		 *   if found
-		 * - *config-strct-doc-value*: value set with non-empty
-		 *   documentation, if found
 		 * - *config-fields*: the first child of this is cloned and
 		 *   filled in with data for each field (see "Per field")
 		 * - *config-insert-{has,none}*: shown or hidden depending on
@@ -1611,6 +1634,9 @@ namespace ortJson {
 		 *   filled in with data for each unique tuple (see "Per
 		 *   unique") unless there are no tuples, in which case the
 		 *   element is hidden
+		 *
+		 * For documentation:
+		 * - see fillComment()
 		 *
 		 * For any insert:
 		 * - see fillRolemap()
@@ -1627,9 +1653,10 @@ namespace ortJson {
 		 * For queries:
 		 * - see fillSearchClassObj() 
 		 */
-		fillStrctObj(e: HTMLElement, strct: ortJson.strctObj): void
+		fillStrctObj(e: HTMLElement, strct: ortJson.strctObj,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
-			this.fillFieldSet(e, strct);
+			this.fillFieldSet(e, strct, undefined, cb, arg);
 
 			if (strct.nq.length) {
 				this.showcl(e, 'config-uniques-has');
@@ -1669,6 +1696,10 @@ namespace ortJson {
 			this.attrcl(e, 'config-strct-name-link', 'href', 
 				'#' + this.prefixes.strcts + 'strcts/' + 
 				strct.name);
+
+			if (typeof cb !== 'undefined' &&
+			    typeof cb.strct !== 'undefined')
+				cb.strct(e, strct, arg);
 		}
 
 		/**
@@ -1803,10 +1834,6 @@ namespace ortJson {
 		 * Per update (or delete):
 		 *
 		 * - see fillRolemap()
-		 * - *config-update-doc-{has,none}*: shown or hidden depending
-		 *   on whether there's a non-empty documentation field
-		 * - *config-update-doc*: filled in with non-empty documentation
-		 *   if doc is defined
 		 * - *config-update-name-{has,none}*: shown or hidden depending
 		 *   on whether the update is anonymous
 		 * - *config-update-name*: filled in with the update name if a
@@ -1833,6 +1860,9 @@ namespace ortJson {
 		 *   filled in with data for each reference (see "Per update
 		 *   reference") unless there are no references, in which case
 		 *   the element is hidden
+		 *
+		 * For documentation:
+		 * - see fillComment()
 		 *
 		 * Per update reference:
 		 * - *config-uref-field*: the field name in the current
@@ -2015,11 +2045,6 @@ namespace ortJson {
 		 *   during construction (or _query + unique number)
 		 * - *config-query-name-link*: *href* set as the same fragment
 		 *   set in *config-query-name-id*
-		 * - *config-query-doc-{has,none}*: shown or hidden
-		 *   depending on whether there's a non-empty
-		 *   documentation field
-		 * - *config-query-doc*: filled in with non-empty
-		 *   documentation if doc is defined*
 		 * - *config-query-type*: filled in with the query type
 		 * - *config-query-sntq-{has,none}*: whether there's a
 		 *   list of search columns
@@ -2056,6 +2081,9 @@ namespace ortJson {
 		 * - *config-query-limit*: filled in with the limit
 		 * - *config-query-limit-value*: value filled in with
 		 *   the limit
+		 *
+		 * For documentation:
+		 * - see fillComment()
 		 *
 		 * Per query search field:
 		 * - *config-sent-fname*: filled in with the fname
@@ -2245,7 +2273,8 @@ namespace ortJson {
 		 *   are no fields, in which case the elements are hidden
 		 */
 		fillFieldSet(e: HTMLElement, strct: ortJson.strctObj,
-			exclude?: string[]): void
+			exclude?: string[], cb?: ortJson.ortJsonConfigCallbacks,
+			arg?: any): void
 		{
 			this.attrcl(e, 'config-fields-name-link', 'href', 
 				'#' + this.prefixes.strcts + 'strcts/' + 
@@ -2278,8 +2307,8 @@ namespace ortJson {
 				for (let j: number = 0; j < keys.length; j++) {
 					const cln: HTMLElement = <HTMLElement>
 						tmpl.cloneNode(true);
-					this.fillFieldObj
-						(cln, strct.fq[keys[j]]);
+					this.fillFieldObj(cln, 
+						strct.fq[keys[j]], cb, arg);
 					list[i].appendChild(cln);
 				}
 				this.show(list[i]);
@@ -2310,10 +2339,6 @@ namespace ortJson {
 		 *   *config-fields-name-link* prefix
 		 * - *config-field-fullname-data*: 'data-fullname' attribute set
 		 *   as "parent.name"
-		 * - *config-field-doc-{none,has}*: shown or hidden depending on
-		 *   whether there's a non-empty documentation field
-		 * - *config-field-doc*: filled in with non-empty documentation
-		 *   if doc is defined
 		 * - *config-field-type-TYPE*: shown or hidden depending upon
 		 *   the field type
 		 * - *config-field-type*: filled in with the type name
@@ -2373,8 +2398,12 @@ namespace ortJson {
 		 *   on whether the field has flags
 		 * - *config-field-flags-join*: filled in with comma-separated
 		 *   flags or empty string if having none
+		 *
+		 * For documentation:
+		 * - see fillComment()
 		 */
-		fillFieldObj(e: HTMLElement, field: ortJson.fieldObj): void
+		fillFieldObj(e: HTMLElement, field: ortJson.fieldObj,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			const flags: fieldObjFlags[] = [
 				'rowid', 'null', 'unique', 'noexport'
@@ -2545,6 +2574,10 @@ namespace ortJson {
 				}
 				this.replcl(e, 'config-field-limit', lim);
 			}
+
+			if (typeof cb !== 'undefined' &&
+			    typeof cb.field !== 'undefined')
+				cb.field(e, field, arg);
 		}
 	}
 }

@@ -429,6 +429,8 @@ namespace ortJson {
 			arg?: any) => void;
 		bitindex?: (e: HTMLElement, strct: ortJson.bitIndexObj,
 			arg?: any) => void;
+		role?: (e: HTMLElement, strct: ortJson.roleObj,
+			arg?: any) => void;
 	}
 
 	/**
@@ -969,7 +971,7 @@ namespace ortJson {
 				'href', '#' + this.prefixes.enums);
 			this.attrcl(pn, 'config-bitfs-prefix-link',
 				'href', '#' + this.prefixes.bitfs);
-			this.fillRoleSet(pn);
+			this.fillRoleSet(pn, undefined, cb, arg);
 			this.fillStrctSet(pn, cb, arg);
 			this.fillEnumSet(pn, cb, arg);
 			this.fillBitfSet(pn, cb, arg);
@@ -1447,7 +1449,8 @@ namespace ortJson {
 		 *
 		 * Accepts an optional array of role names not to show.
 		 */
-		fillRoleSet(e: HTMLElement, exclude?: string[]): void
+		fillRoleSet(e: HTMLElement, exclude?: string[],
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			this.attrcl(e, 'config-roles-name-link', 
 				'href', '#' + this.prefixes.roles + 'roles');
@@ -1483,7 +1486,7 @@ namespace ortJson {
 					const cln: HTMLElement = 
 						<HTMLElement>
 						tmpl.cloneNode(true);
-					this.fillRoleObj(cln, newrq[j]);
+					this.fillRoleObj(cln, newrq[j], cb, arg);
 					list[i].appendChild(cln);
 				}
 				this.show(list[i]);
@@ -1516,7 +1519,8 @@ namespace ortJson {
 		 * For documentation:
 		 * - see fillComment()
 		 */
-		fillRoleObj(e: HTMLElement, role: ortJson.roleObj): void
+		fillRoleObj(e: HTMLElement, role: ortJson.roleObj,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			this.fillComment(e, 'role', role.doc);
 			this.replcl(e, 'config-role-name', role.name);
@@ -1546,37 +1550,40 @@ namespace ortJson {
 				this.hidecl(e, 'config-role-subrq-has');
 				this.replcl(e, 'config-role-subrq-join', '');
 				this.hidecl(e, 'config-role-subrq');
-				return;
-			} 
-			this.hidecl(e, 'config-role-subrq-none');
-			this.showcl(e, 'config-role-subrq-has');
-			this.replcl(e, 'config-role-subrq-join', 
-				role.subrq.join(', '));
-			const list: HTMLElement[] = 
-				this.list(e, 'config-role-subrq');
-			for (let i: number = 0; i < list.length; i++) {
-				if (list[i].children.length === 0)
-					continue;
-				const tmpl: HTMLElement =
-					<HTMLElement>list[i].children[0];
-				this.clr(list[i]);
-				for (let j: number = 0; 
-			  	     j < role.subrq.length; j++) {
-					const cln: HTMLElement = 
-						<HTMLElement>
-						tmpl.cloneNode(true);
-					this.replcl(cln, 
-						'config-role-subrq-role-name', 
-						role.subrq[j]);
-					this.attrcl(cln, 
-						'config-role-subrq-role-link', 
-						'href', '#' + 
-						this.prefixes.roles + 
-						'roles/' + role.subrq[j]);
-					list[i].appendChild(cln);
+			} else { 
+				this.hidecl(e, 'config-role-subrq-none');
+				this.showcl(e, 'config-role-subrq-has');
+				this.replcl(e, 'config-role-subrq-join', 
+					role.subrq.join(', '));
+				const list: HTMLElement[] = 
+					this.list(e, 'config-role-subrq');
+				for (let i: number = 0; i < list.length; i++) {
+					if (list[i].children.length === 0)
+						continue;
+					const tmpl: HTMLElement =
+						<HTMLElement>list[i].children[0];
+					this.clr(list[i]);
+					for (let j: number = 0; 
+					     j < role.subrq.length; j++) {
+						const cln: HTMLElement = 
+							<HTMLElement>
+							tmpl.cloneNode(true);
+						this.replcl(cln, 
+							'config-role-subrq-role-name',
+							role.subrq[j]);
+						this.attrcl(cln, 
+							'config-role-subrq-role-link', 
+							'href', '#' + 
+							this.prefixes.roles + 
+							'roles/' + role.subrq[j]);
+						list[i].appendChild(cln);
+					}
+					this.show(list[i]);
 				}
-				this.show(list[i]);
 			}
+			if (typeof cb !== 'undefined' &&
+			    typeof cb.role !== 'undefined')
+				cb.role(e, role, arg);
 		}
 
 		/**

@@ -413,20 +413,17 @@ namespace ortJson {
 
 	/**
 	 * These callbacks are adding custom manipulation of the DOM for
-	 * specific types of objects.
+	 * specific types of objects.  These callbacks are invoked after all
+	 * other processing for the object (e.g., the field) has run.
 	 */
 	export interface ortJsonConfigCallbacks {
-		/**
-		 * If provided, invoked in fillStrctObj() after all other
-		 * filling has occurred.
-		 */
 		strct?: (e: HTMLElement, strct: ortJson.strctObj,
 			arg?: any) => void;
-		/**
-		 * If provided, invoked in fillFieldObj() after all other
-		 * filling has occurred.
-		 */
 		field?: (e: HTMLElement, strct: ortJson.fieldObj,
+			arg?: any) => void;
+		enm?: (e: HTMLElement, strct: ortJson.enumObj,
+			arg?: any) => void;
+		eitem?: (e: HTMLElement, strct: ortJson.enumItemObj,
 			arg?: any) => void;
 	}
 
@@ -970,7 +967,7 @@ namespace ortJson {
 				'href', '#' + this.prefixes.bitfs);
 			this.fillRoleSet(pn);
 			this.fillStrctSet(pn, cb, arg);
-			this.fillEnumSet(pn);
+			this.fillEnumSet(pn, cb, arg);
 			this.fillBitfSet(pn);
 			this.show(pn);
 		}
@@ -1065,7 +1062,8 @@ namespace ortJson {
 		 * - *config-enums-name-id*: set *id* to 'enums' within the
 		 *   *config-enums-prefix-id* prefix
 		 */
-		fillEnumSet(e: HTMLElement): void
+		fillEnumSet(e: HTMLElement,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			this.attrcl(e, 'config-enums-name-link', 
 				'href', '#' + this.prefixes.enums + 'enums');
@@ -1095,7 +1093,7 @@ namespace ortJson {
 						<HTMLElement>
 						tmpl.cloneNode(true);
 					this.fillEnumObj(cln, 
-						this.obj.eq[keys[j]]);
+						this.obj.eq[keys[j]], cb, arg);
 					list[i].appendChild(cln);
 				}
 			}
@@ -1161,7 +1159,8 @@ namespace ortJson {
 		 * For labels:
 		 * - see fillLabelSet() (name "enum-null")
 		 */
-		fillEnumObj(e: HTMLElement, enm: ortJson.enumObj): void
+		fillEnumObj(e: HTMLElement, enm: ortJson.enumObj,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			this.fillComment(e, 'enum', enm.doc);
 			this.replcl(e, 'config-enum-name', enm.name);
@@ -1174,8 +1173,11 @@ namespace ortJson {
 			this.attrcl(e, 'config-enum-name-link', 'href', 
 				'#' + this.prefixes.enums + 'enums/' + 
 				enm.name);
-			this.fillEnumItemSet(e, enm);
+			this.fillEnumItemSet(e, enm, cb, arg);
 			this.fillLabelSet(e, 'enum-null', enm.labelsNull);
+			if (typeof cb !== 'undefined' &&
+			    typeof cb.enm !== 'undefined')
+				cb.enm(e, enm, arg);
 		}
 
 		/**
@@ -1191,8 +1193,8 @@ namespace ortJson {
 		 *   filled in with fillEnumItemObj() for each item unless there
 		 *   are no items, in which case the element is hidden
 		 */
-		private fillEnumItemSet(e: HTMLElement, 
-			enm: ortJson.enumObj): void
+		private fillEnumItemSet(e: HTMLElement, enm: ortJson.enumObj,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			this.attrcl(e, 'config-eitems-name-link', 'href', 
 				'#' + this.prefixes.enums + 'enums/' + 
@@ -1219,8 +1221,8 @@ namespace ortJson {
 				for (let j = 0; j < keys.length; j++) {
 					const cln: HTMLElement = <HTMLElement>
 						tmpl.cloneNode(true);
-					this.fillEnumItemObj
-						(cln, enm.eq[keys[j]]);
+					this.fillEnumItemObj(cln, 
+						enm.eq[keys[j]], cb, arg);
 					list[i].appendChild(cln);
 				}
 				this.show(list[i]);
@@ -1249,7 +1251,8 @@ namespace ortJson {
 		 * For labels:
 		 * - see fillLabelSet() (name "enumitem")
 		 */
-		fillEnumItemObj(e: HTMLElement, eitem: ortJson.enumItemObj): void
+		fillEnumItemObj(e: HTMLElement, eitem: ortJson.enumItemObj,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			this.fillComment(e, 'enumitem', eitem.doc);
 			this.attrcl(e, 'config-enumitem-name-id', 'id', 
@@ -1276,6 +1279,9 @@ namespace ortJson {
 					'value', '');
 			}
 			this.fillLabelSet(e, 'enumitem', eitem.labels);
+			if (typeof cb !== 'undefined' &&
+			    typeof cb.eitem !== 'undefined')
+				cb.eitem(e, eitem, arg);
 		}
 
 		/**

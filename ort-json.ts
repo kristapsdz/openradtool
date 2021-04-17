@@ -425,6 +425,10 @@ namespace ortJson {
 			arg?: any) => void;
 		eitem?: (e: HTMLElement, strct: ortJson.enumItemObj,
 			arg?: any) => void;
+		bitf?: (e: HTMLElement, strct: ortJson.bitfObj,
+			arg?: any) => void;
+		bitindex?: (e: HTMLElement, strct: ortJson.bitIndexObj,
+			arg?: any) => void;
 	}
 
 	/**
@@ -968,7 +972,7 @@ namespace ortJson {
 			this.fillRoleSet(pn);
 			this.fillStrctSet(pn, cb, arg);
 			this.fillEnumSet(pn, cb, arg);
-			this.fillBitfSet(pn);
+			this.fillBitfSet(pn, cb, arg);
 			this.show(pn);
 		}
 
@@ -1012,7 +1016,8 @@ namespace ortJson {
 		 * - *config-bitfs-name-id*: set *id* to 'bitfs' within the
 		 *   *config-bitfs-prefix-id* prefix
 		 */
-		fillBitfSet(e: HTMLElement): void
+		fillBitfSet(e: HTMLElement,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			this.attrcl(e, 'config-bitfs-name-link', 
 				'href', '#' + this.prefixes.bitfs + 'bitfs');
@@ -1040,8 +1045,8 @@ namespace ortJson {
 					const cln: HTMLElement = 
 						<HTMLElement>
 						tmpl.cloneNode(true);
-					this.fillBitfObj
-						(cln, this.obj.bq[name]);
+					this.fillBitfObj(cln, 
+						this.obj.bq[name], cb, arg);
 					list[i].appendChild(cln);
 				}
 				this.show(list[i]);
@@ -1120,7 +1125,8 @@ namespace ortJson {
 		 * For labels:
 		 * - see fillLabelSet() ("bitf-null" and "bitf-unset")
 		 */
-		fillBitfObj(e: HTMLElement, bitf: ortJson.bitfObj): void
+		fillBitfObj(e: HTMLElement, bitf: ortJson.bitfObj,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			this.fillComment(e, 'bitf', bitf.doc);
 			this.replcl(e, 'config-bitf-name', bitf.name);
@@ -1133,9 +1139,12 @@ namespace ortJson {
 			this.attrcl(e, 'config-bitf-name-link', 'href', 
 				'#' + this.prefixes.bitfs + 'bitfs/' + 
 				bitf.name);
-			this.fillBitIndexSet(e, bitf);
+			this.fillBitIndexSet(e, bitf, cb, arg);
 			this.fillLabelSet(e, 'bitf-null', bitf.labelsNull);
 			this.fillLabelSet(e, 'bitf-unset', bitf.labelsUnset);
+			if (typeof cb !== 'undefined' &&
+			    typeof cb.bitf !== 'undefined')
+				cb.bitf(e, bitf, arg);
 		}
 
 		/**
@@ -1346,8 +1355,8 @@ namespace ortJson {
 		 *   filled in with fillBitIndexObj() for each item unless there
 		 *   are no items, in which case the element is hidden
 		 */
-		private fillBitIndexSet(e: HTMLElement, 
-			bitf: ortJson.bitfObj): void
+		private fillBitIndexSet(e: HTMLElement, bitf: ortJson.bitfObj,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			this.attrcl(e, 'config-bitems-name-link', 'href', 
 				'#' + this.prefixes.bitfs + 'bitfs/' + 
@@ -1373,8 +1382,8 @@ namespace ortJson {
 				for (let j = 0; j < keys.length; j++) {
 					const cln: HTMLElement = <HTMLElement>
 						tmpl.cloneNode(true);
-					this.fillBitIndexObj
-						(cln, bitf.bq[keys[j]]);
+					this.fillBitIndexObj(cln,
+						bitf.bq[keys[j]], cb, arg);
 					list[i].appendChild(cln);
 				}
 				this.show(list[i]);
@@ -1399,7 +1408,8 @@ namespace ortJson {
 		 * For labels:
 		 * - see fillLabelSet() (name "bitindex")
 		 */
-		fillBitIndexObj(e: HTMLElement, biti: ortJson.bitIndexObj): void
+		fillBitIndexObj(e: HTMLElement, biti: ortJson.bitIndexObj,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			this.fillComment(e, 'bitindex', biti.doc);
 			this.attrcl(e, 'config-bitindex-name-id', 'id', 
@@ -1416,6 +1426,9 @@ namespace ortJson {
 			this.attrcl(e, 'config-bitindex-value-value', 
 				'value', biti.value.toString());
 			this.fillLabelSet(e, 'bitindex', biti.labels);
+			if (typeof cb !== 'undefined' &&
+			    typeof cb.bitindex !== 'undefined')
+				cb.bitindex(e, biti, arg);
 		}
 
 		/**
@@ -1702,7 +1715,6 @@ namespace ortJson {
 			this.attrcl(e, 'config-strct-name-link', 'href', 
 				'#' + this.prefixes.strcts + 'strcts/' + 
 				strct.name);
-
 			if (typeof cb !== 'undefined' &&
 			    typeof cb.strct !== 'undefined')
 				cb.strct(e, strct, arg);

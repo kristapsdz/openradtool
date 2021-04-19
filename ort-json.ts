@@ -1852,6 +1852,7 @@ namespace ortJson {
 						cls.anon[j], j);
 					list[i].appendChild(cln);
 				}
+				this.show(list[i]);
 			}
 		}
 

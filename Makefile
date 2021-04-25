@@ -7,7 +7,8 @@ VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 12
 VERSION_BUILD	 = 7
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
-LIBOBJS		 = compats.o \
+LIBOBJS		 = audit.o \
+		   compats.o \
 		   config.o \
 		   diff.o \
 		   linker.o \
@@ -34,8 +35,7 @@ PKGCONFIGS	 = ort.pc \
 		   ort-lang-javascript.pc \
 		   ort-lang-json.pc \
 		   ort-lang-sql.pc
-OBJS		 = audit.o \
-		   cheader.o \
+OBJS		 = cheader.o \
 		   cmanpage.o \
 		   csource.o \
 		   lang.o \
@@ -49,6 +49,7 @@ OBJS		 = audit.o \
 		   lang-sql.o \
 		   lang-xliff.o \
 		   main.o \
+		   mainaudit.o \
 		   maindiff.o \
 		   nodejs.o \
 		   javascript.o \
@@ -181,6 +182,7 @@ DOTAR		 = $(HEADERS) \
 		   linker_resolve.c \
 		   log.c \
 		   main.c \
+		   mainaudit.c \
 		   maindiff.c \
 		   nodejs.c \
 		   ortPrivate.ts \
@@ -313,14 +315,14 @@ ort-sql: sql.o libort-lang-sql.a libort.a
 ort-sqldiff: sqldiff.o libort-lang-sql.a libort.a
 	$(CC) -o $@ sqldiff.o libort-lang-sql.a libort.a $(LDFLAGS) $(LDADD)
 
-ort-audit: audit.o libort.a
-	$(CC) -o $@ audit.o libort.a $(LDFLAGS) $(LDADD)
+ort-audit: mainaudit.o libort.a
+	$(CC) -o $@ mainaudit.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-audit-gv: audit.o libort.a
-	$(CC) -o $@ audit.o libort.a $(LDFLAGS) $(LDADD)
+ort-audit-gv: mainaudit.o libort.a
+	$(CC) -o $@ mainaudit.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-audit-json: audit.o libort.a
-	$(CC) -o $@ audit.o libort.a $(LDFLAGS) $(LDADD)
+ort-audit-json: mainaudit.o libort.a
+	$(CC) -o $@ mainaudit.o libort.a $(LDFLAGS) $(LDADD)
 
 ort-xliff: xliff.o libort-lang-xliff.a libort.a
 	$(CC) -o $@ xliff.o libort-lang-xliff.a libort.a $(LDFLAGS) $(LIBS_PKG) $(LDADD)

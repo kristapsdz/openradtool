@@ -18,6 +18,7 @@
 #define ORT_H
 
 TAILQ_HEAD(aliasq, alias);
+TAILQ_HEAD(auditq, audit);
 TAILQ_HEAD(bitfq, bitf);
 TAILQ_HEAD(bitidxq, bitidx);
 TAILQ_HEAD(diffq, diff);
@@ -641,6 +642,37 @@ struct	diff {
 	TAILQ_ENTRY(diff) 	 	 entries;
 };
 
+enum	auditt {
+	AUDIT_INSERT,
+	AUDIT_UPDATE,
+	AUDIT_QUERY,
+	AUDIT_REACHABLE,
+};
+
+struct	auditnode {
+	const struct search	*sr;
+	char			*path;
+	int			 exported;
+};
+
+struct	auditreach {
+	const struct strct	*st;
+	struct auditnode	*srs;
+	int			 exported;
+	size_t			 srsz;
+};
+
+struct	audit {
+	union {
+		const struct strct	*st;
+		const struct update	*up;
+		const struct search	*sr;
+		struct auditreach	 ar;
+	};
+	enum auditt		 type;
+	TAILQ_ENTRY(audit)	 entries;
+};
+
 __BEGIN_DECLS
 
 struct config	*ort_config_alloc(void);
@@ -658,6 +690,10 @@ void	 	 ort_msgv(struct msgq *, enum msgtype, int,
 void	 	 ort_msg(struct msgq *, enum msgtype, int, 
 			const struct pos *, const char *, ...);
 void		 ort_msgq_free(struct msgq *);
+
+/* EXPERIMENTAL. */
+struct auditq	*ort_audit(const struct role *, const struct config *);
+void		 ort_auditq_free(struct auditq *);
 
 __END_DECLS
 

@@ -35,7 +35,8 @@ PKGCONFIGS	 = ort.pc \
 		   ort-lang-javascript.pc \
 		   ort-lang-json.pc \
 		   ort-lang-sql.pc
-OBJS		 = cheader.o \
+OBJS		 = audit-json.o \
+		   cheader.o \
 		   cmanpage.o \
 		   csource.o \
 		   lang.o \
@@ -74,6 +75,7 @@ HTMLS		 = archive.html \
 		   man/ort-sqldiff.1.html \
 		   man/ort-xliff.1.html \
 		   man/ort.3.html \
+		   man/ort_audit.3.html \
 		   man/ort_config_alloc.3.html \
 		   man/ort_config_free.3.html \
 		   man/ort_diff.3.html \
@@ -98,6 +100,7 @@ HTMLS		 = archive.html \
 		   man/ort.5.html
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/openradtool
 MAN3S		 = man/ort.3 \
+		   man/ort_audit.3  \
 		   man/ort_config_alloc.3 \
 		   man/ort_config_free.3 \
 		   man/ort_diff.3  \
@@ -122,7 +125,6 @@ MAN3S		 = man/ort.3 \
 MAN5S		 = man/ort.5
 MAN1S		 = man/ort.1 \
 		   man/ort-audit.1 \
-		   man/ort-audit-gv.1 \
 		   man/ort-audit-json.1 \
 		   man/ort-c-header.1 \
 		   man/ort-c-manpage.1 \
@@ -222,7 +224,6 @@ IHTMLS		 = audit-example.ort.html \
 		   test.c.html
 BINS		 = ort \
 		   ort-audit \
-		   ort-audit-gv \
 		   ort-audit-json \
 		   ort-c-header \
 		   ort-c-manpage \
@@ -318,11 +319,11 @@ ort-sqldiff: sqldiff.o libort-lang-sql.a libort.a
 ort-audit: mainaudit.o libort.a
 	$(CC) -o $@ mainaudit.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-audit-gv: mainaudit.o libort.a
-	$(CC) -o $@ mainaudit.o libort.a $(LDFLAGS) $(LDADD)
+ort-audit-gv: audit-json.o libort.a
+	$(CC) -o $@ audit-json.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-audit-json: mainaudit.o libort.a
-	$(CC) -o $@ mainaudit.o libort.a $(LDFLAGS) $(LDADD)
+ort-audit-json: audit-json.o libort.a
+	$(CC) -o $@ audit-json.o libort.a $(LDFLAGS) $(LDADD)
 
 ort-xliff: xliff.o libort-lang-xliff.a libort.a
 	$(CC) -o $@ xliff.o libort-lang-xliff.a libort.a $(LDFLAGS) $(LIBS_PKG) $(LDADD)

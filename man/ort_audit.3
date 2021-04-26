@@ -1,0 +1,177 @@
+.\"	$Id$
+.\"
+.\" Copyright (c) 2021 Kristaps Dzonsons <kristaps@bsd.lv>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate$
+.Dt ORT_AUDIT 3
+.Os
+.Sh NAME
+.Nm ort_audit
+.Nd audit role operations in a configuration
+.Sh LIBRARY
+.Lb libort
+.Sh SYNOPSIS
+.In sys/queue.h
+.In stdio.h
+.In ort.h
+.Ft "struct auditq *"
+.Fo ort_audit
+.Fa "const struct role *r"
+.Fa "const struct config *cfg"
+.Fc
+.Sh DESCRIPTION
+Audits the configuration
+.Fa cfg
+and returns all operations and access possible by
+.Fa r .
+.Pp
+The audit results are returned as a queue of operations and components
+that describe what the role may do.
+.Pp
+The result should be freed by
+.Xr ort_auditq_free 3
+after use.
+.Pp
+The
+.Fa cfg
+must be fully linked as driven by
+.Xr ort_parse_close 3 .
+.Pp
+The type of audit target is defined in
+.Vt "enum audidt" ,
+which may be any of the following:
+.Bl -tag -width Ds -offset indent
+.It Dv AUDIT_INSERT
+For
+.Cm insert
+operations.
+.It Dv AUDIT_UPDATE
+For
+.Cm delete
+and
+.Cm update
+operations.
+.It Dv AUDIT_QUERY
+For
+.Cm count ,
+.Cm iterate ,
+.Cm list ,
+and
+.Cm search
+operations.
+.It Dv AUDIT_REACHABLE
+For structures that may be accessed or exported through queries and the
+export interface.
+.El
+.Pp
+The returned structure is a queue of
+.Vt struct audit ,
+which consists of the following:
+.Bl -tag -width Ds -offset indent
+.It Va "enum auditt type"
+The audit target type.
+This affects which of the following union fields will be set.
+.It Va "<anon union>"
+This is a union consisting of the following:
+.Bl -tag -width Ds
+.It Va "const struct strct *st"
+Set by
+.Dv AUDIT_INSERT .
+.It Va "const struct update *up"
+Set by
+.Dv AUDIT_UPDATE .
+.It Va "const struct search *sr"
+Set by
+.Dv AUDIT_QUERY .
+.It Va "struct auditreach ar"
+Set by
+.Dv AUDIT_REACHABLE .
+.El
+.El
+.Pp
+Reachable structures are described by
+.Vt struct auditreach ,
+which consists of the following:
+.Bl -tag -width Ds -offset indent
+.It Va "const struct strct *st"
+The structure that is readable and possible exportable.
+.It Va "struct auditnode *srs"
+An array consisting of all origin queries
+.Fa sr ,
+dot-separated (or
+.Dv NULL )
+path from the origin structure to the target, and whether the target is
+exported or not.
+.It Va "size_t srsz"
+The number of elements in
+.Fa srs .
+.It Va "int exported"
+Whether it is exportable through any source in
+.Fa srs .
+.El
+.\" The following requests should be uncommented and used where appropriate.
+.\" .Sh CONTEXT
+.\" For section 9 functions only.
+.Sh RETURN VALUES
+Returns the audit report or
+.Dv NULL
+on memory allocation failure.
+.\" For sections 2, 3, and 9 function return values only.
+.\" .Sh ENVIRONMENT
+.\" For sections 1, 6, 7, and 8 only.
+.\" .Sh FILES
+.\" .Sh EXIT STATUS
+.\" For sections 1, 6, and 8 only.
+.Sh EXAMPLES
+The following audits the
+.Ar user
+role in a configuration
+.Pa db.ort .
+.Bd -literal -offset indent
+struct config *cfg;
+struct auditq *aq;
+const struct role *r;
+
+if ((cfg = ort_config_alloc()) == NULL)
+  err(1, NULL);
+if (!ort_parse_file(cfg, stdin, "<stdin>"))
+  errx(1, "failed parsing");
+if (!ort_parse_close(cfg))
+  errx(1, "failed linking");
+
+TAILQ_FOREACH(r, &cfg->arq, allentries)
+  if (strcasecmp(r->name, "user") == 0)
+    break;
+if (r == NULL)
+  errx(1, "user: role not found");
+if ((aq = ort_audit(r, cfg)) == NULL)
+  err(1, NULL);
+
+/* Do something with aq. */
+
+ort_auditq_free(aq);
+ort_config_free(cfg);
+.Ed
+.\" .Sh DIAGNOSTICS
+.\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
+.\" .Sh ERRORS
+.\" For sections 2, 3, 4, and 9 errno settings only.
+.\" .Sh SEE ALSO
+.\" .Xr foobar 1
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh CAVEATS
+.\" .Sh BUGS

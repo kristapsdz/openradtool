@@ -690,8 +690,6 @@ void	 	 ort_msgv(struct msgq *, enum msgtype, int,
 void	 	 ort_msg(struct msgq *, enum msgtype, int, 
 			const struct pos *, const char *, ...);
 void		 ort_msgq_free(struct msgq *);
-
-/* EXPERIMENTAL. */
 struct auditq	*ort_audit(const struct role *, const struct config *);
 void		 ort_auditq_free(struct auditq *);
 

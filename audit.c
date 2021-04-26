@@ -69,14 +69,15 @@ follow(const struct strct *st, const struct role *r, struct auditq *aq,
 		a->ar.exported = exported;
 	}
 
-	pp = reallocarray(a->ar.srs,
+	pp = recallocarray(a->ar.srs, a->ar.srsz,
 		a->ar.srsz + 1, sizeof(struct auditnode));
 	if (pp == NULL)
 		return 0;
 	a->ar.srs = pp;
 	a->ar.srs[a->ar.srsz].exported = exported;
 	a->ar.srs[a->ar.srsz].sr = sr;
-	if ((a->ar.srs[a->ar.srsz].path = strdup(path)) == NULL)
+	if (path != NULL &&
+	    (a->ar.srs[a->ar.srsz].path = strdup(path)) == NULL)
 		return 0;
 	a->ar.srsz++;
 
@@ -140,6 +141,8 @@ ort_auditq_free(struct auditq *aq)
 		}
 		free(a);
 	}
+
+	free(aq);
 }
 
 struct auditq *
@@ -175,7 +178,7 @@ ort_audit(const struct role *r, const struct config *cfg)
 				a->type = AUDIT_UPDATE;
 				a->up = up;
 			}
-		TAILQ_FOREACH(sr, &st->sq, entries) {
+		TAILQ_FOREACH(sr, &st->sq, entries)
 			if (rolemap_has(sr->rolemap, r)) {
 				a = calloc(1, sizeof(struct audit));
 				if (a == NULL)
@@ -183,11 +186,11 @@ ort_audit(const struct role *r, const struct config *cfg)
 				TAILQ_INSERT_TAIL(aq, a, entries);
 				a->type = AUDIT_QUERY;
 				a->sr = sr;
+				sst = sr->dst != NULL ? 
+					sr->dst->strct : st;
+				if (!follow(sst, r, aq, sr, 1, NULL))
+					goto err;
 			}
-			sst = sr->dst != NULL ? sr->dst->strct : st;
-			if (!follow(sst, r, aq, sr, 1, NULL))
-				return 0;
-		}
 	}
 
 	return aq;

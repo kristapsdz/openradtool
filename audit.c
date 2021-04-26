@@ -160,6 +160,16 @@ ort_audit(const struct role *r, const struct config *cfg)
 	TAILQ_INIT(aq);
 
 	TAILQ_FOREACH(st, &cfg->sq, entries) {
+		if (st->ins != NULL &&
+		    rolemap_has(st->ins->rolemap, r)) {
+			a = calloc(1, sizeof(struct audit));
+			if (a == NULL)
+				goto err;
+			TAILQ_INSERT_TAIL(aq, a, entries);
+			a->type = AUDIT_INSERT;
+			a->st = st;
+		}
+				 
 		TAILQ_FOREACH(up, &st->uq, entries)
 			if (rolemap_has(up->rolemap, r)) {
 				a = calloc(1, sizeof(struct audit));

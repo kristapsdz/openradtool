@@ -32,79 +32,131 @@
 
 #include "ort.h"
 
+static size_t
+writer_size(const struct audit *a, char *b, size_t bsz, size_t i)
+{
+	int	 c;
+
+	switch (a->type) {
+	case AUDIT_INSERT:
+		c = snprintf(b, bsz, "%s", a->st->name);
+		break;
+	case AUDIT_UPDATE:
+		c = snprintf(b, bsz, "%s:%s", 
+			a->up->parent->name, 
+			a->up->name == NULL ? "-" : a->up->name);
+		break;
+	case AUDIT_QUERY:
+		c = snprintf(b, bsz, "%s:%s",
+			a->sr->parent->name,
+			a->sr->name == NULL ? "-" : a->sr->name);
+		break;
+	case AUDIT_REACHABLE:
+		assert(i < a->ar.srsz);
+		c = snprintf(b, bsz, "%s:%s:%s", 
+			a->ar.st->name,
+			a->ar.srs[i].sr->name == NULL ? 
+			"-" : a->ar.srs[i].sr->name,
+			a->ar.srs[i].path == NULL ? 
+			"-" : a->ar.srs[i].path);
+		break;
+	}
+	if (c < 0)
+		err(1, NULL);
+	return (size_t)c;
+}
+
 static void
-writer_insert(const struct audit *a)
+writer_insert(const struct audit *a, char *b, size_t bsz)
 {
 
 	assert(a->st->ins != NULL);
-	printf("%-11s %s %s:%zu:%zu\n", "insert", a->st->name,
+	writer_size(a, b, bsz, 0);
+	printf("%-11s %-*s %s:%zu:%zu\n", "insert", (int)bsz, b,
 		a->st->ins->pos.fname, a->st->ins->pos.line, 
 		a->st->ins->pos.column);
 }
 
 static void
-writer_update(const struct audit *a)
+writer_update(const struct audit *a, char *b, size_t bsz)
 {
 
-	printf("%-11s %s:%s %s:%zu:%zu\n", 
-		a->up->type == UP_DELETE ? "delete" : "update",
-		a->up->parent->name,
-		a->up->name == NULL ? "-" : a->up->name,
+	writer_size(a, b, bsz, 0);
+	printf("%-11s %-*s %s:%zu:%zu\n", a->up->type == UP_DELETE ?
+		"delete" : "update", (int)bsz, b,
 		a->up->pos.fname, a->up->pos.line, a->up->pos.column);
 }
 
 static void
-writer_query(const struct audit *a)
+writer_query(const struct audit *a, char *b, size_t bsz)
 {
 
-	printf("%-11s %s:%s %s:%zu:%zu\n", 
+	writer_size(a, b, bsz, 0);
+	printf("%-11s %-*s %s:%zu:%zu\n", 
 		a->sr->type == STYPE_COUNT ? "count" : 
 			a->sr->type == STYPE_ITERATE ? "iterate" : 
 			a->sr->type == STYPE_SEARCH ? "search" : 
-			"list", a->sr->parent->name,
-		a->sr->name == NULL ? "<anonymous>" : a->sr->name,
-		a->sr->pos.fname, a->sr->pos.line, a->sr->pos.column);
+			"list", (int)bsz, b, a->sr->pos.fname, 
+		a->sr->pos.line, a->sr->pos.column);
 }
 
 static void
-writer_reachable(const struct audit *a)
+writer_reachable(const struct audit *a, char *b, size_t bsz)
 {
 	size_t	 i;
 
-	for (i = 0; i < a->ar.srsz; i++)
-		printf("%-11s %s:%s:%s %s:%zu:%zu\n",
-			a->ar.srs[i].exported ? "readwrite" : "read",
-			a->ar.st->name,
-			a->ar.srs[i].sr->name == NULL ? 
-			"-" : a->ar.srs[i].sr->name,
-			a->ar.srs[i].path == NULL ? 
-			"-" : a->ar.srs[i].path,
-			a->ar.st->pos.fname, a->ar.st->pos.line, 
-			a->ar.st->pos.column);
+	for (i = 0; i < a->ar.srsz; i++) {
+		writer_size(a, b, bsz, i);
+		printf("%-11s %-*s %s:%zu:%zu\n", a->ar.srs[i].exported ?
+			"readwrite" : "read", (int)bsz, b, 
+			a->ar.srs[i].sr->pos.fname, 
+			a->ar.srs[i].sr->pos.line, 
+			a->ar.srs[i].sr->pos.column);
+	}
 }
 
 static void
 writer(const struct auditq *aq)
 {
 	const struct audit	*a;
+	size_t			 i, msz = 0, sz;
+	char			*b;
+
+	TAILQ_FOREACH(a, aq, entries)
+		switch (a->type) {
+		case AUDIT_REACHABLE:
+			for (i = 0; i < a->ar.srsz; i++) {
+				sz = writer_size(a, NULL, 0, i);
+				if (sz > msz)
+					msz = sz;
+			}
+			break;
+		default:
+			if ((sz = writer_size(a, NULL, 0, 0)) > msz)
+				msz = sz;
+			break;
+		}
+
+	if ((b = malloc(msz + 1)) == NULL)
+		err(1, NULL);
 
 	TAILQ_FOREACH(a, aq, entries)
 		switch (a->type) {
 		case AUDIT_INSERT:
-			writer_insert(a);
+			writer_insert(a, b, msz + 1);
 			break;
 		case AUDIT_UPDATE:
-			writer_update(a);
+			writer_update(a, b, msz + 1);
 			break;
 		case AUDIT_QUERY:
-			writer_query(a);
+			writer_query(a, b, msz + 1);
 			break;
 		case AUDIT_REACHABLE:
-			writer_reachable(a);
-			break;
-		default:
+			writer_reachable(a, b, msz + 1);
 			break;
 		}
+
+	free(b);
 }
 
 int

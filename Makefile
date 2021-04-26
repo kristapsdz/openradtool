@@ -80,7 +80,7 @@ HTMLS		 = archive.html \
 		   man/ort_config_alloc.3.html \
 		   man/ort_config_free.3.html \
 		   man/ort_diff.3.html \
-		   man/ort_diff_free.3.html \
+		   man/ort_diffq_free.3.html \
 		   man/ort_lang_c_header.3.html \
 		   man/ort_lang_c_manpage.3.html \
 		   man/ort_lang_c_source.3.html \
@@ -106,7 +106,7 @@ MAN3S		 = man/ort.3 \
 		   man/ort_config_alloc.3 \
 		   man/ort_config_free.3 \
 		   man/ort_diff.3  \
-		   man/ort_diff_free.3  \
+		   man/ort_diffq_free.3  \
 		   man/ort_lang_c_header.3 \
 		   man/ort_lang_c_manpage.3 \
 		   man/ort_lang_c_source.3 \

@@ -157,6 +157,7 @@ out:
 	ort_write_msg_file(stderr, &mq);
 
 	ort_msgq_free(&mq);
+	ort_diffq_free(q);
 	ort_config_free(cfg);
 	ort_config_free(dcfg);
 
@@ -167,7 +168,6 @@ out:
 
 	free(confs);
 	free(dconfs);
-	ort_diff_free(q);
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 
 usage:

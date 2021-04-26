@@ -1651,12 +1651,12 @@ ort_diff(const struct config *from, const struct config *into)
 
 	return q;
 err:
-	ort_diff_free(q);
+	ort_diffq_free(q);
 	return NULL;
 }
 
 void
-ort_diff_free(struct diffq *q)
+ort_diffq_free(struct diffq *q)
 {
 	struct diff	*d;
 

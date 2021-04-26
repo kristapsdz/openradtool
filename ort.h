@@ -682,7 +682,7 @@ int		 ort_parse_file(struct config *, FILE *, const char *);
 int		 ort_write_file(FILE *, const struct config *);
 int		 ort_write_msg_file(FILE *f, const struct msgq *);
 struct diffq	*ort_diff(const struct config *, const struct config *);
-void		 ort_diff_free(struct diffq *);
+void		 ort_diffq_free(struct diffq *);
 int		 ort_write_diff_file(FILE *, const struct diffq *,
 			const char **, size_t, const char **, size_t);
 void	 	 ort_msgv(struct msgq *, enum msgtype, int, 

@@ -173,6 +173,8 @@ main(int argc, char *argv[])
 out:
 	ort_write_msg_file(stderr, &cfg->mq);
 	ort_write_msg_file(stderr, &dcfg->mq);
+
+	ort_diffq_free(q);
 	ort_config_free(cfg);
 	ort_config_free(dcfg);
 
@@ -183,8 +185,6 @@ out:
 
 	free(confs);
 	free(dconfs);
-	ort_diff_free(q);
-
 	return rc;
 usage:
 	fprintf(stderr, 

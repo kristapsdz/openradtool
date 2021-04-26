@@ -33,7 +33,7 @@
 #include "ort.h"
 
 static size_t
-writer_size(const struct audit *a, char *b, size_t bsz, size_t i)
+audit_buf(const struct audit *a, char *b, size_t bsz, size_t i)
 {
 	int	 c;
 
@@ -52,6 +52,10 @@ writer_size(const struct audit *a, char *b, size_t bsz, size_t i)
 			a->sr->name == NULL ? "-" : a->sr->name);
 		break;
 	case AUDIT_REACHABLE:
+		if (i == a->ar.srsz) {
+			c = snprintf(b, bsz, "%s", a->ar.st->name);
+			break;
+		}
 		assert(i < a->ar.srsz);
 		c = snprintf(b, bsz, "%s:%s:%s", 
 			a->ar.st->name,
@@ -67,31 +71,31 @@ writer_size(const struct audit *a, char *b, size_t bsz, size_t i)
 }
 
 static void
-writer_insert(const struct audit *a, char *b, size_t bsz)
+audit_insert(const struct audit *a, char *b, size_t bsz)
 {
 
 	assert(a->st->ins != NULL);
-	writer_size(a, b, bsz, 0);
+	audit_buf(a, b, bsz, 0);
 	printf("%-11s %-*s %s:%zu:%zu\n", "insert", (int)bsz, b,
 		a->st->ins->pos.fname, a->st->ins->pos.line, 
 		a->st->ins->pos.column);
 }
 
 static void
-writer_update(const struct audit *a, char *b, size_t bsz)
+audit_update(const struct audit *a, char *b, size_t bsz)
 {
 
-	writer_size(a, b, bsz, 0);
+	audit_buf(a, b, bsz, 0);
 	printf("%-11s %-*s %s:%zu:%zu\n", a->up->type == UP_DELETE ?
 		"delete" : "update", (int)bsz, b,
 		a->up->pos.fname, a->up->pos.line, a->up->pos.column);
 }
 
 static void
-writer_query(const struct audit *a, char *b, size_t bsz)
+audit_query(const struct audit *a, char *b, size_t bsz)
 {
 
-	writer_size(a, b, bsz, 0);
+	audit_buf(a, b, bsz, 0);
 	printf("%-11s %-*s %s:%zu:%zu\n", 
 		a->sr->type == STYPE_COUNT ? "count" : 
 			a->sr->type == STYPE_ITERATE ? "iterate" : 
@@ -101,12 +105,22 @@ writer_query(const struct audit *a, char *b, size_t bsz)
 }
 
 static void
-writer_reachable(const struct audit *a, char *b, size_t bsz)
+audit_reach(const struct audit *a, char *b, size_t bsz, int verb)
 {
 	size_t	 i;
 
+	if (verb == 0) {
+		audit_buf(a, b, bsz, a->ar.srsz);
+		printf("%-11s %-*s %s:%zu:%zu\n", a->ar.exported ?
+			"readwrite" : "read", (int)bsz, b, 
+			a->ar.st->pos.fname, 
+			a->ar.st->pos.line, 
+			a->ar.st->pos.column);
+		return;
+	}
+
 	for (i = 0; i < a->ar.srsz; i++) {
-		writer_size(a, b, bsz, i);
+		audit_buf(a, b, bsz, i);
 		printf("%-11s %-*s %s:%zu:%zu\n", a->ar.srs[i].exported ?
 			"readwrite" : "read", (int)bsz, b, 
 			a->ar.srs[i].sr->pos.fname, 
@@ -116,26 +130,32 @@ writer_reachable(const struct audit *a, char *b, size_t bsz)
 }
 
 static void
-writer(const struct auditq *aq)
+audit_write(const struct auditq *aq, int verb)
 {
 	const struct audit	*a;
-	size_t			 i, msz = 0, sz;
+	size_t			 i, msz = 0, sz, asz;
 	char			*b;
 
-	TAILQ_FOREACH(a, aq, entries)
+	TAILQ_FOREACH(a, aq, entries) {
 		switch (a->type) {
 		case AUDIT_REACHABLE:
+			if (verb == 0) {
+				sz = audit_buf(a, NULL, 0, a->ar.srsz);
+				break;
+			}
 			for (i = 0; i < a->ar.srsz; i++) {
-				sz = writer_size(a, NULL, 0, i);
-				if (sz > msz)
-					msz = sz;
+				asz = audit_buf(a, NULL, 0, i);
+				if (asz > sz)
+					sz = asz;
 			}
 			break;
 		default:
-			if ((sz = writer_size(a, NULL, 0, 0)) > msz)
-				msz = sz;
+			sz = audit_buf(a, NULL, 0, 0);
 			break;
 		}
+		if (sz > msz)
+			msz = sz;
+	}
 
 	if ((b = malloc(msz + 1)) == NULL)
 		err(1, NULL);
@@ -143,16 +163,16 @@ writer(const struct auditq *aq)
 	TAILQ_FOREACH(a, aq, entries)
 		switch (a->type) {
 		case AUDIT_INSERT:
-			writer_insert(a, b, msz + 1);
+			audit_insert(a, b, msz + 1);
 			break;
 		case AUDIT_UPDATE:
-			writer_update(a, b, msz + 1);
+			audit_update(a, b, msz + 1);
 			break;
 		case AUDIT_QUERY:
-			writer_query(a, b, msz + 1);
+			audit_query(a, b, msz + 1);
 			break;
 		case AUDIT_REACHABLE:
-			writer_reachable(a, b, msz + 1);
+			audit_reach(a, b, msz + 1, verb);
 			break;
 		}
 
@@ -165,7 +185,7 @@ main(int argc, char *argv[])
 	const char		 *role = "default";
 	struct config		 *cfg = NULL;
 	const struct role	 *r;
-	int			  c, rc = 0;
+	int			  c, rc = 0, verb = 0;
 	size_t			  i;
 	FILE			**confs = NULL;
 	struct auditq		 *aq = NULL;
@@ -175,10 +195,13 @@ main(int argc, char *argv[])
 		err(1, "pledge");
 #endif
 
-	while ((c = getopt(argc, argv, "r:")) != -1)
+	while ((c = getopt(argc, argv, "vr:")) != -1)
 		switch (c) {
 		case 'r':
 			role = optarg;
+			break;
+		case 'v':
+			verb = 1;
 			break;
 		default:
 			goto usage;
@@ -232,7 +255,7 @@ main(int argc, char *argv[])
 		goto out;
 	}
 
-	writer(aq);
+	audit_write(aq, verb);
 	rc = 1;
 out:
 	ort_write_msg_file(stderr, &cfg->mq);
@@ -245,7 +268,7 @@ out:
 	free(confs);
 	return !rc;
 usage:
-	fprintf(stderr, "usage: %s [-r role] [config...]\n",
+	fprintf(stderr, "usage: %s [-v] [-r role] [config...]\n",
 		getprogname());
 	return 1;
 }

@@ -1,6 +1,6 @@
 .\"	$OpenBSD$
 .\"
-.\" Copyright (c) 2017--2018 Kristaps Dzonsons <kristaps@bsd.lv>
+.\" Copyright (c) 2017--2021 Kristaps Dzonsons <kristaps@bsd.lv>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -22,22 +22,84 @@
 .Nd audit ort role access
 .Sh SYNOPSIS
 .Nm ort-audit
-.Ar role
+.Op Fl v
+.Op Fl r Ar role
 .Op Ar config...
 .Sh DESCRIPTION
-The
-.Nm
-utility accepts
+Accepts
 .Xr ort 5
 .Ar config
 files, defaulting to standard input,
-and audits all access available to
+and generates an audit report on standard output.
+Its arguments are as follows:
+.Bl -tag -width Ds
+.It Fl v
+Instead of printing once whether a structure is reachable, print for
+each query and path to the reachable structure.
+.It Fl r Ar role
+Audit the named
 .Ar role .
+.El
 .Pp
-It outputs the role's access to the data and operations available (if
-any) to each structure.
+By default, the
+.Ar all
+role is audited.
 .Pp
-This tool is still experimental.
+Output consists of three space-separated columns.
+The first column is the type of operation, the second is the component
+accessable along with extra information, and the third is the location
+in the configuration where the component was parsed.
+.Pp
+The types of operation are
+.Cm count ,
+.Cm delete ,
+.Cm insert ,
+.Cm iterate ,
+.Cm list ,
+.Cm read ,
+.Cm readwrite ,
+.Cm search ,
+and
+.Cm update .
+All of these correspond to operations except for
+.Cm read
+and
+.Cm readwrite ,
+which refer to whether a structure is reachable through a query
+.Pq Cm read ;
+and if so
+.Pq Cm readwrite ,
+whether it may be exported.
+If
+.Fl v
+is used, reachable structures are shown for each query and path possible.
+.Pp
+The component (and source) depends upon the operation:
+.Bl -bullet
+.It
+If the operation is an insert, the component and source are the
+structure and insert position.
+.It
+If an update or delete, it's the operation's structure, name, and
+position.
+If anonymous, a hyphen
+.Sq \-
+is shown instead of the name.
+The structure and operation name are separated by a colon.
+.It
+For queries, the structure and name of the query (or a hyphen, if
+anonymous) and position.
+.It
+For reachable structures, the structure name and position unless
+.Fl v
+is specified, in which case it's the structure name, the originating
+query, and the path to the structure along nested structures, with each
+path component separated by a period.
+If the structure is reachable at the query origin, the path is a hyphen.
+The source is the query position.
+.El
+.Pp
+The position is listed as the originating file, line, and column.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.
@@ -47,7 +109,45 @@ This tool is still experimental.
 .\" For sections 1, 6, 7, and 8 only.
 .Sh EXIT STATUS
 .Ex -std
-.\" .Sh EXAMPLES
+.Sh EXAMPLES
+Consider the following
+.Fa db.ort :
+.Bd -literal -offset indent
+roles {
+        role foo;
+        role bar;
+};
+struct baz {
+        field id int rowid;
+};
+struct bar {
+	field baz struct bazid;
+	field bazid:baz.id int;
+        field id int rowid;
+        insert;
+        iterate: name id;
+        roles foo { insert; };
+        roles bar { iterate id; };
+};
+.Ed
+.Pp
+When audited, this produces the following:
+.Bd -literal -offset indent
+% ort-audit -r foo db.ort
+insert      bar  db.ort:8:7
+% ort-audit -vr bar db.ort
+iterate     bar:id      db.ort:13:15
+readwrite   bar:id:-    db.ort:13:15
+readwrite   baz:id:baz  db.ort:13:15
+.Ed
+.Pp
+From this, it's clear that the
+.Qq foo
+role has no access to the
+.Qq baz
+or
+.Qq bar
+structures at all, and can only insert.
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
 .\" .Sh ERRORS

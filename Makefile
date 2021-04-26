@@ -76,6 +76,7 @@ HTMLS		 = archive.html \
 		   man/ort-xliff.1.html \
 		   man/ort.3.html \
 		   man/ort_audit.3.html \
+		   man/ort_auditq_free.3.html \
 		   man/ort_config_alloc.3.html \
 		   man/ort_config_free.3.html \
 		   man/ort_diff.3.html \
@@ -101,6 +102,7 @@ HTMLS		 = archive.html \
 WWWDIR		 = /var/www/vhosts/kristaps.bsd.lv/htdocs/openradtool
 MAN3S		 = man/ort.3 \
 		   man/ort_audit.3  \
+		   man/ort_auditq_free.3  \
 		   man/ort_config_alloc.3 \
 		   man/ort_config_free.3 \
 		   man/ort_diff.3  \

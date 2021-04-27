@@ -1,0 +1,5 @@
+iterate     bar:id            regress/audit/reachable-nested-readonly-all.ort:21:8
+read        bar:id:-          regress/audit/reachable-nested-readonly-all.ort:21:8
+read        baz:id:baz        regress/audit/reachable-nested-readonly-all.ort:21:8
+read        baz2:id:baz.baz2  regress/audit/reachable-nested-readonly-all.ort:21:8
+read        baz2:id:baz2      regress/audit/reachable-nested-readonly-all.ort:21:8

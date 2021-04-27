@@ -43,7 +43,6 @@ rolemap_has(const struct rolemap *rm, const struct role *r)
 			if (rc == rr->role)
 				return 1;
 	return 0;
-
 }
 
 static int
@@ -151,8 +150,10 @@ ort_audit(const struct role *r, const struct config *cfg)
 	const struct strct	*st, *sst;
 	const struct search	*sr;
 	const struct update	*up;
+	const struct rolemap	*rm;
 	struct audit		*a;
 	struct auditq		*aq = NULL;
+	int			 exported;
 
 	if ((aq = calloc(1, sizeof(struct auditq))) == NULL)
 		goto err;
@@ -160,6 +161,15 @@ ort_audit(const struct role *r, const struct config *cfg)
 	TAILQ_INIT(aq);
 
 	TAILQ_FOREACH(st, &cfg->sq, entries) {
+		exported = 1;
+		TAILQ_FOREACH(rm, &st->rq, entries) 
+			if (rm->type == ROLEMAP_NOEXPORT &&
+			    rm->f == NULL &&
+			    rolemap_has(rm, r)) {
+				exported = 0;
+				break;
+			}
+
 		if (st->ins != NULL &&
 		    rolemap_has(st->ins->rolemap, r)) {
 			a = calloc(1, sizeof(struct audit));
@@ -198,7 +208,7 @@ ort_audit(const struct role *r, const struct config *cfg)
 				a->sr = sr;
 				sst = sr->dst != NULL ? 
 					sr->dst->strct : st;
-				if (!follow(sst, r, aq, sr, 1, NULL))
+				if (!follow(sst, r, aq, sr, exported, NULL))
 					goto err;
 			}
 	}

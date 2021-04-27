@@ -1,0 +1,18 @@
+roles {
+	role user;
+};
+
+struct baz {
+	field id int rowid;
+	insert;
+	roles user { insert; };
+};
+
+struct bar {
+	field baz struct bazid;
+	field bazid:baz.id int;
+	field id int rowid;
+	insert;
+	iterate: name id;
+	roles user { insert; };
+};

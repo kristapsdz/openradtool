@@ -1,0 +1,5 @@
+iterate     bar:id            regress/audit/reachable-nested-multipath.ort:21:8
+readwrite   bar:id:-          regress/audit/reachable-nested-multipath.ort:21:8
+readwrite   baz:id:baz        regress/audit/reachable-nested-multipath.ort:21:8
+readwrite   baz2:id:baz.baz2  regress/audit/reachable-nested-multipath.ort:21:8
+readwrite   baz2:id:baz2      regress/audit/reachable-nested-multipath.ort:21:8

@@ -1,0 +1,10 @@
+roles {
+	role user;
+};
+
+struct bar {
+	field id int rowid;
+	iterate: name id;
+	roles user { iterate id; };
+};
+

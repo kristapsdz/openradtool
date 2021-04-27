@@ -1,0 +1,2 @@
+insert      baz  regress/audit/insert-multi.ort:7:7
+insert      bar  regress/audit/insert-multi.ort:15:7

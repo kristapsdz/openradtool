@@ -1,0 +1,2 @@
+iterate     bar:id    regress/audit/reachable.ort:7:8
+readwrite   bar:id:-  regress/audit/reachable.ort:7:8

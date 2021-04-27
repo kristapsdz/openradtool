@@ -216,11 +216,11 @@
 			for (j = 0; j < data.paths.length; j++) {
 				row = document.createElement('li');
 				list[i].appendChild(row);
-				for (k = 0; k < data.paths[j].path.length; k++) {
+				if (data.paths[j].path.length) {
 					col = document.createElement('span');
 					col.className = 'path';
 					row.appendChild(col);
-					repl(col, data.paths[j].path[k]);
+					repl(col, data.paths[j].path);
 				}
 				if (0 === data.paths[j].path.length) {
 					col = document.createElement('span');

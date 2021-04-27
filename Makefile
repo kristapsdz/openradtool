@@ -679,6 +679,25 @@ regress: all
 		fi ; \
 		echo "pass" ; \
 	done ; \
+	echo "=== ort-audit output tests === " ; \
+	for f in regress/audit/*.result ; do \
+		fn=`basename $$f .result`.ort ; \
+		printf "ort-audit: regress/audit/$$fn... " ; \
+		./ort-audit -vr user regress/audit/$$fn >$$tmp 2>/dev/null ; \
+		if [ $$? -gt 1 ] ; then \
+			echo "fail (did not execute)" ; \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		diff -w $$tmp $$f >/dev/null 2>&1 ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (output check)" ; \
+			diff -wu $$tmp $$f ; \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+	done ; \
 	echo "=== ort-diff output tests === " ; \
 	for f in regress/diff/*.result ; do \
 		fn=`basename $$f .result`.{old,new}.ort ; \

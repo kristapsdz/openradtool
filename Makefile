@@ -62,7 +62,6 @@ HTMLS		 = archive.html \
 		   index.html \
 		   man/ort.1.html \
 		   man/ort-audit.1.html \
-		   man/ort-audit-gv.1.html \
 		   man/ort-audit-json.1.html \
 		   man/ort-c-header.1.html \
 		   man/ort-c-manpage.1.html \
@@ -321,9 +320,6 @@ ort-sqldiff: sqldiff.o libort-lang-sql.a libort.a
 ort-audit: mainaudit.o libort.a
 	$(CC) -o $@ mainaudit.o libort.a $(LDFLAGS) $(LDADD)
 
-ort-audit-gv: audit-json.o libort.a
-	$(CC) -o $@ audit-json.o libort.a $(LDFLAGS) $(LDADD)
-
 ort-audit-json: audit-json.o libort.a
 	$(CC) -o $@ audit-json.o libort.a $(LDFLAGS) $(LDADD)
 
@@ -444,7 +440,7 @@ test: test.o db.o db.db
 	$(CC) -o $@ test.o db.o $(LIBS_SQLBOX) $(LDADD_CRYPT)
 
 audit-out.js: ort-audit-json audit-example.ort
-	./ort-audit-json -r user audit-example.ort >$@
+	./ort-audit-json -s -r user audit-example.ort >$@
 
 db.o: db.c db.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(CFLAGS_SQLBOX) -o $@ -c db.c

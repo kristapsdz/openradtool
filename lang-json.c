@@ -136,11 +136,11 @@ gen_string(FILE *f, const char *cp)
 		case '\f':
 			rc = fputs("\\f", f) != EOF;
 			break;
-		case '\r':
-			rc = fputs("\\r", f) != EOF;
-			break;
 		case '\n':
 			rc = fputs("\\n", f) != EOF;
+			break;
+		case '\r':
+			rc = fputs("\\r", f) != EOF;
 			break;
 		case '\t':
 			rc = fputs("\\t", f) != EOF;

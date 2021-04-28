@@ -190,12 +190,6 @@ print_doc(const char *cp)
 
 	while ('\0' != (c = *cp++))
 		switch (c) {
-		case ('"'):
-		case ('\\'):
-		case ('/'):
-			putchar('\\');
-			putchar(c);
-			break;
 		case ('\b'):
 			fputs("\\b", stdout);
 			break;
@@ -212,7 +206,10 @@ print_doc(const char *cp)
 			fputs("\\t", stdout);
 			break;
 		default:
-			putchar(c);
+			if ((unsigned char)c < 32)
+				printf("\\u%.4u", c);
+			else
+				fputc(c, stdout);
 			break;
 		}
 

@@ -69,20 +69,6 @@ static	const char *const utypes[UP__MAX] = {
 	"delete", /* UP_DELETE */
 };
 
-static int
-check_rolemap(const struct rolemap *rm, const struct role *r)
-{
-	const struct rref	*rr;
-	const struct role	*rc;
-
-	TAILQ_FOREACH(rr, &rm->rq, entries)
-		for (rc = r; rc != NULL; rc = rc->parent)
-			if (rc == rr->role)
-				return 1;
-
-	return 0;
-}
-
 static size_t
 print_name_db_insert(const struct strct *p)
 {
@@ -294,77 +280,54 @@ gen_audit_updates(const struct strct *p, const struct auditq *aq)
 }
 
 static void
-gen_protos_insert(const struct strct *s,
-	int *first, const struct role *r)
+gen_protos_insert(const struct strct *s, int *first)
 {
 
-	if (s->ins != NULL && s->ins->rolemap != NULL &&
-	    check_rolemap(s->ins->rolemap, r)) {
-		printf("%s\n\t\t\"", *first ? "" : ",");
-		print_name_db_insert(s);
-		fputs("\": {\n\t\t\t\"doc\": null,\n"
-			"\t\t\t\"type\": \"insert\" }", stdout);
-		*first = 0;
-	}
+	printf("%s\n\t\t\"", *first ? "" : ",");
+	print_name_db_insert(s);
+	fputs("\": {\n\t\t\t\"doc\": null,\n"
+		"\t\t\t\"type\": \"insert\" }", stdout);
+	*first = 0;
 }
 
 static void
-gen_protos_updates(const struct updateq *uq,
-	int *first, const struct role *r)
+gen_protos_updates(const struct update *u, int *first)
 {
-	const struct update	*u;
 
-	TAILQ_FOREACH(u, uq, entries) {
-		if (u->rolemap == NULL ||
-		    !check_rolemap(u->rolemap, r))
-			continue;
-		printf("%s\n\t\t\"", *first ? "" : ",");
-		print_name_db_update(u);
-		fputs("\": {\n\t\t\t\"doc\": ", stdout);
-		print_doc(u->doc);
-		printf(",\n\t\t\t\"type\": \"%s\" }", utypes[u->type]);
-		*first = 0;
-	}
+	printf("%s\n\t\t\"", *first ? "" : ",");
+	print_name_db_update(u);
+	fputs("\": {\n\t\t\t\"doc\": ", stdout);
+	print_doc(u->doc);
+	printf(",\n\t\t\t\"type\": \"%s\" }", utypes[u->type]);
+	*first = 0;
 }
 
 static void
-gen_protos_queries(const struct searchq *sq,
-	int *first, const struct role *r)
+gen_protos_queries(const struct search *s, int *first)
 {
-	const struct search	*s;
 
-	TAILQ_FOREACH(s, sq, entries) {
-		if (s->rolemap == NULL || 
-		    !check_rolemap(s->rolemap, r))
-			continue;
-		printf("%s\n\t\t\"", *first ? "" : ",");
-		print_name_db_search(s);
-		fputs("\": {\n\t\t\t\"doc\": ", stdout);
-		print_doc(s->doc);
-		printf(",\n\t\t\t\"type\": \"%s\" }", stypes[s->type]);
-		*first = 0;
-	}
+	printf("%s\n\t\t\"", *first ? "" : ",");
+	print_name_db_search(s);
+	fputs("\": {\n\t\t\t\"doc\": ", stdout);
+	print_doc(s->doc);
+	printf(",\n\t\t\t\"type\": \"%s\" }", stypes[s->type]);
+	*first = 0;
 }
 
 static void
-gen_protos_fields(const struct strct *s,
-	int *first, const struct role *r)
+gen_protos_fields(const struct audit *a, int *first)
 {
-	const struct field	*f;
-	int			 noexport;
+	size_t	 i;
 
-	TAILQ_FOREACH(f, &s->fq, entries) {
-		noexport = f->type == FTYPE_PASSWORD ||
-			(f->flags & FIELD_NOEXPORT) ||
-			(f->rolemap != NULL &&
-			check_rolemap(f->rolemap, r));
+	for (i = 0; i < a->ar.fdsz; i++) {
 		printf("%s\n\t\t\"%s.%s\": {\n"
 		       "\t\t\t\"export\": %s,\n"
 		       "\t\t\t\"doc\": ",
 			*first ? "" : ",",
-			f->parent->name, f->name,
-			noexport ? "false" : "true");
-		print_doc(f->doc);
+			a->ar.fds[i].fd->parent->name, 
+			a->ar.fds[i].fd->name, 
+			a->ar.fds[i].exported ? "true" : "false");
+		print_doc(a->ar.fds[i].fd->doc);
 		printf(" }");
 		*first = 0;
 	}
@@ -436,19 +399,28 @@ gen_audit_json(const struct config *cfg, const struct auditq *aq,
 	      "\t\"functions\": {", stdout);
 
 	first = 1;
-	TAILQ_FOREACH(s, &cfg->sq, entries) {
-		gen_protos_queries(&s->sq, &first, r);
-		gen_protos_updates(&s->uq, &first, r);
-		gen_protos_updates(&s->dq, &first, r);
-		gen_protos_insert(s, &first, r);
-	}
+	TAILQ_FOREACH(a, aq, entries) 
+		switch (a->type) {
+		case AUDIT_UPDATE:
+			gen_protos_updates(a->up, &first);
+			break;
+		case AUDIT_QUERY:
+			gen_protos_queries(a->sr, &first);
+			break;
+		case AUDIT_INSERT:
+			gen_protos_insert(a->st, &first);
+			break;
+		default:
+			break;
+		}
 
 	puts("\n\t},\n"
 	     "\t\"fields\": {");
 
 	first = 1;
-	TAILQ_FOREACH(s, &cfg->sq, entries)
-		gen_protos_fields(s, &first, r);
+	TAILQ_FOREACH(a, aq, entries)
+		if (a->type == AUDIT_REACHABLE)
+			gen_protos_fields(a, &first);
 
 	puts("\n\t}};\n"
 	     "\n"

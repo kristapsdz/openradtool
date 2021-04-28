@@ -52,6 +52,7 @@ follow(const struct strct *st, const struct role *r, struct auditq *aq,
 	struct audit		*a;
 	void			*pp;
 	int			 nexp, c;
+	size_t			 i;
 	const struct field	*fd;
 	char			*newpath;
 
@@ -66,10 +67,24 @@ follow(const struct strct *st, const struct role *r, struct auditq *aq,
 		a->type = AUDIT_REACHABLE;
 		a->ar.st = st;
 		a->ar.exported = exported;
+		TAILQ_FOREACH(fd, &st->fq, entries)
+			a->ar.fdsz++;
+		if (a->ar.fdsz > 0 && (a->ar.fds = calloc
+		    (a->ar.fdsz, sizeof(struct auditfield))) == NULL)
+		    	return 0;
+		i = 0;
+		TAILQ_FOREACH(fd, &st->fq, entries) {
+			a->ar.fds[i].fd = fd;
+			a->ar.fds[i].exported = 
+				!(fd->flags & FIELD_NOEXPORT) &&
+				!rolemap_has(fd->rolemap, r);
+			i++;
+		}
+		assert(i == a->ar.fdsz);
 	}
 
 	pp = recallocarray(a->ar.srs, a->ar.srsz,
-		a->ar.srsz + 1, sizeof(struct auditnode));
+		a->ar.srsz + 1, sizeof(struct auditpaths));
 	if (pp == NULL)
 		return 0;
 	a->ar.srs = pp;
@@ -137,6 +152,7 @@ ort_auditq_free(struct auditq *aq)
 			for (i = 0; i < a->ar.srsz; i++)
 				free(a->ar.srs[i].path);
 			free(a->ar.srs);
+			free(a->ar.fds);
 		}
 		free(a);
 	}

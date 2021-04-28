@@ -649,17 +649,24 @@ enum	auditt {
 	AUDIT_REACHABLE,
 };
 
-struct	auditnode {
+struct	auditpaths {
 	const struct search	*sr;
 	char			*path;
 	int			 exported;
 };
 
-struct	auditreach {
-	const struct strct	*st;
-	struct auditnode	*srs;
+struct	auditfield {
+	const struct field	*fd;
 	int			 exported;
-	size_t			 srsz;
+};
+
+struct	auditreach {
+	const struct strct	 *st;
+	struct auditpaths	 *srs;
+	size_t			  srsz;
+	struct auditfield	 *fds;
+	size_t			  fdsz;
+	int			  exported;
 };
 
 struct	audit {

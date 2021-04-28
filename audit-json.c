@@ -240,7 +240,7 @@ gen_audit_deletes(const struct strct *p, const struct auditq *aq)
 	const struct audit	*a;
 	int	 		 first = 1;
 
-	printf("\t\t\t\"deletes\": [");
+	printf("\t\t\t\"delete\": [");
 
 	TAILQ_FOREACH(a, aq, entries)
 		if (a->type == AUDIT_UPDATE &&
@@ -261,7 +261,7 @@ gen_audit_updates(const struct strct *p, const struct auditq *aq)
 	const struct audit	*a;
 	int			 first = 1;
 
-	printf("\t\t\t\"updates\": [");
+	printf("\t\t\t\"update\": [");
 
 	TAILQ_FOREACH(a, aq, entries)
 		if (a->type == AUDIT_UPDATE &&
@@ -351,24 +351,28 @@ gen_audit_queries(const struct strct *p, const struct auditq *aq,
 
 	/* Last item: don't have a trailing comma. */
 
-	printf("]%s\n", t != STYPE_SEARCH ? "," : "");
+	printf("]%s\n", t != (STYPE__MAX - 1) ? "," : "");
 }
 
 static void
 gen_audit_json(const struct config *cfg, const struct auditq *aq,
-	const struct role *r)
+	const struct role *r, int standalone)
 {
 	const struct strct	*s;
 	const struct audit	*a;
 	int	 		 first;
+	enum stype		 st;
 
-	printf("(function(root) {\n"
-	       "\t'use strict';\n"
-	       "\tvar audit = {\n"
-	       "\t    \"role\": \"%s\",\n"
-	       "\t    \"doc\": ", r->name);
+	if (standalone)
+		fputs("(function(root) {\n"
+		     " 'use strict';\n"
+		     " var audit = ", stdout);
+
+	printf("{\n"
+	       "\t\"role\": \"%s\",\n"
+	       "\t\"doc\": ", r->name);
 	print_doc(r->doc);
-	puts(",\n\t    \"access\": [");
+	puts(",\n\t\"access\": [");
 
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
 		printf("\t\t{ \"name\": \"%s\",\n"
@@ -384,10 +388,8 @@ gen_audit_json(const struct config *cfg, const struct auditq *aq,
 		gen_audit_inserts(s, aq);
 		gen_audit_updates(s, aq);
 		gen_audit_deletes(s, aq);
-		gen_audit_queries(s, aq, STYPE_ITERATE, "iterates");
-		gen_audit_queries(s, aq, STYPE_LIST, "lists");
-		gen_audit_queries(s, aq, STYPE_SEARCH, "searches");
-
+		for (st = 0; st < STYPE__MAX; st++)
+			gen_audit_queries(s, aq, st, stypes[st]);
 		printf("\t\t}}%s\n", 
 			TAILQ_NEXT(s, entries) != NULL ? "," : "");
 	}
@@ -419,10 +421,15 @@ gen_audit_json(const struct config *cfg, const struct auditq *aq,
 		if (a->type == AUDIT_REACHABLE)
 			gen_protos_fields(a, &first);
 
-	puts("\n\t}};\n"
-	     "\n"
-	     "\troot.audit = audit;\n"
-	     "})(this);");
+	puts("\n\t}");
+
+	if (standalone)
+		puts(" };\n"
+		     " root.audit = audit;\n"
+		     "})(this);");
+	else
+		puts("}");
+
 }
 
 int
@@ -431,7 +438,7 @@ main(int argc, char *argv[])
 	const char		 *role = "default";
 	struct config		 *cfg = NULL;
 	const struct role	 *r;
-	int			  c, rc = 0;
+	int			  c, rc = 0, standalone = 0;
 	size_t			  i;
 	FILE			**confs = NULL;
 	struct auditq		 *aq = NULL;
@@ -441,8 +448,11 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "pledge");
 #endif
 
-	while ((c = getopt(argc, argv, "r:")) != -1)
+	while ((c = getopt(argc, argv, "sr:")) != -1)
 		switch (c) {
+		case 's':
+			standalone = 1;
+			break;
 		case 'r':
 			role = optarg;
 			break;
@@ -498,7 +508,7 @@ main(int argc, char *argv[])
 		goto out;
 	}
 
-	gen_audit_json(cfg, aq, r);
+	gen_audit_json(cfg, aq, r, standalone);
 	rc = 1;
 out:
 	ort_write_msg_file(stderr, &cfg->mq);

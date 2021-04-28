@@ -295,6 +295,23 @@
 		fillShowMore(root, 'list', name, fillList);
 	}
 
+	function fillCount(root, name)
+	{
+		var obj;
+		if (null === (obj = auditFunctionGet(name)))
+			return;
+		replcl(root, 'audit-count-function', name);
+		if (null !== obj.doc) {
+			replcl(root, 'audit-count-doc', obj.doc);
+			showcl(root, 'audit-count-doc');
+			hidecl(root, 'audit-count-nodoc');
+		} else {
+			hidecl(root, 'audit-count-doc');
+			showcl(root, 'audit-count-nodoc');
+		}
+		fillShowMore(root, 'count', name, fillCount);
+	}
+
 	function fillIterate(root, name)
 	{
 		var obj;
@@ -523,20 +540,22 @@
 		
 		replcl(root, 'audit-data-count', pct + '%');
 		replcl(root, 'audit-queries-count', 
-			audit.access.searches.length +
-			audit.access.lists.length +
-			audit.access.iterates.length);
+			audit.access.get.length +
+			audit.access.count.length +
+			audit.access.list.length +
+			audit.access.iterate.length);
 		replcl(root, 'audit-updates-count', 
-			audit.access.updates.length);
+			audit.access.update.length);
 		replcl(root, 'audit-deletes-count', 
-			audit.access.deletes.length);
+			audit.access.delete.length);
 
 		if (0 === pct + ins + 
-		    audit.access.deletes.length +
-		    audit.access.updates.length +
-		    audit.access.searches.length +
-		    audit.access.lists.length +
-		    audit.access.iterates.length) {
+		    audit.access.delete.length +
+		    audit.access.update.length +
+		    audit.access.count.length +
+		    audit.access.get.length +
+		    audit.access.list.length +
+		    audit.access.iterate.length) {
 			if ( ! root.classList.contains('noop'))
 				root.classList.add('noop');
 		} else
@@ -544,11 +563,12 @@
 
 		/* Fill other functions. */
 
-		fill(root, audit.access.searches, 'searches', fillSearch);
-		fill(root, audit.access.iterates, 'iterates', fillIterate);
-		fill(root, audit.access.lists, 'lists', fillList);
-		fill(root, audit.access.updates, 'updates', fillUpdate);
-		fill(root, audit.access.deletes, 'deletes', fillDelete);
+		fill(root, audit.access.get, 'searches', fillSearch);
+		fill(root, audit.access.count, 'counts', fillCount);
+		fill(root, audit.access.iterate, 'iterates', fillIterate);
+		fill(root, audit.access.list, 'lists', fillList);
+		fill(root, audit.access.update, 'updates', fillUpdate);
+		fill(root, audit.access.delete, 'deletes', fillDelete);
 	}
 
 	function init() 
@@ -608,28 +628,33 @@
 		fillVec(vec, 'inserts', fillInsert);
 
 		for (vec = [], i = 0; i < ac.length; i++)
-			for (j = 0; j < ac[i].access.deletes.length; j++)
-				vec.push(ac[i].access.deletes[j]);
+			for (j = 0; j < ac[i].access.delete.length; j++)
+				vec.push(ac[i].access.delete[j]);
 		fillVec(vec, 'deletes', fillDelete);
 
 		for (vec = [], i = 0; i < ac.length; i++)
-			for (j = 0; j < ac[i].access.updates.length; j++)
-				vec.push(ac[i].access.updates[j]);
+			for (j = 0; j < ac[i].access.update.length; j++)
+				vec.push(ac[i].access.update[j]);
 		fillVec(vec, 'updates', fillUpdate);
 
 		for (vec = [], i = 0; i < ac.length; i++)
-			for (j = 0; j < ac[i].access.searches.length; j++)
-				vec.push(ac[i].access.searches[j]);
+			for (j = 0; j < ac[i].access.get.length; j++)
+				vec.push(ac[i].access.get[j]);
 		fillVec(vec, 'searches', fillSearch);
 
 		for (vec = [], i = 0; i < ac.length; i++)
-			for (j = 0; j < ac[i].access.iterates.length; j++)
-				vec.push(ac[i].access.iterates[j]);
+			for (j = 0; j < ac[i].access.iterate.length; j++)
+				vec.push(ac[i].access.iterate[j]);
 		fillVec(vec, 'iterates', fillIterate);
 
 		for (vec = [], i = 0; i < ac.length; i++)
-			for (j = 0; j < ac[i].access.lists.length; j++)
-				vec.push(ac[i].access.lists[j]);
+			for (j = 0; j < ac[i].access.count.length; j++)
+				vec.push(ac[i].access.count[j]);
+		fillVec(vec, 'counts', fillCount);
+
+		for (vec = [], i = 0; i < ac.length; i++)
+			for (j = 0; j < ac[i].access.list.length; j++)
+				vec.push(ac[i].access.list[j]);
 		fillVec(vec, 'lists', fillList);
 
 		show('kwbp-parsed');

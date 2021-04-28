@@ -22,20 +22,94 @@
 .Nd audit ort role access as JSON
 .Sh SYNOPSIS
 .Nm ort-audit-json
-.Ar role
+.Op Fl s
+.Op Fl r Ar role
 .Op Ar config...
 .Sh DESCRIPTION
-The
-.Nm
-utility accepts
+Accepts
 .Xr ort 5
 .Ar config
 files, defaulting to standard input,
-and audits all access available to
+and generates a JSON or JavaScript audit report on standard output.
+Its arguments are as follows:
+.Bl -tag -width Ds
+.It Fl s
+Emit a full JavaScript document instead of just a JSON object.
+.It Fl r Ar role
+Audit the named
 .Ar role .
-The output is rendered in the JSON format.
+.El
 .Pp
-This tool is still experimental.
+By default, the
+.Ar all
+role is audited.
+The audit consists of all operations and reachable structures and fields
+along with documentation and other information germane to the audit
+target.
+.Pp
+Output is formatted in JSON or as a JavaScript document.
+In the default JSON case, the output conforms to the following:
+.Bd -literal -offset indent
+interface auditAccessFrom {
+  function: string;
+  exporting: boolean;
+  path: string;
+}
+
+interface auditAccess {
+  exportable: boolean;
+  data: string[];
+  accessfrom: auditAccessFrom[];
+  insert: string|null;
+  delete: string[];
+  update: string[];
+  count: string[];
+  get: string[];
+  iterate: string[];
+  list: string[];
+}
+
+interface auditFunction{
+  doc: string|null;
+  type: 'insert'|'delete'|...;
+}
+
+interface auditFunctionSet {
+  [name: string]: auditFunction;
+}
+
+interface auditField {
+  export: boolean;
+  doc: string|null;
+}
+
+interface auditFieldSet {
+  [name: string]: auditField;
+}
+
+export interface audit {
+  role: string;
+  doc: string|null;
+  access: auditAccess[];
+  functions: auditFunctionSet;
+  fields: auditFieldSet;
+}
+.Ed
+.Pp
+The root object is a
+.Qq audit
+object.
+If the
+.Fl s
+flag is given, the
+.Qq audit
+object is wrapped as follows:
+.Bd -literal -offset indent
+(function(root) {
+ 'use strict';
+ var audit = { /* Contents of audit object. */ };
+});
+.Ed
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.
@@ -54,7 +128,9 @@ implementation of a web-based front-end.
 By putting these into a single directory along with
 .Pa audit-out.js ,
 consisting of the output of
-.Nm ,
+.Nm
+with
+.Fl s ,
 a browser may be used to audit a role's access.
 .Sh EXIT STATUS
 .Ex -std

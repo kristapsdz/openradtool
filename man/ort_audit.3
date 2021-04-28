@@ -109,17 +109,28 @@ which consists of the following:
 The structure that is readable and possible exportable.
 .It Va "struct auditpaths *srs"
 An array consisting of all origin queries
-.Fa sr ,
+.Va sr ,
 dot-separated (or
 .Dv NULL )
 path from the origin structure to the target, and whether the target is
 exported or not.
 .It Va "size_t srsz"
 The number of elements in
-.Fa srs .
+.Va srs .
+.It Va "struct auditfield *fds"
+An array consisting of all fields that may be accessed.
+The structure contains
+.Va fd ,
+the field that may be accessed, and
+.Va exported ,
+which is non-zero if the field may be exported.
+Whether these fields are actually exported depends upon how the
+structure is being accessed in the
+.Va srs
+search paths.
 .It Va "int exported"
 Whether it is exportable through any source in
-.Fa srs .
+.Va srs .
 .El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT

@@ -1,0 +1,6 @@
+insert      bar                 regress/audit/all.ort:13:7
+update      bar:id              regress/audit/all.ort:14:7
+delete      bar:id              regress/audit/all.ort:15:7
+iterate     bar:id              regress/audit/all.ort:16:8
+readwrite   bar:iterate:id:-    regress/audit/all.ort:16:8
+readwrite   baz:iterate:id:baz  regress/audit/all.ort:16:8

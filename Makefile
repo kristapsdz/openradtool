@@ -679,6 +679,18 @@ regress: all
 		fi ; \
 		echo "pass" ; \
 	done ; \
+	echo "=== ort-audit run tests === " ; \
+	for f in regress/*.ort ; do \
+		grep -q '^roles' $$f || continue ; \
+		printf "ort-audit: $$f... " ; \
+		./ort-audit -vr all $$f 2>/dev/null >/dev/null ; \
+		if [ $$? -gt 1 ] ; then \
+			echo "fail (did not execute)" ; \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		echo "pass" ; \
+	done ; \
 	echo "=== ort-audit output tests === " ; \
 	for f in regress/audit/*.result ; do \
 		fn=`basename $$f .result`.ort ; \

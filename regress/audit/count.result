@@ -1,0 +1,3 @@
+count       bar:id            regress/audit/count.ort:13:6
+readwrite   bar:count:id:-    regress/audit/count.ort:13:6
+readwrite   baz:count:id:baz  regress/audit/count.ort:13:6

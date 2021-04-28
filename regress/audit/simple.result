@@ -1,3 +1,3 @@
-iterate     bar:id      regress/audit/simple.ort:14:8
-readwrite   bar:id:-    regress/audit/simple.ort:14:8
-readwrite   baz:id:baz  regress/audit/simple.ort:14:8
+iterate     bar:id              regress/audit/simple.ort:14:8
+readwrite   bar:iterate:id:-    regress/audit/simple.ort:14:8
+readwrite   baz:iterate:id:baz  regress/audit/simple.ort:14:8

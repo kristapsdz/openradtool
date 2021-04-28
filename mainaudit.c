@@ -32,6 +32,13 @@
 
 #include "ort.h"
 
+static	const char *const stypes[STYPE__MAX] = {
+	"count", /* STYPE_COUNT */
+	"search", /* STYPE_SEARCH */
+	"list", /* STYPE_LIST */
+	"iterate", /* STYPE_ITERATE */
+};
+
 static size_t
 audit_buf(const struct audit *a, char *b, size_t bsz, size_t i)
 {
@@ -57,8 +64,8 @@ audit_buf(const struct audit *a, char *b, size_t bsz, size_t i)
 			break;
 		}
 		assert(i < a->ar.srsz);
-		c = snprintf(b, bsz, "%s:%s:%s", 
-			a->ar.st->name,
+		c = snprintf(b, bsz, "%s:%s:%s:%s", 
+			a->ar.st->name, stypes[a->ar.srs[i].sr->type],
 			a->ar.srs[i].sr->name == NULL ? 
 			"-" : a->ar.srs[i].sr->name,
 			a->ar.srs[i].path == NULL ? 

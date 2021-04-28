@@ -1,4 +1,4 @@
-iterate     bar:id            regress/audit/reachable-nested.ort:19:8
-readwrite   bar:id:-          regress/audit/reachable-nested.ort:19:8
-readwrite   baz:id:baz        regress/audit/reachable-nested.ort:19:8
-readwrite   baz2:id:baz.baz2  regress/audit/reachable-nested.ort:19:8
+iterate     bar:id                    regress/audit/reachable-nested.ort:19:8
+readwrite   bar:iterate:id:-          regress/audit/reachable-nested.ort:19:8
+readwrite   baz:iterate:id:baz        regress/audit/reachable-nested.ort:19:8
+readwrite   baz2:iterate:id:baz.baz2  regress/audit/reachable-nested.ort:19:8

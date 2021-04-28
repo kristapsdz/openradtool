@@ -93,8 +93,8 @@ anonymous) and position.
 For reachable structures, the structure name and position unless
 .Fl v
 is specified, in which case it's the structure name, the originating
-query, and the path to the structure along nested structures, with each
-path component separated by a period.
+query type and name, and the path to the structure along nested
+structures, with each path component separated by a period.
 If the structure is reachable at the query origin, the path is a hyphen.
 The source is the query position.
 .El
@@ -136,9 +136,9 @@ When audited, this produces the following:
 % ort-audit -r foo db.ort
 insert      bar  db.ort:8:7
 % ort-audit -vr bar db.ort
-iterate     bar:id      db.ort:13:15
-readwrite   bar:id:-    db.ort:13:15
-readwrite   baz:id:baz  db.ort:13:15
+iterate     bar:id              db.ort:13:15
+readwrite   bar:iterate:id:-    db.ort:13:15
+readwrite   baz:iterate:id:baz  db.ort:13:15
 .Ed
 .Pp
 From this, it's clear that the

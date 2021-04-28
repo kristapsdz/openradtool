@@ -1,0 +1,3 @@
+list        bar:id           regress/audit/list.ort:13:5
+readwrite   bar:list:id:-    regress/audit/list.ort:13:5
+readwrite   baz:list:id:baz  regress/audit/list.ort:13:5

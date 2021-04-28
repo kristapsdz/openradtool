@@ -1,4 +1,4 @@
-list        bar:fid    regress/audit/reachable-multi.ort:7:5
-readwrite   bar:fid:-  regress/audit/reachable-multi.ort:7:5
-readwrite   bar:id:-   regress/audit/reachable-multi.ort:8:8
-iterate     bar:id     regress/audit/reachable-multi.ort:8:8
+list        bar:fid           regress/audit/reachable-multi.ort:7:5
+readwrite   bar:list:fid:-    regress/audit/reachable-multi.ort:7:5
+readwrite   bar:iterate:id:-  regress/audit/reachable-multi.ort:8:8
+iterate     bar:id            regress/audit/reachable-multi.ort:8:8

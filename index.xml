@@ -334,9 +334,8 @@
 					<p>
 						Arguably the most powerful feature of <span class="nm">ort</span>.
 						Audit <a href="https://learnbchs.org/rbac.html">role-based access control</a> access with <a
-							href="ort-audit.1.html">ort-audit(1)</a>, <a
-							href="ort-audit-json.1.html">ort-audit-json(1)</a>, and <a
-							href="ort-audit-gv.1.html">ort-audit-gv(1)</a>:
+							href="ort-audit.1.html">ort-audit(1)</a> and <a
+							href="ort-audit-json.1.html">ort-audit-json(1)</a>:
 						see the full availability of data and operations available to the role.
 						Role compliance in <span class="nm">ort</span> is guaranteed by having separate jailed database
 						and application processes.
@@ -353,7 +352,7 @@
 			</section>
 		</article>
 		<footer>
-			Copyright &#xa9; 2017&#8211;2020, <a href="https://github.com/kristapsdz">Kristaps Dzonsons</a>
+			Copyright &#xa9; 2017&#8211;2021, <a href="https://github.com/kristapsdz">Kristaps Dzonsons</a>
 		</footer>
 	</body>
 </html>

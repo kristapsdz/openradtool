@@ -3,6 +3,36 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.12.8</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-04-29">2021-04-29</time>
+		</header>
+		<aside>
+			<p>
+				Re-write internals of auditing system.  These now use the internal
+				<a href="ort_audit.3.html">ort_audit(3)</a> function.  The output of
+				<a href="ort-audit.1.html">ort-audit(1)</a> has been formalised and
+				is now documented (it differs from the prior output).
+			</p>
+			<p>
+				Formalise the output of
+				<a href="ort_audit_json.1.html">ort-audit-json(1)</a> and include
+				the <code>count</code> operation in its output.
+				For coherence with the program name, output straight-up JSON and
+				have a flag <b>-s</b> for wrapping the object in JavaScript.
+			</p>
+			<p>
+				Rename <code>ort_diff_free</code> to 
+				<a href="ort_diffq_free.3.html">ort_diffq_free(3)</a> for
+				consistency.
+			</p>
+			<p>
+				Remove <code>ort-audit-gv</code>, which isn't really useful.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.12.7</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-04-17">2021-04-17</time>

@@ -159,6 +159,7 @@ DOTAR		 = $(HEADERS) \
 		   audit.css \
 		   audit.html \
 		   audit.js \
+		   audit-json.c \
 		   b64_ntop.c \
 		   cheader.c \
 		   cmanpage.c \

@@ -394,6 +394,7 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/openradtool-$(VERSION)/
 	mkdir -p .dist/openradtool-$(VERSION)/man
 	mkdir -p .dist/openradtool-$(VERSION)/regress
+	mkdir -p .dist/openradtool-$(VERSION)/regress/audit
 	mkdir -p .dist/openradtool-$(VERSION)/regress/c
 	mkdir -p .dist/openradtool-$(VERSION)/regress/diff
 	mkdir -p .dist/openradtool-$(VERSION)/regress/javascript
@@ -408,6 +409,8 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	install -m 0444 regress/*.result .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.nresult .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/*.md .dist/openradtool-$(VERSION)/regress
+	install -m 0444 regress/audit/*.ort .dist/openradtool-$(VERSION)/regress/audit
+	install -m 0444 regress/audit/*.result .dist/openradtool-$(VERSION)/regress/audit
 	install -m 0444 regress/c/*.ort .dist/openradtool-$(VERSION)/regress/c
 	install -m 0444 regress/c/*.c .dist/openradtool-$(VERSION)/regress/c
 	install -m 0444 regress/c/*.md .dist/openradtool-$(VERSION)/regress/c

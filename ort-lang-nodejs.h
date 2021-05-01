@@ -17,8 +17,10 @@
 #ifndef ORT_LANG_NODEJS
 #define ORT_LANG_NODEJS
 
+#define	ORT_LANG_NODEJS_VALID_EXPRESS	0x01
+
 struct ort_lang_nodejs {
-	unsigned int	 dummy;
+	unsigned int	 flags;
 };
 
 int	 ort_lang_nodejs(const struct ort_lang_nodejs *,

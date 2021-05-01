@@ -36,18 +36,27 @@
 int
 main(int argc, char *argv[])
 {
-	struct config	 *cfg = NULL;
-	int		  c, rc = 0;
-	FILE		**confs = NULL;
-	size_t		  i;
+	struct ort_lang_nodejs	  args;
+	struct config		 *cfg = NULL;
+	int			  c, rc = 0;
+	FILE			**confs = NULL;
+	size_t			  i;
+
+	memset(&args, 0, sizeof(struct ort_lang_nodejs));
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
 		err(1, "pledge");
 #endif
 
-	if ((c = getopt(argc, argv, "")) != -1)
-		goto usage;
+	while ((c = getopt(argc, argv, "")) != -1)
+		switch (c) {
+		case 'v':
+			args.flags |= ORT_LANG_NODEJS_VALID_EXPRESS;
+			break;
+		default:
+			goto usage;
+		}
 
 	argc -= optind;
 	argv += optind;
@@ -76,7 +85,7 @@ main(int argc, char *argv[])
 		goto out;
 
 	if ((rc = ort_parse_close(cfg)))
-		if (!(rc = ort_lang_nodejs(NULL, cfg, stdout)))
+		if (!(rc = ort_lang_nodejs(&args, cfg, stdout)))
 			warn(NULL);
 out:
 	ort_write_msg_file(stderr, &cfg->mq);
@@ -88,6 +97,6 @@ out:
 	free(confs);
 	return !rc;
 usage:
-	fprintf(stderr, "usage: %s [config...]\n", getprogname());
+	fprintf(stderr, "usage: %s [-v] [config...]\n", getprogname());
 	return 1;
 }

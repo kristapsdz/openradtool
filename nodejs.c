@@ -49,7 +49,7 @@ main(int argc, char *argv[])
 		err(1, "pledge");
 #endif
 
-	while ((c = getopt(argc, argv, "")) != -1)
+	while ((c = getopt(argc, argv, "v")) != -1)
 		switch (c) {
 		case 'v':
 			args.flags |= ORT_LANG_NODEJS_VALID_EXPRESS;

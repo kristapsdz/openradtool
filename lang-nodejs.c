@@ -1387,6 +1387,37 @@ gen_strct(FILE *f, const struct strct *p, size_t pos)
 	       "\t}\n", p->name) > 0;
 }
 
+static int
+gen_ortns_express_valids(FILE *f, const struct config *cfg)
+{
+	const struct strct	*st;
+	const struct field	*fd;
+	int			 first = 1;
+
+	if (fputs("\texport const ortValids: expressValidator.Schema = {", f) == EOF)
+		return 0;
+
+	TAILQ_FOREACH(st, &cfg->sq, entries) {
+		TAILQ_FOREACH(fd, &st->fq, entries) {
+			if (fd->type == FTYPE_STRUCT ||
+			    fd->type == FTYPE_BLOB)
+				continue;
+			if (fprintf(f, "%s\n\t\t'%s-%s': {\n", 
+			    first ? "" : ",", st->name, fd->name) < 0)
+				return 0;
+			if (fd->type == FTYPE_EMAIL && fputs
+			    ("\t\t\tisEmail: true,\n"
+			     "\t\t\tnormalizeEmail: true,\n", f) == EOF)
+				return 0;
+			if (fputs("\t\t}", f) == EOF)
+				return 0;
+			first = 0;
+		}
+	}
+
+	return fputs("\n\t}\n", f) != EOF;
+}
+
 /*
  * Generates data structure part of the data model under the "ortns"
  * namespace.
@@ -1395,7 +1426,8 @@ gen_strct(FILE *f, const struct strct *p, size_t pos)
  * Return zero on failure, non-zero on success.
  */
 static int
-gen_ortns(FILE *f, const struct config *cfg)
+gen_ortns(const struct ort_lang_nodejs *args, FILE *f,
+	const struct config *cfg)
 {
 	const struct strct	*p;
 	const struct enm	*e;
@@ -1416,6 +1448,12 @@ gen_ortns(FILE *f, const struct config *cfg)
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		if (!gen_strct(f, p, i++))
 			return 0;
+
+	if (args != NULL &&
+	    (args->flags & ORT_LANG_NODEJS_VALID_EXPRESS) &&
+	    !gen_ortns_express_valids(f, cfg))
+		return 0;
+
 	return fputs("}\n", f) != EOF;
 }
 
@@ -1708,7 +1746,12 @@ ort_lang_nodejs(const struct ort_lang_nodejs *args,
 	    "import Database from 'better-sqlite3';\n", f) == EOF)
 		return 0;
 
-	if (!gen_ortns(f, cfg))
+	if (args != NULL &&
+	    (args->flags & ORT_LANG_NODEJS_VALID_EXPRESS) &&
+	    fputs("import expressValidator from 'express-validator';\n", f) == EOF)
+		return 0;
+
+	if (!gen_ortns(args, f, cfg))
 		return 0;
 	if (!gen_ortdb(f))
 		return 0;

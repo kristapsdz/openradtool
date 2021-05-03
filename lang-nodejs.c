@@ -1491,8 +1491,12 @@ gen_ortns_express_valids(FILE *f, const struct config *cfg)
 	const struct strct	*st;
 	const struct field	*fd;
 
+	if (fputc('\n', f) == EOF)
+		return 0;
+	if (!gen_comment(f, 0, COMMENT_JS, "Namespace for validation."))
+		return 0;
 	if (fputs
-	    ("\n"
+	    ("export namespace ortvalid {\n"
 	     "\texport interface ortValidType {\n"
 	     "\t\t[key: string]: (value?: any) => any;\n"
 	     "\t}\n"
@@ -1514,7 +1518,7 @@ gen_ortns_express_valids(FILE *f, const struct config *cfg)
 		}
 	}
 
-	return fputs("\t}\n", f) != EOF;
+	return fputs("\t}\n}\n", f) != EOF;
 }
 
 /*
@@ -1525,8 +1529,7 @@ gen_ortns_express_valids(FILE *f, const struct config *cfg)
  * Return zero on failure, non-zero on success.
  */
 static int
-gen_ortns(const struct ort_lang_nodejs *args, FILE *f,
-	const struct config *cfg)
+gen_ortns(FILE *f, const struct config *cfg)
 {
 	const struct strct	*p;
 	const struct enm	*e;
@@ -1547,11 +1550,6 @@ gen_ortns(const struct ort_lang_nodejs *args, FILE *f,
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		if (!gen_strct(f, p, i++))
 			return 0;
-
-	if (args != NULL &&
-	    (args->flags & ORT_LANG_NODEJS_VALID) &&
-	    !gen_ortns_express_valids(f, cfg))
-		return 0;
 
 	return fputs("}\n", f) != EOF;
 }
@@ -1844,13 +1842,16 @@ ort_lang_nodejs(const struct ort_lang_nodejs *args,
 	    "import bcrypt from 'bcrypt';\n"
 	    "import Database from 'better-sqlite3';\n", f) == EOF)
 		return 0;
-
 	if (args != NULL &&
 	    (args->flags & ORT_LANG_NODEJS_VALID) &&
 	    fputs("import validator from 'validator';\n", f) == EOF)
 		return 0;
 
-	if (!gen_ortns(args, f, cfg))
+	if (!gen_ortns(f, cfg))
+		return 0;
+	if (args != NULL &&
+	    (args->flags & ORT_LANG_NODEJS_VALID) &&
+	    !gen_ortns_express_valids(f, cfg))
 		return 0;
 	if (!gen_ortdb(f))
 		return 0;

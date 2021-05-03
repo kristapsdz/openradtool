@@ -52,7 +52,7 @@ main(int argc, char *argv[])
 	while ((c = getopt(argc, argv, "v")) != -1)
 		switch (c) {
 		case 'v':
-			args.flags |= ORT_LANG_NODEJS_VALID_EXPRESS;
+			args.flags |= ORT_LANG_NODEJS_VALID;
 			break;
 		default:
 			goto usage;

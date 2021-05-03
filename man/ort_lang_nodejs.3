@@ -38,10 +38,22 @@ Outputs a node.js implementation of the parsed configuration
 .Fa cfg
 to
 .Fa f .
-The
+The values in
 .Fa args
-is currently ignored and may be
-.Dv NULL .
+are as follows:
+.Bl -tag -width Ds -offset indent
+.It Va unsigned int flags
+The bit-field of components to output.
+This may currently only be
+.Dv ORT_LANG_NODEJS_VALID ,
+for generating the validation namespace.
+.El
+.Pp
+If
+.Fa args
+is
+.Dv NULL ,
+it defaults to all values being zero.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

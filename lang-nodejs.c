@@ -1387,12 +1387,103 @@ gen_strct(FILE *f, const struct strct *p, size_t pos)
 	       "\t}\n", p->name) > 0;
 }
 
+/*
+ * Return 0 if nothing written, >0 if written, <0 on error.
+ */
+static int
+gen_ortns_express_valid(FILE *f, const struct field *fd)
+{
+	const struct fvalid	*fv;
+	int			 c;
+
+	/* These use the native functions for validation. */
+
+	switch (fd->type) {
+	case FTYPE_TEXT:
+	case FTYPE_PASSWORD:
+		if (TAILQ_EMPTY(&fd->fvq))
+			return 0;
+		if (fputs
+		    ("\n"
+		     "\t\t\tisByteLength: {\n"
+		     "\t\t\t\toptions: {", f) == EOF)
+			return -1;
+		TAILQ_FOREACH(fv, &fd->fvq, entries) {
+			if (fputc(' ', f) == EOF)
+				return -1;
+			switch (fv->type) {
+			case VALIDATE_GE:
+				c = fprintf(f, "min: %zu", 
+					fv->d.value.len);
+				break;
+			case VALIDATE_LE:
+				c = fprintf(f, "max: %zu", 
+					fv->d.value.len);
+				break;
+			case VALIDATE_GT:
+				c = fprintf(f, "gt: %zu", 
+					fv->d.value.len);
+				break;
+			case VALIDATE_LT:
+				c = fprintf(f, "lt: %zu", 
+					fv->d.value.len);
+				break;
+			case VALIDATE_EQ:
+				c = fprintf(f, "min: %zu, max: %zu",
+					fv->d.value.len, 
+					fv->d.value.len);
+				break;
+			default:
+				abort();
+			}
+			if (c < 0 ||
+			    (TAILQ_NEXT(fv, entries) != NULL &&
+			     fputc(',', f) == EOF))
+				return -1;
+		}
+		return fputs(" },\n\t\t\t},\n", f) != EOF;
+	case FTYPE_EMAIL:
+		return fputs
+		    ("\n"
+		     "\t\t\tisEmail: true,\n"
+		     "\t\t\tnormalizeEmail: true,\n", f) != EOF;
+	default:
+		break;
+	}
+
+	switch (fd->type) {
+	case FTYPE_BIT:
+	case FTYPE_EPOCH:
+	case FTYPE_INT:
+	case FTYPE_ENUM:
+	case FTYPE_BITFIELD:
+		if (fputs
+		    ("\n"
+		     "\t\t\tcustom: {\n"
+		     "\t\t\t\toptions: value => {\n"
+		     "\t\t\t\t\tlet check: BigInt;\n"
+		     "\t\t\t\t\ttry {\n"
+		     "\t\t\t\t\t\tcheck = BigInt(value);\n"
+		     "\t\t\t\t\t} catch (er) {\n"
+		     "\t\t\t\t\t\treturn false;\n"
+		     "\t\t\t\t\t}\n"
+		     "\t\t\t\t\treturn true;\n"
+		     "\t\t\t\t}\n"
+		     "\t\t\t},\n", f) == EOF)
+			return -1;
+		break;
+	default:
+		break;
+	}
+	return 1;
+}
+
 static int
 gen_ortns_express_valids(FILE *f, const struct config *cfg)
 {
 	const struct strct	*st;
 	const struct field	*fd;
-	int			 first = 1;
+	int			 c, first = 1;
 
 	if (fputs("\texport const ortValids: expressValidator.Schema = {", f) == EOF)
 		return 0;
@@ -1402,14 +1493,14 @@ gen_ortns_express_valids(FILE *f, const struct config *cfg)
 			if (fd->type == FTYPE_STRUCT ||
 			    fd->type == FTYPE_BLOB)
 				continue;
-			if (fprintf(f, "%s\n\t\t'%s-%s': {\n", 
+			if (fprintf(f, "%s\n\t\t'%s-%s': {", 
 			    first ? "" : ",", st->name, fd->name) < 0)
 				return 0;
-			if (fd->type == FTYPE_EMAIL && fputs
-			    ("\t\t\tisEmail: true,\n"
-			     "\t\t\tnormalizeEmail: true,\n", f) == EOF)
+			if ((c = gen_ortns_express_valid(f, fd)) < 0)
 				return 0;
-			if (fputs("\t\t}", f) == EOF)
+			else if (c > 0 && fputs("\t\t", f) == EOF)
+				return 0;
+			if (fputc('}', f) == EOF)
 				return 0;
 			first = 0;
 		}

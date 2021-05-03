@@ -31,9 +31,11 @@ files, defaulting to standard input,
 and generates a Node module in TypeScript.
 .Pp
 The output requires only the
-.Qq typescript
-and
-.Qq better-sqlite3
+.Qq typescript ,
+.Qq better-sqlite3 ,
+.Qq bcrypt ,
+and optionally
+.Qq validator
 dependencies.
 The output is documented using the
 .Xr typedoc 1
@@ -342,6 +344,24 @@ If a field is marked as
 it will also be given the
 .Vt null
 type.
+.Ss Validation
+If run with
+.Fl v ,
+.Nm
+outputs validation functions for each native field type in an object
+.Va ortvalid.ortValids ,
+with a validator for each field.
+The fields (object keys) are named
+.Ar struct Ns . Ns Ar field .
+.Pp
+Validator functions are typed as
+.Vt "(value?: any) => any" ,
+and accept the value (which may be undefined) of the request input.
+They return the field's corresponding data structure in
+.Sx Data structures
+or
+.Dv null
+on failure.
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.
@@ -358,6 +378,8 @@ the Node framework.
 It uses the
 .Qq express ,
 framework for web requests,
+.Qq validator
+for input validation,
 .Qq bcrypt
 for passwords, and
 .Qq better-sqlite3
@@ -366,8 +388,7 @@ It mandates the use of TypeScript instead of JavaScript.
 It needs only the
 .Xr npm 1
 system installed and (depending on the operating system) a C/C++
-compiler for
-.Qq better-sqlite3 .
+compiler for native packages.
 .Pp
 Begin a project (if not already begun) as follows:
 .Bd -literal -offset indent
@@ -376,6 +397,11 @@ Begin a project (if not already begun) as follows:
 % npm install typescript better-sqlite3 express bcrypt
 % npm install @types/express @types/bcrypt @types/better-sqlite3
 % npx tsc --init
+.Ed
+.Pp
+For validation:
+.Bd -literal -offset indent
+% npm install validator @types/validator
 .Ed
 .Pp
 If installing
@@ -421,7 +447,7 @@ roles {
   role user;
 };
 struct user {
-  field name text;
+  field name text limit gt 0;
   field id int rowid;
   insert;
   search id: name id;
@@ -429,35 +455,46 @@ struct user {
 };
 .Ed
 .Pp
-Compile the configuration as a module:
+Compile the configuration as a module.
+This assumes that validation is also required.
 .Bd -literal -offset indent
 % mkdir modules
-% ort-nodejs myproject.ort > modules/ort.ts
+% ort-nodejs -v myproject.ort > modules/ort.ts
 .Ed
 .Pp
 Use the following simple application:
 .Bd -literal -offset indent
-import express, { Request, Response } from 'express';
-import { ort, ortns, ortctx, ortdb } from './modules/ort';
+import express from 'express';
+import { ort, ortns, ortctx, ortdb, ortvalid } from './modules/ort';
 
-const app = express();
+const app: express.Application = express();
 const db: ortdb = ort('test.db');
 
-app.get("/put", function(req: Request, res: Response) {
-  const ctx: ortctx = db.connect();
-  const id: BigInt = ctx.db_user_insert('name');
-  res.send(id.toString());
-});
+app.get("/put", 
+  function(req: express.Request, res: express.Response) {
+    const ctx: ortctx = db.connect();
+    const name: string|null = ortvalid.ortValids
+      ['user-name'](req.query['user-name']);
+    if (name === null)
+      return res.status(400).send('bad');
+    const id: BigInt = ctx.db_user_insert(name);
+    return res.send(id.toString());
+  }
+);
 
-app.get("/get", function(req: Request, res: Response) {
-  const ctx: ortctx = db.connect();
-  const obj: ortns.user|null =
-    ctx.db_user_get_id(BigInt(1));
-  if (obj !== null)
-    res.send(JSON.stringify(obj.export()));
-  else
-    res.send('not found');
-});
+app.get("/get",
+  function(req: express.Request, res: express.Response) {
+    const ctx: ortctx = db.connect();
+    const id: BigInt|null = ortvalid.ortValids
+      ['user-id'](req.query['user-id']);
+    if (id === null)
+      return res.status(400).send('bad');
+    const obj: ortns.user|null = ctx.db_user_get_id(id));
+    if (obj === null)
+      return res.status(404).send('not found');
+    return res.send(JSON.stringify(obj.export()));
+  }
+);
 
 app.listen(3000, function() {
   console.log('Server is running.');
@@ -484,8 +521,10 @@ Server is running.
 .Ed
 .Pp
 Making an HTTP request to
-.Qq localhost:3000
-will result in a display of the created user's identifier.
+.Qq localhost:3000/get?user-id=nnn
+will result in a display of the created user's identifier, while
+.Qq localhost:3000/put?user-name=xxx
+will create one.
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
 .\" .Sh ERRORS

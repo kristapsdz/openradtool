@@ -1448,6 +1448,14 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 		     "(v);\n", f) == EOF)
 			return 0;
 		break;
+	case FTYPE_REAL:
+		if (fputs
+		    ("\t\t\tif (!validator.isDecimal(v, { "
+		    "locale: 'en-US' }))\n"
+		    "\t\t\t\treturn null;\n"
+		    "\t\t\treturn parseFloat(v);\n", f) == EOF)
+			return 0;
+		break;
 	case FTYPE_ENUM:
 		if (fprintf(f, 
 		    "\t\t\tif (!(v in ortns.%s))\n"

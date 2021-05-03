@@ -1401,19 +1401,21 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 	const struct fvalid	*fv;
 
 	if (fputs
-	    ("\t\t\tif (typeof v === 'undefined')\n"
+	    ("\t\t\tif (typeof v === 'undefined' || v === null)\n"
 	     "\t\t\t\treturn null;\n", f) == EOF)
 		return 0;
 
 	/* These use the native functions for validation. */
 
 	switch (fd->type) {
+	case FTYPE_BLOB:
+		if (fputs("\t\t\treturn v;\n", f) == EOF)
+			return 0;
+		break;
 	case FTYPE_TEXT:
 	case FTYPE_PASSWORD:
 		if (fputs
-		    ("\t\t\tif (v === null)\n"
-		     "\t\t\t\treturn null;\n"
-		     "\t\t\tconst nv: string = "
+		    ("\t\t\tconst nv: string = "
 		     "v.toString();\n", f) == EOF)
 			return 0;
 		TAILQ_FOREACH(fv, &fd->fvq, entries)
@@ -1422,23 +1424,38 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 			    "\t\t\t\treturn null;\n", 
 			    vtypes[fv->type], fv->d.value.len) < 0)
 				return 0;
-		return fputs("\t\t\treturn nv;\n", f) != EOF;
+		if (fputs("\t\t\treturn nv;\n", f) == EOF)
+			return 0;
+		break;
+	case FTYPE_DATE:
+		if (fputs
+		    ("\t\t\tif (!validator.isDate(v, { "
+		     "format: 'YYYY-MM-DD', strictMode: true }))\n"
+		     "\t\t\t\treturn null;\n"
+		     "\t\t\tconst nv: Date|null = "
+		     "validator.toDate(v);\n"
+		     "\t\t\tif (nv === null)\n"
+		     "\t\t\t\treturn null;\n"
+		     "\t\t\treturn BigInt(nv.getTime() / 1000);\n",
+		     f) == EOF)
+			return 0;
+		break;
 	case FTYPE_EMAIL:
-		return fputs
+		if (fputs
 		    ("\t\t\tif (!validator.isEmail(v))\n"
 		     "\t\t\t\treturn null;\n"
 		     "\t\t\treturn validator.normalizeEmail"
-		     "(v);\n", f) != EOF;
-	default:
+		     "(v);\n", f) == EOF)
+			return 0;
 		break;
-	}
-
-	switch (fd->type) {
-	case FTYPE_BIT:
-	case FTYPE_EPOCH:
-	case FTYPE_INT:
 	case FTYPE_ENUM:
-	case FTYPE_BITFIELD:
+		if (fprintf(f, 
+		    "\t\t\tif (!(v in ortns.%s))\n"
+		    "\t\t\t\treturn null;\n"
+		    "\t\t\treturn v;\n", fd->enm->name) < 0)
+			return 0;
+		break;
+	default:
 		if (fputs
 		    ("\t\t\tlet nv: BigInt;\n"
 		     "\t\t\ttry {\n"
@@ -1453,9 +1470,8 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 			    "\t\t\t\treturn null;\n", 
 			    vtypes[fv->type], fv->d.value.integer) < 0)
 				return 0;
-		return fputs("\t\t\treturn nv;\n", f) != EOF;
-		break;
-	default:
+		if (fputs("\t\t\treturn nv;\n", f) == EOF)
+			return 0;
 		break;
 	}
 	return 1;
@@ -1478,8 +1494,7 @@ gen_ortns_express_valids(FILE *f, const struct config *cfg)
 
 	TAILQ_FOREACH(st, &cfg->sq, entries) {
 		TAILQ_FOREACH(fd, &st->fq, entries) {
-			if (fd->type == FTYPE_STRUCT ||
-			    fd->type == FTYPE_BLOB)
+			if (fd->type == FTYPE_STRUCT)
 				continue;
 			if (fprintf(f, "\t\t'%s-%s': (v) => {\n", 
 			    st->name, fd->name) < 0)

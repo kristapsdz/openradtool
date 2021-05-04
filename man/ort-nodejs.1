@@ -432,7 +432,6 @@ to mandate the use of TypeScript instead of JavaScript:
 [...]
 "main": "index.ts",
 "scripts": {
-  "test": "echo \e"Error: no test specified\e" && exit 1",
   "tsc": "tsc"
 }
 [...]
@@ -497,7 +496,7 @@ app.get("/get",
       ['user-id'](req.query['user-id']);
     if (id === null)
       return res.status(400).send('bad');
-    const obj: ortns.user|null = ctx.db_user_get_id(id));
+    const obj: ortns.user|null = ctx.db_user_get_id(id);
     if (obj === null)
       return res.status(404).send('not found');
     return res.send(JSON.stringify(obj.export()));

@@ -3,6 +3,23 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.12.9</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-05-04">2021-05-04</time>
+		</header>
+		<aside>
+			<p>
+				Add validation routines to
+				<a href="ort-nodejs.1.html">ort-nodejs(1)</a> and
+				<a href="ort_lang_nodejs.3.html">ort_lang_nodejs(3)</a>.
+				These use the
+				<a href="https://github.com/validatorjs/validator.js">validator.js</a>
+				system for validation.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.12.8</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-04-29">2021-04-29</time>

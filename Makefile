@@ -893,11 +893,11 @@ regress: all
 	fi ; \
 	if [ -f "node_modules/.bin/ts-node" ]; then \
 		echo "=== ort-nodejs validation tests === " ; \
-		( ./ort-nodejs -v -Ndb regress/nodejs/validation.ort ; \
+		( ./ort-nodejs -v -Nd regress/nodejs/validation.ort ; \
 		  cat regress/nodejs/regress-valid.ts ; ) > \
 		  regress/nodejs/validation.ts ; \
 		printf "ts-node: regress/nodejs/validation.ts... " ; \
-		node_modules/.bin/ts-node --skip-project \
+		node_modules/.bin/ts-node --skip-project -O "{'target': 'es2015'}" \
 			regress/nodejs/validation.ts ; \
 		rm -f regress/nodejs/validation.ts ; \
 		[ $$? -eq 0 ] || { echo "fail" ; exit 1 ; } ; \

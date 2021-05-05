@@ -1476,7 +1476,7 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 		break;
 	default:
 		if (fputs
-		    ("\t\t\tif (v.toString().length === 0)\n"
+		    ("\t\t\tif (v.toString().trim().length === 0)\n"
 		     "\t\t\t\treturn null;\n"
 		     "\t\t\tlet nv: BigInt;\n"
 		     "\t\t\ttry {\n"

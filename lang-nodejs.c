@@ -1487,7 +1487,7 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 			return 0;
 		TAILQ_FOREACH(fv, &fd->fvq, entries)
 			if (fprintf(f, 
-			    "\t\t\tif (!(nv %s BigInt(%" PRId64 ")))\n"
+			    "\t\t\tif (!(nv %s BigInt('%" PRId64 "')))\n"
 			    "\t\t\t\treturn null;\n", 
 			    vtypes[fv->type], fv->d.value.integer) < 0)
 				return 0;

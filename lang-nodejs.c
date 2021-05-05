@@ -1476,7 +1476,9 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 		break;
 	default:
 		if (fputs
-		    ("\t\t\tlet nv: BigInt;\n"
+		    ("\t\t\tif (v.toString().length === 0)\n"
+		     "\t\t\t\treturn null;\n"
+		     "\t\t\tlet nv: BigInt;\n"
 		     "\t\t\ttry {\n"
 		     "\t\t\t\tnv = BigInt(v);\n"
 		     "\t\t\t} catch (er) {\n"
@@ -1485,7 +1487,7 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 			return 0;
 		TAILQ_FOREACH(fv, &fd->fvq, entries)
 			if (fprintf(f, 
-			    "\t\t\tif (!(nv %s %" PRId64 "))\n"
+			    "\t\t\tif (!(nv %s BigInt(%" PRId64 ")))\n"
 			    "\t\t\t\treturn null;\n", 
 			    vtypes[fv->type], fv->d.value.integer) < 0)
 				return 0;

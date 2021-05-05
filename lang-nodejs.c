@@ -1399,6 +1399,7 @@ static int
 gen_ortns_express_valid(FILE *f, const struct field *fd)
 {
 	const struct fvalid	*fv;
+	const struct eitem	*ei;
 
 	if (fputs
 	    ("\t\t\tif (typeof v === 'undefined' || v === null)\n"
@@ -1468,10 +1469,20 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 			return 0;
 		break;
 	case FTYPE_ENUM:
-		if (fprintf(f, 
-		    "\t\t\tif (!(v in ortns.%s))\n"
-		    "\t\t\t\treturn null;\n"
-		    "\t\t\treturn v;\n", fd->enm->name) < 0)
+		if (fputs("\t\t\tswitch (v.toString()) {\n", f) == EOF)
+			return 0;
+		assert(fd->enm != NULL);
+		TAILQ_FOREACH(ei, &fd->enm->eq, entries)
+			if (fprintf(f, 
+			    "\t\t\tcase '%" PRId64 "':\n"
+			    "\t\t\t\treturn ortns.%s.%s;\n",
+			    ei->value, fd->enm->name, ei->name) < 0)
+				return 0;
+		if (fputs
+		    ("\t\t\tdefault:\n"
+		     "\t\t\t\tbreak;\n"
+		     "\t\t\t}\n"
+		     "\t\t\treturn null;\n", f) == EOF)
 			return 0;
 		break;
 	default:

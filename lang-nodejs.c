@@ -1450,10 +1450,21 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 		break;
 	case FTYPE_REAL:
 		if (fputs
-		    ("\t\t\tif (!validator.isDecimal(v, { "
-		    "locale: 'en-US' }))\n"
-		    "\t\t\t\treturn null;\n"
-		    "\t\t\treturn parseFloat(v);\n", f) == EOF)
+		    ("\t\t\tlet nv: number;\n"
+		     "\t\t\tif (!validator.isDecimal(v.toString(), { "
+		     "locale: 'en-US' }))\n"
+		     "\t\t\t\treturn null;\n"
+		     "\t\t\tnv = parseFloat(v);\n"
+		     "\t\t\tif (isNaN(nv))\n"
+		     "\t\t\t\treturn null;\n", f) == EOF)
+			return 0;
+		TAILQ_FOREACH(fv, &fd->fvq, entries)
+			if (fprintf(f, 
+			    "\t\t\tif (!(nv %s %f))\n"
+			    "\t\t\t\treturn null;\n", 
+			    vtypes[fv->type], fv->d.value.decimal) < 0)
+				return 0;
+		if (fputs("\t\t\treturn nv;\n", f) == EOF)
 			return 0;
 		break;
 	case FTYPE_ENUM:

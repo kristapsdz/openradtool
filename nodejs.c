@@ -43,14 +43,21 @@ main(int argc, char *argv[])
 	size_t			  i;
 
 	memset(&args, 0, sizeof(struct ort_lang_nodejs));
+	args.flags = ORT_LANG_NODEJS_DB | ORT_LANG_NODEJS_CORE;
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
 		err(1, "pledge");
 #endif
 
-	while ((c = getopt(argc, argv, "v")) != -1)
+	while ((c = getopt(argc, argv, "N:v")) != -1)
 		switch (c) {
+		case 'N':
+			if (strchr(optarg, 'b') != NULL)
+				args.flags &= ~ORT_LANG_NODEJS_CORE;
+			if (strchr(optarg, 'd') != NULL)
+				args.flags &= ~ORT_LANG_NODEJS_DB;
+			break;
 		case 'v':
 			args.flags |= ORT_LANG_NODEJS_VALID;
 			break;
@@ -97,6 +104,7 @@ out:
 	free(confs);
 	return !rc;
 usage:
-	fprintf(stderr, "usage: %s [-v] [config...]\n", getprogname());
+	fprintf(stderr, "usage: %s [-v] [-N[b|d] [config...]\n", 
+		getprogname());
 	return 1;
 }

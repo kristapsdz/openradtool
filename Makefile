@@ -892,6 +892,20 @@ regress: all
 		echo "!!! skipping ort-javascript internal tests !!! " ; \
 	fi ; \
 	if [ -f "node_modules/.bin/ts-node" ]; then \
+		echo "=== ort-nodejs validation tests === " ; \
+		( ./ort-nodejs -v -Ndb regress/nodejs/validation.ort ; \
+		  cat regress/nodejs/regress-valid.ts ; ) > \
+		  regress/nodejs/validation.ts ; \
+		printf "ts-node: regress/nodejs/validation.ts... " ; \
+		node_modules/.bin/ts-node --skip-project \
+			regress/nodejs/validation.ts ; \
+		rm -f regress/nodejs/validation.ts ; \
+		[ $$? -eq 0 ] || { echo "fail" ; exit 1 ; } ; \
+		echo "pass" ; \
+	else \
+		echo "!!! skipping ort-nodejs validation tests !!! " ; \
+	fi ; \
+	if [ -f "node_modules/.bin/ts-node" ]; then \
 		echo "=== ort-json reformat tests === " ; \
 		cat ort-json.ts regress/json/regress-runner.ts > $$tmp.ts ; \
 		set -e ; \

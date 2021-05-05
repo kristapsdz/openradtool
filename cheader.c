@@ -126,7 +126,7 @@ usage:
 	fprintf(stderr, 
 		"usage: %s "
 		"[-jJv] "
-		"[-N bd] "
+		"[-N[b|d]] "
 		"[config...]\n",
 		getprogname());
 	return EXIT_FAILURE;

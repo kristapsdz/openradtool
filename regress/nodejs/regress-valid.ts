@@ -187,6 +187,13 @@ if (ortvalid.ortValids['foo-bt'](65) !== null)
 if (ortvalid.ortValids['foo-bt'](-1) !== null)
 	process.exit(1);
 
+if ((num = ortvalid.ortValids['foo-btineq'](' 3 ')) === null)
+	process.exit(1);
+else if (num !== BigInt('3'))
+	process.exit(1);
+if (ortvalid.ortValids['foo-btineq'](5) !== null)
+	process.exit(1);
+
 let bz: ortns.baz|null;
 
 if (ortvalid.ortValids['foo-bz']('a') !== null)

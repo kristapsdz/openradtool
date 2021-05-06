@@ -6,6 +6,7 @@ enum baz {
 struct foo {
 	field mail email;
 	field bt bit;
+	field btineq bit limit lt 4;
 	field txt text limit gt 0 limit lt 10;
 	field txteq text limit eq 2;
 	field txtineq password limit ge 2 limit le 3;

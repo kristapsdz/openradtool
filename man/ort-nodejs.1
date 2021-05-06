@@ -1,6 +1,6 @@
 .\"	$OpenBSD$
 .\"
-.\" Copyright (c) 2020 Kristaps Dzonsons <kristaps@bsd.lv>
+.\" Copyright (c) 2020--2021 Kristaps Dzonsons <kristaps@bsd.lv>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -23,6 +23,7 @@
 .Sh SYNOPSIS
 .Nm ort-nodejs
 .Op Fl v
+.Op Fl N Ar db
 .Op Ar config...
 .Sh DESCRIPTION
 Accepts
@@ -36,6 +37,23 @@ Its arguments are as follows:
 Output
 .Sx Validation
 object and types.
+.It Fl N Ar bd
+Disable production of output, which may be
+.Ar b
+and/or
+.Ar d .
+The
+.Ar b
+flag suppresses output of the foundational
+.Sx Data structures ,
+while
+.Ar d
+suppresses the
+.Sx Module
+and
+.Sx Database access
+methods.
+This flag is used when creating multiple output files.
 .El
 .Pp
 The output requires only the

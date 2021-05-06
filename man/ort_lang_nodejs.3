@@ -44,9 +44,24 @@ are as follows:
 .Bl -tag -width Ds -offset indent
 .It Va unsigned int flags
 The bit-field of components to output.
-This may currently only be
-.Dv ORT_LANG_NODEJS_VALID ,
-for generating the validation namespace.
+.El
+.Pp
+The following components are output if specified:
+.Bl -tag -width Ds -offset indent
+.It Dv ORT_LANG_NODEJS_CORE
+Generate the data structures.
+.It Dv ORT_LANG_NODEJS_DB
+Generate database routines.
+This stipulates a dependency on the
+.Qq better-sqlite3
+and
+.Qq bcrypt
+packages.
+.It Dv ORT_LANG_NODEJS_VALID
+Generate the validation namespace.
+This stipulates a dependency on the
+.Qq validator
+package.
 .El
 .Pp
 If
@@ -75,6 +90,7 @@ struct config *cfg;
 struct ort_lang_nodejs args;
 
 memset(&args, 0, sizeof(struct ort_lang_nodejs));
+args.flags = ORT_LANG_NODEJS_CORE|ORT_LANG_NODEJS_DB;
 
 if ((cfg = ort_config_alloc()) == NULL)
   err(1, NULL);

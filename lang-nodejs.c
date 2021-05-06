@@ -1399,7 +1399,6 @@ static int
 gen_ortns_express_valid(FILE *f, const struct field *fd)
 {
 	const struct fvalid	*fv;
-	const struct eitem	*ei;
 
 	if (fputs
 	    ("\t\t\tif (typeof v === 'undefined' || v === null)\n"
@@ -1412,7 +1411,7 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 	case FTYPE_BLOB:
 		if (fputs("\t\t\treturn v;\n", f) == EOF)
 			return 0;
-		break;
+		return 1;
 	case FTYPE_TEXT:
 	case FTYPE_PASSWORD:
 		if (fputs
@@ -1427,33 +1426,20 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 				return 0;
 		if (fputs("\t\t\treturn nv;\n", f) == EOF)
 			return 0;
-		break;
-	case FTYPE_DATE:
-		if (fputs
-		    ("\t\t\tif (!validator.isDate(v, { "
-		     "format: 'YYYY-MM-DD', strictMode: true }))\n"
-		     "\t\t\t\treturn null;\n"
-		     "\t\t\tconst nv: Date|null = "
-		     "validator.toDate(v);\n"
-		     "\t\t\tif (nv === null)\n"
-		     "\t\t\t\treturn null;\n"
-		     "\t\t\treturn BigInt(nv.getTime() / 1000);\n",
-		     f) == EOF)
-			return 0;
-		break;
+		return 1;
 	case FTYPE_EMAIL:
 		if (fputs
-		    ("\t\t\tif (!validator.isEmail(v))\n"
+		    ("\t\t\tif (!validator.isEmail(v.trim()))\n"
 		     "\t\t\t\treturn null;\n"
 		     "\t\t\treturn validator.normalizeEmail"
-		     "(v);\n", f) == EOF)
+		     "(v.trim());\n", f) == EOF)
 			return 0;
-		break;
+		return 1;
 	case FTYPE_REAL:
 		if (fputs
 		    ("\t\t\tlet nv: number;\n"
-		     "\t\t\tif (!validator.isDecimal(v.toString(), { "
-		     "locale: 'en-US' }))\n"
+		     "\t\t\tif (!validator.isDecimal"
+		     "(v.toString().trim(), { locale: 'en-US' }))\n"
 		     "\t\t\t\treturn null;\n"
 		     "\t\t\tnv = parseFloat(v);\n"
 		     "\t\t\tif (isNaN(nv))\n"
@@ -1467,24 +1453,32 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 				return 0;
 		if (fputs("\t\t\treturn nv;\n", f) == EOF)
 			return 0;
+		return 1;
+	case FTYPE_DATE:
+		if (fputs
+		    ("\t\t\tif (!validator.isDate(v.trim(), { "
+		     "format: 'YYYY-MM-DD', strictMode: true }))\n"
+		     "\t\t\t\treturn null;\n"
+		     "\t\t\tconst nd: Date|null = "
+		     "validator.toDate(v.trim());\n"
+		     "\t\t\tif (nd === null)\n"
+		     "\t\t\t\treturn null;\n"
+		     "\t\t\tconst nv: BigInt = "
+		     "BigInt(nd.getTime() / 1000);\n",
+		     f) == EOF)
+			return 0;
 		break;
 	case FTYPE_ENUM:
-		if (fputs("\t\t\tswitch (v.toString()) {\n", f) == EOF)
-			return 0;
 		assert(fd->enm != NULL);
-		TAILQ_FOREACH(ei, &fd->enm->eq, entries)
-			if (fprintf(f, 
-			    "\t\t\tcase '%" PRId64 "':\n"
-			    "\t\t\t\treturn ortns.%s.%s;\n",
-			    ei->value, fd->enm->name, ei->name) < 0)
-				return 0;
-		if (fputs
-		    ("\t\t\tdefault:\n"
-		     "\t\t\t\tbreak;\n"
-		     "\t\t\t}\n"
-		     "\t\t\treturn null;\n", f) == EOF)
+		assert(TAILQ_EMPTY(&fd->fvq));
+		if (fprintf(f, 
+		    "\t\t\tif (!(<any>Object).values(ortns.%s)."
+		    "includes(v.toString().trim()))\n"
+		    "\t\t\t\treturn null;\n"
+		    "\t\t\treturn <ortns.%s>v.toString().trim();\n",
+		    fd->enm->name, fd->enm->name) < 0)
 			return 0;
-		break;
+		return 1;
 	default:
 		if (fputs
 		    ("\t\t\tif (v.toString().trim().length === 0)\n"
@@ -1500,17 +1494,17 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 		    ("\t\t\tif (nv < BigInt(0) || nv > BigInt(64))\n"
 		     "\t\t\t\treturn null;\n", f) == EOF)
 			return 0;
-		TAILQ_FOREACH(fv, &fd->fvq, entries)
-			if (fprintf(f, 
-			    "\t\t\tif (!(nv %s BigInt('%" PRId64 "')))\n"
-			    "\t\t\t\treturn null;\n", 
-			    vtypes[fv->type], fv->d.value.integer) < 0)
-				return 0;
-		if (fputs("\t\t\treturn nv;\n", f) == EOF)
-			return 0;
 		break;
 	}
-	return 1;
+
+	TAILQ_FOREACH(fv, &fd->fvq, entries)
+		if (fprintf(f, 
+		    "\t\t\tif (!(nv %s BigInt('%" PRId64 "')))\n"
+		    "\t\t\t\treturn null;\n", 
+		    vtypes[fv->type], fv->d.value.integer) < 0)
+			return 0;
+
+	return fputs("\t\t\treturn nv;\n", f) != EOF;
 }
 
 static int

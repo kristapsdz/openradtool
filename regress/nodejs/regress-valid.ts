@@ -8,6 +8,10 @@ if ((str = ortvalid.ortValids['foo-mail']('hello@hello.com')) === null)
 	process.exit(1);
 else if (str !== 'hello@hello.com')
 	process.exit(1);
+if ((str = ortvalid.ortValids['foo-mail']('  hello@hello.com  ')) === null)
+	process.exit(1);
+else if (str !== 'hello@hello.com')
+	process.exit(1);
 
 if ((str = ortvalid.ortValids['foo-txt']('hello')) === null)
 	process.exit(1);
@@ -78,6 +82,10 @@ if ((rl = ortvalid.ortValids['foo-rl']('1')) === null)
 	process.exit(1);
 else if (rl !== 1)
 	process.exit(1);
+if ((rl = ortvalid.ortValids['foo-rl'](' 1 ')) === null)
+	process.exit(1);
+else if (rl !== 1)
+	process.exit(1);
 if ((rl = ortvalid.ortValids['foo-rl'](-0.5)) === null)
 	process.exit(1);
 else if (rl !== -0.5)
@@ -117,6 +125,10 @@ if ((num = ortvalid.ortValids['foo-num']('99')) === null)
 	process.exit(1);
 else if (num !== BigInt(99))
 	process.exit(1);
+if ((num = ortvalid.ortValids['foo-num'](' 99 ')) === null)
+	process.exit(1);
+else if (num !== BigInt(99))
+	process.exit(1);
 if ((num = ortvalid.ortValids['foo-num']('-99')) === null)
 	process.exit(1);
 else if (num !== BigInt(-99))
@@ -142,6 +154,10 @@ else if (num !== BigInt('-9223372036854775807'))
 	process.exit(1);
 
 if ((num = ortvalid.ortValids['foo-dt']('2020-04-04')) === null)
+	process.exit(1);
+else if (num !== BigInt('1585958400'))
+	process.exit(1);
+if ((num = ortvalid.ortValids['foo-dt'](' 2020-04-04 ')) === null)
 	process.exit(1);
 else if (num !== BigInt('1585958400'))
 	process.exit(1);
@@ -179,6 +195,11 @@ if ((bz = ortvalid.ortValids['foo-bz']('1')) === null)
 	process.exit(1);
 else if (bz !== ortns.baz.a)
 	process.exit(1);
+if ((bz = ortvalid.ortValids['foo-bz'](' 1 ')) === null)
+	process.exit(1);
+else if (bz !== ortns.baz.a)
+	process.exit(1);
+
 if ((bz = ortvalid.ortValids['foo-bz'](2)) === null)
 	process.exit(1);
 else if (bz !== ortns.baz.b)

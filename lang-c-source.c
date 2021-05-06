@@ -1988,7 +1988,6 @@ gen_valids_field(FILE *f,
 	assert(v->type < VALIDATE__MAX);
 	switch (fd->type) {
 	case FTYPE_BIT:
-	case FTYPE_ENUM:
 	case FTYPE_BITFIELD:
 	case FTYPE_DATE:
 	case FTYPE_EPOCH:

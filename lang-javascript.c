@@ -496,10 +496,18 @@ ort_lang_javascript(const struct config *cfg,
 	const struct eitem	*ei;
 	char			*obj, *objarray;
 	int64_t			 maxvalue;
+	struct ort_lang_js	 tmp;
 
-	if (fputs("namespace ort {\n", f) == EOF)
+	if (args == NULL) {
+		memset(&tmp, 0, sizeof(struct ort_lang_js));
+		args = &tmp;
+	}
+
+	if (fprintf(f, "%snamespace ort {\n",
+	    (args->flags & ORT_LANG_JS_EXPORT) ? "export " : "") < 0)
 		return 0;
-	if (fprintf(f, "%s\n", args->ext_privMethods) < 0)
+	if (args->ext_privMethods != NULL &&
+	    fputs(args->ext_privMethods, f) == EOF)
 		return 0;
 
 	if (fputs("\n"

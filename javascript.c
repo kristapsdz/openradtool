@@ -152,9 +152,9 @@ out:
 
 	free(confs);
 	free(ext_privMethods);
-	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
+	return !rc;
 usage:
 	fprintf(stderr, "usage: %s [-S sharedir] [config...]\n", 
 		getprogname());
-	return EXIT_FAILURE;
+	return 1;
 }

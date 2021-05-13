@@ -17,8 +17,11 @@
 #ifndef ORT_LANG_JAVASCRIPT_H
 #define ORT_LANG_JAVASCRIPT_H
 
+#define	ORT_LANG_JS_EXPORT	0x01
+
 struct	ort_lang_js {
 	const char	*ext_privMethods;
+	unsigned int	 flags;
 };
 
 int	ort_lang_javascript(const struct config *, 

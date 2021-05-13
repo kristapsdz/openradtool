@@ -824,7 +824,7 @@ regress: all
 		fi ; \
 		echo "pass" ; \
 	done ; \
-	if [ "x$(LIBS_REGRESS)" == "x" ]; then \
+	if [ "x$(LIBS_REGRESS)" = "x" ] ; then \
 		echo "!!! skipping ort-c-{header,source} compile tests !!! " ; \
 		echo "!!! skipping ort-c-{header,source,sql} run tests !!! " ; \
 	else \

@@ -34,16 +34,16 @@
 .Fa "FILE *f"
 .Fc
 .Sh DESCRIPTION
-Outputs a JavaScript (really TypeScript) file to
+Outputs a TypeScript file to
 .Fa f
 from the parsed configuration
-.Fa cfg
-with classes to populate HTML5 DOM trees with JSON produced by
+.Fa cfg .
+The output consists of a namespace containing classes to populate HTML5 DOM
+trees.
+The classes accept input usually produced by
 .Xr ort_lang_c_header 3
-.Fn json_xxxx
-functions and
-.Xr ort_lang_nodejs 3
-exports.
+or
+.Xr ort_lang_nodejs 3 .
 Parameters are in
 .Fa args .
 The values in
@@ -53,9 +53,27 @@ are as follows:
 .It Va const char *ext_privMethods
 This string consists of classes and functions required by the produced
 code.
-It must be set to the contents of
+It should be set to the contents of
 .Pa ortPrivate.ts .
+.It Va unsigned flags
+Bit-field of output options.
 .El
+.Pp
+The following output options are available:
+.Bl -tag -width Ds -offset indent
+.It Dv ORT_LANG_JS_EXPORT
+Mark the top-level namespace as
+.Dq export .
+.El
+.Pp
+If
+.Fa args
+is
+.Dv NULL ,
+it is set to a structure initialised to zero.
+This will inhibit printing of the
+.Va ext_privMethods
+data, which is probably not desired.
 .Pp
 The output is documented in typedoc.
 .\" The following requests should be uncommented and used where appropriate.

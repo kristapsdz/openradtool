@@ -3,6 +3,20 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.12.11</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-05-13">2021-05-13</time>
+		</header>
+		<aside>
+			<p>
+				Add ability to specify the namespace output by
+				<a href="ort_lang_javascript.3.html">ort_lang_javascript(3)</a> as 
+				exported.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.12.10</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-05-06">2021-05-06</time>

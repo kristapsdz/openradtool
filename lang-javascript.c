@@ -503,8 +503,10 @@ ort_lang_javascript(const struct config *cfg,
 		args = &tmp;
 	}
 
-	if (fprintf(f, "%snamespace ort {\n",
-	    (args->flags & ORT_LANG_JS_EXPORT) ? "export " : "") < 0)
+	if (fprintf(f, "%snamespace %s {\n",
+	    (args->flags & ORT_LANG_JS_EXPORT) ? "export " : "",
+	    args->ns != NULL && args->ns[0] != '\0' ?
+	    args->ns : ORT_LANG_JS_DEFAULT_NS) < 0)
 		return 0;
 	if (args->ext_privMethods != NULL &&
 	    fputs(args->ext_privMethods, f) == EOF)

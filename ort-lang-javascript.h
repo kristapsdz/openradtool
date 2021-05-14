@@ -18,9 +18,11 @@
 #define ORT_LANG_JAVASCRIPT_H
 
 #define	ORT_LANG_JS_EXPORT	0x01
+#define ORT_LANG_JS_DEFAULT_NS	"ort"
 
 struct	ort_lang_js {
 	const char	*ext_privMethods;
+	const char	*ns;
 	unsigned int	 flags;
 };
 

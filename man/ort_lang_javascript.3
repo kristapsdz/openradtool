@@ -55,6 +55,11 @@ This string consists of classes and functions required by the produced
 code.
 It should be set to the contents of
 .Pa ortPrivate.ts .
+.It Va const char *ns
+If not
+.Dv NULL
+and non-empty, the name of the top-level namespace.
+This is not checked for correctness beyond that it be non-empty.
 .It Va unsigned flags
 Bit-field of output options.
 .El
@@ -70,7 +75,8 @@ If
 .Fa args
 is
 .Dv NULL ,
-it is set to a structure initialised to zero.
+it is set to a structure initialised to zero and using the default namespace name
+.Dq ort .
 This will inhibit printing of the
 .Va ext_privMethods
 data, which is probably not desired.

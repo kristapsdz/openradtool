@@ -528,7 +528,7 @@ ort_lang_javascript(const struct config *cfg,
 	TAILQ_FOREACH(s, &cfg->sq, entries)
 		if (fprintf(f, "\texport type DCbStruct%s = "
 		    "(e: HTMLElement,\n"
-		    "\t\tname: string, val: ort.%sData|null) "
+		    "\t\tname: string, val: %sData|null) "
 		    "=> void;\n", s->name, s->name) < 0)
 			return 0;
 

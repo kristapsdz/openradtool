@@ -35,7 +35,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "version.h"
 #include "paths.h"
 #include "ort.h"
 #include "ort-lang-c.h"

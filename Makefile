@@ -138,12 +138,13 @@ MAN1S		 = man/ort.1 \
 		   man/ort-sqldiff.1 \
 		   man/ort-xliff.1
 GENHEADERS	 = paths.h \
-		   version.h
+		   ort-version.h
 PUBHEADERS	 = ort.h \
 		   ort-lang-javascript.h \
 		   ort-lang-json.h \
 		   ort-lang-nodejs.h \
-		   ort-lang-sql.h
+		   ort-lang-sql.h \
+		   ort-version.h
 HEADERS 	 = $(PUBHEADERS) \
 		   extern.h \
 		   lang-c.h \
@@ -361,9 +362,18 @@ distcheck: openradtool.tar.gz.sha512 openradtool.tar.gz
 	( cd .distcheck/openradtool-$(VERSION) && $(MAKE) install )
 	rm -rf .distcheck
 
-version.h: Makefile
-	( echo "#define VERSION \"$(VERSION)\"" ; \
-	  echo "#define VSTAMP `echo $$((($(VERSION_BUILD)+1)+($(VERSION_MINOR)+1)*100+($(VERSION_MAJOR)+1)*10000))`" ; ) >$@
+ort-version.h: Makefile
+	( vstamp="$$(( ($(VERSION_BUILD) + 1) + \
+		($(VERSION_MINOR) + 1) * 100 + \
+		($(VERSION_MAJOR) + 1) * 10000 ))" ; \
+	  echo "#ifndef ORT_VERSION_H" ; \
+	  echo "#define ORT_VERSION_H" ; \
+	  echo "#define ORT_VERSION \"$(VERSION)\"" ; \
+	  echo "#define ORT_MAJOR $(VERSION_MAJOR)" ; \
+	  echo "#define ORT_MINOR $(VERSION_MINOR)" ; \
+	  echo "#define ORT_BUILD $(VERSION_BUILD)" ; \
+	  echo "#define ORT_VSTAMP $$vstamp" ; \
+	  echo "#endif" ; ) >$@
 
 paths.h: Makefile
 	echo "#define SHAREDIR \"$(SHAREDIR)/openradtool\"" >$@

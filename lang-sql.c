@@ -104,6 +104,18 @@ gen_prologue(FILE *f, int *prol)
 }
 
 static int
+gen_unique_field(FILE *f, const struct field *fd)
+{
+
+	return fprintf(f, 
+		"CREATE UNIQUE INDEX unique_%s ON %s(%s);\n",
+		fd->name, fd->parent->name, fd->name) >= 0;
+}
+
+/*
+ * Generate a multi-field unique statement.
+ */
+static int
 gen_unique(FILE *f, const struct unique *u)
 {
 	const struct nref	*n;
@@ -182,8 +194,6 @@ gen_field(FILE *f, const struct field *fd, int *first, int comments)
 		return 0;
 	if (fd->flags & FIELD_ROWID && fputs(" PRIMARY KEY", f) == EOF)
 		return 0;
-	if (fd->flags & FIELD_UNIQUE && fputs(" UNIQUE", f) == EOF)
-		return 0;
 	if (!(fd->flags & FIELD_ROWID) && 
 	    !(fd->flags & FIELD_NULL) && fputs(" NOT NULL", f) == EOF)
 		return 0;
@@ -217,12 +227,21 @@ gen_struct(FILE *f, const struct strct *p, int comments)
 	if (fputs("\n);\n\n", f) == EOF)
 		return 0;
 
-	TAILQ_FOREACH(n, &p->nq, entries)
+	first = 1;
+	TAILQ_FOREACH(fd, &p->fq, entries)
+		if (fd->flags & FIELD_UNIQUE) {
+			first = 0;
+			if (!gen_unique_field(f, fd))
+				return 0;
+		}
+	TAILQ_FOREACH(n, &p->nq, entries) {
+		first = 0;
 		if (!gen_unique(f, n))
 			return 0;
-	if (!TAILQ_EMPTY(&p->nq) && fputs("\n", f) == EOF)
-		return 0;
+	}
 
+	if (!first && fputs("\n", f) == EOF)
+		return 0;
 	return 1;
 }
 
@@ -256,8 +275,6 @@ gen_diff_field_new(FILE *f, const struct field *fd)
 		return 0;
 
 	if (fd->flags & FIELD_ROWID && fputs(" PRIMARY KEY", f) == EOF)
-		return 0;
-	if (fd->flags & FIELD_UNIQUE && fputs(" UNIQUE", f) == EOF)
 		return 0;
 	if (!(fd->flags & FIELD_ROWID) && !(fd->flags & FIELD_NULL) &&
 	    fputs(" NOT NULL", f) == EOF)
@@ -315,7 +332,7 @@ gen_check_fields(struct msgq *mq, const struct diffq *q, int destruct)
 	size_t	 		 errors = 0;
 	unsigned int		 mask;
 
-	mask = FIELD_ROWID | FIELD_NULL | FIELD_UNIQUE;
+	mask = FIELD_ROWID | FIELD_NULL;
 
 	TAILQ_FOREACH(d, q, entries) {
 		switch (d->type) {
@@ -478,6 +495,13 @@ gen_check_strcts(struct msgq *mq, const struct diffq *q, int destruct)
 }
 
 static int
+gen_diff_unique_field_del(FILE *f, const struct field *fd)
+{
+
+	return fprintf(f, "DROP INDEX unique_%s;\n", fd->name) >= 0;
+}
+
+static int
 gen_diff_unique_del(FILE *f, const struct unique *u)
 {
 	const struct nref	*n;
@@ -541,6 +565,15 @@ ort_lang_diff_sql(const struct ort_lang_sql *args,
 		}
 
 	TAILQ_FOREACH(d, q, entries)
+		if (d->type == DIFF_ADD_FIELD &&
+		    (d->field->flags & FIELD_UNIQUE)) {
+			if (!gen_prologue(f, &prol))
+				goto out;
+			if (!gen_unique_field(f, d->field))
+				goto out;
+		}
+
+	TAILQ_FOREACH(d, q, entries)
 		if (d->type == DIFF_ADD_FIELD) {
 			if (d->field->type == FTYPE_STRUCT)
 				continue;
@@ -573,11 +606,41 @@ ort_lang_diff_sql(const struct ort_lang_sql *args,
 		}
 
 	TAILQ_FOREACH(d, q, entries)
-		if (d->type == DIFF_DEL_UNIQUE) {
-			if (!gen_prologue(f, &prol))
+		switch (d->type) {
+		case DIFF_DEL_FIELD:
+			if (!(d->field->flags & FIELD_UNIQUE))
+				break;
+			if (!gen_prologue(f, &prol) ||
+			    !gen_diff_unique_field_del(f, d->field))
 				goto out;
-			if (!gen_diff_unique_del(f, d->unique))
+			break;
+		case DIFF_MOD_FIELD_FLAGS:
+			if ((d->field_pair.from->flags & 
+			     FIELD_UNIQUE) &&
+			    !(d->field_pair.into->flags & 
+		 	      FIELD_UNIQUE)) {
+				if (!gen_prologue(f, &prol) ||
+				    !gen_diff_unique_field_del
+				     (f, d->field_pair.into))
+					goto out;
+			}
+			if (!(d->field_pair.from->flags & 
+			     FIELD_UNIQUE) &&
+			    (d->field_pair.into->flags & 
+		 	      FIELD_UNIQUE)) {
+				if (!gen_prologue(f, &prol) ||
+				    !gen_unique_field
+				     (f, d->field_pair.from))
+					goto out;
+			}
+			break;
+		case DIFF_DEL_UNIQUE:
+			if (!gen_prologue(f, &prol) ||
+			    !gen_diff_unique_del(f, d->unique))
 				goto out;
+			break;
+		default:
+			break;
 		}
 
 	rc = 1;

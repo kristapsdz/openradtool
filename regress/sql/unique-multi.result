@@ -3,8 +3,9 @@ PRAGMA foreign_keys=ON;
 CREATE TABLE foo (
 	foo INTEGER NOT NULL,
 	bar INTEGER NOT NULL,
-	baz INTEGER NOT NULL,
-	UNIQUE(foo, bar),
-	UNIQUE(baz, bar)
+	baz INTEGER NOT NULL
 );
+
+CREATE UNIQUE INDEX unique_bar_foo ON foo(bar, foo);
+CREATE UNIQUE INDEX unique_bar_baz ON foo(bar, baz);
 

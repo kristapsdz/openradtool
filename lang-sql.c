@@ -103,28 +103,30 @@ gen_prologue(FILE *f, int *prol)
 	return fputs("PRAGMA foreign_keys=ON;\n\n", f) != EOF;
 }
 
-/*
- * Generate the "UNIQUE" statements on this table.
- * Return zero on failure, non-zero on success.
- */
 static int
-gen_unique(FILE *f, const struct unique *n, int *first)
+gen_unique(FILE *f, const struct unique *u)
 {
-	struct nref	*ref;
-	int		 ffirst = 1;
+	const struct nref	*n;
 
-	if (fprintf(f, "%s\n\tUNIQUE(", *first ? "" : ",") < 0)
+	if (fputs("CREATE UNIQUE INDEX unique_", f) == EOF)
 		return 0;
-
-	TAILQ_FOREACH(ref, &n->nq, entries) {
-		if (fprintf(f, "%s%s", 
-		    ffirst ? "" : ", ", ref->field->name) < 0)
+	TAILQ_FOREACH(n, &u->nq, entries) {
+		if (fputs(n->field->name, f) == EOF)
 			return 0;
-		ffirst = 0;
+		if (TAILQ_NEXT(n, entries) != NULL &&
+		    fputc('_', f) == EOF)
+			return 0;
 	}
-
-	*first = 0;
-	return fputc(')', f) != EOF;
+	if (fprintf(f, " ON %s(", u->parent->name) < 0)
+		return 0;
+	TAILQ_FOREACH(n, &u->nq, entries) {
+		if (fputs(n->field->name, f) == EOF)
+			return 0;
+		if (TAILQ_NEXT(n, entries) != NULL &&
+		    fputs(", ", f) == EOF)
+			return 0;
+	}
+	return fputs(");\n", f) != EOF;
 }
 
 /*
@@ -212,10 +214,16 @@ gen_struct(FILE *f, const struct strct *p, int comments)
 	TAILQ_FOREACH(fd, &p->fq, entries)
 		if (!gen_fkeys(f, fd, &first))
 			return 0;
+	if (fputs("\n);\n\n", f) == EOF)
+		return 0;
+
 	TAILQ_FOREACH(n, &p->nq, entries)
-		if (!gen_unique(f, n, &first))
+		if (!gen_unique(f, n))
 			return 0;
-	return fputs("\n);\n\n", f) != EOF;
+	if (!TAILQ_EMPTY(&p->nq) && fputs("\n", f) == EOF)
+		return 0;
+
+	return 1;
 }
 
 int
@@ -469,23 +477,21 @@ gen_check_strcts(struct msgq *mq, const struct diffq *q, int destruct)
 	return errors;
 }
 
-static size_t
-gen_check_uniques(struct msgq *mq, const struct diffq *q, int destruct)
+static int
+gen_diff_unique_del(FILE *f, const struct unique *u)
 {
-	const struct diff	*d;
-	size_t			 errors = 0;
+	const struct nref	*n;
 
-	TAILQ_FOREACH(d, q, entries)
-		switch (d->type) {
-		case DIFF_ADD_UNIQUE:
-			gen_warnx(mq, &d->unique->pos, "new unique field");
-			errors++;
-			break;
-		default:
-			break;
-		}
-
-	return errors;
+	if (fputs("DROP INDEX unique_", f) == EOF)
+		return 0;
+	TAILQ_FOREACH(n, &u->nq, entries) {
+		if (fputs(n->field->name, f) == EOF)
+			return 0;
+		if (TAILQ_NEXT(n, entries) != NULL &&
+		    fputc('_', f) == EOF)
+			return 0;
+	}
+	return fputs(";\n", f) != EOF;
 }
 
 /*
@@ -512,7 +518,6 @@ ort_lang_diff_sql(const struct ort_lang_sql *args,
 	errors += gen_check_bitfs(mq, q, destruct);
 	errors += gen_check_fields(mq, q, destruct);
 	errors += gen_check_strcts(mq, q, destruct);
-	errors += gen_check_uniques(mq, q, destruct);
 
 	if (errors)
 		goto out;
@@ -524,6 +529,14 @@ ort_lang_diff_sql(const struct ort_lang_sql *args,
 			if (!gen_prologue(f, &prol))
 				goto out;
 			if (!gen_struct(f, d->strct, 0))
+				goto out;
+		}
+
+	TAILQ_FOREACH(d, q, entries)
+		if (d->type == DIFF_ADD_UNIQUE) {
+			if (!gen_prologue(f, &prol))
+				goto out;
+			if (!gen_unique(f, d->unique))
 				goto out;
 		}
 
@@ -556,6 +569,14 @@ ort_lang_diff_sql(const struct ort_lang_sql *args,
 			    "-- ALTER TABLE %s DROP COLUMN %s;\n", 
 			    d->field->parent->name, 
 			    d->field->name) < 0)
+				goto out;
+		}
+
+	TAILQ_FOREACH(d, q, entries)
+		if (d->type == DIFF_DEL_UNIQUE) {
+			if (!gen_prologue(f, &prol))
+				goto out;
+			if (!gen_diff_unique_del(f, d->unique))
 				goto out;
 		}
 

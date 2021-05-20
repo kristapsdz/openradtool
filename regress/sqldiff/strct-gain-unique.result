@@ -1,0 +1,3 @@
+PRAGMA foreign_keys=ON;
+
+CREATE UNIQUE INDEX unique_bar_baz ON foo(bar, baz);

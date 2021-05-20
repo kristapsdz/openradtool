@@ -907,7 +907,7 @@ regress: all
 		  cat regress/nodejs/regress-valid.ts ; ) > \
 		  regress/nodejs/validation.ts ; \
 		printf "ts-node: regress/nodejs/validation.ts... " ; \
-		node_modules/.bin/ts-node --skip-project -O "{'target': 'es2015'}" \
+		node_modules/.bin/ts-node --skip-project -O '{"target": "es2015"}' \
 			regress/nodejs/validation.ts ; \
 		rm -f regress/nodejs/validation.ts ; \
 		[ $$? -eq 0 ] || { echo "fail" ; exit 1 ; } ; \

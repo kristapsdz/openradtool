@@ -3,7 +3,7 @@ struct foo {
 	field bar int;
 	field baz int;
 	field id int rowid;
-	unique foo, bar;
-	unique foo, bar, baz;
+	unique bar, foo;
+	unique bar, baz, foo;
 };
 

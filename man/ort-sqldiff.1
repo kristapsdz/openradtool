@@ -57,9 +57,11 @@ may be empty, and thus read from standard input, but not both.
 .Pp
 .Nm
 outputs a series of
-.Cm CREATE TABLE
+.Cm CREATE TABLE ,
+.Cm ALTER TABLE ,
+.Cm CREATE INDEX ,
 and
-.Cm ALTER TABLE
+.Cm DROP INDEX
 SQL commands to update the configuration
 .Ar oldconfig
 to the new configuration
@@ -99,8 +101,7 @@ changed foreign key references
 changed SQL attributes
 .Po
 .Cm rowid ,
-.Cm null ,
-.Cm unique
+.Cm null
 .Pc
 .El
 .Pp
@@ -134,6 +135,16 @@ statement is not provided for columns
 .Cm NOT NULL ,
 the update will fail as-is and must be manually edited with default
 values.
+.Pp
+Unique
+.Cm field
+constraints and
+.Cm struct
+statements are handled by SQL unique indexes.
+These are named by the unique fields (sorted), separated by underscores if
+applicable, and prefixed with
+.Dq unique .
+These are created or dropped when applicable.
 .Pp
 It's good practise, but not enforced by
 .Nm ,

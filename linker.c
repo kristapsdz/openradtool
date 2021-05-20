@@ -334,17 +334,33 @@ check_reffind(struct config *cfg, const struct strct *p)
 	return 0;
 }
 
+static int
+nref_cmp(const void *a, const void *b)
+{
+	const struct nref	*na = *(const struct nref **)a, 
+	     			*nb = *(const struct nref **)b;
+
+	assert(na->field->name != NULL);
+	assert(nb->field->name != NULL);
+	return strcasecmp(na->field->name, nb->field->name);
+}
+
+
 /*
  * Make sure that the unique statements noted in "u" are not equal
  * to any other unique statements.
+ * Also normalise the order of "nq" entries to be lexicographic.
  * Returns zero on failure, non-zero on success.
  */
 static int
-check_unique_unique(struct config *cfg, const struct strct *s)
+check_unique_unique(struct config *cfg, struct strct *s)
 {
-	const struct unique	*u, *uu;
-	const struct nref	*nf, *unf;
-	size_t			 errs = 0, sz, usz;
+	struct unique		 *u;
+	struct nref		 *nf;
+	const struct unique	 *uu;
+	const struct nref	 *unf;
+	struct nref		**ar;
+	size_t			  errs = 0, sz, usz, i;
 
 	/*
 	 * "Duplicate" means same number of fields, same fields by
@@ -378,6 +394,31 @@ check_unique_unique(struct config *cfg, const struct strct *s)
 				uu->pos.column);
 			errs++;
 		}
+		if (errs > 0)
+			break;
+
+		/*
+		 * If no errors, normalise the queue order.  For
+		 * simplicity, do this by copying into an array, sorting
+		 * the array, then copying back into the queue.
+		 */
+
+		ar = calloc(sz, sizeof(struct nref *));
+		if (ar == NULL) {
+			gen_err(cfg, NULL);
+			return 0;
+		}
+
+		i = 0;
+		while ((nf = TAILQ_FIRST(&u->nq)) != NULL) {
+			ar[i++] = nf;
+			TAILQ_REMOVE(&u->nq, nf, entries);
+		}
+		qsort(ar, sz, sizeof(struct nref *), nref_cmp);
+		for (i = 0; i < sz; i++) 
+			TAILQ_INSERT_TAIL(&u->nq, ar[i], entries);
+
+		free(ar);
 	}
 
 	return errs == 0;

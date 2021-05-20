@@ -54,7 +54,7 @@ is mapped into a representative SQL type except the
 .Cm struct ,
 which is a virtual type.
 The name of the column inherits from the field name.
-.Bl -column "ort type" "SQL type"
+.Bl -column "ort type" "SQL type" -offset indent
 .It Cm bit Ta Cm INTEGER
 .It Cm bitfield Ta Cm INTEGER
 .It Cm blob Ta Cm BLOB
@@ -69,7 +69,7 @@ The name of the column inherits from the field name.
 .El
 .Pp
 Furthermore, types may have the following attributes.
-.Bl -column "ort type" "SQL type"
+.Bl -column "ort type" "SQL type" -offset indent
 .It Cm actdel Ta Cm ON DELETE
 .It Cm actup Ta Cm ON UPDATE
 .It Cm default Ta Cm DEFAULT()
@@ -90,7 +90,7 @@ Reference types may contain the
 and
 .Cm actdel
 attributes map as follows:
-.Bl -column "ort type" "SQL type"
+.Bl -column "ort type" "SQL type" -offset indent
 .It Cm cascade Ta Cm CASCADE
 .It Cm default Ta Cm DEFAULT
 .It Cm nullify Ta Cm NULLIFY
@@ -103,8 +103,17 @@ followed by the update or delete clause, if applicable.
 .Pp
 Lastly, any
 .Cm unique
-statement on the structure is rendered as the SQL
-.Cm UNIQUE(xxx, \&.\&.\&.\&) .
+statement on the structure is rendered as a unique index.
+The name of the index is the (sorted) fields in the
+.Cm unique
+statement, separated by underscores, and prefixed with
+.Dq unique_.
+Thus, an example
+.Li unique(foo, bar)
+would be rendered as:
+.Bd -literal -offset indent
+CREATE UNIQUE INDEX unique_bar_foo ON foo(foo, bar);
+.Ed
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

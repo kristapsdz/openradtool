@@ -548,28 +548,17 @@ ort_lang_diff_sql(const struct ort_lang_sql *args,
 
 	rc = -1;
 
+	/*
+	 * Make sure we do all additions now, as we might end up
+	 * referencing these later.  Start with structures (which fields
+	 * will reference), then unique statements.
+	 */
+
 	TAILQ_FOREACH(d, q, entries)
 		if (d->type == DIFF_ADD_STRCT) {
 			if (!gen_prologue(f, &prol))
 				goto out;
 			if (!gen_struct(f, d->strct, 0))
-				goto out;
-		}
-
-	TAILQ_FOREACH(d, q, entries)
-		if (d->type == DIFF_ADD_UNIQUE) {
-			if (!gen_prologue(f, &prol))
-				goto out;
-			if (!gen_unique(f, d->unique))
-				goto out;
-		}
-
-	TAILQ_FOREACH(d, q, entries)
-		if (d->type == DIFF_ADD_FIELD &&
-		    (d->field->flags & FIELD_UNIQUE)) {
-			if (!gen_prologue(f, &prol))
-				goto out;
-			if (!gen_unique_field(f, d->field))
 				goto out;
 		}
 
@@ -581,40 +570,24 @@ ort_lang_diff_sql(const struct ort_lang_sql *args,
 				goto out;
 			if (!gen_diff_field_new(f, d->field))
 				goto out;
-		}
-
-	TAILQ_FOREACH(d, q, entries) 
-		if (d->type == DIFF_DEL_STRCT && destruct) {
-			if (!gen_prologue(f, &prol))
-				goto out;
-			if (fprintf(f,
-			    "DROP TABLE %s;\n", d->strct->name) < 0)
-				goto out;
-		}
-
-	TAILQ_FOREACH(d, q, entries)
-		if (d->type == DIFF_DEL_FIELD && destruct) {
-			if (d->field->type == FTYPE_STRUCT)
-				continue;
-			if (!gen_prologue(f, &prol))
-				goto out;
-			if (fprintf(f, 
-			    "-- ALTER TABLE %s DROP COLUMN %s;\n", 
-			    d->field->parent->name, 
-			    d->field->name) < 0)
-				goto out;
-		}
-
-	TAILQ_FOREACH(d, q, entries)
-		switch (d->type) {
-		case DIFF_DEL_FIELD:
 			if (!(d->field->flags & FIELD_UNIQUE))
-				break;
-			if (!gen_prologue(f, &prol) ||
-			    !gen_diff_unique_field_del(f, d->field))
+				continue;
+			if (!gen_unique_field(f, d->field))
 				goto out;
-			break;
-		case DIFF_MOD_FIELD_FLAGS:
+		}
+
+	TAILQ_FOREACH(d, q, entries)
+		if (d->type == DIFF_ADD_UNIQUE) {
+			if (!gen_prologue(f, &prol))
+				goto out;
+			if (!gen_unique(f, d->unique))
+				goto out;
+		}
+
+	/* Any modifications... */
+
+	TAILQ_FOREACH(d, q, entries)
+		if (d->type == DIFF_MOD_FIELD_FLAGS) {
 			if ((d->field_pair.from->flags & 
 			     FIELD_UNIQUE) &&
 			    !(d->field_pair.into->flags & 
@@ -633,6 +606,21 @@ ort_lang_diff_sql(const struct ort_lang_sql *args,
 				     (f, d->field_pair.from))
 					goto out;
 			}
+		}
+
+	/* 
+	 * For deletions, start with fields and uniques, then make our
+	 * way up to structures.
+	 */
+
+	TAILQ_FOREACH(d, q, entries)
+		switch (d->type) {
+		case DIFF_DEL_FIELD:
+			if (!(d->field->flags & FIELD_UNIQUE))
+				break;
+			if (!gen_prologue(f, &prol) ||
+			    !gen_diff_unique_field_del(f, d->field))
+				goto out;
 			break;
 		case DIFF_DEL_UNIQUE:
 			if (!gen_prologue(f, &prol) ||
@@ -641,6 +629,28 @@ ort_lang_diff_sql(const struct ort_lang_sql *args,
 			break;
 		default:
 			break;
+		}
+
+	TAILQ_FOREACH(d, q, entries)
+		if (d->type == DIFF_DEL_FIELD && destruct) {
+			if (d->field->type == FTYPE_STRUCT)
+				continue;
+			if (!gen_prologue(f, &prol))
+				goto out;
+			if (fprintf(f, 
+			    "-- ALTER TABLE %s DROP COLUMN %s;\n", 
+			    d->field->parent->name, 
+			    d->field->name) < 0)
+				goto out;
+		}
+
+	TAILQ_FOREACH(d, q, entries) 
+		if (d->type == DIFF_DEL_STRCT && destruct) {
+			if (!gen_prologue(f, &prol))
+				goto out;
+			if (fprintf(f,
+			    "DROP TABLE %s;\n", d->strct->name) < 0)
+				goto out;
 		}
 
 	rc = 1;

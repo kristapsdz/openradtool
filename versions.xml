@@ -3,6 +3,34 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.13.0</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-05-17">2021-05-17</time>
+		</header>
+		<aside>
+			<p>
+				Change the way that
+				<a href="ort-sqldiff.1.html">ort-sqldiff(1)</a> handles unique
+				fields and unique tuples.  Prior to this, these would be output
+				directly into the tables as <code>UNIQUE</code> statements, which
+				unfortunately can't be modified with SQLite after creation.
+			</p>
+			<p>
+				Now, <a href="ort-sqldiff.1.html">ort-sqldiff(1)</a> outputs
+				<code>UNIQUE INDEX</code> statements for these components.  These
+				can be added and dropped at will, making migration between databases
+				much easier.
+			</p>
+			<p>
+				This requires a minor version bump and makes
+				<a href="ort-sqldiff.1.html">ort-sqldiff(1)</a> incompatible between
+				versions, as existing <code>UNIQUE</code> statements may not be shed.
+				Existing databases will need to be dumped and re-inserted.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.12.12</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-05-17">2021-05-17</time>

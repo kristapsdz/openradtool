@@ -831,6 +831,18 @@ Like
 but using underscores instead of periods.
 .It Va struct alias *alias
 Resolved alias.
+.It Va struct field **chain
+The fields referenced within each component of
+.Va fname
+or
+.Va uname .
+.It Va size_t chainsz
+The number of elements in
+.Va chain ,
+so also the number of components in
+.Va fname
+and
+.Va uname .
 .El
 .Pp
 Ordering within query results is dictated by the queue of

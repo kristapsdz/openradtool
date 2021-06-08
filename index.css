@@ -113,6 +113,13 @@ pre.hl					{ overflow: hidden; }
 #archive nav[data-sblg-nav] li > div:first-child	
 					{ font-weight: 500; }
 .blue					{ color: blue; }
+#announce				{ background-color: #131313;
+					  padding-top: 1rem;
+					  padding-bottom: 1rem;
+					  position: relative;
+					  color: #ddd; }
+#announce strong			{ color: #fff; }
+#announce a				{ color: #46c; }
 
 @media only screen and (max-width: 1024px), only screen and (max-device-width: 1024px) {
  #header .intro				{ font-size: 120%; }

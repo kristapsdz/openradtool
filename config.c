@@ -106,6 +106,7 @@ parse_free_search(struct search *p)
 
 	while ((sent = TAILQ_FIRST(&p->sntq)) != NULL) {
 		TAILQ_REMOVE(&p->sntq, sent, entries);
+		free(sent->chain);
 		free(sent->uname);
 		free(sent->fname);
 		free(sent->name);

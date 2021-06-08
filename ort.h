@@ -266,6 +266,8 @@ struct	rref {
 };
 
 struct	sent {
+	struct field	**chain;
+	size_t		  chainsz;
 	struct pos	  pos;
 	struct search	 *parent;
 	struct field	 *field;

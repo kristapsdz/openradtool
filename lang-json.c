@@ -698,13 +698,22 @@ gen_order(FILE *f, const struct ord *o)
 static int
 gen_sent(FILE *f, const struct sent *s)
 {
+	size_t	 i;
 
 	if (fputs(" {", f) == EOF)
 		return 0;
 	if (!gen_pos(f, &s->pos))
 		return 0;
+	if (fputs(" \"chain\": [", f) == EOF)
+		return 0;
+	for (i = 0; i < s->chainsz; i++) 
+		if (fprintf(f, "%s\"%s.%s\"", 
+		    i > 0 ? ", " : "", 
+		    s->chain[i]->parent->name,
+		    s->chain[i]->name) < 0)
+			return 0;
 	return fprintf(f, 
-		" \"fname\": \"%s\", \"op\": \"%s\" }", 
+		"], \"fname\": \"%s\", \"op\": \"%s\" }", 
 		s->fname, optypes[s->op]) > 0;
 }
 

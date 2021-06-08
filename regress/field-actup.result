@@ -1,9 +1,9 @@
-struct bar {
-	field fooid:foo.id int actdel cascade;
+struct foo {
 	field id int rowid;
 };
 
-struct foo {
+struct bar {
+	field fooid:foo.id int actdel cascade;
 	field id int rowid;
 };
 

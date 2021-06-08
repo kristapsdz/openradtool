@@ -114,7 +114,10 @@ parse_cmp(const void *a1, const void *a2)
 	      *p1 = *(const struct strct **)a1, 
 	      *p2 = *(const struct strct **)a2;
 
-	return (ssize_t)p1->height - (ssize_t)p2->height;
+	if (p1->height != p2->height) 
+		return (ssize_t)p1->height - (ssize_t)p2->height;
+
+	return strcmp(p1->name, p2->name);
 }
 
 /*

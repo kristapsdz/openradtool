@@ -1,9 +1,9 @@
-struct bar {
-	field fooid:foo.id int null actdel nullify;
+struct foo {
 	field id int rowid;
 };
 
-struct foo {
+struct bar {
+	field fooid:foo.id int null actdel nullify;
 	field id int rowid;
 };
 

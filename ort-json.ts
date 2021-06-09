@@ -203,6 +203,7 @@ namespace ortJson {
 	export interface orderObj {
 		pos: posObj;
 		fname: string;
+		chain: string[];
 		op: orderObjOp;
 	}
 
@@ -212,6 +213,7 @@ namespace ortJson {
 	export interface aggrObj {
 		pos: posObj;
 		fname: string;
+		chain: string[];
 		op: 'minrow'|'maxrow';
 	}
 
@@ -220,6 +222,7 @@ namespace ortJson {
 	 */
 	export interface groupObj {
 		pos: posObj;
+		chain: string[];
 		fname: string;
 	}
 
@@ -228,6 +231,7 @@ namespace ortJson {
 	 */
 	export interface dstnctObj {
 		pos: posObj;
+		chain: string[];
 		fname: string;
 	}
 

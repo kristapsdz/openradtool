@@ -674,6 +674,20 @@ gen_insert(FILE *f, const struct insert *insert)
 	return fputs(" },", f) != EOF;
 }
 
+static int
+gen_chain(FILE *f, const struct field **chain, size_t chainsz)
+{
+	size_t	 i;
+
+	if (fputs(" \"chain\": [", f) == EOF)
+		return 0;
+	for (i = 0; i < chainsz; i++) 
+		if (fprintf(f, "%s\"%s.%s\"", i > 0 ? ", " : "", 
+		    chain[i]->parent->name, chain[i]->name) < 0)
+			return 0;
+	return fputs(" ],", f) != EOF;
+}
+
 /*
  * Emit { orderObj } w/o comma.
  * Return zero on failure, non-zero on success.
@@ -685,6 +699,8 @@ gen_order(FILE *f, const struct ord *o)
 	if (fputs(" {", f) == EOF)
 		return 0;
 	if (!gen_pos(f, &o->pos))
+		return 0;
+	if (!gen_chain(f, (const struct field **)o->chain, o->chainsz))
 		return 0;
 	return fprintf(f, 
 		" \"fname\": \"%s\", \"op\": \"%s\" }", 
@@ -698,22 +714,15 @@ gen_order(FILE *f, const struct ord *o)
 static int
 gen_sent(FILE *f, const struct sent *s)
 {
-	size_t	 i;
 
 	if (fputs(" {", f) == EOF)
 		return 0;
 	if (!gen_pos(f, &s->pos))
 		return 0;
-	if (fputs(" \"chain\": [", f) == EOF)
+	if (!gen_chain(f, (const struct field **)s->chain, s->chainsz))
 		return 0;
-	for (i = 0; i < s->chainsz; i++) 
-		if (fprintf(f, "%s\"%s.%s\"", 
-		    i > 0 ? ", " : "", 
-		    s->chain[i]->parent->name,
-		    s->chain[i]->name) < 0)
-			return 0;
 	return fprintf(f, 
-		"], \"fname\": \"%s\", \"op\": \"%s\" }", 
+		" \"fname\": \"%s\", \"op\": \"%s\" }", 
 		s->fname, optypes[s->op]) > 0;
 }
 
@@ -730,6 +739,8 @@ gen_group(FILE *f, const struct group *g)
 	if (fputs(" {", f) == EOF)
 		return 0;
 	if (!gen_pos(f, &g->pos))
+		return 0;
+	if (!gen_chain(f, (const struct field **)g->chain, g->chainsz))
 		return 0;
 	return fprintf(f, " \"fname\": \"%s\" },", g->fname) > 0;
 }
@@ -748,6 +759,8 @@ gen_distinct(FILE *f, const struct dstnct *d)
 		return 0;
 	if (!gen_pos(f, &d->pos))
 		return 0;
+	if (!gen_chain(f, (const struct field **)d->chain, d->chainsz))
+		return 0;
 	return fprintf(f, " \"fname\": \"%s\" }", d->fname) > 0;
 }
 
@@ -764,6 +777,8 @@ gen_aggr(FILE *f, const struct aggr *a)
 	if (fputs(" {", f) == EOF)
 		return 0;
 	if (!gen_pos(f, &a->pos))
+		return 0;
+	if (!gen_chain(f, (const struct field **)a->chain, a->chainsz))
 		return 0;
 	return fprintf(f, 
 		" \"fname\": \"%s\", \"op\": \"%s\" },", 

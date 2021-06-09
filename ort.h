@@ -297,49 +297,32 @@ struct	ord {
 	TAILQ_ENTRY(ord) entries;
 };
 
-/*
- * Possible row-wide aggregation functions.
- */
 enum	aggrtype {
-	AGGR_MAXROW, /* row with maximum of all values */
-	AGGR_MINROW /* row with minimum of all values */
+	AGGR_MAXROW,
+	AGGR_MINROW
 };
 
-/*
- * A row grouping reference.
- * This will resolve to a native field in a structure for which query
- * commands will be generated.
- * It may not be equal to any aggregate functions within the same
- * structure.
- */
 struct	group {
 	struct field	**chain;
 	size_t		  chainsz;
-	struct field	  *field; /* resolved group field */
-	char		  *name; /* fname w/o last field or NULL */
-	char		  *fname; /* canonical dot-form name */
-	struct pos	   pos; /* position in parse */
-	struct search	  *parent; /* up-reference */
-	struct alias	  *alias; /* resolved alias */
+	struct field	  *field;
+	char		  *name;
+	char		  *fname;
+	struct pos	   pos;
+	struct search	  *parent;
+	struct alias	  *alias;
 };
 
-/*
- * An aggregate reference.
- * This will resolve to a native field in a structure for which query
- * commands will be generated.
- * It will be produced as, for example, "MAX(a.b.c)" in the column
- * specification of the generated query.
- */
 struct	aggr {
 	struct field	**chain;
 	size_t		  chainsz;
-	struct field	 *field; /* resolved aggregate field */
-	char		 *name; /* fname w/o last field or NULL */
-	char		 *fname; /* canonical dot-form name */
-	enum aggrtype	  op; /* type of aggregation */
-	struct pos	  pos; /* position in parse */
-	struct search	 *parent; /* up-reference */
-	struct alias	 *alias; /* resolved alias */
+	struct field	 *field;
+	char		 *name;
+	char		 *fname;
+	enum aggrtype	  op;
+	struct pos	  pos;
+	struct search	 *parent;
+	struct alias	 *alias;
 };
 
 enum	stype {

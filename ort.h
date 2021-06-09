@@ -285,6 +285,8 @@ enum	ordtype {
 };
 
 struct	ord {
+	struct field	**chain;
+	size_t		  chainsz;
 	struct field	*field;
 	char		*name;
 	char		*fname;
@@ -311,6 +313,8 @@ enum	aggrtype {
  * structure.
  */
 struct	group {
+	struct field	**chain;
+	size_t		  chainsz;
 	struct field	  *field; /* resolved group field */
 	char		  *name; /* fname w/o last field or NULL */
 	char		  *fname; /* canonical dot-form name */
@@ -327,6 +331,8 @@ struct	group {
  * specification of the generated query.
  */
 struct	aggr {
+	struct field	**chain;
+	size_t		  chainsz;
 	struct field	 *field; /* resolved aggregate field */
 	char		 *name; /* fname w/o last field or NULL */
 	char		 *fname; /* canonical dot-form name */
@@ -345,10 +351,12 @@ enum	stype {
 };
 
 struct	dstnct {
-	char		*fname;
-	struct pos	 pos;
-	struct strct	*strct;
-	struct search	*parent;
+	struct field	**chain;
+	size_t		  chainsz;
+	char		 *fname;
+	struct pos	  pos;
+	struct strct	 *strct;
+	struct search	 *parent;
 };
 
 struct	search {

@@ -33,7 +33,8 @@
 /*
  * Resolve a reference chain to a single field: a "names" consisting of
  * "foo" "bar" "bar" would have been input as "foo.bar.baz" and resolves
- * to the field "baz" wherever that is.
+ * to the field "baz" wherever that is.  Each link in the chain is
+ * dropped into "chain", which must be pre-allocated.
  * Each non-terminal field must be a "struct" and not null.
  * Returns the resolved field (of any type) or NULL if not found.
  */
@@ -55,8 +56,7 @@ resolve_field_chain(struct config *cfg, const struct pos *pos,
 			return NULL;
 		}
 
-		if (chain != NULL)
-			chain[i] = f;
+		chain[i] = f;
 
 		/* Terminal fields handled by caller. */
 
@@ -89,9 +89,17 @@ static int
 resolve_struct_order(struct config *cfg, struct struct_order *r)
 {
 
+	r->result->chain = 
+		calloc(sizeof(struct field *), r->namesz);
+	if (r->result->chain == NULL) {
+		gen_err(cfg, &r->result->pos);
+		return -1;
+	}
+	r->result->chainsz = r->namesz;
+
 	r->result->field = resolve_field_chain
 		(cfg, &r->result->pos, r->result->parent->parent, 
-		 (const char **)r->names, r->namesz, NULL);
+		 (const char **)r->names, r->namesz, r->result->chain);
 
 	if (r->result->field != NULL &&
 	    r->result->field->type == FTYPE_STRUCT) {
@@ -108,9 +116,17 @@ static int
 resolve_struct_aggr(struct config *cfg, struct struct_aggr *r)
 {
 
+	r->result->chain = 
+		calloc(sizeof(struct field *), r->namesz);
+	if (r->result->chain == NULL) {
+		gen_err(cfg, &r->result->pos);
+		return -1;
+	}
+	r->result->chainsz = r->namesz;
+
 	r->result->field = resolve_field_chain
 		(cfg, &r->result->pos, r->result->parent->parent, 
-		 (const char **)r->names, r->namesz, NULL);
+		 (const char **)r->names, r->namesz, r->result->chain);
 
 	if (r->result->field != NULL &&
 	    (r->result->field->type == FTYPE_STRUCT ||
@@ -129,9 +145,17 @@ static int
 resolve_struct_grouprow(struct config *cfg, struct struct_grouprow *r)
 {
 
+	r->result->chain = 
+		calloc(sizeof(struct field *), r->namesz);
+	if (r->result->chain == NULL) {
+		gen_err(cfg, &r->result->pos);
+		return -1;
+	}
+	r->result->chainsz = r->namesz;
+
 	r->result->field = resolve_field_chain
 		(cfg, &r->result->pos, r->result->parent->parent, 
-		 (const char **)r->names, r->namesz, NULL);
+		 (const char **)r->names, r->namesz, r->result->chain);
 
 	if (r->result->field != NULL &&
 	    (r->result->field->type == FTYPE_STRUCT ||
@@ -178,9 +202,17 @@ resolve_struct_distinct(struct config *cfg, struct struct_distinct *r)
 {
 	struct field	*f;
 
+	r->result->chain = 
+		calloc(sizeof(struct field *), r->namesz);
+	if (r->result->chain == NULL) {
+		gen_err(cfg, &r->result->pos);
+		return -1;
+	}
+	r->result->chainsz = r->namesz;
+
 	f = resolve_field_chain
 		(cfg, &r->result->pos, r->result->parent->parent, 
-		 (const char **)r->names, r->namesz, NULL);
+		 (const char **)r->names, r->namesz, r->result->chain);
 
 	if (f == NULL)
 		return 0;

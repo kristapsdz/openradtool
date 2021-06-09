@@ -56,6 +56,7 @@ static void
 parse_free_aggr(struct aggr *p)
 {
 
+	free(p->chain);
 	free(p->fname);
 	free(p->name);
 	free(p);
@@ -65,6 +66,7 @@ static void
 parse_free_group(struct group *p)
 {
 	
+	free(p->chain);
 	free(p->fname);
 	free(p->name);
 	free(p);
@@ -77,6 +79,7 @@ parse_free_ordq(struct ordq *q)
 
 	while ((ord = TAILQ_FIRST(q)) != NULL) {
 		TAILQ_REMOVE(q, ord, entries);
+		free(ord->chain);
 		free(ord->fname);
 		free(ord->name);
 		free(ord);
@@ -87,6 +90,7 @@ static void
 parse_free_distinct(struct dstnct *p)
 {
 
+	free(p->chain);
 	free(p->fname);
 	free(p);
 }

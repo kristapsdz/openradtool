@@ -341,6 +341,12 @@ gen_fill_field(FILE *f, const struct field *fd)
 	case FTYPE_BIT:
 	case FTYPE_BITFIELD:
 	case FTYPE_INT:
+		if (!print_src(f, indent,
+		    "if (%s(&set->ps[(*pos)++], &ORT_GET_%s_%s(p)) == -1)\n"
+		    "\texit(EXIT_FAILURE);",
+		    coltypes[fd->type], fd->parent->name, fd->name))
+			return 0;
+		break;
 	case FTYPE_REAL:
 		if (!print_src(f, indent,
 		    "if (%s(&set->ps[(*pos)++], &p->%s) == -1)\n"
@@ -387,29 +393,44 @@ count_bind(enum ftype t, enum optype type)
  * Return -1 on failure, 0 if not bound, 1 otherwise.
  */
 static int
-gen_bind(FILE *f, enum ftype t, size_t idx,
+gen_bind(FILE *f, const struct field *fd, size_t idx,
 	size_t pos, int ptr, size_t tabs, enum optype type)
 {
 	size_t	 i;
 
-	if (count_bind(t, type) == 0)
+	if (count_bind(fd->type, type) == 0)
 		return 0;
 
 	for (i = 0; i < tabs; i++)
 		if (fputc('\t', f) == EOF)
 			return -1;
-	if (fprintf(f, "parms[%zu].%s = %sv%zu;\n", 
-	    idx - 1, bindvars[t], ptr ? "*" : "", pos) < 0)
-		return -1;
+
+	switch (fd->type) {
+	case FTYPE_BIT:
+	case FTYPE_BITFIELD:
+	case FTYPE_INT:
+		if (fprintf(f, 
+		    "parms[%zu].iparm = ORT_GETV_%s_%s(%sv%zu);\n",
+		    idx - 1, fd->parent->name, fd->name,
+		    ptr ? "*" : "", pos) < 0)
+			return -1;
+		break;
+	default:
+		if (fprintf(f, "parms[%zu].%s = %sv%zu;\n", idx - 1, 
+		    bindvars[fd->type], ptr ? "*" : "", pos) < 0)
+			return -1;
+		break;
+	}
 
 	for (i = 0; i < tabs; i++)
 		if (fputc('\t', f) == EOF)
 			return -1;
+
 	if (fprintf(f, "parms[%zu].type = %s;\n", 
-	    idx - 1, bindtypes[t]) < 0)
+	    idx - 1, bindtypes[fd->type]) < 0)
 		return -1;
 
-	if (t == FTYPE_BLOB) {
+	if (fd->type == FTYPE_BLOB) {
 		for (i = 0; i < tabs; i++)
 			if (fputc('\t', f) == EOF)
 				return 0;
@@ -425,11 +446,11 @@ gen_bind(FILE *f, enum ftype t, size_t idx,
  * pointer.
  */
 static int
-gen_bind_val(FILE *f, enum ftype t,
+gen_bind_val(FILE *f, const struct field *fd,
 	size_t idx, size_t pos, enum optype type)
 {
 
-	return gen_bind(f, t, idx, pos, 0, 1, type);
+	return gen_bind(f, fd, idx, pos, 0, 1, type);
 }
 
 /*
@@ -504,7 +525,7 @@ gen_iterator(FILE *f, const struct config *cfg,
 	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries)
 		if (OPTYPE_ISBINARY(sent->op)) {
-			c = gen_bind_val(f, sent->field->type, 
+			c = gen_bind_val(f, sent->field, 
 				idx, pos, sent->op);
 			if (c < 0)
 				return 0;
@@ -628,7 +649,7 @@ gen_list(FILE *f, const struct config *cfg,
 	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries)
 		if (OPTYPE_ISBINARY(sent->op)) {
-			c = gen_bind_val(f, sent->field->type, 
+			c = gen_bind_val(f, sent->field, 
 				idx, pos, sent->op);
 			if (c < 0)
 				return 0;
@@ -1256,7 +1277,7 @@ gen_count(FILE *f, const struct config *cfg,
 	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
 		if (OPTYPE_ISBINARY(sent->op)) {
-			c = gen_bind_val(f, sent->field->type, 
+			c = gen_bind_val(f, sent->field, 
 				idx, pos, sent->op);
 			if (c < 0)
 				return 0;
@@ -1327,7 +1348,7 @@ gen_search(FILE *f, const struct config *cfg,
 	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) 
 		if (OPTYPE_ISBINARY(sent->op)) {
-			c = gen_bind_val(f, sent->field->type, 
+			c = gen_bind_val(f, sent->field, 
 				idx, pos, sent->op);
 			if (c < 0)
 				return 0;
@@ -1517,7 +1538,7 @@ gen_insert(FILE *f, const struct config *cfg, const struct strct *p)
 			if (!gen_bind_hash(f, idx, hpos++, tabs))
 				return 0;
 		} else {
-			if (gen_bind(f, fd->type, idx, pos,
+			if (gen_bind(f, fd, idx, pos,
 			    (fd->flags & FIELD_NULL), tabs, 
 			    OPTYPE_EQUAL /* XXX */) < 0)
 				return 0;
@@ -1693,7 +1714,7 @@ gen_reffind(FILE *f, const struct config *cfg, const struct strct *p)
 		if ((fd->ref->source->flags & FIELD_NULL))
 			if (fprintf(f, "\tif (p->has_%s) {\n"
 			    "\t\tparm.type = SQLBOX_PARM_INT;\n"
-			    "\t\tparm.iparm = p->%s;\n"
+			    "\t\tparm.iparm = ORT_GET_%s_%s(p);\n"
 			    "\t\tif (!sqlbox_prepare_bind_async\n"
 			    "\t\t    (db, 0, STMT_%s_BY_UNIQUE_%s, 1, &parm, 0))\n"
 			    "\t\t\texit(EXIT_FAILURE);\n"
@@ -1705,6 +1726,7 @@ gen_reffind(FILE *f, const struct config *cfg, const struct strct *p)
 			    "\t\tp->has_%s = 1;\n"
 			    "\t}\n",
 			    fd->ref->source->name,
+			    fd->ref->target->parent->name,
 			    fd->ref->source->name,
 			    fd->ref->target->parent->name,
 			    fd->ref->target->name,
@@ -1917,7 +1939,7 @@ gen_update(FILE *f, const struct config *cfg,
 			if (!gen_bind_hash(f, idx, hpos++, tabs))
 				return 0;
 		} else {
-			if (gen_bind(f, ref->field->type, idx, pos,
+			if (gen_bind(f, ref->field, idx, pos,
 			     (ref->field->flags & FIELD_NULL), 
 			     tabs, OPTYPE_STREQ /* XXX */) < 0)
 				return 0;
@@ -1936,7 +1958,7 @@ gen_update(FILE *f, const struct config *cfg,
 		assert(ref->field->type != FTYPE_STRUCT);
 		if (OPTYPE_ISUNARY(ref->op))
 			continue;
-		c = gen_bind(f, ref->field->type, 
+		c = gen_bind(f, ref->field, 
 			idx, pos, 0, 1, ref->op);
 		if (c < 0)
 			return 0;
@@ -2144,16 +2166,28 @@ gen_json_out_field(FILE *f,
 		} else if (fputs(tabs, f) == EOF)
 			return 0;
 
-		if (fd->type == FTYPE_BLOB) {
+		switch (fd->type) {
+		case FTYPE_BLOB:
 			if (fprintf(f, "%s(r, \"%s\", buf%zu);\n",
 			    puttypes[fd->type], 
 			    fd->name, ++(*pos)) < 0)
 				return 0;
-		} else {
+			break;
+		case FTYPE_BIT:
+		case FTYPE_BITFIELD:
+		case FTYPE_INT:
+			if (fprintf(f, 
+			    "%s(r, \"%s\", ORT_GET_%s_%s(p));\n", 
+			    puttypes[fd->type], fd->name, 
+			    fd->parent->name, fd->name) < 0)
+				return 0;
+			break;
+		default:
 			if (fprintf(f, "%s(r, \"%s\", p->%s);\n", 
 			    puttypes[fd->type], 
 			    fd->name, fd->name) < 0)
 				return 0;
+			break;
 		}
 		if ((fd->flags & FIELD_NULL) && !*sp) {
 			if (fputc('\n', f) == EOF)
@@ -2303,9 +2337,18 @@ gen_json_parse(FILE *f, const struct strct *p)
 		switch (fd->type) {
 		case FTYPE_BIT:
 		case FTYPE_BITFIELD:
+		case FTYPE_INT:
+			if (fprintf(f, "\t\t\tif (!jsmn_parse_int("
+			    "buf + t[j+1].start,\n"
+			    "\t\t\t    t[j+1].end - t[j+1].start, "
+			    "&ORT_GET_%s_%s(p)))\n"
+			    "\t\t\t\treturn 0;\n"
+			    "\t\t\tj++;\n", 
+			    fd->parent->name, fd->name) < 0)
+				return 0;
+			break;
 		case FTYPE_DATE:
 		case FTYPE_EPOCH:
-		case FTYPE_INT:
 			if (fprintf(f, "\t\t\tif (!jsmn_parse_int("
 			    "buf + t[j+1].start,\n"
 			    "\t\t\t    t[j+1].end - t[j+1].start, "

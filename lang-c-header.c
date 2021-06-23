@@ -69,42 +69,43 @@ gen_upper(FILE *f, const char *cp)
  * Return zero on failure, non-zero on success.
  */
 static int
-gen_field(FILE *f, const struct field *p)
+gen_field(FILE *f, const struct field *fd)
 {
 	int	 c = 0;
 
-	if (!gen_comment(f, 1, COMMENT_C, p->doc))
+	if (!gen_comment(f, 1, COMMENT_C, fd->doc))
 		return 0;
 
-	switch (p->type) {
+	switch (fd->type) {
 	case FTYPE_STRUCT:
 		c = fprintf(f, "\tstruct %s %s;\n", 
-			p->ref->target->parent->name, p->name);
+			fd->ref->target->parent->name, fd->name);
 		break;
 	case FTYPE_REAL:
-		c = fprintf(f, "\tdouble\t %s;\n", p->name);
+		c = fprintf(f, "\tdouble\t %s;\n", fd->name);
 		break;
 	case FTYPE_BLOB:
 		c = fprintf(f, "\tvoid\t*%s;\n\tsize_t\t %s_sz;\n",
-		       p->name, p->name);
+		       fd->name, fd->name);
 		break;
 	case FTYPE_DATE:
 	case FTYPE_EPOCH:
-		c = fprintf(f, "\ttime_t\t %s;\n", p->name);
+		c = fprintf(f, "\ttime_t\t %s;\n", fd->name);
 		break;
 	case FTYPE_BIT:
 	case FTYPE_BITFIELD:
 	case FTYPE_INT:
-		c = fprintf(f, "\tint64_t\t %s;\n", p->name);
+		c = fprintf(f, "\t%s_%s\t %s;\n", 
+			fd->parent->name, fd->name, fd->name);
 		break;
 	case FTYPE_TEXT:
 	case FTYPE_EMAIL:
 	case FTYPE_PASSWORD:
-		c = fprintf(f, "\tchar\t*%s;\n", p->name);
+		c = fprintf(f, "\tchar\t*%s;\n", fd->name);
 		break;
 	case FTYPE_ENUM:
 		c = fprintf(f, "\tenum %s %s;\n", 
-			p->enm->name, p->name);
+			fd->enm->name, fd->name);
 		break;
 	default:
 		break;
@@ -206,21 +207,91 @@ gen_enum(FILE *f, const struct enm *e)
  * Return zero on failure, non-zero on success.
  */
 static int
-gen_struct(FILE *f, const struct config *cfg, const struct strct *p)
+gen_struct(FILE *f, const struct ort_lang_c *args, 
+	const struct config *cfg, const struct strct *s)
 {
-	const struct field *fd;
+	const struct field	*fd;
 
-	if (!gen_comment(f, 0, COMMENT_C, p->doc))
+	/* 
+	 * Emit our safe typing first.
+	 * If we don't use safe types, emit the typedefs for everything
+	 * anyways, to make code differences between safe-generated code
+	 * and non-safe code easy.
+	 */
+
+	if (args->flags & ORT_LANG_C_SAFE_TYPES) {
+		TAILQ_FOREACH(fd, &s->fq, entries)
+			switch (fd->type) {
+			case FTYPE_BIT:
+			case FTYPE_BITFIELD:
+			case FTYPE_INT:
+				if (fprintf(f, 
+				    "typedef struct %s_%s "
+				     "{ int64_t val; } %s_%s;\n"
+				    "#define ORT_%s_%s(_src) "
+				     "(%s_%s){ .val = (_src) }\n"
+				    "#define ORT_GET_%s_%s(_dst) "
+				     "(_dst)->%s.val\n"
+				    "#define ORT_GETV_%s_%s(_dst) "
+				     "(_dst).val\n"
+				    "#define ORT_SET_%s_%s(_dst, _src) "
+				     "(_dst)->%s.val = (_src)\n"
+				    "#define ORT_SETV_%s_%s(_dst, _src) "
+				     "(_dst).val = (_src)\n\n",
+				    s->name, fd->name, 
+				    s->name, fd->name, 
+				    s->name, fd->name, 
+				    s->name, fd->name, 
+				    s->name, fd->name, fd->name, 
+				    s->name, fd->name,
+				    s->name, fd->name, fd->name, 
+				    s->name, fd->name) < 0)
+					return 0;
+				break;
+			default:
+				break;
+			}
+	} else {
+		TAILQ_FOREACH(fd, &s->fq, entries)
+			switch (fd->type) {
+			case FTYPE_BIT:
+			case FTYPE_BITFIELD:
+			case FTYPE_INT:
+				if (fprintf(f,
+				    "typedef int64_t %s_%s;\n"
+				    "#define ORT_%s_%s(_src) (_src)\n"
+				    "#define ORT_GET_%s_%s(_dst) "
+				     "(_dst)->%s\n"
+				    "#define ORT_GETV_%s_%s(_dst) "
+				     "(_dst)\n"
+				    "#define ORT_SET_%s_%s(_dst, _src) "
+				     "(_dst)->%s = (_src)\n"
+				    "#define ORT_SETV_%s_%s(_dst, _src) "
+				     "(_dst) = (_src)\n\n",
+				    s->name, fd->name, 
+				    s->name, fd->name, 
+				    s->name, fd->name, fd->name, 
+				    s->name, fd->name,
+				    s->name, fd->name, fd->name, 
+				    s->name, fd->name) < 0)
+					return 0;
+				break;
+			default:
+				break;
+			}
+	}
+
+	if (!gen_comment(f, 0, COMMENT_C, s->doc))
 		return 0;
 
-	if (fprintf(f, "struct\t%s {\n", p->name) < 0)
+	if (fprintf(f, "struct\t%s {\n", s->name) < 0)
 		return 0;
 
-	TAILQ_FOREACH(fd, &p->fq, entries)
+	TAILQ_FOREACH(fd, &s->fq, entries)
 		if (!gen_field(f, fd))
 			return 0;
 
-	TAILQ_FOREACH(fd, &p->fq, entries) {
+	TAILQ_FOREACH(fd, &s->fq, entries) {
 		if (fd->type == FTYPE_STRUCT &&
 		    (fd->ref->source->flags & FIELD_NULL)) {
 			if (!gen_commentv(f, 1, COMMENT_C,
@@ -242,8 +313,8 @@ gen_struct(FILE *f, const struct config *cfg, const struct strct *p)
 			return 0;
 	}
 
-	if ((p->flags & STRCT_HAS_QUEUE) &&
-	    fprintf(f, "\tTAILQ_ENTRY(%s) _entries;\n", p->name) < 0)
+	if ((s->flags & STRCT_HAS_QUEUE) &&
+	    fprintf(f, "\tTAILQ_ENTRY(%s) _entries;\n", s->name) < 0)
 		return 0;
 
 	if (!TAILQ_EMPTY(&cfg->rq)) {
@@ -257,24 +328,24 @@ gen_struct(FILE *f, const struct config *cfg, const struct strct *p)
 	if (fputs("};\n\n", f) == EOF)
 		return 0;
 
-	if (p->flags & STRCT_HAS_QUEUE) {
+	if (s->flags & STRCT_HAS_QUEUE) {
 		if (!gen_commentv(f, 0, COMMENT_C, 
-		    "Queue of %s for listings.", p->name))
+		    "Queue of %s for listings.", s->name))
 			return 0;
 		if (fprintf(f, "TAILQ_HEAD(%s_q, %s);\n\n", 
-		    p->name, p->name) < 0)
+		    s->name, s->name) < 0)
 			return 0;
 	}
 
-	if (p->flags & STRCT_HAS_ITERATOR) {
+	if (s->flags & STRCT_HAS_ITERATOR) {
 		if (!gen_commentv(f, 0, COMMENT_C, 
 		    "Callback of %s for iteration.\n"
 		    "The arg parameter is the opaque pointer "
 		    "passed into the iterate function.",
-		    p->name))
+		    s->name))
 			return 0;
 		if (fprintf(f, "typedef void (*%s_cb)(const struct %s "
-		    "*v, void *arg);\n\n", p->name, p->name) < 0)
+		    "*v, void *arg);\n\n", s->name, s->name) < 0)
 			return 0;
 	}
 
@@ -953,7 +1024,13 @@ ort_lang_c_header(const struct ort_lang_c *args,
 	const struct enm	*e;
 	const struct role	*r;
 	const struct bitf	*bf;
+	struct ort_lang_c	 targs;
 	int			 i = 0;
+
+	if (args == NULL) {
+		memset(&targs, 0, sizeof(struct ort_lang_c));
+		args = &targs;
+	}
 
 	/* If the guard is NULL, we don't emit any guarding. */
 
@@ -1002,7 +1079,7 @@ ort_lang_c_header(const struct ort_lang_c *args,
 			if (!gen_bitfield(f, bf))
 				return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			if (!gen_struct(f, cfg, p))
+			if (!gen_struct(f, args, cfg, p))
 				return 0;
 	}
 

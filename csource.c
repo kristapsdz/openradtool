@@ -139,7 +139,7 @@ main(int argc, char *argv[])
 
 	argc -= optind;
 	argv += optind;
-	
+
 	/* Read in all of our files now so we can repledge. */
 
 	if (argc > 0 &&

@@ -34,7 +34,10 @@ int
 main(void)
 {
 	struct ort	*sql;
-	int64_t		 cid, uid, nuid, val = 1;
+	int64_t		 rc, nuid;
+	company_somenum	 val = ORT_company_somenum(1);
+	user_uid	 uid;
+	user_cid	 cid;
 	struct user	*u, *u2, *u3;
 	const char	*buf = "hello there";
 
@@ -53,18 +56,20 @@ main(void)
 	
 	/* Insert our initial company record. */
 
-	if ((cid = db_company_insert(sql, "foo bar", &val)) < 0)
+	if ((rc = db_company_insert(sql, "foo bar", &val)) < 0)
 		errx(EXIT_FAILURE, "db.db: db_company_insert");
+	ORT_SETV_user_cid(cid, rc);
 
 	/* Now insert our initial user. */
 
-	uid = db_user_insert(sql, cid, SEX_male,
+	rc = db_user_insert(sql, cid, SEX_male,
 		"password", "foo@foo.com", strlen(buf), 
 		(const void **)&buf, "foo bar");
-	if (uid < 0) {
+	if (rc < 0) {
 		warnx("are you re-running the test?");
 		errx(EXIT_FAILURE, "db.db: db_user_insert (duplicate)");
 	}
+	ORT_SETV_user_uid(uid, rc);
 
 	/*
 	 * Try to insert a user with the same e-mail.
@@ -84,23 +89,25 @@ main(void)
 	/* Print it... */
 
 	warnx("company name: %s", u->company.name);
-	warnx("company id: %" PRId64, u->company.id);
+	warnx("company id: %" PRId64, 
+		ORT_GET_company_id(&u->company));
 	if (u->company.has_somenum)
-		warnx("company somenum: %" PRId64, u->company.somenum);
+		warnx("company somenum: %" PRId64, 
+			ORT_GET_company_somenum(&u->company));
 	if (u->company.has_somenum)
 		warnx("company has unset somenum");
-	warnx("user cid: %" PRId64, u->cid);
+	warnx("user cid: %" PRId64, ORT_GET_user_cid(u));
 	warnx("user hash: %s", u->hash);
 	warnx("user email: %s", u->email);
 	warnx("user name: %s", u->name);
 	warnx("user image size: %zu B", u->image_sz);
-	warnx("user uid: %" PRId64, u->uid);
+	warnx("user uid: %" PRId64, ORT_GET_user_uid(u));
 
 	/* Look up the same user by e-mail/password. */
 
 	u2 = db_user_get_creds(sql, "foo@foo.com", "password");
 
-	if (u2 == NULL || u2->uid != u->uid)
+	if (u2 == NULL || ORT_GET_user_uid(u2) != ORT_GET_user_uid(u))
 		errx(EXIT_FAILURE, "db.db: db_user_get_creds");
 
 	/* 

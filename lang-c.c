@@ -298,8 +298,20 @@ print_var(FILE *f, size_t pos, size_t col,
 		col += rc;
 	}
 
-	rc = fprintf(f, "%s%sv%zu", ftypes[fd->type], 
-		(flags & FIELD_NULL) ?  "*" : "", pos);
+	switch (fd->type) {
+	case FTYPE_BIT:
+	case FTYPE_BITFIELD:
+	case FTYPE_INT:
+		rc = fprintf(f, "%s_%s %sv%zu", 
+			fd->parent->name, fd->name,
+			(flags & FIELD_NULL) ?  "*" : "", pos);
+		break;
+	default:
+		rc = fprintf(f, "%s%sv%zu", ftypes[fd->type], 
+			(flags & FIELD_NULL) ?  "*" : "", pos);
+		break;
+	}
+
 	if (rc < 0)
 		return -1;
 

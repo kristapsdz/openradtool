@@ -22,6 +22,7 @@
 #define	ORT_LANG_C_JSON_JSMN	 0x04
 #define	ORT_LANG_C_VALID_KCGI	 0x08
 #define ORT_LANG_C_DB_SQLBOX	 0x10
+#define ORT_LANG_C_SAFE_TYPES	 0x20
 
 struct	ort_lang_c {
 	const char		*guard;

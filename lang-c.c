@@ -269,7 +269,8 @@ static int
 print_var(FILE *f, size_t pos, size_t col, 
 	const struct field *fd, unsigned int flags)
 {
-	int	rc;
+	int			 rc;
+	const struct field	*rfd;
 
 	if (fputc(',', f) == EOF)
 		return -1;
@@ -302,8 +303,9 @@ print_var(FILE *f, size_t pos, size_t col,
 	case FTYPE_BIT:
 	case FTYPE_BITFIELD:
 	case FTYPE_INT:
+		rfd = fd->ref != NULL ? fd->ref->target : fd;
 		rc = fprintf(f, "%s_%s %sv%zu", 
-			fd->parent->name, fd->name,
+			rfd->parent->name, rfd->name,
 			(flags & FIELD_NULL) ?  "*" : "", pos);
 		break;
 	default:

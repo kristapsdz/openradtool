@@ -186,7 +186,7 @@ struct company {
 };
 .Ed
 .Pp
-Text variables are NUL-terminated
+By default, text variables are NUL-terminated
 .Vt "char *"
 strings, blobs are
 .Vt "void *" ,
@@ -203,12 +203,55 @@ struct company {
   char *name;
   enum foo foo;
   int has_foo;
-  int64_t id;
+  company_id id;
 };
 .Ed
 .Pp
-All structures are defined in order so that they need not be
-forward-declared.
+Integer fields use defined types with the name of the structure, an
+underscore, then the field name.
+If safe typing is enabled, these are implemented as structures with
+a single integer field.
+Otherwise, the type is an alias for
+.Vt int64_t .
+.Pp
+.Bd -literal -offset indent
+typedef int64_t company_id;
+# typedef struct { int64_t val } company_id;
+.Ed
+.Pp
+Integers may be set, get, or assigned by using the following macros.
+These allow for transitioning from legacy non-safe to safe types:
+.Bl -tag -width Ds -offset indent
+.It Fn ORT_company_id x
+Return a variable for static assignment consisting of
+.Va x ,
+which should be an
+.Vt int64_t .
+.It Fn ORT_GET_company_id x
+Return the
+.Vt int64_t
+value from the field within
+.Va x ,
+a pointer to a
+.Vt struct company .
+.It Fn ORT_GETV_company_id x
+Like
+.Fn ORT_GET_company_id ,
+but to get the value directly from the field.
+.It Fn ORT_SET_company_id x y
+Set the field within
+.Va x ,
+a pointer to a
+.Vt struct company ,
+to the
+.Vt int64_t
+value
+.Va y .
+.It Fn ORT_SETV_company_id x y
+Like
+.Fn ORT_SET_company_id ,
+but to set the value directly to a field.
+.El
 .Pp
 If the structure consists of a
 .Cm list
@@ -223,6 +266,9 @@ of an opaque pointer type
 .Vt "struct ort_store" .
 This is used to keep track of the role in which the query function was
 invoked.
+.Pp
+All structures are defined in order so that they need not be
+forward-declared.
 .
 .Ss Database input
 Input functions define how the structures described in

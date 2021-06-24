@@ -202,18 +202,18 @@ gen_enum(FILE *f, const struct enm *e)
 	return fputs("};\n\n", f) != EOF;
 }
 
+/* 
+ * Emit our typing first.
+ * If we don't use safe types, emit typedefs to the native type for all
+ * types we care about; otherwise, emit the struct wrappers.
+ * Also emit the macros for setting, getting, and static init.
+ * Returns zero on failure, non-zero on success.
+ */
 static int
-gen_strong_types(FILE *f, const struct ort_lang_c *args, 
+gen_types(FILE *f, const struct ort_lang_c *args, 
 	const struct config *cfg, const struct strct *s)
 {
 	const struct field	*fd;
-
-	/* 
-	 * Emit our safe typing first.
-	 * If we don't use safe types, emit the typedefs for everything
-	 * anyways, to make code differences between safe-generated code
-	 * and non-safe code easy.
-	 */
 
 	if (args->flags & ORT_LANG_C_SAFE_TYPES) {
 		TAILQ_FOREACH(fd, &s->fq, entries)
@@ -1096,7 +1096,7 @@ ort_lang_c_header(const struct ort_lang_c *args,
 			if (!gen_bitfield(f, bf))
 				return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
-			if (!gen_strong_types(f, args, cfg, p))
+			if (!gen_types(f, args, cfg, p))
 				return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			if (!gen_struct(f, args, cfg, p))

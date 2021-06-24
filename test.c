@@ -37,7 +37,7 @@ main(void)
 	int64_t		 rc, nuid;
 	company_somenum	 val = ORT_company_somenum(1);
 	user_uid	 uid;
-	user_cid	 cid;
+	company_id	 cid;
 	struct user	*u, *u2, *u3;
 	const char	*buf = "hello there";
 
@@ -58,7 +58,7 @@ main(void)
 
 	if ((rc = db_company_insert(sql, "foo bar", &val)) < 0)
 		errx(EXIT_FAILURE, "db.db: db_company_insert");
-	ORT_SETV_user_cid(cid, rc);
+	ORT_SETV_company_id(cid, rc);
 
 	/* Now insert our initial user. */
 

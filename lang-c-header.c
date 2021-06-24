@@ -71,7 +71,8 @@ gen_upper(FILE *f, const char *cp)
 static int
 gen_field(FILE *f, const struct field *fd)
 {
-	int	 c = 0;
+	int	 		 c = 0;
+	const struct field	*rfd;
 
 	if (!gen_comment(f, 1, COMMENT_C, fd->doc))
 		return 0;
@@ -95,8 +96,9 @@ gen_field(FILE *f, const struct field *fd)
 	case FTYPE_BIT:
 	case FTYPE_BITFIELD:
 	case FTYPE_INT:
+		rfd = fd->ref != NULL ? fd->ref->target : fd;
 		c = fprintf(f, "\t%s_%s\t %s;\n", 
-			fd->parent->name, fd->name, fd->name);
+			rfd->parent->name, rfd->name, fd->name);
 		break;
 	case FTYPE_TEXT:
 	case FTYPE_EMAIL:
@@ -200,14 +202,8 @@ gen_enum(FILE *f, const struct enm *e)
 	return fputs("};\n\n", f) != EOF;
 }
 
-/*
- * Generate the C API for a given structure.
- * This generates the TAILQ_ENTRY listing if the structure has any
- * listings declared on it.
- * Return zero on failure, non-zero on success.
- */
 static int
-gen_struct(FILE *f, const struct ort_lang_c *args, 
+gen_strong_types(FILE *f, const struct ort_lang_c *args, 
 	const struct config *cfg, const struct strct *s)
 {
 	const struct field	*fd;
@@ -225,11 +221,18 @@ gen_struct(FILE *f, const struct ort_lang_c *args,
 			case FTYPE_BIT:
 			case FTYPE_BITFIELD:
 			case FTYPE_INT:
-				if (fprintf(f, 
+				if (fd->ref == NULL &&
+				    fprintf(f, 
 				    "typedef struct %s_%s "
 				     "{ int64_t val; } %s_%s;\n"
 				    "#define ORT_%s_%s(_src) "
-				     "(%s_%s){ .val = (_src) }\n"
+				     "(%s_%s){ .val = (_src) }\n",
+				    s->name, fd->name, 
+				    s->name, fd->name,
+				    s->name, fd->name, 
+				    s->name, fd->name) < 0)
+					return 0;
+				if (fprintf(f, 
 				    "#define ORT_GET_%s_%s(_dst) "
 				     "(_dst)->%s.val\n"
 				    "#define ORT_GETV_%s_%s(_dst) "
@@ -238,10 +241,6 @@ gen_struct(FILE *f, const struct ort_lang_c *args,
 				     "(_dst)->%s.val = (_src)\n"
 				    "#define ORT_SETV_%s_%s(_dst, _src) "
 				     "(_dst).val = (_src)\n\n",
-				    s->name, fd->name, 
-				    s->name, fd->name, 
-				    s->name, fd->name, 
-				    s->name, fd->name, 
 				    s->name, fd->name, fd->name, 
 				    s->name, fd->name,
 				    s->name, fd->name, fd->name, 
@@ -257,9 +256,14 @@ gen_struct(FILE *f, const struct ort_lang_c *args,
 			case FTYPE_BIT:
 			case FTYPE_BITFIELD:
 			case FTYPE_INT:
-				if (fprintf(f,
+				if (fd->ref == NULL &&
+				    fprintf(f,
 				    "typedef int64_t %s_%s;\n"
-				    "#define ORT_%s_%s(_src) (_src)\n"
+				    "#define ORT_%s_%s(_src) (_src)\n",
+				    s->name, fd->name, 
+				    s->name, fd->name) < 0)
+					return 0;
+				if (fprintf(f,
 				    "#define ORT_GET_%s_%s(_dst) "
 				     "(_dst)->%s\n"
 				    "#define ORT_GETV_%s_%s(_dst) "
@@ -268,8 +272,6 @@ gen_struct(FILE *f, const struct ort_lang_c *args,
 				     "(_dst)->%s = (_src)\n"
 				    "#define ORT_SETV_%s_%s(_dst, _src) "
 				     "(_dst) = (_src)\n\n",
-				    s->name, fd->name, 
-				    s->name, fd->name, 
 				    s->name, fd->name, fd->name, 
 				    s->name, fd->name,
 				    s->name, fd->name, fd->name, 
@@ -280,6 +282,21 @@ gen_struct(FILE *f, const struct ort_lang_c *args,
 				break;
 			}
 	}
+
+	return 1;
+}
+
+/*
+ * Generate the C API for a given structure.
+ * This generates the TAILQ_ENTRY listing if the structure has any
+ * listings declared on it.
+ * Return zero on failure, non-zero on success.
+ */
+static int
+gen_struct(FILE *f, const struct ort_lang_c *args, 
+	const struct config *cfg, const struct strct *s)
+{
+	const struct field	*fd;
 
 	if (!gen_comment(f, 0, COMMENT_C, s->doc))
 		return 0;
@@ -1077,6 +1094,9 @@ ort_lang_c_header(const struct ort_lang_c *args,
 				return 0;
 		TAILQ_FOREACH(bf, &cfg->bq, entries)
 			if (!gen_bitfield(f, bf))
+				return 0;
+		TAILQ_FOREACH(p, &cfg->sq, entries)
+			if (!gen_strong_types(f, args, cfg, p))
 				return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			if (!gen_struct(f, args, cfg, p))

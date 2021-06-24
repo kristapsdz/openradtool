@@ -286,7 +286,7 @@ gen_role(FILE *f, const struct role *r)
 static int
 gen_fill_field(FILE *f, const struct field *fd)
 {
-	size_t	 indent;
+	size_t	 		 indent;
 
 	/*
 	 * By default, structs on possibly-null foreign keys are set as
@@ -396,7 +396,7 @@ static int
 gen_bind(FILE *f, const struct field *fd, size_t idx,
 	size_t pos, int ptr, size_t tabs, enum optype type)
 {
-	size_t	 i;
+	size_t	 		 i;
 
 	if (count_bind(fd->type, type) == 0)
 		return 0;
@@ -1726,7 +1726,7 @@ gen_reffind(FILE *f, const struct config *cfg, const struct strct *p)
 			    "\t\tp->has_%s = 1;\n"
 			    "\t}\n",
 			    fd->ref->source->name,
-			    fd->ref->target->parent->name,
+			    fd->ref->source->parent->name,
 			    fd->ref->source->name,
 			    fd->ref->target->parent->name,
 			    fd->ref->target->name,

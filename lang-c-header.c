@@ -202,6 +202,82 @@ gen_enum(FILE *f, const struct enm *e)
 	return fputs("};\n\n", f) != EOF;
 }
 
+static int
+gen_type_funcs(FILE *f, const struct ort_lang_c *args, 
+	const struct config *cfg, const struct strct *s)
+{
+	const struct field	*fd, *rfd;
+
+	if (args->flags & ORT_LANG_C_SAFE_TYPES) {
+		TAILQ_FOREACH(fd, &s->fq, entries) {
+			rfd = fd->ref != NULL ? fd->ref->target : fd;
+			switch (fd->type) {
+			case FTYPE_BIT:
+			case FTYPE_BITFIELD:
+			case FTYPE_INT:
+				if (fd->ref == NULL &&
+				    fprintf(f, 
+				    "#define ORT_%s_%s(_src) "
+				     "(%s_%s){ .val = (_src) }\n",
+				    s->name, fd->name, 
+				    s->name, fd->name) < 0)
+					return 0;
+				if (fprintf(f, 
+				    "inline int64_t ORT_GET_%s_%s(const struct %s *dst) { "
+				     "return dst->%s.val; }\n"
+				    "inline int64_t ORT_GETV_%s_%s(const %s_%s dst) { "
+				     "return dst.val; }\n"
+				    "inline void ORT_SET_%s_%s(struct %s *dst, int64_t src) { "
+				     "dst->%s.val = src; }\n"
+				    "inline void ORT_SETV_%s_%s(%s_%s *dst, int64_t src) { "
+				     "dst->val = src; }\n\n",
+				    s->name, fd->name, 
+				    s->name, fd->name, 
+				    s->name, fd->name,
+				    rfd->parent->name, rfd->name,
+				    s->name, fd->name, s->name, fd->name, 
+				    s->name, fd->name,
+				    rfd->parent->name, rfd->name) < 0)
+					return 0;
+				break;
+			default:
+				break;
+			}
+		}
+	} else {
+		TAILQ_FOREACH(fd, &s->fq, entries)
+			switch (fd->type) {
+			case FTYPE_BIT:
+			case FTYPE_BITFIELD:
+			case FTYPE_INT:
+				if (fd->ref == NULL &&
+				    fprintf(f,
+				    "#define ORT_%s_%s(_src) (_src)\n",
+				    s->name, fd->name) < 0)
+					return 0;
+				if (fprintf(f,
+				    "#define ORT_GET_%s_%s(_dst) "
+				     "(_dst)->%s\n"
+				    "#define ORT_GETV_%s_%s(_dst) "
+				     "(_dst)\n"
+				    "#define ORT_SET_%s_%s(_dst, _src) "
+				     "(_dst)->%s = (_src)\n"
+				    "#define ORT_SETV_%s_%s(_dst, _src) "
+				     "(_dst) = (_src)\n\n",
+				    s->name, fd->name, fd->name, 
+				    s->name, fd->name,
+				    s->name, fd->name, fd->name, 
+				    s->name, fd->name) < 0)
+					return 0;
+				break;
+			default:
+				break;
+			}
+	}
+
+	return 1;
+}
+
 /* 
  * Emit our typing first.
  * If we don't use safe types, emit typedefs to the native type for all
@@ -224,26 +300,8 @@ gen_types(FILE *f, const struct ort_lang_c *args,
 				if (fd->ref == NULL &&
 				    fprintf(f, 
 				    "typedef struct %s_%s "
-				     "{ int64_t val; } %s_%s;\n"
-				    "#define ORT_%s_%s(_src) "
-				     "(%s_%s){ .val = (_src) }\n",
+				     "{ int64_t val; } %s_%s;\n",
 				    s->name, fd->name, 
-				    s->name, fd->name,
-				    s->name, fd->name, 
-				    s->name, fd->name) < 0)
-					return 0;
-				if (fprintf(f, 
-				    "#define ORT_GET_%s_%s(_dst) "
-				     "(_dst)->%s.val\n"
-				    "#define ORT_GETV_%s_%s(_dst) "
-				     "(_dst).val\n"
-				    "#define ORT_SET_%s_%s(_dst, _src) "
-				     "(_dst)->%s.val = (_src)\n"
-				    "#define ORT_SETV_%s_%s(_dst, _src) "
-				     "(_dst).val = (_src)\n\n",
-				    s->name, fd->name, fd->name, 
-				    s->name, fd->name,
-				    s->name, fd->name, fd->name, 
 				    s->name, fd->name) < 0)
 					return 0;
 				break;
@@ -258,26 +316,9 @@ gen_types(FILE *f, const struct ort_lang_c *args,
 			case FTYPE_INT:
 				if (fd->ref == NULL &&
 				    fprintf(f,
-				    "typedef int64_t %s_%s;\n"
-				    "#define ORT_%s_%s(_src) (_src)\n",
-				    s->name, fd->name, 
+				    "typedef int64_t %s_%s;\n",
 				    s->name, fd->name) < 0)
 					return 0;
-				if (fprintf(f,
-				    "#define ORT_GET_%s_%s(_dst) "
-				     "(_dst)->%s\n"
-				    "#define ORT_GETV_%s_%s(_dst) "
-				     "(_dst)\n"
-				    "#define ORT_SET_%s_%s(_dst, _src) "
-				     "(_dst)->%s = (_src)\n"
-				    "#define ORT_SETV_%s_%s(_dst, _src) "
-				     "(_dst) = (_src)\n\n",
-				    s->name, fd->name, fd->name, 
-				    s->name, fd->name,
-				    s->name, fd->name, fd->name, 
-				    s->name, fd->name) < 0)
-					return 0;
-				break;
 			default:
 				break;
 			}
@@ -1100,6 +1141,9 @@ ort_lang_c_header(const struct ort_lang_c *args,
 				return 0;
 		TAILQ_FOREACH(p, &cfg->sq, entries)
 			if (!gen_struct(f, args, cfg, p))
+				return 0;
+		TAILQ_FOREACH(p, &cfg->sq, entries)
+			if (!gen_type_funcs(f, args, cfg, p))
 				return 0;
 	}
 

@@ -342,8 +342,9 @@ gen_fill_field(FILE *f, const struct field *fd)
 	case FTYPE_BITFIELD:
 	case FTYPE_INT:
 		if (!print_src(f, indent,
-		    "if (%s(&set->ps[(*pos)++], &ORT_GET_%s_%s(p)) == -1)\n"
-		    "\texit(EXIT_FAILURE);",
+		    "if (%s(&set->ps[(*pos)++], &tmpint) == -1)\n"
+		    "\texit(EXIT_FAILURE);\n"
+		    "ORT_SET_%s_%s(p, tmpint);",
 		    coltypes[fd->type], fd->parent->name, fd->name))
 			return 0;
 		break;
@@ -1796,10 +1797,16 @@ gen_fill(FILE *f, const struct config *cfg, const struct strct *p)
 	 */
 
 	TAILQ_FOREACH(fd, &p->fq, entries)
-		if (fd->type == FTYPE_ENUM || 
-		    fd->type == FTYPE_DATE ||
-		    fd->type == FTYPE_EPOCH) {
+		switch (fd->type) {
+		case FTYPE_BIT:
+		case FTYPE_BITFIELD:
+		case FTYPE_ENUM:
+		case FTYPE_DATE:
+		case FTYPE_EPOCH:
+		case FTYPE_INT:
 			needint = 1;
+			break;
+		default:
 			break;
 		}
 
@@ -2237,7 +2244,7 @@ static int
 gen_json_parse(FILE *f, const struct strct *p)
 {
 	const struct field	*fd;
-	int			 hasenum = 0, hasstruct = 0, 
+	int			 intcast = 0, hasstruct = 0, 
 				 hasblob = 0;
 
 	/* Whether we need conversion space. */
@@ -2245,12 +2252,22 @@ gen_json_parse(FILE *f, const struct strct *p)
 	TAILQ_FOREACH(fd, &p->fq, entries) {
 		if (fd->flags & FIELD_NOEXPORT)
 			continue;
-		if (fd->type == FTYPE_ENUM)
-			hasenum = 1;
-		else if (fd->type == FTYPE_BLOB)
+		switch (fd->type) {
+		case FTYPE_BIT:
+		case FTYPE_BITFIELD:
+		case FTYPE_ENUM:
+		case FTYPE_INT:
+			intcast = 1;
+			break;
+		case FTYPE_BLOB:
 			hasblob = 1;
-		else if (fd->type == FTYPE_STRUCT)
+			break;
+		case FTYPE_STRUCT:
 			hasstruct = 1;
+			break;
+		default:
+			break;
+		}
 	}
 
 	if (!gen_func_json_parse(f, p, 0))
@@ -2259,7 +2276,7 @@ gen_json_parse(FILE *f, const struct strct *p)
 	    "\tint i;\n"
 	    "\tsize_t j;\n", f) == EOF)
 		return 0;
-	if (hasenum && fputs("\tint64_t tmpint;\n", f) == EOF)
+	if (intcast && fputs("\tint64_t tmpint;\n", f) == EOF)
 		return 0;
 	if ((hasblob || hasstruct) && fputs("\tint rc;\n", f) == EOF)
 		return 0;
@@ -2341,8 +2358,9 @@ gen_json_parse(FILE *f, const struct strct *p)
 			if (fprintf(f, "\t\t\tif (!jsmn_parse_int("
 			    "buf + t[j+1].start,\n"
 			    "\t\t\t    t[j+1].end - t[j+1].start, "
-			    "&ORT_GET_%s_%s(p)))\n"
+			    "&tmpint))\n"
 			    "\t\t\t\treturn 0;\n"
+			    "\t\t\tORT_SET_%s_%s(p, tmpint);\n"
 			    "\t\t\tj++;\n", 
 			    fd->parent->name, fd->name) < 0)
 				return 0;

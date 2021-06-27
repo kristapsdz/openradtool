@@ -20,6 +20,7 @@
 # include <sys/queue.h>
 #endif
 
+#include <assert.h>
 #include <ctype.h>
 #include <inttypes.h>
 #include <stdarg.h>
@@ -32,6 +33,36 @@
 #include "ort-version.h"
 #include "lang.h"
 #include "lang-c.h"
+
+static int
+gen_field_type(FILE *f, const struct field *fd)
+{
+	const struct field	*rfd;
+	int			 c;
+
+	switch (fd->type) {
+	case FTYPE_ENUM:
+		assert(fd->enm != NULL);
+		c = fprintf(f, "enum %s", fd->enm->name);
+		break;
+	case FTYPE_BIT:
+	case FTYPE_BITFIELD:
+	case FTYPE_INT:
+		rfd = fd->ref != NULL ? fd->ref->target : fd;
+		c = fprintf(f, "%s_%s", rfd->parent->name, rfd->name);
+		break;
+	default:
+		c = fprintf(f, "%s", get_ftype_str(fd->type));
+		break;
+	}
+
+	if (c < 0)
+		return 0;
+	if ((fd->flags & FIELD_NULL) && fputc('*', f) == EOF)
+		return 0;
+
+	return 1;
+}
 
 static int
 gen_doc_block(FILE *f, const char *cp, int tail, int head)
@@ -222,7 +253,8 @@ gen_roles(FILE *f, const struct config *cfg)
 static int
 gen_field(FILE *f, const struct field *fd)
 {
-	int	 c = 0;
+	int	 	 	 c = 0;
+	const struct field	*rfd;
 
 	if (fprintf(f, ".It Va ") < 0)
 		return 0;
@@ -247,7 +279,9 @@ gen_field(FILE *f, const struct field *fd)
 	case FTYPE_BIT:
 	case FTYPE_BITFIELD:
 	case FTYPE_INT:
-		c = fprintf(f, "int64_t %s\n", fd->name);
+		rfd = fd->ref != NULL ? fd->ref->target : fd;
+		c = fprintf(f, "%s_%s %s\n", 
+			rfd->parent->name, rfd->name, fd->name);
 		break;
 	case FTYPE_TEXT:
 	case FTYPE_EMAIL:
@@ -377,15 +411,7 @@ gen_search(FILE *f, const struct search *sr)
 			return 0;
 		if (fputs("\\fI", f) == EOF)
 			return 0;
-		if (sent->field->type == FTYPE_ENUM)
-			c = fprintf(f, "enum %s", 
-				sent->field->enm->name);
-		else 
-			c = fprintf(f, "%s%s", 
-				get_ftype_str(sent->field->type), 
-				(sent->field->flags & FIELD_NULL) ?
-				"*" : "");
-		if (c < 0)
+		if (!gen_field_type(f, sent->field))
 			return 0;
 		if (fprintf(f, "\\fR\t\\fI%s\\fR\n", 
 		    sent->field->name) < 0)
@@ -410,13 +436,7 @@ gen_search(FILE *f, const struct search *sr)
 				return 0;
 			if (fputs("\\fI", f) == EOF)
 				return 0;
-			if (sent->field->type == FTYPE_ENUM)
-				c = fprintf(f, "enum %s", 
-					sent->field->enm->name);
-			else 
-				c = fprintf(f, "%s", get_ftype_str
-					(sent->field->type));
-			if (c < 0)
+			if (!gen_field_type(f, sent->field))
 				return 0;
 			if (fprintf(f, "\\fR\t\\fI%s\\fR\n", 
 			    sent->field->name) < 0)
@@ -562,7 +582,7 @@ gen_update(FILE *f, const struct update *up)
 {
 	const struct uref	*ur;
 	const char		*rettype, *functype;
-	int			 c, hasunary = 0;
+	int			 hasunary = 0;
 
 	rettype = up->type == UP_MODIFY ? "int" : "void";
 	functype = up->type == UP_MODIFY ? "update" : "delete";
@@ -618,15 +638,7 @@ gen_update(FILE *f, const struct update *up)
 			return 0;
 		if (fputs("\\fI", f) == EOF)
 			return 0;
-		if (ur->field->type == FTYPE_ENUM)
-			c = fprintf(f, "enum %s", 
-				ur->field->enm->name);
-		else 
-			c = fprintf(f, "%s%s", 
-				get_ftype_str(ur->field->type), 
-				(ur->field->flags & FIELD_NULL) ?
-				"*" : "");
-		if (c < 0)
+		if (!gen_field_type(f, ur->field))
 			return 0;
 		if (fprintf(f, "\\fR\t\\fI%s\\fR\n", 
 		    ur->field->name) < 0)
@@ -649,15 +661,7 @@ gen_update(FILE *f, const struct update *up)
 			return 0;
 		if (fputs("\\fI", f) == EOF)
 			return 0;
-		if (ur->field->type == FTYPE_ENUM)
-			c = fprintf(f, "enum %s", 
-				ur->field->enm->name);
-		else 
-			c = fprintf(f, "%s%s", 
-				get_ftype_str(ur->field->type), 
-				(ur->field->flags & FIELD_NULL) ?
-				"*" : "");
-		if (c < 0)
+		if (!gen_field_type(f, ur->field))
 			return 0;
 		if (fprintf(f, "\\fR\t\\fI%s\\fR\n", 
 		    ur->field->name) < 0)
@@ -682,13 +686,7 @@ gen_update(FILE *f, const struct update *up)
 				return 0;
 			if (fputs("\\fI", f) == EOF)
 				return 0;
-			if (ur->field->type == FTYPE_ENUM)
-				c = fprintf(f, "enum %s", 
-					ur->field->enm->name);
-			else 
-				c = fprintf(f, "%s", get_ftype_str
-					(ur->field->type));
-			if (c < 0)
+			if (!gen_field_type(f, ur->field))
 				return 0;
 			if (fprintf(f, "\\fR\t\\fI%s\\fR\n", 
 			    ur->field->name) < 0)
@@ -707,7 +705,6 @@ static int
 gen_insert(FILE *f, const struct strct *s)
 {
 	const struct field	*fd;
-	int			 c;
 
 	if (fprintf(f, ".It Ft int64_t Fn db_%s_insert\n", s->name) < 0)
 		return 0;
@@ -728,12 +725,7 @@ gen_insert(FILE *f, const struct strct *s)
 				return 0;
 		if (fputs("\\fI", f) == EOF)
 			return 0;
-		if (fd->type == FTYPE_ENUM)
-			c = fprintf(f, "enum %s", fd->enm->name);
-		else 
-			c = fprintf(f, "%s%s", get_ftype_str(fd->type), 
-				(fd->flags & FIELD_NULL) ?  "*" : "");
-		if (c < 0)
+		if (!gen_field_type(f, fd))
 			return 0;
 		if (fprintf(f, "\\fR\t\\fI%s\\fR\n", fd->name) < 0)
 			return 0;

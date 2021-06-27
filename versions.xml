@@ -3,6 +3,43 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.13.3</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-06-27">2021-06-27</time>
+		</header>
+		<aside>
+			<p>
+				Introduce <q>safe typing</q> to the output of
+				<a href="ort-c-header.1.html">ort-c-header(1)</a>.
+				This affects the API for both data types and operations, and
+				accounts for the common error of type mis-assignment.
+			</p>
+			<p>
+				For example, with a structure <code>user</code> with a row
+				identifier <code>id</code> and originator foreign key
+				<code>ouserid</code>, searching for the originator user erroneously
+				using <code>id</code>.  In prior versions, both <code>id</code> and
+				<code>ouserid</code> were <code>int64_t</code>, which made it easy
+				to use one instead of the other.  With safe typing, two new types of
+				<code>user_id</code> and <code>user_ouserid</code> exist, and may
+				not be set to each other without using setter and getter functions.
+			</p>
+			<p>
+				By default, safe typing is not enabled and types may be mixed.  To
+				ease transitioning between safe and un-safe types, the setter and
+				getter functions are emitted for both forms, and (for example)
+				<code>user_id</code> is also emitted for un-safe typing as a simple
+				alias for <code>int64_t</code>, so existing code need not be
+				modified.
+			</p>
+			<p>
+				Safe types are still a work in progress, with the implementation not
+				quite finalised until the next minor release.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.13.2</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-06-09">2021-06-09</time>

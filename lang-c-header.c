@@ -210,70 +210,67 @@ gen_type_funcs(FILE *f, const struct ort_lang_c *args,
 
 	if (args->flags & ORT_LANG_C_SAFE_TYPES) {
 		TAILQ_FOREACH(fd, &s->fq, entries) {
+			if (fd->type != FTYPE_BIT &&
+			    fd->type != FTYPE_BITFIELD &&
+			    fd->type != FTYPE_INT)
+				continue;
 			rfd = fd->ref != NULL ? fd->ref->target : fd;
-			switch (fd->type) {
-			case FTYPE_BIT:
-			case FTYPE_BITFIELD:
-			case FTYPE_INT:
-				if (fd->ref == NULL &&
-				    fprintf(f, 
-				    "#define ORT_%s_%s(_src) "
-				     "(%s_%s){ .val = (_src) }\n",
-				    s->name, fd->name, 
-				    s->name, fd->name) < 0)
-					return 0;
-				if (fprintf(f, 
-				    "inline int64_t ORT_GET_%s_%s(const struct %s *dst) { "
-				     "return dst->%s.val; }\n"
-				    "inline int64_t ORT_GETV_%s_%s(const %s_%s dst) { "
-				     "return dst.val; }\n"
-				    "inline void ORT_SET_%s_%s(struct %s *dst, int64_t src) { "
-				     "dst->%s.val = src; }\n"
-				    "inline void ORT_SETV_%s_%s(%s_%s *dst, int64_t src) { "
-				     "dst->val = src; }\n\n",
-				    s->name, fd->name, 
-				    s->name, fd->name, 
-				    s->name, fd->name,
-				    rfd->parent->name, rfd->name,
-				    s->name, fd->name, s->name, fd->name, 
-				    s->name, fd->name,
-				    rfd->parent->name, rfd->name) < 0)
-					return 0;
-				break;
-			default:
-				break;
-			}
+			if (fd->ref == NULL &&
+			    fprintf(f, 
+			    "#define ORT_%s_%s(_src) "
+			     "(%s_%s){ .val = (_src) }\n",
+			    s->name, fd->name, 
+			    s->name, fd->name) < 0)
+				return 0;
+			if (fprintf(f, 
+			    "inline int64_t ORT_GET_%s_%s"
+			     "(const struct %s *dst) "
+			     "{ return dst->%s.val; }\n"
+			    "inline int64_t ORT_GETV_%s_%s"
+			     "(const %s_%s dst) "
+			     "{ return dst.val; }\n"
+			    "inline void ORT_SET_%s_%s"
+			     "(struct %s *dst, int64_t src) "
+			     "{ dst->%s.val = src; }\n"
+			    "inline void ORT_SETV_%s_%s"
+			     "(%s_%s *dst, int64_t src) "
+			     "{ dst->val = src; }\n\n",
+			    s->name, fd->name, 
+			    s->name, fd->name, 
+			    s->name, fd->name,
+			    rfd->parent->name, rfd->name,
+			    s->name, fd->name, s->name, fd->name, 
+			    s->name, fd->name,
+			    rfd->parent->name, rfd->name) < 0)
+				return 0;
 		}
-	} else {
-		TAILQ_FOREACH(fd, &s->fq, entries)
-			switch (fd->type) {
-			case FTYPE_BIT:
-			case FTYPE_BITFIELD:
-			case FTYPE_INT:
-				if (fd->ref == NULL &&
-				    fprintf(f,
-				    "#define ORT_%s_%s(_src) (_src)\n",
-				    s->name, fd->name) < 0)
-					return 0;
-				if (fprintf(f,
-				    "#define ORT_GET_%s_%s(_dst) "
-				     "(_dst)->%s\n"
-				    "#define ORT_GETV_%s_%s(_dst) "
-				     "(_dst)\n"
-				    "#define ORT_SET_%s_%s(_dst, _src) "
-				     "(_dst)->%s = (_src)\n"
-				    "#define ORT_SETV_%s_%s(_dst, _src) "
-				     "(_dst) = (_src)\n\n",
-				    s->name, fd->name, fd->name, 
-				    s->name, fd->name,
-				    s->name, fd->name, fd->name, 
-				    s->name, fd->name) < 0)
-					return 0;
-				break;
-			default:
-				break;
-			}
-	}
+	} else
+		TAILQ_FOREACH(fd, &s->fq, entries) {
+			if (fd->type != FTYPE_BIT &&
+			    fd->type != FTYPE_BITFIELD &&
+			    fd->type != FTYPE_INT)
+				continue;
+			if (fd->ref == NULL &&
+			    fprintf(f,
+			    "#define ORT_%s_%s(_src) (_src)\n",
+			    s->name, fd->name) < 0)
+				return 0;
+			if (fprintf(f,
+			    "inline int64_t ORT_GET_%s_%s"
+			     "(const struct %s *dst) "
+			     "{ return dst->%s; }\n"
+			    "#define ORT_GETV_%s_%s(_dst) (_dst)\n"
+			    "inline void ORT_SET_%s_%s"
+			     "(struct %s *dst, int64_t src) "
+			     "{ dst->%s = src; }\n"
+			    "#define ORT_SETV_%s_%s(_dst, _src) "
+			     "*(_dst) = (_src)\n\n",
+			    s->name, fd->name, s->name, fd->name,
+			    s->name, fd->name, 
+			    s->name, fd->name, s->name, fd->name,
+			    s->name, fd->name) < 0)
+				return 0;
+		}
 
 	return 1;
 }

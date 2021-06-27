@@ -210,7 +210,7 @@ struct company {
 Integer fields use defined types with the name of the structure, an
 underscore, then the field name.
 If safe typing is enabled, these are implemented as structures with
-a single integer field.
+a single integer field whose name is not fixed.
 Otherwise, the type is an alias for
 .Vt int64_t .
 .Pp
@@ -221,12 +221,15 @@ typedef int64_t company_id;
 .Pp
 Integers may be set, get, or assigned by using the following macros or
 inline functions.
-These allow for transitioning from legacy non-safe to safe types:
+These should be used when safe types are enabled and are also produced
+in non-safe mode for easier transition.
+Callers should not assume they are implemented as either macros or
+functions, however, as this may change.
 .Bl -tag -width Ds -offset indent
 .It Fn ORT_company_id "int64_t x"
 Return a
 .Ft company_id
-value initialised with
+value initialised to
 .Fa x .
 .It Fn ORT_GET_company_id "const struct company *p"
 Return the
@@ -246,12 +249,12 @@ Set the
 .Va id
 field within
 .Fa p
-to the
+to
 .Fa val .
 .It Fn ORT_SETV_company_id "company_id *p" "int64_t val"
 Like
 .Fn ORT_SET_company_id ,
-but to set
+but setting
 .Fa val
 directly to the field
 .Fa p .
@@ -270,9 +273,6 @@ of an opaque pointer type
 .Vt "struct ort_store" .
 This is used to keep track of the role in which the query function was
 invoked.
-.Pp
-All structures are defined in order so that they need not be
-forward-declared.
 .
 .Ss Database input
 Input functions define how the structures described in

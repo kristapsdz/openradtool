@@ -99,7 +99,7 @@ main(int argc, char *argv[])
 	args.header = "db.h";
 	args.flags = ORT_LANG_C_DB_SQLBOX;
 
-	while ((c = getopt(argc, argv, "h:I:jJN:sS:v")) != -1)
+	while ((c = getopt(argc, argv, "h:I:jJN:S:v")) != -1)
 		switch (c) {
 		case 'h':
 			args.header = optarg;
@@ -123,9 +123,6 @@ main(int argc, char *argv[])
 		case 'N':
 			if (strchr(optarg, 'd') != NULL)
 				args.flags &= ~ORT_LANG_C_DB_SQLBOX;
-			break;
-		case 's':
-			/* Ignore. */
 			break;
 		case 'S':
 			sharedir = optarg;

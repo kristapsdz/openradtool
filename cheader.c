@@ -72,7 +72,7 @@ main(int argc, char *argv[])
 				args.flags &= ~ORT_LANG_C_DB_SQLBOX;
 			break;
 		case 's':
-			/* Ignore. */
+			args.flags |= ORT_LANG_C_SAFE_TYPES;
 			break;
 		case 'v':
 			args.flags |= ORT_LANG_C_VALID_KCGI;
@@ -124,7 +124,7 @@ out:
 usage:
 	fprintf(stderr, 
 		"usage: %s "
-		"[-jJv] "
+		"[-jJsv] "
 		"[-N[b|d]] "
 		"[config...]\n",
 		getprogname());

@@ -22,7 +22,7 @@
 .Nd generate ort C API
 .Sh SYNOPSIS
 .Nm ort-c-header
-.Op Fl jJv
+.Op Fl jJsv
 .Op Fl g Ar guard
 .Op Fl N Ar db
 .Op Ar config...
@@ -46,6 +46,10 @@ function declarations.
 Output
 .Sx JSON import
 function declarations.
+.It Fl s
+Enable safe types, where natural field types (e.g.,
+.Cm int )
+are embedded in typed structures to prevent mis-assignment.
 .It Fl v
 Output
 .Sx Data validation
@@ -69,8 +73,6 @@ declarations, while
 suppresses the
 .Sx Database input .
 This flag is used when creating multiple header files.
-.It Fl s
-This flag is retained only for backward compatibility.
 .El
 .Pp
 By default, the

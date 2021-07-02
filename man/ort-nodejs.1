@@ -116,13 +116,12 @@ or entering
 .Qq none .
 This does not return failure: on role violation, it invokes
 .Fn process.abort .
-.It Fn db_role_open_current "id: number" Ns No : string
+.It Fn db_role_current Ns No : string
 If roles are enabled, get the currently-assigned role.
 If
 .Fn db_role
 hasn't yet been called, this will be
 .Qq default .
-Throws an exception on database error.
 .It Fn db_trans_open_immediate "id: number" Ns No : void
 Open a transaction with a unique identifier
 .Fa id .

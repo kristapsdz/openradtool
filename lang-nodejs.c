@@ -1724,6 +1724,17 @@ gen_ortctx_dbrole(FILE *f, const struct config *cfg)
 		return 0;
 
 	if (!gen_comment(f, 1, COMMENT_JS,
+	    "If roles are enabled, get the currently-assigned role.  "
+	    "If db_role() hasn't yet been called, this will be "
+	    "\"default\"."))
+		return 0;
+	if (fputs("\tdb_role_current(): string\n"
+	    "\t{\n"
+	    "\t\treturn this.#role;\n"
+	    "\t}\n\n", f) == EOF)
+		return 0;
+
+	if (!gen_comment(f, 1, COMMENT_JS,
 	    "If roles are enabled, move from the current role to "
 	    "\"newrole\".  If the role is the same as the current "
 	    "role, this does nothing.  Roles may only transition to "
@@ -1825,13 +1836,6 @@ gen_ortctx(FILE *f, const struct config *cfg)
 	    "\t\tthis.#o = o;\n"
 	    "\t}\n\n", f) == EOF)
 		return 0;
-
-	if (!TAILQ_EMPTY(&cfg->rq))
-		if (fputs("\tdb_role_current(): string\n"
-		    "\t{\n"
-		    "\t\treturn this.#role;\n"
-		    "\t}\n\n", f) == EOF)
-			return 0;
 
 	if (fputs("\tdb_trans_open_immediate(id: number): void\n"
 	    "\t{\n"

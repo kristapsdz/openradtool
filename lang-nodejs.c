@@ -1951,7 +1951,8 @@ ort_lang_nodejs(const struct ort_lang_nodejs *args,
 		    "Instance an application-wide context. "
 		    "This should only be called once per server, with "
 		    "the {@link ortdb.connect} method used for "
-		    "sequences of operations."))
+		    "sequences of operations. Throws an exception on "
+		    "database error."))
 			return 0;
 		if (fputs
 		    ("export function ort(dbname: string): ortdb\n"

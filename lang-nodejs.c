@@ -1723,6 +1723,8 @@ gen_ortctx_dbrole(FILE *f, const struct config *cfg)
 	if (fputs("\n"
 	    "\tdb_role(newrole: string): void\n"
 	    "\t{\n"
+	    "\t\tif (this.#role === newrole)\n"
+	    "\t\t\treturn;\n"
 	    "\t\tif (this.#role === 'none')\n"
 	    "\t\t\tprocess.abort();\n"
 	    "\t\tif (newrole === 'all')\n"

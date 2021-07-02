@@ -1720,8 +1720,20 @@ gen_ortctx_dbrole(FILE *f, const struct config *cfg)
 	if (TAILQ_EMPTY(&cfg->rq))
 		return 1;
 
-	if (fputs("\n"
-	    "\tdb_role(newrole: string): void\n"
+	if (fputc('\n', f) == EOF)
+		return 0;
+
+	if (!gen_comment(f, 1, COMMENT_JS,
+	    "If roles are enabled, move from the current role to "
+	    "\"newrole\".  If the role is the same as the current "
+	    "role, this does nothing.  Roles may only transition to "
+	    "ancestor roles, not descendant roles or siblings, or "
+	    "any other non-ancestor roles.  The only exception is "
+	    "when leaving \"default\" or entering \"none\".  This "
+	    "does not return failure: on role violation, it invokes "
+	    "process.abort()."))
+		return 0;
+	if (fputs("\tdb_role(newrole: string): void\n"
 	    "\t{\n"
 	    "\t\tif (this.#role === newrole)\n"
 	    "\t\t\treturn;\n"

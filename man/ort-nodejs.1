@@ -90,6 +90,9 @@ Connect to the database.
 This should be invoked for each request.
 In applications not having a request, this corresponds to a single
 operator sequence.
+If roles are enabled, the connection will begin in the
+.Qq default
+role.
 .It Va version Ns No : string
 The version of
 .Nm

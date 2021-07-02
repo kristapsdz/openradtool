@@ -1618,11 +1618,11 @@ gen_ortdb(FILE *f)
 	    "\t}\n\n", f) == EOF)
 		return 0;
 	if (!gen_comment(f, 1, COMMENT_JS,
-	    "Create a connection to the database. "
-	    "This should be called for each sequence "
-	    "representing a single operator. "
-	    "In web applications, for example, this should "
-	    "be called for each request."))
+	    "Connect to the database.  This should be invoked for "
+	    "each request.  In applications not having a request, "
+	    "this corresponds to a single operator sequence.  If "
+	    "roles are enabled, the connection will begin in the "
+	    "\"default\" role."))
 		return 0;
 	return fputs("\tconnect(): ortctx\n"
 	     "\t{\n"
@@ -1827,7 +1827,6 @@ gen_ortctx(FILE *f, const struct config *cfg)
 	    "single \'request\', such as a request for a web "
 	    "application."))
 		return 0;
-
 	if (fputs("export class ortctx {\n"
 	    "\t#role: string = 'default';\n"
 	    "\treadonly #o: ortdb;\n"
@@ -1837,23 +1836,60 @@ gen_ortctx(FILE *f, const struct config *cfg)
 	    "\t}\n\n", f) == EOF)
 		return 0;
 
+	if (!gen_comment(f, 1, COMMENT_JS,
+	    "Open a transaction with a unique identifier \"id\".  "
+	    "This is the preferred way of creating database "
+	    "transactions.  The transaction immediately enters "
+	    "unshared lock mode (single writer, readers allowed).  "
+	    "Throws an exception on database error."))
+		return 0;
 	if (fputs("\tdb_trans_open_immediate(id: number): void\n"
 	    "\t{\n"
 	    "\t\tthis.#o.db.exec(\'BEGIN TRANSACTION IMMEDIATE\');\n"
-	    "\t}\n\n"
-	    "\tdb_trans_open_deferred(id: number): void\n"
+	    "\t}\n\n", f) == EOF)
+		return 0;
+
+	if (!gen_comment(f, 1, COMMENT_JS,
+	    "Open a transaction with a unique identifier \"id\".  "
+	    "The transaction locks the database on first access "
+	    "with shared locks (no writes allowed, reads allowed) "
+	    "on queries and unshared locks (single writer, reads "
+	    "allowed) on modification.  Throws an exception on "
+	    "database error."))
+		return 0;
+	if (fputs("\tdb_trans_open_deferred(id: number): void\n"
 	    "\t{\n"
 	    "\t\tthis.#o.db.exec(\'BEGIN TRANSACTION DEFERRED\');\n"
-	    "\t}\n\n"
-	    "\tdb_trans_open_exclusive(id: number): void\n"
+	    "\t}\n\n", f) == EOF)
+		return 0;
+
+	if (!gen_comment(f, 1, COMMENT_JS,
+	    "Open a transaction with a unique identifier \"id\".  "
+	    "The transaction locks exclusively, preventing all "
+	    "other access.  Throws an exception on database error."))
+		return 0;
+	if (fputs("\tdb_trans_open_exclusive(id: number): void\n"
 	    "\t{\n"
 	    "\t\tthis.#o.db.exec(\'BEGIN TRANSACTION EXCLUSIVE\');\n"
-	    "\t}\n\n"
-	    "\tdb_trans_rollback(id: number): void\n"
+	    "\t}\n\n", f) == EOF)
+		return 0;
+
+	if (!gen_comment(f, 1, COMMENT_JS,
+	    "Roll-back a transaction opened by db_trans_open_xxxx() "
+	    "with identifier \"id\".  Throws an exception on "
+	    "database error."))
+		return 0;
+	if (fputs("\tdb_trans_rollback(id: number): void\n"
 	    "\t{\n"
 	    "\t\tthis.#o.db.exec(\'ROLLBACK TRANSACTION\');\n"
-	    "\t}\n\n"
-	    "\tdb_trans_commit(id: number): void\n"
+	    "\t}\n\n", f) == EOF)
+		return 0;
+
+	if (!gen_comment(f, 1, COMMENT_JS,
+	    "Commit a transaction opened by db_trans_open_xxxx() "
+	    "with identifier \"id\".  Throws an exception on "
+	    "database error."))
+	if (fputs("\tdb_trans_commit(id: number): void\n"
 	    "\t{\n"
 	    "\t\tthis.#o.db.exec(\'COMMIT TRANSACTION\');\n"
 	    "\t}\n", f) == EOF)

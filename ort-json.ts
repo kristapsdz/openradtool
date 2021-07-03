@@ -424,6 +424,8 @@ namespace ortJson {
 	export interface ortJsonConfigCallbacks {
 		strct?: (e: HTMLElement, strct: ortJson.strctObj,
 			arg?: any) => void;
+		query?: (e: HTMLElement, strct: ortJson.searchObj,
+			arg?: any) => void;
 		field?: (e: HTMLElement, strct: ortJson.fieldObj,
 			arg?: any) => void;
 		enm?: (e: HTMLElement, strct: ortJson.enumObj,
@@ -1703,7 +1705,7 @@ namespace ortJson {
 
 			this.fillUpdateClassObj(e, 'deletes', strct, strct.dq);
 			this.fillUpdateClassObj(e, 'updates', strct, strct.uq);
-			this.fillSearchClassObj(e, strct);
+			this.fillSearchClassObj(e, strct, cb, arg);
 
 			if (strct.insert !== null) {
 				this.showcl(e, 'config-insert-has');
@@ -2017,7 +2019,8 @@ namespace ortJson {
 		 *   hidden
 		 */
 		private fillSearchClassObj(e: HTMLElement, 
-			strct: ortJson.strctObj): void
+			strct: ortJson.strctObj, 
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			this.attrcl(e, 'config-queries-name-link', 'href', 
 				'#' + this.prefixes.strcts + 'strcts/' + 
@@ -2047,13 +2050,15 @@ namespace ortJson {
 					const cln: HTMLElement = <HTMLElement>
 						tmpl.cloneNode(true);
 					this.fillSearchObj(cln, 
-						strct.sq.named[keys[j]], j);
+						strct.sq.named[keys[j]], j, 
+						cb, arg);
 					list[i].appendChild(cln);
 				}
 				for (let j = 0; j < strct.sq.anon.length; j++) {
 					const cln: HTMLElement = <HTMLElement>
 						tmpl.cloneNode(true);
-					this.fillSearchObj(cln, strct.sq.anon[j], j);
+					this.fillSearchObj(cln, strct.sq.anon[j],
+						j, cb, arg);
 					list[i].appendChild(cln);
 				}
 				this.show(list[i]);
@@ -2133,7 +2138,8 @@ namespace ortJson {
 		 *   operation
 		 */
 		fillSearchObj(e: HTMLElement, query: ortJson.searchObj,
-			pos: number): void
+			pos: number, cb?: ortJson.ortJsonConfigCallbacks,
+			arg?: any): void
 		{
 			this.fillComment(e, 'query', query.doc);
 			if (query.name === null) {
@@ -2242,6 +2248,9 @@ namespace ortJson {
 				this.showcl(e, 'config-query-aggr-none');
 			}
 			this.fillRolemap(e, 'query', query.rolemap);
+			if (typeof cb !== 'undefined' &&
+			    typeof cb.query !== 'undefined')
+				cb.query(e, query, arg);
 		}
 
 		private fillOrds(e: HTMLElement, 

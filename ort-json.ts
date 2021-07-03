@@ -191,6 +191,7 @@ namespace ortJson {
 	export interface sentObj {
 		pos: posObj;
 		fname: string;
+		uname: string;
 		chain: string[];
 		op: sentObjOp;
 	}

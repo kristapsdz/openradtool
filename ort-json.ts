@@ -192,6 +192,7 @@ namespace ortJson {
 		pos: posObj;
 		fname: string;
 		uname: string;
+		field: fieldPtrObj;
 		chain: string[];
 		op: sentObjOp;
 	}

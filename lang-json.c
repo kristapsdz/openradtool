@@ -722,8 +722,10 @@ gen_sent(FILE *f, const struct sent *s)
 	if (!gen_chain(f, (const struct field **)s->chain, s->chainsz))
 		return 0;
 	return fprintf(f, " \"fname\": \"%s\", \"uname\": \"%s\", "
-		"\"op\": \"%s\" }", 
-		s->fname, s->uname, optypes[s->op]) > 0;
+		"\"field\": { \"strct\": \"%s\", \"field\": \"%s\" }, "
+		"\"op\": \"%s\" }", s->fname, s->uname, 
+		s->field->parent->name, s->field->name,
+		optypes[s->op]) > 0;
 }
 
 /*

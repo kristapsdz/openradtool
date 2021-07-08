@@ -578,7 +578,7 @@ gen_update(FILE *f, const struct config *cfg,
 	TAILQ_FOREACH(ref, &up->crq, entries)
 		if (!OPTYPE_ISUNARY(ref->op)) {
 			if (!gen_commentv(f, 1, ct,
-			    "@param v%zu %s (%s)", pos++, 
+			    "@param v%zu constraint %s (%s)", pos++, 
 			    ref->field->name, optypes[ref->op]))
 				return 0;
 			ct = COMMENT_JS_FRAG;

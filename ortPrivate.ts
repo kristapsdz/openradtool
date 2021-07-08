@@ -141,7 +141,7 @@
 		eq(other: Long|number): boolean
 		{
 			const v: Long = !Long.isLong(other) ?
-				new Long(<number>other) : <Long>other;
+				Long.fromNumber(<number>other) : <Long>other;
 
 			if (this.unsigned !== v.unsigned && 
 			    (this.high >>> 31) === 1 && 
@@ -395,9 +395,10 @@
 		}
 
 		/**
-		 * Attempt to convert from a Long, number, or string.
-		 * @return The Long representation of the value, or null on
-		 * conversion failure including undefined-ness.
+		 * Attempt to convert from a Long, number, or string.  Failure
+		 * to convert, whether by syntax, not being defined, or null,
+		 * will return null.
+		 * @return The value or null on failure.
 		 */
 		static fromValue(val: any, unsigned?: boolean): Long|null
 		{
@@ -415,10 +416,9 @@
 		}
 
 		/**
-		 * Attempt to convert from a Long, number, or string.
-		 * @return The Long representation of the value, null
-		 * on conversion failure, or undefined it it was passed
-		 * undefined.
+		 * Like fromValue(), except passing through on undefined values.
+		 * @return The value, null on failure, or undefined if not
+		 * defined.
 		 */
 		static fromValueUndef(val: any, unsigned?: boolean): Long|null|undefined
 		{
@@ -428,10 +428,11 @@
 		}
 
 		/**
-		 * @return The Long representation of the value.  If
-		 * NaN, returns zero or unsigned zero as applicable.
-		 * If negative and wanting unsigned, bound at zero.
-		 * Otherwise bound to a 64-bit integer size.
+		 * Convert from a number to the Long representation of the
+		 * value.  If NaN, returns zero or unsigned zero as applicable.
+		 * If negative and wanting unsigned, bound at zero.  Otherwise
+		 * bound to a 64-bit integer size.
+		 * @return The value.
 		 */
 		static fromNumber(value: number, unsigned?: boolean): Long
 		{
@@ -465,21 +466,22 @@
 		}
 
 		/**
-		 * @return The Long representation of the string or zero
-		 * if conversion failed.  This should only be used for
-		 * constant-value transformation that is *guaranteed*
-		 * will not fail.
+		 * Like fromString(), except returning failed conversions as a
+		 * zero value.
+		 * @return The value.
 		 */
-		static fromStringZero(str: string): Long
+		static fromStringZero(str: string, unsigned?: boolean): Long
 		{
-			const val: Long|null = Long.fromString(str);
+			const val: Long|null = Long.fromString(str, unsigned);
 			return val === null ? Long.ZERO : val;
 		}
 
 		/**
-		 * @return The Long representation of the string, which
-		 * may be an optional leading "-" followed by digits.
-		 * It does not accept NaN, Infinity, or other symbols.
+		 * Convert from a string representation of a number to a Long.
+		 * The string may have an optional leading "-" followed by
+		 * digits.  This does not accept NaN, Infinity, or other
+		 * symbols.
+		 * @return The value or null on failure.
 		 */
 		static fromString(str: string, unsigned?: boolean): Long | null
 		{

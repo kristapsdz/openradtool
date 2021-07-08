@@ -3,6 +3,22 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.13.4</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-07-08">2021-07-08</time>
+		</header>
+		<aside>
+			<p>
+				Considerably improve the documentation of the internal Long
+				implementation, which is a utility for the output of
+				<a href="ort-javascript.1.html">ort-javascript(1)</a> to convert
+				and manipulate 64-bit integers without necessarily having BigNum
+				support in the browser.  Also make some small fixes to the code.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.13.3</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-06-27">2021-06-27</time>

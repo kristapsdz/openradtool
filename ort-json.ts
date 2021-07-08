@@ -428,6 +428,8 @@ namespace ortJson {
 			arg?: any) => void;
 		query?: (e: HTMLElement, strct: ortJson.searchObj,
 			arg?: any) => void;
+		update?: (e: HTMLElement, strct: ortJson.updateObj,
+			arg?: any) => void;
 		field?: (e: HTMLElement, strct: ortJson.fieldObj,
 			arg?: any) => void;
 		enm?: (e: HTMLElement, strct: ortJson.enumObj,
@@ -1705,8 +1707,8 @@ namespace ortJson {
 				this.showcl(e, 'config-uniques-none');
 			}
 
-			this.fillUpdateClassObj(e, 'deletes', strct, strct.dq);
-			this.fillUpdateClassObj(e, 'updates', strct, strct.uq);
+			this.fillUpdateClassObj(e, 'deletes', strct, strct.dq, cb, arg);
+			this.fillUpdateClassObj(e, 'updates', strct, strct.uq, cb, arg);
 			this.fillSearchClassObj(e, strct, cb, arg);
 
 			if (strct.insert !== null) {
@@ -1821,7 +1823,8 @@ namespace ortJson {
 		 */
 		private fillUpdateClassObj(e: HTMLElement, 
 			type: 'updates'|'deletes', strct: ortJson.strctObj,
-			cls: ortJson.updateClassObj): void
+			cls: ortJson.updateClassObj,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			this.attrcl(e, 'config-' + type + '-name-link', 'href', 
 				'#' + this.prefixes.strcts + 'strcts/' + 
@@ -1851,14 +1854,14 @@ namespace ortJson {
 					const cln: HTMLElement = <HTMLElement>
 						tmpl.cloneNode(true);
 					this.fillUpdateObj(cln, type,
-						cls.named[keys[j]], j);
+						cls.named[keys[j]], j, cb, arg);
 					list[i].appendChild(cln);
 				}
 				for (let j = 0; j < cls.anon.length; j++) {
 					const cln: HTMLElement = <HTMLElement>
 						tmpl.cloneNode(true);
 					this.fillUpdateObj(cln, type,
-						cls.anon[j], j);
+						cls.anon[j], j, cb, arg);
 					list[i].appendChild(cln);
 				}
 				this.show(list[i]);
@@ -1911,7 +1914,8 @@ namespace ortJson {
 		 * - *config-uref-mod-value*: value set to the update modifier
 		 */
 		fillUpdateObj(e: HTMLElement, type: 'updates'|'deletes',
-			up: ortJson.updateObj, pos: number): void
+			up: ortJson.updateObj, pos: number,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
 		{
 			this.fillComment(e, 'update', up.doc);
 			if (up.name === null) {
@@ -1977,6 +1981,9 @@ namespace ortJson {
 					this.fillUrefs(list[i], up.mrq);
 			}
 			this.fillRolemap(e, 'update', up.rolemap);
+			if (typeof cb !== 'undefined' &&
+			    typeof cb.update !== 'undefined')
+				cb.update(e, up, arg);
 		}
 
 		private fillUrefs(e: HTMLElement, 

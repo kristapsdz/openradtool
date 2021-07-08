@@ -3,7 +3,7 @@
 	 * The JavaScript implementation of openradtool uses strings for numbers
 	 * because of the 64-bit problem: internally, openradtool uses 64-bit
 	 * integer numbers, but JavaScript has only 53 bits of precision for
-	 * integers.
+	 * integers, and 32 for bit-wise operations.
 	 * This class is a modified version of long.js fixed to base 10 and
 	 * converted to TypeScript.
 	 *
@@ -75,9 +75,10 @@
 		}
 
 		/**
-		 * Convert to a JavaScript number, losing precision and
-		 * possibly truncating with larger or smaller numbers.
-		 * @return The Long best-effort converted to a number.
+		 * Convert to a JavaScript number, losing precision
+		 * (from 64 to 53 bits) and thus possibly truncating
+		 * with larger or smaller numbers.
+		 * @return The Long converted to a number.
 		 */
 		toNumber(): number
 		{
@@ -90,7 +91,9 @@
 		};
 
 		/**
-		 * Assume this is a 32-bit integer and return that.
+		 * Similar to toNumber() except further reducing the
+		 * number to 32 bits of precision.
+		 * @return The Long converted to a number.
 		 */
 		toInt(): number
 		{
@@ -98,8 +101,9 @@
 		}
 
 		/**
-		 * @return Whether the value is strictly < 0.  This only applies
-		 * to signed numbers, else this is always false.
+		 * Test whether the value is strictly <0.  For unsigned
+		 * values, this is always false.
+		 * @return Whether the value is strictly <0.
 		 */
 		isNegative(): boolean
 		{
@@ -107,7 +111,8 @@
 		}
 
 		/**
-		 * @return Whether the value is zero, regardless of sign.
+		 * Test whether the value is zero, regardless of sign.
+		 * @return Whether the value is zero.
 		 */
 		isZero(): boolean
 		{
@@ -115,6 +120,8 @@
 		}
 
 		/**
+		 * Test whether the value is an odd number, regardless
+		 * of sign.
 		 * @return Whether the value is an odd number.
 		 */
 		isOdd(): boolean
@@ -123,11 +130,13 @@
 		}
 
 		/**
-		 * @return Whether the value equals the given value.  This is
-		 * according to the numerical value, not the bit pattern, so a
-		 * negative signed value and a positive signed value will be
-		 * the same even if having the same bit pattern.  The exception
-		 * here is zero, which is the same whether signed or not.
+		 * Test whether the value equals the given value.  This
+		 * is according to the numerical value, not the bit
+		 * pattern, so a negative signed value and a positive
+		 * signed value will be the same even if having the same
+		 * bit pattern.  The exception here is zero, which is
+		 * the same whether signed or not.
+		 * @return Whether the values are equal.
 		 */
 		eq(other: Long|number): boolean
 		{
@@ -143,7 +152,10 @@
 		}
 
 		/**
-		 * @return The negative of the value.
+		 * Negate a number (make it negative if positive,
+		 * positive if negative).  If zero, this converts to
+		 * zero of the other sign.
+		 * @return The negated value.
 		 */
 		neg(): Long
 		{
@@ -153,6 +165,8 @@
 		}
 
 		/**
+		 * The bit-wise NOT of the value.  This retains the sign
+		 * of the original.
 		 * @return The bit-wise NOT of the value.
 		 */
 		not(): Long
@@ -162,8 +176,9 @@
 		}
 
 		/**
-		 * @return The bit-wise AND of the value with the given value.
-		 * Sign is inherited from the source value.  
+		 * The bit-wise AND of the value with the argument.
+		 * This retains the sign of the original.
+		 * @return The bit-wise AND of the value and argument.
 		 */
 		and(other: Long|number): Long
 		{
@@ -175,9 +190,9 @@
 		}
 
 		/**
-		 * @return The bit-wise OR of the value with the given value.
-		 * Sign is inherited from the source value.  If the
-		 * parameterised value can't be parsed, returns zero.
+		 * The bit-wise OR of the value with the argument.
+		 * Sign is inherited from the source value.
+		 * @return The bit-wise OR of the value and argument.
 		 */
 		or(other: Long|number): Long 
 		{
@@ -189,9 +204,12 @@
 		}
 
 		/**
-		 * @return 0 if they are the same (or the number could not be
-		 * parsed), 1 if the this is greater, and -1 if the given one
-		 * is greater.
+		 * Compare the value with the argument and return their
+		 * sign comparison: 1 if the value is greater, -1 if
+		 * less, 0 if the same.  Zero is always the same as
+		 * zero, regardless the sign.
+		 * @return 0 if they are the same, 1 if the value is
+		 * greater, and -1 if the value is less.
 		 */
 		compare(other: Long|number): number
 		{
@@ -222,8 +240,12 @@
 		};
 
 		/**
-		 * @return The value left-shifted by the given number of bits.
-		 * Sign is inherited from the source value.
+		 * Left-shift the value by the given number of bits
+		 * (modulo 64).  Sign is inherited from the source
+		 * value.  The module means that shifting by 64 bits is
+		 * the same as zero, 65 the same as one, etc.  Shifting
+		 * by a negative number has undefined behaviour.
+		 * @return The left-shifted value.
 		 */
 		shl(numBits: Long|number): Long
 		{
@@ -245,7 +267,10 @@
 		}
 
 		/**
-		 * @return The value multiplied by the given value.
+		 * Arithmetic multiplication of the value to the argument.
+		 * Wrapping behaviour, including the identity at MAX_VALUE or
+		 * MIN_VALUE, is undefined.
+		 * @return The multiplied value.
 		 */
 		mul(tomul: Long|number): Long
 		{
@@ -255,11 +280,9 @@
 			if (this.isZero() || v.isZero())
 				return Long.ZERO;
 			if (this.eq(Long.MIN_VALUE))
-				return v.isOdd() ? Long.MIN_VALUE :
-				Long.ZERO;
+				return v.isOdd() ? Long.MIN_VALUE : Long.ZERO;
 			if (v.eq(Long.MIN_VALUE))
-				return this.isOdd() ? Long.MIN_VALUE :
-				Long.ZERO;
+				return this.isOdd() ? Long.MIN_VALUE : Long.ZERO;
 
 			if (this.isNegative()) {
 				if (v.isNegative())
@@ -315,7 +338,9 @@
 		}
 
 		/**
-		 * @return The difference of the value and the given value.
+		 * Alias for adding the negative of the argument to the
+		 * value.
+		 * @return The difference of the values.
 		 */
 		sub(tosub: Long|number): Long
 		{
@@ -325,7 +350,8 @@
 		};
 
 		/**
-		 * @return The sum of the value and the given value.
+		 * Add the argument to the value.
+		 * @return The addition of the values.
 		 */
 		add(toadd: Long|number): Long
 		{

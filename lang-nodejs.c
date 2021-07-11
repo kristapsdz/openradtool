@@ -1149,6 +1149,42 @@ gen_api(FILE *f, const struct config *cfg, const struct strct *p)
 }
 
 /*
+ * Generate an bitfield pseudo-enumeration.
+ * Return zero on failure, non-zero on success.
+ */
+static int
+gen_bitf(FILE *f, const struct bitf *p, size_t pos)
+{
+	const struct bitidx	*bi;
+
+	if (pos > 0 && fputc('\n', f) == EOF)
+		return 0;
+	if (!gen_comment(f, 1, COMMENT_JS, p->doc))
+		return 0;
+
+	if (fprintf(f, "\texport enum %s {\n", p->name) < 0)
+		return 0;
+
+	TAILQ_FOREACH(bi, &p->bq, entries) {
+		if (!gen_comment(f, 2, COMMENT_JS, bi->doc))
+			return 0;
+		if (fprintf(f, 
+		    "\t\tBITI_%s = \'%" PRId64 "\',\n"
+		    "\t\tBITF_%s = \'%" PRIu64 "\'", 
+		    bi->name, bi->value,
+		    bi->name, UINT64_C(1) << (uint64_t)bi->value) < 0)
+			return 0;
+		if (TAILQ_NEXT(bi, entries) != NULL)
+			if (fputc(',', f) == EOF)
+				return 0;
+		if (fputc('\n', f) == EOF)
+			return 0;
+	}
+
+	return fputs("\t}\n", f) != EOF;
+}
+
+/*
  * Generate an enumeration.
  * Return zero on failure, non-zero on success.
  */
@@ -1555,6 +1591,7 @@ gen_ortns(FILE *f, const struct config *cfg)
 {
 	const struct strct	*p;
 	const struct enm	*e;
+	const struct bitf	*b;
 	size_t			 i = 0;
 
 	if (fputc('\n', f) == EOF)
@@ -1568,6 +1605,9 @@ gen_ortns(FILE *f, const struct config *cfg)
 		return 0;
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		if (!gen_enm(f, e, i++))
+			return 0;
+	TAILQ_FOREACH(b, &cfg->bq, entries)
+		if (!gen_bitf(f, b, i++))
 			return 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		if (!gen_strct(f, p, i++))

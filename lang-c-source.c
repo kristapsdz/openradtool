@@ -2312,6 +2312,7 @@ gen_json_parse(FILE *f, const struct strct *p)
 			return 0;
 
 		switch (fd->type) {
+		case FTYPE_BITFIELD:
 		case FTYPE_DATE:
 		case FTYPE_ENUM:
 		case FTYPE_EPOCH:
@@ -2326,7 +2327,6 @@ gen_json_parse(FILE *f, const struct strct *p)
 				return 0;
 			break;
 		case FTYPE_BIT:
-		case FTYPE_BITFIELD:
 			if (fputs("\t\t\tif ((t[j+1].type != JSMN_STRING && "
 			    "t[j+1].type != JSMN_PRIMITIVE) ||\n"
 			    "\t\t\t    !isdigit((unsigned int)"

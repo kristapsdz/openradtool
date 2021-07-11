@@ -155,7 +155,7 @@ gen_bitfield(FILE *f, const struct bitf *b)
 			return 0;
 		if (!gen_upper(f, b->name))
 			return 0;
-		if (fprintf(f, "_%s = (1U << %" PRId64 "),\n", 
+		if (fprintf(f, "_%s = UINT64_C(1) << %" PRId64 ",\n", 
 		    bi->name, bi->value) < 0)
 			return 0;
 		if (bi->value > maxv)

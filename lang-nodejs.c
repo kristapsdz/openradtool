@@ -476,12 +476,30 @@ gen_insert(FILE *f, const struct strct *p)
 		    (fd->flags & FIELD_ROWID))
 			continue;
 
-		if (fd->type != FTYPE_PASSWORD) {
+		/* 
+		 * Passwords are special-cased below the switch and we
+		 * need to convert bitfields (individual bits and named
+		 * fields) into a signed representation else high bits
+		 * will trip range errors.
+		 */
+
+		switch (fd->type) {
+		case FTYPE_PASSWORD:
+			break;
+		case FTYPE_BIT:
+		case FTYPE_BITFIELD:
+			if (fprintf(f, "\t\tparms.push"
+			    "(BigInt.asIntN(64, v%zu));\n", pos++) < 0)
+				return 0;
+			continue;
+		default:
 			if (fprintf(f, 
 			    "\t\tparms.push(v%zu);\n", pos++) < 0)
 				return 0;
 			continue;
 		}
+
+		/* Handle password. */
 
 		if (fd->flags & FIELD_NULL) {
 			if (fprintf(f, "\t\tif (v%zu === null)\n"
@@ -710,13 +728,31 @@ gen_update(FILE *f, const struct config *cfg,
 
 	pos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
-		if (ref->field->type != FTYPE_PASSWORD ||
-		    ref->mod == MODTYPE_STRSET) {
+		/* 
+		 * Passwords are special-cased below the switch (unless
+		 * they're string-setting) and we need to convert
+		 * bitfields (individual bits and named fields) into a
+		 * signed representation: unsigned can exceed range.
+		 */
+
+		switch (ref->field->type) {
+		case FTYPE_BIT:
+		case FTYPE_BITFIELD:
+			if (fprintf(f, "\t\tparms.push"
+			    "(BigInt.asIntN(64, v%zu));\n", pos++) < 0)
+				return 0;
+			continue;
+		case FTYPE_PASSWORD:
+			if (ref->mod != MODTYPE_STRSET)
+				break;
+			/* FALLTHROUGH */
+		default:
 			if (fprintf(f, 
 			    "\t\tparms.push(v%zu);\n", pos++) < 0)
 				return 0;
 			continue;
 		}
+
 		if (ref->field->flags & FIELD_NULL) {
 			if (fprintf(f, "\t\tif (v%zu === null)\n"
 			    "\t\t\tparms.push(null);\n"
@@ -738,8 +774,19 @@ gen_update(FILE *f, const struct config *cfg,
 		assert(ref->field->type != FTYPE_STRUCT);
 		if (OPTYPE_ISUNARY(ref->op))
 			continue;
-		if (fprintf(f, "\t\tparms.push(v%zu);\n", pos++) < 0)
-			return 0;
+		switch (ref->field->type) {
+		case FTYPE_BIT:
+		case FTYPE_BITFIELD:
+			if (fprintf(f, "\t\tparms.push"
+			    "(BigInt.asIntN(64, v%zu));\n", pos++) < 0)
+				return 0;
+			break;
+		default:
+			if (fprintf(f, 
+			    "\t\tparms.push(v%zu);\n", pos++) < 0)
+				return 0;
+			continue;
+		}
 	}
 
 	if (up->type == UP_MODIFY) {
@@ -1006,14 +1053,33 @@ gen_query(FILE *f, const struct config *cfg,
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
 		if (OPTYPE_ISUNARY(sent->op))
 			continue;
-		if (sent->field->type != FTYPE_PASSWORD ||
-		    (sent->op == OPTYPE_STREQ ||
-		     sent->op == OPTYPE_STRNEQ)) {
+
+		/* 
+		 * Passwords are special-cased below the switch (unless
+		 * they're streq/strneq) and we need to convert
+		 * bitfields (individual bits and named fields) into a
+		 * signed representation: unsigned can exceed range.
+		 */
+
+		switch (sent->field->type) {
+		case FTYPE_BIT:
+		case FTYPE_BITFIELD:
+			if (fprintf(f, "\t\tparms.push"
+			    "(BigInt.asIntN(64, v%zu));\n", pos++) < 0)
+				return 0;
+			continue;
+		case FTYPE_PASSWORD:
+			if (sent->op != OPTYPE_STREQ &&
+			    sent->op != OPTYPE_STRNEQ)
+				break;
+			/* FALLTHROUGH */
+		default:
 			if (fprintf(f, 
 			    "\t\tparms.push(v%zu);\n", pos++) < 0)
 				return 0;
 			continue;
 		}
+
 		if (sent->field->flags & FIELD_NULL) {
 			if (fprintf(f, "\t\tif (v%zu === null)\n"
 			    "\t\t\tparms.push(null);\n"

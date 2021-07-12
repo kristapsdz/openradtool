@@ -1,0 +1,12 @@
+bits bits {
+	item lo 0;
+	item hi 63;
+};
+
+struct foo {
+	field foo bits bits;
+	field id int rowid;
+	insert;
+	search foo and: name bybits limit 1;
+	update foo: foo and: name bybits;
+};

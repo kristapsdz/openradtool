@@ -61,6 +61,9 @@ namespace ortJson {
 
 	/**
 	 * Same as "struct bitidx" in ort(3).
+	 * The "mask" extension is the 64-bit number produced by the
+	 * value.
+	 * It is informational.
 	 */
 	export interface bitIndexObj {
 		parent: string;
@@ -68,6 +71,7 @@ namespace ortJson {
 		pos: posObj;
 		doc: string|null;
 		value: string|number;
+		mask: string|number;
 		labels: labelSet;
 	}
 
@@ -1414,6 +1418,7 @@ namespace ortJson {
 		 * - *config-bitindex-name-value*: *value* set to name
 		 * - *config-bitindex-value*: set text to item value
 		 * - *config-bitindex-value-value*: *value* set to item value
+		 * - *config-bitindex-mask*: set text to item mask
 		 *
 		 * For documentation:
 		 * - see fillComment()
@@ -1434,6 +1439,8 @@ namespace ortJson {
 			this.replcl(e, 'config-bitindex-name', biti.name);
 			this.replcl(e, 'config-bitindex-value', 
 				biti.value.toString());
+			this.replcl(e, 'config-bitindex-mask', 
+				biti.mask.toString());
 			this.attrcl(e, 'config-bitindex-name-value', 
 				'value', biti.name);
 			this.attrcl(e, 'config-bitindex-value-value', 

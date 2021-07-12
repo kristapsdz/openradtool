@@ -405,8 +405,10 @@ gen_bitidx(FILE *f, const struct bitidx *bi, const struct config *cfg)
 		return 0;
 	if (!gen_labelq(f, "labels", &bi->labels, cfg))
 		return 0;
-	return fprintf(f, " \"value\": "
-		"\"%" PRId64 "\" }", bi->value) > 0;
+	return fprintf(f, " \"mask\": \"%" PRIu64 "\", \"value\": "
+		"\"%" PRId64 "\" }", 
+		UINT64_C(1) << (uint64_t)bi->value, 
+		bi->value) >= 0;
 }
 
 /*

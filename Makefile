@@ -248,7 +248,7 @@ IMAGES		 = index.svg \
 		   index-fig6.svg \
 		   index-fig7.svg \
 		   index-fig8.svg
-NODE_TYPES	 = $(LIBDIR)/node_modules/@types
+TS_NODE		 = node_modules/.bin/ts-node
 
 # Only needed for test, not built by default.
 LIBS_SQLBOX	!= pkg-config --libs sqlbox 2>/dev/null || echo "-lsqlbox -lsqlite3"
@@ -892,44 +892,44 @@ regress: all
 			echo "pass" ; \
 		done ; \
 	fi ; \
-	if [ -f "node_modules/.bin/ts-node" ]; then \
+	if [ -f "$(TS_NODE)" ]; then \
 		echo "=== ort-javascript internal tests === " ; \
 		set -e ; \
-		node_modules/.bin/ts-node --skip-project \
+		$(TS_NODE) --skip-project \
 			regress/javascript/internal/regress-runner.ts ; \
 		set +e ; \
 	else \
 		echo "!!! skipping ort-javascript internal tests !!! " ; \
 	fi ; \
-	if [ -f "node_modules/.bin/ts-node" ]; then \
+	if [ -f "$(TS_NODE)" ]; then \
 		echo "=== ort-nodejs validation tests === " ; \
-		( ./ort-nodejs -v -Nd regress/nodejs/validation.ort ; \
-		  cat regress/nodejs/regress-valid.ts ; ) > \
-		  regress/nodejs/validation.ts ; \
-		printf "ts-node: regress/nodejs/validation.ts... " ; \
-		node_modules/.bin/ts-node --skip-project -O '{"target": "es2015"}' \
-			regress/nodejs/validation.ts ; \
-		rm -f regress/nodejs/validation.ts ; \
+		( ./ort-nodejs -v -Nd regress/nodejs/valid/all.ort ; \
+		  cat regress/nodejs/valid/regress-runner.ts ; ) > \
+		  regress/nodejs/valid/all.ts ; \
+		printf "ts-node: regress/nodejs/valid/all.ts... " ; \
+		$(TS_NODE) --skip-project -O '{"target": "es2015"}' \
+			regress/nodejs/valid/all.ts ; \
+		rm -f regress/nodejs/valid/all.ts ; \
 		[ $$? -eq 0 ] || { echo "fail" ; exit 1 ; } ; \
 		echo "pass" ; \
 	else \
 		echo "!!! skipping ort-nodejs validation tests !!! " ; \
 	fi ; \
-	if [ -f "node_modules/.bin/ts-node" ]; then \
+	if [ -f "$(TS_NODE)" ]; then \
 		echo "=== ort-json reformat tests === " ; \
 		cat ort-json.ts regress/json/regress-runner.ts > $$tmp.ts ; \
 		set -e ; \
-		node_modules/.bin/ts-node --skip-project $$tmp.ts ; \
+		$(TS_NODE) --skip-project $$tmp.ts ; \
 		set +e ; \
 		rm -f $$tmp.ts ; \
 	else \
 		echo "!!! skipping ort-json reformat run tests !!! " ; \
 	fi ; \
-	if [ -f "node_modules/.bin/ts-node" ]; then \
+	if [ -f "$(TS_NODE)" ]; then \
 		echo "=== ort-nodejs compile tests === " ; \
 		set -e ; \
-		node_modules/.bin/ts-node --skip-project \
-			regress/nodejs/regress-runner.ts ; \
+		$(TS_NODE) --skip-project \
+			regress/nodejs/compile-runner.ts ; \
 		set +e ; \
 	else \
 		echo "!!! skipping ort-nodejs compile tests !!! " ; \
@@ -946,10 +946,10 @@ regress: all
 		fi ; \
 		echo "pass" ; \
 	done ; \
-	if [ -f "node_modules/.bin/ts-node" ]; then \
+	if [ -f "$(TS_NODE)" ]; then \
 		echo "=== ort-javascript run tests === " ; \
 		set -e ; \
-		node_modules/.bin/ts-node --skip-project \
+		$(TS_NODE) --skip-project \
 			regress/javascript/regress-runner.ts ; \
 		set +e ; \
 	else \

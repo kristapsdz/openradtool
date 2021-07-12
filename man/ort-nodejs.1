@@ -333,17 +333,27 @@ applications using the
 .Xr ort-javascript 1
 tool.
 .Ss Data structures
-Assuming the exemplar structure
-.Qq foo ,
-the data in
-.Sx Data access
-may be manipulated with the
-.Vt ortns.fooData obj
-object interface in
-.Vt ortns.foo .
-All names (field names, structures, enumerations, etc.) are expressed in
-lowercase unless as explicitly noted.
-This consists of all fields in the structure with types mapped as follows:
+There are three data structures produced by
+.Nm :
+.Cm struct
+interfaces and enumerations for both
+.Cm bitfield
+and
+.Cm enum .
+.Pp
+Enumerations use the
+.Vt string
+type for all of their items.
+Enumerations for bitfields have two members per item: one for the bit
+index, one for the produced mask.
+These are prefixed by
+.Qq BITI
+and
+.Qq BITF ,
+respectively.
+.Pp
+Interfaces consist of all fields in their reference structure with types
+mapped as follows:
 .Bl -column -offset indent "password " "Buffer "
 .It Cm bit Ta BigInt
 .It Cm date Ta BigInt
@@ -357,15 +367,19 @@ This consists of all fields in the structure with types mapped as follows:
 .It Cm bits Ta BigInt
 .El
 .Pp
-Structures are mapped to their interfaces, such as
+Structure fields are mapped to their interfaces, such as
 .Va ortns.barData
 for a structure named
 .Qq bar .
-Enumerations are mapped to enumerations defined similarly, such as
+.Pp
+Enumerations are mapped to an enumeration defined similarly: such as
 .Va ortns.baz
 for an enumeration named
 .Qq baz .
 The enumeration values are all string literals of their numeric value.
+Since bitfields are combinations of bits in their respective
+enumerations, they are represented by BigInt and not the enumeration
+type.
 .Pp
 If a field is marked as
 .Cm null ,

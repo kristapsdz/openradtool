@@ -50,8 +50,11 @@ main(int argc, char *argv[])
 		err(1, "pledge");
 #endif
 
-	while ((c = getopt(argc, argv, "N:v")) != -1)
+	while ((c = getopt(argc, argv, "eN:v")) != -1)
 		switch (c) {
+		case 'e':
+			args.flags |= ORT_LANG_NODEJS_NOMODULE;
+			break;
 		case 'N':
 			if (strchr(optarg, 'b') != NULL)
 				args.flags &= ~ORT_LANG_NODEJS_CORE;
@@ -104,7 +107,7 @@ out:
 	free(confs);
 	return !rc;
 usage:
-	fprintf(stderr, "usage: %s [-v] [-N[b|d] [config...]\n", 
+	fprintf(stderr, "usage: %s [-ev] [-N[b|d] [config...]\n", 
 		getprogname());
 	return 1;
 }

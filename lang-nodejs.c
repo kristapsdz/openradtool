@@ -1544,7 +1544,8 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 }
 
 static int
-gen_ortns_express_valids(FILE *f, const struct config *cfg)
+gen_ortns_express_valids(const struct ort_lang_nodejs *args,
+	FILE *f, const struct config *cfg)
 {
 	const struct strct	*st;
 	const struct field	*fd;
@@ -1553,8 +1554,11 @@ gen_ortns_express_valids(FILE *f, const struct config *cfg)
 		return 0;
 	if (!gen_comment(f, 0, COMMENT_JS, "Namespace for validation."))
 		return 0;
+	if (!(args->flags & ORT_LANG_NODEJS_NOMODULE) &&
+	    fputs("export ", f) == EOF)
+		return 0;
 	if (fputs
-	    ("export namespace ortvalid {\n"
+	    ("namespace ortvalid {\n"
 	     "\texport interface ortValidType {\n"
 	     "\t\t[key: string]: (value?: any) => any;\n"
 	     "\t}\n"
@@ -1587,7 +1591,8 @@ gen_ortns_express_valids(FILE *f, const struct config *cfg)
  * Return zero on failure, non-zero on success.
  */
 static int
-gen_ortns(FILE *f, const struct config *cfg)
+gen_ortns(const struct ort_lang_nodejs *args,
+	FILE *f, const struct config *cfg)
 {
 	const struct strct	*p;
 	const struct enm	*e;
@@ -1601,7 +1606,10 @@ gen_ortns(FILE *f, const struct config *cfg)
 	    "classes.  The interfaces are for the data itself, "
 	    "while the classes manage roles and metadata."))
 		return 0;
-	if (fputs("export namespace ortns {\n", f) == EOF)
+	if (!(args->flags & ORT_LANG_NODEJS_NOMODULE) &&
+	    fputs("export ", f) == EOF)
+		return 0;
+	if (fputs("namespace ortns {\n", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		if (!gen_enm(f, e, i++))
@@ -1622,7 +1630,7 @@ gen_ortns(FILE *f, const struct config *cfg)
  * Return zero on failure, non-zero on success.
  */
 static int
-gen_ortdb(FILE *f)
+gen_ortdb(const struct ort_lang_nodejs *args, FILE *f)
 {
 
 	if (fputc('\n', f) == EOF)
@@ -1632,7 +1640,10 @@ gen_ortdb(FILE *f)
 	    "Only one of these should exist per running node.js "
 	    "server."))
 		return 0;
-	if (fputs("export class ortdb {\n"
+	if (!(args->flags & ORT_LANG_NODEJS_NOMODULE) &&
+	    fputs("export ", f) == EOF)
+		return 0;
+	if (fputs("class ortdb {\n"
 	    "\tdb: Database.Database;\n", f) == EOF)
 		return 0;
 	if (!gen_comment(f, 1, COMMENT_JS,
@@ -1825,7 +1836,8 @@ gen_ortctx_dbrole(FILE *f, const struct config *cfg)
  * Return zero on failure, non-zero on success.
  */
 static int
-gen_ortctx(FILE *f, const struct config *cfg)
+gen_ortctx(const struct ort_lang_nodejs *args,
+	FILE *f, const struct config *cfg)
 {
 	const struct strct	*p;
 
@@ -1867,7 +1879,10 @@ gen_ortctx(FILE *f, const struct config *cfg)
 	    "single \'request\', such as a request for a web "
 	    "application."))
 		return 0;
-	if (fputs("export class ortctx {\n"
+	if (!(args->flags & ORT_LANG_NODEJS_NOMODULE) &&
+	    fputs("export ", f) == EOF)
+		return 0;
+	if (fputs("class ortctx {\n"
 	    "\t#role: string = 'default';\n"
 	    "\treadonly #o: ortdb;\n"
 	    "\n"
@@ -1964,26 +1979,28 @@ ort_lang_nodejs(const struct ort_lang_nodejs *args,
 		if (fputc('\n', f) == EOF)
 			return 0;
 
-	if ((args->flags & ORT_LANG_NODEJS_DB) &&
-	    fputs("import bcrypt from 'bcrypt';\n"
-	    "import Database from 'better-sqlite3';\n", f) == EOF)
-		return 0;
-	if ((args->flags & ORT_LANG_NODEJS_VALID) &&
-	    fputs("import validator from 'validator';\n", f) == EOF)
-		return 0;
+	if (!(args->flags & ORT_LANG_NODEJS_NOMODULE)) {
+		if ((args->flags & ORT_LANG_NODEJS_DB) &&
+		    fputs("import bcrypt from 'bcrypt';\n"
+		    "import Database from 'better-sqlite3';\n", f) == EOF)
+			return 0;
+		if ((args->flags & ORT_LANG_NODEJS_VALID) &&
+		    fputs("import validator from 'validator';\n", f) == EOF)
+			return 0;
+	}
 
 	if ((args->flags & ORT_LANG_NODEJS_CORE) &&
-	    !gen_ortns(f, cfg))
+	    !gen_ortns(args, f, cfg))
 		return 0;
 
 	if ((args->flags & ORT_LANG_NODEJS_VALID) &&
-	    !gen_ortns_express_valids(f, cfg))
+	    !gen_ortns_express_valids(args, f, cfg))
 		return 0;
 
 	if ((args->flags & ORT_LANG_NODEJS_DB)) {
-		if (!gen_ortdb(f))
+		if (!gen_ortdb(args, f))
 			return 0;
-		if (!gen_ortctx(f, cfg))
+		if (!gen_ortctx(args, f, cfg))
 			return 0;
 		if (fputc('\n', f) == EOF)
 			return 0;
@@ -1994,8 +2011,11 @@ ort_lang_nodejs(const struct ort_lang_nodejs *args,
 		    "sequences of operations. Throws an exception on "
 		    "database error."))
 			return 0;
+		if (!(args->flags & ORT_LANG_NODEJS_NOMODULE) &&
+		    fputs("export ", f) == EOF)
+			return 0;
 		if (fputs
-		    ("export function ort(dbname: string): ortdb\n"
+		    ("function ort(dbname: string): ortdb\n"
 		     "{\n"
 		     "\treturn new ortdb(dbname);\n"
 		     "}\n", f) == EOF)

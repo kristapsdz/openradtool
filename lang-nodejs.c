@@ -1632,10 +1632,30 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 		     "\t\t\t\treturn null;\n"
 		     "\t\t\t}\n", f) == EOF)
 			return 0;
-		if (fd->type == FTYPE_BIT && fputs
-		    ("\t\t\tif (nv < BigInt(0) || nv > BigInt(64))\n"
-		     "\t\t\t\treturn null;\n", f) == EOF)
-			return 0;
+		
+		/*
+		 * Bitfields need to be clamped into signed integers,
+		 * but can be passed as unsigned.  Integers need to be
+		 * checked for boundaries, and bits are 0--63.
+		 */
+
+		if (fd->type == FTYPE_BITFIELD) {
+		       if (fputs
+			   ("\t\t\tif (nv < minInt || nv > maxUint)\n" 
+			    "\t\t\t\treturn null;\n"
+			    "\t\t\tnv = BigInt.asIntN(64, nv);\n", f) == EOF)
+			       return 0;
+		} else if (fd->type != FTYPE_BIT) {
+		       if (fputs
+			   ("\t\t\tif (nv < minInt || nv > maxInt)\n" 
+			    "\t\t\t\treturn null;\n", f) == EOF)
+			       return 0;
+		} else {
+		       if (fputs
+			   ("\t\t\tif (nv < BigInt(0) || nv > BigInt(64))\n"
+			    "\t\t\t\treturn null;\n", f) == EOF)
+			       return 0;
+		}
 		break;
 	}
 
@@ -1665,6 +1685,10 @@ gen_ortns_express_valids(const struct ort_lang_nodejs *args,
 		return 0;
 	if (fputs
 	    ("namespace ortvalid {\n"
+	     "\tconst minInt: BigInt = BigInt('-9223372036854775808');\n"
+	     "\tconst maxInt: BigInt = BigInt('9223372036854775807');\n"
+	     "\tconst maxUint: BigInt = BigInt('18446744073709551615');\n"
+	     "\n"
 	     "\texport interface ortValidType {\n"
 	     "\t\t[key: string]: (value?: any) => any;\n"
 	     "\t}\n"

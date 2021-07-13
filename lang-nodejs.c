@@ -1675,6 +1675,7 @@ gen_ortns_express_valids(const struct ort_lang_nodejs *args,
 {
 	const struct strct	*st;
 	const struct field	*fd;
+	int			 c;
 
 	if (fputc('\n', f) == EOF)
 		return 0;
@@ -1689,11 +1690,46 @@ gen_ortns_express_valids(const struct ort_lang_nodejs *args,
 	     "\tconst maxInt: BigInt = BigInt('9223372036854775807');\n"
 	     "\tconst maxUint: BigInt = BigInt('18446744073709551615');\n"
 	     "\n"
-	     "\texport interface ortValidType {\n"
-	     "\t\t[key: string]: (value?: any) => any;\n"
-	     "\t}\n"
-	     "\n"
-	     "\texport const ortValids: ortValidType = {\n", f) == EOF)
+	     "\texport interface ortValidType {\n", f) == EOF)
+		return 0;
+
+	TAILQ_FOREACH(st, &cfg->sq, entries)
+		TAILQ_FOREACH(fd, &st->fq, entries) {
+			if (fd->type == FTYPE_STRUCT)
+				continue;
+			if (fprintf(f, "\t\t'%s-%s': (v?: any) => ", 
+			    st->name, fd->name) < 0)
+				return 0;
+			switch (fd->type) {
+			case FTYPE_BLOB:
+				c = fputs("any;\n", f) != EOF;
+				break;
+			case FTYPE_ENUM:
+				c = fprintf(f, "%s|null;\n", 
+					fd->enm->name) >= 0;
+				break;
+			default:
+				c = fprintf(f, "%s|null;\n", 
+					ftypes[fd->type]) >= 0;
+				break;
+			}
+			if (!c)
+				return 0;
+		}
+	if (fputs("\t}\n\n", f) == EOF)
+		return 0;
+
+	if (!gen_comment(f, 1, COMMENT_JS,
+	    "Validator routines for each field.\n"
+	    "These all test the input and return the validated "
+	    "output or null on failure.\n"
+	    "Validated output may be different from input, not just "
+	    "in terms of type (e.g., the opaque input value being "
+	    "returned as a BigInt), but reformatted like an e-mail "
+	    "address having white-space stripped."))
+		return 0;
+	if (fputs
+	    ("\texport const ortValids: ortValidType = {\n", f) == EOF)
 		return 0;
 
 	TAILQ_FOREACH(st, &cfg->sq, entries) {

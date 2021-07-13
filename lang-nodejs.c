@@ -488,9 +488,19 @@ gen_insert(FILE *f, const struct strct *p)
 			break;
 		case FTYPE_BIT:
 		case FTYPE_BITFIELD:
-			if (fprintf(f, "\t\tparms.push"
-			    "(BigInt.asIntN(64, v%zu));\n", pos++) < 0)
-				return 0;
+			if (fd->flags & FIELD_NULL) {
+				if (fprintf(f, "\t\tparms.push"
+				    "(v%zu === null ? null : "
+				    "BigInt.asIntN(64, v%zu));\n",
+				    pos, pos) < 0)
+					return 0;
+			} else
+				if (fprintf(f, 
+				    "\t\tparms.push"
+				    "(BigInt.asIntN(64, v%zu));\n", 
+				    pos) < 0)
+					return 0;
+			pos++;
 			continue;
 		default:
 			if (fprintf(f, 
@@ -738,9 +748,19 @@ gen_update(FILE *f, const struct config *cfg,
 		switch (ref->field->type) {
 		case FTYPE_BIT:
 		case FTYPE_BITFIELD:
-			if (fprintf(f, "\t\tparms.push"
-			    "(BigInt.asIntN(64, v%zu));\n", pos++) < 0)
-				return 0;
+			if (ref->field->flags & FIELD_NULL) {
+				if (fprintf(f, "\t\tparms.push"
+				    "(v%zu === null ? null : "
+				    "BigInt.asIntN(64, v%zu));\n",
+				    pos, pos) < 0)
+					return 0;
+			} else
+				if (fprintf(f, 
+				    "\t\tparms.push"
+				    "(BigInt.asIntN(64, v%zu));\n", 
+				    pos) < 0)
+					return 0;
+			pos++;
 			continue;
 		case FTYPE_PASSWORD:
 			if (ref->mod != MODTYPE_STRSET)
@@ -777,9 +797,19 @@ gen_update(FILE *f, const struct config *cfg,
 		switch (ref->field->type) {
 		case FTYPE_BIT:
 		case FTYPE_BITFIELD:
-			if (fprintf(f, "\t\tparms.push"
-			    "(BigInt.asIntN(64, v%zu));\n", pos++) < 0)
-				return 0;
+			if (ref->field->flags & FIELD_NULL) {
+				if (fprintf(f, "\t\tparms.push"
+				    "(v%zu === null ? null : "
+				    "BigInt.asIntN(64, v%zu));\n",
+				    pos, pos) < 0)
+					return 0;
+			} else
+				if (fprintf(f, 
+				    "\t\tparms.push"
+				    "(BigInt.asIntN(64, v%zu));\n", 
+				    pos) < 0)
+					return 0;
+			pos++;
 			break;
 		default:
 			if (fprintf(f, 
@@ -1064,9 +1094,19 @@ gen_query(FILE *f, const struct config *cfg,
 		switch (sent->field->type) {
 		case FTYPE_BIT:
 		case FTYPE_BITFIELD:
-			if (fprintf(f, "\t\tparms.push"
-			    "(BigInt.asIntN(64, v%zu));\n", pos++) < 0)
-				return 0;
+			if (sent->field->flags & FIELD_NULL) {
+				if (fprintf(f, "\t\tparms.push"
+				    "(v%zu === null ? null : "
+				    "BigInt.asIntN(64, v%zu));\n",
+				    pos, pos) < 0)
+					return 0;
+			} else
+				if (fprintf(f, 
+				    "\t\tparms.push"
+				    "(BigInt.asIntN(64, v%zu));\n", 
+				    pos) < 0)
+					return 0;
+			pos++;
 			continue;
 		case FTYPE_PASSWORD:
 			if (sent->op != OPTYPE_STREQ &&

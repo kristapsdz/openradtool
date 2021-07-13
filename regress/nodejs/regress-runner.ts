@@ -9,6 +9,7 @@ const fs = require('fs');
 const { execFileSync, spawnSync } = require('child_process');
 const bcrypt = require('bcrypt');
 const Database = require('better-sqlite3');
+const validator = require('validator');
 
 const tmpdb: string = '/tmp/regress.db';
 const basedir: string = 'regress/nodejs';
@@ -57,7 +58,7 @@ for (i = 0; i < files.length; i++) {
 
 	/* Run ort-nodejs on ort(5) configuration, catch errors. */
 
-	const nodejs = spawnSync('./ort-nodejs', ['-e', ortname]);
+	const nodejs = spawnSync('./ort-nodejs', ['-v', '-e', ortname]);
 	if (nodejs.status !== null && nodejs.status !== 0) {
 		console.log('ts-node: ' + ortname + 
 			'... fail (ort-nodejs did not execute)');
@@ -102,9 +103,9 @@ for (i = 0; i < files.length; i++) {
 
 	try {
 		const func: Function = new Function
-			('bcrypt', 'Database', 'dbfile', 
+			('validator', 'bcrypt', 'Database', 'dbfile', 
 			 output.outputText);
-		result = func(bcrypt, Database, tmpdb);
+		result = func(validator, bcrypt, Database, tmpdb);
 	} catch (error) {
 		console.log('ts-node: ' + ortname + '... fail');
 		const cat = spawnSync('cat', ['-n', '-'], {

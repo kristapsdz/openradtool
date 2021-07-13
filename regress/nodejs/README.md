@@ -1,5 +1,4 @@
-Test syntax of files the parent directory by passing them from
-ort-nodejs(1) into the transpiler.
+compile-runner.ts: tests syntax of files the parent directory by passing
+them from ort-nodejs(1) into the transpiler.
 
-To save on the tremendous time taken to start up Node, this occurs
-within regress-runner.ts, which does this all within a Node instance.
+regress-runner.ts: spins up a full Nodejs application for testing.

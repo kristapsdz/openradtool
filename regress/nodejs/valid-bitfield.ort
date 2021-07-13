@@ -1,0 +1,10 @@
+bits baz {
+	item a 1;
+	item b 2;
+	item c 63;
+};
+
+struct foo {
+	field bt bits baz;
+	field id int rowid;
+};

@@ -79,7 +79,7 @@ for (i = 0; i < files.length; i++) {
 			noUnusedLocals: true,
 			noUnusedParameters: true,
 			strict: true,
-			target: 'es6',
+			target: 'esnext',
 		},
 		reportDiagnostics: true,
 	});

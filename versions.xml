@@ -3,6 +3,28 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.13.5</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-07-12">2021-07-12</time>
+		</header>
+		<aside>
+			<p>
+				Export bitfields as enumerations in
+				<a href="ort-nodejs.1.html">ort-nodejs(1)</a>.
+				This makes the Node.js output similar to the C output.  While here,
+				perform various cleanups to the documentation.
+			</p>
+			<p>
+				Add more validation for integer types in
+				<a href="ort-nodejs.1.html">ort-nodejs(1)</a> validator routines.
+				Also make sure that high-value bit-fields (e.g., all bits set)
+				aren't discarded by the SQLite3 module with range errors: properly
+				fix them into their signed format before passing into the database.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.13.4</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-07-08">2021-07-08</time>

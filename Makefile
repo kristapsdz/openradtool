@@ -902,20 +902,6 @@ regress: all
 		echo "!!! skipping ort-javascript internal tests !!! " ; \
 	fi ; \
 	if [ -f "$(TS_NODE)" ]; then \
-		echo "=== ort-nodejs validation tests === " ; \
-		( ./ort-nodejs -v -Nd regress/nodejs/valid/all.ort ; \
-		  cat regress/nodejs/valid/regress-runner.ts ; ) > \
-		  regress/nodejs/valid/all.ts ; \
-		printf "ts-node: regress/nodejs/valid/all.ts... " ; \
-		$(TS_NODE) --skip-project -O '{"target": "es2015"}' \
-			regress/nodejs/valid/all.ts ; \
-		rm -f regress/nodejs/valid/all.ts ; \
-		[ $$? -eq 0 ] || { echo "fail" ; exit 1 ; } ; \
-		echo "pass" ; \
-	else \
-		echo "!!! skipping ort-nodejs validation tests !!! " ; \
-	fi ; \
-	if [ -f "$(TS_NODE)" ]; then \
 		echo "=== ort-json reformat tests === " ; \
 		cat ort-json.ts regress/json/regress-runner.ts > $$tmp.ts ; \
 		set -e ; \

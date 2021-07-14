@@ -1551,7 +1551,7 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 
 	switch (fd->type) {
 	case FTYPE_BLOB:
-		if (fputs("\t\t\treturn v;\n", f) == EOF)
+		if (fputs("\t\t\treturn Buffer.from(v);\n", f) == EOF)
 			return 0;
 		return 1;
 	case FTYPE_TEXT:
@@ -1701,9 +1701,6 @@ gen_ortns_express_valids(const struct ort_lang_nodejs *args,
 			    st->name, fd->name) < 0)
 				return 0;
 			switch (fd->type) {
-			case FTYPE_BLOB:
-				c = fputs("any;\n", f) != EOF;
-				break;
 			case FTYPE_ENUM:
 				c = fprintf(f, "%s|null;\n", 
 					fd->enm->name) >= 0;

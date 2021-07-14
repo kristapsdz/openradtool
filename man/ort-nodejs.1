@@ -233,7 +233,7 @@ in the nested structure
 .Qq yy
 with operation
 .Qq op2 .
-.It Fn "db_foo_insert" "ARGS" Ns No : BigInt
+.It Fn "db_foo_insert" "ARGS" Ns No : bigint
 Insert a row and return its identifier or -1 on constraint failure.
 This accepts all native fields
 .Fa ARGS
@@ -266,15 +266,15 @@ and does not have a return value.
 Like
 .Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
 but invoking a function callback for each retrieved result.
-.It Fn "db_foo_count" Ns No : BigInt
+.It Fn "db_foo_count" Ns No : bigint
 Like
 .Fn db_foo_count_xxxx
 but returning a count of all rows.
-.It Fn "db_foo_count_xxxx" "ARGS" Ns No : BigInt
+.It Fn "db_foo_count_xxxx" "ARGS" Ns No : bigint
 Like
 .Fn db_foo_get_xxxx ,
 but returning a count of responses.
-.It Fn "db_foo_count_by_xxxx_op1_yy_zz_op2" "ARGS" Ns No : BigInt
+.It Fn "db_foo_count_by_xxxx_op1_yy_zz_op2" "ARGS" Ns No : bigint
 Like
 .Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
 but returning a count of responses.
@@ -363,16 +363,16 @@ respectively.
 Interfaces consist of all fields in their reference structure with types
 mapped as follows:
 .Bl -column -offset indent "password " "Buffer "
-.It Cm bit Ta BigInt
-.It Cm date Ta BigInt
-.It Cm epoch Ta BigInt
-.It Cm int Ta BigInt
+.It Cm bit Ta bigint
+.It Cm date Ta bigint
+.It Cm epoch Ta bigint
+.It Cm int Ta bigint
 .It Cm real Ta number
 .It Cm blob Ta Buffer
 .It Cm text Ta string
 .It Cm email Ta string
 .It Cm password Ta string
-.It Cm bits Ta BigInt
+.It Cm bits Ta bigint
 .El
 .Pp
 Structure fields are mapped to their interfaces, such as
@@ -386,7 +386,7 @@ for an enumeration named
 .Qq baz .
 The enumeration values are all string literals of their numeric value.
 Since bitfields are combinations of bits in their respective
-enumerations, they are represented by BigInt and not the enumeration
+enumerations, they are represented by bigint and not the enumeration
 type.
 .Pp
 If a field is marked as
@@ -538,7 +538,7 @@ app.get("/put",
       ['user-name'](req.query['user-name']);
     if (name === null)
       return res.status(400).send('bad');
-    const id: BigInt = ctx.db_user_insert(name);
+    const id: bigint = ctx.db_user_insert(name);
     return res.send(id.toString());
   }
 );
@@ -546,7 +546,7 @@ app.get("/put",
 app.get("/get",
   function(req: express.Request, res: express.Response) {
     const ctx: ortctx = db.connect();
-    const id: BigInt|null = ortvalid.ortValids
+    const id: bigint|null = ortvalid.ortValids
       ['user-id'](req.query['user-id']);
     if (id === null)
       return res.status(400).send('bad');

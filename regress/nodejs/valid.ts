@@ -111,7 +111,7 @@ if (ortvalid.ortValids['foo-rleq']('-1.002') !== null)
 if (ortvalid.ortValids['foo-rleq'](1.001) !== null)
 	return false;
 
-let num: BigInt|null;
+let num: bigint|null;
 
 if ((num = ortvalid.ortValids['foo-num'](-1)) === null)
 	return false;

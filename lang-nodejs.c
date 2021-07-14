@@ -70,10 +70,10 @@ static	const char *const optypes[OPTYPE__MAX] = {
 };
 
 static	const char *const ftypes[FTYPE__MAX] = {
-	"BigInt", /* FTYPE_BIT */
-	"BigInt", /* FTYPE_DATE */
-	"BigInt", /* FTYPE_EPOCH */
-	"BigInt", /* FTYPE_INT */
+	"bigint", /* FTYPE_BIT */
+	"bigint", /* FTYPE_DATE */
+	"bigint", /* FTYPE_EPOCH */
+	"bigint", /* FTYPE_INT */
 	"number", /* FTYPE_REAL */
 	"Buffer", /* FTYPE_BLOB */
 	"string", /* FTYPE_TEXT */
@@ -81,7 +81,7 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	"string", /* FTYPE_EMAIL */
 	NULL, /* FTYPE_STRUCT */
 	NULL, /* FTYPE_ENUM */
-	"BigInt", /* FTYPE_BITFIELD */
+	"bigint", /* FTYPE_BITFIELD */
 };
 
 static const char *const vtypes[VALIDATE__MAX] = {
@@ -448,10 +448,10 @@ gen_insert(FILE *f, const struct strct *p)
 		return 0;
 
 	if (col + 7 >= 72) {
-		if (fputs("\n\t\tBigInt", f) == EOF)
+		if (fputs("\n\t\tbigint", f) == EOF)
 			return 0;
 	} else {
-		if (fputs(" BigInt", f) == EOF)
+		if (fputs(" bigint", f) == EOF)
 			return 0;
 	}
 
@@ -1058,7 +1058,7 @@ gen_query(FILE *f, const struct config *cfg,
 		if (fputs("void\n", f) == EOF)
 			return 0;
 	} else {
-		if (fputs("BigInt\n", f) == EOF)
+		if (fputs("bigint\n", f) == EOF)
 			return 0;
 	}
 
@@ -1605,7 +1605,7 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 		     "validator.toDate(v.trim());\n"
 		     "\t\t\tif (nd === null)\n"
 		     "\t\t\t\treturn null;\n"
-		     "\t\t\tconst nv: BigInt = "
+		     "\t\t\tconst nv: bigint = "
 		     "BigInt(nd.getTime() / 1000);\n",
 		     f) == EOF)
 			return 0;
@@ -1625,7 +1625,7 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 		if (fputs
 		    ("\t\t\tif (v.toString().trim().length === 0)\n"
 		     "\t\t\t\treturn null;\n"
-		     "\t\t\tlet nv: BigInt;\n"
+		     "\t\t\tlet nv: bigint;\n"
 		     "\t\t\ttry {\n"
 		     "\t\t\t\tnv = BigInt(v);\n"
 		     "\t\t\t} catch (er) {\n"
@@ -1686,9 +1686,9 @@ gen_ortns_express_valids(const struct ort_lang_nodejs *args,
 		return 0;
 	if (fputs
 	    ("namespace ortvalid {\n"
-	     "\tconst minInt: BigInt = BigInt('-9223372036854775808');\n"
-	     "\tconst maxInt: BigInt = BigInt('9223372036854775807');\n"
-	     "\tconst maxUint: BigInt = BigInt('18446744073709551615');\n"
+	     "\tconst minInt: bigint = BigInt('-9223372036854775808');\n"
+	     "\tconst maxInt: bigint = BigInt('9223372036854775807');\n"
+	     "\tconst maxUint: bigint = BigInt('18446744073709551615');\n"
 	     "\n"
 	     "\texport interface ortValidType {\n", f) == EOF)
 		return 0;
@@ -1722,7 +1722,7 @@ gen_ortns_express_valids(const struct ort_lang_nodejs *args,
 	    "output or null on failure.\n"
 	    "Validated output may be different from input, not just "
 	    "in terms of type (e.g., the opaque input value being "
-	    "returned as a BigInt), but reformatted like an e-mail "
+	    "returned as a bigint), but reformatted like an e-mail "
 	    "address having white-space stripped."))
 		return 0;
 	if (fputs

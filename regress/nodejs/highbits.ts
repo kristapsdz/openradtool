@@ -1,10 +1,10 @@
 const db: ortdb = ort(dbfile);
 const ctx: ortctx = db.connect();
 
-const bits: BigInt = 
+const bits: bigint = 
 	BigInt(ortns.bits.BITF_lo) | BigInt(ortns.bits.BITF_hi);
 
-const rc: BigInt = ctx.db_foo_insert(bits);
+const rc: bigint = ctx.db_foo_insert(bits);
 if (rc < 0)
 	return false;
 

@@ -1,4 +1,4 @@
-let val: BigInt|null;
+let val: bigint|null;
 
 if ((val = ortvalid.ortValids['foo-bt']('0')) === null)
 	return false;

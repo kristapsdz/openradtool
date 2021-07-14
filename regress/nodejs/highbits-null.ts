@@ -1,7 +1,7 @@
 const db: ortdb = ort(dbfile);
 const ctx: ortctx = db.connect();
 
-const rc: BigInt = ctx.db_foo_insert(null);
+const rc: bigint = ctx.db_foo_insert(null);
 if (rc < 0)
 	return false;
 

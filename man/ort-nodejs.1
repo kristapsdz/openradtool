@@ -393,17 +393,29 @@ If run with
 outputs validation functions for each native field type in an object
 .Va ortvalid.ortValids ,
 with a validator for each field.
-The fields (object keys) are named
-.Ar struct Ns . Ns Ar field .
+The fields (object properties) are named
+.Ar struct Ns - Ns Ar field .
 .Pp
-Validator functions are typed as
-.Vt "(value?: any) => any" ,
+Validator functions are typed according to their mapped field types
+as described in
+.Sx Data structures :
+.Vt "(value?: any) => TYPE|null" ,
 and accept the value (which may be undefined) of the request input.
-They return the field's corresponding data structure in
-.Sx Data structures
-or
+These return
 .Dv null
-on failure.
+when the input is undefined,
+.Cm undefined ,
+.Cm null ,
+fails any user-defined validation, or the following:
+.Bl -column -offset indent "password " "not 64-bit signed integer "
+.It Cm bit Ta not in 0\(en63
+.It Cm date Ta not ISO-8601 format
+.It Cm epoch Ta not 64-bit signed integer
+.It Cm int Ta not 64-bit signed integer
+.It Cm real Ta not 64-bit decimal number
+.It Cm email Ta not valid e-mail
+.It Cm bits Ta not contained in 64 bits
+.El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
 .\" For section 9 functions only.

@@ -1462,7 +1462,7 @@ gen_strct(FILE *f, const struct strct *p, size_t pos)
 			case FTYPE_BLOB:
 				if (!(fd->flags & FIELD_NULL)) {
 					if (fprintf(f, 
-					    "%s\t\tres[\'%s\'] = new "
+					    "%s\t\tres[\'%s\'] = "
 					    "obj[\'%s\'].toString"
 					    "(\'base64\');\n", tab, 
 					    fd->name, fd->name) < 0)

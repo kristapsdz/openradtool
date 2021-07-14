@@ -1573,8 +1573,10 @@ gen_ortns_express_valid(FILE *f, const struct field *fd)
 		if (fputs
 		    ("\t\t\tif (!validator.isEmail(v.trim()))\n"
 		     "\t\t\t\treturn null;\n"
-		     "\t\t\treturn validator.normalizeEmail"
-		     "(v.trim());\n", f) == EOF)
+		     "\t\t\tconst em: string|false = \n"
+		     "\t\t\t\tvalidator.normalizeEmail(v.trim());\n"
+		     "\t\t\treturn typeof(em) === 'string' ? "
+		     "em : null;\n", f) == EOF)
 			return 0;
 		return 1;
 	case FTYPE_REAL:
@@ -1702,7 +1704,7 @@ gen_ortns_express_valids(const struct ort_lang_nodejs *args,
 				return 0;
 			switch (fd->type) {
 			case FTYPE_ENUM:
-				c = fprintf(f, "%s|null;\n", 
+				c = fprintf(f, "ortns.%s|null;\n", 
 					fd->enm->name) >= 0;
 				break;
 			default:

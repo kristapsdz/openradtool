@@ -22,7 +22,7 @@
 .Nd generate node.js module
 .Sh SYNOPSIS
 .Nm ort-nodejs
-.Op Fl v
+.Op Fl ev
 .Op Fl N Ar db
 .Op Ar config...
 .Sh DESCRIPTION
@@ -33,6 +33,14 @@ files, defaulting to standard input,
 and generates a Node module in TypeScript.
 Its arguments are as follows:
 .Bl -tag -width Ds
+.It Fl e
+Embedded output.
+Does not emit
+.Cm import
+statements, nor are top-level namespaces, classes, and functions marked as
+.Cm export .
+This is useful for embedding instead of using as a module.
+This flag may be deprecated in the future.
 .It Fl v
 Output
 .Sx Validation

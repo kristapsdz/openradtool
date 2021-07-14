@@ -535,7 +535,7 @@ gen_insert(FILE *f, const struct strct *p)
 	     "\t\t\treturn BigInt(-1);\n"
 	     "\t\t}\n"
 	     "\n"
-	     "\t\treturn BigInt(info.lastInsertRowid);\n"
+	     "\t\treturn BigInt(info.lastInsertRowid.toString());\n"
 	     "\t}\n", f) != EOF;
 }
 

@@ -10,16 +10,25 @@
 		<aside>
 			<p>
 				Export bitfields as enumerations in
-				<a href="ort-nodejs.1.html">ort-nodejs(1)</a>.
-				This makes the Node.js output similar to the C output.  While here,
-				perform various cleanups to the documentation.
+				<a href="ort-nodejs.1.html">ort-nodejs(1)</a>.  This makes the
+				Node.js output similar to the C output.  While here, perform various
+				cleanups to the documentation.
 			</p>
 			<p>
 				Add more validation for integer types in
-				<a href="ort-nodejs.1.html">ort-nodejs(1)</a> validator routines.
-				Also make sure that high-value bit-fields (e.g., all bits set)
-				aren't discarded by the SQLite3 module with range errors: properly
-				fix them into their signed format before passing into the database.
+				<a href="ort-nodejs.1.html">ort-nodejs(1)</a> validator routines,
+				and also have the <code>blob</code> field return a Buffer.  Make
+				sure that high-value bit-fields (e.g., all bits set) aren't
+				discarded by the SQLite3 module with range errors: properly fix them
+				into their signed format before passing into the database.
+			</p>
+			<p>
+				Lastly, use <code>bigint</code> instead of <code>BigInt</code> in
+				<a href="ort-nodejs.1.html">ort-nodejs(1)</a> output.
+				Fix that the export functions were trying to <code>new</code> a
+				string when converting from a <code>Buffer</code> (harmless).  Fix
+				type warnings about <code>lastInsertRowid</code> by converting to a
+				<code>string</code> before converting it into a <code>BigInt</code>.
 			</p>
 		</aside>
 	</article>

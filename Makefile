@@ -5,7 +5,7 @@ include Makefile.configure
 
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 13
-VERSION_BUILD	 = 4
+VERSION_BUILD	 = 5
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = audit.o \
 		   compats.o \
@@ -893,25 +893,6 @@ regress: all
 		done ; \
 	fi ; \
 	if [ -f "$(TS_NODE)" ]; then \
-		echo "=== ort-javascript internal tests === " ; \
-		set -e ; \
-		$(TS_NODE) --skip-project \
-			regress/javascript/internal/regress-runner.ts ; \
-		set +e ; \
-	else \
-		echo "!!! skipping ort-javascript internal tests !!! " ; \
-	fi ; \
-	if [ -f "$(TS_NODE)" ]; then \
-		echo "=== ort-json reformat tests === " ; \
-		cat ort-json.ts regress/json/regress-runner.ts > $$tmp.ts ; \
-		set -e ; \
-		$(TS_NODE) --skip-project $$tmp.ts ; \
-		set +e ; \
-		rm -f $$tmp.ts ; \
-	else \
-		echo "!!! skipping ort-json reformat run tests !!! " ; \
-	fi ; \
-	if [ -f "$(TS_NODE)" ]; then \
 		echo "=== ort-nodejs compile tests === " ; \
 		set -e ; \
 		$(TS_NODE) --skip-project \
@@ -919,6 +900,24 @@ regress: all
 		set +e ; \
 	else \
 		echo "!!! skipping ort-nodejs compile tests !!! " ; \
+	fi ; \
+	if [ -f "$(TS_NODE)" ]; then \
+		echo "=== ort-nodejs run tests === " ; \
+		set -e ; \
+		$(TS_NODE) --skip-project \
+			regress/nodejs/regress-runner.ts ; \
+		set +e ; \
+	else \
+		echo "!!! skipping ort-nodejs run tests !!! " ; \
+	fi ; \
+	if [ -f "$(TS_NODE)" ]; then \
+		echo "=== ort-javascript internal tests === " ; \
+		set -e ; \
+		$(TS_NODE) --skip-project \
+			regress/javascript/internal/regress-runner.ts ; \
+		set +e ; \
+	else \
+		echo "!!! skipping ort-javascript internal tests !!! " ; \
 	fi ; \
 	echo "=== ort-javascript output tests === " ; \
 	for f in regress/javascript/*.ort ; do \
@@ -940,6 +939,16 @@ regress: all
 		set +e ; \
 	else \
 		echo "!!! skipping ort-javascript run tests !!! " ; \
+	fi ; \
+	if [ -f "$(TS_NODE)" ]; then \
+		echo "=== ort-json reformat tests === " ; \
+		cat ort-json.ts regress/json/regress-runner.ts > $$tmp.ts ; \
+		set -e ; \
+		$(TS_NODE) --skip-project $$tmp.ts ; \
+		set +e ; \
+		rm -f $$tmp.ts ; \
+	else \
+		echo "!!! skipping ort-json reformat tests !!! " ; \
 	fi ; \
 	if [ -f "node_modules/.bin/typescript-json-schema" ]; then \
 		node_modules/.bin/typescript-json-schema \

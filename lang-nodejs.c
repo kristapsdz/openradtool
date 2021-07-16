@@ -904,8 +904,10 @@ gen_query(FILE *f, const struct config *cfg,
 		if (s->dst->strct != s->parent) 
 			if (!gen_commentv(f, 1, COMMENT_JS_FRAG,
 			    "The results are limited to "
-			    "{@link ortns.%s.%s}.", 
-			    s->parent->name, s->dst->fname))
+			    "{@link ortns.%sData.%s}, which is a "
+			    "{@link ortns.%sData}.",
+			    s->parent->name, s->dst->fname,
+			    s->dst->strct->name))
 				return 0;
 	}
 

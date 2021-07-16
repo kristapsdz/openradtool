@@ -242,6 +242,8 @@ namespace ortJson {
 		strct: string;
 	}
 
+	export type searchObjType = 'search'|'iterate'|'list'|'count';
+
 	/**
 	 * Same as "struct search" in ort(3).
 	 */
@@ -272,18 +274,21 @@ namespace ortJson {
 		aggr: aggrObj|null;
 		group: groupObj|null;
 		dst: dstnctObj|null;
-		type: 'search'|'iterate'|'list'|'count';
+		type: searchObjType;
 	}
 
 	export interface searchSet {
 		[name: string]: searchObj;
 	}
 
+	/**
+	 * This is the scope in which names of queries are unique.
+	 */
 	export interface searchTypeSet {
-		'search': searchSet;
-		'iterate': searchSet;
-		'list': searchSet;
-		'count': searchSet;
+		iterate: searchSet;
+		list: searchSet;
+		count: searchSet;
+		search: searchSet;
 	}
 
 	export interface searchClassObj {
@@ -2036,6 +2041,21 @@ namespace ortJson {
 			}
 		}
 
+		private fillSearchTypeSet(e: HTMLElement,
+			tmpl: HTMLElement, set: ortJson.searchSet,
+			cb?: ortJson.ortJsonConfigCallbacks, arg?: any): void
+		{
+		    	const keys: string[] = Object.keys(set);
+			keys.sort();
+			for (let i = 0; i < keys.length; i++) {
+				const cln: HTMLElement = <HTMLElement>
+					tmpl.cloneNode(true);
+				this.fillSearchObj(cln, 
+					set[keys[i]], i, cb, arg);
+				e.appendChild(cln);
+			}
+		}
+
 		/**
 		 * For the queries in a struct:
 		 *
@@ -2060,14 +2080,16 @@ namespace ortJson {
 			this.attrcl(e, 'config-queries-name-id', 'id', 
 				this.prefixes.strcts + 'strcts/' + 
 				strct.name + '/queries');
-			const keys: string[] = Object.keys(strct.sq.named);
-			if (keys.length + strct.sq.anon.length === 0) {
+			if (Object.keys(strct.sq.named.iterate).length + 
+			    Object.keys(strct.sq.named.search).length + 
+			    Object.keys(strct.sq.named.count).length + 
+			    Object.keys(strct.sq.named.list).length + 
+			    strct.sq.anon.length === 0) {
 				this.hidecl(e, 'config-queries-has');
 				this.showcl(e, 'config-queries-none');
 				this.hidecl(e, 'config-queries');
 				return;
 			} 
-			keys.sort();
 			this.showcl(e, 'config-queries-has');
 			this.hidecl(e, 'config-queries-none');
 			const list: HTMLElement[] = 
@@ -2078,14 +2100,14 @@ namespace ortJson {
 				const tmpl: HTMLElement =
 					<HTMLElement>list[i].children[0];
 				this.clr(list[i]);
-				for (let j = 0; j < keys.length; j++) {
-					const cln: HTMLElement = <HTMLElement>
-						tmpl.cloneNode(true);
-					this.fillSearchObj(cln, 
-						strct.sq.named[keys[j]], j, 
-						cb, arg);
-					list[i].appendChild(cln);
-				}
+				this.fillSearchTypeSet(list[i], tmpl,
+					strct.sq.named.count, cb, arg);
+				this.fillSearchTypeSet(list[i], tmpl,
+					strct.sq.named.iterate, cb, arg);
+				this.fillSearchTypeSet(list[i], tmpl,
+					strct.sq.named.list, cb, arg);
+				this.fillSearchTypeSet(list[i], tmpl,
+					strct.sq.named.search, cb, arg);
 				for (let j = 0; j < strct.sq.anon.length; j++) {
 					const cln: HTMLElement = <HTMLElement>
 						tmpl.cloneNode(true);

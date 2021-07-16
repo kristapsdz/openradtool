@@ -765,7 +765,8 @@ gen_distinct(FILE *f, const struct dstnct *d)
 		return 0;
 	if (!gen_chain(f, (const struct field **)d->chain, d->chainsz))
 		return 0;
-	return fprintf(f, " \"fname\": \"%s\" }", d->fname) > 0;
+	return fprintf(f, " \"strct\": \"%s\", \"fname\": \"%s\" }", 
+		d->strct->name, d->fname) > 0;
 }
 
 /*

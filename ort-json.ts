@@ -239,6 +239,7 @@ namespace ortJson {
 		pos: posObj;
 		chain: string[];
 		fname: string;
+		strct: string;
 	}
 
 	/**

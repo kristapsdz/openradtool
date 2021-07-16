@@ -279,11 +279,18 @@ namespace ortJson {
 		[name: string]: searchObj;
 	}
 
+	export interface searchTypeSet {
+		'search': searchSet;
+		'iterate': searchSet;
+		'list': searchSet;
+		'count': searchSet;
+	}
+
 	export interface searchClassObj {
 		/**
 		 * Have a user-provided name.
 		 */
-		named: searchSet;
+		named: searchTypeSet;
 		/**
 		 * Defined by search parameters: not named.
 		 */
@@ -738,6 +745,14 @@ namespace ortJson {
 			return str;
 		}
 
+		private searchTypeSetToString(set: searchTypeSet): string
+		{
+			return this.searchSetToString(set.iterate) +
+				this.searchSetToString(set.count) +
+				this.searchSetToString(set.search) +
+				this.searchSetToString(set.list);
+		}
+
 		private rolemapObjToString(map: rolemapObj): string
 		{
 			if (map.rq.length === 0)
@@ -761,7 +776,7 @@ namespace ortJson {
 
 			for (let i: number = 0; i < strct.sq.anon.length; i++) 
 		       		str += this.searchObjToString(strct.sq.anon[i]);	
-			str += this.searchSetToString(strct.sq.named);
+			str += this.searchTypeSetToString(strct.sq.named);
 
 			for (let i: number = 0; i < strct.uq.anon.length; i++) 
 		       		str += this.updateObjToString(strct.uq.anon[i]);	

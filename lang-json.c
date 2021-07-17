@@ -765,7 +765,7 @@ gen_distinct(FILE *f, const struct dstnct *d)
 		return 0;
 	if (!gen_chain(f, (const struct field **)d->chain, d->chainsz))
 		return 0;
-	return fprintf(f, " \"strct\": \"%s\", \"fname\": \"%s\" }", 
+	return fprintf(f, " \"strct\": \"%s\", \"fname\": \"%s\" }",
 		d->strct->name, d->fname) > 0;
 }
 
@@ -798,7 +798,7 @@ gen_aggr(FILE *f, const struct aggr *a)
  * Return zero on failure, non-zero on success.
  */
 static int
-gen_search(FILE *f, int *first, const struct search *s, int inobj)
+gen_search(FILE *f, int *first, const struct search *s)
 {
 	const struct sent	*sent;
 	const struct ord	*ord;
@@ -809,8 +809,7 @@ gen_search(FILE *f, int *first, const struct search *s, int inobj)
 	} else
 		*first = 0;
 
-	if (inobj && s->name != NULL &&
-	    fprintf(f, " \"%s\":", s->name) < 0)
+	if (s->name != NULL && fprintf(f, " \"%s\":", s->name) < 0)
 		return 0;
 	if (fputs(" {", f) == EOF)
 		return 0;
@@ -985,7 +984,6 @@ gen_strct(FILE *f, const struct strct *s)
 	const struct unique	*un;
 	const struct rolemap	*rm;
 	int			 first;
-	enum stype		 stype;
 
 	if (fprintf(f, " \"%s\": {", s->name) < 0)
 		return 0;
@@ -1060,24 +1058,17 @@ gen_strct(FILE *f, const struct strct *s)
 
 	if (fputs(" \"sq\": { \"named\": {", f) == EOF)
 		return 0;
-	for (stype = 0; stype < STYPE__MAX; stype++) {
-		if (fprintf(f, " \"%s\": {", stypes[stype]) < 0)
+	first = 1;
+	TAILQ_FOREACH(sr, &s->sq, entries)
+		if (sr->name != NULL &&
+		    !gen_search(f, &first, sr))
 			return 0;
-		first = 1;
-		TAILQ_FOREACH(sr, &s->sq, entries)
-			if (sr->name != NULL && sr->type == stype &&
-			    !gen_search(f, &first, sr, 1))
-				return 0;
-		if (fputc('}', f) == EOF ||
-		    (stype < STYPE__MAX - 1 && fputc(',', f) == EOF))
-			return 0;
-	}
 	if (fputs(" }, \"anon\": [", f) == EOF)
 		return 0;
 	first = 1;
 	TAILQ_FOREACH(sr, &s->sq, entries)
 		if (sr->name == NULL &&
-		    !gen_search(f, &first, sr, 0))
+		    !gen_search(f, &first, sr))
 			return 0;
 	return fputs(" ] } }", f) != EOF;
 }

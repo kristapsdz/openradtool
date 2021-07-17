@@ -10,7 +10,7 @@ struct bar {
 	field baz struct bazid;
 	field bazid:baz.id int;
 	field id int rowid;
-	iterate: name id;
+	iterate: name iid;
 	search: name id limit 1;
-	roles user { iterate id; search id; };
+	roles user { iterate iid; search id; };
 };

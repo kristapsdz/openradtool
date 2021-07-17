@@ -1,6 +1,6 @@
-iterate     bar:id              regress/audit/query-multi.ort:13:8
-readwrite   bar:iterate:id:-    regress/audit/query-multi.ort:13:8
-readwrite   bar:search:id:-     regress/audit/query-multi.ort:14:7
-readwrite   baz:iterate:id:baz  regress/audit/query-multi.ort:13:8
-readwrite   baz:search:id:baz   regress/audit/query-multi.ort:14:7
-search      bar:id              regress/audit/query-multi.ort:14:7
+iterate     bar:iid              regress/audit/query-multi.ort:13:8
+readwrite   bar:iterate:iid:-    regress/audit/query-multi.ort:13:8
+readwrite   bar:search:id:-      regress/audit/query-multi.ort:14:7
+readwrite   baz:iterate:iid:baz  regress/audit/query-multi.ort:13:8
+readwrite   baz:search:id:baz    regress/audit/query-multi.ort:14:7
+search      bar:id               regress/audit/query-multi.ort:14:7

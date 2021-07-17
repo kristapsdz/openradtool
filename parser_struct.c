@@ -769,8 +769,7 @@ parse_config_search_params(struct parse *p, struct search *s)
 				break;
 			}
 			TAILQ_FOREACH(ss, &s->parent->sq, entries) {
-				if (s->type != ss->type ||
-				    ss->name == NULL ||
+				if (ss->name == NULL ||
 				    strcasecmp(ss->name, p->last.string))
 					continue;
 				parse_errx(p, "duplicate query name");

@@ -3,6 +3,25 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.13.6</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-07-17">2021-07-17</time>
+		</header>
+		<aside>
+			<p>
+				<strong>Change parser behaviour</strong>: no longer allow for
+				queries of the same name within a structure.  Prior to this, the
+				rule was that query names must be unique within the query type
+				(e.g., <code>iterate</code>).
+			</p>
+			<p>
+				The reason for this change is to reflect how the code actually
+				operates a bit better.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.13.5</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-07-12">2021-07-12</time>

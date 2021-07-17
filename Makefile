@@ -694,7 +694,7 @@ regress: all
 		grep -q '^roles' $$f || continue ; \
 		printf "ort-audit: $$f... " ; \
 		./ort-audit -vr all $$f 2>/dev/null >/dev/null ; \
-		if [ $$? -gt 1 ] ; then \
+		if [ $$? -ge 1 ] ; then \
 			echo "fail (did not execute)" ; \
 			rm -f $$tmp ; \
 			exit 1 ; \
@@ -706,7 +706,7 @@ regress: all
 		fn=`basename $$f .result`.ort ; \
 		printf "ort-audit: regress/audit/$$fn... " ; \
 		./ort-audit -vr user regress/audit/$$fn >$$tmp 2>/dev/null ; \
-		if [ $$? -gt 1 ] ; then \
+		if [ $$? -ge 1 ] ; then \
 			echo "fail (did not execute)" ; \
 			rm -f $$tmp ; \
 			exit 1 ; \

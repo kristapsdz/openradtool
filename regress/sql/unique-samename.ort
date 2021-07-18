@@ -1,0 +1,7 @@
+struct foo {
+	field moo int unique;
+};
+
+struct bar {
+	field moo int unique;
+};

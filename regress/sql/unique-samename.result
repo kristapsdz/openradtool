@@ -1,0 +1,14 @@
+PRAGMA foreign_keys=ON;
+
+CREATE TABLE foo (
+	moo INTEGER NOT NULL
+);
+
+CREATE UNIQUE INDEX unique_foo__moo ON foo(moo);
+
+CREATE TABLE bar (
+	moo INTEGER NOT NULL
+);
+
+CREATE UNIQUE INDEX unique_bar__moo ON bar(moo);
+

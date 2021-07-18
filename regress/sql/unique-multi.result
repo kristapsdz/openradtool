@@ -6,6 +6,6 @@ CREATE TABLE foo (
 	baz INTEGER NOT NULL
 );
 
-CREATE UNIQUE INDEX unique_bar_foo ON foo(bar, foo);
-CREATE UNIQUE INDEX unique_bar_baz ON foo(bar, baz);
+CREATE UNIQUE INDEX unique_foo__bar_foo ON foo(bar, foo);
+CREATE UNIQUE INDEX unique_foo__bar_baz ON foo(bar, baz);
 

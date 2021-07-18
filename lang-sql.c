@@ -108,8 +108,9 @@ gen_unique_field(FILE *f, const struct field *fd)
 {
 
 	return fprintf(f, 
-		"CREATE UNIQUE INDEX unique_%s ON %s(%s);\n",
-		fd->name, fd->parent->name, fd->name) >= 0;
+		"CREATE UNIQUE INDEX unique_%s__%s ON %s(%s);\n",
+		fd->parent->name, fd->name, fd->parent->name, 
+		fd->name) >= 0;
 }
 
 /*
@@ -120,7 +121,8 @@ gen_unique(FILE *f, const struct unique *u)
 {
 	const struct nref	*n;
 
-	if (fputs("CREATE UNIQUE INDEX unique_", f) == EOF)
+	if (fprintf(f, 
+	    "CREATE UNIQUE INDEX unique_%s__", u->parent->name) < 0)
 		return 0;
 	TAILQ_FOREACH(n, &u->nq, entries) {
 		if (fputs(n->field->name, f) == EOF)
@@ -498,7 +500,8 @@ static int
 gen_diff_unique_field_del(FILE *f, const struct field *fd)
 {
 
-	return fprintf(f, "DROP INDEX unique_%s;\n", fd->name) >= 0;
+	return fprintf(f, "DROP INDEX unique_%s__%s;\n", 
+		fd->parent->name, fd->name) >= 0;
 }
 
 static int
@@ -506,7 +509,8 @@ gen_diff_unique_del(FILE *f, const struct unique *u)
 {
 	const struct nref	*n;
 
-	if (fputs("DROP INDEX unique_", f) == EOF)
+	if (fprintf(f, 
+	    "DROP INDEX unique_%s__", u->parent->name) < 0)
 		return 0;
 	TAILQ_FOREACH(n, &u->nq, entries) {
 		if (fputs(n->field->name, f) == EOF)

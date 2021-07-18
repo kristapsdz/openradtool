@@ -687,6 +687,13 @@ regress: all
 			rm -f $$tmp ; \
 			exit 1 ; \
 		fi ; \
+		sqlite3 ":memory:" < $$tmp 2>/dev/null ; \
+		if [ $$? -ne 0 ] ; then \
+			echo "fail (compile)" ; \
+			sqlite3 ":memory:" < $$tmp ; \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
 		echo "pass" ; \
 	done ; \
 	echo "=== ort-audit run tests === " ; \

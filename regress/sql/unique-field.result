@@ -5,5 +5,5 @@ CREATE TABLE foo (
 	bar INTEGER NOT NULL
 );
 
-CREATE UNIQUE INDEX unique_foo ON foo(foo);
+CREATE UNIQUE INDEX unique_foo__foo ON foo(foo);
 

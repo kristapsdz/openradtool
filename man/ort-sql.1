@@ -107,12 +107,17 @@ statement on the structure is rendered as a unique index.
 The name of the index is the (sorted) fields in the
 .Cm unique
 statement, separated by underscores, and prefixed with
-.Dq unique_.
-Thus, an example
+.Dq unique_strct__
+where
+.Dq strct
+is the name of the structure.
+Thus, an example structure
+.Dq xyzzy
+having
 .Li unique(foo, bar)
 would be rendered as:
 .Bd -literal -offset indent
-CREATE UNIQUE INDEX unique_bar_foo ON foo(foo, bar);
+CREATE UNIQUE INDEX unique_xyzzy__bar_foo ON xyzzy(foo, bar);
 .Ed
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT

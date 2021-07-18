@@ -3,6 +3,27 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.13.7</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-07-18">2021-07-18</time>
+		</header>
+		<aside>
+			<p>
+				<strong>SQL change</strong>: indexes are now output as 
+				<code>unique_strct__field1_field2</code> instead of
+				<code>unique_field1_field2</code>.
+				This prevents multiple structures with the same unique field(s) from
+				having the same index name.
+				This only changes the name of the index, so existing indexes won't
+				be affected.  However, if removing a unique statement, the
+				corresponding index won't be removed as the name won't be found.
+				New indexes won't clobber any existing ones because of the prefix
+				style.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.13.6</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-07-17">2021-07-17</time>

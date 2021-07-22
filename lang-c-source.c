@@ -1470,7 +1470,7 @@ gen_insert(FILE *f, const struct config *cfg, const struct strct *p)
 		return 0;
 	if (fputs("\n"
 	    "{\n"
-	    "\tint rc;\n"
+	    "\tenum sqlbox_code rc;\n"
 	    "\tint64_t id = -1;\n"
 	    "\tstruct sqlbox *db = ctx->db;\n", f) == EOF)
 		return 0;

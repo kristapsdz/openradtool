@@ -328,8 +328,15 @@ gen_fill_field(FILE *f, const struct field *fd)
 		    fd->name, fd->name))
 			return 0;
 		break;
-	case FTYPE_DATE:
 	case FTYPE_ENUM:
+		if (!print_src(f, indent,
+		    "if (%s(&set->ps[(*pos)++], &tmpint) == -1)\n"
+		    "\texit(EXIT_FAILURE);\n"
+		    "p->%s = (enum %s)tmpint;",
+		    coltypes[fd->type], fd->name, fd->enm->name))
+			return 0;
+		break;
+	case FTYPE_DATE:
 	case FTYPE_EPOCH:
 		if (!print_src(f, indent,
 		    "if (%s(&set->ps[(*pos)++], &tmpint) == -1)\n"

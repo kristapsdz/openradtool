@@ -607,18 +607,6 @@
 	}
 
 	/**
-	 * Remove the attribute of an element.
-	 * @param e The element whose attribute to set.
-	 * @param attr The attribute name.
-	 * @param text The attribute value.
-	 * @internal
-	 */
-	function _rattr(e: HTMLElement, attr: string): void
-	{
-		e.removeAttribute(attr);
-	}
-
-	/**
 	 * Set attributes for all elements matching a class.
 	 * @internal
 	 */
@@ -775,11 +763,11 @@
 		for (i = 0; i < list.length; i++) {
 			const attrval: string|null = 
 				(<HTMLInputElement>list[i]).value;
-			_rattr(list[i], 'checked');
+			(<any>list[i]).checked = false;
 			if (val === null || attrval === null)
 				continue;
 			if (val.toString() === attrval)
-				_attr(list[i], 'checked', 'checked');
+				(<any>list[i]).checked = true;
 		}
 	}
 
@@ -802,11 +790,11 @@
 		for (i = 0; i < list.length; i++) {
 			const attrval: string|null = 
 				(<HTMLOptionElement>list[i]).value;
-			_rattr(list[i], 'selected');
+			(<any>list[i]).selected = false;
 			if (val === null || attrval === null)
 				continue;
 			if (val.toString() === attrval)
-				_attr(list[i], 'selected', 'selected');
+				(<any>list[i]).selected = true;
 		}
 	}
 
@@ -871,7 +859,7 @@
 		for (i = 0; i < list.length; i++) {
 			const attrval: string|null = 
 				(<HTMLInputElement>list[i]).value;
-			_rattr(list[i], 'checked');
+			(<any>list[i]).checked = false;
 			if (lval === null || attrval === null)
 				continue;
 
@@ -891,7 +879,7 @@
 
 			if ((v === 0 && lval.isZero()) ||
 			    !Long.ONE.shl(v - 1).and(lval).isZero())
-				_attr(list[i], 'checked', 'checked');
+				(<any>list[i]).checked = true;
 		}
 	}
 

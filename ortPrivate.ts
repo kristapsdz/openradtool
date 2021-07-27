@@ -761,13 +761,14 @@
 			(e, fname + '-value-checked', inc);
 
 		for (i = 0; i < list.length; i++) {
-			const attrval: string|null = 
-				(<HTMLInputElement>list[i]).value;
-			(<any>list[i]).checked = false;
+			const elem: HTMLInputElement =
+				<HTMLInputElement>list[i];
+			const attrval: string|null = elem.value;
+			elem.removeAttribute('checked');
 			if (val === null || attrval === null)
 				continue;
 			if (val.toString() === attrval)
-				(<any>list[i]).checked = true;
+				elem.setAttribute('checked', 'checked');
 		}
 	}
 
@@ -788,13 +789,14 @@
 			e.getElementsByTagName('option');
 
 		for (i = 0; i < list.length; i++) {
-			const attrval: string|null = 
-				(<HTMLOptionElement>list[i]).value;
-			(<any>list[i]).selected = false;
+			const elem: HTMLOptionElement =
+				<HTMLOptionElement>list[i];
+			const attrval: string|null = elem.value;
+			elem.removeAttribute('selected');
 			if (val === null || attrval === null)
 				continue;
 			if (val.toString() === attrval)
-				(<any>list[i]).selected = true;
+				elem.setAttribute('selected', 'selected');
 		}
 	}
 
@@ -857,9 +859,10 @@
 			return;
 
 		for (i = 0; i < list.length; i++) {
-			const attrval: string|null = 
-				(<HTMLInputElement>list[i]).value;
-			(<any>list[i]).checked = false;
+			const elem: HTMLInputElement =
+				<HTMLInputElement>list[i];
+			const attrval: string|null = elem.value;
+			elem.removeAttribute('checked');
 			if (lval === null || attrval === null)
 				continue;
 
@@ -878,8 +881,9 @@
 				continue;
 
 			if ((v === 0 && lval.isZero()) ||
-			    !Long.ONE.shl(v - 1).and(lval).isZero())
-				(<any>list[i]).checked = true;
+			    !Long.ONE.shl(v - 1).and(lval).isZero()) {
+				elem.setAttribute('checked', 'checked');
+			}
 		}
 	}
 

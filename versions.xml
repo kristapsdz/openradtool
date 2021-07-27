@@ -3,6 +3,26 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.13.8</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-07-27">2021-07-27</time>
+		</header>
+		<aside>
+			<p>
+				Tighten up code produced by
+				<a href="ort-c-source.1.html">ort-c-source(1)</a>
+				in having the correct type for some enumeration and casting to avoid
+				spurrious warnings raised by <strong>-Weverything</strong>.
+			</p>
+			<p>
+				Fix output of 
+				<a href="ort-javascript.1.html">ort-javascript(1)</a> when using the 
+				<code>-value-checked</code> and <code>-value-selected</code> classes.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.13.7</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-07-18">2021-07-18</time>

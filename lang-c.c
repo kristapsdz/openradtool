@@ -302,6 +302,8 @@ print_var(FILE *f, size_t pos, size_t col,
 	switch (fd->type) {
 	case FTYPE_BIT:
 	case FTYPE_BITFIELD:
+	case FTYPE_DATE:
+	case FTYPE_EPOCH:
 	case FTYPE_INT:
 		rfd = fd->ref != NULL ? fd->ref->target : fd;
 		rc = fprintf(f, "%s_%s %sv%zu", 

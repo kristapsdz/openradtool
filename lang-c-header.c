@@ -79,7 +79,7 @@ gen_field(FILE *f, const struct field *fd)
 
 	switch (fd->type) {
 	case FTYPE_STRUCT:
-		c = fprintf(f, "\tstruct %s %s;\n", 
+		c = fprintf(f, "\tstruct %s %s;\n",
 			fd->ref->target->parent->name, fd->name);
 		break;
 	case FTYPE_REAL:
@@ -89,15 +89,13 @@ gen_field(FILE *f, const struct field *fd)
 		c = fprintf(f, "\tvoid\t*%s;\n\tsize_t\t %s_sz;\n",
 		       fd->name, fd->name);
 		break;
-	case FTYPE_DATE:
-	case FTYPE_EPOCH:
-		c = fprintf(f, "\ttime_t\t %s;\n", fd->name);
-		break;
 	case FTYPE_BIT:
 	case FTYPE_BITFIELD:
+	case FTYPE_DATE:
+	case FTYPE_EPOCH:
 	case FTYPE_INT:
 		rfd = fd->ref != NULL ? fd->ref->target : fd;
-		c = fprintf(f, "\t%s_%s\t %s;\n", 
+		c = fprintf(f, "\t%s_%s\t %s;\n",
 			rfd->parent->name, rfd->name, fd->name);
 		break;
 	case FTYPE_TEXT:
@@ -106,7 +104,7 @@ gen_field(FILE *f, const struct field *fd)
 		c = fprintf(f, "\tchar\t*%s;\n", fd->name);
 		break;
 	case FTYPE_ENUM:
-		c = fprintf(f, "\tenum %s %s;\n", 
+		c = fprintf(f, "\tenum %s %s;\n",
 			fd->enm->name, fd->name);
 		break;
 	default:
@@ -150,12 +148,12 @@ gen_bitfield(FILE *f, const struct bitf *b)
 			return 0;
 		if (!gen_upper(f, b->name))
 			return 0;
-		if (fprintf(f, "_%s = %" PRId64 ",\n\tBITF_", 
+		if (fprintf(f, "_%s = %" PRId64 ",\n\tBITF_",
 		    bi->name, bi->value) < 0)
 			return 0;
 		if (!gen_upper(f, b->name))
 			return 0;
-		if (fprintf(f, "_%s = UINT64_C(1) << %" PRId64 ",\n", 
+		if (fprintf(f, "_%s = UINT64_C(1) << %" PRId64 ",\n",
 		    bi->name, bi->value) < 0)
 			return 0;
 		if (bi->value > maxv)
@@ -194,7 +192,7 @@ gen_enum(FILE *f, const struct enm *e)
 			return 0;
 		if (!gen_upper(f, e->name))
 			return 0;
-		if (fprintf(f, "_%s = %" PRId64 "%s\n", ei->name, 
+		if (fprintf(f, "_%s = %" PRId64 "%s\n", ei->name,
 		    ei->value, TAILQ_NEXT(ei, entries) ? "," : "") < 0)
 			return 0;
 	}
@@ -202,72 +200,115 @@ gen_enum(FILE *f, const struct enm *e)
 	return fputs("};\n\n", f) != EOF;
 }
 
+/*
+ * Generate setters and getters for variables having safe typing,
+ * although we define "dummy" operations for non-safe typing to make
+ * migration easier.  References don't get the full treatment, as their
+ * setters and getters will be defined for the referenced variable.
+ * Return TRUE on success, FALSE on failure.
+ */
 static int
-gen_type_funcs(FILE *f, const struct ort_lang_c *args, 
+gen_type_funcs(FILE *f, const struct ort_lang_c *args,
 	const struct config *cfg, const struct strct *s)
 {
 	const struct field	*fd, *rfd;
+	const char		*type;
 
 	if (args->flags & ORT_LANG_C_SAFE_TYPES) {
 		TAILQ_FOREACH(fd, &s->fq, entries) {
 			if (fd->type != FTYPE_BIT &&
 			    fd->type != FTYPE_BITFIELD &&
+			    fd->type != FTYPE_DATE &&
+			    fd->type != FTYPE_EPOCH &&
 			    fd->type != FTYPE_INT)
 				continue;
+
+			if (fputc('\n', f) == EOF)
+				return 0;
+
+			/*
+			 * If we're a reference (fd->ref != NULL), then
+			 * don't print the type's setters and getters,
+			 * as they're defined on the referenced type and
+			 * not the reference.
+			 */
+
 			rfd = fd->ref != NULL ? fd->ref->target : fd;
 			if (fd->ref == NULL &&
-			    fprintf(f, 
+			    fprintf(f,
 			    "#define ORT_%s_%s(_src) "
 			     "(%s_%s){ .val = (_src) }\n",
-			    s->name, fd->name, 
+			    s->name, fd->name,
 			    s->name, fd->name) < 0)
 				return 0;
-			if (fprintf(f, 
-			    "inline int64_t ORT_GET_%s_%s"
+
+			if (fd->type == FTYPE_DATE ||
+			    fd->type == FTYPE_EPOCH)
+				type = "time_t";
+			else
+				type = "int64_t";
+
+			if (fprintf(f,
+			    "inline %s ORT_GET_%s_%s"
 			     "(const struct %s *dst) "
 			     "{ return dst->%s.val; }\n"
-			    "inline int64_t ORT_GETV_%s_%s"
+			    "inline %s ORT_GETV_%s_%s"
 			     "(const %s_%s dst) "
 			     "{ return dst.val; }\n"
 			    "inline void ORT_SET_%s_%s"
-			     "(struct %s *dst, int64_t src) "
+			     "(struct %s *dst, %s src) "
 			     "{ dst->%s.val = src; }\n"
 			    "inline void ORT_SETV_%s_%s"
-			     "(%s_%s *dst, int64_t src) "
-			     "{ dst->val = src; }\n\n",
-			    s->name, fd->name, 
-			    s->name, fd->name, 
-			    s->name, fd->name,
-			    rfd->parent->name, rfd->name,
-			    s->name, fd->name, s->name, fd->name, 
-			    s->name, fd->name,
-			    rfd->parent->name, rfd->name) < 0)
+			     "(%s_%s *dst, %s src) "
+			     "{ dst->val = src; }\n",
+			    type, s->name, fd->name, s->name, fd->name,
+			    type, s->name, fd->name,
+			    rfd->parent->name, rfd->name, s->name,
+			    fd->name, s->name, type, fd->name, s->name,
+			    fd->name, rfd->parent->name, rfd->name,
+			    type) < 0)
 				return 0;
 		}
 	} else
 		TAILQ_FOREACH(fd, &s->fq, entries) {
 			if (fd->type != FTYPE_BIT &&
 			    fd->type != FTYPE_BITFIELD &&
+			    fd->type != FTYPE_DATE &&
+			    fd->type != FTYPE_EPOCH &&
 			    fd->type != FTYPE_INT)
 				continue;
+
+			if (fputc('\n', f) == EOF)
+				return 0;
+
+			/* Like above, don't expand references. */
+
 			if (fd->ref == NULL &&
 			    fprintf(f,
 			    "#define ORT_%s_%s(_src) (_src)\n",
 			    s->name, fd->name) < 0)
 				return 0;
+
+			if (fd->type == FTYPE_DATE ||
+			    fd->type == FTYPE_EPOCH)
+				type = "time_t";
+			else
+				type = "int64_t";
+
+
 			if (fprintf(f,
-			    "inline int64_t ORT_GET_%s_%s"
+			    "inline %s ORT_GET_%s_%s"
 			     "(const struct %s *dst) "
 			     "{ return dst->%s; }\n"
 			    "#define ORT_GETV_%s_%s(_dst) (_dst)\n"
 			    "inline void ORT_SET_%s_%s"
-			     "(struct %s *dst, int64_t src) "
+			     "(struct %s *dst, %s src) "
 			     "{ dst->%s = src; }\n"
 			    "#define ORT_SETV_%s_%s(_dst, _src) "
-			     "*(_dst) = (_src)\n\n",
-			    s->name, fd->name, s->name, fd->name,
-			    s->name, fd->name, 
-			    s->name, fd->name, s->name, fd->name,
+			     "*(_dst) = (_src)\n",
+			    type, s->name, fd->name, s->name,
+			    fd->name, s->name, fd->name, s->name,
+			    fd->name, s->name, type, fd->name,
 			    s->name, fd->name) < 0)
 				return 0;
 		}
@@ -275,30 +316,37 @@ gen_type_funcs(FILE *f, const struct ort_lang_c *args,
 	return 1;
 }
 
-/* 
- * Emit our typing first.
- * If we don't use safe types, emit typedefs to the native type for all
- * types we care about; otherwise, emit the struct wrappers.
- * Also emit the macros for setting, getting, and static init.
- * Returns zero on failure, non-zero on success.
+/*
+ * Emit our typing first.  If we don't use safe types, emit typedefs to
+ * the native type for all types we care about; otherwise, emit the
+ * struct wrappers.  Also emit the macros for setting, getting, and
+ * static init.  Return TRUE on success, FALSE on failure.
  */
 static int
-gen_types(FILE *f, const struct ort_lang_c *args, 
+gen_types(FILE *f, const struct ort_lang_c *args,
 	const struct config *cfg, const struct strct *s)
 {
 	const struct field	*fd;
+	const char		*type;
 
 	if (args->flags & ORT_LANG_C_SAFE_TYPES) {
 		TAILQ_FOREACH(fd, &s->fq, entries)
 			switch (fd->type) {
 			case FTYPE_BIT:
 			case FTYPE_BITFIELD:
+			case FTYPE_DATE:
+			case FTYPE_EPOCH:
 			case FTYPE_INT:
+				if (fd->type == FTYPE_DATE ||
+				    fd->type == FTYPE_EPOCH)
+					type = "time_t";
+				else
+					type = "int64_t";
 				if (fd->ref == NULL &&
-				    fprintf(f, 
+				    fprintf(f,
 				    "typedef struct %s_%s "
-				     "{ int64_t val; } %s_%s;\n",
-				    s->name, fd->name, 
+				     "{ %s val; } %s_%s;\n",
+				    s->name, fd->name, type,
 				    s->name, fd->name) < 0)
 					return 0;
 				break;
@@ -310,12 +358,20 @@ gen_types(FILE *f, const struct ort_lang_c *args,
 			switch (fd->type) {
 			case FTYPE_BIT:
 			case FTYPE_BITFIELD:
+			case FTYPE_DATE:
+			case FTYPE_EPOCH:
 			case FTYPE_INT:
+				if (fd->type == FTYPE_DATE ||
+				    fd->type == FTYPE_EPOCH)
+					type = "time_t";
+				else
+					type = "int64_t";
 				if (fd->ref == NULL &&
 				    fprintf(f,
-				    "typedef int64_t %s_%s;\n",
-				    s->name, fd->name) < 0)
+				    "typedef %s %s_%s;\n",
+				    type, s->name, fd->name) < 0)
 					return 0;
+				break;
 			default:
 				break;
 			}
@@ -331,10 +387,13 @@ gen_types(FILE *f, const struct ort_lang_c *args,
  * Return zero on failure, non-zero on success.
  */
 static int
-gen_struct(FILE *f, const struct ort_lang_c *args, 
+gen_struct(FILE *f, const struct ort_lang_c *args,
 	const struct config *cfg, const struct strct *s)
 {
 	const struct field	*fd;
+
+	if (fputc('\n', f) == EOF)
+		return 0;
 
 	if (!gen_comment(f, 0, COMMENT_C, s->doc))
 		return 0;
@@ -351,7 +410,7 @@ gen_struct(FILE *f, const struct ort_lang_c *args,
 		    (fd->ref->source->flags & FIELD_NULL)) {
 			if (!gen_commentv(f, 1, COMMENT_C,
 			    "Non-zero if \"%s\" has been set "
-			    "from \"%s\".", fd->name, 
+			    "from \"%s\".", fd->name,
 			    fd->ref->source->name))
 				return 0;
 			if (fprintf(f, "\tint has_%s;\n", fd->name) < 0)
@@ -380,27 +439,31 @@ gen_struct(FILE *f, const struct ort_lang_c *args,
 			return 0;
 	}
 
-	if (fputs("};\n\n", f) == EOF)
+	if (fputs("};\n", f) == EOF)
 		return 0;
 
 	if (s->flags & STRCT_HAS_QUEUE) {
-		if (!gen_commentv(f, 0, COMMENT_C, 
+		if (fputc('\n', f) == EOF)
+			return 0;
+		if (!gen_commentv(f, 0, COMMENT_C,
 		    "Queue of %s for listings.", s->name))
 			return 0;
-		if (fprintf(f, "TAILQ_HEAD(%s_q, %s);\n\n", 
+		if (fprintf(f, "TAILQ_HEAD(%s_q, %s);\n",
 		    s->name, s->name) < 0)
 			return 0;
 	}
 
 	if (s->flags & STRCT_HAS_ITERATOR) {
-		if (!gen_commentv(f, 0, COMMENT_C, 
+		if (fputc('\n', f) == EOF)
+			return 0;
+		if (!gen_commentv(f, 0, COMMENT_C,
 		    "Callback of %s for iteration.\n"
 		    "The arg parameter is the opaque pointer "
 		    "passed into the iterate function.",
 		    s->name))
 			return 0;
 		if (fprintf(f, "typedef void (*%s_cb)(const struct %s "
-		    "*v, void *arg);\n\n", s->name, s->name) < 0)
+		    "*v, void *arg);\n", s->name, s->name) < 0)
 			return 0;
 	}
 
@@ -418,6 +481,9 @@ gen_update(FILE *f, const struct config *cfg, const struct update *up)
 	enum cmtt		 ct = COMMENT_C_FRAG_OPEN;
 	size_t			 pos = 1;
 
+	if (fputc('\n', f) == EOF)
+		return 0;
+
 	if (up->doc != NULL) {
 		if (!gen_comment(f, 0, COMMENT_C_FRAG_OPEN, up->doc))
 			return 0;
@@ -434,17 +500,17 @@ gen_update(FILE *f, const struct config *cfg, const struct update *up)
 		TAILQ_FOREACH(ref, &up->mrq, entries)
 			if (ref->field->type == FTYPE_PASSWORD)  {
 				if (!gen_commentv(f, 0, COMMENT_C_FRAG,
-				    "\tv%zu: %s (password)", 
+				    "\tv%zu: %s (password)",
 				    pos++, ref->field->name))
 					return 0;
 			} else {
 				if (!gen_commentv(f, 0, COMMENT_C_FRAG,
-				    "\tv%zu: %s", 
+				    "\tv%zu: %s",
 				    pos++, ref->field->name))
 					return 0;
 			}
 	} else {
-		if (!gen_commentv(f, 0, ct, 
+		if (!gen_commentv(f, 0, ct,
 		    "Delete fields in struct %s.\n",
 		    up->parent->name))
 			return 0;
@@ -455,7 +521,7 @@ gen_update(FILE *f, const struct config *cfg, const struct update *up)
 
 	TAILQ_FOREACH(ref, &up->crq, entries)
 		if (ref->op == OPTYPE_NOTNULL) {
-			if (!gen_commentv(f, 0, COMMENT_C_FRAG, 
+			if (!gen_commentv(f, 0, COMMENT_C_FRAG,
 			    "\t%s (not an argument: "
 			    "checked not null)", ref->field->name))
 				return 0;
@@ -466,7 +532,7 @@ gen_update(FILE *f, const struct config *cfg, const struct update *up)
 				return 0;
 		} else {
 			if (!gen_commentv(f, 0, COMMENT_C_FRAG,
-			     "\tv%zu: %s (%s)", pos++, 
+			     "\tv%zu: %s (%s)", pos++,
 			     ref->field->name, optypes[ref->op]))
 				return 0;
 		}
@@ -475,10 +541,7 @@ gen_update(FILE *f, const struct config *cfg, const struct update *up)
 	    "Returns zero on constraint violation, "
 	    "non-zero on success."))
 		return 0;
-	if (!gen_func_db_update(f, up, 1))
-		return 0;
-
-	return fputs("", f) != EOF;
+	return gen_func_db_update(f, up, 1);
 }
 
 /*
@@ -491,6 +554,9 @@ gen_search(FILE *f, const struct config *cfg, const struct search *s)
 	const struct sent	*sent;
 	const struct strct	*rc;
 	size_t			 pos = 1;
+
+	if (fputc('\n', f) == EOF)
+		return 0;
 
 	rc = s->dst != NULL ? s->dst->strct : s->parent;
 
@@ -519,11 +585,11 @@ gen_search(FILE *f, const struct config *cfg, const struct search *s)
 		if (!gen_commentv(f, 0, COMMENT_C_FRAG,
 		    "This %s distinct query results.",
 		    s->type == STYPE_ITERATE ?
-		    "iterates over" : 
-		    s->type == STYPE_COUNT ? 
+		    "iterates over" :
+		    s->type == STYPE_COUNT ?
 		    "counts" : "returns"))
 			return 0;
-		if (s->dst->strct != s->parent) 
+		if (s->dst->strct != s->parent)
 			if (!gen_commentv(f, 0, COMMENT_C_FRAG,
 			    "The results are limited "
 			    "to the nested structure of \"%s\" "
@@ -566,8 +632,8 @@ gen_search(FILE *f, const struct config *cfg, const struct search *s)
 				return 0;
 		} else {
 			if (!gen_commentv(f, 0, COMMENT_C_FRAG,
-			    "\tv%zu: %s (%s%s)", pos++, 
-			    sent->fname, 
+			    "\tv%zu: %s (%s%s)", pos++,
+			    sent->fname,
 			    sent->field->type == FTYPE_PASSWORD ?
 			    "pre-hashed password, " : "",
 			    optypes[sent->op]))
@@ -597,9 +663,7 @@ gen_search(FILE *f, const struct config *cfg, const struct search *s)
 			return 0;
 	}
 
-	if (!gen_func_db_search(f, s, 1))
-		return 0;
-	return fputs("", f) != EOF;
+	return gen_func_db_search(f, s, 1);
 }
 
 /*
@@ -613,6 +677,9 @@ gen_database(FILE *f, const struct config *cfg, const struct strct *p)
 	const struct field	*fd;
 	const struct update	*u;
 	size_t			 pos;
+
+	if (fputc('\n', f) == EOF)
+		return 0;
 
 	if (!gen_comment(f, 0, COMMENT_C,
 	    "Clear resources and free \"p\".\n"
@@ -648,7 +715,7 @@ gen_database(FILE *f, const struct config *cfg, const struct strct *p)
 				continue;
 			if (fd->type == FTYPE_PASSWORD) {
 				if (!gen_commentv(f, 0, COMMENT_C_FRAG,
-				    "\tv%zu: %s (pre-hashed password)", 
+				    "\tv%zu: %s (pre-hashed password)",
 				    pos++, fd->name))
 					return 0;
 			} else {
@@ -662,8 +729,6 @@ gen_database(FILE *f, const struct config *cfg, const struct strct *p)
 		    "success or <0 otherwise."))
 			return 0;
 		if (!gen_func_db_insert(f, p, 1))
-			return 0;
-		if (fputs("\n", f) == EOF)
 			return 0;
 	}
 
@@ -688,6 +753,8 @@ static int
 gen_json_parse(FILE *f, const struct config *cfg, const struct strct *p)
 {
 
+	if (fputc('\n', f) == EOF)
+		return 0;
 	if (!gen_comment(f, 0, COMMENT_C,
 	    "Deserialise the parsed JSON buffer \"buf\", which "
 	    "need not be NUL terminated, with parse tokens "
@@ -730,10 +797,7 @@ gen_json_parse(FILE *f, const struct config *cfg, const struct strct *p)
 	    "Does not touch the pointer itself.\n"
 	    "May be passed NULL.", p->name))
 		return 0;
-	if (!gen_func_json_clear(f, p, 1))
-		return 0;
-
-	return fputs("\n", f) != EOF;
+	return gen_func_json_clear(f, p, 1);
 }
 
 /*
@@ -744,6 +808,8 @@ static int
 gen_json_out(FILE *f, const struct config *cfg, const struct strct *p)
 {
 
+	if (fputc('\n', f) == EOF)
+		return 0;
 	if (!gen_commentv(f, 0, COMMENT_C,
 	    "Print out the fields of a %s in JSON "
 	    "including nested structures.\n"
@@ -779,8 +845,6 @@ gen_json_out(FILE *f, const struct config *cfg, const struct strct *p)
 			return 0;
 		if (!gen_func_json_array(f, p, 1))
 			return 0;
-		if (fputs("\n", f) == EOF)
-			return 0;
 	}
 
 	if (STRCT_HAS_ITERATOR & p->flags) {
@@ -794,8 +858,6 @@ gen_json_out(FILE *f, const struct config *cfg, const struct strct *p)
 		    "from an iterator.", p->name))
 			return 0;
 		if (!gen_func_json_iterate(f, p, 1))
-			return 0;
-		if (fputs("\n", f) == EOF)
 			return 0;
 	}
 
@@ -812,13 +874,13 @@ gen_valids(FILE *f, const struct config *cfg, const struct strct *p)
 	const struct field	*fd;
 
 	TAILQ_FOREACH(fd, &p->fq, entries) {
+		if (fputc('\n', f) == EOF)
+			return 0;
 		if (!gen_commentv(f, 0, COMMENT_C,
 		    "Validation routines for the %s "
 		    "field in struct %s.", fd->name, p->name))
 			return 0;
 		if (!gen_func_valid(f, fd, 1))
-			return 0;
-		if (fputs("\n", f) == EOF)
 			return 0;
 	}
 
@@ -860,6 +922,8 @@ static int
 gen_transaction(FILE *f, const struct config *cfg)
 {
 
+	if (fputc('\n', f) == EOF)
+		return 0;
 	if (!gen_comment(f, 0, COMMENT_C,
 	    "Open a transaction with identifier \"id\".\n"
 	    "If \"mode\" is 0, the transaction is opened in "
@@ -914,6 +978,9 @@ gen_transaction(FILE *f, const struct config *cfg)
 static int
 gen_open(FILE *f, const struct config *cfg)
 {
+
+	if (fputc('\n', f) == EOF)
+		return 0;
 
 	if (!gen_comment(f, 0, COMMENT_C,
 	    "Forward declaration of opaque pointer."))
@@ -973,9 +1040,7 @@ gen_open(FILE *f, const struct config *cfg)
 	    "See db_logging_data() to set the pointer "
 	    "after initialisation."))
 		return 0;
-	if (!gen_func_db_open_logging(f, 1))
-		return 0;
-	return fputs("\n", f) != EOF;
+	return gen_func_db_open_logging(f, 1);
 }
 
 /*
@@ -1089,11 +1154,11 @@ ort_lang_c_header(const struct ort_lang_c *args,
 
 	/* If the guard is NULL, we don't emit any guarding. */
 
-	if (args->guard != NULL && fprintf(f, 
+	if (args->guard != NULL && fprintf(f,
 	    "#ifndef %s\n#define %s\n\n", args->guard, args->guard) < 0)
 		return 0;
 
-	if (!gen_commentv(f, 0, COMMENT_C, 
+	if (!gen_commentv(f, 0, COMMENT_C,
 	    "WARNING: automatically generated by %s %s.\n"
 	    "DO NOT EDIT!", __func__, ORT_VERSION))
 		return 0;
@@ -1108,7 +1173,7 @@ ort_lang_c_header(const struct ort_lang_c *args,
             "#endif\n\n", ORT_VERSION, (long long)ORT_VSTAMP) < 0)
 		return 0;
 	
-	if ((args->flags & ORT_LANG_C_DB_SQLBOX) && 
+	if ((args->flags & ORT_LANG_C_DB_SQLBOX) &&
 	    !TAILQ_EMPTY(&cfg->rq)) {
 		if (!gen_comment(f, 0, COMMENT_C,
 		    "Our roles for access control.\n"
@@ -1183,7 +1248,7 @@ ort_lang_c_header(const struct ort_lang_c *args,
 		          "\tJSMN_ERROR_PART = -3\n"
 		          "};\n\n", f) == EOF)
 			return 0;
-		if (!gen_comment(f, 0, COMMENT_C, 
+		if (!gen_comment(f, 0, COMMENT_C,
 		    "Type of JSON token"))
 			return 0;
 		if (fputs("typedef enum {\n"
@@ -1218,7 +1283,7 @@ ort_lang_c_header(const struct ort_lang_c *args,
 			return 0;
 	}
 
-	if (fputs("__BEGIN_DECLS\n\n", f) == EOF)
+	if (fputs("\n__BEGIN_DECLS\n", f) == EOF)
 		return 0;
 
 	if (args->flags & ORT_LANG_C_DB_SQLBOX) {
@@ -1286,7 +1351,7 @@ ort_lang_c_header(const struct ort_lang_c *args,
 			if (!gen_valids(f, cfg, p))
 				return 0;
 
-	if (fputs("__END_DECLS\n", f) == EOF)
+	if (fputs("\n__END_DECLS\n", f) == EOF)
 		return 0;
 
 	if (args->guard != NULL &&

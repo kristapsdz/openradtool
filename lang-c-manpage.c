@@ -47,6 +47,8 @@ gen_field_type(FILE *f, const struct field *fd)
 		break;
 	case FTYPE_BIT:
 	case FTYPE_BITFIELD:
+	case FTYPE_DATE:
+	case FTYPE_EPOCH:
 	case FTYPE_INT:
 		rfd = fd->ref != NULL ? fd->ref->target : fd;
 		c = fprintf(f, "%s_%s", rfd->parent->name, rfd->name);
@@ -272,12 +274,10 @@ gen_field(FILE *f, const struct field *fd)
 			return 0;
 		c = fprintf(f, ".It Va size_t %s_sz\n", fd->name);
 		break;
-	case FTYPE_DATE:
-	case FTYPE_EPOCH:
-		c = fprintf(f, "time_t %s\n", fd->name);
-		break;
 	case FTYPE_BIT:
 	case FTYPE_BITFIELD:
+	case FTYPE_DATE:
+	case FTYPE_EPOCH:
 	case FTYPE_INT:
 		rfd = fd->ref != NULL ? fd->ref->target : fd;
 		c = fprintf(f, "%s_%s %s\n", 

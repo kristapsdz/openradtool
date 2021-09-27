@@ -209,12 +209,15 @@ struct company {
 };
 .Ed
 .Pp
-Integer fields use defined types with the name of the structure, an
-underscore, then the field name.
+Integer and epoch fields use defined types with the name of the
+structure, an underscore, then the field name.
 If safe typing is enabled, these are implemented as structures with
 a single integer field whose name is not fixed.
 Otherwise, the type is an alias for
-.Vt int64_t .
+.Vt int64_t
+or
+.Vt time_t ,
+as appropriate.
 .Pp
 .Bd -literal -offset indent
 typedef int64_t company_id;

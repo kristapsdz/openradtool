@@ -69,7 +69,7 @@ main(int argc, char *argv[])
 		i++;
 
 	confst = i;
-	confsz = argc - i;
+	confsz = (size_t)argc - i;
 
 	/* If we have 2 w/o -f, it's old-new. */
 
@@ -164,8 +164,8 @@ main(int argc, char *argv[])
 		}
 
 	if (!ort_write_diff_file(stdout, q, 
-	    (const char **)&argv[confst], confsz,
-	    (const char **)argv, dconfsz)) {
+	    (const char *const *)&argv[confst], confsz,
+	    (const char *const *)argv, dconfsz)) {
 		rc = -1;
 		warn(NULL);
 	}

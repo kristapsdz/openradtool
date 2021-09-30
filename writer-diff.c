@@ -1085,8 +1085,8 @@ ort_write_diff_enms(FILE *f, const struct diffq *q)
 
 int
 ort_write_diff_file(FILE *f, const struct diffq *q, 
-	const char **into, size_t intosz,
-	const char **from, size_t fromsz)
+	const char *const *into, size_t intosz,
+	const char *const *from, size_t fromsz)
 {
 	const struct diff	*d;
 	size_t			 i;

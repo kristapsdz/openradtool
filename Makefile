@@ -3,6 +3,7 @@
 
 include Makefile.configure
 
+#CFLAGS		+= -Weverything -Wno-switch-enum -Wno-padded -Wno-reserved-id-macro
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 13
 VERSION_BUILD	 = 9
@@ -249,6 +250,10 @@ IMAGES		 = index.svg \
 		   index-fig7.svg \
 		   index-fig8.svg
 TS_NODE		 = node_modules/.bin/ts-node
+
+# Comment these out to disable their tests.
+JSONSCHEMA	 = jsonschema
+XMLLINT		 = xmllint
 
 # Only needed for test, not built by default.
 LIBS_SQLBOX	!= pkg-config --libs sqlbox 2>/dev/null || echo "-lsqlbox -lsqlite3"
@@ -596,6 +601,7 @@ regress: all
 	@tmp=`mktemp` ; \
 	MALLOC_OPTIONS=S ; \
 	set +e ; \
+	skipped=; \
 	echo "=== ort output tests === " ; \
 	for f in regress/*.result ; do \
 		bf=`basename $$f .result`.ort ; \
@@ -626,23 +632,22 @@ regress: all
 		fi ; \
 		echo "pass" ; \
 	done ; \
-	which xmllint >/dev/null 2>&1 ; \
-	if [ $$? -eq 0 ]; then \
+	if [ -n "$(XMLLINT)" ]; then \
 		echo "=== ort-xliff syntax tests === " ; \
 		sc=regress/xliff/xliff-core-1.2-strict.xsd ; \
 		for f in regress/*.ort ; do \
-			printf "xmllint: $$f... " ; \
+			printf "$(XMLLINT): $$f... " ; \
 			./ort-xliff $$f >$$tmp 2>/dev/null ; \
 			if [ $$? -ne 0 ] ; then \
 				echo "fail (did not execute)" ; \
 				rm -f $$tmp ; \
 				exit 1 ; \
 			fi ; \
-			xmllint --schema $$sc --nonet --noout \
+			$(XMLLINT) --schema $$sc --nonet --noout \
 				--path "regress/xliff" $$tmp 2>/dev/null ; \
 			if [ $$? -ne 0 ] ; then \
 				echo "fail" ; \
-				xmllint --schema $$sc --nonet \
+				$(XMLLINT) --schema $$sc --nonet \
 					--path "regress/xliff" $$tmp ; \
 				rm -f $$tmp ; \
 				exit 1 ; \
@@ -651,6 +656,7 @@ regress: all
 		done ; \
 	else \
 		echo "!!! skipping ort-xliff syntax tests !!! " ; \
+		skipped = "$$skipped ort-xliff-syntax" ; \
 	fi ; \
 	echo "=== ort-sql syntax tests === " ; \
 	for f in regress/*.ort ; do \
@@ -844,6 +850,8 @@ regress: all
 	if [ "x$(LIBS_REGRESS)" = "x" ] ; then \
 		echo "!!! skipping ort-c-{header,source} compile tests !!! " ; \
 		echo "!!! skipping ort-c-{header,source,sql} run tests !!! " ; \
+		skipped = "$$skipped ort-c-{header,source}-compile" ; \
+		skipped = "$$skipped ort-c-{header,source,sql}-run" ; \
 	else \
 		echo "=== ort-c-{header,source} compile tests === " ; \
 		for f in regress/*.ort ; do \
@@ -907,6 +915,7 @@ regress: all
 		set +e ; \
 	else \
 		echo "!!! skipping ort-nodejs compile tests !!! " ; \
+		skipped = "$$skipped ort-nodejs}-compile" ; \
 	fi ; \
 	if [ -f "$(TS_NODE)" ]; then \
 		echo "=== ort-nodejs run tests === " ; \
@@ -916,6 +925,7 @@ regress: all
 		set +e ; \
 	else \
 		echo "!!! skipping ort-nodejs run tests !!! " ; \
+		skipped = "$$skipped ort-nodejs}-run" ; \
 	fi ; \
 	if [ -f "$(TS_NODE)" ]; then \
 		echo "=== ort-javascript internal tests === " ; \
@@ -925,6 +935,7 @@ regress: all
 		set +e ; \
 	else \
 		echo "!!! skipping ort-javascript internal tests !!! " ; \
+		skipped = "$$skipped ort-javascript}-internal" ; \
 	fi ; \
 	echo "=== ort-javascript output tests === " ; \
 	for f in regress/javascript/*.ort ; do \
@@ -946,6 +957,7 @@ regress: all
 		set +e ; \
 	else \
 		echo "!!! skipping ort-javascript run tests !!! " ; \
+		skipped = "$$skipped ort-javascript}-run" ; \
 	fi ; \
 	if [ -f "$(TS_NODE)" ]; then \
 		echo "=== ort-json reformat tests === " ; \
@@ -956,13 +968,14 @@ regress: all
 		rm -f $$tmp.ts ; \
 	else \
 		echo "!!! skipping ort-json reformat tests !!! " ; \
+		skipped = "$$skipped ort-json}-reformat" ; \
 	fi ; \
 	if [ -f "node_modules/.bin/typescript-json-schema" ]; then \
 		node_modules/.bin/typescript-json-schema \
 			--strictNullChecks ort-json.ts \
 			ortJson.ortJsonConfig > ort-json.schema ; \
-		which jsonschema-3 >/dev/null 2>&1 ; \
-		if [ $$? -eq 0 ]; then \
+		if [ -n "$(JSONSCHEMA)" ]; \
+		then \
 			echo "=== ort-json output tests === " ; \
 			for f in regress/*.ort ; do \
 				printf "ort-json: $$f... " ; \
@@ -972,11 +985,11 @@ regress: all
 					rm -f $$tmp ; \
 					exit 1 ; \
 				fi ; \
-				jsonschema-3 -i $$tmp \
+				$(JSONSCHEMA) -i $$tmp \
 					ort-json.schema >/dev/null 2>&1; \
 				if [ $$? -ne 0 ]; then \
 					echo "fail" ; \
-					jsonschema-3 -i $$tmp ort-json.schema ; \
+					$(JSONSCHEMA) -i $$tmp ort-json.schema ; \
 					rm -f $$tmp ; \
 					exit 1 ; \
 				fi ; \
@@ -984,10 +997,18 @@ regress: all
 			done ; \
 		else \
 			echo "!!! skipping ort-json output tests !!! " ; \
+			skipped = "$$skipped ort-json}-output" ; \
 		fi ; \
 	else \
 		echo "!!! skipping ort-json output tests !!! " ; \
+		skipped = "$$skipped ort-json}-output" ; \
 	fi ; \
+	if [ -n "$$skipped" ]; \
+	then \
+		echo "Skipped: $$skipped" ; \
+	else \
+		echo "Ran all tests." ; \
+	fi ;
 	rm -f $$tmp
 
 .in.pc.pc:

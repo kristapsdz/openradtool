@@ -22,6 +22,7 @@
 
 #include <assert.h>
 #include <expat.h>
+#include <limits.h> /* INT_MAX */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -115,7 +116,8 @@ static int
 xliff_sort(const void *p1, const void *p2)
 {
 
-	return strcmp(*(const char **)p1, *(const char **)p2);
+	return strcmp(*(const char *const *)p1,
+		*(const char *const *)p2);
 }
 
 static void
@@ -166,7 +168,7 @@ static void
 xtext(void *dat, const XML_Char *s, int len)
 {
 	struct xparse	 *p = dat;
-	size_t		 sz;
+	size_t		 sz, slen = (size_t)len;
 	void		*pp;
 
 	assert(p->curunit != NULL);
@@ -176,17 +178,17 @@ xtext(void *dat, const XML_Char *s, int len)
 		if (p->curunit->source != NULL) {
 			sz = strlen(p->curunit->source);
 			pp = realloc(p->curunit->source,
-				 sz + len + 1);
+				 sz + slen + 1);
 			if (pp == NULL) {
 				p->er = 1;
 				XML_StopParser(p->p, 0);
 				return;
 			}
 			p->curunit->source = pp;
-			memcpy(p->curunit->source + sz, s, len);
-			p->curunit->source[sz + len] = '\0';
+			memcpy(p->curunit->source + sz, s, slen);
+			p->curunit->source[sz + slen] = '\0';
 		} else {
-			p->curunit->source = strndup(s, len);
+			p->curunit->source = strndup(s, slen);
 			if (p->curunit->source == NULL) {
 				p->er = 1;
 				XML_StopParser(p->p, 0);
@@ -197,17 +199,17 @@ xtext(void *dat, const XML_Char *s, int len)
 		if (p->curunit->target != NULL) {
 			sz = strlen(p->curunit->target);
 			pp = realloc(p->curunit->target,
-				 sz + len + 1);
+				 sz + slen + 1);
 			if (pp == NULL) {
 				p->er = 1;
 				XML_StopParser(p->p, 0);
 				return;
 			}
 			p->curunit->target = pp;
-			memcpy(p->curunit->target + sz, s, len);
-			p->curunit->target[sz + len] = '\0';
+			memcpy(p->curunit->target + sz, s, slen);
+			p->curunit->target[sz + slen] = '\0';
 		} else {
-			p->curunit->target = strndup(s, len);
+			p->curunit->target = strndup(s, slen);
 			if (p->curunit->target == NULL) {
 				p->er = 1;
 				XML_StopParser(p->p, 0);
@@ -518,7 +520,8 @@ xliff_read(struct msgq *mq, FILE *f,
 			xparse_free(xp);
 			return -1;
 		}
-		if (XML_Parse(p, buf, sz, feof(f)) == XML_STATUS_OK)
+		assert(sz < INT_MAX);
+		if (XML_Parse(p, buf, (int)sz, feof(f)) == XML_STATUS_OK)
 			continue;
 
 		/* If we have a hard error, stop at once. */
@@ -542,8 +545,10 @@ xliff_read(struct msgq *mq, FILE *f,
 static int
 xliffunit_sort(const void *a1, const void *a2)
 {
-	struct xliffunit *p1 = (struct xliffunit *)a1,
-		 	 *p2 = (struct xliffunit *)a2;
+	const struct xliffunit	*p1, *p2;
+
+	p1 = (const struct xliffunit *)a1;
+	p2 = (const struct xliffunit *)a2;
 
 	return strcmp(p1->source, p2->source);
 }

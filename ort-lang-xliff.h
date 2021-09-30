@@ -19,7 +19,7 @@
 
 struct	ort_lang_xliff {
 	FILE		 	**in;
-	const char		**fnames;
+	const char *const 	 *fnames;
 	size_t			  insz;
 	unsigned int		  flags;
 #define ORT_LANG_XLIFF_COPY	  0x01

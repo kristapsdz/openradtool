@@ -44,7 +44,7 @@ main(int argc, char *argv[])
 #define	OP_JOIN			  1
 #define	OP_UPDATE		 (-1)
 	int			  c, op = OP_EXTRACT, rc = 0;
-	size_t			  confsz = 0, i, j, xmlstart = 0;
+	size_t			  confsz = 0, i, j, xmlstart = 0, sz;
 	struct msgq		  mq = TAILQ_HEAD_INITIALIZER(mq);
 
 #if HAVE_PLEDGE
@@ -79,33 +79,34 @@ main(int argc, char *argv[])
 	 */
 
 	if (op == OP_JOIN || op == OP_UPDATE) {
-		for (confsz = 0; confsz < (size_t)argc; confsz++)
+		sz = (size_t)argc;
+		for (confsz = 0; confsz < sz; confsz++)
 			if (strcmp(argv[confsz], "-x") == 0)
 				break;
 
 		/* If we have >2 w/o -x, error (which conf/xml?). */
 
-		if (confsz == (size_t)argc && argc > 2)
+		if (confsz == sz && sz > 2)
 			goto usage;
 
-		if ((i = confsz) < (size_t)argc)
+		if ((i = confsz) < sz)
 			i++;
 
 		xmlstart = i;
-		args.insz = argc - i;
+		args.insz = sz - i;
 
 		if (confsz == 0 && args.insz == 0)
 			goto usage;
 
 		/* If we have 2 w/o -x, it's old-new. */
 
-		if (args.insz == 0 && argc == 2)
+		if (args.insz == 0 && sz == 2)
 			args.insz = confsz = xmlstart = 1;
 
 		if (OP_UPDATE == op && args.insz > 1)
 			goto usage;
 
-		args.fnames = (const char **)&argv[xmlstart];
+		args.fnames = (const char *const *)&argv[xmlstart];
 
 		if (args.insz > 0 &&
 		    (args.in = calloc(args.insz, sizeof(FILE *))) == NULL)
@@ -117,9 +118,9 @@ main(int argc, char *argv[])
 		for (i = 0; i < confsz; i++)
 			if ((confs[i] = fopen(argv[i], "r")) == NULL)
 				err(1, "%s", argv[i]);
-		if (i < (size_t)argc && 0 == strcmp(argv[i], "-x"))
+		if (i < sz && 0 == strcmp(argv[i], "-x"))
 			i++;
-		for (j = 0; i < (size_t)argc; j++, i++)
+		for (j = 0; i < sz; j++, i++)
 			if ((args.in[j] = fopen(argv[i], "r")) == NULL)
 				err(1, "%s", argv[i]);
 

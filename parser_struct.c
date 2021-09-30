@@ -98,7 +98,7 @@ strct_alloc(struct parse *p, const char *name)
 	}
 
 	for (cp = s->name; *cp != '\0'; cp++)
-		*cp = tolower((unsigned char)*cp);
+		*cp = (char)tolower((unsigned char)*cp);
 
 	s->cfg = p->cfg;
 	parse_point(p, &s->pos);
@@ -136,7 +136,7 @@ name_append(char ***p, size_t *sz, const char *v)
 	}
 
 	for ( ; *cp != '\0'; cp++)
-		*cp = tolower((unsigned char)*cp);
+		*cp = (char)tolower((unsigned char)*cp);
 
 	return 1;
 }
@@ -184,7 +184,7 @@ ref_append(char **p, const char *v, char delim)
 	}
 
 	for (src = v; *src != '\0'; dst++, src++) 
-		*dst = tolower((unsigned char)*src);
+		*dst = (char)tolower((unsigned char)*src);
 
 	*dst = '\0';
 	return 1;
@@ -784,7 +784,7 @@ parse_config_search_params(struct parse *p, struct search *s)
 				return;
 			}
 			for (cp = s->name; *cp != '\0'; cp++)
-				*cp = tolower((unsigned char)*cp);
+				*cp = (char)tolower((unsigned char)*cp);
 			parse_next(p);
 		} else if (strcasecmp("comment", p->last.string) == 0) {
 			if (!parse_comment(p, &s->doc))
@@ -1082,7 +1082,7 @@ terms:
 				return;
 			}
 			for (cp = up->name; *cp != '\0'; cp++)
-				*cp = tolower((unsigned char)*cp);
+				*cp = (char)tolower((unsigned char)*cp);
 		} else if (0 == strcasecmp(p->last.string, "comment")) {
 			if ( ! parse_comment(p, &up->doc))
 				return;
@@ -1172,7 +1172,7 @@ parse_struct_search(struct parse *p, struct strct *s, enum stype stype)
  */
 static int
 rolemap_assign(struct parse *p, struct strct *s, 
-	const char **ns, size_t nsz, 
+	const char *const *ns, size_t nsz, 
 	enum rolemapt type, const char *name)
 {
 	struct rref	*rs;
@@ -1353,7 +1353,7 @@ parse_struct_roles(struct parse *p, struct strct *s)
 		/* Assign all roles to the given operation. */
 
 		if (!rolemap_assign(p, s, 
-		    (const char **)ns, nsz, type, name))
+		    (const char *const *)ns, nsz, type, name))
 			goto cleanup;
 
 		if (p->lasttype != TOK_SEMICOLON) {

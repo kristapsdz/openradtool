@@ -170,11 +170,11 @@ struct	field {
 	struct strct	  *parent;
 	struct fvalidq	   fvq;
 	unsigned int	   flags;
-#define	FIELD_ROWID	   0x01
-#define	FIELD_UNIQUE	   0x02
-#define FIELD_NULL	   0x04
-#define	FIELD_NOEXPORT	   0x08
-#define FIELD_HASDEF	   0x10
+#define	FIELD_ROWID	   0x01u
+#define	FIELD_UNIQUE	   0x02u
+#define FIELD_NULL	   0x04u
+#define	FIELD_NOEXPORT	   0x08u
+#define FIELD_HASDEF	   0x10u
 	TAILQ_ENTRY(field) entries;
 };
 

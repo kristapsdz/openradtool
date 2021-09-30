@@ -267,7 +267,7 @@ parse_write_field(struct writer *w, const struct field *p)
 			break;
 		default:
 			abort();
-			break;
+			/* NOTREACHED */
 		}
 		if (rc == 0)
 			return 0;

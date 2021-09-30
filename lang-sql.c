@@ -317,7 +317,7 @@ gen_diff_field_new(FILE *f, const struct field *fd)
 			break;
 		default:
 			abort();
-			break;
+			/* NOTREACHED */
 		}
 		if (rc < 0)
 			return 0;

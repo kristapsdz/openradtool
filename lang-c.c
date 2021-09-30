@@ -283,20 +283,20 @@ print_var(FILE *f, size_t pos, size_t col,
 
 	if (rc < 0)
 		return -1;
-	col += rc;
+	col += (size_t)rc;
 
 	if (FTYPE_ENUM == fd->type) {
 		rc = fprintf(f, "enum %s %sv%zu", fd->enm->name,
 			(flags & FIELD_NULL) ? "*" : "", pos);
 		if (rc < 0)
 			return -1;
-		return col + rc;
+		return (int)col + rc;
 	}
 
 	if (fd->type == FTYPE_BLOB) {
 		if ((rc = fprintf(f, "size_t v%zu_sz, ", pos)) < 0)
 			return -1;
-		col += rc;
+		col += (size_t)rc;
 	}
 
 	switch (fd->type) {
@@ -319,7 +319,7 @@ print_var(FILE *f, size_t pos, size_t col,
 	if (rc < 0)
 		return -1;
 
-	return col + rc;
+	return (int)col + rc;
 }
 
 /*
@@ -346,7 +346,7 @@ gen_func_db_update(FILE *f, const struct update *u, int decl)
 	} else {
 		if ((rc = fprintf(f, "%s ", type)) < 0)
 			return 0;
-		col = rc;
+		col = (size_t)rc;
 	}
 
 	/* Now function name. */
@@ -355,7 +355,7 @@ gen_func_db_update(FILE *f, const struct update *u, int decl)
 		u->parent->name, utypes[u->type]);
 	if (rc < 0)
 		return 0;
-	sz = rc;
+	sz = (size_t)rc;
 
 	if (u->name == NULL && u->type == UP_MODIFY) {
 		if (!(u->flags & UPDATE_ALL))
@@ -365,7 +365,7 @@ gen_func_db_update(FILE *f, const struct update *u, int decl)
 					modtypes[ur->mod]);
 				if (rc < 0)
 					return 0;
-				sz += rc;
+				sz += (size_t)rc;
 			}
 		if (!TAILQ_EMPTY(&u->crq)) {
 			if (fputs("_by", f) == EOF)
@@ -377,7 +377,7 @@ gen_func_db_update(FILE *f, const struct update *u, int decl)
 					optypes[ur->op]);
 				if (rc < 0)
 					return 0;
-				sz += rc;
+				sz += (size_t)rc;
 			}
 		}
 	} else if (u->name == NULL) {
@@ -391,13 +391,13 @@ gen_func_db_update(FILE *f, const struct update *u, int decl)
 					optypes[ur->op]);
 				if (rc < 0)
 					return 0;
-				sz += rc;
+				sz += (size_t)rc;
 			}
 		}
 	} else {
 		if ((rc = fprintf(f, "_%s", u->name)) < 0)
 			return 0;
-		sz += rc;
+		sz += (size_t)rc;
 	}
 
 	if ((col += sz) >= 72) {
@@ -416,7 +416,7 @@ gen_func_db_update(FILE *f, const struct update *u, int decl)
 		if ((rc = print_var(f, pos++, col, 
 		    ur->field, ur->field->flags)) < 0)
 			return 0;
-		col = rc;
+		col = (size_t)rc;
 	}
 
 	TAILQ_FOREACH(ur, &u->crq, entries)
@@ -424,7 +424,7 @@ gen_func_db_update(FILE *f, const struct update *u, int decl)
 			if ((rc = print_var(f, 
 			    pos++, col, ur->field, 0)) < 0)
 				return 0;
-			col = rc;
+			col = (size_t)rc;
 		}
 
 	return fprintf(f, ")%s", decl ? ";\n" : "") > 0;
@@ -464,7 +464,7 @@ gen_func_db_search(FILE *f, const struct search *s, int decl)
 
 	if (rc < 0)
 		return 0;
-	col += rc;
+	col += (size_t)rc;
 
 	if (!decl) {
 		if (fputc('\n', f) == EOF)
@@ -481,7 +481,7 @@ gen_func_db_search(FILE *f, const struct search *s, int decl)
 	rc = fprintf(f, "db_%s_%s", s->parent->name, stypes[s->type]);
 	if (rc < 0)
 		return 0;
-	sz += rc;
+	sz += (size_t)rc;
 	if (s->name == NULL && !TAILQ_EMPTY(&s->sntq)) {
 		if (fputs("_by", f) == EOF)
 			return 0;
@@ -491,12 +491,12 @@ gen_func_db_search(FILE *f, const struct search *s, int decl)
 				sent->uname, optypes[sent->op]);
 			if (rc < 0)
 				return 0;
-			sz += rc;
+			sz += (size_t)rc;
 		}
 	} else if (s->name != NULL) {
 		if ((rc = fprintf(f, "_%s", s->name)) < 0)
 			return 0;
-		sz += rc;
+		sz += (size_t)rc;
 	}
 
 	if ((col += sz) >= 72) {
@@ -515,7 +515,7 @@ gen_func_db_search(FILE *f, const struct search *s, int decl)
 		if ((rc = fprintf(f, 
 		    ", %s_cb cb, void *arg", retstr->name)) < 0)
 			return 0;
-		col += rc;
+		col += (size_t)rc;
 	}
 
 	TAILQ_FOREACH(sent, &s->sntq, entries)
@@ -523,7 +523,7 @@ gen_func_db_search(FILE *f, const struct search *s, int decl)
 			if ((rc = print_var
 			    (f, pos++, col, sent->field, 0)) < 0)
 				return 0;
-			col = rc;
+			col = (size_t)rc;
 		}
 
 	return fprintf(f, ")%s", decl ? ";\n" : "") > 0;
@@ -557,21 +557,21 @@ gen_func_db_insert(FILE *f, const struct strct *p, int decl)
 
 	if ((rc = fprintf(f, "db_%s_insert", p->name)) < 0)
 		return 0;
-	col += rc;
+	col += (size_t)rc;
 
 	if (col >= 72) {
 		if (fputc('\n', f) == EOF)
 			return 0;
 		if ((rc = fprintf(f, "    ")) < 0)
 			return 0;
-		col = rc;
+		col = (size_t)rc;
 	}
 
 	/* Arguments starting with database pointer. */
 
 	if ((rc = fprintf(f, "(struct ort *ctx")) < 0)
 		return 0;
-	col += rc;
+	col += (size_t)rc;
 
 	TAILQ_FOREACH(fd, &p->fq, entries)
 		if (!(fd->type == FTYPE_STRUCT || 
@@ -579,7 +579,7 @@ gen_func_db_insert(FILE *f, const struct strct *p, int decl)
 			rc = print_var(f, pos++, col, fd, fd->flags);
 			if (rc < 0)
 				return 0;
-			col = rc;
+			col = (size_t)rc;
 		}
 
 	return fprintf(f, ")%s", decl ? ";\n" : "") > 0;

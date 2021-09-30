@@ -17,10 +17,10 @@
 #ifndef ORT_LANG_NODEJS
 #define ORT_LANG_NODEJS
 
-#define	ORT_LANG_NODEJS_VALID		0x01
-#define	ORT_LANG_NODEJS_CORE		0x02
-#define ORT_LANG_NODEJS_DB		0x04
-#define	ORT_LANG_NODEJS_NOMODULE	0x08
+#define	ORT_LANG_NODEJS_VALID		0x01u
+#define	ORT_LANG_NODEJS_CORE		0x02u
+#define ORT_LANG_NODEJS_DB		0x04u
+#define	ORT_LANG_NODEJS_NOMODULE	0x08u
 
 struct ort_lang_nodejs {
 	unsigned int	 flags;

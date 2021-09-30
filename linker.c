@@ -36,7 +36,7 @@
  * Generate a warning message at position "pos".
  */
 void
-gen_warnx(struct config *cfg, 
+gen_warnx(struct config *cfg,
 	const struct pos *pos, const char *fmt, ...)
 {
 	va_list	 ap;
@@ -67,14 +67,14 @@ gen_err(struct config *cfg, const struct pos *pos)
  * The caller is still responsible for exiting.
  */
 void
-gen_errx(struct config *cfg, 
+gen_errx(struct config *cfg,
 	const struct pos *pos, const char *fmt, ...)
 {
 	va_list	 ap;
 
 	if (fmt != NULL) {
 		va_start(ap, fmt);
-		ort_msgv(&cfg->mq, MSGTYPE_ERROR, 
+		ort_msgv(&cfg->mq, MSGTYPE_ERROR,
 			0, pos, fmt, ap);
 		va_end(ap);
 	} else
@@ -110,12 +110,15 @@ annotate(struct ref *ref, size_t height, size_t colour)
 static int
 parse_cmp(const void *a1, const void *a2)
 {
-	const struct strct 
-	      *p1 = *(const struct strct **)a1, 
-	      *p2 = *(const struct strct **)a2;
+	const struct strct
+	      *const p1 = *(const struct strct *const *)a1,
+	      *const p2 = *(const struct strct *const *)a2;
 
-	if (p1->height != p2->height) 
-		return (ssize_t)p1->height - (ssize_t)p2->height;
+	if (p1->height != p2->height) {
+		if (p1->height > p2->height)
+			return 1;
+		return (p1->height == p2->height) ? 0 : -1;
+	}
 
 	return strcmp(p1->name, p2->name);
 }
@@ -132,7 +135,7 @@ check_aggrtype(struct config *cfg, const struct search *srch)
 
 	if (srch->group != NULL) {
 		if (srch->aggr == NULL) {
-			gen_errx(cfg, &srch->group->pos, 
+			gen_errx(cfg, &srch->group->pos,
 				"group without a constraint");
 			errs++;
 		}
@@ -144,9 +147,9 @@ check_aggrtype(struct config *cfg, const struct search *srch)
 				"column for group and constraint");
 			errs++;
 		}
-		if (srch->aggr->field->parent != 
+		if (srch->aggr->field->parent !=
 		    srch->group->field->parent) {
-			gen_errx(cfg, &srch->group->pos, 
+			gen_errx(cfg, &srch->group->pos,
 				"structure for group and constraint "
 				"must be the same");
 			errs++;
@@ -189,18 +192,18 @@ check_searchtype(struct config *cfg, const struct search *srch)
 	 * multiple searches and vice versa.
 	 */
 
-	if (srch->type == STYPE_SEARCH && 
+	if (srch->type == STYPE_SEARCH &&
 	    TAILQ_EMPTY(&srch->sntq) && srch->limit != 1)
-		gen_warnx(cfg, &srch->pos, 
+		gen_warnx(cfg, &srch->pos,
 			"single-result search without parameters "
 			"and without a limit of one");
 	if (srch->type != STYPE_SEARCH &&
 	    (srch->flags & SEARCH_IS_UNIQUE))
-		gen_warnx(cfg, &srch->pos, 
+		gen_warnx(cfg, &srch->pos,
 			"multiple-result search on a unique field");
-	if (!(srch->flags & SEARCH_IS_UNIQUE) && 
+	if (!(srch->flags & SEARCH_IS_UNIQUE) &&
 	    srch->type == STYPE_SEARCH && srch->limit != 1)
-		gen_warnx(cfg, &srch->pos, 
+		gen_warnx(cfg, &srch->pos,
 			"single-result search on a non-unique field "
 			"without a limit of one");
 
@@ -210,7 +213,7 @@ check_searchtype(struct config *cfg, const struct search *srch)
 		if ((sent->op == OPTYPE_NOTNULL ||
 		     sent->op == OPTYPE_ISNULL) &&
 		    !(sent->field->flags & FIELD_NULL))
-			gen_warnx(cfg, &sent->pos, 
+			gen_warnx(cfg, &sent->pos,
 				"null operator on non-null field");
 
 	/* Logical AND/OR should only occur with bitfields. */
@@ -252,7 +255,7 @@ check_searchtype(struct config *cfg, const struct search *srch)
 			errs++;
 		}
 
-	/* 
+	/*
 	 * Disallow passwords in distinct.
 	 * TODO: this should allow for passwords *within* the
 	 * distinct subparts.
@@ -263,9 +266,9 @@ check_searchtype(struct config *cfg, const struct search *srch)
 			if (OPTYPE_ISUNARY(sent->op) ||
 			    sent->op == OPTYPE_STREQ ||
 			    sent->op == OPTYPE_STRNEQ ||
-			    sent->field->type != FTYPE_PASSWORD) 
+			    sent->field->type != FTYPE_PASSWORD)
 				continue;
-			gen_errx(cfg, &sent->pos, 
+			gen_errx(cfg, &sent->pos,
 				"password queries not allowed when "
 				"searching on distinct subsets");
 			errs++;
@@ -301,8 +304,8 @@ check_unique_roles_tree(struct config *cfg, const struct rolemap *rm)
 					break;
 			if (rp == NULL)
 				continue;
-			gen_warnx(cfg, &rs->pos, 
-				"overlapping role: %s, %s", 
+			gen_warnx(cfg, &rs->pos,
+				"overlapping role: %s, %s",
 				rrs->role->name, rs->role->name);
 		}
 
@@ -340,8 +343,8 @@ check_reffind(struct config *cfg, const struct strct *p)
 static int
 nref_cmp(const void *a, const void *b)
 {
-	const struct nref	*na = *(const struct nref **)a, 
-	     			*nb = *(const struct nref **)b;
+	const struct nref	*na = *(const struct nref *const *)a,
+	     			*nb = *(const struct nref *const *)b;
 
 	assert(na->field->name != NULL);
 	assert(nb->field->name != NULL);
@@ -378,7 +381,7 @@ check_unique_unique(struct config *cfg, struct strct *s)
 			if (uu == u)
 				continue;
 			usz = 0;
-			TAILQ_FOREACH(unf, &uu->nq, entries) 
+			TAILQ_FOREACH(unf, &uu->nq, entries)
 				usz++;
 			if (usz != sz)
 				continue;
@@ -418,7 +421,7 @@ check_unique_unique(struct config *cfg, struct strct *s)
 			TAILQ_REMOVE(&u->nq, nf, entries);
 		}
 		qsort(ar, sz, sizeof(struct nref *), nref_cmp);
-		for (i = 0; i < sz; i++) 
+		for (i = 0; i < sz; i++)
 			TAILQ_INSERT_TAIL(&u->nq, ar[i], entries);
 
 		free(ar);
@@ -448,7 +451,7 @@ check_unique_roles(struct config *cfg, const struct rolemap *rm)
 	return errs == 0;
 }
 
-/* 
+/*
  * See whether operations are defined in a role.
  * These aren't errors, but should be warned about.
  */
@@ -466,12 +469,12 @@ check_roleops(struct config *cfg, const struct strct *p)
 		if (u->rolemap == NULL)
 			gen_warnx(cfg, &u->pos, "role "
 				"not assigned to delete function");
-	TAILQ_FOREACH(u, &p->uq, entries) 
+	TAILQ_FOREACH(u, &p->uq, entries)
 		if (u->rolemap == NULL)
 			gen_warnx(cfg, &u->pos, "role "
 				"not assigned to update function");
 	if (p->ins != NULL && p->ins->rolemap == NULL)
-		gen_warnx(cfg, &p->ins->pos, 
+		gen_warnx(cfg, &p->ins->pos,
 			"role not assigned to insert function");
 }
 
@@ -552,7 +555,7 @@ ort_parse_close(struct config *cfg)
 	if (i > 0)
 		return 0;
 
-	/* 
+	/*
 	 * Now follow and order all outbound links for structs.
 	 * From the get-go, we don't descend into structures that we've
 	 * already coloured.
@@ -573,7 +576,7 @@ ort_parse_close(struct config *cfg)
 	}
 	assert(sz > 0);
 
-	/* 
+	/*
 	 * Copy the list into a temporary array.
 	 * Then sort the list by reverse-height.
 	 * Finally, re-create the list from the sorted elements.

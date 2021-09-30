@@ -54,7 +54,7 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	if (argc > 0 &&
-	    (confs = calloc(argc, sizeof(FILE *))) == NULL)
+	    (confs = calloc((size_t)argc, sizeof(FILE *))) == NULL)
 		err(1, NULL);
 
 	for (i = 0; i < (size_t)argc; i++)

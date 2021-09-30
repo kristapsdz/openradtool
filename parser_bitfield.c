@@ -178,7 +178,7 @@ parse_bitidx(struct parse *p, struct bitf *b)
 		}
 
 		for (cp = bi->name; *cp != '\0'; cp++)
-			*cp = tolower((unsigned char)*cp);
+			*cp = (char)tolower((unsigned char)*cp);
 
 		parse_bitidx_item(p, bi);
 	}
@@ -235,7 +235,7 @@ parse_bitfield(struct parse *p)
 	}
 
 	for (cp = b->name; *cp != '\0'; cp++)
-		*cp = tolower((unsigned char)*cp);
+		*cp = (char)tolower((unsigned char)*cp);
 
 	parse_bitidx(p, b);
 }

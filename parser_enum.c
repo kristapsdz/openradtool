@@ -189,7 +189,7 @@ parse_enum_data(struct parse *p, struct enm *e)
 		}
 
 		for (cp = ei->name; *cp != '\0'; cp++)
-			*cp = tolower((unsigned char)*cp);
+			*cp = (char)tolower((unsigned char)*cp);
 
 		parse_enum_item(p, ei);
 
@@ -268,7 +268,7 @@ parse_enum(struct parse *p)
 	}
 
 	for (cp = e->name; *cp != '\0'; cp++)
-		*cp = tolower((unsigned char)*cp);
+		*cp = (char)tolower((unsigned char)*cp);
 
 	parse_enum_data(p, e);
 

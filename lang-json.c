@@ -604,7 +604,7 @@ gen_field(FILE *f, const struct field *fd)
 			break;
 		default:
 			abort();
-			break;
+			/* NOTREACHED */
 		}
 	} else if (fputs("null", f) == EOF)
 		return 0;
@@ -677,7 +677,7 @@ gen_insert(FILE *f, const struct insert *insert)
 }
 
 static int
-gen_chain(FILE *f, const struct field **chain, size_t chainsz)
+gen_chain(FILE *f, const struct field *const *chain, size_t chainsz)
 {
 	size_t	 i;
 
@@ -702,7 +702,8 @@ gen_order(FILE *f, const struct ord *o)
 		return 0;
 	if (!gen_pos(f, &o->pos))
 		return 0;
-	if (!gen_chain(f, (const struct field **)o->chain, o->chainsz))
+	if (!gen_chain(f,
+	    (const struct field *const *)o->chain, o->chainsz))
 		return 0;
 	return fprintf(f, 
 		" \"fname\": \"%s\", \"op\": \"%s\" }", 
@@ -721,7 +722,8 @@ gen_sent(FILE *f, const struct sent *s)
 		return 0;
 	if (!gen_pos(f, &s->pos))
 		return 0;
-	if (!gen_chain(f, (const struct field **)s->chain, s->chainsz))
+	if (!gen_chain(f,
+	    (const struct field *const *)s->chain, s->chainsz))
 		return 0;
 	return fprintf(f, " \"fname\": \"%s\", \"uname\": \"%s\", "
 		"\"field\": { \"strct\": \"%s\", \"field\": \"%s\" }, "
@@ -744,7 +746,8 @@ gen_group(FILE *f, const struct group *g)
 		return 0;
 	if (!gen_pos(f, &g->pos))
 		return 0;
-	if (!gen_chain(f, (const struct field **)g->chain, g->chainsz))
+	if (!gen_chain(f,
+	    (const struct field *const *)g->chain, g->chainsz))
 		return 0;
 	return fprintf(f, " \"fname\": \"%s\" },", g->fname) > 0;
 }
@@ -763,7 +766,8 @@ gen_distinct(FILE *f, const struct dstnct *d)
 		return 0;
 	if (!gen_pos(f, &d->pos))
 		return 0;
-	if (!gen_chain(f, (const struct field **)d->chain, d->chainsz))
+	if (!gen_chain(f,
+	    (const struct field *const *)d->chain, d->chainsz))
 		return 0;
 	return fprintf(f, " \"strct\": \"%s\", \"fname\": \"%s\" }",
 		d->strct->name, d->fname) > 0;
@@ -783,7 +787,8 @@ gen_aggr(FILE *f, const struct aggr *a)
 		return 0;
 	if (!gen_pos(f, &a->pos))
 		return 0;
-	if (!gen_chain(f, (const struct field **)a->chain, a->chainsz))
+	if (!gen_chain(f,
+	    (const struct field *const *)a->chain, a->chainsz))
 		return 0;
 	return fprintf(f, 
 		" \"fname\": \"%s\", \"op\": \"%s\" },", 

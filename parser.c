@@ -265,7 +265,7 @@ parse_errx(struct parse *p, const char *fmt, ...)
  * Returns zero on memory failure, non-zero otherwise.
  */
 static int
-buf_push(struct parse *p, char c)
+buf_push(struct parse *p, int c)
 {
 	void		*pp;
 	const size_t	 inc = 1024;
@@ -279,7 +279,7 @@ buf_push(struct parse *p, char c)
 		p->buf = pp;
 		p->bufmax += inc;
 	}
-	p->buf[p->bufsz++] = c;
+	p->buf[p->bufsz++] = (char)c;
 	return 1;
 }
 
@@ -640,7 +640,7 @@ parse_label(struct parse *p, struct labelq *q)
 			}
 			cp = p->cfg->langs[p->cfg->langsz++];
 			for (; *cp != '\0'; cp++)
-				*cp = tolower((unsigned char)*cp);
+				*cp = (char)tolower((unsigned char)*cp);
 		}
 		parse_next(p);
 	} else if (p->lasttype != TOK_LITERAL) {

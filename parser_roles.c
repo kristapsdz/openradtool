@@ -48,7 +48,7 @@ role_alloc(struct parse *p, const char *name, struct role *parent)
 	}
 
 	for (cp = r->name; '\0' != *cp; cp++)
-		*cp = tolower((unsigned char)*cp);
+		*cp = (char)tolower((unsigned char)*cp);
 
 	r->parent = parent;
 	parse_point(p, &r->pos);

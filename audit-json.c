@@ -74,7 +74,8 @@ print_name_db_insert(const struct strct *p)
 {
 	int	 rc;
 
-	return (rc = printf("db_%s_insert", p->name)) > 0 ? rc : 0;
+	return (rc = printf("db_%s_insert", p->name)) > 0 ?
+		(size_t)rc : 0;
 }
 
 static size_t
@@ -85,17 +86,18 @@ print_name_db_search(const struct search *s)
 	int	 	   rc;
 
 	rc = printf("db_%s_%s", s->parent->name, stypes[s->type]);
-	sz += rc > 0 ? rc : 0;
+	sz += rc > 0 ? (size_t)rc : 0;
 
 	if (s->name == NULL && !TAILQ_EMPTY(&s->sntq)) {
-		sz += (rc = printf("_by")) > 0 ? rc : 0;
+		sz += (rc = printf("_by")) > 0 ? (size_t)rc : 0;
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
 			rc = printf("_%s_%s", 
 				sent->uname, optypes[sent->op]);
-			sz += rc > 0 ? rc : 0;
+			sz += rc > 0 ? (size_t)rc : 0;
 		}
 	} else if (s->name != NULL)
-		sz += (rc = printf("_%s", s->name)) > 0 ? rc : 0;
+		sz += (rc = printf("_%s", s->name)) > 0 ?
+			(size_t)rc : 0;
 
 	return sz;
 }
@@ -108,7 +110,7 @@ print_name_db_update(const struct update *u)
 	int		   rc;
 
 	rc = printf("db_%s_%s", u->parent->name, utypes[u->type]);
-	col = rc > 0 ? rc : 0;
+	col = rc > 0 ? (size_t)rc : 0;
 
 	if (u->name == NULL && u->type == UP_MODIFY) {
 		if (!(u->flags & UPDATE_ALL))
@@ -116,29 +118,32 @@ print_name_db_update(const struct update *u)
 				rc = printf("_%s_%s", 
 					ur->field->name, 
 					modtypes[ur->mod]);
-				col += rc > 0 ? rc : 0;
+				col += rc > 0 ? (size_t)rc : 0;
 			}
 		if (!TAILQ_EMPTY(&u->crq)) {
-			col += (rc = printf("_by")) > 0 ? rc : 0;
+			col += (rc = printf("_by")) > 0 ?
+				(size_t)rc : 0;
 			TAILQ_FOREACH(ur, &u->crq, entries) {
 				rc = printf("_%s_%s", 
 					ur->field->name, 
 					optypes[ur->op]);
-				col += rc > 0 ? rc : 0;
+				col += rc > 0 ? (size_t)rc : 0;
 			}
 		}
 	} else if (u->name == NULL) {
 		if (!TAILQ_EMPTY(&u->crq)) {
-			col += (rc = printf("_by")) > 0 ? rc : 0;
+			col += (rc = printf("_by")) > 0 ?
+				(size_t)rc : 0;
 			TAILQ_FOREACH(ur, &u->crq, entries) {
 				rc = printf("_%s_%s", 
 					ur->field->name, 
 					optypes[ur->op]);
-				col += rc > 0 ? rc : 0;
+				col += rc > 0 ? (size_t)rc : 0;
 			}
 		}
 	} else 
-		col += (rc = printf("_%s", u->name)) > 0 ? rc : 0;
+		col += (rc = printf("_%s", u->name)) > 0 ?
+			(size_t)rc : 0;
 
 	return col;
 }
@@ -466,7 +471,7 @@ main(int argc, char *argv[])
 	/* Read in all of our files now so we can repledge. */
 
 	if (argc > 0 &&
-	    (confs = calloc(argc, sizeof(FILE *))) == NULL)
+	    (confs = calloc((size_t)argc, sizeof(FILE *))) == NULL)
 		err(EXIT_FAILURE, NULL);
 
 	for (i = 0; i < (size_t)argc; i++)

@@ -17,12 +17,12 @@
 #ifndef ORT_LANG_C_H
 #define ORT_LANG_C_H
 
-#define ORT_LANG_C_CORE	 	 0x01
-#define	ORT_LANG_C_JSON_KCGI	 0x02
-#define	ORT_LANG_C_JSON_JSMN	 0x04
-#define	ORT_LANG_C_VALID_KCGI	 0x08
-#define ORT_LANG_C_DB_SQLBOX	 0x10
-#define ORT_LANG_C_SAFE_TYPES	 0x20
+#define ORT_LANG_C_CORE	 	 0x01u
+#define	ORT_LANG_C_JSON_KCGI	 0x02u
+#define	ORT_LANG_C_JSON_JSMN	 0x04u
+#define	ORT_LANG_C_VALID_KCGI	 0x08u
+#define ORT_LANG_C_DB_SQLBOX	 0x10u
+#define ORT_LANG_C_SAFE_TYPES	 0x20u
 
 struct	ort_lang_c {
 	const char		*guard;

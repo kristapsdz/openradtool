@@ -137,7 +137,9 @@ print_comment(FILE *f, const char *doc, size_t tabs,
 				for (cpp = cp; *cpp != '\0'; cpp++)
 					if (isspace((unsigned char)*cpp))
 						break;
-				if (curcol + (cpp - cp) > maxcol) {
+				assert(cpp >= cp);
+				if (curcol + (size_t)(cpp - cp) >
+				    maxcol) {
 					if (fputc('\n', f) == EOF)
 						return 0;
 					for (i = 0; i < tabs; i++)
@@ -282,7 +284,7 @@ gen_sql_stmt_schema(FILE *f, size_t tabs, enum langt lang,
 		rc = fprintf(f, "%s%c,%c", spacer, delim, delim);
 		if (rc < 0)
 			return 0;
-		*col += rc;
+		*col += (size_t)rc;
 	}
 
 	if (fputc(' ', f) == EOF)
@@ -310,7 +312,7 @@ gen_sql_stmt_schema(FILE *f, size_t tabs, enum langt lang,
 		rc = fprintf(f, "+ ort_schema_%s(", p->name);
 	if (rc < 0)
 		return 0;
-	*col += rc;
+	*col += (size_t)rc;
 
 	if (pname != NULL) {
 		TAILQ_FOREACH(a, &orig->aq, entries)
@@ -328,7 +330,7 @@ gen_sql_stmt_schema(FILE *f, size_t tabs, enum langt lang,
 			lang == LANG_JS ? "'" : "");
 	if (rc < 0)
 		return 0;
-	*col += rc;
+	*col += (size_t)rc;
 
 	/*
 	 * Recursive step.
@@ -465,7 +467,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 		col = tabs * 8;
 		if ((rc = fprintf(f, "%cSELECT ", delim)) < 0)
 			return 0;
-		col += rc;
+		col += (size_t)rc;
 		if (!gen_sql_stmt_schema(f, 
 		    tabs, lang, p, 1, p, NULL, &col))
 			return 0;
@@ -523,12 +525,12 @@ gen_sql_stmts(FILE *f, size_t tabs,
 		if (s->type == STYPE_COUNT) {
 			if ((rc = fprintf(f, "COUNT(")) < 0)
 				return 0;
-			col += rc;
+			col += (size_t)rc;
 		}
 		if (s->dst) {
 			if ((rc = fprintf(f, "DISTINCT ")) < 0)
 				return 0;
-			col += rc;
+			col += (size_t)rc;
 			if (!gen_sql_stmt_schema(f, tabs, lang, p, 1, 
 			    s->dst->strct, 
 			    strcmp(s->dst->fname, ".") == 0 ? 
@@ -718,7 +720,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 		if ((rc = fprintf(f, 
 		    "%cINSERT INTO %s ", delim, p->name)) < 0)
 			return 0;
-		col += rc;
+		col += (size_t)rc;
 
 		first = 1;
 		TAILQ_FOREACH(fd, &p->fq, entries) {
@@ -741,14 +743,14 @@ gen_sql_stmts(FILE *f, size_t tabs,
 
 			if ((rc = fprintf(f, "%s", fd->name)) < 0)
 				return 0;
-			col += 1 + rc;
+			col += 1 + (size_t)rc;
 			first = 0;
 		}
 
 		if (first == 0) {
 			if ((rc = fprintf(f, ") ")) < 0)
 				return 0;
-			if ((col += rc) >= 72) {
+			if ((col += (size_t)rc) >= 72) {
 				if (fprintf(f, "%c\n", delim) < 0)
 					return 0;
 				for (i = 0; i < tabs + 1; i++)
@@ -758,13 +760,13 @@ gen_sql_stmts(FILE *f, size_t tabs,
 				if ((rc = fprintf(f, 
 				    "%s%c", spacer, delim)) < 0)
 					return 0;
-				col += rc;
+				col += (size_t)rc;
 			}
 
 			first = 1;
 			if ((rc = fprintf(f, "VALUES ")) < 0)
 				return 0;
-			col += rc;
+			col += (size_t)rc;
 			TAILQ_FOREACH(fd, &p->fq, entries) {
 				if (fd->type == FTYPE_STRUCT ||
 				    (fd->flags & FIELD_ROWID))
@@ -782,7 +784,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 						delim, first ? "(" : " ");
 					if (rc < 0)
 						return 0;
-					col += rc;
+					col += (size_t)rc;
 				} else {
 					if (fputc(first ? 
 					    '(' : ',', f) == EOF)

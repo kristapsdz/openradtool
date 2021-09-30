@@ -65,7 +65,9 @@ readfile(const char *dir, const char *fname)
 
 	/* FIXME: overflow check. */
 
-	sz = st.st_size;
+	assert(st.st_size > 0 && (uint64_t)st.st_size < SIZE_MAX);
+
+	sz = (size_t)st.st_size;
 	if ((buf = malloc(sz + 1)) == NULL)
 		err(1, NULL);
 	if ((ssz = read(fd, buf, sz)) < 0)
@@ -140,7 +142,7 @@ main(int argc, char *argv[])
 	/* Read in all of our files now so we can repledge. */
 
 	if (argc > 0 &&
-	    (confs = calloc(argc, sizeof(FILE *))) == NULL)
+	    (confs = calloc((size_t)argc, sizeof(FILE *))) == NULL)
 		err(EXIT_FAILURE, NULL);
 
 	for (i = 0; i < (size_t)argc; i++)

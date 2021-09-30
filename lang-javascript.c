@@ -77,7 +77,7 @@ static	const char *types[FTYPE__MAX] = {
 static int
 gen_label_text(FILE *f, const char *cp)
 {
-	unsigned char	 c;
+	char	 	c;
 
 	while ((c = *cp++) != '\0')
 		switch (c) {
@@ -316,7 +316,7 @@ gen_js_field(FILE *f, const struct field *fd)
 
 	if ((rc = fprintf(f, "\'%s\',", fd->parent->name)) < 0)
 		return 0;
-	col += rc;
+	col += (size_t)rc;
 
 	/* Field name. */
 
@@ -332,7 +332,7 @@ gen_js_field(FILE *f, const struct field *fd)
 
 	if ((rc = fprintf(f, "\'%s\',", fd->name)) < 0)
 		return 0;
-	col += rc;
+	col += (size_t)rc;
 
 	/* "Custom." */
 
@@ -348,7 +348,7 @@ gen_js_field(FILE *f, const struct field *fd)
 
 	if ((rc = fprintf(f, "custom,")) < 0)
 		return 0;
-	col += rc;
+	col += (size_t)rc;
 
 	/* Field in interface and "inc". */
 
@@ -364,7 +364,7 @@ gen_js_field(FILE *f, const struct field *fd)
 
 	if ((rc = fprintf(f, "o.%s, inc,", fd->name)) < 0)
 		return 0;
-	col += rc;
+	col += (size_t)rc;
 
 	/* True or false. */
 
@@ -385,7 +385,7 @@ gen_js_field(FILE *f, const struct field *fd)
 		"true" : "false");
 	if (rc < 0)
 		return 0;
-	col += rc;
+	col += (size_t)rc;
 
 	/* Nested object or null. */
 
@@ -442,7 +442,7 @@ gen_class_proto(FILE *f, int priv,
 
 	if ((rc = fprintf(f, "%s(", func)) < 0)
 		return 0;
-	col += rc;
+	col += (size_t)rc;
 
 	va_start(ap, func);
 	while ((name = va_arg(ap, char *)) != NULL) {
@@ -467,12 +467,12 @@ gen_class_proto(FILE *f, int priv,
 			va_end(ap);
 			return 0;
 		}
-		col += rc;
+		col += (size_t)rc;
 		if ((rc = fprintf(f, ": %s", type)) < 0) {
 			va_end(ap);
 			return 0;
 		}
-		col += rc;
+		col += (size_t)rc;
 		first = 0;
 	}
 	va_end(ap);

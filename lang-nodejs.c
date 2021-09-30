@@ -121,21 +121,21 @@ gen_var(FILE *f, size_t pos, size_t col, const struct field *fd)
 
 	if ((rc = fprintf(f, "v%zu: ", pos)) < 0)
 		return -1;
-	col += rc;
+	col += (size_t)rc;
 
 	rc = fd->type == FTYPE_ENUM ?
 		fprintf(f, "ortns.%s", fd->enm->name) :
 		fprintf(f, "%s", ftypes[fd->type]);
 	if (rc < 0)
 		return -1;
-	col += rc;
+	col += (size_t)rc;
 
 	if ((fd->flags & FIELD_NULL) ||
 	    (fd->type == FTYPE_STRUCT &&
 	     (fd->ref->source->flags & FIELD_NULL))) {
 		if ((rc = fprintf(f, "|null")) < 0)
 			return 0;
-		col += rc;
+		col += (size_t)rc;
 	}
 
 	assert(col > 0 && col < INT_MAX);
@@ -218,7 +218,7 @@ gen_reffind(FILE *f, const struct strct *p)
 		return 0;
 	if ((rc = fprintf(f, "private db_%s_reffind", p->name)) < 0)
 		return 0;
-	col = 8 + rc;
+	col = 8 + (size_t)rc;
 
 	if (col >= 72) {
 		if (fputs("\n\t(", f) == EOF)
@@ -286,7 +286,7 @@ gen_fill(FILE *f, const struct strct *p)
 		return 0;
 	if ((rc = fprintf(f, "private db_%s_fill", p->name)) < 0)
 		return 0;
-	col = 8 + rc;
+	col = 8 + (size_t)rc;
 
 	if (col >= 72) {
 		if (fputs("\n\t(", f) == EOF)
@@ -301,7 +301,7 @@ gen_fill(FILE *f, const struct strct *p)
 	if ((rc = fprintf(f, 
 	    "data: {row: any[], pos: number}):")) < 0)
 		return 0;
-	col += rc;
+	col += (size_t)rc;
 
 	if (col + strlen(p->name) + 13 >= 72) {
 		if (fputs("\n\t\t", f) == EOF)
@@ -423,7 +423,7 @@ gen_insert(FILE *f, const struct strct *p)
 		return 0;
 	if ((rc = fprintf(f, "db_%s_insert", p->name)) < 0)
 		return 0;
-	col = 8 + rc;
+	col = 8 + (size_t)rc;
 
 	if (col >= 72) {
 		if (fputs("\n\t(", f) == EOF)
@@ -441,7 +441,7 @@ gen_insert(FILE *f, const struct strct *p)
 		      (fd->flags & FIELD_ROWID))) {
 			if ((rc = gen_var(f, pos++, col, fd)) < 0)
 				return 0;
-			col = rc;
+			col = (size_t)rc;
 		}
 
 	if (fputs("):", f) == EOF)
@@ -634,7 +634,7 @@ gen_update(FILE *f, const struct config *cfg,
 	if ((rc = fprintf(f, "db_%s_%s",
 	    up->parent->name, utypes[up->type])) < 0)
 		return 0;
-	col = 8 + rc;
+	col = 8 + (size_t)rc;
 
 	if (up->name == NULL && up->type == UP_MODIFY) {
 		if (!(up->flags & UPDATE_ALL))
@@ -644,38 +644,38 @@ gen_update(FILE *f, const struct config *cfg,
 					modtypes[ref->mod]);
 				if (rc < 0)
 					return 0;
-				col += rc;
+				col += (size_t)rc;
 			}
 		if (!TAILQ_EMPTY(&up->crq)) {
 			if ((rc = fprintf(f, "_by")) < 0)
 				return 0;
-			col += rc;
+			col += (size_t)rc;
 			TAILQ_FOREACH(ref, &up->crq, entries) {
 				rc = fprintf(f, "_%s_%s", 
 					ref->field->name, 
 					optypes[ref->op]);
 				if (rc < 0)
 					return 0;
-				col += rc;
+				col += (size_t)rc;
 			}
 		}
 	} else if (up->name == NULL) {
 		if (!TAILQ_EMPTY(&up->crq)) {
 			if ((rc = fprintf(f, "_by")) < 0)
 				return 0;
-			col += rc;
+			col += (size_t)rc;
 			TAILQ_FOREACH(ref, &up->crq, entries) {
 				rc = fprintf(f, "_%s_%s", 
 					ref->field->name, 
 					optypes[ref->op]);
 				if (rc < 0)
-				col += rc;
+				col += (size_t)rc;
 			}
 		}
 	} else {
 		if ((rc = fprintf(f, "_%s", up->name)) < 0)
 			return 0;
-		col += rc;
+		col += (size_t)rc;
 	}
 
 	if (col >= 72) {
@@ -692,14 +692,14 @@ gen_update(FILE *f, const struct config *cfg,
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
 		if ((rc = gen_var(f, pos++, col, ref->field)) < 0)
 			return 0;
-		col = rc;
+		col = (size_t)rc;
 	}
 	TAILQ_FOREACH(ref, &up->crq, entries)
 		if (!OPTYPE_ISUNARY(ref->op)) {
 			if ((rc = gen_var
 			    (f, pos++, col, ref->field)) < 0)
 				return 0;
-			col = rc;
+			col = (size_t)rc;
 		}
 
 	if (fputs("):", f) == EOF)
@@ -979,22 +979,22 @@ gen_query(FILE *f, const struct config *cfg,
 	if ((rc = fprintf(f, "db_%s_%s", 
 	    s->parent->name, stypes[s->type])) < 0)
 		return 0;
-	col = 8 + rc;
+	col = 8 + (size_t)rc;
 
 	if (s->name == NULL && !TAILQ_EMPTY(&s->sntq)) {
 		if ((rc = fprintf(f, "_by")) < 0)
 			return 0;
-		col += rc;
+		col += (size_t)rc;
 		TAILQ_FOREACH(sent, &s->sntq, entries) {
 			if ((rc = fprintf(f, "_%s_%s", 
 			    sent->uname, optypes[sent->op])) < 0)
 				return 0;
-			col += rc;
+			col += (size_t)rc;
 		}
 	} else if (s->name != NULL) {
 		if ((rc = fprintf(f, "_%s", s->name)) < 0)
 			return 0;
-		col += rc;
+		col += (size_t)rc;
 	}
 
 	if (col >= 72) {
@@ -1013,7 +1013,7 @@ gen_query(FILE *f, const struct config *cfg,
 			if ((rc = gen_var
 			    (f, pos++, col, sent->field)) < 0)
 				return 0;
-			col = rc;
+			col = (size_t)rc;
 		}
 
 	if (s->type == STYPE_ITERATE) {
@@ -1032,7 +1032,7 @@ gen_query(FILE *f, const struct config *cfg,
 		if ((rc = fprintf(f, "cb: "
 		    "(res: ortns.%s) => void", rs->name)) < 0)
 			return 0;
-		col += rc;
+		col += (size_t)rc;
 	}
 
 	if (fputs("): ", f) == EOF)

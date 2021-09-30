@@ -140,7 +140,7 @@ static void
 audit_write(const struct auditq *aq, int verb)
 {
 	const struct audit	*a;
-	size_t			 i, msz = 0, sz, asz;
+	size_t			 i, msz = 0, sz = 0, asz;
 	char			*b;
 
 	TAILQ_FOREACH(a, aq, entries) {
@@ -220,7 +220,7 @@ main(int argc, char *argv[])
 	/* Read in all of our files now so we can repledge. */
 
 	if (argc > 0 &&
-	    (confs = calloc(argc, sizeof(FILE *))) == NULL)
+	    (confs = calloc((size_t)argc, sizeof(FILE *))) == NULL)
 		err(1, NULL);
 
 	for (i = 0; i < (size_t)argc; i++)

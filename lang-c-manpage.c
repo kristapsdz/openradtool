@@ -151,7 +151,7 @@ gen_bitfs(FILE *f, const struct config *cfg)
 		if ((name = strdup(b->name)) == NULL)
 			return -1;
 		for (cp = name; *cp != '\0'; cp++)
-			*cp = toupper((unsigned char)*cp);
+			*cp = (char)toupper((unsigned char)*cp);
 		TAILQ_FOREACH(bi, &b->bq, entries)
 			if (!gen_bitem(f, bi, name)) {
 				free(name);
@@ -207,7 +207,7 @@ gen_enums(FILE *f, const struct config *cfg)
 		if ((name = strdup(e->name)) == NULL)
 			return -1;
 		for (cp = name; *cp != '\0'; cp++)
-			*cp = toupper((unsigned char)*cp);
+			*cp = (char)toupper((unsigned char)*cp);
 		TAILQ_FOREACH(ei, &e->eq, entries)
 			if (!gen_eitem(f, ei, name)) {
 				free(name);

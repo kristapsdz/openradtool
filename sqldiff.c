@@ -41,7 +41,7 @@ main(int argc, char *argv[])
 	struct config	 *cfg = NULL, *dcfg = NULL;
 	int		  rc = 0, c, destruct = 0;
 	size_t		  confsz = 0, dconfsz = 0, i, j, 
-			  confst = 0;
+			  confst = 0, sz;
 	struct diffq	 *q = NULL;
 	struct msgq	  mq = TAILQ_HEAD_INITIALIZER(mq);
 
@@ -61,27 +61,28 @@ main(int argc, char *argv[])
 
 	argc -= optind;
 	argv += optind;
+	sz = (size_t)argc;
 
 	/* Read up until "-f" (or argc) for old configs. */
 
-	for (dconfsz = 0; dconfsz < (size_t)argc; dconfsz++)
+	for (dconfsz = 0; dconfsz < sz; dconfsz++)
 		if (strcmp(argv[dconfsz], "-f") == 0)
 			break;
 	
 	/* If we have >2 w/o -f, error (which old/new?). */
 
-	if (dconfsz == (size_t)argc && argc > 2)
+	if (dconfsz == sz && sz > 2)
 		goto usage;
 
-	if ((i = dconfsz) < (size_t)argc)
+	if ((i = dconfsz) < sz)
 		i++;
 
 	confst = i;
-	confsz = argc - i;
+	confsz = sz - i;
 
 	/* If we have 2 w/o -f, it's old-new. */
 
-	if (confsz == 0 && argc == 2)
+	if (confsz == 0 && sz == 2)
 		confsz = dconfsz = confst = 1;
 
 	/* Need at least one configuration. */
@@ -101,10 +102,10 @@ main(int argc, char *argv[])
 		if ((dconfs[i] = fopen(argv[i], "r")) == NULL)
 			err(EXIT_FAILURE, "%s", argv[i]);
 
-	if (i < (size_t)argc && strcmp(argv[i], "-f") == 0)
+	if (i < sz && strcmp(argv[i], "-f") == 0)
 		i++;
 
-	for (j = 0; i < (size_t)argc; j++, i++)
+	for (j = 0; i < sz; j++, i++)
 		if ((confs[j] = fopen(argv[i], "r")) == NULL)
 			err(EXIT_FAILURE, "%s", argv[i]);
 

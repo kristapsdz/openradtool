@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <inttypes.h>
+#include <limits.h> /* INT_MAX */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -145,7 +146,7 @@ parse_validate(struct parse *p, struct field *fd)
 			return;
 		}
 		v->d.value.decimal = tok == TOK_DECIMAL ? 
-			p->last.decimal : p->last.integer;
+			p->last.decimal : (double)p->last.integer;
 		TAILQ_FOREACH(vv, &fd->fvq, entries)
 			if (v != vv &&
 			    v->type == vv->type &&
@@ -167,7 +168,7 @@ parse_validate(struct parse *p, struct field *fd)
 			parse_errx(p, "expected length");
 			return;
 		}
-		v->d.value.len = p->last.integer;
+		v->d.value.len = (size_t)p->last.integer;
 		TAILQ_FOREACH(vv, &fd->fvq, entries)
 			if (v != vv && 
 			    v->type == vv->type &&
@@ -325,24 +326,33 @@ parse_field_info(struct parse *p, struct field *fd)
 				if (parse_next(p) != TOK_INTEGER) {
 					parse_errx(p, "expected year (integer)");
 					break;
+				} else if (p->last.integer > INT_MAX) {
+					parse_errx(p, "invalid year");
+					break;
 				}
-				tm.tm_year = p->last.integer - 1900;
+				tm.tm_year = (int)p->last.integer - 1900;
 				if (parse_next(p) != TOK_INTEGER) {
 					parse_errx(p, "expected month (integer)");
 					break;
 				} else if (p->last.integer >= 0) {
 					parse_errx(p, "invalid month");
 					break;
+				} else if (p->last.integer < INT_MIN) {
+					parse_errx(p, "invalid month");
+					break;
 				}
-				tm.tm_mon = -p->last.integer - 1;
+				tm.tm_mon = (int)-p->last.integer - 1;
 				if (parse_next(p) != TOK_INTEGER) {
 					parse_errx(p, "expected day (integer)");
 					break;
 				} else if (p->last.integer >= 0) {
 					parse_errx(p, "invalid day");
 					break;
+				} else if (p->last.integer < INT_MIN) {
+					parse_errx(p, "invalid day");
+					break;
 				}
-				tm.tm_mday = -p->last.integer;
+				tm.tm_mday = (int)-p->last.integer;
 				tm.tm_isdst = -1;
 				fd->flags |= FIELD_HASDEF;
 				fd->def.integer = mktime(&tm); 
@@ -369,7 +379,8 @@ parse_field_info(struct parse *p, struct field *fd)
 				fd->flags |= FIELD_HASDEF;
 				fd->def.decimal = 
 					p->lasttype == TOK_DECIMAL ?
-					p->last.decimal : p->last.integer;
+					p->last.decimal : 
+					(double)p->last.integer;
 				break;
 			case FTYPE_EMAIL:
 			case FTYPE_TEXT:
@@ -584,7 +595,7 @@ field_alloc(struct parse *p, struct strct *s, const char *name)
 	}
 
 	for (cp = fd->name; *cp != '\0'; cp++)
-		*cp = tolower((unsigned char)*cp);
+		*cp = (char)tolower((unsigned char)*cp);
 
 	parse_point(p, &fd->pos);
 	fd->type = FTYPE_INT;

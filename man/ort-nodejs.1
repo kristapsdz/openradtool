@@ -466,18 +466,26 @@ For validation:
 % npm install validator @types/validator
 .Ed
 .Pp
-If installing
+When installing
 .Qq better-sqlite3
-or
-.Qq bcrypt
 on
 .Ox ,
-you may need to specify an alternate compiler:
+you may need to specify an alternate Python interpreter:
 .Bd -literal -offset indent
-% CXX=/usr/local/bin/clang++ \e
-  CC=/usr/local/bin/clang \e
-  npm install better-sqlite3 bcrypt
+% PYTHON=/usr/local/bin/python2.7 \e
+  npm install better-sqlite3
 .Ed
+.Pp
+Older versions of
+.Ox
+required overriding
+.Ev CXX
+and
+.Ev CC
+with ports-installed versions for both
+.Qq better-sqlite3
+and
+.Qq bcrypt .
 .Pp
 Modify
 .Pa package.json

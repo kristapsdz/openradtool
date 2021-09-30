@@ -54,13 +54,16 @@ npm install
 make regress
 ```
 
-If you're on OpenBSD, you may need to pass an alternative compiler:
+If you're on OpenBSD (≥6.9), you may need to install a python2 interpreter from
+the ports tree and override newer versions:
 
 ```sh
-CXX=/usr/local/bin/clang++ \
-CC=/usr/local/bin/clang \
+PYTHON=/usr/local/bin/python2.7 \
 npm install
 ```
+
+Older versions of OpenBSD instead require overriding `CC` and `CXX` with the
+ports-installed versions of clang.
 
 This will use the *package.json* and *package-lock.json* files to
 configure the *node_modules* subdirectory required for the regression

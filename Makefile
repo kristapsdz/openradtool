@@ -29,6 +29,7 @@ LIBS		 = libort.a \
 		   libort-lang-javascript.a \
 		   libort-lang-json.a \
 		   libort-lang-nodejs.a \
+		   libort-lang-rust.a \
 		   libort-lang-sql.a \
 		   libort-lang-xliff.a
 PKGCONFIGS	 = ort.pc \
@@ -48,6 +49,7 @@ OBJS		 = audit-json.o \
 		   lang-javascript.o \
 		   lang-json.o \
 		   lang-nodejs.o \
+		   lang-rust.o \
 		   lang-sql.o \
 		   lang-xliff.o \
 		   main.o \
@@ -56,6 +58,7 @@ OBJS		 = audit-json.o \
 		   nodejs.o \
 		   javascript.o \
 		   json.o \
+		   rust.o \
 		   sql.o \
 		   sqldiff.o \
 		   xliff.o
@@ -144,6 +147,7 @@ PUBHEADERS	 = ort.h \
 		   ort-lang-javascript.h \
 		   ort-lang-json.h \
 		   ort-lang-nodejs.h \
+		   ort-lang-rust.h \
 		   ort-lang-sql.h \
 		   ort-version.h
 HEADERS 	 = $(PUBHEADERS) \
@@ -180,6 +184,7 @@ DOTAR		 = $(HEADERS) \
 		   lang-javascript.c \
 		   lang-json.c \
 		   lang-nodejs.c \
+		   lang-rust.c \
 		   lang-sql.c \
 		   lang-xliff.c \
 		   lang.c \
@@ -204,6 +209,7 @@ DOTAR		 = $(HEADERS) \
 		   parser_field.c \
 		   parser_roles.c \
 		   parser_struct.c \
+		   rust.c \
 		   sql.c \
 		   sqldiff.c \
 		   test.c \
@@ -236,6 +242,7 @@ BINS		 = ort \
 		   ort-javascript \
 		   ort-json \
 		   ort-nodejs \
+		   ort-rust \
 		   ort-sql \
 		   ort-sqldiff \
 		   ort-xliff
@@ -294,6 +301,9 @@ libort-lang-json.a: lang-json.o
 libort-lang-nodejs.a: lang-nodejs.o lang.o
 	$(AR) rs $@ lang-nodejs.o lang.o
 
+libort-lang-rust.a: lang-rust.o lang.o
+	$(AR) rs $@ lang-rust.o lang.o
+
 libort-lang-sql.a: lang-sql.o lang.o
 	$(AR) rs $@ lang-sql.o lang.o
 
@@ -302,6 +312,9 @@ libort-lang-xliff.a: lang-xliff.o
 
 ort-nodejs: nodejs.o libort-lang-nodejs.a libort.a
 	$(CC) -o $@ nodejs.o libort-lang-nodejs.a libort.a $(LDFLAGS) $(LDADD)
+
+ort-rust: rust.o libort-lang-rust.a libort.a
+	$(CC) -o $@ rust.o libort-lang-rust.a libort.a $(LDFLAGS) $(LDADD)
 
 ort-c-source: csource.o libort-lang-c.a libort.a
 	$(CC) -o $@ csource.o libort-lang-c.a libort.a $(LDFLAGS) $(LDADD)

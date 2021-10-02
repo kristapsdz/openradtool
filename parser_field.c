@@ -567,10 +567,8 @@ field_alloc(struct parse *p, struct strct *s, const char *name)
 
 	/* Check reserved identifiers. */
 
-	if (!parse_check_badidents(p, name)) {
-		parse_errx(p, "reserved identifier");
+	if (!parse_check_badidents(p, name))
 		return NULL;
-	}
 
 	/* Check other fields in struct having same name. */
 
@@ -628,8 +626,8 @@ parse_field(struct parse *p, struct strct *s)
 	if (parse_next(p) != TOK_IDENT) {
 		parse_errx(p, "expected field name");
 		return;
-	} 
-	fd = field_alloc(p, s, p->last.string);
+	} else if ((fd = field_alloc(p, s, p->last.string)) == NULL)
+		return;
 
 	if (parse_next(p) == TOK_SEMICOLON)
 		return;

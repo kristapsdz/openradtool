@@ -31,7 +31,8 @@ enum	cmtt {
 
 enum	langt {
 	LANG_JS,
-	LANG_C
+	LANG_C,
+	LANG_RUST
 };
 
 int	 gen_comment(FILE *, size_t, enum cmtt, const char *);

@@ -254,6 +254,19 @@ gen_commentv(FILE *f, size_t tabs, enum cmtt t, const char *fmt, ...)
 	return c;
 }
 
+static int
+gen_ws(FILE *f, size_t tabs, enum langt lang)
+{
+	const char	*tab = lang == LANG_RUST ? "    " : "\t";
+	size_t		 i;
+
+	for (i = 0; i < tabs; i++)
+		if (fputs(tab, f) == EOF)
+			return 0;
+
+	return 1;
+}
+
 /*
  * Print all of the columns that a select statement wants.
  * If "pname" is NULL, don't try to resolve the schema's alias and use
@@ -270,11 +283,11 @@ gen_sql_stmt_schema(FILE *f, size_t tabs, enum langt lang,
 	int			 rc;
 	char			*name = NULL;
 	char			 delim;
-	const char		*spacer;
-	size_t			 i;
+	const char		*spacer, *mquote;
 
 	delim = lang == LANG_JS ? '\'' : '"';
-	spacer = lang == LANG_JS ? "+ " : "";
+	mquote = lang == LANG_JS ? "'" : lang == LANG_RUST ? "\"" : "";
+	spacer = lang == LANG_C ? "" : "+ ";
 
 	if (first) {
 		if (fputc(delim, f) == EOF)
@@ -294,9 +307,8 @@ gen_sql_stmt_schema(FILE *f, size_t tabs, enum langt lang,
 	if (!first && *col >= 72) {
 		if (fputc('\n', f) == EOF)
 			return 0;
-		for (i = 0; i < tabs + 1; i++)
-			if (fputc('\t', f) == EOF)
-				return 0;
+		if (!gen_ws(f, tabs + 1, lang))
+			return 0;
 		*col = 8 * (tabs + 1);
 	}
 
@@ -308,8 +320,11 @@ gen_sql_stmt_schema(FILE *f, size_t tabs, enum langt lang,
 
 	if (lang == LANG_C)
 		rc = fprintf(f, "DB_SCHEMA_%s(", p->name);
+	else if (lang == LANG_RUST)
+		rc = fprintf(f, "+ &stmt_%s(", p->name);
 	else
 		rc = fprintf(f, "+ ort_schema_%s(", p->name);
+
 	if (rc < 0)
 		return 0;
 	*col += (size_t)rc;
@@ -319,15 +334,9 @@ gen_sql_stmt_schema(FILE *f, size_t tabs, enum langt lang,
 			if (strcasecmp(a->name, pname) == 0)
 				break;
 		assert(a != NULL);
-		rc = fprintf(f, "%s%s%s) ",
-			lang == LANG_JS ? "'" : "",
-			a->alias,
-			lang == LANG_JS ? "'" : "");
+		rc = fprintf(f, "%s%s%s) ", mquote, a->alias, mquote);
 	} else
-		rc = fprintf(f, "%s%s%s) ", 
-			lang == LANG_JS ? "'" : "",
-			p->name,
-			lang == LANG_JS ? "'" : "");
+		rc = fprintf(f, "%s%s%s) ", mquote, p->name, mquote);
 	if (rc < 0)
 		return 0;
 	*col += (size_t)rc;
@@ -376,10 +385,9 @@ gen_sql_stmt_join(FILE *f, size_t tabs, enum langt lang,
 	char			*name;
 	char			 delim;
 	const char		*spacer;
-	size_t			 i;
 
 	delim = lang == LANG_JS ? '\'' : '"';
-	spacer = lang == LANG_JS ? "+ " : "";
+	spacer = lang == LANG_C ? "" : "+ ";
 
 	TAILQ_FOREACH(fd, &p->fq, entries) {
 		if (fd->type != FTYPE_STRUCT ||
@@ -405,9 +413,8 @@ gen_sql_stmt_join(FILE *f, size_t tabs, enum langt lang,
 		(*count)++;
 		if (fputc('\n', f) == EOF)
 			return 0;
-		for (i = 0; i < tabs + 1; i++)
-			if (fputc('\t', f) == EOF)
-				return 0;
+		if (!gen_ws(f, tabs + 1, lang))
+			return 0;
 		if (fprintf(f, 
 		    "%s%cINNER JOIN %s AS %s ON %s.%s=%s.%s %c",
 		    spacer, delim,
@@ -436,12 +443,12 @@ gen_sql_stmts(FILE *f, size_t tabs,
 	const struct uref	*ur;
 	const struct ord	*ord;
 	int			 first, hastrail, needquot, rc;
-	size_t			 i, pos, nc, col;
+	size_t			 pos, nc, col, ntabs;
 	char			 delim;
 	const char		*spacer;
 
 	delim = lang == LANG_JS ? '\'' : '"';
-	spacer = lang == LANG_JS ? "+ " : "";
+	spacer = lang == LANG_C ? "" : "+ ";
 
 	/* 
 	 * We have a special query just for our unique fields.
@@ -455,45 +462,58 @@ gen_sql_stmts(FILE *f, size_t tabs,
 	TAILQ_FOREACH(fd, &p->fq, entries)  {
 		if (!(fd->flags & (FIELD_ROWID|FIELD_UNIQUE)))
 			continue;
-		for (i = 0; i < tabs; i++)
-			if (fputc('\t', f) == EOF)
-				return 0;
-		if (fprintf(f, "/* STMT_%s_BY_UNIQUE_%s */\n", 
-		    p->name, fd->name) < 0)
+
+		if (!gen_ws(f, tabs, lang))
 			return 0;
-		for (i = 0; i < tabs; i++)
-			if (fputc('\t', f) == EOF)
+		if (lang == LANG_RUST &&
+		    fprintf(f, "STMT_%s_BY_UNIQUE_%s => {\n",
+			    p->name, fd->name) < 0)
+			return 0;
+		if (lang != LANG_RUST && 
+		    fprintf(f, "/* STMT_%s_BY_UNIQUE_%s */\n",
+			    p->name, fd->name) < 0)
+			return 0;
+
+		ntabs = lang == LANG_RUST ? tabs + 1 : tabs;
+
+		if (!gen_ws(f, ntabs, lang))
+			return 0;
+		col = ntabs * 8;
+		if (lang == LANG_RUST) {
+			if (fputs("s = String::new() + ", f) == EOF)
 				return 0;
-		col = tabs * 8;
+			col += 21;
+		}
 		if ((rc = fprintf(f, "%cSELECT ", delim)) < 0)
 			return 0;
 		col += (size_t)rc;
 		if (!gen_sql_stmt_schema(f, 
-		    tabs, lang, p, 1, p, NULL, &col))
+		    ntabs, lang, p, 1, p, NULL, &col))
 			return 0;
-
 		if (fprintf(f, "%s%c FROM %s", 
 		    spacer, delim, p->name) < 0)
 			return 0;
 		nc = 0;
 		if (!gen_sql_stmt_join
-		    (f, tabs, lang, p, p, NULL, &nc))
+		    (f, ntabs, lang, p, p, NULL, &nc))
 			return 0;
 		if (nc > 0) {
 			if (fputc('\n', f) == EOF)
 				return 0;
-			for (i = 0; i < tabs + 1; i++)
-				if (fputc('\t', f) == EOF)
-					return 0;
+			if (!gen_ws(f, ntabs + 1, lang))
+				return 0;
 			if (fprintf(f, "%s%c", spacer, delim) < 0)
 				return 0;
 		} else {
 			if (fputc(' ', f) == EOF)
 				return 0;
 		}
-
-		if (fprintf(f, "WHERE %s.%s = ?%c,\n", 
+		if (fprintf(f, "WHERE %s.%s = ?%c", 
 		    p->name, fd->name, delim) < 0)
+			return 0;
+		if (lang == LANG_RUST && fputs("; }", f) == EOF)
+			return 0;
+		if (fputs(",\n", f) == EOF)
 			return 0;
 	}
 
@@ -501,18 +521,31 @@ gen_sql_stmts(FILE *f, size_t tabs,
 
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries) {
-		for (i = 0; i < tabs; i++)
-			if (fputc('\t', f) == EOF)
-				return 0;
-		if (fprintf(f, "/* STMT_%s_BY_SEARCH_%zu */\n",
-		    p->name, pos++) < 0)
+		if (!gen_ws(f, tabs, lang))
 			return 0;
-		for (i = 0; i < tabs; i++)
-			if (fputc('\t', f) == EOF)
-				return 0;
-		if (fprintf(f, "%cSELECT ", delim) < 0)
+		if (lang == LANG_RUST &&
+		    fprintf(f, "STMT_%s_BY_SEARCH_%zu => {\n",
+			    p->name, pos++) < 0)
 			return 0;
-		col = 16;
+		if (lang != LANG_RUST &&
+		    fprintf(f, "/* STMT_%s_BY_SEARCH_%zu */\n",
+			    p->name, pos++) < 0)
+			return 0;
+
+		ntabs = lang == LANG_RUST ? tabs + 1 : tabs;
+
+		if (!gen_ws(f, ntabs, lang))
+			return 0;
+		col = ntabs * 8;
+		if (lang == LANG_RUST) {
+			if (fputs("s = String::new() + ", f) == EOF)
+				return 0;
+			col += 21;
+		}
+		if ((rc = fprintf(f, "%cSELECT ", delim)) < 0)
+			return 0;
+		col += (size_t)rc;
+
 		needquot = 0;
 
 		/* 
@@ -531,14 +564,14 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			if ((rc = fprintf(f, "DISTINCT ")) < 0)
 				return 0;
 			col += (size_t)rc;
-			if (!gen_sql_stmt_schema(f, tabs, lang, p, 1, 
+			if (!gen_sql_stmt_schema(f, ntabs, lang, p, 1, 
 			    s->dst->strct, 
 			    strcmp(s->dst->fname, ".") == 0 ? 
 			    NULL : s->dst->fname, &col))
 				return 0;
 			needquot = 1;
 		} else if (s->type != STYPE_COUNT) {
-			if (!gen_sql_stmt_schema(f, tabs, lang,
+			if (!gen_sql_stmt_schema(f, ntabs, lang,
 			    p, 1, p, NULL, &col))
 				return 0;
 			needquot = 1;
@@ -568,7 +601,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 		
 		nc = 0;
 		if (!gen_sql_stmt_join
-		    (f, tabs, lang, p, p, NULL, &nc))
+		    (f, ntabs, lang, p, p, NULL, &nc))
 			return 0;
 
 		/* 
@@ -586,9 +619,8 @@ gen_sql_stmts(FILE *f, size_t tabs,
 				return 0;
 			if (fputc('\n', f) == EOF)
 				return 0;
-			for (i = 0; i < tabs + 1; i++)
-				if (fputc('\t', f) == EOF)
-					return 0;
+			if (!gen_ws(f, ntabs + 1, lang))
+				return 0;
 			if (fprintf(f, 
 			    "%s%cLEFT OUTER JOIN %s as _custom "
 			    "ON %s.%s = _custom.%s "
@@ -623,9 +655,8 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			return 0;
 		if (fputc('\n', f) == EOF)
 			return 0;
-		for (i = 0; i < tabs + 1; i++)
-			if (fputc('\t', f) == EOF)
-				return 0;
+		if (!gen_ws(f, ntabs + 1, lang))
+			return 0;
 		if (fprintf(f, "%s%c", spacer, delim) < 0)
 			return 0;
 
@@ -699,24 +730,36 @@ gen_sql_stmts(FILE *f, size_t tabs,
 		if (STYPE_SEARCH != s->type && s->offset > 0 &&
 		    fprintf(f, " OFFSET %" PRId64, s->offset) < 0)
 			return 0;
-		if (fprintf(f, "%c,\n", delim) < 0)
+		if (fputc(delim, f) == EOF)
+			return 0;
+		if (lang == LANG_RUST && fputs("; }", f) == EOF)
+			return 0;
+		if (fputs(",\n", f) == EOF)
 			return 0;
 	}
 
 	/* Insertion of a new record. */
 
 	if (p->ins != NULL) {
-		for (i = 0; i < tabs; i++)
-			if (fputc('\t', f) == EOF)
-				return 0;
-		if (fprintf(f, 
-	  	    "/* STMT_%s_INSERT */\n", p->name) < 0)
+		if (!gen_ws(f, tabs, lang))
 			return 0;
-		for (i = 0; i < tabs; i++)
-			if (fputc('\t', f) == EOF)
-				return 0;
+		if (lang == LANG_RUST &&
+		    fprintf(f, "STMT_%s_INSERT => {\n", p->name) < 0)
+			return 0;
+		if (lang != LANG_RUST &&
+		    fprintf(f, "/* STMT_%s_INSERT */\n", p->name) < 0)
+			return 0;
 
-		col = tabs * 8;
+		ntabs = lang == LANG_RUST ? tabs + 1 : tabs;
+
+		if (!gen_ws(f, ntabs, lang))
+			return 0;
+		col = ntabs * 8;
+		if (lang == LANG_RUST) {
+			if (fputs("s = String::new() + ", f) == EOF)
+				return 0;
+			col += 21;
+		}
 		if ((rc = fprintf(f, 
 		    "%cINSERT INTO %s ", delim, p->name)) < 0)
 			return 0;
@@ -731,13 +774,12 @@ gen_sql_stmts(FILE *f, size_t tabs,
 				if (fprintf(f, "%s%c\n", 
 				    first ? "" : ",", delim) < 0)
 					return 0;
-				for (i = 0; i < tabs + 1; i++)
-					if (fputc('\t', f) == EOF)
-						return 0;
+				if (!gen_ws(f, ntabs + 1, lang))
+					return 0;
 				if (fprintf(f, "%s%c%s", spacer, 
 				    delim, first ? "(" : " ") < 0)
 					return 0;
-				col = (tabs + 1) * 8;
+				col = (ntabs + 1) * 8;
 			} else if (fputc(first ? '(' : ',', f) == EOF)
 				return 0;
 
@@ -753,10 +795,9 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			if ((col += (size_t)rc) >= 72) {
 				if (fprintf(f, "%c\n", delim) < 0)
 					return 0;
-				for (i = 0; i < tabs + 1; i++)
-					if (fputc('\t', f) == EOF)
-						return 0;
-				col = (tabs + 1) * 8;
+				if (!gen_ws(f, ntabs + 1, lang))
+					return 0;
+				col = (ntabs + 1) * 8;
 				if ((rc = fprintf(f, 
 				    "%s%c", spacer, delim)) < 0)
 					return 0;
@@ -776,10 +817,9 @@ gen_sql_stmts(FILE *f, size_t tabs,
 					    first ? "" : ",", 
 					    delim) < 0)
 						return 0;
-					for (i = 0; i < tabs + 1; i++)
-						if (fputc('\t', f) == EOF)
-							return 0;
-					col = (tabs + 1) * 8;
+					if (!gen_ws(f, ntabs + 1, lang))
+						return 0;
+					col = (ntabs + 1) * 8;
 					rc = fprintf(f, "%s%c%s", spacer,
 						delim, first ? "(" : " ");
 					if (rc < 0)
@@ -796,13 +836,17 @@ gen_sql_stmts(FILE *f, size_t tabs,
 				col += 2;
 				first = 0;
 			}
-			if (fprintf(f, ")%c,\n", delim) < 0)
+			if (fprintf(f, ")%c", delim) < 0)
 				return 0;
 		} else {
 			if (fprintf(f, 
-			    "DEFAULT VALUES%c,\n", delim) < 0)
+			    "DEFAULT VALUES%c", delim) < 0)
 				return 0;
 		}
+		if (lang == LANG_RUST && fputs("; }", f) == EOF)
+			return 0;
+		if (fputs(",\n", f) == EOF)
+			return 0;
 	}
 	
 	/* 
@@ -813,15 +857,26 @@ gen_sql_stmts(FILE *f, size_t tabs,
 
 	pos = 0;
 	TAILQ_FOREACH(up, &p->uq, entries) {
-		for (i = 0; i < tabs; i++)
-			if (fputc('\t', f) == EOF)
-				return 0;
-		if (fprintf(f, 
-		    "/* STMT_%s_UPDATE_%zu */\n", p->name, pos++) < 0)
+		if (!gen_ws(f, tabs, lang))
 			return 0;
-		for (i = 0; i < tabs; i++)
-			if (fputc('\t', f) == EOF)
+		if (lang == LANG_RUST &&
+		    fprintf(f, "STMT_%s_UPDATE_%zu => {\n",
+			    p->name, pos++) < 0)
+			return 0;
+		if (lang != LANG_RUST &&
+		    fprintf(f, "/* STMT_%s_UPDATE_%zu */\n",
+			    p->name, pos++) < 0)
+			return 0;
+
+		ntabs = lang == LANG_RUST ? tabs + 1 : tabs;
+
+		if (!gen_ws(f, ntabs, lang))
+			return 0;
+		if (lang == LANG_RUST) {
+			if (fputs("s = String::new() + ", f) == EOF)
 				return 0;
+			col += 21;
+		}
 		if (fprintf(f, "%cUPDATE %s SET", delim, p->name) < 0)
 			return 0;
 
@@ -896,7 +951,11 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			}
 			first = 0;
 		}
-		if (fprintf(f, "%c,\n", delim) < 0)
+		if (fputc(delim, f) == EOF)
+			return 0;
+		if (lang == LANG_RUST && fputs("; }", f) == EOF)
+			return 0;
+		if (fputs(",\n", f) == EOF)
 			return 0;
 	}
 
@@ -904,15 +963,27 @@ gen_sql_stmts(FILE *f, size_t tabs,
 
 	pos = 0;
 	TAILQ_FOREACH(up, &p->dq, entries) {
-		for (i = 0; i < tabs; i++)
-			if (fputc('\t', f) == EOF)
-				return 0;
-		if (fprintf(f, 
-		    "/* STMT_%s_DELETE_%zu */\n", p->name, pos++) < 0)
+		if (!gen_ws(f, tabs, lang))
 			return 0;
-		for (i = 0; i < tabs; i++)
-			if (fputc('\t', f) == EOF)
+		if (lang == LANG_RUST &&
+		    fprintf(f, "STMT_%s_DELETE_%zu => {\n",
+			    p->name, pos++) < 0)
+			return 0;
+		if (lang != LANG_RUST &&
+		    fprintf(f, "/* STMT_%s_DELETE_%zu */\n",
+			    p->name, pos++) < 0)
+			return 0;
+
+		ntabs = lang == LANG_RUST ? tabs + 1 : tabs;
+
+		if (!gen_ws(f, ntabs, lang))
+			return 0;
+		col = ntabs * 8;
+		if (lang == LANG_RUST) {
+			if (fputs("s = String::new() + ", f) == EOF)
 				return 0;
+			col += 21;
+		}
 		if (fprintf(f, "%cDELETE FROM %s", delim, p->name) < 0)
 			return 0;
 
@@ -934,7 +1005,11 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			}
 			first = 0;
 		}
-		if (fprintf(f, "%c,\n", delim) < 0)
+		if (fputc(delim, f) == EOF)
+			return 0;
+		if (lang == LANG_RUST && fputs("; }", f) == EOF)
+			return 0;
+		if (fputs(",\n", f) == EOF)
 			return 0;
 	}
 
@@ -948,13 +1023,12 @@ gen_sql_enums(FILE *f, size_t tabs,
 	const struct search	*s;
 	const struct update	*u;
 	const struct field	*fd;
-	size_t			 i, pos;
+	size_t			 pos;
 
 	TAILQ_FOREACH(fd, &p->fq, entries)
 		if (fd->flags & (FIELD_UNIQUE|FIELD_ROWID)) {
-			for (i = 0; i < tabs; i++)
-				if (fputc('\t', f) == EOF)
-					return 0;
+			if (!gen_ws(f, tabs, lang))
+				return 0;
 			if (fprintf(f, "STMT_%s_BY_UNIQUE_%s,\n", 
 			    p->name, fd->name) < 0)
 				return 0;
@@ -962,18 +1036,16 @@ gen_sql_enums(FILE *f, size_t tabs,
 
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries) {
-		for (i = 0; i < tabs; i++)
-			if (fputc('\t', f) == EOF)
-				return 0;
+		if (!gen_ws(f, tabs, lang))
+			return 0;
 		if (fprintf(f, 
 		    "STMT_%s_BY_SEARCH_%zu,\n", p->name, pos++) < 0)
 			return 0;
 	}
 
 	if (p->ins != NULL) {
-		for (i = 0; i < tabs; i++)
-			if (fputc('\t', f) == EOF)
-				return 0;
+		if (!gen_ws(f, tabs, lang))
+			return 0;
 		if (fprintf(f, 
 		    "STMT_%s_INSERT,\n", p->name) < 0)
 			return 0;
@@ -981,9 +1053,8 @@ gen_sql_enums(FILE *f, size_t tabs,
 
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries) {
-		for (i = 0; i < tabs; i++)
-			if (fputc('\t', f) == EOF)
-				return 0;
+		if (!gen_ws(f, tabs, lang))
+			return 0;
 		if (fprintf(f, 
 		    "STMT_%s_UPDATE_%zu,\n", p->name, pos++) < 0)
 			return 0;
@@ -991,9 +1062,8 @@ gen_sql_enums(FILE *f, size_t tabs,
 
 	pos = 0;
 	TAILQ_FOREACH(u, &p->dq, entries) {
-		for (i = 0; i < tabs; i++)
-			if (fputc('\t', f) == EOF)
-				return 0;
+		if (!gen_ws(f, tabs, lang))
+			return 0;
 		if (fprintf(f, 
 		    "STMT_%s_DELETE_%zu,\n", p->name, pos++) < 0)
 			return 0;

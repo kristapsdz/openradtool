@@ -50,13 +50,37 @@ static	const char *const ftypes[FTYPE__MAX] = {
 };
 
 static char *
-strdup_title(const char *s)
+strdup_ident(const char *s)
 {
 	char	*cp;
 
-	if ((cp = strdup(s)) != NULL)
-		cp[0] = (char)toupper((unsigned char)cp[0]);
+	if (strcasecmp(s, "self") == 0 ||
+	    strcasecmp(s, "type") == 0) {
+		if (asprintf(&cp, "r#%s", s) == -1)
+			return NULL;
+	} else
+		cp = strdup(s);
 
+	return cp;
+}
+
+static char *
+strdup_title(const char *s)
+{
+	char	*cp;
+	size_t	 offs = 0;
+
+	if (strcasecmp(s, "self") == 0 ||
+	    strcasecmp(s, "type") == 0) {
+		if (asprintf(&cp, "r#%s", s) == -1)
+			return NULL;
+		offs = 2;
+	} else {
+		if ((cp = strdup(s)) == NULL)
+			return NULL;
+	}
+
+	cp[offs] = (char)toupper((unsigned char)cp[offs]);
 	return cp;
 }
 
@@ -73,7 +97,10 @@ gen_data_strct(const struct strct *s, FILE *f)
 		goto out;
 
 	TAILQ_FOREACH(fd, &s->fq, entries) {
-		if (fprintf(f, "%12spub %s: ", "", fd->name) < 0)
+		free(cp);
+		if ((cp = strdup_ident(fd->name)) == NULL)
+			goto out;
+		if (fprintf(f, "%12spub %s: ", "", cp) < 0)
 			goto out;
 
 		if ((fd->flags & FIELD_NULL) &&
@@ -92,7 +119,7 @@ gen_data_strct(const struct strct *s, FILE *f)
 			cp = strdup_title(fd->enm->name);
 			if (cp == NULL)
 				goto out;
-			if (fprintf(f, "super::types::%s", cp) < 0)
+			if (fprintf(f, "%s", cp) < 0)
 				goto out;
 		} else {
 			if (fputs(ftypes[fd->type], f) == EOF)
@@ -223,24 +250,10 @@ static int
 gen_data(const struct config *cfg, FILE *f)
 {
 	const struct strct	*s;
-
-	if (fprintf(f, "\n%4spub mod data {\n", "") < 0)
-		return 0;
-
-	TAILQ_FOREACH(s, &cfg->sq, entries)
-		if (!gen_data_strct(s, f))
-			return 0;
-
-	return fprintf(f, "%4s}\n", "") != EOF;
-}
-
-static int
-gen_types(const struct config *cfg, FILE *f)
-{
 	const struct enm	*e;
 	const struct bitf	*b;
 
-	if (fprintf(f, "\n%4spub mod types {\n", "") < 0)
+	if (fprintf(f, "\n%4spub mod data {\n", "") < 0)
 		return 0;
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
@@ -248,6 +261,10 @@ gen_types(const struct config *cfg, FILE *f)
 			return 0;
 	TAILQ_FOREACH(b, &cfg->bq, entries)
 		if (!gen_types_bitf(b, f))
+			return 0;
+
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		if (!gen_data_strct(s, f))
 			return 0;
 
 	return fprintf(f, "%4s}\n", "") != EOF;
@@ -296,6 +313,57 @@ gen_roles(const struct config *cfg, FILE *f)
 	return fprintf(f, "%4s}\n", "") >= 0;
 }
 
+static int
+gen_aliases(const struct config *cfg, FILE *f)
+{
+	const struct field	*fd, *last;
+	const struct strct	*s;
+
+	if (fprintf(f, "%8senum Ortstmt {\n", "") < 0)
+		return 0;
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		if (!gen_sql_enums(f, 3, s, LANG_RUST))
+			return 0;
+	if (fprintf(f, "%8s}\n", "") < 0)
+		return 0;
+
+	TAILQ_FOREACH(s, &cfg->sq, entries) {
+		last = NULL;
+		TAILQ_FOREACH(fd, &s->fq, entries)
+			if (fd->type != FTYPE_STRUCT)
+				last = fd;
+		assert(last != NULL);
+
+		if (fprintf(f, "\n"
+		    "%8sfn stmt_%s(v: &str) -> String {\n"
+		    "%12slet mut s = String::new();\n",
+		    "", s->name, "") < 0)
+			return 0;
+
+		TAILQ_FOREACH(fd, &s->fq, entries) {
+			if (fd->type == FTYPE_STRUCT)
+				continue;
+			if (fprintf(f,
+			    "%12ss += &format!(\"{}.%s%s\", v);\n",
+			    "", fd->name, last != fd ? ", " : "") < 0)
+				return 0;
+		}
+
+		if (fprintf(f, "%12ss\n%8s}\n", "", "") < 0)
+			return 0;
+	}
+
+	if (fprintf(f, "\n"
+	    "%8spub fn stmt_fmt(v: Ortstmt) -> String {\n"
+	    "%12slet s;\n"
+	    "%12smatch v {\n", "", "", "") < 0)
+		return 0;
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		if (!gen_sql_stmts(f, 4, s, LANG_RUST))
+			return 0;
+	return fprintf(f, "%12s}\n%12ss\n%8s}\n", "", "", "") >= 0;
+}
+
 int
 ort_lang_rust(const struct ort_lang_rust *args,
 	const struct config *cfg, FILE *f)
@@ -327,7 +395,12 @@ ort_lang_rust(const struct ort_lang_rust *args,
 		return 0;
 	if (!gen_objs(cfg, f))
 		return 0;
-	if (!gen_types(cfg, f))
+
+	if (fprintf(f, "\n%4spub(self) mod stmt {\n", "") < 0)
+		return 0;
+	if (!gen_aliases(cfg, f))
+		return 0;
+	if (fprintf(f, "%4s}\n", "") < 0)
 		return 0;
 
 	if (fprintf(f, "\n"
@@ -350,7 +423,10 @@ ort_lang_rust(const struct ort_lang_rust *args,
 	if (!TAILQ_EMPTY(&cfg->arq) &&
 	    fprintf(f, "%16srole: Ortrole::Default,\n", "") < 0)
 		return 0;
-	if (fprintf(f, "%12s})\n%8s}\n%4s}\n", "", "", "") < 0)
+	if (fprintf(f, "%12s})\n%8s}\n", "", "") < 0)
+		return 0;
+
+	if (fprintf(f, "%4s}\n", "") < 0)
 		return 0;
 
 	return fputs("}\n", f) != EOF;

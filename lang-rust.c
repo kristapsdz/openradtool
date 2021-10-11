@@ -401,8 +401,7 @@ static int
 gen_insert(const struct strct *s, FILE *f)
 {
 	const struct field	*fd;
-	const char		*ft;
-	size_t	 	 	 pos = 1;
+	size_t	 	 	 pos, hash;
 
 	if (fprintf(f, "\n%8spub fn db_%s_insert(&self, ", "", s->name) < 0)
 		return 0;
@@ -419,33 +418,66 @@ gen_insert(const struct strct *s, FILE *f)
 		return 0;
 	if (gen_enum_insert(f, 1, s, LANG_RUST) < 0)
 		return 0;
-	if (fprintf(f, ");\n"
+	if (fputs(");\n", f) == EOF)
+		return 0;
+
+	/*
+	 * Hash passwords.  Use the bcrypt crate, and make sure to
+	 * account for NULL password fields.
+	 */
+
+	pos = hash = 1;
+	TAILQ_FOREACH(fd, &s->fq, entries) {
+		if (fd->type == FTYPE_STRUCT ||
+		    (fd->flags & FIELD_ROWID))
+			continue;
+		if (fd->type == FTYPE_PASSWORD &&
+		    (fd->flags & FIELD_NULL)) {
+			if (fprintf(f,
+			    "%12slet hash%zu = match v%zu {\n"
+			    "%16sSome(i) => Some"
+			    "(hash(i, DEFAULT_COST).unwrap()),\n"
+			    "%16s_ => None,\n%12s};\n",
+			    "", hash, pos, "", "", "") < 0)
+				return 0;
+		} else if (fd->type == FTYPE_PASSWORD) {
+			if (fprintf(f,
+			    "%12slet hash%zu = "
+			    "hash(v%zu, DEFAULT_COST).unwrap();\n",
+			    "", hash, pos) < 0)
+				return 0;
+		}
+		hash += fd->type == FTYPE_PASSWORD;
+		pos++;
+	}
+
+
+	if (fprintf(f,
 	    "%12slet mut stmt = self.conn.prepare(&sql)?;\n"
 	    "%12sstmt.insert(params![\n", "", "") < 0)
 		return 0;
 
-	pos = 1;
+	pos = hash = 1;
 	TAILQ_FOREACH(fd, &s->fq, entries) {
 		if (fd->type == FTYPE_STRUCT ||
 		    (fd->flags & FIELD_ROWID))
 			continue;
 
-		/* 
-		 * Passwords are special-cased below the switch and we
-		 * need to convert bitfields (individual bits and named
-		 * fields) into a signed representation else high bits
-		 * will trip range errors.
-		 */
-
 		if (fd->type == FTYPE_PASSWORD) {
+			if (fprintf(f,
+			    "%16shash%zu,\n", "", hash) < 0)
+				return 0;
 		} else if (fd->type == FTYPE_ENUM) {
-			if (fprintf(f, "%16sv%zu as i64,\n", "", pos) < 0)
+			if (fprintf(f,
+			    "%16sv%zu as i64,\n", "", pos) < 0)
 				return 0;
 		} else {
-			if (fprintf(f, "%16sv%zu,\n", "", pos) < 0)
+			if (fprintf(f,
+			    "%16sv%zu,\n", "", pos) < 0)
 				return 0;
 		}
 
+		hash += fd->type == FTYPE_PASSWORD;
 		pos++;
 	}
 
@@ -483,10 +515,11 @@ ort_lang_rust(const struct ort_lang_rust *args,
 	if (fprintf(f,
 	    "pub mod ort {\n"
 	    "%4suse rusqlite::{Connection,Result,params};\n"
+	    "%4suse bcrypt::{hash,DEFAULT_COST};\n"
 	    "\n"
 	    "%4spub const VERSION: &str = \"%s\";\n"
 	    "%4spub const VSTAMP: i64 = %lld;\n",
-	    "", "", ORT_VERSION, "", (long long)ORT_VSTAMP) < 0)
+	    "", "", "", ORT_VERSION, "", (long long)ORT_VSTAMP) < 0)
 		return 0;
 
 	if (!gen_roles(cfg, f))

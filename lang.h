@@ -40,6 +40,8 @@ int	 gen_commentv(FILE *, size_t, enum cmtt, const char *, ...)
 		__attribute__((format(printf, 4, 5)));
 int	 gen_sql_stmts(FILE *, size_t, const struct strct *, enum langt);
 int	 gen_sql_enums(FILE *, size_t, const struct strct *, enum langt);
-int	 gen_enum_insert(FILE *, int,const struct strct *, enum langt);
+int	 gen_enum_delete(FILE *, int, const struct strct *, size_t, enum langt);
+int	 gen_enum_insert(FILE *, int, const struct strct *, enum langt);
+int	 gen_enum_update(FILE *, int, const struct strct *, size_t, enum langt);
 
 #endif /* !ORT_LANG_H */

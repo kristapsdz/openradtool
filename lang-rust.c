@@ -49,6 +49,35 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	"i64", /* FTYPE_BITFIELD */
 };
 
+static	const char *const utypes[UP__MAX] = {
+	"update", /* UP_MODIFY */
+	"delete", /* UP_DELETE */
+};
+
+static	const char *const modtypes[MODTYPE__MAX] = {
+	"cat", /* MODTYPE_CONCAT */
+	"dec", /* MODTYPE_DEC */
+	"inc", /* MODTYPE_INC */
+	"set", /* MODTYPE_SET */
+	"strset", /* MODTYPE_STRSET */
+};
+
+static	const char *const optypes[OPTYPE__MAX] = {
+	"eq", /* OPTYPE_EQUAL */
+	"ge", /* OPTYPE_GE */
+	"gt", /* OPTYPE_GT */
+	"le", /* OPTYPE_LE */
+	"lt", /* OPTYPE_LT */
+	"neq", /* OPTYPE_NEQUAL */
+	"like", /* OPTYPE_LIKE */
+	"and", /* OPTYPE_AND */
+	"or", /* OPTYPE_OR */
+	"streq", /* OPTYPE_STREQ */
+	"strneq", /* OPTYPE_STRNEQ */
+	"isnull", /* OPTYPE_ISNULL */
+	"notnull", /* OPTYPE_NOTNULL */
+};
+
 static char *
 strdup_ident(const char *s)
 {
@@ -394,6 +423,143 @@ gen_aliases(const struct config *cfg, FILE *f)
 }
 
 /*
+ * Generate db_xxx_delete or db_xxx_update method.
+ * Return zero on failure, non-zero on success.
+ */
+static int
+gen_update(const struct update *up, size_t num, FILE *f)
+{
+	const struct uref	*ref;
+	size_t		 	 pos = 1, hash;
+	int			 rc;
+
+	/* Method signature. */
+
+	if (fprintf(f, "%8spub fn db_%s_%s",
+	    "", up->parent->name, utypes[up->type]) < 0)
+		return 0;
+
+	if (up->name == NULL && up->type == UP_MODIFY) {
+		if (!(up->flags & UPDATE_ALL))
+			TAILQ_FOREACH(ref, &up->mrq, entries) {
+				rc = fprintf(f, "_%s_%s", 
+					ref->field->name, 
+					modtypes[ref->mod]);
+				if (rc < 0)
+					return 0;
+			}
+		if (!TAILQ_EMPTY(&up->crq)) {
+			if (fprintf(f, "_by") < 0)
+				return 0;
+			TAILQ_FOREACH(ref, &up->crq, entries) {
+				rc = fprintf(f, "_%s_%s", 
+					ref->field->name, 
+					optypes[ref->op]);
+				if (rc < 0)
+					return 0;
+			}
+		}
+	} else if (up->name == NULL) {
+		if (!TAILQ_EMPTY(&up->crq)) {
+			if (fprintf(f, "_by") < 0)
+				return 0;
+			TAILQ_FOREACH(ref, &up->crq, entries) {
+				rc = fprintf(f, "_%s_%s", 
+					ref->field->name, 
+					optypes[ref->op]);
+				if (rc < 0)
+					return 0;
+			}
+		}
+	} else {
+		if (fprintf(f, "_%s", up->name) < 0)
+			return 0;
+	}
+
+	if (fputs("(&self, ", f) == EOF)
+		return 0;
+
+	pos = 1;
+	TAILQ_FOREACH(ref, &up->mrq, entries) {
+		if (gen_var(f, pos++, ref->field) < 0)
+			return 0;
+	}
+	TAILQ_FOREACH(ref, &up->crq, entries)
+		if (!OPTYPE_ISUNARY(ref->op)) {
+			if (gen_var(f, pos++, ref->field) < 0)
+				return 0;
+		}
+
+	if (fprintf(f, ") -> Result<usize> {\n"
+	    "%12slet sql = stmt::stmt_fmt(stmt::", "") < 0)
+		return 0;
+	if (up->type == UP_MODIFY &&
+	    gen_enum_update(f, 1, up->parent, num, LANG_RUST) < 0)
+		return 0;
+	if (up->type == UP_DELETE &&
+	    gen_enum_delete(f, 1, up->parent, num, LANG_RUST) < 0)
+		return 0;
+	if (fputs(");\n", f) == EOF)
+		return 0;
+
+	pos = hash = 1;
+	TAILQ_FOREACH(ref, &up->mrq, entries) {
+		if (ref->field->type != FTYPE_PASSWORD ||
+		    ref->mod == MODTYPE_STRSET) {
+			pos++;
+			continue;
+		}
+		if (ref->field->flags & FIELD_NULL) {
+			if (fprintf(f,
+			    "%12slet hash%zu = match v%zu {\n"
+			    "%16sSome(i) => Some"
+			    "(hash(i, DEFAULT_COST).unwrap()),\n"
+			    "%16s_ => None,\n%12s};\n",
+			    "", hash, pos, "", "", "") < 0)
+				return 0;
+		} else {
+			if (fprintf(f,
+			    "%12slet hash%zu = "
+			    "hash(v%zu, DEFAULT_COST).unwrap();\n",
+			    "", hash, pos) < 0)
+				return 0;
+		}
+		hash++;
+		pos++;
+	}
+
+	if (fprintf(f,
+	    "%12slet mut stmt = self.conn.prepare(&sql)?;\n"
+	    "%12sstmt.execute(params![\n", "", "") < 0)
+		return 0;
+
+	pos = hash = 1;
+	TAILQ_FOREACH(ref, &up->mrq, entries) {
+		if (ref->field->type == FTYPE_PASSWORD &&
+		    ref->mod != MODTYPE_STRSET) {
+			if (fprintf(f, "%16shash%zu,\n", "", hash) < 0)
+				return 0;
+			hash++;
+		} else {
+			if (fprintf(f, "%16sv%zu,\n", "", pos) < 0)
+				return 0;
+		}
+		pos++;
+	}
+
+	TAILQ_FOREACH(ref, &up->crq, entries) {
+		assert(ref->field->type != FTYPE_STRUCT);
+		if (OPTYPE_ISUNARY(ref->op))
+			continue;
+		if (fprintf(f, "%16sv%zu,\n", "", pos) < 0)
+			return 0;
+		pos++;
+	}
+
+	return fprintf(f, "%12s])\n%8s}\n", "", "") >= 0;
+}
+
+/*
  * Generate db_xxxx_insert method.
  * Return zero on failure, non-zero on success.
  */
@@ -403,14 +569,14 @@ gen_insert(const struct strct *s, FILE *f)
 	const struct field	*fd;
 	size_t	 	 	 pos, hash;
 
-	if (fprintf(f, "\n%8spub fn db_%s_insert(&self, ", "", s->name) < 0)
+	if (fprintf(f, "%8spub fn db_%s_insert(&self, ", "", s->name) < 0)
 		return 0;
 
 	pos = 1;
 	TAILQ_FOREACH(fd, &s->fq, entries)
 		if (fd->type != FTYPE_STRUCT &&
 		    !(fd->flags & FIELD_ROWID)) 
-			if (!gen_var(f, pos++, fd))
+			if (gen_var(f, pos++, fd) < 0)
 				return 0;
 
 	if (fprintf(f, ") -> Result<i64> {\n"
@@ -451,7 +617,6 @@ gen_insert(const struct strct *s, FILE *f)
 		pos++;
 	}
 
-
 	if (fprintf(f,
 	    "%12slet mut stmt = self.conn.prepare(&sql)?;\n"
 	    "%12sstmt.insert(params![\n", "", "") < 0)
@@ -488,10 +653,22 @@ static int
 gen_api(const struct config *cfg, FILE *f)
 {
 	const struct strct	*s;
+	const struct update	*u;
+	size_t			 pos;
 
-	TAILQ_FOREACH(s, &cfg->sq, entries)
+	TAILQ_FOREACH(s, &cfg->sq, entries) {
 		if (s->ins != NULL && !gen_insert(s, f))
 			return 0;
+		pos = 0;
+		TAILQ_FOREACH(u, &s->dq, entries)
+			if (!gen_update(u, pos++, f))
+				return 0;
+
+		pos = 0;
+		TAILQ_FOREACH(u, &s->uq, entries)
+			if (!gen_update(u, pos++, f))
+				return 0;
+	}
 
 	return 1;
 }
@@ -547,16 +724,18 @@ ort_lang_rust(const struct ort_lang_rust *args,
 		return 0;
 
 	if (fprintf(f, "\n"
-	    "%4simpl Ortctx {\n"
-	    "%8spub fn connect(dbname: &str) -> Result<Ortctx, rusqlite::Error> {\n"
-	    "%12slet conn = Connection::open(dbname)?;\n"
-	    "%12sOk(Ortctx {\n"
-	    "%16sconn,\n", "", "", "", "", "") < 0)
+	    "%4spub fn connect(dbname: &str) -> Result<Ortctx, rusqlite::Error> {\n"
+	    "%8slet conn = Connection::open(dbname)?;\n"
+	    "%8sOk(Ortctx {\n"
+	    "%12sconn,\n", "", "", "", "") < 0)
 		return 0;
 	if (!TAILQ_EMPTY(&cfg->arq) &&
-	    fprintf(f, "%16srole: Ortrole::Default,\n", "") < 0)
+	    fprintf(f, "%12srole: Ortrole::Default,\n", "") < 0)
 		return 0;
-	if (fprintf(f, "%12s})\n%8s}\n", "", "") < 0)
+	if (fprintf(f, "%8s})\n%4s}\n", "", "") < 0)
+		return 0;
+
+	if (fprintf(f, "\n%4simpl Ortctx {\n", "") < 0)
 		return 0;
 	if (!gen_api(cfg, f))
 		return 0;

@@ -57,8 +57,8 @@ static	const char *const optypes[OPTYPE__MAX] = {
 };
 
 int
-gen_enum_insert(FILE *f, int defn,
-	const struct strct *s, enum langt lang)
+gen_enum_insert(FILE *f, int defn, const struct strct *s,
+	enum langt lang)
 {
 
 	return lang == LANG_RUST ?
@@ -69,22 +69,9 @@ gen_enum_insert(FILE *f, int defn,
 		fprintf(f, "STMT_%s_INSERT", s->name);
 }
 
-static int
-print_stmt_delete(const struct strct *s, int defn,
-	size_t pos, enum langt lang, FILE *f)
-{
-
-	return lang == LANG_RUST ?
-		fprintf(f, "%s%c%sDelete%zu",
-			defn ? "Ortstmt::" : "",
-			toupper((unsigned char)s->name[0]),
-			&s->name[1], pos) :
-		fprintf(f, "STMT_%s_DELETE_%zu", s->name, pos);
-}
-
-static int
-print_stmt_update(const struct strct *s, int defn,
-	size_t pos, enum langt lang, FILE *f)
+int
+gen_enum_update(FILE *f, int defn, const struct strct *s, 
+	size_t pos, enum langt lang)
 {
 
 	return lang == LANG_RUST ?
@@ -93,6 +80,19 @@ print_stmt_update(const struct strct *s, int defn,
 			toupper((unsigned char)s->name[0]),
 			&s->name[1], pos) :
 		fprintf(f, "STMT_%s_UPDATE_%zu", s->name, pos);
+}
+
+int
+gen_enum_delete(FILE *f, int defn, const struct strct *s,
+	size_t pos, enum langt lang)
+{
+
+	return lang == LANG_RUST ?
+		fprintf(f, "%s%c%sDelete%zu",
+			defn ? "Ortstmt::" : "",
+			toupper((unsigned char)s->name[0]),
+			&s->name[1], pos) :
+		fprintf(f, "STMT_%s_DELETE_%zu", s->name, pos);
 }
 
 static int
@@ -930,7 +930,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			return 0;
 		if (lang != LANG_RUST && fputs("/* ", f) == EOF)
 			return 0;
-		if (print_stmt_update(p, 1, pos++, lang, f) < 0)
+		if (gen_enum_update(f, 1, p, pos++, lang) < 0)
 			return 0;
 		if (lang == LANG_RUST && fputs(" => {\n", f) == EOF)
 			return 0;
@@ -1036,7 +1036,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			return 0;
 		if (lang != LANG_RUST && fputs("/* ", f) == EOF)
 			return 0;
-		if (print_stmt_delete(p, 1, pos++, lang, f) < 0)
+		if (gen_enum_delete(f, 1, p, pos++, lang) < 0)
 			return 0;
 		if (lang == LANG_RUST && fputs(" => {\n", f) == EOF)
 			return 0;
@@ -1117,14 +1117,14 @@ gen_sql_enums(FILE *f, size_t tabs,
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
 		if (!gen_ws(f, tabs, lang) ||
-		    print_stmt_update(p, 0, pos++, lang, f) < 0 ||
+		    gen_enum_update(f, 0, p, pos++, lang) < 0 ||
 		    fputs(",\n", f) == EOF)
 			return 0;
 
 	pos = 0;
 	TAILQ_FOREACH(u, &p->dq, entries)
 		if (!gen_ws(f, tabs, lang) ||
-		    print_stmt_delete(p, 0, pos++, lang, f) < 0 ||
+		    gen_enum_delete(f, 0, p, pos++, lang) < 0 ||
 		    fputs(",\n", f) == EOF)
 			return 0;
 

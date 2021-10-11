@@ -669,6 +669,7 @@ gen_update(FILE *f, const struct config *cfg,
 					ref->field->name, 
 					optypes[ref->op]);
 				if (rc < 0)
+					return 0;
 				col += (size_t)rc;
 			}
 		}

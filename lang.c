@@ -56,60 +56,66 @@ static	const char *const optypes[OPTYPE__MAX] = {
 	"NOTNULL", /* OPTYPE_NOTNULL */
 };
 
-static int
-print_stmt_insert(const struct strct *s, enum langt lang, FILE *f)
+int
+gen_enum_insert(FILE *f, int defn,
+	const struct strct *s, enum langt lang)
 {
 
 	return lang == LANG_RUST ?
-		fprintf(f, "%c%sInsert",
+		fprintf(f, "%s%c%sInsert",
+			defn ? "Ortstmt::" : "",
 			toupper((unsigned char)s->name[0]),
 			&s->name[1]) :
 		fprintf(f, "STMT_%s_INSERT", s->name);
 }
 
 static int
-print_stmt_delete(const struct strct *s,
+print_stmt_delete(const struct strct *s, int defn,
 	size_t pos, enum langt lang, FILE *f)
 {
 
 	return lang == LANG_RUST ?
-		fprintf(f, "%c%sDelete%zu",
+		fprintf(f, "%s%c%sDelete%zu",
+			defn ? "Ortstmt::" : "",
 			toupper((unsigned char)s->name[0]),
 			&s->name[1], pos) :
 		fprintf(f, "STMT_%s_DELETE_%zu", s->name, pos);
 }
 
-
 static int
-print_stmt_update(const struct strct *s,
+print_stmt_update(const struct strct *s, int defn,
 	size_t pos, enum langt lang, FILE *f)
 {
 
 	return lang == LANG_RUST ?
-		fprintf(f, "%c%sUpdate%zu",
+		fprintf(f, "%s%c%sUpdate%zu",
+			defn ? "Ortstmt::" : "",
 			toupper((unsigned char)s->name[0]),
 			&s->name[1], pos) :
 		fprintf(f, "STMT_%s_UPDATE_%zu", s->name, pos);
 }
 
 static int
-print_stmt_query(const struct strct *s,
+print_stmt_query(const struct strct *s, int defn,
 	size_t pos, enum langt lang, FILE *f)
 {
 
 	return lang == LANG_RUST ?
-		fprintf(f, "%c%sBySearch%zu",
+		fprintf(f, "%s%c%sBySearch%zu",
+			defn ? "Ortstmt::" : "",
 			toupper((unsigned char)s->name[0]),
 			&s->name[1], pos) :
 		fprintf(f, "STMT_%s_BY_SEARCH_%zu", s->name, pos);
 }
 
 static int
-print_stmt_unique(const struct field *fd, enum langt lang, FILE *f)
+print_stmt_unique(const struct field *fd, int defn,
+	enum langt lang, FILE *f)
 {
 
 	return lang == LANG_RUST ?
-		fprintf(f, "%c%sByUnique%c%s",
+		fprintf(f, "%s%c%sByUnique%c%s",
+			defn ? "Ortstmt::" : "",
 			toupper((unsigned char)fd->parent->name[0]),
 			&fd->parent->name[1],
 			toupper((unsigned char)fd->name[0]),
@@ -528,7 +534,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			return 0;
 		if (lang != LANG_RUST && fputs("/* ", f) == EOF)
 			return 0;
-		if (print_stmt_unique(fd, lang, f) < 0)
+		if (print_stmt_unique(fd, 1, lang, f) < 0)
 			return 0;
 		if (lang == LANG_RUST && fputs(" => {\n", f) == EOF)
 			return 0;
@@ -586,7 +592,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			return 0;
 		if (lang != LANG_RUST && fputs("/* ", f) == EOF)
 			return 0;
-		if (print_stmt_query(p, pos++, lang, f) < 0)
+		if (print_stmt_query(p, 1, pos++, lang, f) < 0)
 			return 0;
 		if (lang == LANG_RUST && fputs(" => {\n", f) == EOF)
 			return 0;
@@ -806,7 +812,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			return 0;
 		if (lang != LANG_RUST && fputs("/* ", f) == EOF)
 			return 0;
-		if (print_stmt_insert(p, lang, f) < 0)
+		if (gen_enum_insert(f, 1, p, lang) < 0)
 			return 0;
 		if (lang == LANG_RUST && fputs(" => {\n", f) == EOF)
 			return 0;
@@ -924,7 +930,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			return 0;
 		if (lang != LANG_RUST && fputs("/* ", f) == EOF)
 			return 0;
-		if (print_stmt_update(p, pos++, lang, f) < 0)
+		if (print_stmt_update(p, 1, pos++, lang, f) < 0)
 			return 0;
 		if (lang == LANG_RUST && fputs(" => {\n", f) == EOF)
 			return 0;
@@ -1030,7 +1036,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			return 0;
 		if (lang != LANG_RUST && fputs("/* ", f) == EOF)
 			return 0;
-		if (print_stmt_delete(p, pos++, lang, f) < 0)
+		if (print_stmt_delete(p, 1, pos++, lang, f) < 0)
 			return 0;
 		if (lang == LANG_RUST && fputs(" => {\n", f) == EOF)
 			return 0;
@@ -1091,34 +1097,34 @@ gen_sql_enums(FILE *f, size_t tabs,
 	TAILQ_FOREACH(fd, &p->fq, entries)
 		if (fd->flags & (FIELD_UNIQUE|FIELD_ROWID))
 			if (!gen_ws(f, tabs, lang) ||
-			    print_stmt_unique(fd, lang, f) < 0 ||
+			    print_stmt_unique(fd, 0, lang, f) < 0 ||
 			    fputs(",\n", f) == EOF)
 				return 0;
 
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
 		if (!gen_ws(f, tabs, lang) ||
-		    print_stmt_query(p, pos++, lang, f) < 0 ||
+		    print_stmt_query(p, 0, pos++, lang, f) < 0 ||
 		    fputs(",\n", f) == EOF)
 			return 0;
 
 	if (p->ins != NULL)
 		if (!gen_ws(f, tabs, lang) ||
-		    print_stmt_insert(p, lang, f) < 0 ||
+		    gen_enum_insert(f, 0, p, lang) < 0 ||
 		    fputs(",\n", f) == EOF)
 			return 0;
 
 	pos = 0;
 	TAILQ_FOREACH(u, &p->uq, entries)
 		if (!gen_ws(f, tabs, lang) ||
-		    print_stmt_update(p, pos++, lang, f) < 0 ||
+		    print_stmt_update(p, 0, pos++, lang, f) < 0 ||
 		    fputs(",\n", f) == EOF)
 			return 0;
 
 	pos = 0;
 	TAILQ_FOREACH(u, &p->dq, entries)
 		if (!gen_ws(f, tabs, lang) ||
-		    print_stmt_delete(p, pos++, lang, f) < 0 ||
+		    print_stmt_delete(p, 0, pos++, lang, f) < 0 ||
 		    fputs(",\n", f) == EOF)
 			return 0;
 

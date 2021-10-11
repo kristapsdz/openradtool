@@ -40,7 +40,7 @@ static	const char *const ftypes[FTYPE__MAX] = {
 	"i64", /* FTYPE_EPOCH */
 	"i64", /* FTYPE_INT */
 	"f64", /* FTYPE_REAL */
-	"ByteBuffer", /* FTYPE_BLOB */
+	"Vec<u8>", /* FTYPE_BLOB */
 	"String", /* FTYPE_TEXT */
 	"String", /* FTYPE_PASSWORD */
 	"String", /* FTYPE_EMAIL */
@@ -82,6 +82,34 @@ strdup_title(const char *s)
 
 	cp[offs] = (char)toupper((unsigned char)cp[offs]);
 	return cp;
+}
+
+static int
+gen_var(FILE *f, size_t pos, const struct field *fd)
+{
+
+	if (pos > 1 && fputs(", ", f) == EOF)
+		return -1;
+	if (fprintf(f, "v%zu: ", pos) < 0)
+		return -1;
+	if ((fd->flags & FIELD_NULL) && fputs("Option<", f) == EOF)
+		return 0;
+	if (fd->type == FTYPE_ENUM) {
+		if (fprintf(f, "data::%c%s",
+		    toupper((unsigned char)fd->enm->name[0]),
+		    fd->enm->name + 1) < 0)
+			return 0;
+	} else {
+		if (strcmp(ftypes[fd->type], "i64") &&
+		    strcmp(ftypes[fd->type], "f64"))
+			if (fputc('&', f) == EOF)
+				return 0;
+		if (fputs(ftypes[fd->type], f) == EOF)
+			return 0;
+	}
+	if ((fd->flags & FIELD_NULL) && fputs(">", f) == EOF)
+		return 0;
+	return 1;
 }
 
 static int
@@ -319,7 +347,8 @@ gen_aliases(const struct config *cfg, FILE *f)
 	const struct field	*fd, *last;
 	const struct strct	*s;
 
-	if (fprintf(f, "%8senum Ortstmt {\n", "") < 0)
+	if (fprintf(f, "%8s#[allow(dead_code)]\n"
+	    "%8spub enum Ortstmt {\n", "", "") < 0)
 		return 0;
 	TAILQ_FOREACH(s, &cfg->sq, entries)
 		if (!gen_sql_enums(f, 3, s, LANG_RUST))
@@ -364,6 +393,77 @@ gen_aliases(const struct config *cfg, FILE *f)
 	return fprintf(f, "%12s}\n%12ss\n%8s}\n", "", "", "") >= 0;
 }
 
+/*
+ * Generate db_xxxx_insert method.
+ * Return zero on failure, non-zero on success.
+ */
+static int
+gen_insert(const struct strct *s, FILE *f)
+{
+	const struct field	*fd;
+	const char		*ft;
+	size_t	 	 	 pos = 1;
+
+	if (fprintf(f, "\n%8spub fn db_%s_insert(&self, ", "", s->name) < 0)
+		return 0;
+
+	pos = 1;
+	TAILQ_FOREACH(fd, &s->fq, entries)
+		if (fd->type != FTYPE_STRUCT &&
+		    !(fd->flags & FIELD_ROWID)) 
+			if (!gen_var(f, pos++, fd))
+				return 0;
+
+	if (fprintf(f, ") -> Result<i64> {\n"
+	    "%12slet sql = stmt::stmt_fmt(stmt::", "") < 0)
+		return 0;
+	if (gen_enum_insert(f, 1, s, LANG_RUST) < 0)
+		return 0;
+	if (fprintf(f, ");\n"
+	    "%12slet mut stmt = self.conn.prepare(&sql)?;\n"
+	    "%12sstmt.insert(params![\n", "", "") < 0)
+		return 0;
+
+	pos = 1;
+	TAILQ_FOREACH(fd, &s->fq, entries) {
+		if (fd->type == FTYPE_STRUCT ||
+		    (fd->flags & FIELD_ROWID))
+			continue;
+
+		/* 
+		 * Passwords are special-cased below the switch and we
+		 * need to convert bitfields (individual bits and named
+		 * fields) into a signed representation else high bits
+		 * will trip range errors.
+		 */
+
+		if (fd->type == FTYPE_PASSWORD) {
+		} else if (fd->type == FTYPE_ENUM) {
+			if (fprintf(f, "%16sv%zu as i64,\n", "", pos) < 0)
+				return 0;
+		} else {
+			if (fprintf(f, "%16sv%zu,\n", "", pos) < 0)
+				return 0;
+		}
+
+		pos++;
+	}
+
+	return fprintf(f, "%12s])\n%8s}\n", "", "") >= 0;
+}
+
+static int
+gen_api(const struct config *cfg, FILE *f)
+{
+	const struct strct	*s;
+
+	TAILQ_FOREACH(s, &cfg->sq, entries)
+		if (s->ins != NULL && !gen_insert(s, f))
+			return 0;
+
+	return 1;
+}
+
 int
 ort_lang_rust(const struct ort_lang_rust *args,
 	const struct config *cfg, FILE *f)
@@ -382,10 +482,10 @@ ort_lang_rust(const struct ort_lang_rust *args,
 
 	if (fprintf(f,
 	    "pub mod ort {\n"
-	    "%4suse rusqlite::{Connection,Result};\n"
+	    "%4suse rusqlite::{Connection,Result,params};\n"
 	    "\n"
-	    "%4spub const Version: &str = \"%s\";\n"
-	    "%4spub const Vstamp: i64 = %lld;\n",
+	    "%4spub const VERSION: &str = \"%s\";\n"
+	    "%4spub const VSTAMP: i64 = %lld;\n",
 	    "", "", ORT_VERSION, "", (long long)ORT_VSTAMP) < 0)
 		return 0;
 
@@ -425,9 +525,7 @@ ort_lang_rust(const struct ort_lang_rust *args,
 		return 0;
 	if (fprintf(f, "%12s})\n%8s}\n", "", "") < 0)
 		return 0;
-
-	if (fprintf(f, "%4s}\n", "") < 0)
+	if (!gen_api(cfg, f))
 		return 0;
-
-	return fputs("}\n", f) != EOF;
+	return fprintf(f, "%4s}\n}\n", "") >= 0;
 }

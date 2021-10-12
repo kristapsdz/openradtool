@@ -840,6 +840,77 @@ gen_update(FILE *f, const struct config *cfg,
 }
 
 /*
+ * Generate the check for a password.  This is used for queries, once
+ * the object "obj" has been loaded from the database.  Returns FALSE on
+ * failure, TRUE on success.
+ * FIXME: this is hard-coded for two tabs.
+ */
+static int
+gen_checkpass(FILE *f, size_t pos, const char *name,
+	enum optype type, const struct field *fd)
+{
+
+	if (fprintf(f, "(%s",
+	    type == OPTYPE_NEQUAL ? "!(" : "") < 0)
+		return 0;
+
+	if (fd->flags & FIELD_NULL) {
+		if (fprintf(f,
+		    "(v%zu === null && obj.%s !== null) ||\n\t\t    "
+		    "(v%zu !== null && obj.%s === null) ||\n\t\t    "
+		    "(v%zu !== null && obj.%s !== null && "
+		     "!bcrypt.compareSync(v%zu, obj.%s))",
+		    pos, name, pos, name, pos, name, pos, name) < 0)
+			return 0;
+	} else {
+		if (fprintf(f,
+		    "!bcrypt.compareSync(v%zu, obj.%s)", pos, name) < 0)
+			return 0;
+	}
+
+	return fprintf(f, "%s)",
+		type == OPTYPE_NEQUAL ? ")" : "") >= 0;
+}
+
+/*
+ * Generate the check for a query's passwords, with failure in the check
+ * returning null or continuing based upon whether "ret" is TRUE.
+ * Returns FALSE on failure, TRUE on success.
+ * FIXME: this is hard-coded for two tabs.
+ */
+static int
+gen_query_checkpass(FILE *f, const struct search *s, int ret)
+{
+	size_t		 	 pos = 1;
+	const struct sent	*sent;
+
+	pos = 1;
+	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		if (OPTYPE_ISUNARY(sent->op))
+			continue;
+		if (sent->field->type != FTYPE_PASSWORD ||
+		    sent->op == OPTYPE_STREQ ||
+		    sent->op == OPTYPE_STRNEQ) {
+			pos++;
+			continue;
+		}
+		if (fputs("\t\tif ", f) == EOF)
+			return 0;
+		if (!gen_checkpass(f, pos, sent->fname,
+		    sent->op, sent->field))
+			return 0;
+		if (ret &&
+		    fprintf(f, "\n\t\t\treturn null;\n") < 0)
+			return 0;
+		if (!ret &&
+		    fprintf(f, "\n\t\t\tcontinue;\n") < 0)
+			return 0;
+		pos++;
+	}
+	return 1;
+}
+
+/*
  * Generate db_xxx_{get,count,list,iterate} method.
  * Return zero on failure, non-zero on success.
  */
@@ -1088,10 +1159,9 @@ gen_query(FILE *f, const struct config *cfg,
 			continue;
 
 		/* 
-		 * Passwords are special-cased below the switch (unless
-		 * they're streq/strneq) and we need to convert
-		 * bitfields (individual bits and named fields) into a
-		 * signed representation: unsigned can exceed range.
+		 * Convert bitfields (individual bits and named fields)
+		 * into a signed representation: unsigned can exceed
+		 * range.
 		 */
 
 		switch (sent->field->type) {
@@ -1109,8 +1179,7 @@ gen_query(FILE *f, const struct config *cfg,
 				    "(BigInt.asIntN(64, v%zu));\n", 
 				    pos) < 0)
 					return 0;
-			pos++;
-			continue;
+			break;
 		case FTYPE_PASSWORD:
 			if (sent->op != OPTYPE_STREQ &&
 			    sent->op != OPTYPE_STRNEQ)
@@ -1118,25 +1187,11 @@ gen_query(FILE *f, const struct config *cfg,
 			/* FALLTHROUGH */
 		default:
 			if (fprintf(f, 
-			    "\t\tparms.push(v%zu);\n", pos++) < 0)
+			    "\t\tparms.push(v%zu);\n", pos) < 0)
 				return 0;
-			continue;
+			break;
 		}
 
-		if (sent->field->flags & FIELD_NULL) {
-			if (fprintf(f, "\t\tif (v%zu === null)\n"
-			    "\t\t\tparms.push(null);\n"
-			    "\t\telse\n"
-			    "\t\t\tparms.push(bcrypt.hashSync"
-			    "(v%zu, bcrypt.genSaltSync()));\n", 
-			    pos, pos) < 0)
-				return 0;
-		} else {
-			if (fprintf(f, "\t\tparms.push(bcrypt.hashSync"
-			    "(v%zu, bcrypt.genSaltSync()));\n", 
-			    pos) < 0)
-				return 0;
-		}
 		pos++;
 	}
 	
@@ -1145,7 +1200,8 @@ gen_query(FILE *f, const struct config *cfg,
 
 	switch (s->type) {
 	case STYPE_SEARCH:
-		if (fprintf(f, "\t\tconst cols: any = stmt.get(parms);\n"
+		if (fprintf(f,
+		    "\t\tconst cols: any = stmt.get(parms);\n"
 		    "\n"
 		    "\t\tif (typeof cols === 'undefined')\n"
 		    "\t\t\treturn null;\n"
@@ -1154,11 +1210,11 @@ gen_query(FILE *f, const struct config *cfg,
 		    "({row: <any[]>cols, pos: 0});\n",
 		    rs->name, rs->name) < 0)
 			return 0;
-		if (rs->flags & STRCT_HAS_NULLREFS) {
+		if (rs->flags & STRCT_HAS_NULLREFS)
 		       if (fprintf(f, "\t\tthis.db_%s_reffind"
 			   "(this.#o, obj);\n", rs->name) < 0)
 			       return 0;
-		}
+		gen_query_checkpass(f, s, 1);
 		if (fprintf(f, "\t\treturn new "
 	  	    "ortns.%s(this.#role, obj);\n", rs->name) < 0)
 			return 0;
@@ -1171,11 +1227,11 @@ gen_query(FILE *f, const struct config *cfg,
 		    "({row: <any>cols, pos: 0});\n",
 		    rs->name, rs->name) < 0)
 			return 0;
-		if (rs->flags & STRCT_HAS_NULLREFS) {
+		if (rs->flags & STRCT_HAS_NULLREFS)
 			if (fprintf(f, "\t\t\tthis.db_%s_reffind"
 			    "(this.#o, obj);\n", rs->name) < 0)
 				return 0;
-		}
+		gen_query_checkpass(f, s, 0);
 		if (fprintf(f, 
 		    "\t\t\tcb(new ortns.%s(this.#role, obj));\n"
 		    "\t\t}\n", rs->name) < 0)
@@ -1193,11 +1249,11 @@ gen_query(FILE *f, const struct config *cfg,
 		    "({row: <any[]>rows[i], pos: 0});\n",
 		    rs->name, rs->name, rs->name) < 0)
 			return 0;
-		if (rs->flags & STRCT_HAS_NULLREFS) {
+		if (rs->flags & STRCT_HAS_NULLREFS)
 			if (fprintf(f, "\t\t\tthis.db_%s_reffind"
 			    "(this.#o, obj);\n", rs->name) < 0)
 				return 0;
-		}
+		gen_query_checkpass(f, s, 0);
 		if (fprintf(f, 
 		    "\t\t\tobjs.push(new ortns.%s(this.#role, obj));\n"
 		    "\t\t}\n"

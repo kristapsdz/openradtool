@@ -95,9 +95,9 @@ gen_enum_delete(FILE *f, int defn, const struct strct *s,
 		fprintf(f, "STMT_%s_DELETE_%zu", s->name, pos);
 }
 
-static int
-print_stmt_query(const struct strct *s, int defn,
-	size_t pos, enum langt lang, FILE *f)
+int
+gen_enum_query(FILE *f, int defn, const struct strct *s,
+	size_t pos, enum langt lang)
 {
 
 	return lang == LANG_RUST ?
@@ -592,7 +592,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			return 0;
 		if (lang != LANG_RUST && fputs("/* ", f) == EOF)
 			return 0;
-		if (print_stmt_query(p, 1, pos++, lang, f) < 0)
+		if (gen_enum_query(f, 1, p, pos++, lang) < 0)
 			return 0;
 		if (lang == LANG_RUST && fputs(" => {\n", f) == EOF)
 			return 0;
@@ -727,11 +727,6 @@ gen_sql_stmts(FILE *f, size_t tabs,
 		if (fprintf(f, "%s%c", spacer, delim) < 0)
 			return 0;
 
-		if (!TAILQ_EMPTY(&s->sntq) || 
-		    (s->aggr != NULL && s->group != NULL))
-			if (fputs("WHERE", f) == EOF)
-				return 0;
-
 		first = 1;
 
 		/* 
@@ -740,6 +735,8 @@ gen_sql_stmts(FILE *f, size_t tabs,
 		 */
 
 		if (s->group != NULL) {
+			if (first && fputs("WHERE", f) == EOF)
+				return 0;
 			if (fprintf(f, " _custom.%s IS NULL", 
 			    s->group->field->name) < 0)
 				return 0;
@@ -754,6 +751,8 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			    sent->op != OPTYPE_STREQ &&
 			    sent->op != OPTYPE_STRNEQ)
 				continue;
+			if (first && fputs("WHERE", f) == EOF)
+				return 0;
 			if (!first && fputs(" AND", f) == EOF)
 				return 0;
 			first = 0;
@@ -1104,7 +1103,7 @@ gen_sql_enums(FILE *f, size_t tabs,
 	pos = 0;
 	TAILQ_FOREACH(s, &p->sq, entries)
 		if (!gen_ws(f, tabs, lang) ||
-		    print_stmt_query(p, 0, pos++, lang, f) < 0 ||
+		    gen_enum_query(f, 0, p, pos++, lang) < 0 ||
 		    fputs(",\n", f) == EOF)
 			return 0;
 

@@ -247,7 +247,9 @@ gen_types_enum(const struct enm *e, FILE *f)
 
 	if ((name = strdup_title(e->name)) == NULL)
 		goto out;
-	if (fprintf(f, "%8spub enum %s {\n", "", name) < 0)
+	if (fprintf(f,
+	    "%8s#[derive(FromPrimitive, ToPrimitive)]\n"
+	    "%8spub enum %s {\n", "", "", name) < 0)
 		goto out;
 
 	TAILQ_FOREACH(ei, &e->eq, entries) {
@@ -559,6 +561,80 @@ gen_update(const struct update *up, size_t num, FILE *f)
 	return fprintf(f, "%12s])\n%8s}\n", "", "") >= 0;
 }
 
+static int
+gen_fill(const struct strct *s, FILE *f)
+{
+	const struct field	*fd;
+	size_t	 		 scol, col, cols = 0;
+
+	TAILQ_FOREACH(fd, &s->fq, entries)
+		cols += fd->type != FTYPE_STRUCT;
+
+	if (fprintf(f,
+	    "%8sfn db_%s_fill(&self, row: &Row, i: &mut usize) -> "
+	     "Result<data::%c%s> {\n"
+	    "%12slet ncol: usize = *i;\n"
+	    "%12s*i += %zu;\n",
+	    "", s->name, toupper((unsigned char)s->name[0]),
+	    s->name + 1, "", "", cols) < 0)
+		return 0;
+
+	col = scol = 0;
+	TAILQ_FOREACH(fd, &s->fq, entries) {
+		if (fd->type == FTYPE_STRUCT &&
+		    !(fd->ref->source->flags & FIELD_NULL)) {
+			if (fprintf(f, 
+			    "%12slet obj%zu = self.db_%s_fill(row, i)?;\n",
+			    "", scol++, fd->ref->target->parent->name) < 0)
+				return 0;
+		} else if (fd->type == FTYPE_ENUM) {
+			if (fprintf(f, 
+			    "%12slet obj%zu = row.get(ncol + %zu)?;\n",
+			    "", scol++, col++) < 0)
+				return 0;
+		} else if (fd->type != FTYPE_STRUCT)
+			col++;
+	}
+
+	if (fprintf(f, "%12sOk(data::%c%s {\n",
+	    "", toupper((unsigned char)s->name[0]), s->name + 1) < 0)
+		return 0;
+
+	col = scol = 0;
+	TAILQ_FOREACH(fd, &s->fq, entries) {
+		switch (fd->type) {
+		case FTYPE_STRUCT:
+			if (fd->ref->source->flags & FIELD_NULL) {
+				if (fprintf(f, "%16s%s: "
+				    "None,\n", "", fd->name) < 0)
+					return 0;
+			} else {
+				if (fprintf(f, "%16s%s: obj%zu,\n",
+				    "", fd->name, scol++) < 0)
+					return 0;
+			}
+			break;
+		case FTYPE_ENUM:
+			if (fprintf(f, "%16s%s: FromPrimitive::from_i64"
+			    "(obj%zu).ok_or"
+			    "(rusqlite::Error::IntegralValueOutOfRange"
+			    "(ncol + %zu, obj%zu))?,\n",
+			    "", fd->name, scol, col, scol) < 0)
+				return 0;
+			col++;
+			scol++;
+			break;
+		default:
+			if (fprintf(f, "%16s%s: row.get(ncol + %zu)?,"
+			    "\n", "", fd->name, col++) < 0)
+				return 0;
+			break;
+		}
+	}
+
+	return fprintf(f, "%12s})\n%8s}\n", "", "") >= 0;
+}
+
 /*
  * Generate db_xxxx_insert method.
  * Return zero on failure, non-zero on success.
@@ -569,7 +645,8 @@ gen_insert(const struct strct *s, FILE *f)
 	const struct field	*fd;
 	size_t	 	 	 pos, hash;
 
-	if (fprintf(f, "%8spub fn db_%s_insert(&self, ", "", s->name) < 0)
+	if (fprintf(f, "%8spub fn db_%s_insert"
+	    "(&self, ", "", s->name) < 0)
 		return 0;
 
 	pos = 1;
@@ -634,7 +711,8 @@ gen_insert(const struct strct *s, FILE *f)
 				return 0;
 		} else if (fd->type == FTYPE_ENUM) {
 			if (fprintf(f,
-			    "%16sv%zu as i64,\n", "", pos) < 0)
+			    "%16sToPrimitive::to_i64(&v%zu).unwrap(),\n",
+			    "", pos) < 0)
 				return 0;
 		} else {
 			if (fprintf(f,
@@ -650,6 +728,229 @@ gen_insert(const struct strct *s, FILE *f)
 }
 
 static int
+gen_query(FILE *f, const struct config *cfg,
+	const struct search *s, size_t num)
+{
+#if 0
+	const struct sent	*sent;
+	const struct strct	*rs;
+	const struct field	*fd;
+	char			*ret;
+	size_t			 pos, hash;
+	int		 	 rc;
+
+	/*
+	 * The "real struct" we'll return is either ourselves or the one
+	 * we reference with a distinct clause.
+	 */
+
+	rs = s->dst != NULL ? s->dst->strct : s->parent;
+	if ((ret = strdup(rs->name)) == NULL)
+		return 0;
+	ret[0] = toupper((unsigned char)ret[0]);
+
+	if (fprintf(f, "%8spub fn db_%s_%s", 
+	    s->parent->name, stypes[s->type]) < 0)
+		return 0;
+
+	if (s->name == NULL && !TAILQ_EMPTY(&s->sntq)) {
+		if (fprintf(f, "_by") < 0)
+			return 0;
+		TAILQ_FOREACH(sent, &s->sntq, entries)
+			if (fprintf(f, "_%s_%s",
+			    sent->uname, optypes[sent->op]) < 0)
+				return 0;
+	} else if (s->name != NULL)
+		if (fprintf(f, "_%s", s->name) < 0)
+			return 0;
+
+	if (fputs("(&self, ", f) == EOF)
+		return 0;
+
+	pos = 1;
+	TAILQ_FOREACH(sent, &s->sntq, entries)
+		if (!OPTYPE_ISUNARY(sent->op) &&
+		    gen_var(f, pos++, sent->field) < 0)
+				return 0;
+
+#if 0
+	if (s->type == STYPE_ITERATE) {
+		if (pos > 1 && fputc(',', f) == EOF)
+			return 0;
+		if ((rc = fprintf(f, "cb: "
+		    "(res: ortns.%s) => void", rs->name)) < 0)
+			return 0;
+		col += (size_t)rc;
+	}
+#endif
+
+	if (fputs(") -> ", f) == EOF)
+		return 0;
+
+	if (s->type == STYPE_SEARCH) {
+		if (fprintf(f, "Result<Option<objs::%s>>", ret) < 0)
+			return 0;
+	} else if (s->type == STYPE_LIST) {
+		if (fprintf(f, "Result<Vec<objs::%s>>", ret) < 0)
+			return 0;
+#if 0
+	} else if (s->type == STYPE_ITERATE) {
+		if (fputs("void\n", f) == EOF)
+			return 0;
+#endif
+	} else {
+		if (fputs("Result<i64>\n", f) == EOF)
+			return 0;
+	}
+
+	if (fprintf(f, " {\n"
+	    "%12slet sql = stmt::stmt_fmt(stmt::", "") < 0)
+		return 0;
+	if (gen_enum_query(f, 1, s, LANG_RUST) < 0)
+		return 0;
+	if (fputs(");\n", f) == EOF)
+		return 0;
+
+	pos = hash = 1;
+	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		if (OPTYPE_ISUNARY(sent->op))
+			continue;
+		fd = sent->field;
+		if (fd->type == FTYPE_STRUCT ||
+		    (fd->flags & FIELD_ROWID))
+			continue;
+		if (fd->type == FTYPE_PASSWORD &&
+		    (fd->flags & FIELD_NULL)) {
+			if (fprintf(f,
+			    "%12slet hash%zu = match v%zu {\n"
+			    "%16sSome(i) => Some"
+			    "(hash(i, DEFAULT_COST).unwrap()),\n"
+			    "%16s_ => None,\n%12s};\n",
+			    "", hash, pos, "", "", "") < 0)
+				return 0;
+		} else if (fd->type == FTYPE_PASSWORD) {
+			if (fprintf(f,
+			    "%12slet hash%zu = "
+			    "hash(v%zu, DEFAULT_COST).unwrap();\n",
+			    "", hash, pos) < 0)
+				return 0;
+		}
+		hash += fd->type == FTYPE_PASSWORD;
+		pos++;
+	}
+
+	if (fprintf(f,
+	    "%12slet mut stmt = self.conn.prepare(&sql)?;\n"
+	    "%12slet mut rows = stmt.%s(params![\n", "", "",
+	    s->type == STYPE_SEARCH || s->type == STYPE_COUNT ?
+	    "query_row" : "query") < 0)
+		return 0;
+
+	pos = hash = 1;
+	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		if (OPTYPE_ISUNARY(sent->op))
+			continue;
+		if (fd->type == FTYPE_PASSWORD) {
+			if (fprintf(f,
+			    "%16shash%zu,\n", "", hash) < 0)
+				return 0;
+		} else if (fd->type == FTYPE_ENUM) {
+			if (fprintf(f,
+			    "%16sToPrimitive::to_i64(&v%zu).unwrap(),\n", "", pos) < 0)
+				return 0;
+		 else {
+			if (fprintf(f,
+			    "%16sv%zu,\n", "", pos) < 0)
+				return 0;
+		}
+		hash += fd->type == FTYPE_PASSWORD;
+		pos++;
+	}
+
+	if (fprintf(f, "%12s])?;\n", "") < 0)
+		return 0;
+	
+	switch (s->type) {
+	case STYPE_SEARCH:
+		if (fprintf(f, "\t\tconst cols: any = stmt.get(parms);\n"
+		    "\n"
+		    "\t\tif (typeof cols === 'undefined')\n"
+		    "\t\t\treturn null;\n"
+		    "\t\tconst obj: ortns.%sData = \n"
+		    "\t\t\tthis.db_%s_fill"
+		    "({row: <any[]>cols, pos: 0});\n",
+		    rs->name, rs->name) < 0)
+			return 0;
+		if (rs->flags & STRCT_HAS_NULLREFS) {
+		       if (fprintf(f, "\t\tthis.db_%s_reffind"
+			   "(this.#o, obj);\n", rs->name) < 0)
+			       return 0;
+		}
+		if (fprintf(f, "\t\treturn new "
+	  	    "ortns.%s(this.#role, obj);\n", rs->name) < 0)
+			return 0;
+		break;
+	case STYPE_ITERATE:
+		if (fprintf(f, 
+		    "\t\tfor (const cols of stmt.iterate(parms)) {\n"
+		    "\t\t\tconst obj: ortns.%sData =\n"
+		    "\t\t\t\tthis.db_%s_fill"
+		    "({row: <any>cols, pos: 0});\n",
+		    rs->name, rs->name) < 0)
+			return 0;
+		if (rs->flags & STRCT_HAS_NULLREFS) {
+			if (fprintf(f, "\t\t\tthis.db_%s_reffind"
+			    "(this.#o, obj);\n", rs->name) < 0)
+				return 0;
+		}
+		if (fprintf(f, 
+		    "\t\t\tcb(new ortns.%s(this.#role, obj));\n"
+		    "\t\t}\n", rs->name) < 0)
+			return 0;
+		break;
+	case STYPE_LIST:
+		if (fprintf(f, 
+		    "\t\tconst rows: any[] = stmt.all(parms);\n"
+		    "\t\tconst objs: ortns.%s[] = [];\n"
+		    "\t\tlet i: number;\n"
+		    "\n"
+		    "\t\tfor (i = 0; i < rows.length; i++) {\n"
+		    "\t\t\tconst obj: ortns.%sData =\n"
+		    "\t\t\t\tthis.db_%s_fill"
+		    "({row: <any[]>rows[i], pos: 0});\n",
+		    rs->name, rs->name, rs->name) < 0)
+			return 0;
+		if (rs->flags & STRCT_HAS_NULLREFS) {
+			if (fprintf(f, "\t\t\tthis.db_%s_reffind"
+			    "(this.#o, obj);\n", rs->name) < 0)
+				return 0;
+		}
+		if (fprintf(f, 
+		    "\t\t\tobjs.push(new ortns.%s(this.#role, obj));\n"
+		    "\t\t}\n"
+		    "\t\treturn objs;\n", rs->name) < 0)
+			return 0;
+		break;
+	case STYPE_COUNT:
+		if (fprintf(f, 
+		    "\t\tconst cols: any = stmt.get(parms);\n"
+		    "\n"
+		    "\t\tif (typeof cols === 'undefined')\n"
+		    "\t\t\tthrow \'count returned no result!?\';\n"
+		    "\t\treturn BigInt(cols[0]);\n") < 0)
+			return 0;
+		break;
+	default:
+		break;
+	}
+
+	free(ret);
+	return fputs("\t}\n", f) != EOF;
+#endif
+	return 1;
+}
+
+static int
 gen_api(const struct config *cfg, FILE *f)
 {
 	const struct strct	*s;
@@ -659,11 +960,12 @@ gen_api(const struct config *cfg, FILE *f)
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
 		if (s->ins != NULL && !gen_insert(s, f))
 			return 0;
+		if (!gen_fill(s, f))
+			return 0;
 		pos = 0;
 		TAILQ_FOREACH(u, &s->dq, entries)
 			if (!gen_update(u, pos++, f))
 				return 0;
-
 		pos = 0;
 		TAILQ_FOREACH(u, &s->uq, entries)
 			if (!gen_update(u, pos++, f))
@@ -690,13 +992,18 @@ ort_lang_rust(const struct ort_lang_rust *args,
 		return 0;
 
 	if (fprintf(f,
+	    "%4s#[macro_use]\n"
+	    "%4sextern crate num_derive;\n"
+	    "\n"
 	    "pub mod ort {\n"
-	    "%4suse rusqlite::{Connection,Result,params};\n"
+	    "%4suse rusqlite::{Connection,Result,params,Row};\n"
 	    "%4suse bcrypt::{hash,DEFAULT_COST};\n"
+	    "%4suse num_traits::{FromPrimitive,ToPrimitive};\n"
 	    "\n"
 	    "%4spub const VERSION: &str = \"%s\";\n"
 	    "%4spub const VSTAMP: i64 = %lld;\n",
-	    "", "", "", ORT_VERSION, "", (long long)ORT_VSTAMP) < 0)
+	    "", "", "", "", "", "",
+	    ORT_VERSION, "", (long long)ORT_VSTAMP) < 0)
 		return 0;
 
 	if (!gen_roles(cfg, f))

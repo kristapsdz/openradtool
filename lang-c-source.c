@@ -186,52 +186,61 @@ print_src(FILE *f, size_t indent, const char *fmt, ...)
  * Return zero on failure, non-zero on success.
  */
 static int
-gen_checkpass(FILE *f, int ptr, size_t pos,
-	const char *name, enum optype type, const struct field *fd)
+gen_checkpass(FILE *f, int ptr, size_t pos, const struct sent *sent)
 {
-	const char	*s = ptr ? "->" : ".";
+	char		*fd, *hasfd;
 
-	assert(type == OPTYPE_EQUAL || type == OPTYPE_NEQUAL);
-
-	if (fprintf(f, "(%s", type == OPTYPE_NEQUAL ? "!(" : "") < 0)
+	if (asprintf(&fd, "p%s%s%s%s",
+	    ptr ? "->" : ".",
+	    sent->name == NULL ? "" : sent->name,
+	    sent->name == NULL ? "" : ".",
+	    sent->field->name) == -1)
+		return 0;
+	if (asprintf(&hasfd, "p%s%s%shas_%s",
+	    ptr ? "->" : ".",
+	    sent->name == NULL ? "" : sent->name,
+	    sent->name == NULL ? "" : ".",
+	    sent->field->name) == -1)
 		return 0;
 
-	if (fd->flags & FIELD_NULL) {
+	if (fprintf(f, "(%s",
+	    sent->op == OPTYPE_NEQUAL ?  "!(" : "") < 0)
+		return 0;
+
+	if (sent->field->flags & FIELD_NULL) {
 		if (fprintf(f,
-		    "(v%zu == NULL && p%shas_%s) ||\n\t\t    "
-		    "(v%zu != NULL && !p%shas_%s) ||\n\t\t    "
-		    "(v%zu != NULL && p%shas_%s && ",
-		    pos, s, name, pos, s, name, pos, s, name) < 0)
+		    "(v%zu == NULL && %s) ||\n\t\t    "
+		    "(v%zu != NULL && !%s) ||\n\t\t    "
+		    "(v%zu != NULL && %s && ",
+		    pos, hasfd, pos, hasfd, pos, hasfd) < 0)
 			return 0;
 #ifdef __OpenBSD__
-		if (fprintf(f,
-		    "crypt_checkpass(v%zu, p%s%s) == -1)",
-		    pos, s, name) < 0)
+		if (fprintf(f, "crypt_checkpass(v%zu, %s) == -1)",
+		    pos, fd) < 0)
 			return 0;
 #else
-		if (fprintf(f,
-		    "strcmp(crypt(v%zu, p%s%s), p%s%s) != 0)",
-		    pos, s, name, s, name) < 0)
+		if (fprintf(f, "strcmp(crypt(v%zu, %s), %s) != 0)",
+		    pos, fd, fd) < 0)
 			return 0;
 #endif
 	} else {
 		if (fprintf(f, "v%zu == NULL || ", pos) < 0)
 			return 0;
 #ifdef __OpenBSD__
-		if (fprintf(f,
-		    "crypt_checkpass(v%zu, p%s%s) == -1",
-		    pos, s, name) < 0)
+		if (fprintf(f, "crypt_checkpass(v%zu, %s) == -1",
+		    pos, fd) < 0)
 			return 0;
 #else
-		if (fprintf(f,
-		    "strcmp(crypt(v%zu, p%s%s), p%s%s) != 0",
-		    pos, s, name, s, name) < 0)
+		if (fprintf(f, "strcmp(crypt(v%zu, %s), %s) != 0",
+		    pos, fd, fd) < 0)
 			return 0;
 #endif
 	}
 
-	return fprintf(f, "%s)",
-		type == OPTYPE_NEQUAL ? ")" : "") > 0;
+	free(fd);
+	free(hasfd);
+	return fprintf(f, "%s)", sent->op == OPTYPE_NEQUAL ?
+		")" : "") > 0;
 }
 
 /*
@@ -590,8 +599,7 @@ gen_iterator(FILE *f, const struct config *cfg,
 		}
 		if (fputs("\t\tif ", f) == EOF)
 			return 0;
-		if (!gen_checkpass(f, 0, pos,
-		    sent->fname, sent->op, sent->field))
+		if (!gen_checkpass(f, 0, pos, sent))
 			return 0;
 		if (fprintf(f, " {\n"
 		    "\t\t\tdb_%s_unfill_r(&p);\n"
@@ -723,8 +731,7 @@ gen_list(FILE *f, const struct config *cfg,
 		}
 		if (fputs("\t\tif ", f) == EOF)
 			return 0;
-		if (!gen_checkpass(f, 1, pos,
-		    sent->fname, sent->op, sent->field))
+		if (!gen_checkpass(f, 1, pos, sent))
 			return 0;
 		if (fprintf(f, " {\n"
 		    "\t\t\tdb_%s_free(p);\n"
@@ -1416,8 +1423,7 @@ gen_search(FILE *f, const struct config *cfg,
 		}
 		if (fputs("\t\tif ", f) == EOF)
 			return 0;
-		if (!gen_checkpass(f, 1, pos,
-		    sent->fname, sent->op, sent->field))
+		if (!gen_checkpass(f, 1, pos, sent))
 			return 0;
 		if (fprintf(f, " {\n"
 		    "\t\t\tdb_%s_free(p);\n"

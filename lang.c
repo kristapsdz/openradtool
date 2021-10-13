@@ -713,6 +713,8 @@ gen_sql_stmts(FILE *f, size_t tabs,
 		if (!hastrail) {
 			if (nc == 0 && fputc(delim, f) == EOF)
 				return 0;
+			if (lang == LANG_RUST && fputs("; }", f) == EOF)
+				return 0;
 			if (fputs(",\n", f) == EOF)
 				return 0;
 			continue;

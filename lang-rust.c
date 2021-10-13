@@ -34,6 +34,13 @@
 #include "ort-version.h"
 #include "lang.h"
 
+static	const char *const stypes[STYPE__MAX] = {
+	"count", /* STYPE_COUNT */
+	"get", /* STYPE_SEARCH */
+	"list", /* STYPE_LIST */
+	"iterate", /* STYPE_ITERATE */
+};
+
 static	const char *const ftypes[FTYPE__MAX] = {
 	"i64", /* FTYPE_BIT */
 	"i64", /* FTYPE_DATE */
@@ -114,10 +121,10 @@ strdup_title(const char *s)
 }
 
 static int
-gen_var(FILE *f, size_t pos, const struct field *fd)
+gen_var(FILE *f, size_t pos, const struct field *fd, int comma)
 {
 
-	if (pos > 1 && fputs(", ", f) == EOF)
+	if (comma && fputs(", ", f) == EOF)
 		return -1;
 	if (fprintf(f, "v%zu: ", pos) < 0)
 		return -1;
@@ -483,14 +490,17 @@ gen_update(const struct update *up, size_t num, FILE *f)
 
 	pos = 1;
 	TAILQ_FOREACH(ref, &up->mrq, entries) {
-		if (gen_var(f, pos++, ref->field) < 0)
+		if (gen_var(f, pos, ref->field, pos > 1) < 0)
 			return 0;
+		pos++;
 	}
-	TAILQ_FOREACH(ref, &up->crq, entries)
-		if (!OPTYPE_ISUNARY(ref->op)) {
-			if (gen_var(f, pos++, ref->field) < 0)
-				return 0;
-		}
+	TAILQ_FOREACH(ref, &up->crq, entries) {
+		if (OPTYPE_ISUNARY(ref->op))
+			continue;
+		if (gen_var(f, pos, ref->field, pos > 1) < 0)
+			return 0;
+		pos++;
+	}
 
 	if (fprintf(f, ") -> Result<usize> {\n"
 	    "%12slet sql = stmt::stmt_fmt(stmt::", "") < 0)
@@ -650,11 +660,14 @@ gen_insert(const struct strct *s, FILE *f)
 		return 0;
 
 	pos = 1;
-	TAILQ_FOREACH(fd, &s->fq, entries)
-		if (fd->type != FTYPE_STRUCT &&
-		    !(fd->flags & FIELD_ROWID)) 
-			if (gen_var(f, pos++, fd) < 0)
-				return 0;
+	TAILQ_FOREACH(fd, &s->fq, entries) {
+		if (fd->type == FTYPE_STRUCT ||
+		    (fd->flags & FIELD_ROWID)) 
+			continue;
+		if (gen_var(f, pos, fd, pos > 1) < 0)
+			return 0;
+		pos++;
+	}
 
 	if (fprintf(f, ") -> Result<i64> {\n"
 	    "%12slet sql = stmt::stmt_fmt(stmt::", "") < 0)
@@ -728,16 +741,12 @@ gen_insert(const struct strct *s, FILE *f)
 }
 
 static int
-gen_query(FILE *f, const struct config *cfg,
-	const struct search *s, size_t num)
+gen_query(const struct search *s, size_t num, FILE *f)
 {
-#if 0
 	const struct sent	*sent;
 	const struct strct	*rs;
-	const struct field	*fd;
 	char			*ret;
 	size_t			 pos, hash;
-	int		 	 rc;
 
 	/*
 	 * The "real struct" we'll return is either ourselves or the one
@@ -750,7 +759,7 @@ gen_query(FILE *f, const struct config *cfg,
 	ret[0] = toupper((unsigned char)ret[0]);
 
 	if (fprintf(f, "%8spub fn db_%s_%s", 
-	    s->parent->name, stypes[s->type]) < 0)
+	    "", s->parent->name, stypes[s->type]) < 0)
 		return 0;
 
 	if (s->name == NULL && !TAILQ_EMPTY(&s->sntq)) {
@@ -764,106 +773,76 @@ gen_query(FILE *f, const struct config *cfg,
 		if (fprintf(f, "_%s", s->name) < 0)
 			return 0;
 
-	if (fputs("(&self, ", f) == EOF)
+	if (fputs("(&self", f) == EOF)
+		return 0;
+
+	if (s->type == STYPE_ITERATE &&
+	    fprintf(f, ", cb: fn(res: objs::%s)", ret) < 0)
 		return 0;
 
 	pos = 1;
-	TAILQ_FOREACH(sent, &s->sntq, entries)
-		if (!OPTYPE_ISUNARY(sent->op) &&
-		    gen_var(f, pos++, sent->field) < 0)
-				return 0;
-
-#if 0
-	if (s->type == STYPE_ITERATE) {
-		if (pos > 1 && fputc(',', f) == EOF)
+	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		if (OPTYPE_ISUNARY(sent->op))
+			continue;
+		if (gen_var(f, pos, sent->field, 1) < 0)
 			return 0;
-		if ((rc = fprintf(f, "cb: "
-		    "(res: ortns.%s) => void", rs->name)) < 0)
-			return 0;
-		col += (size_t)rc;
+		pos++;
 	}
-#endif
 
 	if (fputs(") -> ", f) == EOF)
 		return 0;
 
-	if (s->type == STYPE_SEARCH) {
+	switch (s->type) {
+	case STYPE_SEARCH:
 		if (fprintf(f, "Result<Option<objs::%s>>", ret) < 0)
 			return 0;
-	} else if (s->type == STYPE_LIST) {
+		break;
+	case STYPE_LIST:
 		if (fprintf(f, "Result<Vec<objs::%s>>", ret) < 0)
 			return 0;
-#if 0
-	} else if (s->type == STYPE_ITERATE) {
-		if (fputs("void\n", f) == EOF)
+		break;
+	case STYPE_ITERATE:
+		if (fputs("Result<()>", f) == EOF)
 			return 0;
-#endif
-	} else {
-		if (fputs("Result<i64>\n", f) == EOF)
+		break;
+	default:
+		if (fputs("Result<i64>", f) == EOF)
 			return 0;
+		break;
 	}
 
 	if (fprintf(f, " {\n"
 	    "%12slet sql = stmt::stmt_fmt(stmt::", "") < 0)
 		return 0;
-	if (gen_enum_query(f, 1, s, LANG_RUST) < 0)
+	if (gen_enum_query(f, 1, s->parent, num, LANG_RUST) < 0)
 		return 0;
 	if (fputs(");\n", f) == EOF)
 		return 0;
 
-	pos = hash = 1;
-	TAILQ_FOREACH(sent, &s->sntq, entries) {
-		if (OPTYPE_ISUNARY(sent->op))
-			continue;
-		fd = sent->field;
-		if (fd->type == FTYPE_STRUCT ||
-		    (fd->flags & FIELD_ROWID))
-			continue;
-		if (fd->type == FTYPE_PASSWORD &&
-		    (fd->flags & FIELD_NULL)) {
-			if (fprintf(f,
-			    "%12slet hash%zu = match v%zu {\n"
-			    "%16sSome(i) => Some"
-			    "(hash(i, DEFAULT_COST).unwrap()),\n"
-			    "%16s_ => None,\n%12s};\n",
-			    "", hash, pos, "", "", "") < 0)
-				return 0;
-		} else if (fd->type == FTYPE_PASSWORD) {
-			if (fprintf(f,
-			    "%12slet hash%zu = "
-			    "hash(v%zu, DEFAULT_COST).unwrap();\n",
-			    "", hash, pos) < 0)
-				return 0;
-		}
-		hash += fd->type == FTYPE_PASSWORD;
-		pos++;
-	}
-
 	if (fprintf(f,
 	    "%12slet mut stmt = self.conn.prepare(&sql)?;\n"
-	    "%12slet mut rows = stmt.%s(params![\n", "", "",
-	    s->type == STYPE_SEARCH || s->type == STYPE_COUNT ?
-	    "query_row" : "query") < 0)
+	    "%12slet mut rows = stmt.query(params![\n", "", "") < 0)
 		return 0;
 
 	pos = hash = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries) {
 		if (OPTYPE_ISUNARY(sent->op))
 			continue;
-		if (fd->type == FTYPE_PASSWORD) {
-			if (fprintf(f,
-			    "%16shash%zu,\n", "", hash) < 0)
+		switch (sent->field->type) {
+		case FTYPE_ENUM:
+			if (fprintf(f, "%16sToPrimitive::to_i64"
+			    "(&v%zu).unwrap(),\n", "", pos) < 0)
 				return 0;
-		} else if (fd->type == FTYPE_ENUM) {
-			if (fprintf(f,
-			    "%16sToPrimitive::to_i64(&v%zu).unwrap(),\n", "", pos) < 0)
-				return 0;
-		 else {
-			if (fprintf(f,
-			    "%16sv%zu,\n", "", pos) < 0)
+			break;
+		case FTYPE_PASSWORD:
+			if (sent->op != OPTYPE_STREQ &&
+			    sent->op != OPTYPE_STRNEQ)
+				break;
+			/* FALLTHROUGH */
+		default:
+			if (fprintf(f, "%16sv%zu,\n", "", pos) < 0)
 				return 0;
 		}
-		hash += fd->type == FTYPE_PASSWORD;
 		pos++;
 	}
 
@@ -871,89 +850,67 @@ gen_query(FILE *f, const struct config *cfg,
 		return 0;
 	
 	switch (s->type) {
-	case STYPE_SEARCH:
-		if (fprintf(f, "\t\tconst cols: any = stmt.get(parms);\n"
-		    "\n"
-		    "\t\tif (typeof cols === 'undefined')\n"
-		    "\t\t\treturn null;\n"
-		    "\t\tconst obj: ortns.%sData = \n"
-		    "\t\t\tthis.db_%s_fill"
-		    "({row: <any[]>cols, pos: 0});\n",
-		    rs->name, rs->name) < 0)
-			return 0;
-		if (rs->flags & STRCT_HAS_NULLREFS) {
-		       if (fprintf(f, "\t\tthis.db_%s_reffind"
-			   "(this.#o, obj);\n", rs->name) < 0)
-			       return 0;
-		}
-		if (fprintf(f, "\t\treturn new "
-	  	    "ortns.%s(this.#role, obj);\n", rs->name) < 0)
+	case STYPE_ITERATE:
+		if (fprintf(f,
+		    "%12swhile let Some(row) = rows.next()? {\n"
+		    "%16slet mut i = 0;\n"
+		    "%16slet obj = self.db_%s_fill(&row, &mut i)?;\n"
+		    "%16scb(objs::%s {\n"
+		    "%20sdata: obj,\n"
+		    "%16s});\n"
+		    "%12s}\n"
+		    "%12sOk(())\n",
+		    "", "", "", rs->name, "", ret, "", "", "", "") < 0)
 			return 0;
 		break;
-	case STYPE_ITERATE:
-		if (fprintf(f, 
-		    "\t\tfor (const cols of stmt.iterate(parms)) {\n"
-		    "\t\t\tconst obj: ortns.%sData =\n"
-		    "\t\t\t\tthis.db_%s_fill"
-		    "({row: <any>cols, pos: 0});\n",
-		    rs->name, rs->name) < 0)
-			return 0;
-		if (rs->flags & STRCT_HAS_NULLREFS) {
-			if (fprintf(f, "\t\t\tthis.db_%s_reffind"
-			    "(this.#o, obj);\n", rs->name) < 0)
-				return 0;
-		}
-		if (fprintf(f, 
-		    "\t\t\tcb(new ortns.%s(this.#role, obj));\n"
-		    "\t\t}\n", rs->name) < 0)
+	case STYPE_SEARCH:
+		if (fprintf(f,
+		    "%12sif let Some(row) = rows.next()? {\n"
+		    "%16slet mut i = 0;\n"
+		    "%16slet obj = self.db_%s_fill(&row, &mut i)?;\n"
+		    "%16sreturn Ok(Some(objs::%s {\n"
+		    "%20sdata: obj,\n"
+		    "%16s}));\n"
+		    "%12s}\n"
+		    "%12sOk(None)\n",
+		    "", "", "", rs->name, "", ret, "", "", "", "") < 0)
 			return 0;
 		break;
 	case STYPE_LIST:
-		if (fprintf(f, 
-		    "\t\tconst rows: any[] = stmt.all(parms);\n"
-		    "\t\tconst objs: ortns.%s[] = [];\n"
-		    "\t\tlet i: number;\n"
-		    "\n"
-		    "\t\tfor (i = 0; i < rows.length; i++) {\n"
-		    "\t\t\tconst obj: ortns.%sData =\n"
-		    "\t\t\t\tthis.db_%s_fill"
-		    "({row: <any[]>rows[i], pos: 0});\n",
-		    rs->name, rs->name, rs->name) < 0)
-			return 0;
-		if (rs->flags & STRCT_HAS_NULLREFS) {
-			if (fprintf(f, "\t\t\tthis.db_%s_reffind"
-			    "(this.#o, obj);\n", rs->name) < 0)
-				return 0;
-		}
-		if (fprintf(f, 
-		    "\t\t\tobjs.push(new ortns.%s(this.#role, obj));\n"
-		    "\t\t}\n"
-		    "\t\treturn objs;\n", rs->name) < 0)
-			return 0;
-		break;
-	case STYPE_COUNT:
-		if (fprintf(f, 
-		    "\t\tconst cols: any = stmt.get(parms);\n"
-		    "\n"
-		    "\t\tif (typeof cols === 'undefined')\n"
-		    "\t\t\tthrow \'count returned no result!?\';\n"
-		    "\t\treturn BigInt(cols[0]);\n") < 0)
+		if (fprintf(f,
+		    "%12slet mut vec = Vec::new();\n"
+		    "%12swhile let Some(row) = rows.next()? {\n"
+		    "%16slet mut i = 0;\n"
+		    "%16slet obj = self.db_%s_fill(&row, &mut i)?;\n"
+		    "%16svec.push(objs::%s {\n"
+		    "%20sdata: obj,\n"
+		    "%16s});\n"
+		    "%12s}\n"
+		    "%12sOk(vec)\n",
+		    "", "", "", "", rs->name, "", ret, "", "", "", "") < 0)
 			return 0;
 		break;
 	default:
+		if (fprintf(f,
+		    "%12sif let Some(row) = rows.next()? {\n"
+		    "%16slet count: i64 = row.get(0)?;\n"
+		    "%16sreturn Ok(count);\n"
+		    "%12s}\n"
+		    "%12sErr(rusqlite::Error::QueryReturnedNoRows)\n",
+		    "", "", "", "", "") < 0)
+			return 0;
 		break;
 	}
 
 	free(ret);
-	return fputs("\t}\n", f) != EOF;
-#endif
-	return 1;
+	return fprintf(f, "%8s}\n", "") >= 0;
 }
 
 static int
 gen_api(const struct config *cfg, FILE *f)
 {
 	const struct strct	*s;
+	const struct search	*sr;
 	const struct update	*u;
 	size_t			 pos;
 
@@ -962,6 +919,10 @@ gen_api(const struct config *cfg, FILE *f)
 			return 0;
 		if (!gen_fill(s, f))
 			return 0;
+		pos = 0;
+		TAILQ_FOREACH(sr, &s->sq, entries)
+			if (!gen_query(sr, pos++, f))
+				return 0;
 		pos = 0;
 		TAILQ_FOREACH(u, &s->dq, entries)
 			if (!gen_update(u, pos++, f))

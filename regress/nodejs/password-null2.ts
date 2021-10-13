@@ -14,11 +14,11 @@ if (obj2 !== null)
 	return false;
 
 const obj3: ortns.foo|null = ctx.db_foo_get_nhash('password');
-if (obj3 === null)
+if (obj3 !== null)
 	return false;
 
 const obj4: ortns.foo|null = ctx.db_foo_get_hash(null);
-if (obj4 === null)
+if (obj4 !== null)
 	return false;
 
 const obj5: ortns.foo|null = ctx.db_foo_get_nhash(null);

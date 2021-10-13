@@ -529,6 +529,13 @@ fields.
 Unary operator to check whether the field is null or not null.
 .El
 .Pp
+Comparisons against a database
+.Dv NULL
+value always fail.
+If
+.Dv NULL
+is passed as a pointer value, comparison always fails as well.
+.Pp
 The
 .Cm password
 field does not accept any operators but

@@ -843,33 +843,23 @@ gen_update(FILE *f, const struct config *cfg,
  * Generate the check for a password.  This is used for queries, once
  * the object "obj" has been loaded from the database.  Returns FALSE on
  * failure, TRUE on success.
- * FIXME: this is hard-coded for two tabs.
  */
 static int
 gen_checkpass(FILE *f, size_t pos, const char *name,
 	enum optype type, const struct field *fd)
 {
 
-	if (fprintf(f, "(%s",
-	    type == OPTYPE_NEQUAL ? "!(" : "") < 0)
+	if (fputc('(', f) == EOF)
 		return 0;
-
-	if (fd->flags & FIELD_NULL) {
-		if (fprintf(f,
-		    "(v%zu === null && obj.%s !== null) ||\n\t\t    "
-		    "(v%zu !== null && obj.%s === null) ||\n\t\t    "
-		    "(v%zu !== null && obj.%s !== null && "
-		     "!bcrypt.compareSync(v%zu, obj.%s))",
-		    pos, name, pos, name, pos, name, pos, name) < 0)
-			return 0;
-	} else {
-		if (fprintf(f,
-		    "!bcrypt.compareSync(v%zu, obj.%s)", pos, name) < 0)
-			return 0;
-	}
-
-	return fprintf(f, "%s)",
-		type == OPTYPE_NEQUAL ? ")" : "") >= 0;
+	if ((fd->flags & FIELD_NULL) &&
+	    fprintf(f, "v%zu === null || obj.%s === null ||", pos, name) < 0)
+		return 0;
+	if (type == OPTYPE_EQUAL && fputc('!', f) == EOF)
+		return 0;
+	if (fprintf(f,
+	    "bcrypt.compareSync(v%zu, obj.%s))", pos, name) < 0)
+		return 0;
+	return 1;
 }
 
 /*

@@ -178,69 +178,51 @@ print_src(FILE *f, size_t indent, const char *fmt, ...)
 }
 
 /*
- * Generate the function for checking a password.
- * This should be a conditional phrase that evalutes to FALSE if the
- * password does NOT match the given type, TRUE if the password does
- * match the given type.
- * FIXME: use crypt_checkpass always.
- * Return zero on failure, non-zero on success.
+ * Generate the function for checking a password.  This should be a
+ * conditional phrase that evalutes to FALSE if the password does NOT
+ * match the given type, TRUE if the password does match the given type.
+ * FIXME: use crypt_checkpass always.  Return FALSE on failure, TRUE on
+ * success.
  */
 static int
 gen_checkpass(FILE *f, int ptr, size_t pos, const struct sent *sent)
 {
-	char		*fd, *hasfd;
+	char		*fd = NULL, *hasfd = NULL;
+	int		 rc = 0;
 
 	if (asprintf(&fd, "p%s%s%s%s",
 	    ptr ? "->" : ".",
 	    sent->name == NULL ? "" : sent->name,
 	    sent->name == NULL ? "" : ".",
 	    sent->field->name) == -1)
-		return 0;
+		goto out;
 	if (asprintf(&hasfd, "p%s%s%shas_%s",
 	    ptr ? "->" : ".",
 	    sent->name == NULL ? "" : sent->name,
 	    sent->name == NULL ? "" : ".",
 	    sent->field->name) == -1)
-		return 0;
+		goto out;
 
-	if (fprintf(f, "(%s",
-	    sent->op == OPTYPE_NEQUAL ?  "!(" : "") < 0)
-		return 0;
+	if (fprintf(f, "(v%zu == NULL || ", pos) < 0)
+		goto out;
+	if ((sent->field->flags & FIELD_NULL) &&
+	    fprintf(f, "!%s || ", hasfd) < 0)
+		goto out;
 
-	if (sent->field->flags & FIELD_NULL) {
-		if (fprintf(f,
-		    "(v%zu == NULL && %s) ||\n\t\t    "
-		    "(v%zu != NULL && !%s) ||\n\t\t    "
-		    "(v%zu != NULL && %s && ",
-		    pos, hasfd, pos, hasfd, pos, hasfd) < 0)
-			return 0;
 #ifdef __OpenBSD__
-		if (fprintf(f, "crypt_checkpass(v%zu, %s) == -1)",
-		    pos, fd) < 0)
-			return 0;
+	if (fprintf(f, "crypt_checkpass(v%zu, %s) == %s)",
+	    pos, fd, sent->op == OPTYPE_NEQUAL ? "0" : "-1") < 0)
+		goto out;
 #else
-		if (fprintf(f, "strcmp(crypt(v%zu, %s), %s) != 0)",
-		    pos, fd, fd) < 0)
-			return 0;
+	if (fprintf(f, "strcmp(crypt(v%zu, %s), %s) %s 0)",
+	    pos, fd, sent->op == OPTYPE_NEQUAL ? "==" : "!=") < 0)
+		goto out;
 #endif
-	} else {
-		if (fprintf(f, "v%zu == NULL || ", pos) < 0)
-			return 0;
-#ifdef __OpenBSD__
-		if (fprintf(f, "crypt_checkpass(v%zu, %s) == -1",
-		    pos, fd) < 0)
-			return 0;
-#else
-		if (fprintf(f, "strcmp(crypt(v%zu, %s), %s) != 0",
-		    pos, fd, fd) < 0)
-			return 0;
-#endif
-	}
-
+	rc = 1;
+out:
 	free(fd);
 	free(hasfd);
-	return fprintf(f, "%s)", sent->op == OPTYPE_NEQUAL ?
-		")" : "") > 0;
+	return rc;
 }
 
 /*

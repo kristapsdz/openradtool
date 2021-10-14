@@ -44,5 +44,6 @@ int	 gen_enum_delete(FILE *, int, const struct strct *, size_t, enum langt);
 int	 gen_enum_insert(FILE *, int, const struct strct *, enum langt);
 int	 gen_enum_update(FILE *, int, const struct strct *, size_t, enum langt);
 int	 gen_enum_query(FILE *, int, const struct strct *, size_t, enum langt);
+int	 gen_enum_unique(FILE *, int, const struct field *, enum langt);
 
 #endif /* !ORT_LANG_H */

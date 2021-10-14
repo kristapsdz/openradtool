@@ -148,12 +148,17 @@ gen_var(FILE *f, size_t pos, const struct field *fd, int comma)
 	return 1;
 }
 
+/*
+ * Generate the public structure and implementation for a struct.  These
+ * will contain the actual data and direct functions on it.  Return TRUE
+ * on success, FALSE on failure.
+ */
 static int
 gen_data_strct(const struct strct *s, FILE *f)
 {
 	const struct field	*fd;
 	char			*cp = NULL, *name = NULL;
-	int			 rc = 0;
+	int			 rc = 0, isnull;
 
 	if ((name = strdup_title(s->name)) == NULL)
 		goto out;
@@ -167,8 +172,12 @@ gen_data_strct(const struct strct *s, FILE *f)
 		if (fprintf(f, "%12spub %s: ", "", cp) < 0)
 			goto out;
 
-		if ((fd->flags & FIELD_NULL) &&
-		    fputs("Option<", f) == EOF)
+		isnull = fd->flags & FIELD_NULL;
+		if (fd->type == FTYPE_STRUCT &&
+		    (fd->ref->source->flags & FIELD_NULL))
+			isnull = 1;
+
+		if (isnull && fputs("Option<", f) == EOF)
 			goto out;
 
 		if (fd->type == FTYPE_STRUCT) {
@@ -190,7 +199,7 @@ gen_data_strct(const struct strct *s, FILE *f)
 				goto out;
 		}
 
-		if ((fd->flags & FIELD_NULL) && fputc('>', f) == EOF)
+		if (isnull && fputc('>', f) == EOF)
 			goto out;
 		if (fputs(",\n", f) == EOF)
 			goto out;
@@ -255,7 +264,7 @@ gen_types_enum(const struct enm *e, FILE *f)
 	if ((name = strdup_title(e->name)) == NULL)
 		goto out;
 	if (fprintf(f,
-	    "%8s#[derive(FromPrimitive, ToPrimitive)]\n"
+	    "%8s#[derive(FromPrimitive,ToPrimitive,PartialEq)]\n"
 	    "%8spub enum %s {\n", "", "", name) < 0)
 		goto out;
 
@@ -571,6 +580,73 @@ gen_update(const struct update *up, size_t num, FILE *f)
 	return fprintf(f, "%12s])\n%8s}\n", "", "") >= 0;
 }
 
+/*
+ * Generate db_xxx_reffind method (if applicable).
+ * Return zero on failure, non-zero on success or non-applicable.
+ */
+static int
+gen_reffind(const struct strct *s, FILE *f)
+{
+	const struct field	*fd;
+
+	if (!(s->flags & STRCT_HAS_NULLREFS))
+		return 1;
+
+	if (fprintf(f,
+	    "%8sfn db_%s_reffind(&self, obj: &mut data::%c%s) -> "
+	    "Result<()> {\n", "", s->name, 
+	    toupper((unsigned char)s->name[0]), s->name + 1) < 0)
+		return 0;
+
+	TAILQ_FOREACH(fd, &s->fq, entries) {
+		if (fd->type != FTYPE_STRUCT)
+			continue;
+		if (fd->ref->source->flags & FIELD_NULL) {
+			if (fprintf(f,
+			    "%12sif let Some(nobj) = obj.%s {\n"
+	    		    "%16slet sql = stmt::stmt_fmt(stmt::",
+			    "", fd->ref->source->name, "") < 0)
+				return 0;
+			if (gen_enum_unique
+			    (f, 1, fd->ref->target, LANG_RUST) < 0)
+				return 0;
+			if (fputs(");\n", f) == EOF)
+				return 0;
+			if (fprintf(f,
+			    "%16slet mut stmt = "
+			     "self.conn.prepare(&sql)?;\n"
+			    "%16slet mut rows = "
+			     "stmt.query(params![\n"
+			    "%20snobj,\n"
+			    "%16s])?;\n"
+			    "%16sif let Some(row) = rows.next()? {\n"
+			    "%20slet mut i = 0;\n"
+			    "%20sobj.%s = Some"
+			     "(self.db_%s_fill(&row, &mut i)?);\n"
+			    "%16s} else {\n"
+			    "%20sreturn Err(rusqlite::"
+			     "Error::QueryReturnedNoRows);\n"
+			    "%16s}\n"
+			    "%12s}\n",
+			    "", "", "", "", "", "", "", fd->name, 
+			    fd->ref->target->parent->name, 
+			    "", "", "", "") < 0)
+				return 0;
+		}
+		if (!(fd->ref->target->parent->flags & 
+		      STRCT_HAS_NULLREFS))
+			continue;
+		if (fprintf(f,
+		    "%12sif let Some(mut nobj) = obj.%s.as_mut() {\n"
+		    "%16sself.db_%s_reffind(&mut nobj)?;\n"
+		    "%12s}\n", "", fd->name, "",
+		    fd->ref->target->parent->name, "") < 0)
+			return 0;
+	}
+
+	return fprintf(f, "%12sOk(())\n%8s}\n", "", "") >= 0;
+}
+
 static int
 gen_fill(const struct strct *s, FILE *f)
 {
@@ -818,7 +894,6 @@ gen_query(const struct search *s, size_t num, FILE *f)
 		return 0;
 	if (fputs(");\n", f) == EOF)
 		return 0;
-
 	if (fprintf(f,
 	    "%12slet mut stmt = self.conn.prepare(&sql)?;\n"
 	    "%12slet mut rows = stmt.query(params![\n", "", "") < 0)
@@ -915,9 +990,11 @@ gen_api(const struct config *cfg, FILE *f)
 	size_t			 pos;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
-		if (s->ins != NULL && !gen_insert(s, f))
-			return 0;
 		if (!gen_fill(s, f))
+			return 0;
+		if (!gen_reffind(s, f))
+			return 0;
+		if (s->ins != NULL && !gen_insert(s, f))
 			return 0;
 		pos = 0;
 		TAILQ_FOREACH(sr, &s->sq, entries)

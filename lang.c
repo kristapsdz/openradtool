@@ -108,9 +108,9 @@ gen_enum_query(FILE *f, int defn, const struct strct *s,
 		fprintf(f, "STMT_%s_BY_SEARCH_%zu", s->name, pos);
 }
 
-static int
-print_stmt_unique(const struct field *fd, int defn,
-	enum langt lang, FILE *f)
+int
+gen_enum_unique(FILE *f, int defn, const struct field *fd,
+	enum langt lang)
 {
 
 	return lang == LANG_RUST ?
@@ -534,7 +534,7 @@ gen_sql_stmts(FILE *f, size_t tabs,
 			return 0;
 		if (lang != LANG_RUST && fputs("/* ", f) == EOF)
 			return 0;
-		if (print_stmt_unique(fd, 1, lang, f) < 0)
+		if (gen_enum_unique(f, 1, fd, lang) < 0)
 			return 0;
 		if (lang == LANG_RUST && fputs(" => {\n", f) == EOF)
 			return 0;
@@ -1098,7 +1098,7 @@ gen_sql_enums(FILE *f, size_t tabs,
 	TAILQ_FOREACH(fd, &p->fq, entries)
 		if (fd->flags & (FIELD_UNIQUE|FIELD_ROWID))
 			if (!gen_ws(f, tabs, lang) ||
-			    print_stmt_unique(fd, 0, lang, f) < 0 ||
+			    gen_enum_unique(f, 0, fd, lang) < 0 ||
 			    fputs(",\n", f) == EOF)
 				return 0;
 

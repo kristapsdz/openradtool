@@ -580,6 +580,65 @@ gen_update(const struct update *up, size_t num, FILE *f)
 	return fprintf(f, "%12s])\n%8s}\n", "", "") >= 0;
 }
 
+static int
+gen_checkpass(FILE *f, size_t pos, const char *name,
+	enum optype type, const struct field *fd)
+{
+
+	if ((fd->flags & FIELD_NULL) && fprintf(f,
+	    "v%zu.is_none() || obj.%s.is_none() ||", pos, name) < 0)
+		return 0;
+	if (type == OPTYPE_EQUAL && fputc('!', f) == EOF)
+		return 0;
+	if (fprintf(f, "verify(v%zu", pos) < 0)
+		return 0;
+	if ((fd->flags & FIELD_NULL) &&
+	    fputs(".unwrap(), ", f) == EOF)
+		return 0;
+	if (!(fd->flags & FIELD_NULL) && fputs(", &", f) == EOF)
+		return 0;
+	if (fprintf(f, "obj.%s", name) < 0)
+		return 0;
+	if ((fd->flags & FIELD_NULL) &&
+	    fputs(".as_ref().unwrap()", f) == EOF)
+		return 0;
+	if (fputs(").is_ok() {\n", f) == EOF)
+		return 0;
+	return 1;
+}
+
+static int
+gen_query_checkpass(FILE *f, const struct search *s, int ret)
+{
+	size_t		 	 pos = 1;
+	const struct sent	*sent;
+
+	pos = 1;
+	TAILQ_FOREACH(sent, &s->sntq, entries) {
+		if (OPTYPE_ISUNARY(sent->op))
+			continue;
+		if (sent->field->type != FTYPE_PASSWORD ||
+		    sent->op == OPTYPE_STREQ ||
+		    sent->op == OPTYPE_STRNEQ) {
+			pos++;
+			continue;
+		}
+		if (fprintf(f, "%16sif ", "") < 0)
+			return 0;
+		if (!gen_checkpass(f, pos, sent->fname,
+		    sent->op, sent->field))
+			return 0;
+		if (ret && fprintf(f,
+		    "%20sreturn Ok(None);\n%16s}\n", "", "") < 0)
+			return 0;
+		if (!ret && fprintf(f,
+		    "%20scontinue;\n%16s}\n", "", "") < 0)
+			return 0;
+		pos++;
+	}
+	return 1;
+}
+
 /*
  * Generate db_xxx_reffind method (if applicable).
  * Return zero on failure, non-zero on success or non-applicable.
@@ -925,30 +984,48 @@ gen_query(const struct search *s, size_t num, FILE *f)
 		return 0;
 	
 	switch (s->type) {
-	case STYPE_ITERATE:
-		if (fprintf(f,
-		    "%12swhile let Some(row) = rows.next()? {\n"
-		    "%16slet mut i = 0;\n"
-		    "%16slet obj = self.db_%s_fill(&row, &mut i)?;\n"
-		    "%16scb(objs::%s {\n"
-		    "%20sdata: obj,\n"
-		    "%16s});\n"
-		    "%12s}\n"
-		    "%12sOk(())\n",
-		    "", "", "", rs->name, "", ret, "", "", "", "") < 0)
-			return 0;
-		break;
 	case STYPE_SEARCH:
 		if (fprintf(f,
 		    "%12sif let Some(row) = rows.next()? {\n"
 		    "%16slet mut i = 0;\n"
-		    "%16slet obj = self.db_%s_fill(&row, &mut i)?;\n"
+		    "%16slet obj = self.db_%s_fill(&row, &mut i)?;\n",
+		    "", "", "", rs->name) < 0)
+			return 0;
+		if (rs->flags & STRCT_HAS_NULLREFS)
+		       if (fprintf(f,
+			   "%16sthis.db_%s_reffind(&mut obj);\n",
+			   "", rs->name) < 0)
+			       return 0;
+		gen_query_checkpass(f, s, 1);
+		if (fprintf(f, 
 		    "%16sreturn Ok(Some(objs::%s {\n"
 		    "%20sdata: obj,\n"
 		    "%16s}));\n"
 		    "%12s}\n"
 		    "%12sOk(None)\n",
-		    "", "", "", rs->name, "", ret, "", "", "", "") < 0)
+		    "", ret, "", "", "", "") < 0)
+			return 0;
+		break;
+	case STYPE_ITERATE:
+		if (fprintf(f,
+		    "%12swhile let Some(row) = rows.next()? {\n"
+		    "%16slet mut i = 0;\n"
+		    "%16slet obj = self.db_%s_fill(&row, &mut i)?;\n",
+		    "", "", "", rs->name) < 0)
+			return 0;
+		if (rs->flags & STRCT_HAS_NULLREFS)
+		       if (fprintf(f,
+			   "%16sthis.db_%s_reffind(&mut obj);\n",
+			   "", rs->name) < 0)
+			       return 0;
+		gen_query_checkpass(f, s, 0);
+		if (fprintf(f, 
+		    "%16scb(objs::%s {\n"
+		    "%20sdata: obj,\n"
+		    "%16s});\n"
+		    "%12s}\n"
+		    "%12sOk(())\n",
+		    "", ret, "", "", "", "") < 0)
 			return 0;
 		break;
 	case STYPE_LIST:
@@ -956,13 +1033,22 @@ gen_query(const struct search *s, size_t num, FILE *f)
 		    "%12slet mut vec = Vec::new();\n"
 		    "%12swhile let Some(row) = rows.next()? {\n"
 		    "%16slet mut i = 0;\n"
-		    "%16slet obj = self.db_%s_fill(&row, &mut i)?;\n"
+		    "%16slet obj = self.db_%s_fill(&row, &mut i)?;\n",
+		    "", "", "", "", rs->name) < 0)
+			return 0;
+		if (rs->flags & STRCT_HAS_NULLREFS)
+		       if (fprintf(f,
+			   "%16sthis.db_%s_reffind(&mut obj);\n",
+			   "", rs->name) < 0)
+			       return 0;
+		gen_query_checkpass(f, s, 0);
+		if (fprintf(f,
 		    "%16svec.push(objs::%s {\n"
 		    "%20sdata: obj,\n"
 		    "%16s});\n"
 		    "%12s}\n"
 		    "%12sOk(vec)\n",
-		    "", "", "", "", rs->name, "", ret, "", "", "", "") < 0)
+		    "", ret, "", "", "", "") < 0)
 			return 0;
 		break;
 	default:
@@ -1035,7 +1121,7 @@ ort_lang_rust(const struct ort_lang_rust *args,
 	    "\n"
 	    "pub mod ort {\n"
 	    "%4suse rusqlite::{Connection,Result,params,Row};\n"
-	    "%4suse bcrypt::{hash,DEFAULT_COST};\n"
+	    "%4suse bcrypt::{hash,verify,DEFAULT_COST};\n"
 	    "%4suse num_traits::{FromPrimitive,ToPrimitive};\n"
 	    "\n"
 	    "%4spub const VERSION: &str = \"%s\";\n"

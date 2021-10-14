@@ -263,8 +263,11 @@ gen_reffind(FILE *f, const struct strct *p)
 		if (!(fd->ref->target->parent->flags & 
 		    STRCT_HAS_NULLREFS))
 			continue;
-		if (fprintf(f, "\t\tthis.db_%s_reffind(db, obj.%s);\n",
-		    fd->ref->target->parent->name, fd->name) < 0)
+		if (fprintf(f,
+		    "\t\tif (obj.%s !== null)\n"
+		    "\t\t\tthis.db_%s_reffind(db, obj.%s);\n",
+		    fd->name, fd->ref->target->parent->name,
+		    fd->name) < 0)
 			return 0;
 	}
 

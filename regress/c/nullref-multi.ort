@@ -1,0 +1,14 @@
+struct bar {
+	field id int rowid;
+	insert;
+};
+
+struct foo {
+	field bar1 struct barid1;
+	field bar2 struct barid2;
+	field barid1:bar.id int null;
+	field barid2:bar.id int null;
+	field id int rowid;
+	insert;
+	search id: name id;
+};

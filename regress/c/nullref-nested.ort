@@ -1,0 +1,19 @@
+struct baz {
+	field id int rowid;
+	insert;
+};
+
+struct bar {
+	field baz struct bazid;
+	field bazid:baz.id int null;
+	field id int rowid;
+	insert;
+};
+
+struct foo {
+	field bar struct barid;
+	field barid:bar.id int null;
+	field id int rowid;
+	insert;
+	search id: name id;
+};

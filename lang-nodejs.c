@@ -204,16 +204,6 @@ gen_reffind(FILE *f, const struct strct *p)
 	if (!(p->flags & STRCT_HAS_NULLREFS))
 		return 1;
 
-	/* 
-	 * Do we have any null-ref fields in this?
-	 * (They might be in target references.)
-	 */
-
-	TAILQ_FOREACH(fd, &p->fq, entries)
-		if ((fd->type == FTYPE_STRUCT) &&
-		    (fd->ref->source->flags & FIELD_NULL))
-			break;
-
 	if (fputs("\n\t", f) == EOF)
 		return 0;
 	if ((rc = fprintf(f, "private db_%s_reffind", p->name)) < 0)

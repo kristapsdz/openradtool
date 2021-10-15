@@ -149,6 +149,11 @@ The number of pointers in
 .Va fnames .
 .It Va struct msgq *mq
 Warnings and errors encountered during processing.
+.It Va unsigned int flags
+Bit-field of configuration flags.
+This may consist of
+.Dv CONFIG_HAS_PASS
+if any passwords are declared in the configuration.
 .El
 .Ss Data
 The central component of

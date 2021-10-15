@@ -357,7 +357,7 @@ struct	search {
 	int64_t		    offset;
 	struct rolemap	   *rolemap;
 	unsigned int	    flags; 
-#define	SEARCH_IS_UNIQUE    0x01
+#define	SEARCH_IS_UNIQUE    0x01u
 	TAILQ_ENTRY(search) entries;
 };
 
@@ -400,7 +400,7 @@ struct	update {
 	struct strct	   *parent;
 	struct rolemap	   *rolemap;
 	unsigned int	    flags;
-#define	UPDATE_ALL	    0x01
+#define	UPDATE_ALL	    0x01u
 	TAILQ_ENTRY(update) entries;
 };
 
@@ -427,10 +427,10 @@ struct	strct {
 	struct insert	  *ins;
 	struct rolemap	  *arolemap; /* during linkage (XXX: remove) */
 	unsigned int	   flags;
-#define	STRCT_HAS_QUEUE	   0x01
-#define	STRCT_HAS_ITERATOR 0x02
-#define	STRCT_HAS_BLOB	   0x04
-#define STRCT_HAS_NULLREFS 0x10
+#define	STRCT_HAS_QUEUE	   0x01u
+#define	STRCT_HAS_ITERATOR 0x02u
+#define	STRCT_HAS_BLOB	   0x04u
+#define STRCT_HAS_NULLREFS 0x10u
 	struct config	  *cfg;
 	TAILQ_ENTRY(strct) entries;
 };
@@ -473,6 +473,8 @@ struct	config {
 	size_t		  fnamesz;
 	struct msgq	  mq;
 	struct config_private *priv;
+	unsigned int	  flags;
+#define	CONFIG_HAS_PASS	  0x01u
 };
 
 enum	difftype {

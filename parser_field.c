@@ -685,6 +685,8 @@ parse_field(struct parse *p, struct strct *s)
 		    !(fd->flags & FIELD_NULL)) 
 			parse_errx(p, "nullify action without "
 				"allowing for null");
+		if (fd->type == FTYPE_PASSWORD)
+			p->cfg->flags |= CONFIG_HAS_PASS;
 		return;
 	case FTYPE__MAX:
 		break;

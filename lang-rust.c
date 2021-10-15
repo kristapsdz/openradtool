@@ -208,7 +208,7 @@ gen_data_strct(const struct strct *s, FILE *f)
 	if (fprintf(f, "%8s}\n", "") < 0)
 		goto out;
 
-	if (fprintf(f, 
+	if (fprintf(f,
 	    "%8simpl %s {\n"
 	    "%12sfn to_json(&self) -> String {\n"
 	    "%16slet ret = String::new();\n",
@@ -300,7 +300,7 @@ gen_objs_strct(const struct strct *s, FILE *f)
 		goto out;
 
 	if (!TAILQ_EMPTY(&s->cfg->arq) &&
-	    fprintf(f, "%12srole: super::Ortrole,\n", "") < 0)
+	    fprintf(f, "%12spub(super) role: super::Ortrole,\n", "") < 0)
 		goto out;
 
 	if (fprintf(f,
@@ -371,9 +371,8 @@ gen_roles(const struct config *cfg, FILE *f)
 		return 1;
 
 	if (fprintf(f, "\n"
-	    "%4s#[derive(PartialEq)]\n"
-	    "%4s#[derive(Debug)]\n"
-	    "%4spub enum Ortrole {\n", "", "", "") < 0)
+	    "%4s#[derive(PartialEq, Debug, Clone, Copy)]\n"
+	    "%4spub enum Ortrole {\n", "", "") < 0)
 		return 0;
 
 	TAILQ_FOREACH(r, &cfg->arq, entries) {
@@ -460,8 +459,8 @@ gen_update(const struct update *up, size_t num, FILE *f)
 	if (up->name == NULL && up->type == UP_MODIFY) {
 		if (!(up->flags & UPDATE_ALL))
 			TAILQ_FOREACH(ref, &up->mrq, entries) {
-				rc = fprintf(f, "_%s_%s", 
-					ref->field->name, 
+				rc = fprintf(f, "_%s_%s",
+					ref->field->name,
 					modtypes[ref->mod]);
 				if (rc < 0)
 					return 0;
@@ -470,8 +469,8 @@ gen_update(const struct update *up, size_t num, FILE *f)
 			if (fprintf(f, "_by") < 0)
 				return 0;
 			TAILQ_FOREACH(ref, &up->crq, entries) {
-				rc = fprintf(f, "_%s_%s", 
-					ref->field->name, 
+				rc = fprintf(f, "_%s_%s",
+					ref->field->name,
 					optypes[ref->op]);
 				if (rc < 0)
 					return 0;
@@ -482,8 +481,8 @@ gen_update(const struct update *up, size_t num, FILE *f)
 			if (fprintf(f, "_by") < 0)
 				return 0;
 			TAILQ_FOREACH(ref, &up->crq, entries) {
-				rc = fprintf(f, "_%s_%s", 
-					ref->field->name, 
+				rc = fprintf(f, "_%s_%s",
+					ref->field->name,
 					optypes[ref->op]);
 				if (rc < 0)
 					return 0;
@@ -653,7 +652,7 @@ gen_reffind(const struct strct *s, FILE *f)
 
 	if (fprintf(f,
 	    "%8sfn db_%s_reffind(&self, obj: &mut data::%c%s) -> "
-	    "Result<()> {\n", "", s->name, 
+	    "Result<()> {\n", "", s->name,
 	    toupper((unsigned char)s->name[0]), s->name + 1) < 0)
 		return 0;
 
@@ -687,12 +686,12 @@ gen_reffind(const struct strct *s, FILE *f)
 			     "Error::QueryReturnedNoRows);\n"
 			    "%16s}\n"
 			    "%12s}\n",
-			    "", "", "", "", "", "", "", fd->name, 
-			    fd->ref->target->parent->name, 
+			    "", "", "", "", "", "", "", fd->name,
+			    fd->ref->target->parent->name,
 			    "", "", "", "") < 0)
 				return 0;
 		}
-		if (!(fd->ref->target->parent->flags & 
+		if (!(fd->ref->target->parent->flags &
 		      STRCT_HAS_NULLREFS))
 			continue;
 		if (fprintf(f,
@@ -728,12 +727,12 @@ gen_fill(const struct strct *s, FILE *f)
 	TAILQ_FOREACH(fd, &s->fq, entries) {
 		if (fd->type == FTYPE_STRUCT &&
 		    !(fd->ref->source->flags & FIELD_NULL)) {
-			if (fprintf(f, 
+			if (fprintf(f,
 			    "%12slet obj%zu = self.db_%s_fill(row, i)?;\n",
 			    "", scol++, fd->ref->target->parent->name) < 0)
 				return 0;
 		} else if (fd->type == FTYPE_ENUM) {
-			if (fprintf(f, 
+			if (fprintf(f,
 			    "%12slet obj%zu = row.get(ncol + %zu)?;\n",
 			    "", scol++, col++) < 0)
 				return 0;
@@ -797,7 +796,7 @@ gen_insert(const struct strct *s, FILE *f)
 	pos = 1;
 	TAILQ_FOREACH(fd, &s->fq, entries) {
 		if (fd->type == FTYPE_STRUCT ||
-		    (fd->flags & FIELD_ROWID)) 
+		    (fd->flags & FIELD_ROWID))
 			continue;
 		if (gen_var(f, pos, fd, pos > 1) < 0)
 			return 0;
@@ -893,7 +892,7 @@ gen_query(const struct search *s, size_t num, FILE *f)
 		return 0;
 	ret[0] = toupper((unsigned char)ret[0]);
 
-	if (fprintf(f, "%8spub fn db_%s_%s", 
+	if (fprintf(f, "%8spub fn db_%s_%s",
 	    "", s->parent->name, stypes[s->type]) < 0)
 		return 0;
 
@@ -988,44 +987,56 @@ gen_query(const struct search *s, size_t num, FILE *f)
 		if (fprintf(f,
 		    "%12sif let Some(row) = rows.next()? {\n"
 		    "%16slet mut i = 0;\n"
-		    "%16slet obj = self.db_%s_fill(&row, &mut i)?;\n",
-		    "", "", "", rs->name) < 0)
+		    "%16slet %sobj = self.db_%s_fill(&row, &mut i)?;\n",
+		    "", "", "",
+		    (rs->flags & STRCT_HAS_NULLREFS) ? "mut " : "",
+		    rs->name) < 0)
 			return 0;
 		if (rs->flags & STRCT_HAS_NULLREFS)
 		       if (fprintf(f,
-			   "%16sthis.db_%s_reffind(&mut obj);\n",
+			   "%16sself.db_%s_reffind(&mut obj);\n",
 			   "", rs->name) < 0)
 			       return 0;
 		gen_query_checkpass(f, s, 1);
-		if (fprintf(f, 
+		if (fprintf(f,
 		    "%16sreturn Ok(Some(objs::%s {\n"
-		    "%20sdata: obj,\n"
+		    "%20sdata: obj,\n", "", ret, "") < 0)
+			return 0;
+		if (!TAILQ_EMPTY(&s->parent->cfg->arq) &&
+		    fprintf(f, "%20srole: self.role,\n", "") < 0)
+			return 0;
+		if (fprintf(f,
 		    "%16s}));\n"
 		    "%12s}\n"
-		    "%12sOk(None)\n",
-		    "", ret, "", "", "", "") < 0)
+		    "%12sOk(None)\n", "", "", "") < 0)
 			return 0;
 		break;
 	case STYPE_ITERATE:
 		if (fprintf(f,
 		    "%12swhile let Some(row) = rows.next()? {\n"
 		    "%16slet mut i = 0;\n"
-		    "%16slet obj = self.db_%s_fill(&row, &mut i)?;\n",
-		    "", "", "", rs->name) < 0)
+		    "%16slet %sobj = self.db_%s_fill(&row, &mut i)?;\n",
+		    "", "", "",
+		    (rs->flags & STRCT_HAS_NULLREFS) ? "mut " : "",
+		    rs->name) < 0)
 			return 0;
 		if (rs->flags & STRCT_HAS_NULLREFS)
 		       if (fprintf(f,
-			   "%16sthis.db_%s_reffind(&mut obj);\n",
+			   "%16sself.db_%s_reffind(&mut obj);\n",
 			   "", rs->name) < 0)
 			       return 0;
 		gen_query_checkpass(f, s, 0);
-		if (fprintf(f, 
+		if (fprintf(f,
 		    "%16scb(objs::%s {\n"
-		    "%20sdata: obj,\n"
+		    "%20sdata: obj,\n", "", ret, "") < 0)
+			return 0;
+		if (!TAILQ_EMPTY(&s->parent->cfg->arq) &&
+		    fprintf(f, "%20srole: self.role,\n", "") < 0)
+			return 0;
+		if (fprintf(f,
 		    "%16s});\n"
 		    "%12s}\n"
-		    "%12sOk(())\n",
-		    "", ret, "", "", "", "") < 0)
+		    "%12sOk(())\n", "", "", "") < 0)
 			return 0;
 		break;
 	case STYPE_LIST:
@@ -1033,22 +1044,28 @@ gen_query(const struct search *s, size_t num, FILE *f)
 		    "%12slet mut vec = Vec::new();\n"
 		    "%12swhile let Some(row) = rows.next()? {\n"
 		    "%16slet mut i = 0;\n"
-		    "%16slet obj = self.db_%s_fill(&row, &mut i)?;\n",
-		    "", "", "", "", rs->name) < 0)
+		    "%16slet %sobj = self.db_%s_fill(&row, &mut i)?;\n",
+		    "", "", "", "",
+		    (rs->flags & STRCT_HAS_NULLREFS) ? "mut " : "",
+		    rs->name) < 0)
 			return 0;
 		if (rs->flags & STRCT_HAS_NULLREFS)
 		       if (fprintf(f,
-			   "%16sthis.db_%s_reffind(&mut obj);\n",
+			   "%16sself.db_%s_reffind(&mut obj);\n",
 			   "", rs->name) < 0)
 			       return 0;
 		gen_query_checkpass(f, s, 0);
 		if (fprintf(f,
 		    "%16svec.push(objs::%s {\n"
-		    "%20sdata: obj,\n"
+		    "%20sdata: obj,\n", "", ret, "") < 0)
+			return 0;
+		if (!TAILQ_EMPTY(&s->parent->cfg->arq) &&
+		    fprintf(f, "%20srole: self.role,\n", "") < 0)
+			return 0;
+		if (fprintf(f,
 		    "%16s});\n"
 		    "%12s}\n"
-		    "%12sOk(vec)\n",
-		    "", ret, "", "", "", "") < 0)
+		    "%12sOk(vec)\n", "", "", "") < 0)
 			return 0;
 		break;
 	default:
@@ -1110,7 +1127,7 @@ ort_lang_rust(const struct ort_lang_rust *args,
 		args = &tmp;
 	}
 
-	if (!gen_commentv(f, 0, COMMENT_C, 
+	if (!gen_commentv(f, 0, COMMENT_C,
 	    "WARNING: automatically generated by ort %s.\n"
 	    "DO NOT EDIT!", ORT_VERSION))
 		return 0;

@@ -79,9 +79,20 @@ The C interface tests need [kcgi](https://kristaps.bsd.lv/kcgi) and
 [libcurl](https://curl.se/libcur) installed.  The regression suite will
 automatically pick these up.
 
-Lastly, the XLIFF tests need [xmllint](http://xmlsoft.org/) to validate
-the XLIFF output.  The XSD files are included in the regression suite,
-so no network connection is made to fetch them.
+The XLIFF tests need [xmllint](http://xmlsoft.org/) to validate the
+XLIFF output.  The XSD files are included in the regression suite, so no
+network connection is made to fetch them.
+
+The rust tests need [cargo](https://crates.io) to operate.  Prior to
+running the tests, dependencies must be downloaded.  Regression builds
+are all performed in offline mode.
+
+```sh
+cd rust
+cargo fetch
+cd ..
+make regress
+```
 
 ## License
 

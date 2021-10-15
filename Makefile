@@ -261,6 +261,7 @@ TS_NODE		 = node_modules/.bin/ts-node
 # Comment these out to disable their tests.
 JSONSCHEMA	 = jsonschema
 XMLLINT		 = xmllint
+CARGO		 = cargo
 
 # Only needed for test, not built by default.
 LIBS_SQLBOX	!= pkg-config --libs sqlbox 2>/dev/null || echo "-lsqlbox -lsqlite3"
@@ -1015,6 +1016,30 @@ regress: all
 	else \
 		echo "!!! skipping ort-json output tests !!! " ; \
 		skipped = "$$skipped ort-json}-output" ; \
+	fi ; \
+	if [ -n "$(CARGO)" ]; then \
+		echo "=== ort-rust compile tests === " ; \
+		for f in regress/*.ort ; do \
+			printf "ort-rust: $$f... " ; \
+			./ort-rust $$f > rust/src/lib.rs 2>/dev/null ; \
+			if [ $$? -ne 0 ]; then \
+				echo "fail (did not execute)" ; \
+				./ort-rust $$f ; \
+				rm -f $$tmp ; \
+				exit 1 ; \
+			fi ; \
+			cd rust ; \
+		   	$(CARGO) build --offline ; \
+			if [ $$? -ne 0 ]; then \
+				echo "fail" ; \
+				rm -f $$tmp ; \
+				exit 1 ; \
+			fi ; \
+			cd .. ; \
+		done ; \
+	else \
+		echo "!!! skipping ort-rust compile tests !!! " ; \
+		skipped = "$$skipped ort-rust-compile" ; \
 	fi ; \
 	if [ -n "$$skipped" ]; \
 	then \

@@ -27,3 +27,6 @@ ort-xliff
 ort-version.h
 paths.h
 ort-json.schema
+/rust/target
+/rust/Cargo.lock
+/rust/src

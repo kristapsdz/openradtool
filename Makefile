@@ -3,6 +3,16 @@
 
 include Makefile.configure
 
+# Fill these in to add their tests, though better to override in Makefile.local.
+
+TS_NODE		 =
+TS_JSONSCHEMA	 =
+JSONSCHEMA	 =
+XMLLINT		 =
+CARGO		 =
+
+sinclude Makefile.local
+
 #CFLAGS		+= -Weverything -Wno-switch-enum -Wno-padded -Wno-reserved-id-macro
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 13
@@ -256,12 +266,6 @@ IMAGES		 = index.svg \
 		   index-fig6.svg \
 		   index-fig7.svg \
 		   index-fig8.svg
-TS_NODE		 = node_modules/.bin/ts-node
-
-# Comment these out to disable their tests.
-JSONSCHEMA	 = jsonschema
-XMLLINT		 = xmllint
-CARGO		 = cargo
 
 # Only needed for test, not built by default.
 LIBS_SQLBOX	!= pkg-config --libs sqlbox 2>/dev/null || echo "-lsqlbox -lsqlite3"
@@ -430,6 +434,7 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	mkdir -p .dist/openradtool-$(VERSION)/regress/javascript
 	mkdir -p .dist/openradtool-$(VERSION)/regress/json
 	mkdir -p .dist/openradtool-$(VERSION)/regress/nodejs
+	mkdir -p .dist/openradtool-$(VERSION)/regress/rust
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sqldiff
 	mkdir -p .dist/openradtool-$(VERSION)/regress/sql
 	mkdir -p .dist/openradtool-$(VERSION)/regress/xliff
@@ -456,6 +461,9 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	install -m 0444 regress/json/*.ts .dist/openradtool-$(VERSION)/regress/json
 	install -m 0444 regress/nodejs/*.md .dist/openradtool-$(VERSION)/regress/nodejs
 	install -m 0444 regress/nodejs/*.ts .dist/openradtool-$(VERSION)/regress/nodejs
+	install -m 0444 regress/rust/*.ort .dist/openradtool-$(VERSION)/regress/rust
+	install -m 0444 regress/rust/*.sh .dist/openradtool-$(VERSION)/regress/rust
+	install -m 0444 regress/rust/*.rs .dist/openradtool-$(VERSION)/regress/rust
 	install -m 0444 regress/sql/*.ort .dist/openradtool-$(VERSION)/regress/sql
 	install -m 0444 regress/sql/*.result .dist/openradtool-$(VERSION)/regress/sql
 	install -m 0444 regress/sqldiff/*.ort .dist/openradtool-$(VERSION)/regress/sqldiff
@@ -670,7 +678,7 @@ regress: all
 		done ; \
 	else \
 		echo "!!! skipping ort-xliff syntax tests !!! " ; \
-		skipped = "$$skipped ort-xliff-syntax" ; \
+		skipped="$$skipped ort-xliff-syntax" ; \
 	fi ; \
 	echo "=== ort-sql syntax tests === " ; \
 	for f in regress/*.ort ; do \
@@ -864,8 +872,8 @@ regress: all
 	if [ "x$(LIBS_REGRESS)" = "x" ] ; then \
 		echo "!!! skipping ort-c-{header,source} compile tests !!! " ; \
 		echo "!!! skipping ort-c-{header,source,sql} run tests !!! " ; \
-		skipped = "$$skipped ort-c-{header,source}-compile" ; \
-		skipped = "$$skipped ort-c-{header,source,sql}-run" ; \
+		skipped="$$skipped ort-c-{header,source}-compile" ; \
+		skipped="$$skipped ort-c-{header,source,sql}-run" ; \
 	else \
 		echo "=== ort-c-{header,source} compile tests === " ; \
 		for f in regress/*.ort ; do \
@@ -921,7 +929,7 @@ regress: all
 			echo "pass" ; \
 		done ; \
 	fi ; \
-	if [ -f "$(TS_NODE)" ]; then \
+	if [ -n "$(TS_NODE)" ]; then \
 		echo "=== ort-nodejs compile tests === " ; \
 		set -e ; \
 		$(TS_NODE) --skip-project \
@@ -929,9 +937,9 @@ regress: all
 		set +e ; \
 	else \
 		echo "!!! skipping ort-nodejs compile tests !!! " ; \
-		skipped = "$$skipped ort-nodejs}-compile" ; \
+		skipped="$$skipped ort-nodejs-compile" ; \
 	fi ; \
-	if [ -f "$(TS_NODE)" ]; then \
+	if [ -n "$(TS_NODE)" ]; then \
 		echo "=== ort-nodejs run tests === " ; \
 		set -e ; \
 		$(TS_NODE) --skip-project \
@@ -939,9 +947,9 @@ regress: all
 		set +e ; \
 	else \
 		echo "!!! skipping ort-nodejs run tests !!! " ; \
-		skipped = "$$skipped ort-nodejs}-run" ; \
+		skipped="$$skipped ort-nodejs-run" ; \
 	fi ; \
-	if [ -f "$(TS_NODE)" ]; then \
+	if [ -n "$(TS_NODE)" ]; then \
 		echo "=== ort-javascript internal tests === " ; \
 		set -e ; \
 		$(TS_NODE) --skip-project \
@@ -949,7 +957,7 @@ regress: all
 		set +e ; \
 	else \
 		echo "!!! skipping ort-javascript internal tests !!! " ; \
-		skipped = "$$skipped ort-javascript}-internal" ; \
+		skipped="$$skipped ort-javascript-internal" ; \
 	fi ; \
 	echo "=== ort-javascript output tests === " ; \
 	for f in regress/javascript/*.ort ; do \
@@ -963,7 +971,7 @@ regress: all
 		fi ; \
 		echo "pass" ; \
 	done ; \
-	if [ -f "$(TS_NODE)" ]; then \
+	if [ -n "$(TS_NODE)" ]; then \
 		echo "=== ort-javascript run tests === " ; \
 		set -e ; \
 		$(TS_NODE) --skip-project \
@@ -971,9 +979,9 @@ regress: all
 		set +e ; \
 	else \
 		echo "!!! skipping ort-javascript run tests !!! " ; \
-		skipped = "$$skipped ort-javascript}-run" ; \
+		skipped="$$skipped ort-javascript-run" ; \
 	fi ; \
-	if [ -f "$(TS_NODE)" ]; then \
+	if [ -n "$(TS_NODE)" ]; then \
 		echo "=== ort-json reformat tests === " ; \
 		cat ort-json.ts regress/json/regress-runner.ts > $$tmp.ts ; \
 		set -e ; \
@@ -982,64 +990,51 @@ regress: all
 		rm -f $$tmp.ts ; \
 	else \
 		echo "!!! skipping ort-json reformat tests !!! " ; \
-		skipped = "$$skipped ort-json}-reformat" ; \
+		skipped="$$skipped ort-json-reformat" ; \
 	fi ; \
-	if [ -f "node_modules/.bin/typescript-json-schema" ]; then \
-		node_modules/.bin/typescript-json-schema \
-			--strictNullChecks ort-json.ts \
+	if [ -n "$(TS_JSONSCHEMA)" -a -n "$(JSONSCHEMA)" ]; then \
+		echo "=== ort-json output tests === " ; \
+		$(TS_JSONSCHEMA) --strictNullChecks ort-json.ts \
 			ortJson.ortJsonConfig > ort-json.schema ; \
-		if [ -n "$(JSONSCHEMA)" ]; \
-		then \
-			echo "=== ort-json output tests === " ; \
-			for f in regress/*.ort ; do \
-				printf "ort-json: $$f... " ; \
-				./ort-json $$f > $$tmp 2>/dev/null ; \
-				if [ $$? -ne 0 ]; then \
-					echo "fail (did not execute)" ; \
-					rm -f $$tmp ; \
-					exit 1 ; \
-				fi ; \
-				$(JSONSCHEMA) -i $$tmp \
-					ort-json.schema >/dev/null 2>&1; \
-				if [ $$? -ne 0 ]; then \
-					echo "fail" ; \
-					$(JSONSCHEMA) -i $$tmp ort-json.schema ; \
-					rm -f $$tmp ; \
-					exit 1 ; \
-				fi ; \
-				echo "pass" ; \
-			done ; \
-		else \
-			echo "!!! skipping ort-json output tests !!! " ; \
-			skipped = "$$skipped ort-json}-output" ; \
-		fi ; \
+		for f in regress/*.ort ; do \
+			printf "ort-json: $$f... " ; \
+			./ort-json $$f > $$tmp 2>/dev/null ; \
+			if [ $$? -ne 0 ]; then \
+				echo "fail (did not execute)" ; \
+				rm -f $$tmp ; \
+				exit 1 ; \
+			fi ; \
+			$(JSONSCHEMA) -i $$tmp \
+				ort-json.schema >/dev/null 2>&1; \
+			if [ $$? -ne 0 ]; then \
+				echo "fail" ; \
+				$(JSONSCHEMA) -i $$tmp ort-json.schema ; \
+				rm -f $$tmp ; \
+				exit 1 ; \
+			fi ; \
+			echo "pass" ; \
+		done ; \
 	else \
 		echo "!!! skipping ort-json output tests !!! " ; \
-		skipped = "$$skipped ort-json}-output" ; \
+		skipped="$$skipped ort-json-output" ; \
 	fi ; \
 	if [ -n "$(CARGO)" ]; then \
 		echo "=== ort-rust compile tests === " ; \
-		for f in regress/*.ort ; do \
-			printf "ort-rust: $$f... " ; \
-			./ort-rust $$f > rust/src/lib.rs 2>/dev/null ; \
-			if [ $$? -ne 0 ]; then \
-				echo "fail (did not execute)" ; \
-				./ort-rust $$f ; \
-				rm -f $$tmp ; \
-				exit 1 ; \
-			fi ; \
-			cd rust ; \
-		   	$(CARGO) build --offline ; \
-			if [ $$? -ne 0 ]; then \
-				echo "fail" ; \
-				rm -f $$tmp ; \
-				exit 1 ; \
-			fi ; \
-			cd .. ; \
-		done ; \
+		sh ./regress/rust/regress-compile.sh ; \
+		if [ $$? -ne 0 ]; then \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
+		echo "=== ort-rust run tests === " ; \
+		sh ./regress/rust/regress-runner.sh $$tmp ; \
+		if [ $$? -ne 0 ]; then \
+			rm -f $$tmp ; \
+			exit 1 ; \
+		fi ; \
 	else \
 		echo "!!! skipping ort-rust compile tests !!! " ; \
-		skipped = "$$skipped ort-rust-compile" ; \
+		echo "!!! skipping ort-rust run tests !!! " ; \
+		skipped="$$skipped ort-rust-compile ort-rust-run" ; \
 	fi ; \
 	if [ -n "$$skipped" ]; \
 	then \

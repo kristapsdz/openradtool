@@ -71,9 +71,19 @@ tests.  You can safely remove the *node_modules* directory at any time,
 though you will need to re-run `npm install` to recreate it.  Once
 installed, the regression suite will automatically pick these up.
 
+To enable picking up the Node.js tests, set the `TS_NODE` variable
+to the *ts-node* script, usually *node\_modules/.bin/ts-node*, in the
+*Makefile*.  Alternatively, drop it into a *Makefile.local* that will be
+included by the *Makefile*.
+
 To test JSON output, you'll need both the Node.js installation (as described
 above) and the [py-jsonschema](http://github.com/Julian/jsonschema) utilities
 installed for validating JSON against a schema.
+
+To enable picking up the JSON tests, set the `TS_JSONSCHEMA` variable to
+the *typescript-json-shema* script, usually
+*node\_modules/.bin/typescript-json-schema*, in the *Makefile*.
+Or alternatively, again, in a *Makefile.local*.
 
 The C interface tests need [kcgi](https://kristaps.bsd.lv/kcgi) and
 [libcurl](https://curl.se/libcur) installed.  The regression suite will
@@ -82,6 +92,9 @@ automatically pick these up.
 The XLIFF tests need [xmllint](http://xmlsoft.org/) to validate the
 XLIFF output.  The XSD files are included in the regression suite, so no
 network connection is made to fetch them.
+
+To enable picking up the XLIFF tests, set the `XMLLINT` variable to
+the *xmllint* program in the *Makefile* or a *Makefile.local*.
 
 The rust tests need [cargo](https://crates.io) to operate.  Prior to
 running the tests, dependencies must be downloaded.  Regression builds
@@ -93,6 +106,9 @@ cargo fetch
 cd ..
 make regress
 ```
+
+As usual, you'll need a `CARGO` variable in the *Makefile* or
+*Makefile.local* set to the *cargo* binary.
 
 ## License
 

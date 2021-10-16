@@ -2188,8 +2188,12 @@ ort_lang_nodejs(const struct ort_lang_nodejs *args,
 
 	if (!(args->flags & ORT_LANG_NODEJS_NOMODULE)) {
 		if ((args->flags & ORT_LANG_NODEJS_DB) &&
-		    fputs("import bcrypt from 'bcrypt';\n"
-		    "import Database from 'better-sqlite3';\n", f) == EOF)
+		    (cfg->flags & CONFIG_HAS_PASS) &&
+		    fputs("import bcrypt from 'bcrypt';\n", f) == EOF)
+			return 0;
+		if ((args->flags & ORT_LANG_NODEJS_DB) &&
+		    fputs("import Database from 'better-sqlite3';\n",
+		     f) == EOF)
 			return 0;
 		if ((args->flags & ORT_LANG_NODEJS_VALID) &&
 		    fputs("import validator from 'validator';\n", f) == EOF)

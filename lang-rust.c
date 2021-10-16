@@ -1133,18 +1133,21 @@ ort_lang_rust(const struct ort_lang_rust *args,
 		return 0;
 
 	if (fprintf(f,
-	    "%4s#[macro_use]\n"
-	    "%4sextern crate num_derive;\n"
+	    "#[macro_use]\n"
+	    "extern crate num_derive;\n"
 	    "\n"
 	    "pub mod ort {\n"
-	    "%4suse rusqlite::{Connection,Result,params,Row};\n"
-	    "%4suse bcrypt::{hash,verify,DEFAULT_COST};\n"
+	    "%4suse rusqlite::{Connection,Result,params,Row};\n", "") < 0)
+		return 0;
+	if ((cfg->flags & CONFIG_HAS_PASS) && fprintf(f,
+	    "%4suse bcrypt::{hash,verify,DEFAULT_COST};\n", "") < 0)
+		return 0;
+	if (fprintf(f,
 	    "%4suse num_traits::{FromPrimitive,ToPrimitive};\n"
 	    "\n"
 	    "%4spub const VERSION: &str = \"%s\";\n"
 	    "%4spub const VSTAMP: i64 = %lld;\n",
-	    "", "", "", "", "", "",
-	    ORT_VERSION, "", (long long)ORT_VSTAMP) < 0)
+	    "", "", ORT_VERSION, "", (long long)ORT_VSTAMP) < 0)
 		return 0;
 
 	if (!gen_roles(cfg, f))

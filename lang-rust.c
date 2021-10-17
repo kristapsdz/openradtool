@@ -264,7 +264,7 @@ gen_types_enum(const struct enm *e, FILE *f)
 	if ((name = strdup_title(e->name)) == NULL)
 		goto out;
 	if (fprintf(f,
-	    "%8s#[derive(FromPrimitive,ToPrimitive,PartialEq)]\n"
+	    "%8s#[derive(FromPrimitive,ToPrimitive,PartialEq,Debug)]\n"
 	    "%8spub enum %s {\n", "", "", name) < 0)
 		goto out;
 
@@ -843,7 +843,7 @@ gen_insert(const struct strct *s, FILE *f)
 
 	if (fprintf(f,
 	    "%12slet mut stmt = self.conn.prepare(&sql)?;\n"
-	    "%12sstmt.insert(params![\n", "", "") < 0)
+	    "%12smatch stmt.insert(params![\n", "", "") < 0)
 		return 0;
 
 	pos = hash = 1;
@@ -871,7 +871,20 @@ gen_insert(const struct strct *s, FILE *f)
 		pos++;
 	}
 
-	return fprintf(f, "%12s])\n%8s}\n", "", "") >= 0;
+	if (fprintf(f,
+	    "%12s]) {\n"
+	    "%16sOk(i) => Ok(i),\n"
+	    "%16sErr(e) => match e {\n"
+	    "%20srusqlite::Error::SqliteFailure(err, ref _desc) => match err.code {\n"
+	    "%24slibsqlite3_sys::ErrorCode::ConstraintViolation => Ok(-1),\n"
+	    "%24s_ => Err(e),\n"
+	    "%20s},\n"
+	    "%20s_ => Err(e),\n"
+	    "%16s},\n"
+	    "%12s}\n%8s}\n",
+	    "", "", "", "", "", "", "", "", "", "", "") < 0)
+		return 0;
+	return 1;
 }
 
 static int
@@ -1137,7 +1150,9 @@ ort_lang_rust(const struct ort_lang_rust *args,
 	    "extern crate num_derive;\n"
 	    "\n"
 	    "pub mod ort {\n"
-	    "%4suse rusqlite::{Connection,Result,params,Row};\n", "") < 0)
+	    "%4suse libsqlite3_sys;\n"
+	    "%4suse rusqlite::{Connection,Result,params,Row};\n", 
+	    "", "") < 0)
 		return 0;
 	if ((cfg->flags & CONFIG_HAS_PASS) && fprintf(f,
 	    "%4suse bcrypt::{hash,verify,DEFAULT_COST};\n", "") < 0)

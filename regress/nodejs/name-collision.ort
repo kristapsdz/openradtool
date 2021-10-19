@@ -1,0 +1,10 @@
+struct fooData {
+	field id int rowid;
+};
+
+struct foo {
+	field fooData struct fooid;
+	field fooid:fooData.id;
+	field id int rowid;
+	insert;
+};

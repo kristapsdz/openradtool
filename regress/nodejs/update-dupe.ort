@@ -1,0 +1,6 @@
+struct foo {
+	field uniq int unique;
+	field id int rowid;
+	insert;
+	update uniq: : name uniq;
+};

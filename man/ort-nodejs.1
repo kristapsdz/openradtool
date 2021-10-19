@@ -86,7 +86,7 @@ const db: ortdb = ort('path/to/data.db');
 .Pp
 The
 .Pa path/to/data.db
-must be an existing SQLite3 database usually created with
+must be an existing sqlite3 database usually created with
 .Xr ort-sql 1 .
 There should be one
 .Vt ortdb
@@ -424,6 +424,26 @@ fails any user-defined validation, or the following:
 .It Cm real Ta not 64-bit decimal number
 .It Cm email Ta not valid e-mail
 .It Cm bits Ta not contained in 64 bits
+.El
+.Ss Exceptions
+All database functions will throw an exception if errors occur in
+talking to the underlying database.
+The exception object returned is of type
+.Vt SqliteError ,
+inheriting from the generic
+.Vt Error .
+It is documented in the
+.Qq better-sqlite3 ,
+but consists of two pertinent members:
+.Bl -tag -width Ds
+.It Va "code" Ns No : string
+The extended sqlite3 error code in string format.
+For example, the
+.Xr SQLITE_IOERR_FSTAT 3
+error code is rendered as the string
+.Qq SQLITE_IOERR_FSTAT .
+.It Va "message" Ns No : string
+A free-form message describing the error.
 .El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT

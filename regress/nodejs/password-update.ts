@@ -1,4 +1,4 @@
-const db: ortdb = ort(dbfile);
+const db: ortdb = ort(dbfile, { bcrypt_cost: 4 });
 const ctx: ortctx = db.connect();
 
 const id: bigint = ctx.db_foo_insert('password');

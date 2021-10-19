@@ -33,7 +33,7 @@ fi
 for f in regress/rust/*.ort
 do
 	rm -f $tmp
-	./ort-sql $f | sqlite3 $tmp
+	./ort-sql $f 2>/dev/null | sqlite3 $tmp
 	if [ $? -ne 0 ]
 	then
 		echo "ort-rust $f... fail (ort-sql)" 1>&2

@@ -505,16 +505,18 @@ gen_insert(FILE *f, const struct strct *p)
 		/* Handle password. */
 
 		if (fd->flags & FIELD_NULL) {
-			if (fprintf(f, "\t\tif (v%zu === null)\n"
+			if (fprintf(f,
+			    "\t\tif (v%zu === null)\n"
 			    "\t\t\tparms.push(null);\n"
 			    "\t\telse\n"
-			    "\t\t\tparms.push(bcrypt.hashSync"
-			    "(v%zu, bcrypt.genSaltSync()));\n", 
+			    "\t\t\tparms.push(bcrypt.hashSync(v%zu, "
+			     "this.#o.args.bcrypt_cost));\n", 
 			    pos, pos) < 0)
 				return 0;
 		} else {
-			if (fprintf(f, "\t\tparms.push(bcrypt.hashSync"
-			    "(v%zu, bcrypt.genSaltSync()));\n", 
+			if (fprintf(f,
+			    "\t\tparms.push(bcrypt.hashSync(v%zu, "
+			     "this.#o.args.bcrypt_cost));\n", 
 			    pos) < 0)
 				return 0;
 		}
@@ -771,16 +773,18 @@ gen_update(FILE *f, const struct config *cfg,
 		}
 
 		if (ref->field->flags & FIELD_NULL) {
-			if (fprintf(f, "\t\tif (v%zu === null)\n"
+			if (fprintf(f,
+			    "\t\tif (v%zu === null)\n"
 			    "\t\t\tparms.push(null);\n"
 			    "\t\telse\n"
-			    "\t\t\tparms.push(bcrypt.hashSync"
-			    "(v%zu, bcrypt.genSaltSync()));\n", 
+			    "\t\t\tparms.push(bcrypt.hashSync(v%zu, "
+			     "this.#o.args.bcrypt_cost));\n", 
 			    pos, pos) < 0)
 				return 0;
 		} else {
-			if (fprintf(f, "\t\tparms.push(bcrypt.hashSync"
-			    "(v%zu, bcrypt.genSaltSync()));\n", 
+			if (fprintf(f,
+			    "\t\tparms.push(bcrypt.hashSync(v%zu, "
+			     "this.#o.args.bcrypt_cost));\n", 
 			    pos) < 0)
 				return 0;
 		}
@@ -1837,6 +1841,27 @@ gen_ortns(const struct ort_lang_nodejs *args,
 	return fputs("}\n", f) != EOF;
 }
 
+static int
+gen_ortargs(const struct ort_lang_nodejs *args, FILE *f)
+{
+
+	if (fputc('\n', f) == EOF)
+		return 0;
+	if (!gen_comment(f, 0, COMMENT_JS, "Interface configuration."))
+		return 0;
+	if (!(args->flags & ORT_LANG_NODEJS_NOMODULE) &&
+	    fputs("export ", f) == EOF)
+		return 0;
+	if (fputs("interface ortargs {\n", f) == EOF)
+		return 0;
+	if (!gen_comment(f, 1, COMMENT_JS,
+	    "The number of rounds when bcrypting passwords."))
+		return 0;
+	if (fputs("\tbcrypt_cost: number;\n", f) == EOF)
+		return 0;
+	return fputs("}\n", f) != EOF;
+}
+
 /*
  * Generate the class for managing a single connection.
  * This is otherwise defined as a single sequence of role transitions.
@@ -1856,29 +1881,40 @@ gen_ortdb(const struct ort_lang_nodejs *args, FILE *f)
 	if (!(args->flags & ORT_LANG_NODEJS_NOMODULE) &&
 	    fputs("export ", f) == EOF)
 		return 0;
-	if (fputs("class ortdb {\n"
-	    "\tdb: Database.Database;\n", f) == EOF)
+	if (fputs(
+	    "class ortdb\n"
+	    "{\n"
+	    "\treadonly args: ortargs;\n"
+	    "\treadonly db: Database.Database;\n\n", f) == EOF)
 		return 0;
 	if (!gen_comment(f, 1, COMMENT_JS,
 	    "The ort-nodejs version used to produce this file."))
 		return 0;
-	if (fprintf(f, "\treadonly version: "
-	    "string = \'%s\';\n", ORT_VERSION) < 0)
+	if (fprintf(f,
+	    "\treadonly version: string = \'%s\';\n\n",
+	    ORT_VERSION) < 0)
 		return 0;
 	if (!gen_comment(f, 1, COMMENT_JS,
 	    "The numeric (monotonically increasing) ort-nodejs "
 	    "version used to produce this file."))
 		return 0;
-	if (fprintf(f, "\treadonly vstamp: number = %lld;\n"
-	    "\n", (long long)ORT_VSTAMP) < 0)
+	if (fprintf(f,
+	    "\treadonly vstamp: number = %lld;\n\n", 
+	    (long long)ORT_VSTAMP) < 0)
 		return 0;
 	if (!gen_comment(f, 1, COMMENT_JS,
 	    "@param dbname The file-name of the database "
 	    "relative to the running application."))
 		return 0;
-	if (fputs("\tconstructor(dbname: string) {\n"
+	if (fputs("\tconstructor(dbname: string, args?: ortargs)\n"
+ 	    "\t{\n"
 	    "\t\tthis.db = new Database(dbname);\n"
 	    "\t\tthis.db.defaultSafeIntegers(true);\n"
+	    "\t\tif (typeof args !== \'undefined\') {\n"
+	    "\t\t\tthis.args = Object.assign({}, args);\n"
+	    "\t\t} else {\n"
+	    "\t\t\tthis.args = { bcrypt_cost: 10 };\n"
+	    "\t\t}\n"
 	    "\t}\n\n", f) == EOF)
 		return 0;
 	if (!gen_comment(f, 1, COMMENT_JS,
@@ -2215,9 +2251,11 @@ ort_lang_nodejs(const struct ort_lang_nodejs *args,
 		return 0;
 
 	if ((args->flags & ORT_LANG_NODEJS_DB)) {
-		if (!gen_ortdb(args, f))
-			return 0;
 		if (!gen_ortctx(args, f, cfg))
+			return 0;
+		if (!gen_ortargs(args, f))
+			return 0;
+		if (!gen_ortdb(args, f))
 			return 0;
 		if (fputc('\n', f) == EOF)
 			return 0;
@@ -2232,9 +2270,9 @@ ort_lang_nodejs(const struct ort_lang_nodejs *args,
 		    fputs("export ", f) == EOF)
 			return 0;
 		if (fputs
-		    ("function ort(dbname: string): ortdb\n"
+		    ("function ort(dbname: string, args?: optargs): ortdb\n"
 		     "{\n"
-		     "\treturn new ortdb(dbname);\n"
+		     "\treturn new ortdb(dbname, args);\n"
 		     "}\n", f) == EOF)
 			return 0;
 	}

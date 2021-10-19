@@ -587,7 +587,7 @@ gen_update(const struct update *up, size_t num, FILE *f)
 
 	return fprintf(f,
 	    "%12s]) {\n"
-	    "%16sOk(i) => Ok(true),\n"
+	    "%16sOk(_) => Ok(true),\n"
 	    "%16sErr(e) => match e {\n"
 	    "%20srusqlite::Error::SqliteFailure(err, ref _desc) => "
 	     "match err.code {\n"

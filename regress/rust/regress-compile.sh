@@ -1,8 +1,10 @@
 #! /bin/sh
 
+rm -f rust/src/*.rs
+
 for f in regress/*.ort
 do
-	./ort-rust $f > rust/src/lib.rs 2>/dev/null
+	./ort-rust $f >rust/src/lib.rs 2>/dev/null
 	if [ $? -ne 0 ]
 	then
 		echo "ort-rust: $f... fail (did not execute)" 1>&2

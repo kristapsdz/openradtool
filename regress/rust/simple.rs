@@ -4,8 +4,8 @@ use std::env;
 fn main() {
     let args: Vec<String> = env::args().collect();
     assert_eq!(args.len(), 2);
-
-    let ctx = ort::connect(&args[1]).unwrap();
+    let db = ort::Ortdb::new(&args[1]);
+    let ctx = db.connect().unwrap();
 
     let id1 = ctx.db_foo_insert
         (&"testing".to_string(), 1.2, ort::data::Enm::A, 0x01).unwrap();

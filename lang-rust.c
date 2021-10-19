@@ -510,8 +510,9 @@ gen_update(const struct update *up, size_t num, FILE *f)
 		pos++;
 	}
 
-	if (fprintf(f, ") -> Result<usize> {\n"
-	    "%12slet sql = stmt::stmt_fmt(stmt::", "") < 0)
+	if (fprintf(f, ") -> Result<%s> {\n"
+	    "%12slet sql = stmt::stmt_fmt(stmt::", 
+	    up->type == UP_MODIFY ? "bool" : "()", "") < 0)
 		return 0;
 	if (up->type == UP_MODIFY &&
 	    gen_enum_update(f, 1, up->parent, num, LANG_RUST) < 0)
@@ -533,14 +534,14 @@ gen_update(const struct update *up, size_t num, FILE *f)
 			if (fprintf(f,
 			    "%12slet hash%zu = match v%zu {\n"
 			    "%16sSome(i) => Some"
-			    "(hash(i, DEFAULT_COST).unwrap()),\n"
+			    "(hash(i, self.args.bcrypt_cost).unwrap()),\n"
 			    "%16s_ => None,\n%12s};\n",
 			    "", hash, pos, "", "", "") < 0)
 				return 0;
 		} else {
 			if (fprintf(f,
 			    "%12slet hash%zu = "
-			    "hash(v%zu, DEFAULT_COST).unwrap();\n",
+			    "hash(v%zu, self.args.bcrypt_cost).unwrap();\n",
 			    "", hash, pos) < 0)
 				return 0;
 		}
@@ -550,7 +551,7 @@ gen_update(const struct update *up, size_t num, FILE *f)
 
 	if (fprintf(f,
 	    "%12slet mut stmt = self.conn.prepare(&sql)?;\n"
-	    "%12sstmt.execute(params![\n", "", "") < 0)
+	    "%12smatch stmt.execute(params![\n", "", "") < 0)
 		return 0;
 
 	pos = hash = 1;
@@ -576,7 +577,28 @@ gen_update(const struct update *up, size_t num, FILE *f)
 		pos++;
 	}
 
-	return fprintf(f, "%12s])\n%8s}\n", "", "") >= 0;
+	if (up->type == UP_DELETE)
+		return fprintf(f,
+		    "%12s]) {\n"
+		    "%16sOk(_) => Ok(()),\n"
+		    "%16sErr(e) => Err(e),\n"
+		    "%12s}\n%8s}\n",
+		    "", "", "", "", "") >= 0;
+
+	return fprintf(f,
+	    "%12s]) {\n"
+	    "%16sOk(i) => Ok(true),\n"
+	    "%16sErr(e) => match e {\n"
+	    "%20srusqlite::Error::SqliteFailure(err, ref _desc) => "
+	     "match err.code {\n"
+	    "%24slibsqlite3_sys::ErrorCode::ConstraintViolation => "
+	     "Ok(false),\n"
+	    "%24s_ => Err(e),\n"
+	    "%20s},\n"
+	    "%20s_ => Err(e),\n"
+	    "%16s},\n"
+	    "%12s}\n%8s}\n",
+	    "", "", "", "", "", "", "", "", "", "", "") >= 0;
 }
 
 static int
@@ -601,7 +623,7 @@ gen_checkpass(FILE *f, size_t pos, const char *name,
 	if ((fd->flags & FIELD_NULL) &&
 	    fputs(".as_ref().unwrap()", f) == EOF)
 		return 0;
-	if (fputs(").is_ok() {\n", f) == EOF)
+	if (fputs(").unwrap() {\n", f) == EOF)
 		return 0;
 	return 1;
 }
@@ -826,14 +848,14 @@ gen_insert(const struct strct *s, FILE *f)
 			if (fprintf(f,
 			    "%12slet hash%zu = match v%zu {\n"
 			    "%16sSome(i) => Some"
-			    "(hash(i, DEFAULT_COST).unwrap()),\n"
+			    "(hash(i, self.args.bcrypt_cost).unwrap()),\n"
 			    "%16s_ => None,\n%12s};\n",
 			    "", hash, pos, "", "", "") < 0)
 				return 0;
 		} else if (fd->type == FTYPE_PASSWORD) {
 			if (fprintf(f,
 			    "%12slet hash%zu = "
-			    "hash(v%zu, DEFAULT_COST).unwrap();\n",
+			    "hash(v%zu, self.args.bcrypt_cost).unwrap();\n",
 			    "", hash, pos) < 0)
 				return 0;
 		}
@@ -1155,7 +1177,7 @@ ort_lang_rust(const struct ort_lang_rust *args,
 	    "", "") < 0)
 		return 0;
 	if ((cfg->flags & CONFIG_HAS_PASS) && fprintf(f,
-	    "%4suse bcrypt::{hash,verify,DEFAULT_COST};\n", "") < 0)
+	    "%4suse bcrypt::{hash,verify};\n", "") < 0)
 		return 0;
 	if (fprintf(f,
 	    "%4suse num_traits::{FromPrimitive,ToPrimitive};\n"
@@ -1181,7 +1203,8 @@ ort_lang_rust(const struct ort_lang_rust *args,
 
 	if (fprintf(f, "\n"
 	    "%4spub struct Ortctx {\n"
-	    "%8sconn: Connection,\n", "", "") < 0)
+	    "%8sargs: Ortargs,\n"
+	    "%8sconn: Connection,\n", "", "", "") < 0)
 		return 0;
 	if (!TAILQ_EMPTY(&cfg->arq) &&
 	    fprintf(f, "%8srole: Ortrole,\n", "") < 0)
@@ -1189,21 +1212,66 @@ ort_lang_rust(const struct ort_lang_rust *args,
 	if (fprintf(f, "%4s}\n", "") < 0)
 		return 0;
 
-	if (fprintf(f, "\n"
-	    "%4spub fn connect(dbname: &str) -> Result<Ortctx, rusqlite::Error> {\n"
-	    "%8slet conn = Connection::open(dbname)?;\n"
-	    "%8sOk(Ortctx {\n"
-	    "%12sconn,\n", "", "", "", "") < 0)
-		return 0;
-	if (!TAILQ_EMPTY(&cfg->arq) &&
-	    fprintf(f, "%12srole: Ortrole::Default,\n", "") < 0)
-		return 0;
-	if (fprintf(f, "%8s})\n%4s}\n", "", "") < 0)
-		return 0;
-
 	if (fprintf(f, "\n%4simpl Ortctx {\n", "") < 0)
 		return 0;
 	if (!gen_api(cfg, f))
 		return 0;
-	return fprintf(f, "%4s}\n}\n", "") >= 0;
+
+	if (fprintf(f,
+	    "%8spub(self) fn new(dbname: &str, args: &Ortargs) -> Result<Ortctx> {\n"
+	    "%12slet conn = Connection::open(dbname)?;\n"
+	    "%12sconn.execute(\"PRAGMA foreign_keys=ON\", [])?;\n"
+	    "%12sOk(Ortctx {\n"
+	    "%16sargs: *args,\n"
+	    "%16sconn,\n", 
+	    "", "", "", "", "", "") < 0)
+		return 0;
+	if (!TAILQ_EMPTY(&cfg->arq) &&
+	    fprintf(f, "%16srole: Ortrole::Default,\n", "") < 0)
+		return 0;
+	if (fprintf(f, "%12s})\n%8s}\n%4s}\n", "", "", "") < 0)
+		return 0;
+
+	if (fprintf(f, "\n"
+            "%4s#[derive(Copy, Clone)]\n"
+	    "%4spub struct Ortargs {\n"
+	    "%8spub bcrypt_cost: u32,\n"
+	    "%4s}\n", "", "", "", "") < 0)
+		return 0;
+
+	if (fprintf(f, "\n"
+	    "%4spub struct Ortdb {\n"
+	    "%8sdbname: String,\n"
+	    "%8sargs: Ortargs,\n"
+	    "%4s}\n",
+	    "", "", "", "") < 0)
+		return 0;
+
+	if (fprintf(f, "\n%4simpl Ortdb {\n", "") < 0)
+		return 0;
+
+	if (fprintf(f, 
+	    "%8spub fn new(dbname: &str) -> Ortdb {\n"
+	    "%12sOrtdb {\n"
+	    "%16sdbname: dbname.to_string(),\n"
+	    "%16sargs: Ortargs {\n"
+	    "%20sbcrypt_cost: bcrypt::DEFAULT_COST,\n"
+	    "%16s}\n"
+	    "%12s}\n"
+	    "%8s}\n"
+	    "%8spub fn new_with_args(dbname: &str, args: Ortargs) -> Ortdb {\n"
+	    "%12sOrtdb {\n"
+	    "%16sdbname: dbname.to_string(),\n"
+	    "%16sargs,\n"
+	    "%12s}\n"
+	    "%8s}\n"
+	    "%8spub fn connect(&self) -> Result<Ortctx> {\n"
+	    "%12sOrtctx::new(&self.dbname, &self.args)\n"
+	    "%8s}\n"
+	    "%4s}\n"
+	    "}\n",
+	    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "") < 0)
+		return 0;
+
+	return 1;
 }

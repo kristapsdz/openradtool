@@ -1,0 +1,11 @@
+struct bar {
+	field id int rowid;
+	insert;
+};
+
+struct foo {
+	field barid:bar.id int;
+	field id int rowid;
+	insert;
+	update barid: : name barid;
+};

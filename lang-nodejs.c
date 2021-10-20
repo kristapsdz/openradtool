@@ -382,8 +382,8 @@ gen_fill(FILE *f, const struct strct *p)
 }
 
 /*
- * Generate db_xxxx_insert method.
- * Return zero on failure, non-zero on success.
+ * Generate db_xxxx_insert method.  Return FALSE on failure, TRUE on
+ * success.
  */
 static int
 gen_insert(FILE *f, const struct strct *p)
@@ -395,8 +395,10 @@ gen_insert(FILE *f, const struct strct *p)
 	if (fputc('\n', f) == EOF)
 		return 0;
 	if (!gen_comment(f, 1, COMMENT_JS_FRAG_OPEN,
-	    "Insert a new row into the database. Only "
-	    "native (and non-rowid) fields may be set."))
+	    "Insert a row.  Accepts all native fields as parameters "
+	    "excluding rowid, which is automatically set by the "
+	    "database.  If any fields are specified as null, they "
+	    "may be passed as null values."))
 		return 0;
 
 	TAILQ_FOREACH(fd, &p->fq, entries) {
@@ -408,8 +410,9 @@ gen_insert(FILE *f, const struct strct *p)
 			return 0;
 	}
 	if (!gen_comment(f, 1, COMMENT_JS_FRAG_CLOSE,
-	    "@return New row's identifier on success or "
-	    "<0 otherwise."))
+	    "@return Row identifier on success or -1 on "
+	    "constraint violation.\n"
+	    "@throws Throws on database error."))
 		return 0;
 
 	if (fputc('\t', f) == EOF)
@@ -573,14 +576,14 @@ gen_update(FILE *f, const struct config *cfg,
 		    "The following fields are constrained by "
 		    "unary operations:"))
 			return 0;
+		ct = COMMENT_JS_FRAG;
 		TAILQ_FOREACH(ref, &up->crq, entries) {
 			if (OPTYPE_ISUNARY(ref->op))
 				continue;
-			if (!gen_commentv(f, 1, COMMENT_JS_FRAG,
+			if (!gen_commentv(f, 1, ct,
 			    "%s (checked %s null)", ref->field->name, 
 			    ref->op == OPTYPE_NOTNULL ? "not" : "is"))
 				return 0;
-			ct = COMMENT_JS_FRAG;
 		}
 	}
 
@@ -610,20 +613,17 @@ gen_update(FILE *f, const struct config *cfg,
 			ct = COMMENT_JS_FRAG;
 		}
 
-	if (ct == COMMENT_JS_FRAG_OPEN)
-		ct = COMMENT_JS;
-	else
-		ct = COMMENT_JS_FRAG_CLOSE;
-
-	if (up->type == UP_MODIFY) {
+	if (up->type == UP_MODIFY)
 		if (!gen_comment(f, 1, ct,
 		    "@return False on constraint violation, "
 		    "true on success."))
 			return 0;
-	} else {
-		if (!gen_comment(f, 1, ct, ""))
-			return 0;
-	}
+
+	ct = ct == COMMENT_JS_FRAG_OPEN ?
+		COMMENT_JS: COMMENT_JS_FRAG_CLOSE;
+
+	if (!gen_comment(f, 1, ct, "@throws Throws on database error."))
+		return 0;
 
 	/* Method signature. */
 
@@ -904,8 +904,8 @@ gen_query_checkpass(FILE *f, const struct search *s, int ret)
 }
 
 /*
- * Generate db_xxx_{get,count,list,iterate} method.
- * Return zero on failure, non-zero on success.
+ * Generate db_xxx_{get,count,list,iterate} methods.  Return FALSE on
+ * failure, TRUE on success.
  */
 static int
 gen_query(FILE *f, const struct config *cfg,
@@ -978,16 +978,15 @@ gen_query(FILE *f, const struct config *cfg,
 
 	if (s->type == STYPE_ITERATE)
 		if (!gen_comment(f, 1, COMMENT_JS_FRAG,
-		    "This callback function is called during an "
-		    "implicit transaction: thus, it should not "
-		    "invoke any database modifications or risk "
-		    "deadlock."))
+		    "The callback is called during an implicit "
+		    "transaction: thus, it should not invoke any "
+		    "database modifications or risk deadlock."))
 			return 0;
 	if (rs->flags & STRCT_HAS_NULLREFS)
 		if (!gen_comment(f, 1, COMMENT_JS_FRAG,
 		    "This search involves nested null structure "
 		    "linking, which involves multiple database "
-		    "calls per invocation. Use this sparingly!"))
+		    "calls per invocation. Use sparingly!"))
 			return 0;
 
 	if (hasunary) { 
@@ -1021,22 +1020,26 @@ gen_query(FILE *f, const struct config *cfg,
 	}
 
 	if (s->type == STYPE_ITERATE)
-		if (!gen_comment(f, 1, COMMENT_JS_FRAG_CLOSE,
+		if (!gen_comment(f, 1, COMMENT_JS_FRAG,
 		    "@param cb Callback with retrieved data."))
 			return 0;
 
 	if (s->type == STYPE_SEARCH) {
-		if (!gen_comment(f, 1, COMMENT_JS_FRAG_CLOSE,
+		if (!gen_comment(f, 1, COMMENT_JS_FRAG,
 		    "@return Result or null if no results found."))
 			return 0;
 	} else if (s->type == STYPE_LIST) {
-		if (!gen_comment(f, 1, COMMENT_JS_FRAG_CLOSE,
+		if (!gen_comment(f, 1, COMMENT_JS_FRAG,
 		    "@return Result of null if no results found."))
 			return 0;
 	} else if (s->type == STYPE_COUNT)
-		if (!gen_comment(f, 1, COMMENT_JS_FRAG_CLOSE,
+		if (!gen_comment(f, 1, COMMENT_JS_FRAG,
 		    "@return Count of results."))
 			return 0;
+
+	if (!gen_comment(f, 1, COMMENT_JS_FRAG_CLOSE,
+	    "@throws Throws on database error."))
+		return 0;
 
 	if (fputc('\t', f) == EOF)
 		return 0;
@@ -1270,8 +1273,8 @@ gen_query(FILE *f, const struct config *cfg,
 }
 
 /*
- * Generate the database functions for a structure.
- * Return zero on failure, non-zero on success.
+ * Generate the database functions for a structure.  Return FALSE on
+ * failure, TRUE on success.
  */
 static int
 gen_api(FILE *f, const struct config *cfg, const struct strct *p)
@@ -1320,7 +1323,7 @@ gen_bitf(FILE *f, const struct bitf *p, size_t pos)
 	if (!gen_comment(f, 1, COMMENT_JS, p->doc))
 		return 0;
 
-	if (fprintf(f, "\texport enum %s {\n", p->name) < 0)
+	if (fprintf(f, "\texport enum %s\n\t{\n", p->name) < 0)
 		return 0;
 
 	TAILQ_FOREACH(bi, &p->bq, entries) {
@@ -1356,7 +1359,7 @@ gen_enm(FILE *f, const struct enm *p, size_t pos)
 	if (!gen_comment(f, 1, COMMENT_JS, p->doc))
 		return 0;
 
-	if (fprintf(f, "\texport enum %s {\n", p->name) < 0)
+	if (fprintf(f, "\texport enum %s\n\t{\n", p->name) < 0)
 		return 0;
 
 	TAILQ_FOREACH(ei, &p->eq, entries) {
@@ -1390,7 +1393,7 @@ gen_strct(FILE *f, const struct strct *p, size_t pos)
 		return 0;
 	if (!gen_comment(f, 1, COMMENT_JS, p->doc))
 		return 0;
-	if (fprintf(f, "\texport interface %sData {\n", p->name) < 0)
+	if (fprintf(f, "\texport interface %sData\n\t{\n", p->name) < 0)
 		return 0;
 
 	TAILQ_FOREACH(fd, &p->fq, entries) {
@@ -1553,7 +1556,7 @@ gen_strct(FILE *f, const struct strct *p, size_t pos)
 	    "Class instance of {@link ortns.%sData}.",
 	    p->name))
 		return 0;
-	if (fprintf(f, "\texport class %s {\n"
+	if (fprintf(f, "\texport class %s\n\t{\n"
 	    "\t\treadonly #role: string;\n"
 	    "\t\treadonly obj: ortns.%sData;\n"
 	    "\n", p->name, p->name) < 0)
@@ -1739,12 +1742,13 @@ gen_ortns_express_valids(const struct ort_lang_nodejs *args,
 	    fputs("export ", f) == EOF)
 		return 0;
 	if (fputs
-	    ("namespace ortvalid {\n"
+	    ("namespace ortvalid\n"
+	     "{\n"
 	     "\tconst minInt: bigint = BigInt('-9223372036854775808');\n"
 	     "\tconst maxInt: bigint = BigInt('9223372036854775807');\n"
 	     "\tconst maxUint: bigint = BigInt('18446744073709551615');\n"
 	     "\n"
-	     "\texport interface ortValidType {\n", f) == EOF)
+	     "\texport interface ortValidType\n\t{\n", f) == EOF)
 		return 0;
 
 	TAILQ_FOREACH(st, &cfg->sq, entries)
@@ -1826,7 +1830,7 @@ gen_ortns(const struct ort_lang_nodejs *args,
 	if (!(args->flags & ORT_LANG_NODEJS_NOMODULE) &&
 	    fputs("export ", f) == EOF)
 		return 0;
-	if (fputs("namespace ortns {\n", f) == EOF)
+	if (fputs("namespace ortns\n{\n", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(e, &cfg->eq, entries)
 		if (!gen_enm(f, e, i++))
@@ -1852,7 +1856,7 @@ gen_ortargs(const struct ort_lang_nodejs *args, FILE *f)
 	if (!(args->flags & ORT_LANG_NODEJS_NOMODULE) &&
 	    fputs("export ", f) == EOF)
 		return 0;
-	if (fputs("interface ortargs {\n", f) == EOF)
+	if (fputs("interface ortargs\n{\n", f) == EOF)
 		return 0;
 	if (!gen_comment(f, 1, COMMENT_JS,
 	    "The number of rounds when bcrypting passwords."))
@@ -1874,9 +1878,8 @@ gen_ortdb(const struct ort_lang_nodejs *args, FILE *f)
 	if (fputc('\n', f) == EOF)
 		return 0;
 	if (!gen_comment(f, 0, COMMENT_JS,
-	    "Primary database object. "
-	    "Only one of these should exist per running node.js "
-	    "server."))
+	    "Application-wide database instance. "
+	    "There should only be one of these per server."))
 		return 0;
 	if (!(args->flags & ORT_LANG_NODEJS_NOMODULE) &&
 	    fputs("export ", f) == EOF)
@@ -1888,23 +1891,22 @@ gen_ortdb(const struct ort_lang_nodejs *args, FILE *f)
 	    "\treadonly db: Database.Database;\n\n", f) == EOF)
 		return 0;
 	if (!gen_comment(f, 1, COMMENT_JS,
-	    "The ort-nodejs version used to produce this file."))
+	    "The version of ort-nodejs used to create the module."))
 		return 0;
 	if (fprintf(f,
 	    "\treadonly version: string = \'%s\';\n\n",
 	    ORT_VERSION) < 0)
 		return 0;
 	if (!gen_comment(f, 1, COMMENT_JS,
-	    "The numeric (monotonically increasing) ort-nodejs "
-	    "version used to produce this file."))
+	    "The numeric version of ort-nodejs used to create the "
+	    "module."))
 		return 0;
 	if (fprintf(f,
 	    "\treadonly vstamp: number = %lld;\n\n", 
 	    (long long)ORT_VSTAMP) < 0)
 		return 0;
 	if (!gen_comment(f, 1, COMMENT_JS,
-	    "@param dbname The file-name of the database "
-	    "relative to the running application."))
+	    "Do not call this: use {@link ort} instead."))
 		return 0;
 	if (fputs("\tconstructor(dbname: string, args?: ortargs)\n"
  	    "\t{\n"
@@ -2091,8 +2093,10 @@ gen_ortctx(const struct ort_lang_nodejs *args,
 	const struct strct	*p;
 
 	if (fputs("\n"
-	    "namespace ortstmt {\n"
-	    "\texport enum ortstmt {\n", f) == EOF)
+	    "namespace ortstmt\n"
+	    "{\n"
+	    "\texport enum ortstmt\n"
+	    "\t{\n", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		if (!gen_sql_enums(f, 2, p, LANG_JS))
@@ -2107,7 +2111,8 @@ gen_ortctx(const struct ort_lang_nodejs *args,
 	    "\t\treturn ortstmts[idx];\n"
 	    "\t}\n"
 	    "\n"
-	    "\tconst ortstmts: readonly string[] = [\n", f) == EOF)
+	    "\tconst ortstmts: readonly string[] =\n"
+	    "\t[\n", f) == EOF)
 		return 0;
 	TAILQ_FOREACH(p, &cfg->sq, entries)
 		if (!gen_sql_stmts(f, 2, p, LANG_JS))
@@ -2120,32 +2125,31 @@ gen_ortctx(const struct ort_lang_nodejs *args,
 	if (fputs("}\n\n", f) == EOF)
 		return 0;
 
-	/* ortctx */
-
 	if (!gen_comment(f, 0, COMMENT_JS,
-	    "Manages all access to the database. "
-	    "This object should be used for the lifetime of a "
-	    "single \'request\', such as a request for a web "
-	    "application."))
+	    "Manages each sequence of database interaction."))
 		return 0;
 	if (!(args->flags & ORT_LANG_NODEJS_NOMODULE) &&
 	    fputs("export ", f) == EOF)
 		return 0;
-	if (fputs("class ortctx {\n"
+	if (fputs(
+	    "class ortctx\n"
+	    "{\n"
 	    "\t#role: string = 'default';\n"
 	    "\treadonly #o: ortdb;\n"
 	    "\n"
-	    "\tconstructor(o: ortdb) {\n"
+	    "\tconstructor(o: ortdb)\n"
+	    "\t{\n"
 	    "\t\tthis.#o = o;\n"
 	    "\t}\n\n", f) == EOF)
 		return 0;
 
 	if (!gen_comment(f, 1, COMMENT_JS,
-	    "Open a transaction with a unique identifier \"id\".  "
+	    "Open a transaction with a unique identifier.  "
 	    "This is the preferred way of creating database "
 	    "transactions.  The transaction immediately enters "
-	    "unshared lock mode (single writer, readers allowed).  "
-	    "Throws an exception on database error."))
+	    "unshared lock mode (single writer, readers allowed).\n"
+	    "@param id The unique identifier.\n"
+	    "@throws Throws on database error."))
 		return 0;
 	if (fputs("\tdb_trans_open_immediate(id: number): void\n"
 	    "\t{\n"
@@ -2154,12 +2158,13 @@ gen_ortctx(const struct ort_lang_nodejs *args,
 		return 0;
 
 	if (!gen_comment(f, 1, COMMENT_JS,
-	    "Open a transaction with a unique identifier \"id\".  "
+	    "Open a transaction with a unique identifier.  "
 	    "The transaction locks the database on first access "
 	    "with shared locks (no writes allowed, reads allowed) "
 	    "on queries and unshared locks (single writer, reads "
-	    "allowed) on modification.  Throws an exception on "
-	    "database error."))
+	    "allowed) on modification.\n"
+	    "@param id The unique identifier.\n"
+	    "@throws Throws on database error."))
 		return 0;
 	if (fputs("\tdb_trans_open_deferred(id: number): void\n"
 	    "\t{\n"
@@ -2168,9 +2173,11 @@ gen_ortctx(const struct ort_lang_nodejs *args,
 		return 0;
 
 	if (!gen_comment(f, 1, COMMENT_JS,
-	    "Open a transaction with a unique identifier \"id\".  "
+	    "Open a transaction with a unique identifier.  "
 	    "The transaction locks exclusively, preventing all "
-	    "other access.  Throws an exception on database error."))
+	    "other access.\n"
+	    "@param id The unique identifier.\n"
+	    "@throws Throws on database error."))
 		return 0;
 	if (fputs("\tdb_trans_open_exclusive(id: number): void\n"
 	    "\t{\n"
@@ -2179,9 +2186,10 @@ gen_ortctx(const struct ort_lang_nodejs *args,
 		return 0;
 
 	if (!gen_comment(f, 1, COMMENT_JS,
-	    "Roll-back a transaction opened by db_trans_open_xxxx() "
-	    "with identifier \"id\".  Throws an exception on "
-	    "database error."))
+	    "Roll-back a transaction opened by {@link "
+	    "db_trans_open_immediate} or similar.\n"
+	    "@param id The transaction identifier.\n"
+	    "@throws Throws on database error."))
 		return 0;
 	if (fputs("\tdb_trans_rollback(id: number): void\n"
 	    "\t{\n"
@@ -2190,9 +2198,11 @@ gen_ortctx(const struct ort_lang_nodejs *args,
 		return 0;
 
 	if (!gen_comment(f, 1, COMMENT_JS,
-	    "Commit a transaction opened by db_trans_open_xxxx() "
-	    "with identifier \"id\".  Throws an exception on "
-	    "database error."))
+	    "Commit a transaction opened by {@link "
+	    "db_trans_open_immediate} or similar.\n"
+	    "@param id The transaction identifier.\n"
+	    "@throws Throws on database error."))
+		return 0;
 	if (fputs("\tdb_trans_commit(id: number): void\n"
 	    "\t{\n"
 	    "\t\tthis.#o.db.exec(\'COMMIT TRANSACTION\');\n"
@@ -2260,11 +2270,13 @@ ort_lang_nodejs(const struct ort_lang_nodejs *args,
 		if (fputc('\n', f) == EOF)
 			return 0;
 		if (!gen_comment(f, 0, COMMENT_JS,
-		    "Instance an application-wide context. "
-		    "This should only be called once per server, with "
-		    "the {@link ortdb.connect} method used for "
-		    "sequences of operations. Throws an exception on "
-		    "database error."))
+		    "Create an application-wide database instance. "
+		    "This should only be called once per server.\n"
+		    "@param dbname An existing sqlite3 database.\n"
+		    "@param args Optional configuration parameters. "
+		    "If not given, the number of bcrypt rounds "
+		    "defaults to 10.\n"
+		    "@throws Throws on database error."))
 			return 0;
 		if (!(args->flags & ORT_LANG_NODEJS_NOMODULE) &&
 		    fputs("export ", f) == EOF)

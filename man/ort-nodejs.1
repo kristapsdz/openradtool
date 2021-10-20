@@ -75,23 +75,28 @@ The output is documented using the
 .Xr typedoc 1
 language.
 .Ss Module
-A
-.Nm
-context is initialised using the
-.Fn ort "dbname: string" Ns No : ortdb
-function from the application as follows.
-.Bd -literal -offset indent
-const db: ortdb = ort('path/to/data.db');
-.Ed
+An application context is initialised with the top-level function.
+It throws an exception on database error.
+.Bl -tag -width Ds
+.It Fn ort "dbname: string" "args?: ortargs" Ns No : ortdb
+Creates an application-wide database instance at
+.Fa dbname ,
+an existing sqlite3 database usually created with
+.Xr ort-sql 1 .
+The optional
+.Va args
+consists of configuration parameters.
+If provided, it must define the
+.Va bcrypt_cost
+property with a valid number of encryption rounds.
+If
+.Va args
+is not given, the number of rounds defaults to 10.
+.El
 .Pp
 The
-.Pa path/to/data.db
-must be an existing sqlite3 database usually created with
-.Xr ort-sql 1 .
-There should be one
 .Vt ortdb
-module instanced per application.
-It has the following members:
+object has the following properties and methods:
 .Bl -tag -width Ds
 .It Fn connect Ns No : ortctx
 Connect to the database.
@@ -101,6 +106,11 @@ operator sequence.
 If roles are enabled, the connection will begin in the
 .Qq default
 role.
+.It Va args Ns No : ortargs
+Instance-wide configuration.
+If not set by
+.Fn ort ,
+is set to the default values.
 .It Va version Ns No : string
 The version of
 .Nm
@@ -111,9 +121,12 @@ The numeric version of
 used to create the module.
 .El
 .Pp
-Database manipulation occurs with
+Each sequence of database interaction begins with the
+.Fn connect
+method from the application-wide instance.
+The resulting
 .Vt ortctx
-objects, which consist of the following:
+object has the following role methods:
 .Bl -tag -width Ds
 .It Fn db_role "newrole: string" Ns No : void
 If roles are enabled, move from the current role to
@@ -133,25 +146,29 @@ If
 .Fn db_role
 hasn't yet been called, this will be
 .Qq default .
+.El
+.Pp
+The following
+.Vt ortctx
+methods should be used for transaction management.
+These throw an exception on database error.
+.Bl -tag -width Ds
 .It Fn db_trans_open_immediate "id: number" Ns No : void
 Open a transaction with a unique identifier
 .Fa id .
 This is the preferred way of creating database transactions.
 The transaction immediately enters unshared lock mode (single writer,
 readers allowed).
-Throws an exception on database error.
 .It Fn db_trans_open_deferred "id: number" Ns No : void
 Open a transaction with a unique identifier
 .Fa id .
 The transaction locks the database on first access with shared locks (no
 writes allowed, reads allowed) on queries and unshared locks (single
 writer, reads allowed) on modification.
-Throws an exception on database error.
-.It Fn db_trans_exclusive "id: number" Ns No : void
+.It Fn db_trans_open_exclusive "id: number" Ns No : void
 Open a transaction with a unique identifier
 .Fa id .
 The transaction locks exclusively, preventing all other access.
-Throws an exception on database error.
 .It Fn db_trans_commit "id: number" Ns No : void
 Commit a transaction opened by
 .Fn db_trans_open_immediate ,
@@ -160,7 +177,6 @@ or
 .Fn db_trans_open_exclusive
 with identifier
 .Fa id .
-Throws an exception on database error.
 .It Fn db_trans_rollback "id: number" Ns No : void
 Roll-back a transaction opened by
 .Fn db_trans_open_immediate ,
@@ -169,48 +185,50 @@ or
 .Fn db_trans_open_exclusive
 with identifier
 .Fa id .
-Throws an exception on database error.
 .El
-.Ss Data access
-Each structure has a number of operations available in
-.Vt ortctx .
-These are all stipulated as
-.Cm count ,
-.Cm delete ,
-.Cm insert ,
-.Cm iterate ,
-.Cm list ,
-.Cm search ,
-and
-.Cm update
-statements in the configuration.
+.Pp
+Any
+.Cm insert
+statements are output as follows.
 Let
 .Qq foo
-be the name of the exemplar structure.
-All names are expressed in lowercase unless as explicitly noted.
-.Pp
-All of these functions will throw an exception on database error.
+be the name of the exemplar structure in this and subsequent prototypes.
+Throws an exception on database error.
 .Bl -tag -width Ds
-.It Fn "db_foo_delete_xxxx" "ARGS" Ns No : void
-Run the named
-.Cm delete
-function
-.Qq xxxx .
-The
+.It Fn "db_foo_insert" "ARGS" Ns No : bigint
+Insert a row and return its identifier or -1 on constraint violation.
+This accepts all native fields
 .Fa ARGS
-passed to this function are the fields that constrain which rows are
-deleted.
-Parameters are only specified for operations for binary-operator
-constraints, i.e., those not checking for null status.
-.It Fn "db_foo_delete_by_yy_op" "ARGS" Ns No : void
+as parameters excluding
+.Cm rowid ,
+which is automatically set by the database.
+If any fields are specified as
+.Cm null ,
+they may be passed as
+.Dv null
+values.
+.El
+.Pp
+Query statements
+.Cm count ,
+.Cm iterate ,
+.Cm list ,
+.Cm search
+are output as follows.
+These throw an exception on database error.
+.Bl -tag -width Ds
+.It Fn "db_foo_count" Ns No : bigint
 Like
-.Fn db_foo_delete_xxxx ,
-but using an un-named
-.Cm delete
-statement constrained by
-.Qq yy
-with operation
-.Qq op .
+.Fn db_foo_count_xxxx
+but returning a count of all rows.
+.It Fn "db_foo_count_xxxx" "ARGS" Ns No : bigint
+Like
+.Fn db_foo_get_xxxx ,
+but returning a count of responses.
+.It Fn "db_foo_count_by_xxxx_op1_yy_zz_op2" "ARGS" Ns No : bigint
+Like
+.Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
+but returning a count of responses.
 .It Fn "db_foo_get_xxxx" "ARGS" Ns No : ortns.foo|null
 The
 .Cm search
@@ -234,22 +252,6 @@ in the nested structure
 .Qq yy
 with operation
 .Qq op2 .
-.It Fn "db_foo_insert" "ARGS" Ns No : bigint
-Insert a row and return its identifier or -1 on constraint failure.
-This accepts all native fields
-.Fa ARGS
-as parameters excluding
-.Cm rowid ,
-which is automatically set by the database.
-If any fields are specified as
-.Cm null ,
-they are passed into this functions as pointers.
-The null values must then be specified as
-.Dv NULL
-pointers.
-This function is only generated if the
-.Cm insert
-statement is specified for the given structure.
 .It Fn "db_foo_iterate" "ARGS" "cb" Ns No : void
 Like
 .Fn db_foo_iterate_xxxx
@@ -267,18 +269,6 @@ and does not have a return value.
 Like
 .Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
 but invoking a function callback for each retrieved result.
-.It Fn "db_foo_count" Ns No : bigint
-Like
-.Fn db_foo_count_xxxx
-but returning a count of all rows.
-.It Fn "db_foo_count_xxxx" "ARGS" Ns No : bigint
-Like
-.Fn db_foo_get_xxxx ,
-but returning a count of responses.
-.It Fn "db_foo_count_by_xxxx_op1_yy_zz_op2" "ARGS" Ns No : bigint
-Like
-.Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
-but returning a count of responses.
 .It Fn "db_foo_list" Ns No : ortns.foo[]
 Like
 .Fn db_foo_list_xxxx
@@ -291,6 +281,14 @@ but producing an array of responses.
 Like
 .Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
 but producing a queue of responses.
+.El
+.Pp
+Any
+.Cm update
+statements in the configuration are output as the following methods on
+.Vt ortctx .
+These throw an exception on database error.
+.Bl -tag -width Ds
 .It Fn "db_foo_update_xxxx" "ARGS" Ns No : boolean
 Run the named update function
 .Qq xxxx .
@@ -320,12 +318,133 @@ If constraints are empty, they and the preceding
 are omitted.
 .El
 .Pp
-The data objects returned by these functions are in the
+Any
+.Cm delete
+statements in the configuration are output as the following methods on
+.Vt ortctx .
+These throw an exception on database error.
+.Bl -tag -width Ds
+.It Fn "db_foo_delete_xxxx" "ARGS" Ns No : void
+Run the named
+.Cm delete
+function
+.Qq xxxx .
+The
+.Fa ARGS
+passed to this function are the fields that constrain which rows are
+deleted.
+Parameters are only specified for operations for binary-operator
+constraints, i.e., those not checking for null status.
+.It Fn "db_foo_delete_by_yy_op" "ARGS" Ns No : void
+Like
+.Fn db_foo_delete_xxxx ,
+but using an un-named
+.Cm delete
+statement constrained by
+.Qq yy
+with operation
+.Qq op .
+.El
+.Ss Exceptions
+All database functions will throw an exception if errors occur in
+talking to the underlying database.
+The exception object returned is of type
+.Vt SqliteError ,
+inheriting from the generic
+.Vt Error .
+It is documented in the
+.Qq better-sqlite3 ,
+but consists of two pertinent members:
+.Bl -tag -width Ds
+.It Va "code" Ns No : string
+The extended sqlite3 error code in string format.
+For example, the
+.Xr SQLITE_IOERR_FSTAT 3
+error code is rendered as the string
+.Qq SQLITE_IOERR_FSTAT .
+.It Va "message" Ns No : string
+A free-form message describing the error.
+.El
+.Ss Data structures
+Any enumerations or bitfields
+.Pq Cm enum , Cm bitf
+in the configuration are output in the
 .Vt ortns
-namespace and are named as in the configuration.
+namespace and named as themselves.
+Each enumeration item is serialised as a
+.Vt string
+property.
+Bitfields have two property per item: one for the bit index, one for the
+produced mask.
+These are prefixed by
+.Qq BITI
+and
+.Qq BITF ,
+respectively.
+.Bd -literal
+namespace ortns {
+	enum anenum {
+		item2 = '3'
+	}
+	enum abitf {
+		BITI_item2 = '3',
+		BITF_item2 = '8',
+	}
+}
+.Ed
+.Pp
+Each
+.Cm struct
+is output as an interface in the
+.Vt ortns
+namespace and named as itself followed by
+.Qq Data ,
+such as
+.Vt ortns.fooData .
+All items of the structure are mapped to properties with the following
+types:
+.Bl -column -offset indent "password " "ortns.enum "
+.It Cm bit Ta bigint
+.It Cm bits Ta bigint
+.It Cm blob Ta Buffer
+.It Cm date Ta bigint
+.It Cm email Ta string
+.It Cm enum Ta ortns.enum
+.It Cm epoch Ta bigint
+.It Cm int Ta bigint
+.It Cm password Ta string
+.It Cm real Ta number
+.It Cm text Ta string
+.El
+.Pp
+Since bitfields are combinations of bits in their respective
+enumerations, they are represented by bigint and not the enumeration
+type.
+.Pp
+If a field is marked as
+.Cm null ,
+it will also be given the
+.Vt null
+type, such as
+.Qq bigint|null .
+.Bd -literal
+namespace ortns {
+        interface barData {
+                anint: bigint;
+                astring: string;
+		anulldate: bigint|null;
+        }
+}
+.Ed
+.Pp
+Data objects returned by query methods are output as classes in the
+.Vt ortns
+namespace and named as in the configuration.
 Letting
 .Qq foo
-be an exemplar structure name, the object consists of the following.
+be an exemplar structure name,
+.Vt ortns.foo ,
+the object consists of the following.
 .Bl -tag -width Ds
 .It Fa "obj" Ns No : ortns.fooData
 The read-only data itself.
@@ -341,60 +460,6 @@ The exported object, when converted into a string, is readable by
 applications using the
 .Xr ort-javascript 1
 tool.
-.Ss Data structures
-There are three data structures produced by
-.Nm :
-.Cm struct
-interfaces and enumerations for both
-.Cm bitfield
-and
-.Cm enum .
-.Pp
-Enumerations use the
-.Vt string
-type for all of their items.
-Enumerations for bitfields have two members per item: one for the bit
-index, one for the produced mask.
-These are prefixed by
-.Qq BITI
-and
-.Qq BITF ,
-respectively.
-.Pp
-Interfaces consist of all fields in their reference structure with types
-mapped as follows:
-.Bl -column -offset indent "password " "Buffer "
-.It Cm bit Ta bigint
-.It Cm date Ta bigint
-.It Cm epoch Ta bigint
-.It Cm int Ta bigint
-.It Cm real Ta number
-.It Cm blob Ta Buffer
-.It Cm text Ta string
-.It Cm email Ta string
-.It Cm password Ta string
-.It Cm bits Ta bigint
-.El
-.Pp
-Structure fields are mapped to their interfaces, such as
-.Va ortns.barData
-for a structure named
-.Qq bar .
-.Pp
-Enumerations are mapped to an enumeration defined similarly: such as
-.Va ortns.baz
-for an enumeration named
-.Qq baz .
-The enumeration values are all string literals of their numeric value.
-Since bitfields are combinations of bits in their respective
-enumerations, they are represented by bigint and not the enumeration
-type.
-.Pp
-If a field is marked as
-.Cm null ,
-it will also be given the
-.Vt null
-type.
 .Ss Validation
 If run with
 .Fl v ,
@@ -424,26 +489,6 @@ fails any user-defined validation, or the following:
 .It Cm real Ta not 64-bit decimal number
 .It Cm email Ta not valid e-mail
 .It Cm bits Ta not contained in 64 bits
-.El
-.Ss Exceptions
-All database functions will throw an exception if errors occur in
-talking to the underlying database.
-The exception object returned is of type
-.Vt SqliteError ,
-inheriting from the generic
-.Vt Error .
-It is documented in the
-.Qq better-sqlite3 ,
-but consists of two pertinent members:
-.Bl -tag -width Ds
-.It Va "code" Ns No : string
-The extended sqlite3 error code in string format.
-For example, the
-.Xr SQLITE_IOERR_FSTAT 3
-error code is rendered as the string
-.Qq SQLITE_IOERR_FSTAT .
-.It Va "message" Ns No : string
-A free-form message describing the error.
 .El
 .\" The following requests should be uncommented and used where appropriate.
 .\" .Sh CONTEXT
@@ -560,7 +605,7 @@ import { ort, ortns, ortctx, ortdb, ortvalid } from './modules/ort';
 const app: express.Application = express();
 const db: ortdb = ort('test.db');
 
-app.get("/put", 
+app.get("/put",
   function(req: express.Request, res: express.Response) {
     const ctx: ortctx = db.connect();
     const name: string|null = ortvalid.ortValids

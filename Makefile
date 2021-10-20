@@ -446,6 +446,7 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	install -m 0444 regress/*.md .dist/openradtool-$(VERSION)/regress
 	install -m 0444 regress/audit/*.ort .dist/openradtool-$(VERSION)/regress/audit
 	install -m 0444 regress/audit/*.result .dist/openradtool-$(VERSION)/regress/audit
+	install -m 0444 regress/c/*.sh .dist/openradtool-$(VERSION)/regress/c
 	install -m 0444 regress/c/*.ort .dist/openradtool-$(VERSION)/regress/c
 	install -m 0444 regress/c/*.c .dist/openradtool-$(VERSION)/regress/c
 	install -m 0444 regress/c/*.md .dist/openradtool-$(VERSION)/regress/c
@@ -869,65 +870,26 @@ regress: all
 		fi ; \
 		echo "pass" ; \
 	done ; \
-	if [ "x$(LIBS_REGRESS)" = "x" ] ; then \
+	if [ "x$(CFLAGS_SQLBOX)" = "x" ] ; then \
 		echo "!!! skipping ort-c-{header,source} compile tests !!! " ; \
-		echo "!!! skipping ort-c-{header,source,sql} run tests !!! " ; \
 		skipped="$$skipped ort-c-{header,source}-compile" ; \
-		skipped="$$skipped ort-c-{header,source,sql}-run" ; \
 	else \
 		echo "=== ort-c-{header,source} compile tests === " ; \
-		for f in regress/*.ort ; do \
-			hf=`basename $$f`.h ; \
-			set -e ; \
-			./ort-c-header -vJj $$f > $$f.h 2>/dev/null ; \
-			./ort-c-source -S. -h $$hf -vJj $$f > $$f.c 2>/dev/null ; \
-			set +e ; \
-			printf "$(CC): $$f... " ; \
-			$(CC) $(CFLAGS) $(CFLAGS_SQLBOX) -o /dev/null -c $$f.c 2>/dev/null ; \
-			if [ $$? -ne 0 ] ; then \
-				echo "fail (compile check)" ; \
-				$(CC) $(CFLAGS) $(CFLAGS_SQLBOX) -o /dev/null -c $$f.c ; \
-				rm -f $$f.h $$f.c $$tmp ; \
-				exit 1 ; \
-			fi ; \
-			rm -f $$f.h $$f.c ; \
-			echo "pass" ; \
-		done ; \
+		set -e ; \
+		CC=$(CC) CFLAGS="$(CFLAGS_SQLBOX) $(CFLAGS)" \
+			sh ./regress/c/regress-compile.sh ; \
+		set +e ; \
+	fi ; \
+	if [ "x$(LIBS_REGRESS)" = "x" ] ; then \
+		echo "!!! skipping ort-c-{header,source,sql} run tests !!! " ; \
+		skipped="$$skipped ort-c-{header,source,sql}-run" ; \
+	else \
 		echo "=== ort-c-{header,source,sql} run tests === " ; \
-		for f in regress/c/*.ort ; do \
-			rr=regress/c/regress.c ; \
-			bf=regress/c/`basename $$f .ort` ; \
-			cf=regress/c/`basename $$f .ort`.c ; \
-			hf=`basename $$f`.h ; \
-			rm -f $$tmp ; \
-			set -e ; \
-			./ort-c-header -vJj $$f > $$f.h 2>/dev/null ; \
-			./ort-c-source -S. -h $$hf -vJj $$f > $$f.c 2>/dev/null ; \
-			./ort-sql $$f | sqlite3 $$tmp 2>/dev/null ; \
-			set +e ; \
-			printf "$(CC): $$f... " ; \
-			$(CC) $(CFLAGS_REGRESS) $(CFLAGS) -o $$bf \
-				$$f.c $$cf $$rr $(LIBS_REGRESS) \
-				$(LDADD_CRYPT) $(LDADD_B64_NTOP) \
-				2>/dev/null ; \
-			if [ $$? -ne 0 ] ; then \
-				echo "fail (did not compile)" ; \
-				$(CC) $(CFLAGS_REGRESS) $(CFLAGS) -o $$bf \
-					$$f.c $$cf $$rr $(LIBS_REGRESS) \
-					$(LDADD_CRYPT) $(LDADD_B64_NTOP) ; \
-				rm -f $$f.h $$f.c $$bf $$tmp ; \
-				exit 1 ; \
-			fi ; \
-			rm -f $$f.h $$f.c ; \
-			./$$bf $$tmp 2>/dev/null ; \
-			if [ $$? -ne 0 ] ; then \
-				echo "fail" ; \
-				rm -f $$bf $$tmp ; \
-				exit 1 ; \
-			fi ; \
-			rm -f $$bf ; \
-			echo "pass" ; \
-		done ; \
+		set -e ; \
+		CC=$(CC) CFLAGS="$(CFLAGS_REGRESS) $(CFLAGS)" \
+			LDADD="$(LIBS_REGRESS) $(LDADD_CRYPT) $(LDADD_B64_NTOP)" \
+			sh ./regress/c/regress-runner.sh $$tmp ; \
+		set +e ; \
 	fi ; \
 	if [ -n "$(TS_NODE)" ]; then \
 		echo "=== ort-nodejs compile tests === " ; \

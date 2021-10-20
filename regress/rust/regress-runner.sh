@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 VERBOSE=
 
@@ -27,8 +27,9 @@ else
 	ntmp=`mktemp`
 	rm -f $ntmp
 	tmp=$ntmp.db
-	trap "rm -f $tmp" 0
 fi
+
+trap "rm -f $tmp" 0
 
 for f in regress/rust/*.ort
 do

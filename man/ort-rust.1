@@ -1,0 +1,626 @@
+.\"	$OpenBSD$
+.\"
+.\" Copyright (c) 2021 Kristaps Dzonsons <kristaps@bsd.lv>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate$
+.Dt ORT-RUST 1
+.Os
+.Sh NAME
+.Nm ort-rust
+.Nd generate rust module
+.Sh SYNOPSIS
+.Nm ort-rust
+.Op Ar config...
+.Sh DESCRIPTION
+Accepts
+.Xr ort 5
+.Ar config
+files, defaulting to standard input, and generates a Rust module.
+.Pp
+The output requires the
+.Qq base64 ,
+.Qq bcrypt ,
+.Qq json ,
+.Qq libsqlite3-sys ,
+.Qq num-derive ,
+.Qq num-traits ,
+and
+.Qq rusqlite
+dependencies.
+.Pp
+This mode is currently experimental.
+.Ss Module
+The output is wrapped in a module
+.Qq ort .
+In this manual, the leading
+.Qq ort::
+to submodules, structures, and so on is omitted for brevity.
+For example, the
+.Vt ort::Ortdb
+type is written as simply
+.Vt Ortdb .
+.Pp
+An application context is initialised with the following
+.Vt Ortdb
+associated functions:
+.Bl -tag -width Ds
+.It Fn new "dbname: &str" No -> Ft Ortdb
+Creates an application-wide database instance at
+.Fa dbname ,
+an existing sqlite3 database usually created with
+.Xr ort-sql 1 .
+The number of password hashing rounds defaults to 12.
+.It Fn new_with_args "dbname: &str" "args: Ortargs" No -> Ft Ortdb
+Like
+.Fn new ,
+but accepting
+.Fa args
+consisting of configuration parameters.
+If provided, it must define the
+.Va bcrypt_cost
+property with a valid number of password hashing rounds.
+.El
+.Pp
+The
+.Vt Ortdb
+type has the following method:
+.Bl -tag -width Ds
+.It Fn connect No -> Ft Result<Ortctx>
+Connect to the database.
+This should be invoked for each request.
+In applications not having a request, this corresponds to a single
+operator sequence.
+If roles are enabled, the connection will begin in the
+.Qq default
+role.
+.El
+.Pp
+Each sequence of database interaction begins with the
+.Fn connect
+method from the application-wide
+.Vt Ortdb
+instance.
+.\" The resulting
+.\" .Vt Ortctx
+.\" object has the following role methods:
+.\" .Bl -tag -width Ds
+.\" .It Fn db_role "newrole: string" Ns No : void
+.\" If roles are enabled, move from the current role to
+.\" .Fa newrole .
+.\" If the role is the same as the current role, this does nothing.
+.\" Roles may only transition to ancestor roles, not descendant roles or
+.\" siblings, or any other non-ancestor roles.
+.\" The only exception is when leaving
+.\" .Qq default
+.\" or entering
+.\" .Qq none .
+.\" This does not return failure: on role violation, it invokes
+.\" .Fn process.abort .
+.\" .It Fn db_role_current Ns No : string
+.\" If roles are enabled, get the currently-assigned role.
+.\" If
+.\" .Fn db_role
+.\" hasn't yet been called, this will be
+.\" .Qq default .
+.\" .El
+.\" .Pp
+.\" The following
+.\" .Vt ortctx
+.\" methods should be used for transaction management.
+.\" These throw an exception on database error.
+.\" .Bl -tag -width Ds
+.\" .It Fn db_trans_open_immediate "id: number" Ns No : void
+.\" Open a transaction with a unique identifier
+.\" .Fa id .
+.\" This is the preferred way of creating database transactions.
+.\" The transaction immediately enters unshared lock mode (single writer,
+.\" readers allowed).
+.\" .It Fn db_trans_open_deferred "id: number" Ns No : void
+.\" Open a transaction with a unique identifier
+.\" .Fa id .
+.\" The transaction locks the database on first access with shared locks (no
+.\" writes allowed, reads allowed) on queries and unshared locks (single
+.\" writer, reads allowed) on modification.
+.\" .It Fn db_trans_open_exclusive "id: number" Ns No : void
+.\" Open a transaction with a unique identifier
+.\" .Fa id .
+.\" The transaction locks exclusively, preventing all other access.
+.\" .It Fn db_trans_commit "id: number" Ns No : void
+.\" Commit a transaction opened by
+.\" .Fn db_trans_open_immediate ,
+.\" .Fn db_trans_open_deferred ,
+.\" or
+.\" .Fn db_trans_open_exclusive
+.\" with identifier
+.\" .Fa id .
+.\" .It Fn db_trans_rollback "id: number" Ns No : void
+.\" Roll-back a transaction opened by
+.\" .Fn db_trans_open_immediate ,
+.\" .Fn db_trans_open_deferred ,
+.\" or
+.\" .Fn db_trans_open_exclusive
+.\" with identifier
+.\" .Fa id .
+.\" .El
+.Pp
+Any
+.Cm insert
+statements are output as follows.
+Let
+.Qq foo
+be the name of the exemplar structure in this and subsequent prototypes.
+Its full module path is
+.Vt ort::objs::Foo ,
+written here as simply
+.Vt Foo .
+Returns an error
+.Vt Result
+on database error.
+.Bl -tag -width Ds
+.It Fn "db_foo_insert" "ARGS" No -> Ft Result<i64>
+Insert a row and return its identifier or -1 on constraint violation.
+This accepts all native fields
+.Fa ARGS
+as parameters excluding
+.Cm rowid ,
+which is automatically set by the database.
+If any fields are specified as
+.Cm null ,
+they may be passed as
+.Dv None
+options.
+.El
+.Pp
+Query statements
+.Cm count ,
+.Cm iterate ,
+.Cm list ,
+.Cm search
+are output as follows.
+These return an error
+.Vt Result
+on database error.
+.Bl -tag -width Ds
+.It Fn "db_foo_count" No -> Ft Result<i64>
+Like
+.Fn db_foo_count_xxxx
+but returning a count of all rows.
+.It Fn "db_foo_count_xxxx" "ARGS" No -> Ft Result<i64>
+Like
+.Fn db_foo_get_xxxx ,
+but returning a count of responses.
+.It Fn "db_foo_count_by_xxxx_op1_yy_zz_op2" "ARGS" No -> Ft Result<i64>
+Like
+.Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
+but returning a count of responses.
+.It Fn "db_foo_get_xxxx" "ARGS" No -> Ft Result<Option<Foo>>
+The
+.Cm search
+statement named
+.Qq xxxx .
+The function accepts variables for all binary-operator fields to check
+(i.e., all except for those checking for null).
+.It Fn "db_foo_get_by_xxxx_op1_yy_zz_op2" "ARGS" No -> Ft Result<Option<Foo>>
+Like
+.Fn db_foo_get_xxxx ,
+but for (possibly-nested) structures.
+In the given example,
+.Qq xxxx
+is a field in the given structure with operation
+.Qq op1
+and
+.Qq yy_zz
+means a field
+.Qq zz
+in the nested structure
+.Qq yy
+with operation
+.Qq op2 .
+.It Fn "db_foo_iterate" "ARGS" "cb" No -> Ft Result<()>
+Like
+.Fn db_foo_iterate_xxxx
+but iterating over all rows.
+.It Fn "db_foo_iterate_xxxx" "ARGS" "cb" No -> Ft Result<()>
+Like
+.Fn db_foo_get_xxxx ,
+but invoking a function callback per row.
+The
+.Fa cb
+callback accepts a single parameter of type
+.Vt Foo
+and does not have a return value.
+.It Fn "void db_foo_iterate_by_xxxx_op1_yy_zz_op2" "ARGS" "cb" No -> Ft Result<()>
+Like
+.Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
+but invoking a function callback for each retrieved result.
+.It Fn "db_foo_list" No -> Ft Result<Vec<Foo>>
+Like
+.Fn db_foo_list_xxxx
+but allocating and filling a queue of all rows.
+.It Fn "db_foo_list_xxxx" "ARGS" No -> Ft Result<Vec<Foo>>
+Like
+.Fn db_foo_get_xxxx ,
+but producing an array of responses.
+.It Fn "db_foo_list_by_xxxx_op1_yy_zz_op2" "ARGS" No -> Ft Result<Vec<Foo>>
+Like
+.Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
+but producing a queue of responses.
+.El
+.Pp
+Any
+.Cm update
+statements in the configuration are output as the following methods on
+.Vt Ortctx .
+These return an error
+.Vt Result
+on database error.
+.Bl -tag -width Ds
+.It Fn "db_foo_update_xxxx" "ARGS" No -> Ft Result<bool>
+Run the named update function
+.Qq xxxx .
+The update functions are specified with
+.Cm update
+statements.
+The parameters passed to this function are first the fields to modify,
+then the fields that constrain which rows are updated.
+Update fields are only specified for operations for binary-operator
+constraints, i.e., those not checking for null status.
+Returns true on success, false on constraint failure.
+.It Fn "db_foo_update_xx_mod_by_yy_op" "ARGS" No -> Result<bool>
+Like
+.Fn db_foo_update_xxxx ,
+but using an un-named update statement modifying
+.Qq xx
+with modifier
+.Qq mod
+constrained by
+.Qq yy
+with operation
+.Qq op .
+Either or both modifiers and constraints may be empty.
+If modifiers are empty, all fields are modified by setting.
+If constraints are empty, they and the preceding
+.Qq by
+are omitted.
+.El
+.Pp
+Any
+.Cm delete
+statements in the configuration are output as the following methods on
+.Vt Ortctx .
+These return an error
+.Vt Result
+on database error.
+.Bl -tag -width Ds
+.It Fn "db_foo_delete_xxxx" "ARGS" No -> Ft Result<()>
+Run the named
+.Cm delete
+function
+.Qq xxxx .
+The
+.Fa ARGS
+passed to this function are the fields that constrain which rows are
+deleted.
+Parameters are only specified for operations for binary-operator
+constraints, i.e., those not checking for null status.
+.It Fn "db_foo_delete_by_yy_op" "ARGS" No -> Ft Result<()>
+Like
+.Fn db_foo_delete_xxxx ,
+but using an un-named
+.Cm delete
+statement constrained by
+.Qq yy
+with operation
+.Qq op .
+.El
+.Ss Errors
+All database functions will return a
+.Vt rusqlite::Error
+in its
+.Vt Result
+on error.
+This may be examined for how to respond in the manner documented in its
+crate.
+.Ss Data structures
+Any enumerations or bitfields
+.Pq Cm enum , Cm bitf
+in the configuration are output in the
+.Vt ort::data
+submodule and named as themselves.
+Enumeration has explicit discriminator values.
+.\" Bitfields have two explicit discriminators per item: one for the bit index, one for the
+.\" produced mask.
+.\" These are prefixed by
+.\" .Qq BITI
+.\" and
+.\" .Qq BITF ,
+.\" respectively.
+.\" .Bd -literal
+.\" namespace ortns {
+.\" 	enum anenum {
+.\" 		item2 = '3'
+.\" 	}
+.\" 	enum abitf {
+.\" 		BITI_item2 = '3',
+.\" 		BITF_item2 = '8',
+.\" 	}
+.\" }
+.\" .Ed
+.Pp
+Each
+.Cm struct
+is output as a structure in the
+.Vt ort::data
+module and named as itself, such as
+.Vt ort::data::Foo .
+All items of the structure are mapped to fields with the following
+types:
+.Bl -column -offset indent "password " "ortns.enum "
+.It Cm bit Ta i64
+.It Cm bits Ta i64
+.It Cm blob Ta Vec<u8>
+.It Cm date Ta i64
+.It Cm email Ta String
+.It Cm enum Ta ort::data::Enumname
+.It Cm epoch Ta bigint
+.It Cm int Ta i64
+.It Cm password Ta String
+.It Cm real Ta f64
+.It Cm text Ta String
+.El
+.Pp
+Since bitfields are combinations of bits in their respective
+enumerations, they are represented by
+.Vt i64
+and not the enumeration type.
+.Pp
+If a field is marked as
+.Cm null ,
+it will be wrapped in an
+.Vt Option ,
+such as
+.Vt Option<String> .
+.Pp
+Objects returned by query methods are output as structures in the
+.Vt ort::objs
+module and named as in the configuration.
+Letting
+.Qq foo
+be an exemplar structure name,
+.Vt ort::objs::Foo ,
+the object consists of the following.
+.Bl -tag -width Ds
+.It Fa "data" Ns No : super::data::Foo
+The data itself.
+.It Fn "export" No -> Ft String
+Export as a JSON string in a surrounding object.
+Export rules are governed by the role in which the object was created.
+.El
+.Pp
+The exported object is readable by applications using the
+.Xr ort-javascript 1
+tool.
+.\" .Ss Validation
+.\" If run with
+.\" .Fl v ,
+.\" .Nm
+.\" outputs validation functions for each native field type in an object
+.\" .Va ortvalid.ortValids ,
+.\" with a validator for each field.
+.\" The fields (object properties) are named
+.\" .Ar struct Ns - Ns Ar field .
+.\" .Pp
+.\" Validator functions are typed according to their mapped field types
+.\" as described in
+.\" .Sx Data structures :
+.\" .Vt "(value?: any) => TYPE|null" ,
+.\" and accept the value (which may be undefined) of the request input.
+.\" These return
+.\" .Dv null
+.\" when the input is undefined,
+.\" .Cm undefined ,
+.\" .Cm null ,
+.\" fails any user-defined validation, or the following:
+.\" .Bl -column -offset indent "password " "not 64-bit signed integer "
+.\" .It Cm bit Ta not in 0\(en63
+.\" .It Cm date Ta not ISO-8601 format
+.\" .It Cm epoch Ta not 64-bit signed integer
+.\" .It Cm int Ta not 64-bit signed integer
+.\" .It Cm real Ta not 64-bit decimal number
+.\" .It Cm email Ta not valid e-mail
+.\" .It Cm bits Ta not contained in 64 bits
+.\" .El
+.\" The following requests should be uncommented and used where appropriate.
+.\" .Sh CONTEXT
+.\" For section 9 functions only.
+.\" .Sh RETURN VALUES
+.\" For sections 2, 3, and 9 function return values only.
+.\" .Sh ENVIRONMENT
+.\" For sections 1, 6, 7, and 8 only.
+.\" .Sh FILES
+.Sh EXIT STATUS
+.Ex -std
+.\" .Sh EXAMPLES
+.\" The following example is a full web-server running on port 3000 using
+.\" the Node framework.
+.\" It uses the
+.\" .Qq express ,
+.\" framework for web requests,
+.\" .Qq validator
+.\" for input validation,
+.\" .Qq bcrypt
+.\" for passwords, and
+.\" .Qq better-sqlite3
+.\" for the database.
+.\" It mandates the use of TypeScript instead of JavaScript.
+.\" It needs only the
+.\" .Xr npm 1
+.\" system installed and (depending on the operating system) a C/C++
+.\" compiler for native packages.
+.\" .Pp
+.\" Begin a project (if not already begun) as follows:
+.\" .Bd -literal -offset indent
+.\" % cd myproject
+.\" % npm init -y
+.\" % npm install typescript better-sqlite3 express bcrypt
+.\" % npm install @types/express @types/bcrypt @types/better-sqlite3
+.\" % npx tsc --init
+.\" .Ed
+.\" .Pp
+.\" For validation:
+.\" .Bd -literal -offset indent
+.\" % npm install validator @types/validator
+.\" .Ed
+.\" .Pp
+.\" When installing
+.\" .Qq better-sqlite3
+.\" on
+.\" .Ox ,
+.\" you may need to specify an alternate Python interpreter:
+.\" .Bd -literal -offset indent
+.\" % PYTHON=/usr/local/bin/python2.7 \e
+.\"   npm install better-sqlite3
+.\" .Ed
+.\" .Pp
+.\" Older versions of
+.\" .Ox
+.\" required overriding
+.\" .Ev CXX
+.\" and
+.\" .Ev CC
+.\" with ports-installed versions for both
+.\" .Qq better-sqlite3
+.\" and
+.\" .Qq bcrypt .
+.\" .Pp
+.\" Modify
+.\" .Pa package.json
+.\" to mandate the use of TypeScript instead of JavaScript:
+.\" .Bd -literal -offset indent
+.\" [...]
+.\" "main": "index.ts",
+.\" "scripts": {
+.\"   "tsc": "tsc"
+.\" }
+.\" [...]
+.\" .Ed
+.\" .Pp
+.\" Next, modify
+.\" .Pa tsconfig.json
+.\" to use a more up-to-date output type for JavaScript, otherwise many
+.\" TypeScript security idioms will not be available.
+.\" .Bd -literal -offset indent
+.\" "target": "es2015",
+.\" .Ed
+.\" .Pp
+.\" Now use the following toy
+.\" .Xr ort 5
+.\" configuration installed as
+.\" .Pa myproject.ort :
+.\" .Bd -literal -offset indent
+.\" roles {
+.\"   role user;
+.\" };
+.\" struct user {
+.\"   field name text limit gt 0;
+.\"   field id int rowid;
+.\"   insert;
+.\"   search id: name id;
+.\"   roles default { all; };
+.\" };
+.\" .Ed
+.\" .Pp
+.\" Compile the configuration as a module.
+.\" This assumes that validation is also required.
+.\" .Bd -literal -offset indent
+.\" % mkdir modules
+.\" % ort-nodejs -v myproject.ort > modules/ort.ts
+.\" .Ed
+.\" .Pp
+.\" Use the following simple application:
+.\" .Bd -literal -offset indent
+.\" import express from 'express';
+.\" import { ort, ortns, ortctx, ortdb, ortvalid } from './modules/ort'
+.\" 
+.\" const app: express.Application = express();
+.\" const db: ortdb = ort('test.db');
+.\"
+.\" app.get("/put",
+.\"   function(req: express.Request, res: express.Response) {
+.\"     const ctx: ortctx = db.connect();
+.\"     const name: string|null = ortvalid.ortValids
+.\"       ['user-name'](req.query['user-name']);
+.\"     if (name === null)
+.\"       return res.status(400).send('bad');
+.\"     const id: bigint = ctx.db_user_insert(name);
+.\"     return res.send(id.toString());
+.\"   }
+.\" );
+.\"
+.\" app.get("/get",
+.\"   function(req: express.Request, res: express.Response) {
+.\"     const ctx: ortctx = db.connect();
+.\"     const id: bigint|null = ortvalid.ortValids
+.\"       ['user-id'](req.query['user-id']);
+.\"     if (id === null)
+.\"       return res.status(400).send('bad');
+.\"     const obj: ortns.user|null = ctx.db_user_get_id(id);
+.\"     if (obj === null)
+.\"       return res.status(404).send('not found');
+.\"     return res.send(JSON.stringify(obj.export()));
+.\"   }
+.\" );
+.\"
+.\" app.listen(3000, function() {
+.\"   console.log('Server is running.');
+.\" });
+.\" .Ed
+.\" .Pp
+.\" Compile the application.
+.\" This will create
+.\" .Pa index.js .
+.\" .Bd -literal -offset indent
+.\" % npm run tsc
+.\" .Ed
+.\" .Pp
+.\" Make sure that the database exists.
+.\" This should only be run once.
+.\" .Bd -literal -offset indent
+.\" % ort-sql db.ort | sqlite3 test.db
+.\" .Ed
+.\" .Pp
+.\" Lastly, run the project itself:
+.\" .Bd -literal -offset indent
+.\" % node index.js
+.\" Server is running.
+.\" .Ed
+.\" .Pp
+.\" Making an HTTP request to
+.\" .Qq localhost:3000/get?user-id=nnn
+.\" will result in a display of the created user's identifier, while
+.\" .Qq localhost:3000/put?user-name=xxx
+.\" will create one.
+.\" .Sh DIAGNOSTICS
+.\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
+.\" .Sh ERRORS
+.\" For sections 2, 3, 4, and 9 errno settings only.
+.Sh SEE ALSO
+.Xr cargo 1 ,
+.Xr ort 5
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh CAVEATS
+.\" .Sh BUGS

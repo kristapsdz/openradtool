@@ -124,19 +124,20 @@ strdup_title(const char *s)
  * Return FALSE on failure, TRUE on success.
  */
 static int
-gen_role(FILE *f, const struct role *r, size_t tabs)
+gen_role(FILE *f, const struct role *r, size_t tabs, int squig)
 {
 	const struct role	*rr;
 
 	if (strcmp(r->name, "all"))
-		if (fprintf(f, "%*sOrtrole::%c%s => (),\n",
+		if (fprintf(f, "%*s%sOrtrole::%c%s => %s,\n",
 		    (int)tabs * 4, "",
+		    squig ? "super::" : "",
 		    toupper((unsigned char)r->name[0]),
-		    r->name + 1) < 0)
+		    r->name + 1, squig ? "{}" : "()") < 0)
 			return 0;
 
 	TAILQ_FOREACH(rr, &r->subrq, entries)
-		if (!gen_role(f, rr, tabs))
+		if (!gen_role(f, rr, tabs, squig))
 			return 0;
 	return 1;
 }
@@ -156,7 +157,7 @@ gen_rolemap(FILE *f, const struct rolemap *rm)
 	if (fprintf(f, "%12smatch self.role {\n", "") < 0)
 		return 0;
 	TAILQ_FOREACH(rr, &rm->rq, entries)
-		if (!gen_role(f, rr->role, 4))
+		if (!gen_role(f, rr->role, 4, 0))
 			return 0;
 
 	return fprintf(f,
@@ -195,14 +196,27 @@ gen_var(FILE *f, size_t pos, const struct field *fd, int comma)
 static int
 gen_field_to_json(const struct field *fd, int first, FILE *f)
 {
+	const struct rref	*r;
+	int	 		 tabs = 16;
 
 	if (fd->flags & FIELD_NOEXPORT)
 		return 0;
 	if (fd->type == FTYPE_PASSWORD)
 		return 0;
 
-	if (fprintf(f, "%16sret += \"%s\\\"%s\\\":\";\n",
-	    "", first ? "" : ",", fd->name) < 0)
+	if (fd->rolemap != NULL) {
+		if (fprintf(f, "%16smatch role {\n", "") < 0)
+			return 0;
+		TAILQ_FOREACH(r, &fd->rolemap->rq, entries)
+			if (!gen_role(f, r->role, 5, 1))
+				return 0;
+		if (fprintf(f, "%20s_ => {\n", "") < 0)
+			return 0;
+		tabs += 8;
+	}
+
+	if (fprintf(f, "%*sret += \"%s\\\"%s\\\":\";\n",
+	    tabs, "", first ? "" : ",", fd->name) < 0)
 		return -1;
 
 	switch (fd->type) {
@@ -214,101 +228,134 @@ gen_field_to_json(const struct field *fd, int first, FILE *f)
 	case FTYPE_BITFIELD:
 		if (fd->flags & FIELD_NULL) {
 			if (fprintf(f,
-			    "%16sif let Some(x) = self.%s {\n"
-			    "%20sret += &format!(\"\\\"{}\\\"\", x);\n"
-			    "%16s} else {\n"
-			    "%20sret += \"null\";\n"
-			    "%16s}\n",
-			    "", fd->name, "", "", "", "") < 0)
+			    "%*sif let Some(x) = self.%s {\n"
+			    "%*sret += &format!(\"\\\"{}\\\"\", x);\n"
+			    "%*s} else {\n"
+			    "%*sret += \"null\";\n"
+			    "%*s}\n",
+			    tabs, "", fd->name, 
+			    tabs + 4, "", 
+			    tabs, "", 
+			    tabs + 4, "", 
+			    tabs, "") < 0)
 				return -1;
 		} else {
 			if (fprintf(f,
-			    "%16sret += &format!"
+			    "%*sret += &format!"
 			     "(\"\\\"{}\\\"\", self.%s);\n",
-			    "", fd->name) < 0)
+			    tabs, "", fd->name) < 0)
 				return -1;
 		}
 		break;
 	case FTYPE_ENUM:
 		if (fd->flags & FIELD_NULL) {
 			if (fprintf(f,
-			    "%16sif let Some(ref x) = &self.%s {\n"
-			    "%20sret += &format!(\"\\\"{}\\\"\", "
+			    "%*sif let Some(ref x) = &self.%s {\n"
+			    "%*sret += &format!(\"\\\"{}\\\"\", "
 			     "num_traits::ToPrimitive::to_i64"
 			     "(x).unwrap());\n"
-			    "%16s} else {\n"
-			    "%20sret += \"null\";\n"
-			    "%16s}\n",
-			    "", fd->name, "", "", "", "") < 0)
+			    "%*s} else {\n"
+			    "%*sret += \"null\";\n"
+			    "%*s}\n",
+			    tabs, "", fd->name, 
+			    tabs + 4, "", 
+			    tabs, "", 
+			    tabs + 4, "", 
+			    tabs, "") < 0)
 				return -1;
 		} else {
 			if (fprintf(f,
-			    "%16sret += &format!(\"\\\"{}\\\"\", "
+			    "%*sret += &format!(\"\\\"{}\\\"\", "
 			     "num_traits::ToPrimitive::to_i64"
 			     "(&self.%s).unwrap());\n",
-			    "", fd->name) < 0)
+			    tabs, "", fd->name) < 0)
 				return -1;
 		}
 		break;
 	case FTYPE_STRUCT:
 		if (fd->ref->source->flags & FIELD_NULL) {
 			if (fprintf(f,
-			    "%16sif let Some(ref x) = &self.%s {\n"
-			    "%20sret += \"{\";\n"
-			    "%20sret += &x.to_json();\n"
-			    "%20sret += \"}\";\n"
-			    "%16s} else {\n"
-			    "%20sret += \"null\";\n"
-			    "%16s}\n",
-			    "", fd->name, "", "", "", "", "", "") < 0)
+			    "%*sif let Some(ref x) = &self.%s {\n"
+			    "%*sret += \"{\";\n"
+			    "%*sret += &x.to_json();\n"
+			    "%*sret += \"}\";\n"
+			    "%*s} else {\n"
+			    "%*sret += \"null\";\n"
+			    "%*s}\n",
+			    tabs, "", fd->name, 
+			    tabs + 4, "", 
+			    tabs + 4, "", 
+			    tabs + 4, "", 
+			    tabs, "", 
+			    tabs + 4, "", 
+			    tabs, "") < 0)
 				return -1;
 		} else {
 			if (fprintf(f,
-			    "%16sret += \"{\";\n"
-			    "%16sret += &self.%s.to_json();\n"
-			    "%16sret += \"}\";\n",
-			    "", "", fd->name, "") < 0)
+			    "%*sret += \"{\";\n"
+			    "%*sret += &self.%s.to_json();\n"
+			    "%*sret += \"}\";\n",
+			    tabs, "", 
+			    tabs, "", fd->name, 
+			    tabs, "") < 0)
 				return -1;
 		}
 		break;
 	case FTYPE_BLOB:
 		if (fd->flags & FIELD_NULL) {
 			if (fprintf(f,
-			    "%16sif let Some(ref x) = &self.%s {\n"
-			    "%20sret += \"\\\"\";\n"
-			    "%20sret += &base64::encode(x);\n"
-			    "%20sret += \"\\\"\";\n"
-			    "%16s} else {\n"
-			    "%20sret += \"null\";\n"
-			    "%16s}\n",
-			    "", fd->name, "", "", "", "", "", "") < 0)
+			    "%*sif let Some(ref x) = &self.%s {\n"
+			    "%*sret += \"\\\"\";\n"
+			    "%*sret += &base64::encode(x);\n"
+			    "%*sret += \"\\\"\";\n"
+			    "%*s} else {\n"
+			    "%*sret += \"null\";\n"
+			    "%*s}\n",
+			    tabs, "", fd->name, 
+			    tabs + 4, "", 
+			    tabs + 4, "", 
+			    tabs + 4, "", 
+			    tabs, "", 
+			    tabs + 4, "", 
+			    tabs, "") < 0)
 				return -1;
 		} else {
 			if (fprintf(f,
-			    "%16sret += \"\\\"\";\n"
-			    "%16sret += &base64::encode(&self.%s);\n"
-			    "%16sret += \"\\\"\";\n",
-			    "", "", fd->name, "") < 0)
+			    "%*sret += \"\\\"\";\n"
+			    "%*sret += &base64::encode(&self.%s);\n"
+			    "%*sret += \"\\\"\";\n",
+			    tabs, "", 
+			    tabs, "", fd->name, 
+			    tabs, "") < 0)
 				return -1;
 		}
 		break;
 	default:
 		if (fd->flags & FIELD_NULL) {
 			if (fprintf(f,
-			    "%16sif let Some(ref x) = &self.%s {\n"
-			    "%20sret += &json_escape(x);\n"
-			    "%16s} else {\n"
-			    "%20sret += \"null\";\n"
-			    "%16s}\n",
-			    "", fd->name, "", "", "", "") < 0)
+			    "%*sif let Some(ref x) = &self.%s {\n"
+			    "%*sret += &json_escape(x);\n"
+			    "%*s} else {\n"
+			    "%*sret += \"null\";\n"
+			    "%*s}\n",
+			    tabs, "", fd->name, 
+			    tabs + 4, "", 
+			    tabs, "", 
+			    tabs + 4, "", 
+			    tabs, "") < 0)
 				return -1;
 		} else {
 			if (fprintf(f,
-			    "%16sret += &json_escape(&self.%s);\n",
-			    "", fd->name) < 0)
+			    "%*sret += &json_escape(&self.%s);\n",
+			    tabs, "", fd->name) < 0)
 				return -1;
 		}
 		break;
+	}
+
+	if (fd->rolemap != NULL) {
+		if (fprintf(f, "%20s},\n%16s}\n", "", "") < 0)
+			return 0;
 	}
 
 	return 1;
@@ -376,9 +423,10 @@ gen_data_strct(const struct strct *s, FILE *f)
 
 	if (fprintf(f,
 	    "%8simpl %s {\n"
-	    "%12spub(super) fn to_json(&self) -> String {\n"
+	    "%12spub(super) fn to_json(&self%s) -> String {\n"
 	    "%16slet mut ret = String::new();\n",
-	    "", name, "", "") < 0)
+	    "", name, "", TAILQ_EMPTY(&s->cfg->arq) ? 
+	    "" : ", role: &super::Ortrole", "") < 0)
 		goto out;
 
 	first = 1;
@@ -477,12 +525,14 @@ gen_objs_strct(const struct strct *s, FILE *f)
 	    "%12spub fn export(&self) -> String {\n"
 	    "%16slet mut ret = String::new();\n"
 	    "%16sret += \"{\";\n"
-	    "%16sret += &self.data.to_json();\n"
+	    "%16sret += &self.data.to_json(%s);\n"
 	    "%16sret += \"}\";\n"
 	    "%16sret\n"
 	    "%12s}\n"
 	    "%8s}\n", 
-	    "", "", name, "", "", "", "", "", "", "", "") < 0)
+	    "", "", name, "", "", "", "", 
+	    TAILQ_EMPTY(&s->cfg->arq) ? "" : "&self.role",
+	    "", "", "", "") < 0)
 		goto out;
 	rc = 1;
 out:
@@ -1068,15 +1118,15 @@ gen_insert(const struct strct *s, FILE *f)
 		    (fd->flags & FIELD_NULL)) {
 			if (fprintf(f,
 			    "%12slet hash%zu = match v%zu {\n"
-			    "%16sSome(i) => Some"
-			    "(hash(i, self.args.bcrypt_cost).unwrap()),\n"
+			    "%16sSome(i) => Some(hash(i, "
+			     "self.args.bcrypt_cost).unwrap()),\n"
 			    "%16s_ => None,\n%12s};\n",
 			    "", hash, pos, "", "", "") < 0)
 				return 0;
 		} else if (fd->type == FTYPE_PASSWORD) {
 			if (fprintf(f,
-			    "%12slet hash%zu = "
-			    "hash(v%zu, self.args.bcrypt_cost).unwrap();\n",
+			    "%12slet hash%zu = hash(v%zu, "
+			     "self.args.bcrypt_cost).unwrap();\n",
 			    "", hash, pos) < 0)
 				return 0;
 		}
@@ -1104,14 +1154,17 @@ gen_insert(const struct strct *s, FILE *f)
 			if (fd->flags & FIELD_NULL) {
 				if (fprintf(f,
 				    "%16smatch v%zu {\n"
-				    "%20sSome(x) => Some(ToPrimitive::to_i64(&x).unwrap()),\n"
+				    "%20sSome(x) => Some"
+				     "(ToPrimitive::to_i64"
+				      "(&x).unwrap()),\n"
 				    "%20sNone => None,\n"
 				    "%16s},\n",
 				    "", pos, "", "", "") < 0)
 					return 0;
 			} else {
 				if (fprintf(f,
-				    "%16sToPrimitive::to_i64(&v%zu).unwrap(),\n",
+				    "%16sToPrimitive::to_i64"
+				     "(&v%zu).unwrap(),\n",
 				    "", pos) < 0)
 					return 0;
 			}
@@ -1131,8 +1184,10 @@ gen_insert(const struct strct *s, FILE *f)
 	    "%12s]) {\n"
 	    "%16sOk(i) => Ok(i),\n"
 	    "%16sErr(e) => match e {\n"
-	    "%20srusqlite::Error::SqliteFailure(err, ref _desc) => match err.code {\n"
-	    "%24slibsqlite3_sys::ErrorCode::ConstraintViolation => Ok(-1),\n"
+	    "%20srusqlite::Error::SqliteFailure(err, ref _desc) => "
+	     "match err.code {\n"
+	    "%24slibsqlite3_sys::ErrorCode::ConstraintViolation => "
+	     "Ok(-1),\n"
 	    "%24s_ => Err(e),\n"
 	    "%20s},\n"
 	    "%20s_ => Err(e),\n"
@@ -1456,7 +1511,8 @@ ort_lang_rust(const struct ort_lang_rust *args,
 		return 0;
 
 	if (fprintf(f,
-	    "%8spub(self) fn new(dbname: &str, args: &Ortargs) -> Result<Ortctx> {\n"
+	    "%8spub(self) fn new(dbname: &str, args: &Ortargs) -> "
+	     "Result<Ortctx> {\n"
 	    "%12slet conn = Connection::open(dbname)?;\n"
 	    "%12sconn.execute(\"PRAGMA foreign_keys=ON\", [])?;\n"
 	    "%12sOk(Ortctx {\n"
@@ -1496,19 +1552,26 @@ ort_lang_rust(const struct ort_lang_rust *args,
 	    "%20sbcrypt_cost: bcrypt::DEFAULT_COST,\n"
 	    "%16s}\n"
 	    "%12s}\n"
-	    "%8s}\n"
-	    "%8spub fn new_with_args(dbname: &str, args: Ortargs) -> Ortdb {\n"
+	    "%8s}\n",
+	    "", "", "", "", "", "", "", "") < 0)
+		return 0;
+	if (fprintf(f, 
+	    "%8spub fn new_with_args(dbname: &str, args: Ortargs) -> "
+	     "Ortdb {\n"
 	    "%12sOrtdb {\n"
 	    "%16sdbname: dbname.to_string(),\n"
 	    "%16sargs,\n"
 	    "%12s}\n"
-	    "%8s}\n"
+	    "%8s}\n",
+	    "", "", "", "", "", "") < 0)
+		return 0;
+	if (fprintf(f, 
 	    "%8spub fn connect(&self) -> Result<Ortctx> {\n"
 	    "%12sOrtctx::new(&self.dbname, &self.args)\n"
 	    "%8s}\n"
 	    "%4s}\n"
 	    "}\n",
-	    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "") < 0)
+	    "", "", "", "") < 0)
 		return 0;
 
 	return 1;

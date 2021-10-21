@@ -1,0 +1,22 @@
+roles {
+};
+
+enum enm {
+	item a 200;
+};
+
+bits bits {
+	item a 2;
+};
+
+struct foo {
+	field a text;
+	field b double;
+	field c enum enm;
+	field d bits bits;
+	field id int rowid;
+	insert;
+	search id: name id;
+	roles default { all; };
+	roles default { noexport b; };
+};

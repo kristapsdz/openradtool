@@ -1,0 +1,25 @@
+struct bar {
+	field a text;
+	field id int rowid;
+	insert;
+};
+
+enum enm {
+	item a 200;
+};
+
+bits bits {
+	item a 2;
+};
+
+struct foo {
+	field bar struct barid;
+	field barid:bar.id;
+	field a text;
+	field b double;
+	field c enum enm;
+	field d bits bits;
+	field id int rowid;
+	insert;
+	search id: name id;
+};

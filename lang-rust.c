@@ -120,6 +120,50 @@ strdup_title(const char *s)
 	return cp;
 }
 
+/*
+ * Return FALSE on failure, TRUE on success.
+ */
+static int
+gen_role(FILE *f, const struct role *r, size_t tabs)
+{
+	const struct role	*rr;
+
+	if (strcmp(r->name, "all"))
+		if (fprintf(f, "%*sOrtrole::%c%s => (),\n",
+		    (int)tabs * 4, "",
+		    toupper((unsigned char)r->name[0]),
+		    r->name + 1) < 0)
+			return 0;
+
+	TAILQ_FOREACH(rr, &r->subrq, entries)
+		if (!gen_role(f, rr, tabs))
+			return 0;
+	return 1;
+}
+
+/*
+ * Recursively generate all roles allowed by this rolemap.
+ * Return <0 on failure, >0 if we wrote something, 0 otherwise.
+ */
+static int
+gen_rolemap(FILE *f, const struct rolemap *rm)
+{
+	const struct rref	*rr;
+
+	if (rm == NULL)
+		return 0;
+
+	if (fprintf(f, "%12smatch self.role {\n", "") < 0)
+		return 0;
+	TAILQ_FOREACH(rr, &rm->rq, entries)
+		if (!gen_role(f, rr->role, 4))
+			return 0;
+
+	return fprintf(f,
+		"%16s_ => panic!(\"role violation\"),\n"
+		"%12s}\n", "", "") >= 0;
+}
+
 static int
 gen_var(FILE *f, size_t pos, const struct field *fd, int comma)
 {
@@ -148,6 +192,128 @@ gen_var(FILE *f, size_t pos, const struct field *fd, int comma)
 	return 1;
 }
 
+static int
+gen_field_to_json(const struct field *fd, int first, FILE *f)
+{
+
+	if (fd->flags & FIELD_NOEXPORT)
+		return 0;
+	if (fd->type == FTYPE_PASSWORD)
+		return 0;
+
+	if (fprintf(f, "%16sret += \"%s\\\"%s\\\":\";\n",
+	    "", first ? "" : ",", fd->name) < 0)
+		return -1;
+
+	switch (fd->type) {
+	case FTYPE_BIT:
+	case FTYPE_DATE:
+	case FTYPE_EPOCH:
+	case FTYPE_INT:
+	case FTYPE_REAL:
+	case FTYPE_BITFIELD:
+		if (fd->flags & FIELD_NULL) {
+			if (fprintf(f,
+			    "%16sif let Some(x) = self.%s {\n"
+			    "%20sret += &format!(\"\\\"{}\\\"\", x);\n"
+			    "%16s} else {\n"
+			    "%20sret += \"null\";\n"
+			    "%16s}\n",
+			    "", fd->name, "", "", "", "") < 0)
+				return -1;
+		} else {
+			if (fprintf(f,
+			    "%16sret += &format!"
+			     "(\"\\\"{}\\\"\", self.%s);\n",
+			    "", fd->name) < 0)
+				return -1;
+		}
+		break;
+	case FTYPE_ENUM:
+		if (fd->flags & FIELD_NULL) {
+			if (fprintf(f,
+			    "%16sif let Some(ref x) = &self.%s {\n"
+			    "%20sret += &format!(\"\\\"{}\\\"\", "
+			     "num_traits::ToPrimitive::to_i64"
+			     "(x).unwrap());\n"
+			    "%16s} else {\n"
+			    "%20sret += \"null\";\n"
+			    "%16s}\n",
+			    "", fd->name, "", "", "", "") < 0)
+				return -1;
+		} else {
+			if (fprintf(f,
+			    "%16sret += &format!(\"\\\"{}\\\"\", "
+			     "num_traits::ToPrimitive::to_i64"
+			     "(&self.%s).unwrap());\n",
+			    "", fd->name) < 0)
+				return -1;
+		}
+		break;
+	case FTYPE_STRUCT:
+		if (fd->ref->source->flags & FIELD_NULL) {
+			if (fprintf(f,
+			    "%16sif let Some(ref x) = &self.%s {\n"
+			    "%20sret += \"{\";\n"
+			    "%20sret += &x.to_json();\n"
+			    "%20sret += \"}\";\n"
+			    "%16s} else {\n"
+			    "%20sret += \"null\";\n"
+			    "%16s}\n",
+			    "", fd->name, "", "", "", "", "", "") < 0)
+				return -1;
+		} else {
+			if (fprintf(f,
+			    "%16sret += \"{\";\n"
+			    "%16sret += &self.%s.to_json();\n"
+			    "%16sret += \"}\";\n",
+			    "", "", fd->name, "") < 0)
+				return -1;
+		}
+		break;
+	case FTYPE_BLOB:
+		if (fd->flags & FIELD_NULL) {
+			if (fprintf(f,
+			    "%16sif let Some(ref x) = &self.%s {\n"
+			    "%20sret += \"\\\"\";\n"
+			    "%20sret += &base64::encode(x);\n"
+			    "%20sret += \"\\\"\";\n"
+			    "%16s} else {\n"
+			    "%20sret += \"null\";\n"
+			    "%16s}\n",
+			    "", fd->name, "", "", "", "", "", "") < 0)
+				return -1;
+		} else {
+			if (fprintf(f,
+			    "%16sret += \"\\\"\";\n"
+			    "%16sret += &base64::encode(&self.%s);\n"
+			    "%16sret += \"\\\"\";\n",
+			    "", "", fd->name, "") < 0)
+				return -1;
+		}
+		break;
+	default:
+		if (fd->flags & FIELD_NULL) {
+			if (fprintf(f,
+			    "%16sif let Some(ref x) = &self.%s {\n"
+			    "%20sret += &json_escape(x);\n"
+			    "%16s} else {\n"
+			    "%20sret += \"null\";\n"
+			    "%16s}\n",
+			    "", fd->name, "", "", "", "") < 0)
+				return -1;
+		} else {
+			if (fprintf(f,
+			    "%16sret += &json_escape(&self.%s);\n",
+			    "", fd->name) < 0)
+				return -1;
+		}
+		break;
+	}
+
+	return 1;
+}
+
 /*
  * Generate the public structure and implementation for a struct.  These
  * will contain the actual data and direct functions on it.  Return TRUE
@@ -158,7 +324,7 @@ gen_data_strct(const struct strct *s, FILE *f)
 {
 	const struct field	*fd;
 	char			*cp = NULL, *name = NULL;
-	int			 rc = 0, isnull;
+	int			 ret = 0, isnull, first, rc;
 
 	if ((name = strdup_title(s->name)) == NULL)
 		goto out;
@@ -210,20 +376,23 @@ gen_data_strct(const struct strct *s, FILE *f)
 
 	if (fprintf(f,
 	    "%8simpl %s {\n"
-	    "%12sfn to_json(&self) -> String {\n"
-	    "%16slet ret = String::new();\n",
+	    "%12spub(super) fn to_json(&self) -> String {\n"
+	    "%16slet mut ret = String::new();\n",
 	    "", name, "", "") < 0)
 		goto out;
 
-	TAILQ_FOREACH(fd, &s->fq, entries) {
-		/* TODO */
-	}
+	first = 1;
+	TAILQ_FOREACH(fd, &s->fq, entries)
+		if ((rc = gen_field_to_json(fd, first, f)) < 0)
+			goto out;
+		else if (rc > 0)
+			first = 0;
 
-	rc = fprintf(f, "%16sret\n%12s}\n%8s}\n", "", "", "") >= 0;
+	ret = fprintf(f, "%16sret\n%12s}\n%8s}\n", "", "", "") >= 0;
 out:
 	free(name);
 	free(cp);
-	return rc;
+	return ret;
 }
 
 static int
@@ -287,9 +456,8 @@ out:
 static int
 gen_objs_strct(const struct strct *s, FILE *f)
 {
-	const struct field	*fd;
-	char			*name = NULL;
-	int			 rc = 0;
+	char	*name = NULL;
+	int	 rc = 0;
 
 	if ((name = strdup_title(s->name)) == NULL)
 		goto out;
@@ -307,15 +475,16 @@ gen_objs_strct(const struct strct *s, FILE *f)
 	    "%8s}\n"
 	    "%8simpl %s {\n"
 	    "%12spub fn export(&self) -> String {\n"
-	    "%16slet ret = String::new();\n",
-	    "", "", name, "", "") < 0)
+	    "%16slet mut ret = String::new();\n"
+	    "%16sret += \"{\";\n"
+	    "%16sret += &self.data.to_json();\n"
+	    "%16sret += \"}\";\n"
+	    "%16sret\n"
+	    "%12s}\n"
+	    "%8s}\n", 
+	    "", "", name, "", "", "", "", "", "", "", "") < 0)
 		goto out;
-
-	TAILQ_FOREACH(fd, &s->fq, entries) {
-		/* TODO */
-	}
-
-	rc = fprintf(f, "%16sret\n%12s}\n%8s}\n", "", "", "") >= 0;
+	rc = 1;
 out:
 	free(name);
 	return rc;
@@ -329,6 +498,32 @@ gen_data(const struct config *cfg, FILE *f)
 	const struct bitf	*b;
 
 	if (fprintf(f, "\n%4spub mod data {\n", "") < 0)
+		return 0;
+	if (fprintf(f, "%8suse base64;\n", "") < 0)
+		return 0;
+
+	if (fprintf(f,
+	    "%8sfn json_escape(src: &str) -> String {\n"
+	    "%12slet mut escaped = "
+	     "String::with_capacity(src.len() + 2);\n"
+	    "%12sescaped.push('\"');\n"
+	    "%12sfor c in src.chars() {\n"
+	    "%16smatch c {\n"
+	    "%20s'\\x08' => escaped += \"\\\\b\",\n"
+	    "%20s'\\x0c' => escaped += \"\\\\f\",\n"
+	    "%20s'\\n'   => escaped += \"\\\\n\",\n"
+	    "%20s'\\r'   => escaped += \"\\\\r\",\n"
+	    "%20s'\\t'   => escaped += \"\\\\t\",\n"
+	    "%20s'\"'    => escaped += \"\\\\\\\"\",\n"
+	    "%20s'\\\\'   => escaped += \"\\\\\",\n"
+	    "%20sc      => escaped.push(c),\n"
+	    "%16s}\n"
+	    "%12s}\n"
+	    "%12sescaped.push('\"');\n"
+	    "%12sescaped\n"
+	    "%8s}\n",
+	    "", "", "", "", "", "", "", "", "",
+	    "", "", "", "", "", "", "", "", "") < 0)
 		return 0;
 
 	TAILQ_FOREACH(e, &cfg->eq, entries)
@@ -371,11 +566,13 @@ gen_roles(const struct config *cfg, FILE *f)
 		return 1;
 
 	if (fprintf(f, "\n"
-	    "%4s#[derive(PartialEq, Debug, Clone, Copy)]\n"
+	    "%4s#[derive(PartialEq,Clone,Copy)]\n"
 	    "%4spub enum Ortrole {\n", "", "") < 0)
 		return 0;
 
-	TAILQ_FOREACH(r, &cfg->arq, entries) {
+	TAILQ_FOREACH(r, &cfg->arq, allentries) {
+		if (strcmp(r->name, "all") == 0)
+			continue;
 		if ((cp = strdup_title(r->name)) == NULL)
 			return 0;
 		rc = fprintf(f, "%8s%s,\n", "", cp);
@@ -510,9 +707,12 @@ gen_update(const struct update *up, size_t num, FILE *f)
 		pos++;
 	}
 
-	if (fprintf(f, ") -> Result<%s> {\n"
-	    "%12slet sql = stmt::stmt_fmt(stmt::", 
-	    up->type == UP_MODIFY ? "bool" : "()", "") < 0)
+	if (fprintf(f, ") -> Result<%s> {\n",
+	    up->type == UP_MODIFY ? "bool" : "()") < 0)
+		return 0;
+	if (gen_rolemap(f, up->rolemap) < 0)
+		return 0;
+	if (fprintf(f, "%12slet sql = stmt::stmt_fmt(stmt::", "") < 0)
 		return 0;
 	if (up->type == UP_MODIFY &&
 	    gen_enum_update(f, 1, up->parent, num, LANG_RUST) < 0)
@@ -781,12 +981,28 @@ gen_fill(const struct strct *s, FILE *f)
 			}
 			break;
 		case FTYPE_ENUM:
-			if (fprintf(f, "%16s%s: FromPrimitive::from_i64"
-			    "(obj%zu).ok_or"
-			    "(rusqlite::Error::IntegralValueOutOfRange"
-			    "(ncol + %zu, obj%zu))?,\n",
-			    "", fd->name, scol, col, scol) < 0)
+			if (fprintf(f, "%16s%s: ", "", fd->name) < 0)
 				return 0;
+			if (fd->flags & FIELD_NULL) {
+				if (fprintf(f,
+				    "match obj%zu {\n"
+				    "%20sSome(x) => Some(FromPrimitive"
+				     "::from_i64(x).ok_or(rusqlite"
+				     "::Error::IntegralValueOutOfRange"
+				     "(ncol + %zu, x))?),\n"
+				    "%20sNone => None,\n"
+				    "%16s},\n",
+				    scol, "", col, "", "") < 0)
+					return 0;
+			} else {
+				if (fprintf(f,
+				    "FromPrimitive::from_i64(obj%zu)."
+				     "ok_or(rusqlite::Error::"
+				     "IntegralValueOutOfRange(ncol + "
+				     "%zu, obj%zu))?,\n",
+				    scol, col, scol) < 0)
+					return 0;
+			}
 			col++;
 			scol++;
 			break;
@@ -825,7 +1041,12 @@ gen_insert(const struct strct *s, FILE *f)
 		pos++;
 	}
 
-	if (fprintf(f, ") -> Result<i64> {\n"
+	if (fputs(") -> Result<i64> {\n", f) == EOF)
+		return 0;
+	if (gen_rolemap(f, s->ins->rolemap) < 0)
+		return 0;
+
+	if (fprintf(f,
 	    "%12slet sql = stmt::stmt_fmt(stmt::", "") < 0)
 		return 0;
 	if (gen_enum_insert(f, 1, s, LANG_RUST) < 0)
@@ -873,20 +1094,33 @@ gen_insert(const struct strct *s, FILE *f)
 		if (fd->type == FTYPE_STRUCT ||
 		    (fd->flags & FIELD_ROWID))
 			continue;
-
-		if (fd->type == FTYPE_PASSWORD) {
+		switch (fd->type) {
+		case FTYPE_PASSWORD:
 			if (fprintf(f,
 			    "%16shash%zu,\n", "", hash) < 0)
 				return 0;
-		} else if (fd->type == FTYPE_ENUM) {
-			if (fprintf(f,
-			    "%16sToPrimitive::to_i64(&v%zu).unwrap(),\n",
-			    "", pos) < 0)
-				return 0;
-		} else {
+			break;
+		case FTYPE_ENUM:
+			if (fd->flags & FIELD_NULL) {
+				if (fprintf(f,
+				    "%16smatch v%zu {\n"
+				    "%20sSome(x) => Some(ToPrimitive::to_i64(&x).unwrap()),\n"
+				    "%20sNone => None,\n"
+				    "%16s},\n",
+				    "", pos, "", "", "") < 0)
+					return 0;
+			} else {
+				if (fprintf(f,
+				    "%16sToPrimitive::to_i64(&v%zu).unwrap(),\n",
+				    "", pos) < 0)
+					return 0;
+			}
+			break;
+		default:
 			if (fprintf(f,
 			    "%16sv%zu,\n", "", pos) < 0)
 				return 0;
+			break;
 		}
 
 		hash += fd->type == FTYPE_PASSWORD;
@@ -980,8 +1214,12 @@ gen_query(const struct search *s, size_t num, FILE *f)
 		break;
 	}
 
-	if (fprintf(f, " {\n"
-	    "%12slet sql = stmt::stmt_fmt(stmt::", "") < 0)
+	if (fputs(" {\n", f) == EOF)
+		return 0;
+	if (gen_rolemap(f, s->rolemap) < 0)
+		return 0;
+
+	if (fprintf(f, "%12slet sql = stmt::stmt_fmt(stmt::", "") < 0)
 		return 0;
 	if (gen_enum_query(f, 1, s->parent, num, LANG_RUST) < 0)
 		return 0;

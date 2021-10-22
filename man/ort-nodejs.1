@@ -78,7 +78,7 @@ language.
 An application context is initialised with the top-level function.
 It throws an exception on database error.
 .Bl -tag -width Ds
-.It Fn ort "dbname: string" "args?: ortargs" Ns No : ortdb
+.It Fn ort "dbname: string" "args?: ortargs" Ns No : Ft ortdb
 Creates an application-wide database instance at
 .Fa dbname ,
 an existing sqlite3 database usually created with
@@ -98,7 +98,7 @@ The
 .Vt ortdb
 object has the following properties and methods:
 .Bl -tag -width Ds
-.It Fn connect Ns No : ortctx
+.It Fn connect Ns No : Ft ortctx
 Connect to the database.
 This should be invoked for each request.
 In applications not having a request, this corresponds to a single
@@ -106,16 +106,16 @@ operator sequence.
 If roles are enabled, the connection will begin in the
 .Qq default
 role.
-.It Va args Ns No : ortargs
+.It Va args Ns No : Ft ortargs
 Instance-wide configuration.
 If not set by
 .Fn ort ,
 is set to the default values.
-.It Va version Ns No : string
+.It Va version Ns No : Ft string
 The version of
 .Nm
 used to create the module.
-.It Va vstamp Ns No : number
+.It Va vstamp Ns No : Ft number
 The numeric version of
 .Nm
 used to create the module.
@@ -128,7 +128,7 @@ The resulting
 .Vt ortctx
 object has the following role methods:
 .Bl -tag -width Ds
-.It Fn db_role "newrole: string" Ns No : void
+.It Fn db_role "newrole: string" Ns No : Ft void
 If roles are enabled, move from the current role to
 .Fa newrole .
 If the role is the same as the current role, this does nothing.
@@ -140,7 +140,7 @@ or entering
 .Qq none .
 This does not return failure: on role violation, it invokes
 .Fn process.abort .
-.It Fn db_role_current Ns No : string
+.It Fn db_role_current Ns No : Ft string
 If roles are enabled, get the currently-assigned role.
 If
 .Fn db_role
@@ -153,23 +153,23 @@ The following
 methods should be used for transaction management.
 These throw an exception on database error.
 .Bl -tag -width Ds
-.It Fn db_trans_open_immediate "id: number" Ns No : void
+.It Fn db_trans_open_immediate "id: number" Ns No : Ft void
 Open a transaction with a unique identifier
 .Fa id .
 This is the preferred way of creating database transactions.
 The transaction immediately enters unshared lock mode (single writer,
 readers allowed).
-.It Fn db_trans_open_deferred "id: number" Ns No : void
+.It Fn db_trans_open_deferred "id: number" Ns No : Ft void
 Open a transaction with a unique identifier
 .Fa id .
 The transaction locks the database on first access with shared locks (no
 writes allowed, reads allowed) on queries and unshared locks (single
 writer, reads allowed) on modification.
-.It Fn db_trans_open_exclusive "id: number" Ns No : void
+.It Fn db_trans_open_exclusive "id: number" Ns No : Ft void
 Open a transaction with a unique identifier
 .Fa id .
 The transaction locks exclusively, preventing all other access.
-.It Fn db_trans_commit "id: number" Ns No : void
+.It Fn db_trans_commit "id: number" Ns No : Ft void
 Commit a transaction opened by
 .Fn db_trans_open_immediate ,
 .Fn db_trans_open_deferred ,
@@ -177,7 +177,7 @@ or
 .Fn db_trans_open_exclusive
 with identifier
 .Fa id .
-.It Fn db_trans_rollback "id: number" Ns No : void
+.It Fn db_trans_rollback "id: number" Ns No : Ft void
 Roll-back a transaction opened by
 .Fn db_trans_open_immediate ,
 .Fn db_trans_open_deferred ,
@@ -195,7 +195,7 @@ Let
 be the name of the exemplar structure in this and subsequent prototypes.
 Throws an exception on database error.
 .Bl -tag -width Ds
-.It Fn "db_foo_insert" "ARGS" Ns No : bigint
+.It Fn "db_foo_insert" "ARGS" Ns No : Ft bigint
 Insert a row and return its identifier or -1 on constraint violation.
 This accepts all native fields
 .Fa ARGS
@@ -217,26 +217,26 @@ Query statements
 are output as follows.
 These throw an exception on database error.
 .Bl -tag -width Ds
-.It Fn "db_foo_count" Ns No : bigint
+.It Fn "db_foo_count" Ns No : Ft bigint
 Like
 .Fn db_foo_count_xxxx
 but returning a count of all rows.
-.It Fn "db_foo_count_xxxx" "ARGS" Ns No : bigint
+.It Fn "db_foo_count_xxxx" "ARGS" Ns No : Ft bigint
 Like
 .Fn db_foo_get_xxxx ,
 but returning a count of responses.
-.It Fn "db_foo_count_by_xxxx_op1_yy_zz_op2" "ARGS" Ns No : bigint
+.It Fn "db_foo_count_by_xxxx_op1_yy_zz_op2" "ARGS" Ns No : Ft bigint
 Like
 .Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
 but returning a count of responses.
-.It Fn "db_foo_get_xxxx" "ARGS" Ns No : ortns.foo|null
+.It Fn "db_foo_get_xxxx" "ARGS" Ns No : Ft ortns.foo|null
 The
 .Cm search
 statement named
 .Qq xxxx .
 The function accepts variables for all binary-operator fields to check
 (i.e., all except for those checking for null).
-.It Fn "db_foo_get_by_xxxx_op1_yy_zz_op2" "ARGS" Ns No : ortns.foo|null
+.It Fn "db_foo_get_by_xxxx_op1_yy_zz_op2" "ARGS" Ns No : Ft ortns.foo|null
 Like
 .Fn db_foo_get_xxxx ,
 but for (possibly-nested) structures.
@@ -252,11 +252,11 @@ in the nested structure
 .Qq yy
 with operation
 .Qq op2 .
-.It Fn "db_foo_iterate" "ARGS" "cb" Ns No : void
+.It Fn "db_foo_iterate" "ARGS" "cb" Ns No : Ft void
 Like
 .Fn db_foo_iterate_xxxx
 but iterating over all rows.
-.It Fn "db_foo_iterate_xxxx" "ARGS" "cb" Ns No : void
+.It Fn "db_foo_iterate_xxxx" "ARGS" "cb" Ns No : Ft void
 Like
 .Fn db_foo_get_xxxx ,
 but invoking a function callback per row.
@@ -265,19 +265,19 @@ The
 callback accepts a single parameter of type
 .Vt ortns.foo
 and does not have a return value.
-.It Fn "void db_foo_iterate_by_xxxx_op1_yy_zz_op2" "ARGS" "cb" Ns No : void
+.It Fn "void db_foo_iterate_by_xxxx_op1_yy_zz_op2" "ARGS" "cb" Ns No : Ft void
 Like
 .Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
 but invoking a function callback for each retrieved result.
-.It Fn "db_foo_list" Ns No : ortns.foo[]
+.It Fn "db_foo_list" Ns No : Ft ortns.foo[]
 Like
 .Fn db_foo_list_xxxx
 but allocating and filling a queue of all rows.
-.It Fn "db_foo_list_xxxx" "ARGS" Ns No : ortns.foo[]
+.It Fn "db_foo_list_xxxx" "ARGS" Ns No : Ft ortns.foo[]
 Like
 .Fn db_foo_get_xxxx ,
 but producing an array of responses.
-.It Fn "db_foo_list_by_xxxx_op1_yy_zz_op2" "ARGS" Ns No : ortns.foo[]
+.It Fn "db_foo_list_by_xxxx_op1_yy_zz_op2" "ARGS" Ns No : Ft ortns.foo[]
 Like
 .Fn db_foo_get_by_xxxx_op1_yy_zz_op2 ,
 but producing a queue of responses.
@@ -289,7 +289,7 @@ statements in the configuration are output as the following methods on
 .Vt ortctx .
 These throw an exception on database error.
 .Bl -tag -width Ds
-.It Fn "db_foo_update_xxxx" "ARGS" Ns No : boolean
+.It Fn "db_foo_update_xxxx" "ARGS" Ns No : Ft boolean
 Run the named update function
 .Qq xxxx .
 The update functions are specified with
@@ -300,7 +300,7 @@ then the fields that constrain which rows are updated.
 Update fields are only specified for operations for binary-operator
 constraints, i.e., those not checking for null status.
 Returns true on success, false on constraint failure.
-.It Fn "db_foo_update_xx_mod_by_yy_op" "ARGS" Ns No : boolean
+.It Fn "db_foo_update_xx_mod_by_yy_op" "ARGS" Ns No : Ft boolean
 Like
 .Fn db_foo_update_xxxx ,
 but using an un-named update statement modifying
@@ -324,7 +324,7 @@ statements in the configuration are output as the following methods on
 .Vt ortctx .
 These throw an exception on database error.
 .Bl -tag -width Ds
-.It Fn "db_foo_delete_xxxx" "ARGS" Ns No : void
+.It Fn "db_foo_delete_xxxx" "ARGS" Ns No : Ft void
 Run the named
 .Cm delete
 function
@@ -335,7 +335,7 @@ passed to this function are the fields that constrain which rows are
 deleted.
 Parameters are only specified for operations for binary-operator
 constraints, i.e., those not checking for null status.
-.It Fn "db_foo_delete_by_yy_op" "ARGS" Ns No : void
+.It Fn "db_foo_delete_by_yy_op" "ARGS" Ns No : Ft void
 Like
 .Fn db_foo_delete_xxxx ,
 but using an un-named
@@ -356,13 +356,13 @@ It is documented in the
 .Qq better-sqlite3 ,
 but consists of two pertinent members:
 .Bl -tag -width Ds
-.It Va "code" Ns No : string
+.It Va "code" Ns No : Ft string
 The extended sqlite3 error code in string format.
 For example, the
 .Xr SQLITE_IOERR_FSTAT 3
 error code is rendered as the string
 .Qq SQLITE_IOERR_FSTAT .
-.It Va "message" Ns No : string
+.It Va "message" Ns No : Ft string
 A free-form message describing the error.
 .El
 .Ss Data structures
@@ -426,7 +426,7 @@ If a field is marked as
 it will also be given the
 .Vt null
 type, such as
-.Qq bigint|null .
+.Vt bigint|null .
 .Bd -literal
 namespace ortns {
         interface barData {
@@ -446,9 +446,9 @@ be an exemplar structure name,
 .Vt ortns.foo ,
 the object consists of the following.
 .Bl -tag -width Ds
-.It Fa "obj" Ns No : ortns.fooData
+.It Fa "obj" Ns No : Ft ortns.fooData
 The read-only data itself.
-.It Fn "export" Ns No : any
+.It Fn "export" Ns No : Ft any
 Create an exportable object.
 Export rules are governed by the role in which the object was created.
 This is usually used with

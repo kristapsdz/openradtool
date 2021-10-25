@@ -121,47 +121,55 @@ strdup_title(const char *s)
 }
 
 /*
- * Return FALSE on failure, TRUE on success.
+ * Return <0 on failure, >0 on success, 0 if nothing printed.
  */
 static int
-gen_role(FILE *f, const struct role *r, size_t tabs, int squig)
+gen_role(FILE *f, const struct role *r, size_t tabs,
+	const char *cond, int rc, int super)
 {
 	const struct role	*rr;
+	int			 ret;
 
-	if (strcmp(r->name, "all"))
-		if (fprintf(f, "%*s%sOrtrole::%c%s => %s,\n",
-		    (int)tabs * 4, "",
-		    squig ? "super::" : "",
-		    toupper((unsigned char)r->name[0]),
-		    r->name + 1, squig ? "{}" : "()") < 0)
-			return 0;
+	TAILQ_FOREACH(rr, &r->subrq, entries) {
+		ret = gen_role(f, rr, tabs, cond, rc, super);
+		if (ret < 0)
+			return -1;
+		if (ret > 0 && rc == 0)
+			rc = ret;
+	}
 
-	TAILQ_FOREACH(rr, &r->subrq, entries)
-		if (!gen_role(f, rr, tabs, squig))
-			return 0;
-	return 1;
+	if (strcmp(r->name, "all") == 0)
+		return rc;
+
+	return fprintf(f, "%s%s == %sOrtrole::%c%s",
+	    rc > 0 ? " || ": "", cond,
+	    super ? "super::" : "",
+	    toupper((unsigned char)r->name[0]),
+	    r->name + 1) < 0 ? -1 : 1;
 }
 
 /*
  * Recursively generate all roles allowed by this rolemap.
- * Return <0 on failure, >0 if we wrote something, 0 otherwise.
+ * Return FALSE on failure, TRUE on success.
  */
 static int
 gen_rolemap(FILE *f, const struct rolemap *rm)
 {
 	const struct rref	*rr;
+	int			 rc = 0;
 
-	if (rm == NULL)
+	if (rm == NULL || TAILQ_EMPTY(&rm->rq))
+		return 1;
+	if (fprintf(f, "%12sif !(", "") < 0)
 		return 0;
-
-	if (fprintf(f, "%12smatch self.role {\n", "") < 0)
-		return 0;
-	TAILQ_FOREACH(rr, &rm->rq, entries)
-		if (!gen_role(f, rr->role, 4, 0))
+	TAILQ_FOREACH(rr, &rm->rq, entries) {
+		rc = gen_role(f, rr->role, 4, "self.role", rc, 0);
+		if (rc < 0)
 			return 0;
+	}
 
-	return fprintf(f,
-		"%16s_ => panic!(\"role violation\"),\n"
+	return fprintf(f, ") {\n"
+		"%16spanic!(\"role violation\");\n"
 		"%12s}\n", "", "") >= 0;
 }
 
@@ -197,22 +205,25 @@ static int
 gen_field_to_json(const struct field *fd, int first, FILE *f)
 {
 	const struct rref	*r;
-	int	 		 tabs = 16;
+	int	 		 tabs = 16, rc = 0;
 
 	if (fd->flags & FIELD_NOEXPORT)
 		return 0;
 	if (fd->type == FTYPE_PASSWORD)
 		return 0;
 
-	if (fd->rolemap != NULL) {
-		if (fprintf(f, "%16smatch role {\n", "") < 0)
+	if (fd->rolemap != NULL &&
+	    !TAILQ_EMPTY(&fd->rolemap->rq)) {
+		if (fprintf(f, "%16sif !(", "") < 0)
 			return 0;
-		TAILQ_FOREACH(r, &fd->rolemap->rq, entries)
-			if (!gen_role(f, r->role, 5, 1))
+		TAILQ_FOREACH(r, &fd->rolemap->rq, entries) {
+			rc = gen_role(f, r->role, 5, "role", rc, 1);
+			if (rc < 0)
 				return 0;
-		if (fprintf(f, "%20s_ => {\n", "") < 0)
+		}
+		if (fputs(") {\n", f) == EOF)
 			return 0;
-		tabs += 8;
+		tabs += 4;
 	}
 
 	if (fprintf(f, "%*sret += \"%s\\\"%s\\\":\";\n",
@@ -353,10 +364,8 @@ gen_field_to_json(const struct field *fd, int first, FILE *f)
 		break;
 	}
 
-	if (fd->rolemap != NULL) {
-		if (fprintf(f, "%20s},\n%16s}\n", "", "") < 0)
-			return 0;
-	}
+	if (fd->rolemap != NULL && fprintf(f, "%16s}\n", "") < 0)
+		return 0;
 
 	return 1;
 }
@@ -426,7 +435,7 @@ gen_data_strct(const struct strct *s, FILE *f)
 	    "%12spub(super) fn to_json(&self%s) -> String {\n"
 	    "%16slet mut ret = String::new();\n",
 	    "", name, "", TAILQ_EMPTY(&s->cfg->arq) ? 
-	    "" : ", role: &super::Ortrole", "") < 0)
+	    "" : ", role: super::Ortrole", "") < 0)
 		goto out;
 
 	first = 1;
@@ -531,7 +540,7 @@ gen_objs_strct(const struct strct *s, FILE *f)
 	    "%12s}\n"
 	    "%8s}\n", 
 	    "", "", name, "", "", "", "", 
-	    TAILQ_EMPTY(&s->cfg->arq) ? "" : "&self.role",
+	    TAILQ_EMPTY(&s->cfg->arq) ? "" : "self.role",
 	    "", "", "", "") < 0)
 		goto out;
 	rc = 1;
@@ -760,7 +769,7 @@ gen_update(const struct update *up, size_t num, FILE *f)
 	if (fprintf(f, ") -> Result<%s> {\n",
 	    up->type == UP_MODIFY ? "bool" : "()") < 0)
 		return 0;
-	if (gen_rolemap(f, up->rolemap) < 0)
+	if (!gen_rolemap(f, up->rolemap))
 		return 0;
 	if (fprintf(f, "%12slet sql = stmt::stmt_fmt(stmt::", "") < 0)
 		return 0;
@@ -1093,7 +1102,7 @@ gen_insert(const struct strct *s, FILE *f)
 
 	if (fputs(") -> Result<i64> {\n", f) == EOF)
 		return 0;
-	if (gen_rolemap(f, s->ins->rolemap) < 0)
+	if (!gen_rolemap(f, s->ins->rolemap))
 		return 0;
 
 	if (fprintf(f,
@@ -1271,7 +1280,7 @@ gen_query(const struct search *s, size_t num, FILE *f)
 
 	if (fputs(" {\n", f) == EOF)
 		return 0;
-	if (gen_rolemap(f, s->rolemap) < 0)
+	if (!gen_rolemap(f, s->rolemap))
 		return 0;
 
 	if (fprintf(f, "%12slet sql = stmt::stmt_fmt(stmt::", "") < 0)
@@ -1412,13 +1421,102 @@ gen_query(const struct search *s, size_t num, FILE *f)
 	return fprintf(f, "%8s}\n", "") >= 0;
 }
 
+/*
+ * Generate all of the possible transitions from the given role into all
+ * possible roles, then all of the transitions from the roles "beneath"
+ * the current role.
+ * Return zero on failure, non-zero on success.
+ */
 static int
-gen_api(const struct config *cfg, FILE *f)
+gen_ortctx_dbrole_role(FILE *f, const struct role *r)
+{
+	const struct role	*rr;
+
+	if (fprintf(f,
+	    "%16sOrtrole::%c%s => {\n"
+	    "%20sif ",
+	    "", toupper((unsigned char)r->name[0]),
+	    r->name + 1, "") < 0)
+		return 0;
+	if (gen_role(f, r, 3, "newrole", 0, 0) < 0)
+		return 0;
+	if (fprintf(f, " {\n"
+	    "%24sself.role = newrole;\n"
+	    "%24sreturn;\n"
+	    "%20s}\n"
+	    "%16s},\n", 
+	    "", "", "", "") < 0)
+		return 0;
+
+	TAILQ_FOREACH(rr, &r->subrq, entries)
+		if (!gen_ortctx_dbrole_role(f, rr))
+			return 0;
+
+	return 1;
+}
+
+/*
+ * Return FALSE on failure, TRUE on success.
+ */
+static int
+gen_ortctx_dbrole(const struct config *cfg, FILE *f)
+{
+	const struct role	*r, *rr;
+
+	if (TAILQ_EMPTY(&cfg->rq))
+		return 1;
+
+	if (fprintf(f,
+	    "%8sfn db_role_current(&self) -> Ortrole {\n"
+	    "%12sreturn self.role;\n"
+	    "%8s}\n", "", "", "") < 0)
+		return 0;
+
+	if (fprintf(f,
+	    "%8sfn db_role(&mut self, newrole: Ortrole) {\n"
+	    "%12sif self.role == newrole {\n"
+	    "%16sreturn;\n"
+	    "%12s}\n"
+	    "%12sif self.role == Ortrole::None {\n"
+	    "%16spanic!(\"role violation\");\n"
+	    "%12s}\n",
+	    "", "", "", "", "", "", "") < 0)
+		return 0;
+
+	if (fprintf(f,
+	    "%12smatch self.role {\n"
+	    "%16sOrtrole::Default => {\n"
+	    "%20sself.role = newrole;\n"
+	    "%20sreturn;\n"
+	    "%16s},\n",
+	    "", "", "", "", "") < 0)
+		return 0;
+
+	TAILQ_FOREACH(r, &cfg->rq, entries)
+		if (strcmp(r->name, "all") == 0)
+			break;
+
+	assert(r != NULL);
+	TAILQ_FOREACH(rr, &r->subrq, entries) 
+		if (!gen_ortctx_dbrole_role(f, rr))
+			return 0;
+
+	return fprintf(f, "%16s_ => { },\n"
+	     "%12s}\n"
+	     "%12spanic!(\"role violation\");\n"
+	     "%8s}\n", "", "", "", "") >= 0;
+}
+
+static int
+gen_ortctx(const struct config *cfg, FILE *f)
 {
 	const struct strct	*s;
 	const struct search	*sr;
 	const struct update	*u;
 	size_t			 pos;
+
+	if (!gen_ortctx_dbrole(cfg, f))
+		return 0;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
 		if (!gen_fill(s, f))
@@ -1507,7 +1605,7 @@ ort_lang_rust(const struct ort_lang_rust *args,
 
 	if (fprintf(f, "\n%4simpl Ortctx {\n", "") < 0)
 		return 0;
-	if (!gen_api(cfg, f))
+	if (!gen_ortctx(cfg, f))
 		return 0;
 
 	if (fprintf(f,

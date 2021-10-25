@@ -14,6 +14,7 @@ digraph {
 		src[label="C"];
 		js[label="TypeScript"];
 		njs[label="Node.js"];
+		rust[label="Rust"];
 		sql[label="SQL"];
 		xliff[label="XLIFF"];
 	}
@@ -21,6 +22,7 @@ digraph {
 	bin -> src;
 	bin -> js;
 	bin -> njs;
+	bin -> rust;
 	bin -> sql;
 	bin -> xliff;
 
@@ -34,6 +36,7 @@ digraph {
 	kcgi[label="kcgi(3)", fontcolor="#888888", color="#888888"];
 	sqlbox[label="sqlbox(3)", fontcolor="#888888", color="#888888"];
 	sqlite[label="sqlite3(3)", fontcolor="#888888", color="#888888"];
+	cargo[label="cargo(1)", fontcolor="#888888", color="#888888"];
 
 	sql -> sqlite1;
 
@@ -43,7 +46,10 @@ digraph {
 	njs -> nodejs;
 	njs -> tsdoc;
 
+	rust -> cargo;
+
 	nodejs -> sqlite[dir="both"];
+	cargo -> sqlite[dir="both"];
 
 	src -> sqlbox[dir="both"];
 	src -> kcgi[dir="both"];

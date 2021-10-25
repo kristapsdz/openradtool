@@ -3,6 +3,39 @@
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
+			<h3>0.14.0</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-10-25">2021-10-25</time>
+		</header>
+		<aside>
+			<p>
+				Add initial <a href="https://rust-lang.org">Rust</a> output.
+				This is still experimental and lacks validation.
+			</p>
+			<p>
+				Fix how <a href="ort-nodejs.1.html">ort-nodejs(1)</a> was handling
+				passwords.  Searching on password fields would prior to this have
+				failed unilaterally.  Password operations (querying, updating, etc.)
+				are now all enforced by regression tests.
+			</p>
+			<p>
+				Improve the <a href="ort-nodejs.1.html">ort-nodejs(1)</a> exception
+				handling for inserts and updates.  It now passes through specific
+				constraint errors instead of catching the entire exception.
+				Moreover, the exception handler is now documented in the manual, as
+				its documentation is very spotty in
+				<a href="https://www.npmjs.com/package/better-sqlite3">better-sqlite3</a>.
+				All of these are now checked in the regression suite.
+			</p>
+			<p>
+				Fix how
+				<a href="ort-c-source.1.html">ort-c-source(1)</a> would produce
+				invalid C code for nested null references.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
 			<h3>0.13.9</h3>
 			<address>Kristaps Dzonsons</address>
 			<time datetime="2021-09-27">2021-09-27</time>

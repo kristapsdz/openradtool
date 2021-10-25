@@ -1,0 +1,14 @@
+digraph {
+	edge [arrowsize="0.5";];
+	bgcolor="transparent";
+	rankdir="LR";
+
+	cfg[label="ort(5)"];
+	bin[label="ort-rust(1)"];
+	rust[label="Rust"];
+	cargo[label="cargo(1)"];
+
+	cfg -> bin;
+	bin -> rust;
+	rust -> cargo[style="dotted"];
+}

@@ -15,8 +15,8 @@ sinclude Makefile.local
 
 #CFLAGS		+= -Weverything -Wno-switch-enum -Wno-padded -Wno-reserved-id-macro
 VERSION_MAJOR	 = 0
-VERSION_MINOR	 = 13
-VERSION_BUILD	 = 9
+VERSION_MINOR	 = 14
+VERSION_BUILD	 = 0
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = audit.o \
 		   compats.o \
@@ -238,6 +238,7 @@ IHTMLS		 = audit-example.ort.html \
 		   db.h.html \
 		   db.c.html \
 		   db.node.ts.html \
+		   db.rust.rs.html \
 		   db.sql.html \
 		   db.old.ort.html \
 		   db.update.sql.html \
@@ -267,7 +268,8 @@ IMAGES		 = index.svg \
 		   index-fig5.svg \
 		   index-fig6.svg \
 		   index-fig7.svg \
-		   index-fig8.svg
+		   index-fig8.svg \
+		   index-fig9.svg
 
 # Only needed for test, not built by default.
 LIBS_SQLBOX	!= pkg-config --libs sqlbox 2>/dev/null || echo "-lsqlbox -lsqlite3"
@@ -462,7 +464,6 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	install -m 0444 regress/javascript/*.xml .dist/openradtool-$(VERSION)/regress/javascript
 	install -m 0444 regress/json/*.md .dist/openradtool-$(VERSION)/regress/json
 	install -m 0444 regress/json/*.ts .dist/openradtool-$(VERSION)/regress/json
-	install -m 0444 regress/nodejs/*.md .dist/openradtool-$(VERSION)/regress/nodejs
 	install -m 0444 regress/nodejs/*.ts .dist/openradtool-$(VERSION)/regress/nodejs
 	install -m 0444 regress/rust/*.ort .dist/openradtool-$(VERSION)/regress/rust
 	install -m 0444 regress/rust/*.sh .dist/openradtool-$(VERSION)/regress/rust
@@ -506,6 +507,9 @@ db.ts: ort-javascript db.ort ortPrivate.ts
 
 db.node.ts: ort-nodejs db.ort
 	./ort-nodejs db.ort >$@
+
+db.rust.rs: ort-rust db.ort
+	./ort-rust db.ort >$@
 
 db.update.sql: ort-sqldiff db.old.ort db.ort
 	./ort-sqldiff db.old.ort db.ort >$@
@@ -584,6 +588,9 @@ db.ts.html: db.ts
 db.node.ts.html: db.node.ts
 	highlight -s whitengrey -I -l --src-lang=js db.node.ts >$@
 
+db.rust.rs.html: db.rust.rs
+	highlight -s whitengrey -I -l --src-lang=rust db.rust.rs >$@
+
 db.update.sql.html: db.update.sql
 	highlight -s whitengrey -I -l --src-lang=sql db.update.sql >$@
 
@@ -611,7 +618,7 @@ atom.xml: versions.xml atom-template.xml
 
 clean:
 	rm -f $(BINS) $(GENHEADERS) $(LIBOBJS) $(OBJS) $(LIBS) test test.o
-	rm -f db.c db.h db.o db.sql db.ts db.node.ts db.update.sql db.db db.trans.ort
+	rm -f db.c db.h db.o db.sql db.ts db.node.ts db.rust.rs db.update.sql db.db db.trans.ort
 	rm -f openradtool.tar.gz openradtool.tar.gz.sha512
 	rm -f $(IMAGES) highlight.css $(HTMLS) atom.xml $(PKGCONFIGS)
 	rm -f db.ort.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
@@ -897,7 +904,7 @@ regress: all
 		echo "=== ort-nodejs compile tests === " ; \
 		set -e ; \
 		$(TS_NODE) --skip-project \
-			regress/nodejs/compile-runner.ts ; \
+			regress/nodejs/regress-compile.ts ; \
 		set +e ; \
 	else \
 		echo "!!! skipping ort-nodejs compile tests !!! " ; \

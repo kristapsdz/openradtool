@@ -73,7 +73,7 @@
 					<p class="intro">
 						<span class="nm">openradtool</span> (<q class="nm">ort</q>) is an 
 						<a href="https://opensource.org/licenses/ISC">open source</a> RAD tool generating front-end code
-						(TypeScript) and back-end code (SQL, C, Node.js) from a straightforward data model.
+						(TypeScript) and back-end code (SQL, C, Rust, Node.js) from a straightforward data model.
 					</p>
 				</div>
 				<p>
@@ -105,7 +105,7 @@
 							Data Layer
 						</span>
 						<span class="contents">
-							Node.js and C <a href="#gen-backend">back-end source code</a>&#8212;API and
+							Node.js, C, and Rust <a href="#gen-backend">back-end source code</a>&#8212;API and
 							implementation&#8212;for manipulating and exporting from the database.  This must be
 							driven by your program code.
 						</span>
@@ -197,11 +197,14 @@
 					<br />
 					% <a href="ort-nodejs.1.html">ort-nodejs</a> 
 					<a href="db.ort.html">db.ort</a> &gt; <a href="db.node.ts.html">db.node.ts</a>
+					<br />
+					% <a href="ort-rust.1.html">ort-rust</a> 
+					<a href="db.ort.html">db.ort</a> &gt; <a href="db.rust.rs.html">db.rust.rs</a>
 				</code>
 				<section>
 					<p>
-						Both C and <a href="https://nodejs.org">Node.js</a> back-ends are available.
-						The Node.js output is still somewhat experimental.
+						C, Rust, and <a href="https://nodejs.org">Node.js</a> back-ends are available.
+						The Rust output is still somewhat experimental.
 					</p>
 					<figure>
 						<img src="index-fig8.svg" alt="ort-nodejs(1) functionality" />
@@ -221,6 +224,14 @@
 						a <a href="https://kristaps.bsd.lv/kcgi">kcgi(3)</a> CGI script.
 						Each function and structure in the header file is documented thoroughly.
 						The source files are also documented, though more sparsely.
+					</p>
+					<figure>
+						<img src="index-fig9.svg" alt="ort-c-rust(1) functionality" />
+					</figure>
+					<p>
+						The <a href="https://rust-lang.org">Rust</a> output is still experimental, but is able to
+						interface with data models in a manner similar to the Node.js output.
+						It does not yet have integrated documentation or validation.
 					</p>
 				</section>
 				<h2 id="gen-sql">

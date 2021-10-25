@@ -339,25 +339,9 @@ Any enumerations or bitfields
 in the configuration are output in the
 .Vt ort::data
 submodule and named as themselves.
-Enumeration has explicit discriminator values.
-.\" Bitfields have two explicit discriminators per item: one for the bit index, one for the
-.\" produced mask.
-.\" These are prefixed by
-.\" .Qq BITI
-.\" and
-.\" .Qq BITF ,
-.\" respectively.
-.\" .Bd -literal
-.\" namespace ortns {
-.\" 	enum anenum {
-.\" 		item2 = '3'
-.\" 	}
-.\" 	enum abitf {
-.\" 		BITI_item2 = '3',
-.\" 		BITF_item2 = '8',
-.\" 	}
-.\" }
-.\" .Ed
+Enumerations have explicit discriminator values set to the item value.
+Bitfields also have explicit discriminator, but assigned the bit index (from
+one).
 .Pp
 Each
 .Cm struct
@@ -402,7 +386,7 @@ be an exemplar structure name,
 .Vt ort::objs::Foo ,
 the object consists of the following.
 .Bl -tag -width Ds
-.It Fa "data" Ns No : super::data::Foo
+.It Va "data" Ns No : Vt Foo
 The data itself.
 .It Fn "export" No -> Ft String
 Export as a JSON string in a surrounding object.

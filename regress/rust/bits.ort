@@ -1,0 +1,12 @@
+bits bar {
+	item a 1;
+	item b 2;
+	item c 3;
+};
+
+struct foo {
+	field a bits bar;
+	field id int rowid;
+	insert;
+	search id: name id;
+};

@@ -1,0 +1,8 @@
+struct foo {
+	field a text;
+	field b text;
+	field c text;
+	field id int rowid;
+	insert;
+	search id: name id;
+};

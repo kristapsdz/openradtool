@@ -138,7 +138,7 @@ gen_bitfs(FILE *f, const struct config *cfg)
 	    "values (bits 0\\(en63).\n"
 	    "They're used for input validation and value access.\n"
 	    "The following bitfields are available:\n"
-	    ".Bl -tag -width Ds -offset indent\n") < 0)
+	    ".Bl -tag -width Ds\n") < 0)
 		return -1;
 
 	TAILQ_FOREACH(b, &cfg->bq, entries) {
@@ -146,7 +146,7 @@ gen_bitfs(FILE *f, const struct config *cfg)
 			return -1;
 		if (b->doc != NULL && !gen_doc_block(f, b->doc, 1, 0))
 			return -1;
-		if (fprintf(f, ".Bl -tag -width Ds\n") < 0)
+		if (fprintf(f, ".Bl -tag -width Ds -compact\n") < 0)
 			return -1;
 		if ((name = strdup(b->name)) == NULL)
 			return -1;
@@ -194,7 +194,7 @@ gen_enums(FILE *f, const struct config *cfg)
 	    "of values.\n"
 	    "They're used for input validation and value comparison.\n"
 	    "The following enumerations are available.\n"
-	    ".Bl -tag -width Ds -offset indent\n") < 0)
+	    ".Bl -tag -width Ds\n") < 0)
 		return -1;
 
 	TAILQ_FOREACH(e, &cfg->eq, entries) {
@@ -251,6 +251,43 @@ gen_roles(FILE *f, const struct config *cfg)
 
 	return fprintf(f, ".El\n") < 0 ? -1 : 1;
 }
+
+/*
+ * Return FALSE on failure, TRUE on success.
+ */
+static int
+gen_role_r(FILE *f, const struct role *r, int *first)
+{
+	const struct role	*rr;
+
+	if (strcmp(r->name, "all")) {
+		if (fprintf(f, "%s\n.Dv ROLE_%s",
+		    *first ? "" : " ,", r->name) < 0)
+			return 0;
+		*first = 0;
+	}
+
+	TAILQ_FOREACH(rr, &r->subrq, entries)
+		if (!gen_role_r(f, rr, first))
+			return 0;
+	return 1;
+}
+
+/*
+ * Return FALSE on failure, TRUE on success.
+ */
+static int
+gen_rolemap(FILE *f, const struct rolemap *map)
+{
+	const struct rref	*rr;
+	int			 first = 1;
+
+	TAILQ_FOREACH(rr, &map->rq, entries)
+		if (!gen_role_r(f, rr->role, &first))
+			return 0;
+	return 1;
+}
+
 
 static int
 gen_field(FILE *f, const struct field *fd)
@@ -332,7 +369,7 @@ gen_strcts(FILE *f, const struct config *cfg)
 	    "Structures are the mainstay of the application.\n"
 	    "They correspond to tables in the database.\n"
 	    "The following structures are available:\n"
-	    ".Bl -tag -width Ds -offset indent\n") < 0)
+	    ".Bl -tag -width Ds\n") < 0)
 		return -1;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries) {
@@ -347,14 +384,19 @@ gen_strcts(FILE *f, const struct config *cfg)
 	return fprintf(f, ".El\n") < 0 ? -1 : 1;
 }
 
+/*
+ * Return FALSE on failure, TRUE on success.
+ */
 static int
-gen_search(FILE *f, const struct search *sr)
+gen_query(FILE *f, const struct search *sr, int syn)
 {
 	const char		*retname;
 	const struct sent	*sent;
-	int		 	 c, hasunary = 0;
+	int		 	 c;
 
-	if (fputs(".It Ft \"", f) == EOF)
+	if (syn && fputs(".Ft \"", f) == EOF)
+		return 0;
+	if (!syn && fputs(".It Ft \"", f) == EOF)
 		return 0;
 
 	retname = sr->dst != NULL ? 
@@ -370,7 +412,11 @@ gen_search(FILE *f, const struct search *sr)
 	if (c < 0)
 		return 0;
 
-	if (fprintf(f, "\" Fn db_%s_%s", 
+	if (syn && fprintf(f, "\"\n"
+	    ".Fo db_%s_%s",
+	    sr->parent->name, get_stype_str(sr->type)) < 0)
+		return 0;
+	if (!syn && fprintf(f, "\" Fn db_%s_%s",
 	    sr->parent->name, get_stype_str(sr->type)) < 0)
 		return 0;
 
@@ -385,173 +431,217 @@ gen_search(FILE *f, const struct search *sr)
 		if (fprintf(f, "_%s", sr->name) < 0)
 			return 0;
 
-	if (fputs(
+	if (syn && fputs(
+            "\n"
+	    ".Fa \"struct ort *ort\"\n", f) == EOF)
+		return 0;
+	if (!syn && fputs(
 	    "\n"
 	    ".TS\n"
-	    "lw6 l l.\n"
-            "-\t\\fIstruct ort *\\fR\t\\fIctx\\fR\n", f) == EOF)
+	    "l l l.\n"
+            "-\tort\tstruct ort *\n", f) == EOF)
 		return 0;
 
-	if (sr->type == STYPE_ITERATE && fprintf(f, 
-	    "-\t\\fI%s_cb\\fR\t\\fIcb\\fR\n"
-	    "-\t\\fIvoid *\\fR\t\\fIarg\\fR\n", retname) < 0)
-		return 0;
+	if (sr->type == STYPE_ITERATE) {
+		if (syn && fprintf(f,
+		    ".Fa \"%s_cb cb\"\n"
+		    ".Fa \"void *arg\"\n", retname) < 0)
+			return 0;
+		if (!syn && fprintf(f, 
+		    "-\tcb\t%s_cb\n"
+		    "-\targ\tvoid *\n", retname) < 0)
+			return 0;
+	}
 
 	TAILQ_FOREACH(sent, &sr->sntq, entries) {
-		if (OPTYPE_ISUNARY(sent->op)) {
-			hasunary = 1;
+		if (syn) {
+			if (OPTYPE_ISUNARY(sent->op))
+				continue;
+			if (sent->field->type == FTYPE_BLOB)
+				if (fprintf(f,
+				    ".Fa \"size_t %s_sz\n",
+				    sent->field->name) < 0)
+					return 0;
+			if (fputs(".Fa \"", f) == EOF)
+				return 0;
+			if (!gen_field_type(f, sent->field))
+				return 0;
+			if (fprintf(f, " %s\"\n",
+			    sent->field->name) < 0)
+				return 0;
 			continue;
 		}
-		if (sent->field->type == FTYPE_BLOB)
-			if (fprintf(f, 
-			    "-\t\\fIsize_t\\fR\t\\fI%s\\fR (size)\n", 
+		if (sent->field->type == FTYPE_BLOB &&
+		    !OPTYPE_ISUNARY(sent->op))
+			if (fprintf(f, "-\t(%s size)\tsize_t\n", 
 			    sent->field->name) < 0)
 				return 0;
 		if (fprintf(f, "%s\t", get_optype_str(sent->op)) < 0)
 			return 0;
-		if (fputs("\\fI", f) == EOF)
+		if (fprintf(f, "%s\t", sent->field->name) < 0)
 			return 0;
 		if (!gen_field_type(f, sent->field))
 			return 0;
-		if (fprintf(f, "\\fR\t\\fI%s\\fR\n", 
-		    sent->field->name) < 0)
+		if (fputc('\n', f) == EOF)
 			return 0;
-
 	}
 
-	if (hasunary) {
+	if (syn) {
+		if (fputs(".Fc\n", f) == EOF)
+			return 0;
+	} else {
 		if (fputs(".TE\n", f) == EOF)
 			return 0;
-		if (fputs(".Pp\n"
-		    "Unary operations:\n"
-		    ".Pp\n"
-		    ".TS\n"
-		    "lw6 lw12 l.\n", f) == EOF)
+		if (sr->doc != NULL && !gen_doc_block(f, sr->doc, 0, 1))
 			return 0;
-		TAILQ_FOREACH(sent, &sr->sntq, entries) {
-			if (!OPTYPE_ISUNARY(sent->op))
-				continue;
-			if (fprintf(f, "%s\t",
-			    get_optype_str(sent->op)) < 0)
+		if (sr->rolemap) {
+			if (fputs(
+			    ".Pp\n"
+			    "Only allowed to the following:", f) == EOF)
 				return 0;
-			if (fputs("\\fI", f) == EOF)
+			if (!gen_rolemap(f, sr->rolemap))
 				return 0;
-			if (!gen_field_type(f, sent->field))
-				return 0;
-			if (fprintf(f, "\\fR\t\\fI%s\\fR\n", 
-			    sent->field->name) < 0)
+			if (fputs(" .\n", f) == EOF)
 				return 0;
 		}
 	}
-
-	if (fputs(".TE\n", f) == EOF)
-		return 0;
-	if (sr->doc != NULL && !gen_doc_block(f, sr->doc, 0, 1))
-		return 0;
 	return 1;
-
 }
 
 /*
- * Return -1 on failure, 0 if nothing written, 1 if something written.
+ * Return FALSE on failure, TRUE on success.
  */
 static int
-gen_general(FILE *f, const struct config *cfg)
+gen_general(FILE *f, const struct config *cfg, int syn)
 {
 
-	if (fputs
-	    ("These utility functions allow opening the database,\n"
-	     "closing it, and manipulating its state (roles,\n"
-	     "logging, etc.).\n"
-	     ".Bl -tag -width Ds -offset indent\n", f) == EOF)
-		return -1;
-	if (fputs
-	    (".It Ft \"struct ort *\" Fn db_open_logging\n"
-	     ".TS\n"
-	     "l l.\n"
-	     "\\fIconst char *\\fR\t\\fIfile\\fR\n"
-	     "\\fI(void *)(const char *, void *)\\fR\t\\fIlog\\fR\n"
-	     "\\fI(void *)(const char *, ...)\\fR\t\\fIlog_short\\fR\n"
-	     "\\fIvoid *\\fR\t\\fIarg\\fR\n"
-	     ".TE\n"
-	     ".Pp\n"
-	     "Open a database\n"
-	     ".Fa file\n"
-	     "in a child process with logging enabled.\n"
-	     "Returns\n"
-	     ".Dv NULL\n"
-	     "on failure.\n"
-	     "If both callbacks are provided,\n"
-	     ".Fa log\n"
-	     "overrides\n"
-	     ".Fa log_short .\n"
-	     "The logging function is run both in a child and\n"
-	     "parent process, so it must not have side effects.\n"
-	     ".Fa arg\n"
-	     "is passed to\n"
-	     ".Fa log\n"
-	     "as it is inherited by the child process.\n"
-	     "The context must be closed by\n"
-	     ".Fn db_close .\n"
-	     "See\n"
-	     ".Fn db_logging_data\n"
-	     "to set the pointer after initialisation.\n", f) == EOF)
-		return -1;
-	if (fputs
-	    (".It Ft \"struct ort *\" Fn db_open\n"
-	     ".TS\n"
-	     "l l.\n"
-	     "\\fIconst char *\\fR\t\\fIfile\\fR\n"
-	     ".TE\n"
-	     ".Pp\n"
-	     "Like\n"
-	     ".Fn db_open_logging\n"
-	     "but without logging enabled.\n", f) == EOF)
-		return -1;
-	if (fputs
-	    (".It Ft void Fn db_logging_data\n"
-	     ".TS\n"
-	     "l l.\n"
-	     "\\fIstruct ort *\\fR\t\\fIort\\fR\n"
-	     "\\fIconst void *\\fR\t\\fIarg\\fR\n"
-	     "\\fIsize_t\\fR\t\\fIargsz\\fR\n"
-	     ".TE\n"
-	     ".Pp\n"
-	     "Sets the argument giving to the logging functions (if\n"
-	     "enabled) to the contents of\n"
-	     ".Fa arg ,\n"
-	     "of length\n"
-	     ".Fa argsz ,\n"
-	     "which is copied into the child process.\n"
-	     "Has no effect if logging is not enabled.\n"
-	     "If\n"
-	     ".Fa argsz\n"
-	     "is zero, nothing is passed to the logger.\n", f) == EOF)
-		return -1;
-	if (fputs
-	    (".It Ft void Fn db_close\n"
-	     ".TS\n"
-	     "l l.\n"
-	     "\\fIstruct ort *\\fR\t\\fIp\\fR\n"
-	     ".TE\n"
-	     ".Pp\n"
-	     "Close a database opened with\n"
-	     ".Fn db_open\n"
-	     "or\n"
-	     ".Fn db_open_logging .\n"
-	     "Does nothing if\n"
-	     ".Fa p\n"
-	     "is\n"
-	     ".Dv NULL .\n", f) == EOF)
-		return -1;
-	return fputs(".El\n", f) == EOF ? -1 : 1;
+	if (syn == 1) {
+		if (fputs(
+		    ".Ft \"struct ort *\"\n"
+		    ".Fo db_open_logging\n"
+		    ".Fa \"const char *file\"\n"
+		    ".Fa \"(void *log)(const char *, void *)\"\n"
+		    ".Fa \"(void *log_short)(const char *, ...)\"\n"
+		    ".Fa \"void *arg\"\n"
+		    ".Fc\n", f) == EOF)
+			return 0;
+		if (fputs(
+		    ".Ft \"struct ort *\"\n"
+		    ".Fo db_open\n"
+		    ".Fa \"const char *file\"\n"
+		    ".Fc\n", f) == EOF)
+			return 0;
+	    	if (fputs(
+		    ".Ft void\n"
+		    ".Fo db_logging_data\n"
+		    ".Fa \"struct ort *ort\"\n"
+		    ".Fa \"const void *arg\"\n"
+		    ".Fa \"size_t argsz\"\n"
+		    ".Fc\n", f) == EOF)
+			return 0;
+		if (fputs(
+		    ".Ft void\n"
+		    ".Fo db_close\n"
+		    ".Fa \"struct ort *ort\"\n"
+		    ".Fc\n", f) == EOF)
+			return 0;
+		return 1;
+	}
+
+	if (fputs(
+	    ".Ss Database management\n"
+	    "Allow opening, closing, and manipulating databases "
+	    "(roles, logging, etc.).\n"
+	    ".Bl -tag -width Ds\n", f) == EOF)
+		return 0;
+	if (fputs(
+	    ".It Ft \"struct ort *\" Fn db_open_logging\n"
+	    ".TS\n"
+	    "l l.\n"
+	    "file\tconst char\t*\n"
+	    "log\t(void *)(const char *, void *)\n"
+	    "log_short\t(void *)(const char *, ...)\n"
+	    "void *\targ\n"
+	    ".TE\n"
+	    ".Pp\n"
+	    "Open a database\n"
+	    ".Fa file\n"
+	    "in a child process with logging enabled.\n"
+	    "Returns\n"
+	    ".Dv NULL\n"
+	    "on failure.\n"
+	    "If both callbacks are provided,\n"
+	    ".Fa log\n"
+	    "overrides\n"
+	    ".Fa log_short .\n"
+	    "The logging function is run both in a child and\n"
+	    "parent process, so it must not have side effects.\n"
+	    ".Fa arg\n"
+	    "is passed to\n"
+	    ".Fa log\n"
+	    "as it is inherited by the child process.\n"
+	    "The context must be closed by\n"
+	    ".Fn db_close .\n"
+	    "See\n"
+	    ".Fn db_logging_data\n"
+	    "to set the pointer after initialisation.\n", f) == EOF)
+		return 0;
+	if (fputs(
+	    ".It Ft \"struct ort *\" Fn db_open\n"
+	    ".TS\n"
+	    "l l.\n"
+	    "file\tconst char *\n"
+	    ".TE\n"
+	    ".Pp\n"
+	    "Like\n"
+	    ".Fn db_open_logging\n"
+	    "but without logging enabled.\n", f) == EOF)
+		return 0;
+	if (fputs(
+	    ".It Ft void Fn db_logging_data\n"
+	    ".TS\n"
+	    "l l.\n"
+	    "ort\tstruct ort *\n"
+	    "arg\tconst void *\n"
+	    "argsz\tsize_t\n"
+	    ".TE\n"
+	    ".Pp\n"
+	    "Sets the argument giving to the logging functions (if\n"
+	    "enabled) to the contents of\n"
+	    ".Fa arg ,\n"
+	    "of length\n"
+	    ".Fa argsz ,\n"
+	    "which is copied into the child process.\n"
+	    "Has no effect if logging is not enabled.\n"
+	    "If\n"
+	    ".Fa argsz\n"
+	    "is zero, nothing is passed to the logger.\n", f) == EOF)
+		return 0;
+	if (fputs(
+	    ".It Ft void Fn db_close\n"
+	    ".TS\n"
+	    "l l.\n"
+	    "ort\tstruct ort *\n"
+	    ".TE\n"
+	    ".Pp\n"
+	    "Close a database opened with\n"
+	    ".Fn db_open\n"
+	    "or\n"
+	    ".Fn db_open_logging .\n"
+	    "Does nothing if\n"
+	    ".Fa ort\n"
+	    "is\n"
+	    ".Dv NULL .\n", f) == EOF)
+		return 0;
+
+	return fputs(".El\n.Pp\n", f) != EOF;
 }
 
 /*
- * Return -1 on failure, 0 if nothing written, 1 if something written.
+ * Return FALSE on failure, TRUE on success.
  */
 static int
-gen_searches(FILE *f, const struct config *cfg)
+gen_queries(FILE *f, const struct config *cfg, int syn)
 {
 	const struct strct	*s;
 	const struct search	*sr;
@@ -559,35 +649,52 @@ gen_searches(FILE *f, const struct config *cfg)
 	TAILQ_FOREACH(s, &cfg->sq, entries)
 		if (!TAILQ_EMPTY(&s->sq))
 			break;
-	if (s == NULL)
-		return 0;
 
-	if (fputs
-	    ("The following queries are available,\n"
-	     "which allow accepted roles to extract\n"
-	     "data from the database:\n"
-	     ".Bl -tag -width Ds -offset indent\n", f) == EOF)
-		return -1;
+	if (s == NULL)
+		return 1;
+
+	if (!syn && fputs(
+	    ".Ss Database queries\n"
+	    "Queries extract data from the database.\n"
+	    "They either return an individual structures\n"
+	    ".Pq Qq get ,\n"
+	    "iterate over a set of structures\n"
+	    ".Pq Qq iterate ,\n"
+	    "return a list of structures\n"
+	    ".Pq Qq list ,\n"
+	    "or return a count of matched structures\n"
+	    ".Pq Qq count .\n"
+	    ".Bl -tag -width Ds\n", f) == EOF)
+		return 0;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries)
 		TAILQ_FOREACH(sr, &s->sq, entries)
-			if (!gen_search(f, sr))
-				return -1;
-
-	return fputs(".El\n", f) == EOF ? -1 : 1;
+			if (!gen_query(f, sr, syn))
+				return 0;
+	
+	if (!syn && fputs(".El\n.Pp\n", f) == EOF)
+		return 0;
+	return 1;
 }
 
+/*
+ * Return FALSE on failure, TRUE on success.
+ */
 static int
-gen_update(FILE *f, const struct update *up)
+gen_update(FILE *f, const struct update *up, int syn)
 {
 	const struct uref	*ur;
 	const char		*rettype, *functype;
-	int			 hasunary = 0;
 
 	rettype = up->type == UP_MODIFY ? "int" : "void";
 	functype = up->type == UP_MODIFY ? "update" : "delete";
 
-	if (fprintf(f, ".It Ft %s Fn db_%s_%s",
+	if (syn && fprintf(f,
+	    ".Ft %s\n"
+	    ".Fo db_%s_%s",
+	    rettype, up->parent->name, functype) < 0)
+		return 0;
+	if (!syn && fprintf(f, ".It Ft %s Fn db_%s_%s",
 	    rettype, up->parent->name, functype) < 0)
 		return 0;
 
@@ -620,127 +727,185 @@ gen_update(FILE *f, const struct update *up)
 	} else if (fprintf(f, "_%s", up->name) < 0)
 		return 0;
 
-	if (fputs(
+	if (syn && fputs(
+	    "\n"
+	    ".Fa \"struct ort *ort\"\n", f) == EOF)
+		return 0;
+	if (!syn && fprintf(f,
 	    "\n"
 	    ".TS\n"
-	    "l lw6 l l.\n"
-	    "-\t-\t\\fIstruct ort *\\fR\t\\fIctx\\fR\n", f) == EOF)
+	    "%sl l l.\n"
+	    "%s-\tort\tstruct ort *\n",
+	    up->type == UP_MODIFY ? "l " : "",
+	    up->type == UP_MODIFY ? "-\t" : "") < 0)
 		return 0;
 
 	TAILQ_FOREACH(ur, &up->mrq, entries) {
-		if (ur->field->type == FTYPE_BLOB)
-			if (fprintf(f, "\\(<-\t-\t"
-			    "\\fIsize_t\\fR\t\\fI%s\\fR (size)\n", 
-			    ur->field->name) < 0)
-				return 0;
-		if (fprintf(f, "\\(<-\t%s\t",
-		    get_modtype_str(ur->mod)) < 0)
-			return 0;
-		if (fputs("\\fI", f) == EOF)
-			return 0;
-		if (!gen_field_type(f, ur->field))
-			return 0;
-		if (fprintf(f, "\\fR\t\\fI%s\\fR\n", 
-		    ur->field->name) < 0)
-			return 0;
-
-	}
-
-	TAILQ_FOREACH(ur, &up->crq, entries) {
-		if (OPTYPE_ISUNARY(ur->op)) {
-			hasunary = 1;
-			continue;
-		}
-		if (ur->field->type == FTYPE_BLOB)
-			if (fprintf(f, "\\(->\t-\t"
-			    "\\fIsize_t\\fR\t\\fI%s\\fR (size)\n", 
-			    ur->field->name) < 0)
-				return 0;
-		if (fprintf(f, "\\(->\t%s\t",
-		    get_optype_str(ur->op)) < 0)
-			return 0;
-		if (fputs("\\fI", f) == EOF)
-			return 0;
-		if (!gen_field_type(f, ur->field))
-			return 0;
-		if (fprintf(f, "\\fR\t\\fI%s\\fR\n", 
-		    ur->field->name) < 0)
-			return 0;
-
-	}
-
-	if (hasunary) {
-		if (fputs(".TE\n", f) == EOF)
-			return 0;
-		if (fputs(".Pp\n"
-		    "Unary operations:\n"
-		    ".Pp\n"
-		    ".TS\n"
-		    "l lw6 l l.\n", f) == EOF)
-			return 0;
-		TAILQ_FOREACH(ur, &up->crq, entries) {
-			if (!OPTYPE_ISUNARY(ur->op))
-				continue;
-			if (fprintf(f, "\\(->\t%s\t",
-			    get_optype_str(ur->op)) < 0)
-				return 0;
-			if (fputs("\\fI", f) == EOF)
+		if (syn) {
+			if (ur->field->type == FTYPE_BLOB)
+				if (fprintf(f,
+				    ".Fa \"size_t %s_sz\n",
+				    ur->field->name) < 0)
+					return 0;
+			if (fputs(".Fa \"", f) == EOF)
 				return 0;
 			if (!gen_field_type(f, ur->field))
 				return 0;
-			if (fprintf(f, "\\fR\t\\fI%s\\fR\n", 
+			if (fprintf(f, " %s\"\n", ur->field->name) < 0)
+				return 0;
+			continue;
+		}
+		if (fputs("\\(<-\t", f) == EOF)
+			return 0;
+		if (ur->field->type == FTYPE_BLOB)
+			if (fprintf(f, "-\t%s (size)\tsize_t\n\\(<-\t",
 			    ur->field->name) < 0)
+				return 0;
+		if (fprintf(f, "%s\t%s\t",
+		    get_modtype_str(ur->mod), ur->field->name) < 0)
+			return 0;
+		if (!gen_field_type(f, ur->field))
+			return 0;
+		if (fputc('\n', f) == EOF)
+			return 0;
+	}
+
+	TAILQ_FOREACH(ur, &up->crq, entries) {
+		if (syn && OPTYPE_ISUNARY(ur->op))
+			continue;
+		if (syn) {
+			if (ur->field->type == FTYPE_BLOB)
+				if (fprintf(f,
+				    ".Fa \"size_t %s_sz\n",
+				    ur->field->name) < 0)
+					return 0;
+			if (fputs(".Fa \"", f) == EOF)
+				return 0;
+			if (!gen_field_type(f, ur->field))
+				return 0;
+			if (fprintf(f, " %s\"\n", ur->field->name) < 0)
+				return 0;
+			continue;
+		}
+		if (up->type == UP_MODIFY &&
+		    fputs("\\(->\t", f) == EOF)
+			return 0;
+		if (ur->field->type == FTYPE_BLOB &&
+		    !OPTYPE_ISUNARY(ur->op)) {
+			if (fprintf(f, "-\t%s (size)\tsize_t\n",
+			    ur->field->name) < 0)
+				return 0;
+			if (up->type == UP_MODIFY &&
+			    fputs("\\(->\t", f) == EOF)
+				return 0;
+		}
+		if (fprintf(f, "%s\t%s\t",
+		    get_optype_str(ur->op), ur->field->name) < 0)
+			return 0;
+		if (!gen_field_type(f, ur->field))
+			return 0;
+		if (fputc('\n', f) == EOF)
+			return 0;
+	}
+
+	if (syn) {
+		if (fputs(".Fc\n", f) == EOF)
+			return 0;
+	} else {
+		if (fputs(".TE\n", f) == EOF)
+			return 0;
+		if (up->doc != NULL && !gen_doc_block(f, up->doc, 0, 1))
+			return 0;
+		if (up->rolemap) {
+			if (fputs(
+			    ".Pp\n"
+			    "Only allowed to the following:", f) == EOF)
+				return 0;
+			if (!gen_rolemap(f, up->rolemap))
+				return 0;
+			if (fputs(" .\n", f) == EOF)
 				return 0;
 		}
 	}
-
-	if (fputs(".TE\n", f) == EOF)
-		return 0;
-	if (up->doc != NULL && !gen_doc_block(f, up->doc, 0, 1))
-		return 0;
 	return 1;
 }
 
+/*
+ * Return FALSE on failure, TRUE on success.
+ */
 static int
-gen_insert(FILE *f, const struct strct *s)
+gen_insert(FILE *f, const struct strct *s, int syn)
 {
 	const struct field	*fd;
 
-	if (fprintf(f, ".It Ft int64_t Fn db_%s_insert\n", s->name) < 0)
+	if (syn && fprintf(f,
+	    ".Ft int64_t\n"
+	    ".Fo db_%s_insert\n", s->name) < 0)
 		return 0;
-
-	if (fputs(".TS\nl l.\n", f) == EOF)
+	if (!syn && fprintf(f,
+	    ".It Ft int64_t Fn db_%s_insert\n", s->name) < 0)
 		return 0;
-	if (fputs("\\fIstruct ort *\\fR\t\\fIctx\\fR\n", f) == EOF)
+	if (syn && fputs(
+	    ".Fa \"struct ort *ort\"\n", f) == EOF)
+		return 0;
+	if (!syn && fputs(
+	    ".TS\nl l.\n"
+	    "ort\tstruct ort *\n", f) == EOF)
 		return 0;
 
 	TAILQ_FOREACH(fd, &s->fq, entries) {
 		if (fd->type == FTYPE_STRUCT || 
 		    (fd->flags & FIELD_ROWID))
 			continue;
+		if (syn) {
+			if (fd->type == FTYPE_BLOB)
+				if (fprintf(f,
+				    ".Fa \"size_t %s_sz\"\n",
+				    fd->name) < 0)
+					return 0;
+			if (fputs(".Fa \"", f) == EOF)
+				return 0;
+			if (!gen_field_type(f, fd))
+				return 0;
+			if (fprintf(f, " %s\"\n", fd->name) < 0)
+				return 0;
+			continue;
+		}
 		if (fd->type == FTYPE_BLOB)
-			if (fprintf(f,
-			    "\\fIsize_t\\fR\t\\fI%s\\fR (size)\n", 
+			if (fprintf(f, "%s (size)\tsize_t\n",
 			    fd->name) < 0)
 				return 0;
-		if (fputs("\\fI", f) == EOF)
+		if (fprintf(f, "%s\t", fd->name) < 0)
 			return 0;
 		if (!gen_field_type(f, fd))
 			return 0;
-		if (fprintf(f, "\\fR\t\\fI%s\\fR\n", fd->name) < 0)
+		if (fputc('\n', f) == EOF)
 			return 0;
 
 	}
 
-	return fputs(".TE\n", f) != EOF;
-
+	if (syn && fputs(".Fc\n", f) == EOF)
+		return 0;
+	if (!syn && fputs(".TE\n", f) == EOF)
+		return 0;
+	if (!syn && s->ins->rolemap) {
+		if (fputs(
+		    ".Pp\n"
+		    "Only allowed to the following:", f) == EOF)
+			return 0;
+		if (!gen_rolemap(f, s->ins->rolemap))
+			return 0;
+		if (fputs(" .\n", f) == EOF)
+			return 0;
+	}
+	return 1;
 }
 
 /*
- * Return -1 on failure, 0 if nothing written, 1 if something written.
+ * Return FALSE on failure, TRUE on success.
  */
 static int
-gen_deletes(FILE *f, const struct config *cfg)
+gen_deletes(FILE *f, const struct config *cfg, int syn)
 {
 	const struct strct	*s;
 	const struct update	*up;
@@ -749,28 +914,29 @@ gen_deletes(FILE *f, const struct config *cfg)
 		if (!TAILQ_EMPTY(&s->dq))
 			break;
 	if (s == NULL)
-		return 0;
+		return 1;
 
-	if (fputs
-	    ("Deletes allow for accepted roles to\n"
-	     "delete data from the database.\n"
-	     "The following deletes are available:\n"
-	     ".Bl -tag -width Ds -offset indent\n", f) == EOF)
-		return -1;
+	if (!syn && fputs(
+	    ".Ss Database deletions\n"
+	    "Deletes from the databsae given constraint satisfaction.\n"
+	    ".Bl -tag -width Ds\n", f) == EOF)
+		return 0;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries)
 		TAILQ_FOREACH(up, &s->dq, entries)
-			if (!gen_update(f, up))
-				return -1;
+			if (!gen_update(f, up, syn))
+				return 0;
 
-	return fputs(".El\n", f) == EOF ? -1 : 1;
+	if (!syn && fputs(".El\n.Pp\n", f) == EOF)
+		return 0;
+	return 1;
 }
 
 /*
- * Return -1 on failure, 0 if nothing written, 1 if something written.
+ * Return FALSE on failure, TRUE on success.
  */
 static int
-gen_updates(FILE *f, const struct config *cfg)
+gen_updates(FILE *f, const struct config *cfg, int syn)
 {
 	const struct strct	*s;
 	const struct update	*up;
@@ -778,29 +944,36 @@ gen_updates(FILE *f, const struct config *cfg)
 	TAILQ_FOREACH(s, &cfg->sq, entries)
 		if (!TAILQ_EMPTY(&s->uq))
 			break;
-	if (s == NULL)
-		return 0;
 
-	if (fputs
-	    ("Updates allow for accepted roles to\n"
-	     "modify data in the database.\n"
-	     "The following updates are available:\n"
-	     ".Bl -tag -width Ds -offset indent\n", f) == EOF)
-		return -1;
+	if (s == NULL)
+		return 1;
+
+	if (!syn && fputs(
+	    ".Ss Database updates\n"
+	    "In-place modification of the database.\n"
+	    "Values constraining the update are labelled\n"
+	    ".Qq \\(-> ,\n"
+	    "while values used for updating are labelled\n"
+	    ".Qq \\(<- .\n"
+	    ".Bl -tag -width Ds\n", f) == EOF)
+		return 0;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries)
 		TAILQ_FOREACH(up, &s->uq, entries)
-			if (!gen_update(f, up))
-				return -1;
+			if (!gen_update(f, up, syn))
+				return 0;
 
-	return fputs(".El\n", f) == EOF ? -1 : 1;
+	if (!syn && fputs(".El\n.Pp\n", f) == EOF)
+		return 0;
+
+	return 1;
 }
 
 /*
- * Return -1 on failure, 0 if nothing written, 1 if something written.
+ * Return FALSE on failure, TRUE on success.
  */
 static int
-gen_inserts(FILE *f, const struct config *cfg)
+gen_inserts(FILE *f, const struct config *cfg, int syn)
 {
 	const struct strct	*s;
 
@@ -810,238 +983,355 @@ gen_inserts(FILE *f, const struct config *cfg)
 	if (s == NULL)
 		return 0;
 
-	if (fputs
-	    ("Inserts allow accepted roles to add\n"
-	     "new data to the database.\n"
-	     "The following inserts are available:\n"
-	     ".Bl -tag -width Ds -offset indent\n", f) == EOF)
+	if (!syn && fputs(
+	    ".Ss Database inserts\n"
+	    "Add new data to the database.\n"
+	    "All functions return -1 on constraint failure or the new\n"
+	    "row identifier on success.\n"
+	    ".Bl -tag -width Ds\n", f) == EOF)
 		return -1;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries) 
-		if (s->ins != NULL && !gen_insert(f, s))
+		if (s->ins != NULL && !gen_insert(f, s, syn))
 			return -1;
 
-	return fputs(".El\n", f) == EOF ? -1 : 1;
+	if (!syn && fputs(".El\n", f) == EOF)
+		return 0;
+	return 1;
 }
 
+/*
+ * Return FALSE on failure, TRUE on success.
+ */
 static int
-gen_json_input(FILE *f, const struct strct *s)
+gen_json_input(FILE *f, const struct strct *s, int syn)
 {
+
+	if (syn) {
+		return fprintf(f,
+			".Ft int\n"
+			".Fo jsmn_%s\n"
+			".Fa \"struct %s *p\"\n"
+			".Fa \"const char *buf\"\n"
+			".Fa \"const jsmntok_t *toks\"\n"
+			".Fa \"size_t toksz\"\n"
+			".Fc\n"
+			".Ft int\n"
+			".Fo jsmn_%s_array\n"
+			".Fa \"struct %s **ps\"\n"
+			".Fa \"size_t *psz\"\n"
+			".Fa \"const char *buf\"\n"
+			".Fa \"const jsmntok_t *toks\"\n"
+			".Fa \"size_t toksz\"\n"
+			".Fc\n"
+			".Ft int\n"
+			".Fo jsmn_%s_clear\n"
+			".Fa \"struct %s *p\"\n"
+			".Fc\n"
+			".Ft int\n"
+			".Fo jsmn_%s_free_array\n"
+			".Fa \"struct %s *ps\"\n"
+			".Fa \"size_t psz\"\n"
+			".Fc\n", 
+			s->name, s->name, s->name, s->name, s->name,
+			s->name, s->name, s->name) >= 0;
+	}
 
 	return fprintf(f,
 		".It Ft int Fn jsmn_%s\n"
 		".TS\n"
 		"l l.\n"
-		"\\fIstruct %s *\\fR\t\\fIp\\fR\n"
-		"\\fIconst char *\\fR\t\\fIbuf\\fR\n"
-		"\\fIconst jsmntok_t *\\fR\t\\fItoks\\fR\n"
-		"\\fIsize_t\\fR\t\\fItoksz\\fR\n"
+		"p\tstruct %s *\n"
+		"buf\tconst char *\n"
+		"toks\tconst jsmntok_t *\n"
+		"toksz\tsize_t\n"
 		".TE\n"
+		".Pp\n"
+		"Parse a single structure and any nested structures\n"
+		"from the JSON string.\n"
+		"All fields must be specified.\n"
+		"On success, free with\n"
+		".Fn db_%s_free .\n"
 		".It Ft int Fn jsmn_%s_array\n"
 		".TS\n"
 		"l l.\n"
-		"\\fIstruct %s **\\fR\t\\fIp\\fR\n"
-		"\\fIsize_t *\\fR\t\\fIpsz\\fR\n"
-		"\\fIconst char *\\fR\t\\fIbuf\\fR\n"
-		"\\fIconst jsmntok_t *\\fR\t\\fItoks\\fR\n"
-		"\\fIsize_t\\fR\t\\fItoksz\\fR\n"
+		"ps\tstruct %s **\n"
+		"psz\tsize_t *\n"
+		"buf\tconst char *\n"
+		"toks\tconst jsmntok_t *\n"
+		"toksz\tsize_t\n"
 		".TE\n"
+		".Pp\n"
+		"Parse an array of structures and any nested\n"
+		"structures from the JSON string.\n"
+		"All fields must be specified.\n"
+		"On success, free with\n"
+		".Fn jsmn_%s_free_array .\n"
 		".It Ft int Fn jsmn_%s_clear\n"
 		".TS\n"
 		"l l.\n"
-		"\\fIstruct %s *\\fR\t\\fIp\\fR\n"
+		"p\tstruct %s *\n"
 		".TE\n"
 		".It Ft int Fn jsmn_%s_free_array\n"
 		".TS\n"
 		"l l.\n"
-		"\\fIstruct %s *\\fR\t\\fIp\\fR\n"
-		"\\fIsize_t\\fR\t\\fIpsz\\fR\n"
-		".TE\n", 
-		s->name, s->name, s->name, s->name, s->name,
-		s->name, s->name, s->name) >= 0;
+		"ps\tstruct %s *\n"
+		"psz\tsize_t\n"
+		".TE\n"
+		".Pp\n"
+		"Free an array created by\n"
+		".Fn jsmn_%s_array .\n",
+		s->name, s->name, s->name, s->name, s->name, s->name,
+		s->name, s->name, s->name, s->name, s->name) >= 0;
 }
 
+/*
+ * Return FALSE on failure, TRUE on success.
+ */
 static int
-gen_json_output(FILE *f, const struct strct *s)
+gen_json_output(FILE *f, const struct strct *s, int syn)
 {
+
+	if (syn) {
+		if (fprintf(f,
+		    ".Ft void\n"
+		    ".Fo json_%s_data\n"
+		    ".Fa \"struct kjsonreq *r\"\n"
+		    ".Fa \"const struct %s *p\"\n"
+		    ".Fc\n"
+		    ".Ft void\n"
+		    ".Fo json_%s_obj\n"
+		    ".Fa \"struct kjsonreq *r\"\n"
+		    ".Fa \"const struct %s *p\"\n"
+		    ".Fc\n", s->name, s->name, s->name, s->name) < 0)
+			return 0;
+		if ((s->flags & STRCT_HAS_QUEUE) && fprintf(f,
+		    ".Ft void\n"
+		    ".Fo json_%s_array\n"
+		    ".Fa \"struct kjsonreq *r\"\n"
+		    ".Fa \"const struct %s_q *q\"\n"
+		    ".Fc\n", s->name, s->name) < 0)
+			return 0;
+		if ((s->flags & STRCT_HAS_ITERATOR) && fprintf(f,
+		    ".Ft void\n"
+		    ".Fo json_%s_iterate\n"
+		    ".Fa \"const struct %s *p\"\n"
+		    ".Fa \"void *arg\"\n"
+		    ".Fc\n", s->name, s->name) < 0)
+			return 0;
+		return 1;
+	}
 
 	if (fprintf(f,
 	    ".It Ft void Fn json_%s_data , Fn json_%s_obj\n"
 	    ".TS\n"
 	    "l l.\n"
-	    "\\fIstruct kjsonreq *\\fR\t\\fIr\\fR\n"
-	    "\\fIconst struct %s *\\fR\t\\fIp\\fR\n"
+	    "r\tstruct kjsonreq *\n"
+	    "p\tconst struct %s *\n"
 	    ".TE\n", s->name, s->name, s->name) < 0)
 		return 0;
 	if ((s->flags & STRCT_HAS_QUEUE) && fprintf(f,
 	    ".It Ft void Fn json_%s_array\n"
 	    ".TS\n"
 	    "l l.\n"
-	    "\\fIstruct kjsonreq *\\fR\t\\fIr\\fR\n"
-	    "\\fIconst struct %s_q *\\fR\t\\fIq\\fR\n"
+	    "r\tstruct kjsonreq *\n"
+	    "q\tconst struct %s_q *\n"
 	    ".TE\n", s->name, s->name) < 0)
 		return 0;
 	if ((s->flags & STRCT_HAS_ITERATOR) && fprintf(f,
 	    ".It Ft void Fn json_%s_iterate\n"
 	    ".TS\n"
 	    "l l.\n"
-	    "\\fIconst struct %s *\\fR\t\\fIp\\fR\n"
-	    "\\fIvoid *\\fR\t\\fIarg\\fR (really \\fIstruct kjsonreq *\\fR)\n"
+	    "p\tconst struct %s *\n"
+	    "arg\tvoid * (cast to struct kjsonreq *)\n"
 	    ".TE\n", s->name, s->name) < 0)
 		return 0;
 	return 1;
 }
 
 /*
- * Return 0 on failure, non-zero on success.
+ * Return FALSE on failure, TRUE on success.
  */
 static int
-gen_json_outputs(FILE *f, const struct config *cfg)
+gen_json_outputs(FILE *f, const struct config *cfg, int syn)
 {
 	const struct strct	*s;
 
 	if (TAILQ_EMPTY(&cfg->sq))
-		return 0;
+		return 1;
 
-	if (fputs
-	    ("These print out the fields of a structure in JSON "
-	     "including nested structures.\n"
-	     "They omit any passwords, those marked \"noexport\",\n"
-	     "or those disallowed by the current role.\n"
-	     ".Bl -tag -width Ds -offset indent\n", f) == EOF)
+	if (!syn && fputs(
+	    ".Ss JSON output\n"
+	    "Write out structure data in JSON to request\n"
+	    ".Fa r ,\n"
+	    "omitting passwords, fields marked \"noexport\", and\n"
+	    "those disallowed by the current role.\n"
+	    ".Bl -tag -width Ds\n", f) == EOF)
 		return 0;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries)
-		if (!gen_json_output(f, s))
+		if (!gen_json_output(f, s, syn))
 			return 0;
 
-	return fputs(".El\n", f) != EOF;
-}
-
-/*
- * Return 0 on failure, non-zero on success.
- */
-static int
-gen_json_valids(FILE *f, const struct config *cfg)
-{
-
-	if (TAILQ_EMPTY(&cfg->sq))
-		return 0;
-	if (fputs
-	    (".Ss Validation\n"
-	     "Each non-struct field in the configuration has a "
-	     "validation function.\n"
-	     "These may be passed to the HTTP parsing functions in\n"
-	     ".Xr kcgi 3 ,\n"
-	     "specifically\n"
-	     ".Xr khttp_parse 3 .\n"
-	     ".Bl -tag -width Ds -offset indent\n"
-	     ".It Va enum valid_keys\n"
-	     "A list of keys, each one corresponding to a field.\n"
-	     "The keys are named\n"
-	     ".Dv VALID_struct_field .\n"
-	     ".It Va const struct kvalid valid_keys[]\n"
-	     "Validation functions associated with each field.\n"
-	     ".El\n", f) == EOF)
+	if (!syn && fputs(".El\n", f) == EOF)
 		return 0;
 	return 1;
 }
 
 /*
- * Return 0 on failure, non-zero on success.
+ * Return FALSE on failure, TRUE on success.
  */
 static int
-gen_json_inputs(FILE *f, const struct config *cfg)
+gen_json_valids(FILE *f, const struct config *cfg, int syn)
+{
+
+	if (TAILQ_EMPTY(&cfg->sq))
+		return 1;
+
+	if (syn && fputs(
+	    ".Vt enum valid_keys;\n"
+	    ".Vt const struct kvalid valid_keys[];\n", f) == EOF)
+		return 0;
+	if (!syn && fputs(
+	    ".Ss Validation\n"
+	    "Each non-struct field in the configuration has a "
+	    "validation function.\n"
+	    "These may be passed to the HTTP parsing functions in\n"
+	    ".Xr kcgi 3 ,\n"
+	    "specifically\n"
+	    ".Xr khttp_parse 3 .\n"
+	    ".Bl -tag -width Ds\n"
+	    ".It Va enum valid_keys\n"
+	    "A list of keys, each one corresponding to a field.\n"
+	    "The keys are named\n"
+	    ".Dv VALID_struct_field .\n"
+	    ".It Va const struct kvalid valid_keys[]\n"
+	    "Validation functions associated with each field.\n"
+	    ".El\n", f) == EOF)
+		return 0;
+	return 1;
+}
+
+/*
+ * Return FALSE on failure, TRUE on success.
+ */
+static int
+gen_json_inputs(FILE *f, const struct config *cfg, int syn)
 {
 	const struct strct	*s;
 
 	if (TAILQ_EMPTY(&cfg->sq))
+		return 1;
+
+	if (!syn && fputs(
+	    ".Ss JSON input\n"
+	    "Allow for JSON objects and arrays, such as\n"
+	    "those produced by the JSON export functions\n"
+	    "(if defined), to be re-imported.\n"
+	    "These deserialise parsed JSON buffers\n"
+	    ".Fa buf ,\n"
+	    "which need not be NUL terminated, with parse\n"
+	    "tokens\n"
+	    ".Fa toks\n"
+	    "of length\n"
+	    ".Fa toksz ,\n"
+	    "into\n"
+	    ".Fa p ,\n"
+	    "for arrays of count\n"
+	    ".Fa psz .\n"
+	    "They return 0 on parse failure, <0 on memory\n"
+	    "allocation failure, or the count of tokens\n"
+	    "parsed on success.\n"
+	    ".Bl -tag -width Ds\n", f) == EOF)
 		return 0;
 
-	if (fputs
-	    (".Ss JSON input\n"
-	     "Allow for JSON objects and arrays, such as\n"
-	     "those produced by the JSON export functions\n"
-	     "(if defined), to be re-imported.\n"
-	     "These deserialise parsed JSON buffers\n"
-	     ".Fa buf ,\n"
-	     "which need not be NUL terminated, with parse\n"
-	     "tokens\n"
-	     ".Fa toks\n"
-	     "of length\n"
-	     ".Fa toksz ,\n"
-	     "into\n"
-	     ".Fa p ,\n"
-	     "for arrays of count\n"
-	     ".Fa psz .\n"
-	     "They return 0 on parse failure, <0 on memory\n"
-	     "allocation failure, or the count of tokens\n"
-	     "parsed on success.\n"
-	     ".Bl -tag -width Ds -offset indent\n", f) == EOF)
-		return 0;
+	if (syn) {
+		if (fputs(
+		    ".Ft void\n"
+		    ".Fo jsmn_init\n"
+		    ".Fa \"jsmn_parser *p\"\n"
+		    ".Fc\n"
+		    ".Ft int\n"
+		    ".Fo jsmn_parse\n"
+		    ".Fa \"jsmn_parser *p\"\n"
+		    ".Fa \"const char *buf\"\n"
+		    ".Fa \"size_t sz\"\n"
+		    ".Fa \"jsmntok_t *toks\"\n"
+		    ".Fa \"junsigned int toksz\"\n"
+		    ".Fc\n"
+		    ".Ft int\n"
+		    ".Fo jsmn_eq\n"
+		    ".Fa \"const char *json\"\n"
+		    ".Fa \"const jsmntok_t *tok\"\n"
+		    ".Fa \"const char *s\"\n"
+		    ".Fc\n", f) == EOF)
+			return 0;
+		TAILQ_FOREACH(s, &cfg->sq, entries)
+			if (!gen_json_input(f, s, 1))
+				return 0;
+		return 1;
+	}
 
-	/* Start with the utility functions. */
-
-	if (fputs
-	    (".It Ft void Fn jsmn_init\n"
-	     ".TS\n"
-	     "l l.\n"
-	     "\\fIjsmn_parser *\\fR\t\\fIp\\fR\n"
-	     ".TE\n"
-	     ".Pp\n"
-	     "Initialise a parser\n"
-	     ".Fa p\n"
-	     "for use in\n"
-	     ".Fn jsmn_parse .\n", f) == EOF)
+	if (fputs(
+	    ".It Ft void Fn jsmn_init\n"
+	    ".TS\n"
+	    "l l.\n"
+	    "p\tjsmn_parser *\n"
+	    ".TE\n"
+	    ".Pp\n"
+	    "Initialise a parser\n"
+	    ".Fa p\n"
+	    "for use in\n"
+	    ".Fn jsmn_parse .\n", f) == EOF)
 		return 0;
-	if (fputs
-	    (".It Ft int Fn jsmn_parse\n"
-	     ".TS\n"
-	     "l l.\n"
-	     "\\fIjsmn_parser *\\fR\t\\fIp\\fR\n"
-	     "\\fIconst char *\\fR\t\\fIbuf\\fR\n"
-	     "\\fIsize_t\\fR\t\\fIsz\\fR\n"
-	     "\\fIjsmntok_t *\\fR\t\\fItoks\\fR\n"
-	     "\\fIjunsigned int\\fR\t\\fItoksz\\fR\n"
-	     ".TE\n"
-	     ".Pp\n"
-	     "Parse a buffer\n"
-	     ".Fa buf\n"
-	     "of length\n"
-	     ".Fa bufsz\n"
-	     "with the parser\n"
-	     ".Fa p .\n"
-	     "Returns the number of tokens parsed or less than zero\n"
-	     "on failure.\n"
-	     "If\n"
-	     ".Fa toks\n"
-	     "is\n"
-	     ".Dv NULL ,\n"
-	     "simply returns the number of tokens without parsing.\n"
-	     "In this case,\n"
-	     ".Fa toksz\n"
-	     "is ignored.\n", f) == EOF)
+	if (fputs(
+	    ".It Ft int Fn jsmn_parse\n"
+	    ".TS\n"
+	    "l l.\n"
+	    "p\tjsmn_parser *\n"
+	    "buf\tconst char *\n"
+	    "sz\tsize_t\n"
+	    "toks\tjsmntok_t *\n"
+	    "toksz\tunsigned int\n"
+	    ".TE\n"
+	    ".Pp\n"
+	    "Parse a buffer\n"
+	    ".Fa buf\n"
+	    "of length\n"
+	    ".Fa bufsz\n"
+	    "with the parser\n"
+	    ".Fa p .\n"
+	    "Returns the number of tokens parsed or less than zero\n"
+	    "on failure.\n"
+	    "If\n"
+	    ".Fa toks\n"
+	    "is\n"
+	    ".Dv NULL ,\n"
+	    "simply returns the number of tokens without parsing.\n"
+	    "In this case,\n"
+	    ".Fa toksz\n"
+	    "is ignored.\n", f) == EOF)
 		return 0;
-	if (fputs
-	    (".It Ft int Fn jsmn_eq\n"
-	     ".TS\n"
-	     "l l.\n"
-	     "\\fIconst char *\\fR\t\\fIjson\\fR\n"
-	     "\\fIconst jsmntok_t *\\fR\t\\fItok\\fR\n"
-	     "\\fIconst char *\\fR\t\\fIs\\fR\n"
-	     ".TE\n"
-	     ".Pp\n"
-	     "Check whether the current token in a parse sequence\n"
-	     ".Fa tok\n"
-	     "parsed from\n"
-	     ".Fa json\n"
-	     "is equal to a string\n"
-	     ".Fa s .\n"
-	     "Used when checking for key equality.\n", f) == EOF)
+	if (fputs(
+	    ".It Ft int Fn jsmn_eq\n"
+	    ".TS\n"
+	    "l l.\n"
+	    "json\tconst char *\n"
+	    "tok\tconst jsmntok_t *\n"
+	    "s\tconst char *\n"
+	    ".TE\n"
+	    ".Pp\n"
+	    "Check whether the current token in a parse sequence\n"
+	    ".Fa tok\n"
+	    "parsed from\n"
+	    ".Fa json\n"
+	    "is equal to a string\n"
+	    ".Fa s .\n"
+	    "Used when checking for key equality.\n", f) == EOF)
 		return 0;
 
 	TAILQ_FOREACH(s, &cfg->sq, entries)
-		if (!gen_json_input(f, s))
+		if (!gen_json_input(f, s, 0))
 			return 0;
 
 	return fputs(".El\n", f) != EOF;
@@ -1071,10 +1361,32 @@ ort_lang_c_manpage(const struct ort_lang_c *args,
 	    ".Sh NAME\n"
 	    ".Nm ort\n"
 	    ".Nd C API for your openradtool data model\n"
+	    ".Sh SYNOPSIS\n") < 0)
+		return 0;
+	if (!gen_general(f, cfg, 1))
+		return 0;
+	if (!gen_queries(f, cfg, 1))
+		return 0;
+	if (!gen_updates(f, cfg, 1))
+		return 0;
+	if (!gen_deletes(f, cfg, 1))
+		return 0;
+	if (!gen_inserts(f, cfg, 1))
+		return 0;
+	if ((args->flags & ORT_LANG_C_JSON_JSMN) &&
+	    !gen_json_inputs(f, cfg, 1))
+		return 0;
+	if ((args->flags & ORT_LANG_C_JSON_KCGI) &&
+	    !gen_json_outputs(f, cfg, 1))
+		return 0;
+	if ((args->flags & ORT_LANG_C_VALID_KCGI) &&
+	    !gen_json_valids(f, cfg, 1))
+		return 0;
+
+	if (fprintf(f,
 	    ".Sh DESCRIPTION\n"
 	    ".Ss Data structures\n") < 0)
 		return 0;
-
 	if ((c = gen_roles(f, cfg)) < 0)
 		return 0;
 	else if (c > 0 && fputs(".Pp\n", f) == EOF)
@@ -1090,38 +1402,25 @@ ort_lang_c_manpage(const struct ort_lang_c *args,
 	if (gen_strcts(f, cfg) < 0)
 		return 0;
 
-	if (fputs(".Ss Database input\n", f) == EOF)
+	if (!gen_general(f, cfg, 0))
 		return 0;
-	if ((c = gen_general(f, cfg)) < 0)
+	if (!gen_queries(f, cfg, 0))
 		return 0;
-	else if (c > 0 && fputs(".Pp\n", f) == EOF)
+	if (!gen_updates(f, cfg, 0))
 		return 0;
-	if ((c = gen_searches(f, cfg)) < 0)
+	if (!gen_deletes(f, cfg, 0))
 		return 0;
-	else if (c > 0 && fputs(".Pp\n", f) == EOF)
+	if (!gen_inserts(f, cfg, 0))
 		return 0;
-	if ((c = gen_updates(f, cfg)) < 0)
+	if ((args->flags & ORT_LANG_C_JSON_JSMN) &&
+	    !gen_json_inputs(f, cfg, 0))
 		return 0;
-	else if (c > 0 && fputs(".Pp\n", f) == EOF)
+	if ((args->flags & ORT_LANG_C_JSON_KCGI) &&
+	    !gen_json_outputs(f, cfg, 0))
 		return 0;
-	if ((c = gen_deletes(f, cfg)) < 0)
+	if ((args->flags & ORT_LANG_C_VALID_KCGI) &&
+	    !gen_json_valids(f, cfg, 0))
 		return 0;
-	else if (c > 0 && fputs(".Pp\n", f) == EOF)
-		return 0;
-	if (gen_inserts(f, cfg) < 0)
-		return 0;
-
-	if (args->flags & ORT_LANG_C_JSON_JSMN)
-		if (!gen_json_inputs(f, cfg))
-			return 0;
-
-	if (args->flags & ORT_LANG_C_JSON_KCGI)
-		if (!gen_json_outputs(f, cfg))
-			return 0;
-
-	if (args->flags & ORT_LANG_C_VALID_KCGI)
-		if (!gen_json_valids(f, cfg))
-			return 0;
 
 	if ((args->flags & ORT_LANG_C_VALID_KCGI) ||
 	    (args->flags & ORT_LANG_C_JSON_KCGI)) {

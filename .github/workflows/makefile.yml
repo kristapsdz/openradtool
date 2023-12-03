@@ -6,7 +6,7 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: Install dependencies
-      run: sudo apt-get install -y bmake libxml2-utils cargo python3-jsonschema
+      run: sudo apt-get install -y bmake libxml2-utils python3-jsonschema
     - name: Configure
       run: |
         cat /etc/os-release
@@ -16,6 +16,5 @@ jobs:
         echo "TS_JSONSCHEMA = node_modules/.bin/typescript-json-schema" >> Makefile.local
         echo "JSONSCHEMA = jsonschema" >> Makefile.local
         echo "XMLLINT = xmllint" >> Makefile.local
-        echo "CARGO = cargo" >> Makefile.local
     - name: Build and test
       run: bmake regress

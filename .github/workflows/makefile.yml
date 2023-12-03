@@ -6,7 +6,7 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: Install dependencies
-      run: sudo apt-get install -y bmake lixml2 cargo python3-jsonschema
+      run: sudo apt-get install -y bmake libxml2-utils cargo python3-jsonschema
     - name: Configure
       run: |
         cat /etc/os-release

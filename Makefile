@@ -954,11 +954,14 @@ regress: all
 	fi ; \
 	if [ -n "$(TS_NODE)" ]; then \
 		echo "=== ort-json reformat tests === " ; \
-		cat ort-json.ts regress/json/regress-runner.ts > $$tmp.ts ; \
+		ntmp=`mktemp -p .` ; \
+		rm -f $$ntmp ; \
+		echo "/// <reference lib=\"dom\" />" > $$ntmp.ts ; \
+		cat ort-json.ts regress/json/regress-runner.ts >> $$ntmp.ts ; \
 		set -e ; \
-		$(TS_NODE) --skip-project $$tmp.ts ; \
+		$(TS_NODE) --skip-project $$ntmp.ts ; \
 		set +e ; \
-		rm -f $$tmp.ts ; \
+		rm -f $$ntmp.ts ; \
 	else \
 		echo "!!! skipping ort-json reformat tests !!! " ; \
 		skipped="$$skipped ort-json-reformat" ; \

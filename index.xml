@@ -16,19 +16,6 @@
 		<meta name="description" content="An open source rapid application development utility." />
 	</head>
 	<body itemscope="itemscope" itemtype="http://schema.org/SoftwareApplication">
-		<div id="announce">
-			<div class="text">
-				<p>
-					Do you use <strong>openradtool</strong> and Node.js?
-				</p>
-				<p>
-					We're pleased to announce <strong><a href="https://orb.capem.io">orb</a></strong>, a web application for
-					managing data models complete with on-line editing, auditing, version control, and
-					<a href="https://npmjs.org">npm</a> integration.  Please <a href="info@capem.io">contact us</a> if you'd
-					like to participate in the early release of this system!
-				</p>
-			</div>
-		</div>
 		<header>
 			<section id="breadcrumbs">
 				<div>
@@ -56,7 +43,6 @@
 					<a href="snapshots/openradtool.tar.gz">source</a>
 					<a href="snapshots">archive</a>
 					<a href="archive.html">releases</a>
-					<a href="https://kristaps.bsd.lv/cgi-bin/minci.cgi/index.html?project-name=openradtool">builds</a>
 					<a href="atom.xml">feed</a>
 				</nav>
 			</section>

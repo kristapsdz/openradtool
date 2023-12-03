@@ -81,7 +81,7 @@ for (let i = 0; i < files.length; i++) {
 		console.log(ts.formatDiagnosticsWithColorAndContext
 			(output.diagnostics, {
 				getCurrentDirectory: () => '.',
-				getCanonicalFileName: f => '<stdin>',
+				getCanonicalFileName: (f: string) => '<stdin>',
 				getNewLine: () => '\n'
 			})
 		);

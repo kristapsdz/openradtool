@@ -215,7 +215,7 @@ gen_checkpass(FILE *f, int ptr, size_t pos, const struct sent *sent)
 		goto out;
 #else
 	if (fprintf(f, "strcmp(crypt(v%zu, %s), %s) %s 0)",
-	    pos, fd, sent->op == OPTYPE_NEQUAL ? "==" : "!=") < 0)
+	    pos, fd, fd, sent->op == OPTYPE_NEQUAL ? "==" : "!=") < 0)
 		goto out;
 #endif
 	rc = 1;

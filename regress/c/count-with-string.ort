@@ -1,0 +1,7 @@
+
+struct bar {
+	field foo text;
+	field id int rowid;
+	count foo: name foo;
+};
+

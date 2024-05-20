@@ -1286,6 +1286,10 @@ gen_count(FILE *f, const struct config *cfg,
 
 	/* Emit parameter binding. */
 
+	if (parms > 0 && fputs
+	    ("\tmemset(parms, 0, sizeof(parms));\n", f) == EOF)
+		return 0;
+
 	pos = idx = 1;
 	TAILQ_FOREACH(sent, &s->sntq, entries)
 		if (OPTYPE_ISBINARY(sent->op)) {

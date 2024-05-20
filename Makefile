@@ -16,7 +16,7 @@ sinclude Makefile.local
 #CFLAGS		+= -Weverything -Wno-switch-enum -Wno-padded -Wno-reserved-id-macro
 VERSION_MAJOR	 = 0
 VERSION_MINOR	 = 14
-VERSION_BUILD	 = 0
+VERSION_BUILD	 = 1
 VERSION		:= $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 LIBOBJS		 = audit.o \
 		   compats.o \

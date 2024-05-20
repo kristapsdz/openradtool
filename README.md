@@ -54,17 +54,6 @@ npm install
 make regress
 ```
 
-If you're on OpenBSD (≥6.9), you may need to install a python2 interpreter from
-the ports tree and override newer versions:
-
-```sh
-PYTHON=/usr/local/bin/python2.7 \
-npm install
-```
-
-Older versions of OpenBSD instead require overriding `CC` and `CXX` with the
-ports-installed versions of clang.
-
 This will use the *package.json* and *package-lock.json* files to
 configure the *node_modules* subdirectory required for the regression
 tests.  You can safely remove the *node_modules* directory at any time,
@@ -77,16 +66,19 @@ to the *ts-node* script, usually *node\_modules/.bin/ts-node*, in the
 included by the *Makefile*.
 
 To test JSON output, you'll need both the Node.js installation (as described
-above) and the [py-jsonschema](http://github.com/Julian/jsonschema) utilities
-installed for validating JSON against a schema.
+above) and the [py-jsonschema](http://github.com/Julian/jsonschema) (sometimes
+listed as py3-jsonschema) utilities installed for validating JSON against a
+schema.
 
 To enable picking up the JSON tests, set the `TS_JSONSCHEMA` variable to
 the *typescript-json-shema* script, usually
 *node\_modules/.bin/typescript-json-schema*, in the *Makefile*.
 Or alternatively, again, in a *Makefile.local*.
 
-The C interface tests need [kcgi](https://kristaps.bsd.lv/kcgi) and
-[libcurl](https://curl.se/libcur) installed.  The regression suite will
+The C interface tests need [kcgi](https://kristaps.bsd.lv/kcgi),
+[libcurl](https://curl.se/libcur),
+[sqlbox](https://kristaps.bsd.lv/sqlbox), and
+[sqlite3](https://sqlite.org) installed.  The regression suite will
 automatically pick these up.
 
 The XLIFF tests need [xmllint](http://xmlsoft.org/) to validate the
@@ -98,10 +90,14 @@ the *xmllint* program in the *Makefile* or a *Makefile.local*.
 
 The rust tests need [cargo](https://crates.io) to operate.  Prior to
 running the tests, dependencies must be downloaded.  Regression builds
-are all performed in offline mode.
+are all performed in offline mode.  (The addition of the *main.rs* file
+is just to silence the target test.  The file will be overwritten when
+regression tests are run.)
 
 ```sh
 cd rust
+mkdir -p rust/src
+echo "fn main(){}" > rust/src/main.rs
 cargo fetch
 cd ..
 make regress

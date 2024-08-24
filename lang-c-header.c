@@ -249,16 +249,16 @@ gen_type_funcs(FILE *f, const struct ort_lang_c *args,
 				type = "int64_t";
 
 			if (fprintf(f,
-			    "inline %s ORT_GET_%s_%s"
+			    "static inline %s ORT_GET_%s_%s"
 			     "(const struct %s *dst) "
 			     "{ return dst->%s.val; }\n"
-			    "inline %s ORT_GETV_%s_%s"
+			    "static inline %s ORT_GETV_%s_%s"
 			     "(const %s_%s dst) "
 			     "{ return dst.val; }\n"
-			    "inline void ORT_SET_%s_%s"
+			    "static inline void ORT_SET_%s_%s"
 			     "(struct %s *dst, %s src) "
 			     "{ dst->%s.val = src; }\n"
-			    "inline void ORT_SETV_%s_%s"
+			    "static inline void ORT_SETV_%s_%s"
 			     "(%s_%s *dst, %s src) "
 			     "{ dst->val = src; }\n",
 			    type, s->name, fd->name, s->name, fd->name,
@@ -297,11 +297,11 @@ gen_type_funcs(FILE *f, const struct ort_lang_c *args,
 
 
 			if (fprintf(f,
-			    "inline %s ORT_GET_%s_%s"
+			    "static inline %s ORT_GET_%s_%s"
 			     "(const struct %s *dst) "
 			     "{ return dst->%s; }\n"
 			    "#define ORT_GETV_%s_%s(_dst) (_dst)\n"
-			    "inline void ORT_SET_%s_%s"
+			    "static inline void ORT_SET_%s_%s"
 			     "(struct %s *dst, %s src) "
 			     "{ dst->%s = src; }\n"
 			    "#define ORT_SETV_%s_%s(_dst, _src) "

@@ -20,6 +20,12 @@
 				which is now used for regression tests of said functionality.
 			</p>
 			<p>
+				No longer bundle a copy of <code>b64_ntop</code>.
+				This is part of most systems, and
+				<a href="https://github.com/kristapsdz/oconfigure">oconfigure</a>
+				(or equivalent) may be used for compatible functions.
+			</p>
+			<p>
 				Various fixes for NodeJS, <a href="ort-nodejs.1.html">ort-nodejs(1)</a>, from
 				<a href="https://github.com/validatorjs/validator.js/pull/2257">pull/2257</a>.
 				This is still experimental and lacks validation.

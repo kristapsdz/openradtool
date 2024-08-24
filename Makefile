@@ -178,7 +178,6 @@ DOTAR		 = $(HEADERS) \
 		   audit.html \
 		   audit.js \
 		   audit-json.c \
-		   b64_ntop.c \
 		   cheader.c \
 		   cmanpage.c \
 		   compats.c \
@@ -417,7 +416,7 @@ install: all
 	$(INSTALL_MAN) $(MAN3S) $(DESTDIR)$(MANDIR)/man3
 	$(INSTALL_MAN) $(MAN5S) $(DESTDIR)$(MANDIR)/man5
 	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/openradtool
-	$(INSTALL_DATA) b64_ntop.c jsmn.c $(DESTDIR)$(SHAREDIR)/openradtool
+	$(INSTALL_DATA) jsmn.c $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_DATA) ortPrivate.ts ort-json.ts $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_DATA) $(PUBHEADERS) $(DESTDIR)$(INCLUDEDIR)
 	$(INSTALL_LIB) $(LIBS) $(DESTDIR)$(LIBDIR)

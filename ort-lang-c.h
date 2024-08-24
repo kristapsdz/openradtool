@@ -29,7 +29,6 @@ struct	ort_lang_c {
 	const char		*header;
 	unsigned int		 flags;
 	unsigned int		 includes;
-	const char		*ext_b64_ntop;
 	const char		*ext_jsmn;
 };
 

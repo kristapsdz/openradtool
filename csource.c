@@ -90,7 +90,7 @@ main(int argc, char *argv[])
 	int			  c, rc = 0;
 	FILE			**confs = NULL;
 	size_t			  i;
-	char			 *ext_jsmn, *ext_b64_ntop;
+	char			 *ext_jsmn;
 
 #if HAVE_PLEDGE
 	if (pledge("stdio rpath", NULL) == -1)
@@ -151,10 +151,7 @@ main(int argc, char *argv[])
 
 	/* Files we might embed in source. */
 
-	args.ext_b64_ntop = ext_b64_ntop = 
-		readfile(sharedir, "b64_ntop.c");
-	args.ext_jsmn = ext_jsmn = 
-		readfile(sharedir, "jsmn.c");
+	args.ext_jsmn = ext_jsmn = readfile(sharedir, "jsmn.c");
 
 #if HAVE_PLEDGE
 	if (pledge("stdio", NULL) == -1)
@@ -181,7 +178,6 @@ out:
 		fclose(confs[i]);
 
 	free(confs);
-	free(ext_b64_ntop);
 	free(ext_jsmn);
 	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 usage:

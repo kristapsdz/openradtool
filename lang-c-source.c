@@ -2860,9 +2860,13 @@ ort_lang_c_source(const struct ort_lang_c *args,
 		return 0;
 
 #if defined(__linux__)
-	if (fputs("#define _GNU_SOURCE\n"
-	    "#define _DEFAULT_SOURCE\n", f) == EOF)
-		return 0;
+	if (fputs(
+	    "#ifndef _GNU_SOURCE\n"
+	    "# define _GNU_SOURCE\n"
+	    "#endif\n"
+	    "#ifndef _DEFAULT_SOURCE\n"
+	    "# define _DEFAULT_SOURCE\n"
+	    "#endif\n", f) == EOF)
 #endif
 #if defined(__sun)
 	if (fputs("#ifndef _XOPEN_SOURCE\n"

@@ -2867,6 +2867,7 @@ ort_lang_c_source(const struct ort_lang_c *args,
 	    "#ifndef _DEFAULT_SOURCE\n"
 	    "# define _DEFAULT_SOURCE\n"
 	    "#endif\n", f) == EOF)
+		return 0;
 #endif
 #if defined(__sun)
 	if (fputs("#ifndef _XOPEN_SOURCE\n"

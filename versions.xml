@@ -9,6 +9,31 @@
 		</header>
 		<aside>
 			<p>
+				No longer use basic
+				<a href="https://man.openbsd.org/crypt.3">crypt(3)</a>
+				for password encryption.  Now require
+				<a href="https://man.openbsd.org/crypt_newhash.3">crypt_newhash(3)</a>
+				(or function with similar signature)
+				and family, which use Blowfish encryption.
+				This isn't available by default on Linux, but is available in
+				<a href="https://github.com/kristapsdz/oconfigure">oconfigure</a>,
+				which is now used for regression tests of said functionality.
+			</p>
+			<p>
+				Various fixes for NodeJS, <a href="ort-nodejs.1.html">ort-nodejs(1)</a>, from
+				<a href="https://github.com/validatorjs/validator.js/pull/2257">pull/2257</a>.
+				This is still experimental and lacks validation.
+			</p>
+		</aside>
+	</article>
+	<article data-sblg-article="1" data-sblg-tags="version">
+		<header>
+			<h3>0.14.0</h3>
+			<address>Kristaps Dzonsons</address>
+			<time datetime="2021-10-25">2021-10-25</time>
+		</header>
+		<aside>
+			<p>
 				Add initial <a href="https://rust-lang.org">Rust</a> output.
 				This is still experimental and lacks validation.
 			</p>

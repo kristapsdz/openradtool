@@ -185,7 +185,6 @@ DOTAR		 = $(HEADERS) \
 		   config.c \
 		   csource.c \
 		   diff.c \
-		   gensalt.c \
 		   javascript.c \
 		   json.c \
 		   jsmn.c \
@@ -418,7 +417,7 @@ install: all
 	$(INSTALL_MAN) $(MAN3S) $(DESTDIR)$(MANDIR)/man3
 	$(INSTALL_MAN) $(MAN5S) $(DESTDIR)$(MANDIR)/man5
 	$(INSTALL_DATA) audit.html audit.css audit.js $(DESTDIR)$(SHAREDIR)/openradtool
-	$(INSTALL_DATA) b64_ntop.c jsmn.c gensalt.c $(DESTDIR)$(SHAREDIR)/openradtool
+	$(INSTALL_DATA) b64_ntop.c jsmn.c $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_DATA) ortPrivate.ts ort-json.ts $(DESTDIR)$(SHAREDIR)/openradtool
 	$(INSTALL_DATA) $(PUBHEADERS) $(DESTDIR)$(INCLUDEDIR)
 	$(INSTALL_LIB) $(LIBS) $(DESTDIR)$(LIBDIR)
@@ -482,7 +481,7 @@ openradtool.tar.gz: $(DOTAR) $(DOTAREXEC)
 	rm -rf .dist/
 
 test: test.o db.o db.db
-	$(CC) -o $@ test.o db.o $(LIBS_SQLBOX) $(LDADD_CRYPT)
+	$(CC) -o $@ test.o db.o $(LIBS_SQLBOX)
 
 audit-out.js: ort-audit-json audit-example.ort
 	./ort-audit-json -s -r user audit-example.ort >$@
@@ -624,6 +623,10 @@ clean:
 	rm -f db.ort.xml db.h.xml db.sql.xml db.update.sql.xml test.xml.xml $(IHTMLS) TODO.xml
 	rm -f ort-json.schema
 
+regressclean: clean
+	rm -rf node_modules
+	rm -rf rust/target rust/src
+
 # Remove both what can be built and what's built by ./configure.
 
 distclean: clean
@@ -687,7 +690,7 @@ regress: all
 			echo "pass" ; \
 		done ; \
 	else \
-		echo "!!! skipping ort-xliff syntax tests !!! " ; \
+		echo "!!! skipping ort-xliff syntax tests !!!" 1>&2; \
 		skipped="$$skipped ort-xliff-syntax" ; \
 	fi ; \
 	echo "=== ort-sql syntax tests === " ; \
@@ -880,54 +883,49 @@ regress: all
 		echo "pass" ; \
 	done ; \
 	if [ "x$(CFLAGS_SQLBOX)" = "x" ] ; then \
-		echo "!!! skipping ort-c-{header,source} compile tests !!! " ; \
+		echo "!!! skipping ort-c-{header,source} compile tests !!!" 1>&2; \
 		skipped="$$skipped ort-c-{header,source}-compile" ; \
 	else \
 		echo "=== ort-c-{header,source} compile tests === " ; \
-		set -e ; \
 		CC=$(CC) CFLAGS="$(CFLAGS_SQLBOX) $(CFLAGS)" \
 			sh ./regress/c/regress-compile.sh ; \
-		set +e ; \
+		[ $$? -eq 0 ] || exit 1 ; \
 	fi ; \
 	if [ "x$(LIBS_REGRESS)" = "x" ] ; then \
-		echo "!!! skipping ort-c-{header,source,sql} run tests !!! " ; \
+		echo "!!! skipping ort-c-{header,source,sql} run tests !!!" 1>&2; \
 		skipped="$$skipped ort-c-{header,source,sql}-run" ; \
 	else \
 		echo "=== ort-c-{header,source,sql} run tests === " ; \
-		set -e ; \
 		CC=$(CC) CFLAGS="$(CFLAGS_REGRESS) $(CFLAGS)" \
-			LDADD="$(LIBS_REGRESS) $(LDADD_CRYPT) $(LDADD_B64_NTOP)" \
+			LDADD="$(LIBS_REGRESS) $(LDADD_B64_NTOP)" \
 			sh ./regress/c/regress-runner.sh $$tmp ; \
-		set +e ; \
+		[ $$? -eq 0 ] || exit 1 ; \
 	fi ; \
 	if [ -n "$(TS_NODE)" ]; then \
 		echo "=== ort-nodejs compile tests === " ; \
-		set -e ; \
 		$(TS_NODE) --skip-project \
 			regress/nodejs/regress-compile.ts ; \
-		set +e ; \
+		[ $$? -eq 0 ] || exit 1 ; \
 	else \
-		echo "!!! skipping ort-nodejs compile tests !!! " ; \
+		echo "!!! skipping ort-nodejs compile tests !!!" 1>&2; \
 		skipped="$$skipped ort-nodejs-compile" ; \
 	fi ; \
 	if [ -n "$(TS_NODE)" ]; then \
 		echo "=== ort-nodejs run tests === " ; \
-		set -e ; \
 		$(TS_NODE) --skip-project \
 			regress/nodejs/regress-runner.ts ; \
-		set +e ; \
+		[ $$? -eq 0 ] || exit 1 ; \
 	else \
-		echo "!!! skipping ort-nodejs run tests !!! " ; \
+		echo "!!! skipping ort-nodejs run tests !!!" 1>&2; \
 		skipped="$$skipped ort-nodejs-run" ; \
 	fi ; \
 	if [ -n "$(TS_NODE)" ]; then \
 		echo "=== ort-javascript internal tests === " ; \
-		set -e ; \
 		$(TS_NODE) --skip-project \
 			regress/javascript/internal/regress-runner.ts ; \
-		set +e ; \
+		[ $$? -eq 0 ] || exit 1 ; \
 	else \
-		echo "!!! skipping ort-javascript internal tests !!! " ; \
+		echo "!!! skipping ort-javascript internal tests !!!" 1>&2; \
 		skipped="$$skipped ort-javascript-internal" ; \
 	fi ; \
 	echo "=== ort-javascript output tests === " ; \
@@ -949,7 +947,7 @@ regress: all
 			regress/javascript/regress-runner.ts ; \
 		set +e ; \
 	else \
-		echo "!!! skipping ort-javascript run tests !!! " ; \
+		echo "!!! skipping ort-javascript run tests !!!" 1>&2; \
 		skipped="$$skipped ort-javascript-run" ; \
 	fi ; \
 	if [ -n "$(TS_NODE)" ]; then \
@@ -963,7 +961,7 @@ regress: all
 		set +e ; \
 		rm -f $$ntmp.ts ; \
 	else \
-		echo "!!! skipping ort-json reformat tests !!! " ; \
+		echo "!!! skipping ort-json reformat tests !!!" 1>&2; \
 		skipped="$$skipped ort-json-reformat" ; \
 	fi ; \
 	if [ -n "$(TS_JSONSCHEMA)" -a -n "$(JSONSCHEMA)" ]; then \
@@ -989,7 +987,7 @@ regress: all
 			echo "pass" ; \
 		done ; \
 	else \
-		echo "!!! skipping ort-json output tests !!! " ; \
+		echo "!!! skipping ort-json output tests !!!" 1>&2; \
 		skipped="$$skipped ort-json-output" ; \
 	fi ; \
 	if [ -n "$(CARGO)" ]; then \
@@ -1006,8 +1004,8 @@ regress: all
 			exit 1 ; \
 		fi ; \
 	else \
-		echo "!!! skipping ort-rust compile tests !!! " ; \
-		echo "!!! skipping ort-rust run tests !!! " ; \
+		echo "!!! skipping ort-rust compile tests !!!" 1>&2; \
+		echo "!!! skipping ort-rust run tests !!!" 1>&2; \
 		skipped="$$skipped ort-rust-compile ort-rust-run" ; \
 	fi ; \
 	if [ -n "$$skipped" ]; \

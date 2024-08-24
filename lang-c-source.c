@@ -181,8 +181,8 @@ print_src(FILE *f, size_t indent, const char *fmt, ...)
  * Generate the function for checking a password.  This should be a
  * conditional phrase that evalutes to FALSE if the password does NOT
  * match the given type, TRUE if the password does match the given type.
- * FIXME: use crypt_checkpass always.  Return FALSE on failure, TRUE on
- * success.
+ * This always use crypt_checkpass(3), and depends upon the surrounding
+ * context to provide it.  Return FALSE on failure, TRUE on success.
  */
 static int
 gen_checkpass(FILE *f, int ptr, size_t pos, const struct sent *sent)
@@ -208,16 +208,9 @@ gen_checkpass(FILE *f, int ptr, size_t pos, const struct sent *sent)
 	if ((sent->field->flags & FIELD_NULL) &&
 	    fprintf(f, "!%s || ", hasfd) < 0)
 		goto out;
-
-#ifdef __OpenBSD__
 	if (fprintf(f, "crypt_checkpass(v%zu, %s) == %s)",
 	    pos, fd, sent->op == OPTYPE_NEQUAL ? "0" : "-1") < 0)
 		goto out;
-#else
-	if (fprintf(f, "strcmp(crypt(v%zu, %s), %s) %s 0)",
-	    pos, fd, fd, sent->op == OPTYPE_NEQUAL ? "==" : "!=") < 0)
-		goto out;
-#endif
 	rc = 1;
 out:
 	free(fd);
@@ -226,28 +219,19 @@ out:
 }
 
 /*
- * Generate the function for creating a password hash.
- * FIXME: use crypt_newhash() always.
- * Return zero on failure, non-zero on success.
+ * Generate the function for creating a password hash.  Always use
+ * crypt_newhash(3), letting the surrounding context handle
+ * compatibility if it doesn't exist.  Return FALSE on failure, TRUE on
+ * success.
  */
 static int
 gen_newpass(FILE *f, int ptr, size_t pos, size_t npos)
 {
 
-#ifdef __OpenBSD__
-	if (fprintf(f,
+	return fprintf(f,
 	    "\tcrypt_newhash(%sv%zu, \"blowfish,a\", "
 	    "hash%zu, sizeof(hash%zu));\n",
-	    ptr ? "*" : "", npos, pos, pos) < 0)
-		return 0;
-#else
-	if (fprintf(f,
-	    "\tstrncpy(hash%zu, crypt(%sv%zu, _gensalt()), "
-	    "sizeof(hash%zu));\n",
-	    pos, ptr ? "*" : "", npos, pos) < 0)
-		return 0;
-#endif
-	return 1;
+	    ptr ? "*" : "", npos, pos, pos) >= 0;
 }
 
 /*
@@ -2870,7 +2854,8 @@ ort_lang_c_source(const struct ort_lang_c *args,
 		return 0;
 #endif
 #if defined(__sun)
-	if (fputs("#ifndef _XOPEN_SOURCE\n"
+	if (fputs(
+	    "#ifndef _XOPEN_SOURCE\n"
 	    "# define _XOPEN_SOURCE\n"
 	    "#endif\n"
 	    "#define _XOPEN_SOURCE_EXTENDED 1\n"
@@ -2976,11 +2961,6 @@ ort_lang_c_source(const struct ort_lang_c *args,
 		if (fputc('\n', f) == EOF)
 			return 0;
 	}
-
-#ifndef __OpenBSD__
-	if (fprintf(f, "%s\n", args->ext_gensalt) < 0)
-		return 0;
-#endif
 
 	if (need_b64 &&
 	    fprintf(f, "%s\n", args->ext_b64_ntop) < 0)

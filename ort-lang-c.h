@@ -31,7 +31,6 @@ struct	ort_lang_c {
 	unsigned int		 includes;
 	const char		*ext_b64_ntop;
 	const char		*ext_jsmn;
-	const char		*ext_gensalt;
 };
 
 int	ort_lang_c_header(const struct ort_lang_c *,

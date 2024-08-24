@@ -37,13 +37,13 @@ do
 	rm -f $tmp
 	set -e
 	./ort-c-header -vJj $f >$f.h 2>/dev/null
-	./ort-c-source -S. -h $hf -vJj $f >$f.c 2>/dev/null
+	./ort-c-source -S. -h "$hf,config.h" -vJj $f >$f.c 2>/dev/null
 	./ort-sql $f | sqlite3 $tmp 2>/dev/null
 	set +e
-	$CC $CFLAGS -o $bf $f.c $cf $rr $LDADD 2>/dev/null
+	$CC -I. $CFLAGS -o $bf $f.c $cf $rr compats.c $LDADD 2>/dev/null
 	if [ $? -ne 0 ] ; then
 		echo "$CC: $f... fail (did not compile)"
-		$CC $CFLAGS -o $bf $f.c $cf $rr $LDADD
+		$CC -I. $CFLAGS -o $bf $f.c $cf $rr compats.c $LDADD
 		rm -f $f.h $f.c $bf $tmp
 		exit 1
 	fi

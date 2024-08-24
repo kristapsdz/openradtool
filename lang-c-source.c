@@ -28,7 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "paths.h"
+#include "ort-paths.h"
 #include "ort.h"
 #include "ort-lang-c.h"
 #include "ort-version.h"

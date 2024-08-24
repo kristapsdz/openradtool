@@ -153,7 +153,7 @@ MAN1S		 = man/ort.1 \
 		   man/ort-sql.1 \
 		   man/ort-sqldiff.1 \
 		   man/ort-xliff.1
-GENHEADERS	 = paths.h \
+GENHEADERS	 = ort-paths.h \
 		   ort-version.h
 PUBHEADERS	 = ort.h \
 		   ort-lang-javascript.h \
@@ -402,7 +402,7 @@ ort-version.h: Makefile
 	  echo "#define ORT_VSTAMP $$vstamp" ; \
 	  echo "#endif" ; ) >$@
 
-paths.h: Makefile
+ort-paths.h: Makefile
 	echo "#define SHAREDIR \"$(SHAREDIR)/openradtool\"" >$@
 
 install: all

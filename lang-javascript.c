@@ -29,7 +29,7 @@
 
 #include "ort.h"
 #include "ort-lang-javascript.h"
-#include "paths.h"
+#include "ort-paths.h"
 #include "lang.h"
 
 /*

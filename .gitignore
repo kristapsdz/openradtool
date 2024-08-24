@@ -27,7 +27,7 @@ ort-sql
 ort-sqldiff
 ort-xliff
 ort-version.h
-paths.h
+ort-paths.h
 ort-json.schema
 /rust/target
 /rust/Cargo.lock

@@ -769,8 +769,7 @@ ort_lang_javascript(const struct config *cfg,
 		    "\t\t\t    typeof custom[\'%s\'] !== "
 		    "\'undefined\') {\n"
 		    "\t\t\t\tif (custom['%s'] instanceof Array) {\n"
-		    "\t\t\t\t\tlet i: number;\n"
-		    "\t\t\t\t\tfor (i = 0; "
+		    "\t\t\t\t\tfor (let i = 0; "
 		    "i < custom['%s'].length; i++)\n"
 		    "\t\t\t\t\t\tcustom['%s'][i](e, '%s', o);\n"
 		    "\t\t\t\t} else\n"
@@ -790,11 +789,8 @@ ort_lang_javascript(const struct config *cfg,
 		    "custom?", "DataCallbacks|null", NULL))
 			return 0;
 		if (fputs("\t\t{\n"
-		    "\t\t\tlet i: number;\n"
-		    "\t\t\tconst list: HTMLElement[] = \n"
-		    "\t\t\t\t_elemList(e, name, inc);\n"
-	     	    "\t\t\tfor (i = 0; i < list.length; i++)\n"
-		    "\t\t\t\tthis._fill(list[i], this.obj, "
+		    "\t\t\tfor (const elem of _elemList(e, name, inc))\n"
+		    "\t\t\t\tthis._fill(elem, this.obj, "
 		    "inc, custom);\n"
 		    "\t\t}\n\n", f) == EOF)
 			return 0;
@@ -890,7 +886,6 @@ ort_lang_javascript(const struct config *cfg,
 		    "custom?", "DataCallbacks|null", NULL))
 			return 0;
 		if (fprintf(f, "\t\t{\n"
-		    "\t\t\tlet i: number;\n"
 		    "\t\t\tconst o: %sData[] =\n"
 		    "\t\t\t\t(this.obj instanceof Array) ?\n"
 		    "\t\t\t\t this.obj : [this.obj];\n"
@@ -906,7 +901,7 @@ ort_lang_javascript(const struct config *cfg,
 		    "\t\t\t\t<HTMLElement>e.children[0];\n"
 		    "\t\t\twhile (e.firstChild !== null)\n"
 		    "\t\t\t\te.removeChild(e.firstChild)\n"
-		    "\t\t\tfor (i = 0; i < o.length; i++) {\n"
+		    "\t\t\tfor (let i = 0; i < o.length; i++) {\n"
 		    "\t\t\t\tconst cln: HTMLElement =\n"
 		    "\t\t\t\t\t<HTMLElement>row.cloneNode(true);\n"
 		    "\t\t\t\te.appendChild(cln);\n"
@@ -933,11 +928,8 @@ ort_lang_javascript(const struct config *cfg,
 		    "custom?", "DataCallbacks|null", NULL))
 			return 0;
 		if (fputs("\t\t{\n"
-		    "\t\t\tlet i: number;\n"
-		    "\t\t\tconst list: HTMLElement[] =\n"
-		    "\t\t\t\t_elemList(e, name, false);\n"
-	     	    "\t\t\tfor (i = 0; i < list.length; i++)\n"
-		    "\t\t\t\tthis.fillArray(list[i], custom);\n"
+		    "\t\t\tfor (const elem of _elemList(e, name, false))\n"
+		    "\t\t\t\tthis.fillArray(elem, custom);\n"
 		    "\t\t}\n\n"
 		    "\t}\n\n", f) == EOF)
 			return 0;
@@ -956,10 +948,10 @@ ort_lang_javascript(const struct config *cfg,
 			if (!gen_comment(f, 2, COMMENT_JS, bi->doc))
 				return 0;
 			if (fprintf(f, "\t\tstatic readonly "
-			    "BITF_%s: Long = Long.fromStringZero"
+			    "BITF_%s = Long.fromStringZero"
 			    "(\'%" PRIu64 "\');\n"
 			    "\t\tstatic readonly "
-			    "BITI_%s: number = %" PRId64 ";\n",
+			    "BITI_%s = %" PRId64 ";\n",
 			    bi->name, 
 			    UINT64_C(1) << (uint64_t)bi->value,
 			    bi->name, bi->value) < 0)
@@ -974,7 +966,7 @@ ort_lang_javascript(const struct config *cfg,
 		    "One larger than the largest bit index."))
 			return 0;
 		if (fprintf(f, "\t\tstatic readonly "
-		    "BITI__MAX: number = %" PRId64 ";\n", 
+		    "BITI__MAX = %" PRId64 ";\n", 
 		    maxvalue + 1) < 0)
 			return 0;
 
@@ -1010,10 +1002,9 @@ ort_lang_javascript(const struct config *cfg,
 		    "v", "string|number|null", NULL))
 			return 0;
 		if (fputs("\t\t{\n"
-		    "\t\t\tlet i: number = 0;\n"
-		    "\t\t\tlet s: string = '';\n"
-		    "\t\t\tconst vlong: Long|null = "
-		    "Long.fromValue(v);\n"
+		    "\t\t\tlet i = 0;\n"
+		    "\t\t\tlet s = '';\n"
+		    "\t\t\tconst vlong = Long.fromValue(v);\n"
 		    "\n"
 		    "\t\t\tif (name !== null)\n"
 		    "\t\t\t\tname += '-label';\n"
@@ -1058,7 +1049,7 @@ ort_lang_javascript(const struct config *cfg,
 			if (fprintf(f, 
 			    "\t\t\tif (!vlong.and"
 			    "(%s.BITF_%s).isZero()) {\n"
-			    "\t\t\t\tconst res: string = _strlang(", 
+			    "\t\t\t\tconst res = _strlang(", 
 			    bf->name, bi->name) < 0)
 				return 0;
 			if (!gen_labels(f, cfg, &bi->labels))
@@ -1089,7 +1080,7 @@ ort_lang_javascript(const struct config *cfg,
 			if (!gen_comment(f, 2, COMMENT_JS, ei->doc))
 				return 0;
 			if (fprintf(f, 
-			    "\t\tstatic readonly %s: string = "
+			    "\t\tstatic readonly %s = "
 			    "\'%" PRId64 "\';\n", ei->name, 
 			    ei->value) < 0)
 				return 0;

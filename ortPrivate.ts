@@ -541,7 +541,10 @@
 	 * Labels ("jslabel" in ort(5)) may have multiple languages.
 	 * This maps a language name to a translated string.
 	 */
-	interface langmap { [lang: string]: string };
+	interface langmap
+	{
+		[lang: string]: string
+	};
 
 	/**
 	 * Resolve a set of translated strings into a single one
@@ -553,9 +556,7 @@
 	 */
 	function _strlang(vals: langmap): string
 	{
-		const lang: string|null = 
-			document.documentElement.lang;
-
+		const lang = document.documentElement.lang;
 		if (lang !== null && lang in vals)
 			return vals[lang];
 		else if ('_default' in vals)
@@ -575,8 +576,7 @@
 	 * @param vals All possible translations.
 	 * @internal
 	 */
-	function _replcllang(e: HTMLElement, name:string,
-		vals: langmap): void
+	function _replcllang(e: HTMLElement, name:string, vals: langmap): void
 	{
 		_replcl(e, name, _strlang(vals), false);
 	}
@@ -610,15 +610,11 @@
 	 * Set attributes for all elements matching a class.
 	 * @internal
 	 */
-	function _attrcl(e: HTMLElement, attr: string,
-		name: string, text: string, inc: boolean): void
+	function _attrcl(e: HTMLElement, attr: string, name: string, text: string,
+		inc: boolean): void
 	{
-		let i: number;
-		const list: HTMLElement[] =
-			_elemList(e, name, inc);
-
-		for (i = 0; i < list.length; i++)
-			_attr(list[i], attr, text);
+		for (const elem of _elemList(e, name, inc))
+			_attr(elem, attr, text);
 	}
 
 	/**
@@ -626,18 +622,14 @@
 	 * the given class.
 	 * @internal
 	 */
-	function _elemList(e: HTMLElement|null,
-		cls: string, inc: boolean): HTMLElement[]
+	function _elemList(e: HTMLElement|null, cls: string, inc: boolean): HTMLElement[]
 	{
-		let list: HTMLCollectionOf<Element>;
-		let i: number;
-		const a: HTMLElement[] = [];
-
 		if (e === null)
-			return a;
-		list = e.getElementsByClassName(cls);
-		for (i = 0; i < list.length; i++)
-			a.push(<HTMLElement>list[i]);
+			return [];
+		const a = Array.prototype.filter.call(
+			e.getElementsByClassName(cls),
+			elem => elem instanceof HTMLElement,
+		) as HTMLElement[];
 		if (inc && e.classList.contains(cls))
 			a.push(e);
 		return a;
@@ -649,23 +641,18 @@
 	 */
 	function _repl(e: HTMLElement, text: string): void
 	{
-		while (e.firstChild)
-			e.removeChild(e.firstChild);
-		e.appendChild(document.createTextNode(text));
+		e.replaceChildren(document.createTextNode(text));
 	}
 
 	/**
 	 * Replace children of elements matching class with text.
 	 * @internal
 	 */
-	function _replcl(e: HTMLElement, name: string,
-		text: string, inc: boolean): void
+	function _replcl(e: HTMLElement, name: string, text: string, inc: boolean):
+		void
 	{
-		let i: number;
-		const list: HTMLElement[] = _elemList(e, name, inc);
-
-		for (i = 0; i < list.length; i++)
-			_repl(list[i], text);
+		for (const elem of _elemList(e, name, inc))
+			_repl(elem, text);
 	}
 
 	/**
@@ -683,14 +670,11 @@
 	 * Add class if doesn't exist to all elements with class name.
 	 * @internal
 	 */
-	function _classaddcl(e: HTMLElement, name: string,
-		cls: string, inc: boolean): void
+	function _classaddcl(e: HTMLElement, name: string, cls: string,
+		inc: boolean): void
 	{
-		let i: number;
-		const list: HTMLElement[] = _elemList(e, name, inc);
-
-		for (i = 0; i < list.length; i++)
-			_classadd(list[i], cls);
+		for (const elem of _elemList(e, name, inc))
+			_classadd(elem, cls);
 	}
 
 	/**
@@ -710,11 +694,8 @@
 	 */
 	function _hidecl(e: HTMLElement, name: string, inc: boolean): void
 	{
-		let i: number;
-		const list: HTMLElement[] = _elemList(e, name, inc);
-
-		for (i = 0; i < list.length; i++)
-			_hide(list[i]);
+		for (const elem of _elemList(e, name, inc))
+			_hide(elem);
 	}
 
 	/**
@@ -734,11 +715,8 @@
 	 */
 	function _showcl(e: HTMLElement, name: string, inc: boolean): void
 	{
-		let i: number;
-		const list: HTMLElement[] = _elemList(e, name, inc);
-
-		for (i = 0; i < list.length; i++)
-			_show(list[i]);
+		for (const elem of _elemList(e, name, inc))
+			_show(elem);
 	}
 
 	/**
@@ -756,19 +734,15 @@
 	function _fillValueChecked(e: HTMLElement, fname: string,
 		val: number|string|null, inc: boolean): void
 	{
-		let i: number;
-		const list: HTMLElement[] = _elemList
-			(e, fname + '-value-checked', inc);
-
-		for (i = 0; i < list.length; i++) {
-			const elem: HTMLInputElement =
-				<HTMLInputElement>list[i];
-			const attrval: string|null = elem.value;
-			elem.removeAttribute('checked');
+		for (const elem of
+		     _elemList(e, fname + '-value-checked', inc)) {
+			const inp = elem as HTMLInputElement;
+			const attrval = inp.value;
+			inp.removeAttribute('checked');
 			if (val === null || attrval === null)
 				continue;
 			if (val.toString() === attrval)
-				elem.setAttribute('checked', 'checked');
+				inp.setAttribute('checked', 'checked');
 		}
 	}
 
@@ -784,19 +758,15 @@
 	function _fillValueSelect(e: HTMLElement,
 		val: number|string|null): void
 	{
-		let i: number;
-		const list: HTMLCollectionOf<HTMLElement> = 
-			e.getElementsByTagName('option');
-
-		for (i = 0; i < list.length; i++) {
-			const elem: HTMLOptionElement =
-				<HTMLOptionElement>list[i];
-			const attrval: string|null = elem.value;
-			elem.removeAttribute('selected');
+		const list = Array.from(e.getElementsByTagName('option'));
+		for (const elem of list) {
+			const opt = elem as HTMLOptionElement;
+			const attrval = opt.value;
+			opt.removeAttribute('selected');
 			if (val === null || attrval === null)
 				continue;
 			if (val.toString() === attrval)
-				elem.setAttribute('selected', 'selected');
+				opt.setAttribute('selected', 'selected');
 		}
 	}
 
@@ -812,23 +782,21 @@
 	function _fillDateValue(e: HTMLElement, fname: string,
 		val: string|number|null|undefined, inc: boolean): void
 	{
-		const v: Long|null = Long.fromValue(val);
-		const d: Date = new Date();
-
+		const v = Long.fromValue(val);
 		if (v === null)
 			return;
 
+		const d = new Date();
 		d.setTime(v.toNumber() * 1000);
 
 		/* Make sure to zero-pad the digits. */
 
-		const year: number = d.getFullYear();
-		const mo: number = d.getMonth() + 1;
-		const day: number = d.getDate();
-		const full: string = year + '-' +
+		const year = d.getFullYear();
+		const mo = d.getMonth() + 1;
+		const day = d.getDate();
+		const full = year + '-' +
 			(mo < 10 ? '0' : '') + mo + '-' +
 			(day < 10 ? '0' : '') + day;
-
 		_attrcl(e, 'value', fname + '-date-value', full, inc);
 		_replcl(e, fname + '-date-text', full, inc);
 	}
@@ -848,21 +816,13 @@
 	function _fillBitsChecked(e: HTMLElement, fname: string,
 		 val: string|number|null|undefined, inc: boolean): void
 	{
-		let i: number;
-		let v: number;
-		const lval: Long|null|undefined = 
-			Long.fromValueUndef(val);
-		const list: HTMLElement[] = _elemList
-			(e, fname + '-bits-checked', inc);
-
+		const lval = Long.fromValueUndef(val);
 		if (typeof lval === 'undefined')
 			return;
-
-		for (i = 0; i < list.length; i++) {
-			const elem: HTMLInputElement =
-				<HTMLInputElement>list[i];
-			const attrval: string|null = elem.value;
-			elem.removeAttribute('checked');
+		for (const elem of _elemList(e, fname + '-bits-checked', inc)) {
+			const inp = elem as HTMLInputElement;
+			const attrval: string|null = inp.value;
+			inp.removeAttribute('checked');
 			if (lval === null || attrval === null)
 				continue;
 
@@ -872,7 +832,7 @@
 			 * assume ES6.
 			 */
 
-			v = Number(attrval);
+			const v = Number(attrval);
 			if (isNaN(v))
 				continue;
 			if (!(isFinite(v) && Math.floor(v) === v))
@@ -882,7 +842,7 @@
 
 			if ((v === 0 && lval.isZero()) ||
 			    !Long.ONE.shl(v - 1).and(lval).isZero()) {
-				elem.setAttribute('checked', 'checked');
+				inp.setAttribute('checked', 'checked');
 			}
 		}
 	}
@@ -909,12 +869,11 @@
 		custom: DataCallbacks|null, obj: any, inc: boolean,
 		cannull: boolean, sub: any): void
 	{
-		let i: number;
-		const fname: string = strct + '-' + name;
+		const fname = strct + '-' + name;
 
 		/* Don't do anything if we're not defined. */
 
-		if (typeof obj === 'undefined')
+		if (typeof(obj) === 'undefined')
 			return;
 
 		/* First handle our has/no null situation. */
@@ -933,9 +892,9 @@
 
 		if (cannull && obj === null) {
 			if (custom !== null && fname in custom) {
-				if (custom[fname] instanceof Array) {
-					for (i = 0; i < custom[fname].length; i++)
-						custom[fname][i](e, fname, null);
+				if (Array.isArray(custom[fname])) {
+					for (const fn of custom[fname])
+						fn(e, fname, null);
 				} else
 					custom[fname](e, fname, null);
 			}
@@ -949,15 +908,13 @@
 		 */
 
 		if (sub !== null) {
-			const list: HTMLElement[] = 
-				_elemList(e, fname + '-obj', inc);
-			for (i = 0; i < list.length; i++)
-				sub.fillInner(list[i], custom);
+			for (const elem of
+			     _elemList(e, fname + '-obj', inc))
+				sub.fillInner(elem as HTMLElement, custom);
 		} else {
-			const list: HTMLElement[] = 
-				_elemList(e, fname + '-enum-select', inc);
-			for (i = 0; i < list.length; i++)
-				_fillValueSelect(list[i], obj);
+			for (const elem of
+			     _elemList(e, fname + '-enum-select', inc))
+				_fillValueSelect(elem, obj);
 			_replcl(e, fname + '-text', obj, inc);
 			_attrcl(e, 'value', fname + '-value', obj, inc);
 			_fillValueChecked(e, fname, obj, inc);
@@ -965,11 +922,10 @@
 
 		/* Lastly, handle the custom callback. */
 
-		if (custom !== null &&
-		    typeof custom[fname] !== 'undefined') {
-			if (custom[fname] instanceof Array) {
-				for (i = 0; i < custom[fname].length; i++)
-					custom[fname][i](e, fname, obj);
+		if (custom !== null && fname in custom) {
+			if (Array.isArray(custom[fname])) {
+				for (const fn of custom[fname])
+					fn(e, fname, obj);
 			} else
 				custom[fname](e, fname, obj);
 		}

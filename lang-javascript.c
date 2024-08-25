@@ -753,31 +753,27 @@ ort_lang_javascript(const struct config *cfg,
 		    "inc", "boolean",
 		    "custom?", "DataCallbacks|null", NULL))
 			return 0;
-		if (fprintf(f, "\t\t{\n"
-		    "\t\t\tif (obj instanceof Array && "
-		    "obj.length === 0)\n"
+		if (fputs("\t\t{\n"
+		    "\t\t\tif (Array.isArray(obj) && obj.length === 0)\n"
 		    "\t\t\t\treturn;\n"
-		    "\t\t\tconst o: %sData =\n"
-		    "\t\t\t\t(obj instanceof Array) ? obj[0] : obj;\n"
-		    "\t\t\tif (typeof custom === 'undefined')\n"
-		    "\t\t\t\tcustom = null;\n", s->name) < 0)
+		    "\t\t\tconst o = Array.isArray(obj) ? obj[0] : obj;\n"
+		    "\t\t\tif (typeof(custom) === 'undefined')\n"
+		    "\t\t\t\tcustom = null;\n", f) == EOF)
 			return 0;
 		TAILQ_FOREACH(fd, &s->fq, entries)
 			if (!gen_js_field(f, fd))
 				return 0;
 		if (fprintf(f, "\t\t\tif (custom !== null &&\n"
-		    "\t\t\t    typeof custom[\'%s\'] !== "
-		    "\'undefined\') {\n"
-		    "\t\t\t\tif (custom['%s'] instanceof Array) {\n"
-		    "\t\t\t\t\tfor (let i = 0; "
-		    "i < custom['%s'].length; i++)\n"
-		    "\t\t\t\t\t\tcustom['%s'][i](e, '%s', o);\n"
+		    "\t\t\t    typeof(custom[\'%s\']) !== 'undefined') {\n"
+		    "\t\t\t\tif (Array.isArray(custom['%s'])) {\n"
+		    "\t\t\t\t\tfor (const fn of custom['%s'])\n"
+		    "\t\t\t\t\t\tfn(e, '%s', o);\n"
 		    "\t\t\t\t} else\n"
 		    "\t\t\t\t\tcustom['%s'](e, '%s', o);\n"
 		    "\t\t\t}\n"
 		    "\t\t}\n"
-		    "\n", s->name, s->name, s->name, 
-		    s->name, s->name, s->name, s->name) < 0)
+		    "\n", s->name, s->name, s->name, s->name, s->name,
+		    s->name) < 0)
 			return 0;
 
 		/* _fillByClass() private method. */
@@ -812,19 +808,15 @@ ort_lang_javascript(const struct config *cfg,
 		    "custom?", "DataCallbacks|null", NULL))
 			return 0;
 		if (fputs("\t\t{\n"
-		    "\t\t\tlet len: number;\n"
-		    "\t\t\tif (null === this.obj)\n"
-		    "\t\t\t\tlen = 0;\n"
-		    "\t\t\telse if (this.obj instanceof Array)\n"
-		    "\t\t\t\tlen = this.obj.length;\n"
-		    "\t\t\telse\n"
-		    "\t\t\t\tlen = 1;\n"
-		    "\t\t\tif (null !== e)\n"
+		    "\t\t\tconst len = (this.obj === null) ? 0 :\n"
+		    "\t\t\t\tArray.isArray(this.obj) ? this.obj.length :\n"
+		    "\t\t\t\t1;\n"
+		    "\t\t\tif (e !== null)\n"
 		    "\t\t\t\t_hide(e);\n"
-		    "\t\t\tif (null !== tohide)\n"
+		    "\t\t\tif (tohide !== null)\n"
 		    "\t\t\t\t_show(tohide);\n"
 		    "\t\t\tthis.fillArray(e, custom);\n"
-		    "\t\t\tif (null !== tohide && 0 === len)\n"
+		    "\t\t\tif (tohide !== null && len === 0)\n"
 		    "\t\t\t\t_hide(tohide);\n"
 		    "\t\t}\n\n", f) == EOF)
 			return 0;
@@ -846,19 +838,15 @@ ort_lang_javascript(const struct config *cfg,
 		    "custom?", "DataCallbacks|null", NULL))
 			return 0;
 		if (fputs("\t\t{\n"
-		    "\t\t\tlet len: number;\n"
-		    "\t\t\tif (null === this.obj)\n"
-		    "\t\t\t\tlen = 0;\n"
-		    "\t\t\telse if (this.obj instanceof Array)\n"
-		    "\t\t\t\tlen = this.obj.length;\n"
-		    "\t\t\telse\n"
-		    "\t\t\t\tlen = 1;\n"
-		    "\t\t\tif (null !== e)\n"
+		    "\t\t\tconst len = (this.obj === null) ? 0 :\n"
+		    "\t\t\t\tArray.isArray(this.obj) ? this.obj.length :\n"
+		    "\t\t\t\t1;\n"
+		    "\t\t\tif (e !== null)\n"
 		    "\t\t\t\t_hide(e);\n"
-		    "\t\t\tif (null !== toshow)\n"
+		    "\t\t\tif (toshow !== null)\n"
 		    "\t\t\t\t_hide(toshow);\n"
 		    "\t\t\tthis.fillArray(e, custom);\n"
-		    "\t\t\tif (null !== toshow && 0 === len)\n"
+		    "\t\t\tif (toshow !== null && len === 0)\n"
 		    "\t\t\t\t_show(toshow);\n"
 		    "\t\t}\n\n", f) == EOF)
 			return 0;
@@ -885,29 +873,23 @@ ort_lang_javascript(const struct config *cfg,
 		    "e", "HTMLElement|null",
 		    "custom?", "DataCallbacks|null", NULL))
 			return 0;
-		if (fprintf(f, "\t\t{\n"
-		    "\t\t\tconst o: %sData[] =\n"
-		    "\t\t\t\t(this.obj instanceof Array) ?\n"
-		    "\t\t\t\t this.obj : [this.obj];\n"
-		    "\n"
+		if (fputs("\t\t{\n"
+		    "\t\t\tconst o = Array.isArray(this.obj) ?\n"
+		    "\t\t\t\tthis.obj : [this.obj];\n"
 		    "\t\t\tif (e === null || e.children.length === 0)\n"
 		    "\t\t\t\treturn;\n"
 		    "\t\t\t_hide(e);\n"
 		    "\t\t\tif (o.length === 0 || this.obj === null)\n"
 		    "\t\t\t\treturn;\n"
 		    "\t\t\t_show(e);\n"
-		    "\n"
-		    "\t\t\tconst row: HTMLElement =\n"
-		    "\t\t\t\t<HTMLElement>e.children[0];\n"
-		    "\t\t\twhile (e.firstChild !== null)\n"
-		    "\t\t\t\te.removeChild(e.firstChild)\n"
-		    "\t\t\tfor (let i = 0; i < o.length; i++) {\n"
-		    "\t\t\t\tconst cln: HTMLElement =\n"
-		    "\t\t\t\t\t<HTMLElement>row.cloneNode(true);\n"
-		    "\t\t\t\te.appendChild(cln);\n"
-		    "\t\t\t\tthis._fill(cln, o[i], true, custom);\n"
+		    "\t\t\tconst row = e.children[0];\n"
+		    "\t\t\te.replaceChildren();\n"
+		    "\t\t\tfor (const obj of o) {\n"
+		    "\t\t\t\tconst cln = <HTMLElement>row.cloneNode(true);\n"
+		    "\t\t\t\te.append(cln);\n"
+		    "\t\t\t\tthis._fill(cln, obj, true, custom);\n"
 		    "\t\t\t}\n"
-		    "\t\t}\n\n", s->name) < 0)
+		    "\t\t}\n\n", f) == EOF)
 		    	return 0;
 
 		/* fillArrayByClass() method. */

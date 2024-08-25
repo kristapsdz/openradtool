@@ -42,10 +42,12 @@ Directory containing external source files.
 The default is to use the install-time directory.
 .El
 .Pp
-Output consists of the
+Output consists of an ES2021
 .Qq ort
 namespace with classes that fill data from the JSON into a DOM tree by
 operating on elements having specific classes.
+(While ES2021 is an official baseline; in practice, output code conforms
+to ES7 or even ES6.)
 The output of is fully documented using TypeDoc.
 .Ss Namespaces
 All data produced by
@@ -365,10 +367,8 @@ on a field named
 .Li val ,
 provide a custom callback.
 .Bd -literal -offset indent
-const e: HTMLElement|null =
-  document.getElementById('foo');
-const obj: ort.fooData =
-  <ort.fooData>JSON.parse(response);
+const e = document.getElementById('foo');
+const obj = <ort.fooData>JSON.parse(response);
 const custom: ort.DataCallbacks = {
   'foo-val': ort.someenum.format
 };
@@ -522,9 +522,9 @@ Let this file be called
 .Bd -literal -offset indent
 function init(): void
 {
-  let xmh: XMLHttpRequest = new XMLHttpRequest();
+  const xmh = new XMLHttpRequest();
   xmh.onreadystatechange = function(){
-    let v: string = xmh.responseText;
+    const v = xmh.responseText;
     if (xmh.readyState === 4 && xmh.status === 200)
         success(v);
   };
@@ -541,8 +541,7 @@ in the output of
 .Bd -literal -offset indent
 function success(resp: string): void
 {
-  let obj: ort.fooData =
-    <ort.fooData>JSON.parse(resp);
+  const obj = <ort.fooData>JSON.parse(resp);
   new ort.foo(obj).fill
     (document.getElementById('place'));
 }
@@ -559,9 +558,7 @@ The following abbreviated HTML in which to display the
 contents of these objects.
 Let
 .Pa foo.js
-be the concatenated output of
-.Xr tsc 1
-over all TypeScript files.
+be the concatenated transpiled output of all TypeScript files.
 .Bd -literal -offset indent
 <!DOCTYPE html>
 <html lang="en">
@@ -584,8 +581,14 @@ Assuming a configuration file
 the following creates the single JavaScript file:
 .Bd -literal -offset indent
 % ort-javascript foo.ort > foo.ts
-% tsc --alwaysStrict --strict --outFile foo.js foo.ts script.ts
+% npx tsc --outFile foo.js foo.ts script.ts
 .Ed
+.Pp
+Depending on the typescript version,
+.Fl -target Ar es2021
+and
+.Fl -libs Ar es2021,dom
+may need to passed as additional arguments.
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
 .\" .Sh ERRORS
@@ -593,7 +596,7 @@ the following creates the single JavaScript file:
 .Sh SEE ALSO
 .Xr ort-c-header 1 ,
 .Xr ort-nodejs 1 ,
-.Xr tsc 1 ,
+.Xr npx 1 ,
 .Xr typedoc 1 ,
 .Xr ort 5
 .\" .Sh STANDARDS

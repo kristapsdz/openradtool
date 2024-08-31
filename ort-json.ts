@@ -476,7 +476,7 @@ namespace ortJson {
 		{
 			if (doc === null)
 				return '';
-			return ' comment \"' + doc.replace(/"/g, '\\\"') + '\"';
+			return ' comment "' + doc.replace(/"/g, '\\"') + '"';
 		}
 
 		private roleObjToString(r: roleObj): string
@@ -540,9 +540,9 @@ namespace ortJson {
 			if (field.def !== null &&
 			    (field.type === 'email' ||
 			     field.type === 'text'))
-				str += ' default \"' + 
-					field.def.replace(/"/g, '\\\"') +
-					'\"';
+				str += ' default "' + 
+					field.def.replace(/"/g, '\\"') +
+					'"';
 			else if (field.def !== null)
 				str += ' default ' + field.def;
 
@@ -566,11 +566,11 @@ namespace ortJson {
 			for (let i: number = 0; i < keys.length; i++) {
 				const label: string =
 					set[keys[i]].value.replace
-						(/"/g, '\\\"');
+						(/"/g, '\\"');
 				str += ' jslabel' + 
 					(keys[i] === '_default' ? '' :
 					 ('.' + keys[i])) +
-					' \"' + label + '\"';
+					' "' + label + '"';
 			}
 			if (typeof semi !== 'undefined' && semi)
 				str += ';';

@@ -1,34 +1,47 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!-- vim: set tw=100: -->
+<!-- vim: set tw=90: -->
 <articles>
 	<article data-sblg-article="1" data-sblg-tags="version">
 		<header>
-			<h3>0.14.0</h3>
+			<h3>0.14.1</h3>
 			<address>Kristaps Dzonsons</address>
-			<time datetime="2021-10-25">2021-10-25</time>
+			<time datetime="2024-08-31">2024-08-31</time>
 		</header>
 		<aside>
+			<p>
+				Modernise outputted
+				<a href="ort-javascript.1.html">ort-javascript(1)</a>.
+				Stipulate that any calling environments should be
+				compatible with ES2021, altough in reality, ES6 should be
+				fine.  Tested against the latest versions of Typescript
+				and the dependent ecosystem.
+			</p>
 			<p>
 				No longer use basic
 				<a href="https://man.openbsd.org/crypt.3">crypt(3)</a>
 				for password encryption.  Now require
-				<a href="https://man.openbsd.org/crypt_newhash.3">crypt_newhash(3)</a>
-				(or function with similar signature)
-				and family, which use Blowfish encryption.
-				This isn't available by default on Linux, but is available in
-				<a href="https://github.com/kristapsdz/oconfigure">oconfigure</a>,
-				which is now used for regression tests of said functionality.
+				<a href="https://man.openbsd.org/crypt_newhash.3">
+					crypt_newhash(3)</a> (or function with similar
+				signature) and family, which use Blowfish encryption.
+				This isn't available by default on Linux, but is available
+				in
+				<a href="https://github.com/kristapsdz/oconfigure">
+					oconfigure</a>, which is now used for regression
+				tests of said functionality.
 			</p>
 			<p>
-				No longer bundle a copy of <code>b64_ntop</code>.
-				This is part of most systems, and
-				<a href="https://github.com/kristapsdz/oconfigure">oconfigure</a>
-				(or equivalent) may be used for compatible functions.
+				No longer bundle a copy of <code>b64_ntop</code>.  This is
+				part of most systems, and
+				<a href="https://github.com/kristapsdz/oconfigure">
+					oconfigure</a> (or equivalent) may be used for
+				compatible functions.
 			</p>
 			<p>
-				Various fixes for NodeJS, <a href="ort-nodejs.1.html">ort-nodejs(1)</a>, from
-				<a href="https://github.com/validatorjs/validator.js/pull/2257">pull/2257</a>.
-				This is still experimental and lacks validation.
+				Various fixes for
+				<a href="ort-nodejs.1.html">ort-nodejs(1)</a>, from
+				<a href="https://github.com/validatorjs/validator.js/pull/2257">
+					pull/2257</a>.  This is still experimental and
+				lacks validation.
 			</p>
 		</aside>
 	</article>

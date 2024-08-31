@@ -424,7 +424,7 @@
 		{
 			if (typeof val === 'undefined')
 				return undefined;
-			return Long.fromValue(val);
+			return Long.fromValue(val, unsigned);
 		}
 
 		/**

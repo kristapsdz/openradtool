@@ -1050,7 +1050,7 @@ gen_open(FILE *f, const struct config *cfg)
 		return 0;
 
 	if (fputs("\n"
-	    "\tif (sqlbox_open_async(db, 0))\n"
+	    "\tif (sqlbox_open_async(db, 0) && sqlbox_ping(db))\n"
 	    "\t\treturn ctx;\n"
 	    "err:\n", f) == EOF)
 		return 0;
